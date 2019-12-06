@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2.database;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -226,12 +227,13 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
             if (!inlineObjSupported || !inlineDcSupported) {
                 boolean dc = false;
-                while (inlineIdxs0.iterator().hasNext()) {
-                    InlineIndexHelper ih = inlineIdxs0.iterator().next();
+                Iterator<InlineIndexHelper> it = inlineIdxs0.iterator();
+                while (it.hasNext()) {
+                    InlineIndexHelper ih = it.next();
                     if (!inlineDcSupported && ih.type() == Value.DECIMAL)
                         dc = true;
                     if (dc || (!inlineObjSupported && ih.type() == Value.JAVA_OBJECT))
-                        inlineIdxs0.iterator().remove();
+                        it.remove();
                 }
             }
             inlineIdxs = inlineIdxs0;
