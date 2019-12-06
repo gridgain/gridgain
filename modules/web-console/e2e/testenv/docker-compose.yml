@@ -35,7 +35,7 @@ services:
       context: '../../docker/console'
       dockerfile: 'frontend/Dockerfile'
     ports:
-      - 9001:80
+      - 9001:8008
     depends_on:
       backend:
         condition: service_healthy

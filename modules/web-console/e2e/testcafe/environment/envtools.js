@@ -45,6 +45,10 @@ const insertTestUser = (email = 'a@example.com', password = 'a') => {
     return insertFullTestUser(user);
 };
 
+/**
+ * Removes users and their data
+ * @param user User email mask
+ */
 const dropTestDB = (mask = '@example.com') => {
     return request({
         method: 'DELETE',

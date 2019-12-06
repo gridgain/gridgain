@@ -27,6 +27,7 @@ import org.apache.ignite.console.services.ActivitiesServiceTest;
 import org.apache.ignite.console.services.AdminServiceTest;
 import org.apache.ignite.console.services.MigrationFromMongoTest;
 import org.apache.ignite.console.services.NotificationServiceTest;
+import org.apache.ignite.console.web.controller.AdminControllerTest;
 import org.apache.ignite.console.web.controller.AgentDownloadControllerSelfTest;
 import org.apache.ignite.console.web.security.PasswordEncoderTest;
 import org.apache.ignite.console.web.socket.AgentsServiceSelfTest;
@@ -44,6 +45,7 @@ import org.junit.runners.Suite;
     AccountsServiceTest.class,
     ActivitiesServiceTest.class,
     AdminServiceTest.class,
+    AdminControllerTest.class,
     AgentDownloadControllerSelfTest.class,
     AgentsServiceSelfTest.class,
     BrowsersServiceSelfTest.class,
