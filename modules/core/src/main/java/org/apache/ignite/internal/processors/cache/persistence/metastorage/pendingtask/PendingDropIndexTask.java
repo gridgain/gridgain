@@ -101,7 +101,7 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
     }
 
     /** {@inheritDoc} */
-    public String toString() {
+    @Override public String toString() {
         return S.toString(PendingDropIndexTask.class, this, "super", super.toString());
     }
 }

@@ -259,7 +259,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             pendingDelLatch.await(60, TimeUnit.SECONDS);
 
             if (pendingDelLatch.getCount() > 0)
-                fail("Test timed out: failed to await for cleaning up pending delete object.");
+                fail("Test timed out: failed to await for pending task completion.");
 
             awaitPartitionMapExchange();
 

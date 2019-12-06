@@ -47,7 +47,7 @@ public abstract class AbstractSchemaChangePendingTask extends AbstractNodePendin
     }
 
     /** {@inheritDoc} */
-    public String toString() {
+    @Override public String toString() {
         return S.toString(AbstractSchemaChangePendingTask.class, this);
     }
 }
