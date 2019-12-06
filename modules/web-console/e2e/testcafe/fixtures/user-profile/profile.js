@@ -18,32 +18,35 @@ import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtoo
 import { createRegularUser } from '../../roles';
 import {pageProfile} from '../../page-models/pageProfile';
 
-const regularUser = createRegularUser();
+const originalEmail = 'original@example.com';
+const changedEmail = 'r.roe@example.com';
+
+let regularUser = null;
 
 fixture('Checking user profile')
     .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(changedEmail);
+        regularUser = await createRegularUser(originalEmail);
     })
     .beforeEach(async(t) => {
         await t.useRole(regularUser);
         await t.navigateTo(resolveUrl('/settings/profile'));
     })
     .after(async() => {
-        await dropTestDB();
+        await dropTestDB(originalEmail);
+        await dropTestDB(changedEmail);
     });
 
 test('Testing user data change', async(t) => {
     const firstName = 'Richard';
     const lastName = 'Roe';
-    const email = 'r.roe@example.com';
     const company = 'New Company';
     const country = 'Israel';
 
     await t
         .typeText(pageProfile.firstName.control, firstName, {replace: true})
         .typeText(pageProfile.lastName.control, lastName, {replace: true})
-        .typeText(pageProfile.email.control, email, {replace: true})
+        .typeText(pageProfile.email.control, changedEmail, {replace: true})
         .typeText(pageProfile.company.control, company, {replace: true});
     await pageProfile.country.selectOption(country);
     await t.click(pageProfile.saveChangesButton);
@@ -52,7 +55,7 @@ test('Testing user data change', async(t) => {
         .navigateTo(resolveUrl('/settings/profile'))
         .expect(pageProfile.firstName.control.value).eql(firstName)
         .expect(pageProfile.lastName.control.value).eql(lastName)
-        .expect(pageProfile.email.control.value).eql(email)
+        .expect(pageProfile.email.control.value).eql(changedEmail)
         .expect(pageProfile.company.control.value).eql(company)
         .expect(pageProfile.country.control.value).eql(country);
 });

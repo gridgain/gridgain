@@ -20,17 +20,19 @@ import {PageConfigurationOverview} from '../../page-models/PageConfigurationOver
 import {PageConfigurationAdvancedCluster} from '../../page-models/PageConfigurationAdvancedCluster';
 import {configureNavButton} from '../../components/topNavigation';
 
-const regularUser = createRegularUser();
+const email = 'newClusterWithCache@example.com';
+let regularUser = null;
 
 fixture('New cluster with cache')
     .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(email);
+
+        regularUser = await createRegularUser(email);
     })
     .beforeEach(async(t) => {
         await t.useRole(regularUser);
     })
-    .after(async(t) => await dropTestDB());
+    .after(async(t) => await dropTestDB(email));
 
 test(`New cluster name doesn't disappear`, async(t) => {
     const overview = new PageConfigurationOverview();

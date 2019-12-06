@@ -25,40 +25,45 @@ import {createRegularUser} from '../../roles';
 import {Paragraph, showQueryDialog, confirmClearQueryDialog} from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
 
-const user = createRegularUser();
+const email = 'query@example.com';
+let user = null;
 const notebooks = new PageQueriesNotebooksList();
 const query = `SELECT * FROM Person;`;
 const paragraph = new Paragraph('Query');
 
 fixture('Notebook')
-    .beforeEach(async(t) => {
-        await dropTestDB();
-        await insertTestUser();
+    .before(async(t) => {
+        await dropTestDB(email);
+        user = await createRegularUser(email)
     })
     .afterEach(async(t) => {
         t.ctx.ws.destroy();
-        await dropTestDB();
+    })
+    .after(async () => {
+        await dropTestDB(email);
     });
 
 test('With inactive cluster', async(t) => {
+    const testNotebookName = 'Inactive cluster notebook';
+
     await t.addRequestHooks(
         t.ctx.ws = new WebSocketHook()
-            .use(
-                agentStat(INACTIVE_CLUSTER)
-            )
+            .use(agentStat(INACTIVE_CLUSTER))
     );
 
     await t
         .useRole(user)
         .navigateTo(resolveUrl('/queries/notebooks'));
-    await notebooks.createNotebook('Foo');
-    await t.click(notebooks.getNotebookByName('Foo'));
+    await notebooks.createNotebook(testNotebookName);
+    await t.click(notebooks.getNotebookByName(testNotebookName));
     await paragraph.enterQuery(query, {replace: true});
     await t.expect(paragraph.topRightExecuteButton.withAttribute('disabled')).ok('Top right Execute button should be disabled');
     await t.expect(paragraph.bottomExecuteButton.withAttribute('disabled')).ok('Bottom Execute button should be disabled');
 });
 
 test('Sending a request', async(t) => {
+    const testNotebookName = 'Sending a request notebook';
+
     await t.addRequestHooks(
         t.ctx.ws = new WebSocketHook()
             .use(
@@ -71,8 +76,8 @@ test('Sending a request', async(t) => {
     await t
 		.useRole(user)
         .navigateTo(resolveUrl('/queries/notebooks'));
-    await notebooks.createNotebook('Foo');
-    await t.click(notebooks.getNotebookByName('Foo'));
+    await notebooks.createNotebook(testNotebookName);
+    await t.click(notebooks.getNotebookByName(testNotebookName));
     await paragraph.enterQuery(query, {replace: true});
     await t
         .click(paragraph.bottomExecuteButton)

@@ -18,21 +18,23 @@ import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtoo
 import { createRegularUser } from '../../roles';
 import { PageQueriesNotebooksList } from '../../page-models/PageQueries';
 
-const regularUser = createRegularUser();
+const email = 'notebook@example.com';
+let regularUser = null;
 const notebooksListPage = new PageQueriesNotebooksList();
 const notebookName = 'test_notebook';
 
 fixture('Checking Ignite queries notebooks list')
     .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(email);
+
+        regularUser = await createRegularUser(email);
     })
     .beforeEach(async(t) => {
         await t.useRole(regularUser);
         await t.navigateTo(resolveUrl('/queries/notebooks'));
     })
     .after(async() => {
-        await dropTestDB();
+        await dropTestDB(email);
     });
 
 test('Testing creating notebook', async(t) => {

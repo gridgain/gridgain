@@ -15,23 +15,14 @@
  */
 
 import { Selector } from 'testcafe';
-import { dropTestDB, insertTestUser, resolveUrl } from '../environment/envtools';
-import { createRegularUser } from '../roles';
+import { resolveUrl } from '../environment/envtools';
+import { immutableRole } from '../roles';
 import { queriesNavButton, configureNavButton } from '../components/topNavigation';
 
-const regularUser = createRegularUser();
-
 fixture('Checking Ingite main menu')
-    .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser);
+        await t.useRole(await immutableRole);
         await t.navigateTo(resolveUrl('/'));
-    })
-    .after(async() => {
-        await dropTestDB();
     });
 
 test('Ignite main menu smoke test', async(t) => {

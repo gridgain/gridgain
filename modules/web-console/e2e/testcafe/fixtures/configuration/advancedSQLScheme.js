@@ -29,7 +29,8 @@ import {
 import {createCacheButton} from '../../page-models/pageConfigurationAdvancedCaches'
 import {successNotification} from '../../components/notifications';
 
-const regularUser = createRegularUser();
+const email = 'advancedSQLScheme@example.com';
+let regularUser = null;
 
 const KEY_CLS = 'test.cls.name.Key';
 const VALUE_CLS = 'test.cls.name.Value';
@@ -37,15 +38,16 @@ const INVALID_TYPE = '1.type';
 
 fixture('Advanced SQL scheme configuration')
     .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(email);
+
+        regularUser = await createRegularUser(email);
     })
     .beforeEach(async(t) => {
         await t
             .useRole(regularUser)
             .navigateTo(resolveUrl('/configuration/new/advanced/models'));
     })
-    .after(async(t) => await dropTestDB());
+    .after(async(t) => await dropTestDB(email));
 
 test('Base required fields checked on save.', async(t) => {
     await t.click(createModelButton)

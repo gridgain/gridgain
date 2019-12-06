@@ -14,22 +14,15 @@
  * limitations under the License.
  */
 
-import {dropTestDB, insertTestUser, resolveUrl} from '../environment/envtools';
-import {createRegularUser} from '../roles';
+import {resolveUrl} from '../environment/envtools';
+import {immutableRole} from '../roles';
 import * as helpMenu from '../components/helpMenu';
 import {userMenu} from '../components/userMenu';
 import * as gettingStarted from '../components/gettingStartedDialog';
 
-const user = createRegularUser();
-
 fixture('Help menu')
     .beforeEach(async(t) => {
-        await dropTestDB();
-        await insertTestUser();
-        await t.useRole(user);
-    })
-    .afterEach(async(t) => {
-        await dropTestDB();
+        await t.useRole(await immutableRole);
     });
 
 test.page(resolveUrl('/'))('Help menu items', async(t) => {

@@ -29,7 +29,7 @@ const testUser = {
     industry: 'Banking'
 };
 
-const insertTestUser = (user = testUser) => {
+const insertFullTestUser = (user = testUser) => {
     return request({
         method: 'PUT',
         uri: resolveUrl('/api/v1/test/admins'),
@@ -37,6 +37,12 @@ const insertTestUser = (user = testUser) => {
         json: true
     })
         .catch((err) => {throw err.message;});
+};
+
+const insertTestUser = (email = 'a@example.com', password = 'a') => {
+    const user = Object.assign({}, testUser, {email, password});
+
+    return insertFullTestUser(user);
 };
 
 const dropTestDB = (mask = '@example.com') => {
@@ -110,4 +116,4 @@ const enableDemoMode = ClientFunction(() => {
 
 const getLocation = ClientFunction(() => document.location.href);
 
-module.exports = { insertTestUser, dropTestDB, resolveUrl, enableDemoMode, getLocation };
+module.exports = { insertTestUser, insertFullTestUser, dropTestDB, resolveUrl, enableDemoMode, getLocation };

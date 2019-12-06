@@ -15,15 +15,34 @@
  */
 
 import { Role, t } from 'testcafe';
-import { resolveUrl } from './environment/envtools';
+import { resolveUrl, insertFullTestUser, dropTestDB } from './environment/envtools';
 import {pageSignin as page} from './page-models/pageSignin';
 
+const testUserBase = {
+    firstName: 'John',
+    lastName: 'Doe',
+    company: 'TestCompany',
+    country: 'Canada',
+    industry: 'Banking'
+};
+
+export const immutableUser = Object.assign({}, testUserBase, { email: 'immutable@example.com', password: 'a' });
+
 export const createRegularUser = (login = 'a@example.com', password = 'a') => {
+    return _createRegularUser(Object.assign({}, testUserBase, { email: login, password: password }));
+};
+
+const _createRegularUser = async(user) => {
+    await dropTestDB(user.email);
+    await insertFullTestUser(user);
+
     return Role(resolveUrl('/signin'), async() => {
         await t.eval(() => window.localStorage.clear());
 
         // Disable "Getting started" modal.
         await t.eval(() => window.localStorage.showGettingStarted = 'false');
-        await page.login(login, password);
+        await page.login(user.email, user.password);
     });
 };
+
+export const immutableRole = _createRegularUser(immutableUser);

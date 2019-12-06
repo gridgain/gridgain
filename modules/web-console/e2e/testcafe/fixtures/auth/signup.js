@@ -19,14 +19,19 @@ import {pageSignup as page} from '../../page-models/pageSignup';
 import {errorNotification} from '../../components/notifications';
 import {userMenu} from '../../components/userMenu';
 
+const existEmail = 'exist.singup@exmaple.com';
+const newEmail = 'new.singup@exmaple.com';
+
 fixture('Signup')
     .page(resolveUrl('/signup'))
     .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(existEmail);
+        await dropTestDB(newEmail);
+        await insertTestUser(existEmail);
     })
     .after(async() => {
-        await dropTestDB();
+        await dropTestDB(existEmail);
+        await dropTestDB(newEmail);
     });
 
 test('Local validation', async(t) => {
@@ -46,7 +51,7 @@ test('Local validation', async(t) => {
 });
 test('Server validation', async(t) => {
     await page.fillSignupForm({
-        email: 'a@example.com',
+        email: existEmail,
         password: '1',
         passwordConfirm: '1',
         firstName: 'John',
@@ -56,12 +61,12 @@ test('Server validation', async(t) => {
     });
     await t
         .click(page.signupButton)
-        .expect(errorNotification.withText('The email address you have entered is already registered: a@example.com').exists).ok('Shows global error')
+        .expect(errorNotification.withText(`The email address you have entered is already registered: ${existEmail}`).exists).ok('Shows global error')
         .expect(page.email.getError('server').exists).ok('Marks email input as server-invalid');
 });
 test('Successful signup', async(t) => {
     await page.fillSignupForm({
-        email: 'test@example.com',
+        email: newEmail,
         password: '1',
         passwordConfirm: '1',
         firstName: 'John',

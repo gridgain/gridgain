@@ -16,6 +16,7 @@
 
 const { dropTestDB } = require('./environment/envtools');
 
+const os = require('os');
 const createTestCafe = require('testcafe');
 
 let testcafe = null;
@@ -34,6 +35,7 @@ const startTestcafe = (config) => {
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
+                    .concurrency(os.cpus().length)
                     .run({ skipJsErrors: true });
             }
             catch (err) {

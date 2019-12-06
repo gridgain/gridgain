@@ -14,24 +14,15 @@
  * limitations under the License.
  */
 
-import {dropTestDB, resolveUrl, insertTestUser} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {immutableRole} from '../../roles';
 import {userMenu} from '../../components/userMenu';
 import {pageSignin} from '../../page-models/pageSignin';
 
-const user = createRegularUser();
-
-fixture('Logout')
-    .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
-    })
-    .after(async() => {
-        await dropTestDB();
-    });
+fixture('Logout');
 
 test('Successful logout', async(t) => {
-    await t.useRole(user).navigateTo(resolveUrl('/settings/profile'));
+    await t.useRole(await immutableRole).navigateTo(resolveUrl('/settings/profile'));
     await userMenu.clickOption('Log out');
     await t.expect(pageSignin.selector.exists).ok('Goes to sign in page after logout');
 });

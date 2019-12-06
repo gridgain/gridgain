@@ -14,28 +14,23 @@
  * limitations under the License.
  */
 
-import {createRegularUser} from '../roles';
-import {dropTestDB, insertTestUser, resolveUrl} from '../environment/envtools';
+import {immutableRole} from '../roles';
+import {resolveUrl} from '../environment/envtools';
 import {connectedClustersBadge} from '../components/connectedClustersBadge';
 import {WebSocketHook} from '../mocks/WebSocketHook';
 import {agentStat, FAKE_CLUSTERS} from '../mocks/agentTasks';
 
-const user = createRegularUser();
-
 fixture('Connected clusters')
     .beforeEach(async (t) => {
-        await dropTestDB();
-        await insertTestUser();
         await t.addRequestHooks(t.ctx.ws = new WebSocketHook().use(agentStat(FAKE_CLUSTERS)));
     })
     .afterEach(async (t) => {
         t.ctx.ws.destroy();
-        await dropTestDB();
     });
 
 test('Connected clusters badge', async (t) => {
     await t
-        .useRole(user)
+        .useRole(await immutableRole)
         .navigateTo(resolveUrl('/settings/profile'))
         .expect(connectedClustersBadge.textContent).eql('My Connected Clusters: 2');
 });

@@ -20,19 +20,21 @@ import {pageProfile} from '../../page-models/pageProfile';
 import {confirmation} from '../../components/confirmation';
 import {successNotification} from '../../components/notifications';
 
-const regularUser = createRegularUser();
+const email = 'cred.change@example.com';
+let regularUser = null;
 
 fixture('Checking user credentials change')
     .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(email);
+
+        regularUser = await createRegularUser(email);
     })
     .beforeEach(async(t) => {
         await t.useRole(regularUser);
         await t.navigateTo(resolveUrl('/settings/profile'));
     })
     .after(async() => {
-        await dropTestDB();
+        await dropTestDB(email);
     });
 
 test('Testing secure token change', async(t) => {

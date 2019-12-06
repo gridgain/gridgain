@@ -18,14 +18,16 @@ import { dropTestDB, resolveUrl, insertTestUser } from '../../environment/envtoo
 import {errorNotification} from '../../components/notifications';
 import {pageForgotPassword as page} from '../../page-models/pageForgotPassword';
 
+const email = 'reset@example.com';
+
 fixture('Password reset')
     .page(resolveUrl('/forgot-password'))
     .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(email);
+        await insertTestUser(email);
     })
     .after(async() => {
-        await dropTestDB();
+        await dropTestDB(email);
     });
 
 test('Incorrect email', async(t) => {
@@ -45,7 +47,7 @@ test('Unknown email', async(t) => {
 // TODO: IGNITE-8028 Implement this test as unit test.
 test.skip('Successful reset', async(t) => {
     await t
-        .typeText(page.email.control, 'a@example.com', {replace: true})
+        .typeText(page.email.control, email, {replace: true})
         .click(page.remindPasswordButton)
         .expect(page.email.getError('server').exists).notOk('No errors happen');
 });

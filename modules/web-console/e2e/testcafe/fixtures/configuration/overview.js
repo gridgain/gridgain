@@ -27,19 +27,21 @@ import {successNotification} from '../../components/notifications';
 import * as models from '../../page-models/pageConfigurationAdvancedModels';
 import {configureNavButton} from '../../components/topNavigation';
 
-const regularUser = createRegularUser();
+const email = 'cfg-overview@example.com';
+let regularUser = null;
 
 const repeat = (times, fn) => [...Array(times).keys()].reduce((acc, i) => acc.then(() => fn(i)), Promise.resolve());
 
 fixture('Configuration overview')
     .before(async(t) => {
-        await dropTestDB();
-        await insertTestUser();
+        await dropTestDB(email);
+
+        regularUser = await createRegularUser(email);
     })
     .beforeEach(async(t) => {
         await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`));
     })
-    .after(async(t) => await dropTestDB());
+    .after(async(t) => await dropTestDB(email));
 
 const overviewPage = new PageConfigurationOverview();
 const basicConfigPage = new PageConfigurationBasic();

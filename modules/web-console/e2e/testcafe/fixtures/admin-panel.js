@@ -16,22 +16,13 @@
 
 import { Selector } from 'testcafe';
 import { AngularJSSelector } from 'testcafe-angular-selectors';
-import { dropTestDB, insertTestUser, resolveUrl } from '../environment/envtools';
-import { createRegularUser } from '../roles';
-
-const regularUser = createRegularUser();
+import { resolveUrl } from '../environment/envtools';
+import { immutableRole } from '../roles';
 
 fixture('Checking admin panel')
-    .before(async() => {
-        await dropTestDB();
-        await insertTestUser();
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser);
+        await t.useRole(await immutableRole);
         await t.navigateTo(resolveUrl('/settings/admin'));
-    })
-    .after(async() => {
-        await dropTestDB();
     });
 
 const setNotificationsButton = Selector('button').withText('Set user notifications');

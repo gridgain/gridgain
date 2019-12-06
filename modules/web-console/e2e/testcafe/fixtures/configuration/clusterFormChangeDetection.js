@@ -23,17 +23,19 @@ import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfigurat
 import {confirmation} from '../../components/confirmation';
 import {scrollIntoView} from '../../helpers';
 
-const regularUser = createRegularUser();
+const email = 'changeDetection@example.com';
+let regularUser = null;
 
 fixture('Cluster configuration form change detection')
     .before(async() => {
         await dropTestDB();
-        await insertTestUser();
+
+        regularUser = await createRegularUser(email);
     })
     .beforeEach(async(t) => {
         await t.useRole(regularUser);
     })
-    .after(async(t) => await dropTestDB());
+    .after(async(t) => await dropTestDB(email));
 
 test.skip('New cluster change detection', async(t) => {
     const overview = new PageConfigurationOverview();

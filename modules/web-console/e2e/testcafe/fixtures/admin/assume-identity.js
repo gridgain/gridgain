@@ -15,25 +15,20 @@
  */
 
 import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtools';
-import { createRegularUser } from '../../roles';
+import { immutableRole } from '../../roles';
 import * as admin from '../../page-models/pageAdminListOfRegisteredUsers';
 import {pageProfile as profile} from '../../page-models/pageProfile';
 import * as notifications from '../../components/permanentNotifications';
 import {userMenu} from '../../components/userMenu';
 
-const regularUser = createRegularUser();
-
 fixture('Assumed identity')
     .beforeEach(async(t) => {
-        await dropTestDB();
         await dropTestDB(admin.TEST_USER.email);
-        await insertTestUser();
         await insertTestUser(admin.TEST_USER);
-        await t.useRole(regularUser);
+        await t.useRole(await immutableRole);
     })
     .afterEach(async() => {
         await dropTestDB(admin.TEST_USER.email);
-        await dropTestDB();
     });
 
 test('Become user', async(t) => {

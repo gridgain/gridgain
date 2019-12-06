@@ -25,12 +25,15 @@ import {createRegularUser} from '../../roles';
 import {Paragraph, showStacktraceDialog} from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
 
-const user = createRegularUser();
+const email = 'query.error@example.com';
+let user = null;
 
 fixture('Notebook')
+    .before(async() => {
+        await dropTestDB(email);
+        user = await createRegularUser(email);
+    })
     .beforeEach(async(t) => {
-        await dropTestDB();
-        await insertTestUser();
         await t.addRequestHooks(
             t.ctx.ws = new WebSocketHook()
                 .use(
@@ -42,7 +45,7 @@ fixture('Notebook')
     })
     .afterEach(async(t) => {
         t.ctx.ws.destroy();
-        await dropTestDB();
+        await dropTestDB(email);
     });
 
 test('Show stack trace on query failure.', async(t) => {

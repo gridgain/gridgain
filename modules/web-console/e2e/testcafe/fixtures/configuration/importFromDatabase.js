@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {immutableRole} from '../../roles';
 import {
     agentStat,
     AGENT_ONLY_NO_CLUSTER,
@@ -27,17 +27,10 @@ import {WebSocketHook} from '../../mocks/WebSocketHook';
 import {importDBButton, importDBDialog} from '../../page-models/importFromDatabaseDialog'
 import {errorNotification} from '../../components/notifications';
 
-const regularUser = createRegularUser();
-
 fixture('Import from database dialog')
-    .before(async(t) => {
-        await dropTestDB();
-        await insertTestUser();
-    })
     .beforeEach(async(t) =>
-        await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`))
-    )
-    .after(async(t) => await dropTestDB());
+        await t.useRole(await immutableRole).navigateTo(resolveUrl(`/configuration/overview`))
+    );
 
 test('Dialog has valid state when JDBC drivers are not available', async(t) => {
     await t.addRequestHooks(
