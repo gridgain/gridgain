@@ -2288,14 +2288,21 @@ public class IgniteTxHandler {
      * Applies partition counter updates for transactions.
      * <p>
      * Called after entries are written to WAL on commit or during rollback to close gaps in update counter sequence.
+     * <p>
+     * On rollback counters should be applied on the primary only after backup nodes, otherwise if the primary fail
+     * before sending rollback requests to backups remote transactions can be committed by recovery protocol and
+     * partition consistency will not be restored when primary returns to the grid because RollbackRecord was written
+     * (actual for persistent mode only).
      *
      * @param counters Counter values to be updated.
      * @param rollback {@code True} if applied during rollbacks.
      * @param rollbackOnPrimary {@code True} if rollback happens on primary node. Passed to CQ engine.
      */
-    public void applyPartitionsUpdatesCounters(Iterable<PartitionUpdateCountersMessage> counters,
+    public void applyPartitionsUpdatesCounters(
+        Iterable<PartitionUpdateCountersMessage> counters,
         boolean rollback,
-        boolean rollbackOnPrimary) throws IgniteCheckedException {
+        boolean rollbackOnPrimary
+    ) throws IgniteCheckedException {
         if (counters == null)
             return;
 
@@ -2356,7 +2363,7 @@ public class IgniteTxHandler {
                         invalid = true;
                     }
 
-                    if (invalid && log.isDebugEnabled()) {
+                    if (log.isDebugEnabled() && invalid) {
                         log.debug("Received partition update counters message for invalid partition, ignoring: " +
                             "[cacheId=" + counter.cacheId() + ", part=" + counter.partition(i) + ']');
                     }

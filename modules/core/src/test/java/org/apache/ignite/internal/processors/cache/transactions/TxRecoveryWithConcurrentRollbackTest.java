@@ -19,12 +19,10 @@ package org.apache.ignite.internal.processors.cache.transactions;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
-import java.util.function.Function;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -36,9 +34,6 @@ import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecove
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionState;
@@ -47,6 +42,7 @@ import org.junit.Test;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
@@ -55,14 +51,19 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
  */
 public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest {
     /** Backups. */
-    private int backups = 1;
+    private int backups;
 
     /** Persistence. */
-    private boolean persistence = false;
+    private boolean persistence;
+
+    /** Sync mode. */
+    private CacheWriteSynchronizationMode syncMode;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         final IgniteConfiguration cfg = super.getConfiguration(name);
+
+        cfg.setConsistentId(name);
 
         if (persistence) {
             cfg.setDataStorageConfiguration(
@@ -77,11 +78,12 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         cfg.setActiveOnStart(false);
         cfg.setClientMode("client".equals(name));
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
             setCacheMode(PARTITIONED).
             setBackups(backups).
             setAtomicityMode(TRANSACTIONAL).
-            setWriteSynchronizationMode(FULL_SYNC));
+            setWriteSynchronizationMode(syncMode));
 
         return cfg;
     }
@@ -109,7 +111,7 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
      * Expected result: both DHT transactions produces same COMMITTED state on tx finish.
      * */
     @Test
-    public void testRecoveryNotBreakingTxAtomicity() throws Exception {
+    public void testRecoveryNotBreakingTxAtomicityOnNearFail() throws Exception {
         backups = 1;
         persistence = false;
 
@@ -204,15 +206,28 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         assertEquals(s1, s2);
     }
 
+    /** */
+    @Test
+    public void testRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail_FULL_SYNC() throws Exception {
+        doTestRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail(FULL_SYNC);
+    }
+
+    /** */
+    @Test
+    public void testRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail_PRIMARY_SYNC() throws Exception {
+        doTestRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail(PRIMARY_SYNC);
+    }
+
     /**
-     * Stop near and primary node after primary tx rolled back with enabled persistence.
+     * Stop near and primary node after primary tx is rolled back with enabled persistence.
      * <p>
      * Expected result: after restarting a primary partitions are consistent.
      */
-    @Test
-    public void testRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail() throws Exception {
+    private void doTestRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail(CacheWriteSynchronizationMode syncMode)
+        throws Exception {
         backups = 2;
         persistence = true;
+        this.syncMode = syncMode;
 
         final IgniteEx node0 = startGrids(3);
         node0.cluster().active(true);
@@ -237,32 +252,21 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
             tx0 = txs(grid(0));
             tx2 = txs(grid(2));
 
-            TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-                @Override public boolean apply(ClusterNode node, Message msg) {
-                    return msg instanceof GridDhtTxFinishRequest;
-                }
-            });
+            TestRecordingCommunicationSpi.spi(grid(1)).blockMessages((node, msg) -> msg instanceof GridDhtTxFinishRequest);
 
-            fut = runAsync(new Callable<Void>() {
-                @Override public Void call() throws Exception {
-                    TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked(2);
+            fut = runAsync(() -> {
+                TestRecordingCommunicationSpi.spi(grid(1)).waitForBlocked(2);
 
-                    final List<IgniteInternalTx> txs = txs(grid(1));
+                client.close();
+                grid(1).close();
 
-                    client.close();
-                    grid(1).close();
-
-                    return null;
-                }
+                return null;
             });
 
             tx.rollback();
-
-            fail();
         }
         catch (Exception e) {
-            // Expected.
-            System.out.println();
+            // No-op.
         }
 
         fut.get();
@@ -273,10 +277,11 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         final IgniteInternalTx tx_2 = tx2.get(0);
         tx_2.finishFuture().get();
 
-        final TransactionState s1 = tx_0.state();
-        final TransactionState s2 = tx_2.state();
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
 
         startGrid(1);
+
+        awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
