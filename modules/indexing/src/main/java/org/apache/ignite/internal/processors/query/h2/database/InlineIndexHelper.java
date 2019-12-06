@@ -60,6 +60,9 @@ public class InlineIndexHelper {
     private static final ThreadLocal<GridTuple<List<InlineIndexHelper>>> CUR_HELPER =
         ThreadLocal.withInitial(GridTuple::new);
 
+    /** Max number of significant digits that float can represent */
+    private static final int MAX_FLOAT_PRECISION = 7;
+
     /** */
     public static final List<Integer> AVAILABLE_TYPES = Arrays.asList(
         Value.BOOLEAN,
@@ -77,7 +80,8 @@ public class InlineIndexHelper {
         Value.STRING_FIXED,
         Value.STRING_IGNORECASE,
         Value.BYTES,
-        Value.JAVA_OBJECT
+        Value.JAVA_OBJECT,
+        Value.DECIMAL
     );
 
     /** */
@@ -141,6 +145,7 @@ public class InlineIndexHelper {
                 break;
 
             case Value.FLOAT:
+            case Value.DECIMAL:
                 this.size = 4;
                 break;
 
@@ -324,6 +329,8 @@ public class InlineIndexHelper {
             case Value.JAVA_OBJECT:
                 return ValueJavaObject.getNoCopy(null, readBytes(pageAddr, off), null);
 
+            case Value.DECIMAL:
+                return null;
             default:
                 throw new UnsupportedOperationException("no get operation for fast index type " + type);
         }
@@ -348,6 +355,9 @@ public class InlineIndexHelper {
             case Value.SHORT:
             case Value.LONG:
                 return true;
+
+            case Value.DECIMAL:
+                return false;
 
             case Value.STRING:
             case Value.STRING_FIXED:
@@ -425,6 +435,7 @@ public class InlineIndexHelper {
             case Value.LONG:
             case Value.FLOAT:
             case Value.DOUBLE:
+            case Value.DECIMAL:
                 return compareAsPrimitive(pageAddr, off, v, type);
 
             case Value.TIME:
@@ -572,6 +583,14 @@ public class InlineIndexHelper {
                     float float2 = v.getFloat();
 
                     return fixSort(Float.compare(float1, float2), sortType());
+                case Value.DECIMAL:
+                    float1 = Float.intBitsToFloat(PageUtils.getInt(pageAddr, off + 1));
+                    if (float1 == Float.MAX_VALUE || float1 == Float.MIN_VALUE)
+                        return CANT_BE_COMPARE;
+                    else {
+                        float2 = v.getFloat();
+                        return fixSort(Float.compare(float1, float2), sortType());
+                    }
 
                 case Value.DOUBLE:
                     double double1 = Double.longBitsToDouble(PageUtils.getLong(pageAddr, off + 1));
@@ -843,6 +862,7 @@ public class InlineIndexHelper {
             case Value.DATE:
             case Value.TIMESTAMP:
             case Value.UUID:
+            case Value.DECIMAL:
                 return size + 1;
 
             case Value.STRING:
@@ -911,11 +931,19 @@ public class InlineIndexHelper {
                 PageUtils.putLong(pageAddr, off + 1, val.getLong());
                 return size + 1;
 
-            case Value.FLOAT: {
+            case Value.FLOAT:
                 PageUtils.putByte(pageAddr, off, (byte)valType);
                 PageUtils.putInt(pageAddr, off + 1, Float.floatToIntBits(val.getFloat()));
                 return size + 1;
-            }
+
+            case Value.DECIMAL:
+                float fl = val.getFloat();
+                if (val.getBigDecimal().stripTrailingZeros().precision() > MAX_FLOAT_PRECISION)
+                    fl = fl < 0 ? Float.MIN_VALUE : Float.MAX_VALUE;
+
+                PageUtils.putByte(pageAddr, off, (byte)valType);
+                PageUtils.putInt(pageAddr, off + 1, Float.floatToIntBits(fl));
+                return size + 1;
 
             case Value.DOUBLE: {
                 PageUtils.putByte(pageAddr, off, (byte)valType);
@@ -1061,6 +1089,8 @@ public class InlineIndexHelper {
                 }
 
                 return true;
+            case Value.DECIMAL:
+                return false;
 
             default:
                 return true;

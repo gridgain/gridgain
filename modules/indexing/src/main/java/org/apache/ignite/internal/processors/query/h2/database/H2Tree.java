@@ -222,13 +222,22 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 : wrappedColsInfo.inlineIdx();
 
             boolean inlineObjSupported = inlineSize > 0 && inlineObjectSupported(metaInfo, inlineIdxs0);
+            boolean inlineDcSupported = inlineSize > 0 && metaInfo.flagsSupported() && metaInfo.inlineDecimalSupported();
 
-            inlineIdxs = inlineObjSupported ? inlineIdxs0 : inlineIdxs0.stream()
-                .filter(ih -> ih.type() != Value.JAVA_OBJECT)
-                .collect(Collectors.toList());
+            if (!inlineObjSupported || !inlineDcSupported) {
+                boolean dc = false;
+                while (inlineIdxs0.iterator().hasNext()) {
+                    InlineIndexHelper ih = inlineIdxs0.iterator().next();
+                    if (!inlineDcSupported && ih.type() == Value.DECIMAL)
+                        dc = true;
+                    if (dc || (!inlineObjSupported && ih.type() == Value.JAVA_OBJECT))
+                        inlineIdxs0.iterator().remove();
+                }
+            }
+            inlineIdxs = inlineIdxs0;
 
             if (!metaInfo.flagsSupported())
-                upgradeMetaPage(inlineObjSupported);
+                upgradeMetaPage(inlineObjSupported, inlineDcSupported);
         }
         else {
             unwrappedPk = true;
@@ -415,9 +424,10 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * and created product version on root meta page).
      *
      * @param inlineObjSupported inline POJO by created tree flag.
+     * @param inlineDcSupported inline decimal by created tree flag.
      * @throws IgniteCheckedException On error.
      */
-    private void upgradeMetaPage(boolean inlineObjSupported) throws IgniteCheckedException {
+    private void upgradeMetaPage(boolean inlineObjSupported, boolean inlineDcSupported) throws IgniteCheckedException {
         final long metaPage = acquirePage(metaPageId);
 
         try {
@@ -427,7 +437,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 U.hexLong(metaPageId) + ']';
 
             try {
-                BPlusMetaIO.upgradePageVersion(pageAddr, inlineObjSupported, false, pageSize());
+                BPlusMetaIO.upgradePageVersion(pageAddr, inlineObjSupported, inlineDcSupported, false, pageSize());
 
                 if (wal != null)
                     wal.log(new PageSnapshot(new FullPageId(metaPageId, grpId),
@@ -716,6 +726,9 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         Boolean inlineObjectSupported;
 
         /** */
+        Boolean inlineDecimalSupported;
+
+        /** */
         IgniteProductVersion createdVer;
 
         /**
@@ -727,8 +740,10 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             useUnwrappedPk = io.unwrappedPk(pageAddr);
             flagsSupported = io.supportFlags();
 
-            if (flagsSupported)
+            if (flagsSupported) {
                 inlineObjectSupported = io.inlineObjectSupported(pageAddr);
+                inlineDecimalSupported = io.inlineDecimalSupported(pageAddr);
+            }
 
             createdVer = io.createdVersion(pageAddr);
         }
@@ -759,6 +774,13 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
          */
         public boolean inlineObjectSupported() {
             return inlineObjectSupported;
+        }
+
+        /**
+         * @return {@code true} In case inline decimal is supported.
+         */
+        public boolean inlineDecimalSupported() {
+            return inlineDecimalSupported;
         }
     }
 

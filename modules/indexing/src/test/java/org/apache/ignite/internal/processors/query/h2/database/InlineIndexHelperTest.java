@@ -17,6 +17,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.database;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -39,6 +40,7 @@ import org.h2.value.ValueBoolean;
 import org.h2.value.ValueByte;
 import org.h2.value.ValueBytes;
 import org.h2.value.ValueDate;
+import org.h2.value.ValueDecimal;
 import org.h2.value.ValueDouble;
 import org.h2.value.ValueFloat;
 import org.h2.value.ValueInt;
@@ -473,6 +475,83 @@ public class InlineIndexHelperTest extends AbstractIndexingCommonTest {
             assertTrue(ih.isValueFull(pageAddr, off));
 
             assertTrue(Arrays.equals(new byte[] {1, 2, 3, 4, 5}, ih.get(pageAddr, off, maxSize).getBytes()));
+        }
+        finally {
+            if (page != 0L)
+                pageMem.releasePage(CACHE_ID, pageId, page);
+            pageMem.stop(true);
+        }
+    }
+
+
+    /** */
+    @Test
+    public void testDecimal() throws Exception {
+        DataRegionConfiguration plcCfg = new DataRegionConfiguration().setInitialSize(1024 * MB)
+            .setMaxSize(1024 * MB);
+
+        PageMemory pageMem = new PageMemoryNoStoreImpl(log(),
+            new UnsafeMemoryProvider(log()),
+            null,
+            PAGE_SIZE,
+            plcCfg,
+            new LongAdderMetric("NO_OP", null),
+            false);
+
+        pageMem.start();
+
+        long pageId = 0L;
+        long page = 0L;
+
+        try {
+            pageId = pageMem.allocatePage(CACHE_ID, 1, PageIdAllocator.FLAG_DATA);
+            page = pageMem.acquirePage(CACHE_ID, pageId);
+            long pageAddr = pageMem.readLock(CACHE_ID, pageId, page);
+            int off = 0;
+            int maxSize = 5;
+
+            InlineIndexHelper ih = new InlineIndexHelper("", Value.DECIMAL, 1, 0,
+                CompareMode.getInstance(null, 0));
+
+            /* correct positive value */
+            ValueDecimal v1 = ValueDecimal.get(BigDecimal.valueOf(123456.7));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(0, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
+
+            /* correct negative value */
+            v1 = ValueDecimal.get(BigDecimal.valueOf(-123456.7));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(0, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
+
+            /* correct int value */
+            v1 = ValueDecimal.get(BigDecimal.valueOf(1234567));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(0, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
+
+            /* correct small value */
+            v1 = ValueDecimal.get(BigDecimal.valueOf(0.1234567));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(0, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
+
+            /* trim insignificant zeros */
+            v1 = ValueDecimal.get(BigDecimal.valueOf(000.1234567000000));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(0, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
+
+            /* long positive value */
+            v1 = ValueDecimal.get(BigDecimal.valueOf(123456.78));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(InlineIndexHelper.CANT_BE_COMPARE, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
+
+            /* long negative value */
+            v1 = ValueDecimal.get(BigDecimal.valueOf(-123456.78));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(InlineIndexHelper.CANT_BE_COMPARE, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
+
+            /* long small value */
+            v1 = ValueDecimal.get(BigDecimal.valueOf(0.12345678));
+            ih.put(pageAddr, off, v1, maxSize);
+            assertEquals(InlineIndexHelper.CANT_BE_COMPARE, ih.compare(pageAddr, 0, maxSize, v1, ALWAYS_FAILS_COMPARATOR));
         }
         finally {
             if (page != 0L)
