@@ -139,7 +139,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
                 if (thread.getIgniteInstanceName().endsWith(String.valueOf(RESTARTED_NODE_NUM))
                     && blockDestroy.compareAndSet(true, false))
-                    throw new RuntimeException("Aborting destroy.");
+                    throw new RuntimeException("Aborting destroy (test).");
             }
         };
 
@@ -217,6 +217,10 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         // Now checkpoint will happen during index deletion before it completes.
         forceCheckpoint();
 
+        Ignite aliveNode = grid(ALWAYS_ALIVE_NODE_NUM);
+
+        IgniteCache<Integer, Integer> cacheOnAliveNode = aliveNode.cache(DEFAULT_CACHE_NAME);
+
         if (rebalance) {
             startGrid(nodeCnt);
 
@@ -236,18 +240,14 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
             awaitPartitionMapExchange();
 
+            checkSelectAndPlan(cacheOnAliveNode, false);
+
             if (checkWhenOneNodeStopped) {
-                Ignite aliveNode = grid(ALWAYS_ALIVE_NODE_NUM);
+                createIndex(cacheOnAliveNode, multicolumn);
 
-                cache = aliveNode.cache(DEFAULT_CACHE_NAME);
+                checkSelectAndPlan(cacheOnAliveNode, true);
 
-                checkSelectAndPlan(cache, false);
-
-                createIndex(cache, multicolumn);
-
-                checkSelectAndPlan(cache, true);
-
-                query(cache, "drop index t_idx");
+                query(cacheOnAliveNode, "drop index t_idx");
 
                 forceCheckpoint(aliveNode);
 
@@ -266,9 +266,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             if (checkWhenOneNodeStopped)
                 ignite.cluster().active(true);
 
-            cache = grid(ALWAYS_ALIVE_NODE_NUM).cache(DEFAULT_CACHE_NAME);
-
-            checkSelectAndPlan(cache, false);
+            checkSelectAndPlan(cacheOnAliveNode, false);
         }
         else
             dropIdx.join();
@@ -276,12 +274,16 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         if (!restart)
             assertTrue(idxDropProcLsnr.check());
 
+        cache = grid(RESTARTED_NODE_NUM).cache(DEFAULT_CACHE_NAME);
+
         checkSelectAndPlan(cache, false);
+        checkSelectAndPlan(cacheOnAliveNode, false);
 
         //Trying to recreate index.
         createIndex(cache, multicolumn);
 
         checkSelectAndPlan(cache, true);
+        checkSelectAndPlan(cacheOnAliveNode, true);
 
         forceCheckpoint();
 
