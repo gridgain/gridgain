@@ -75,6 +75,7 @@ import org.apache.ignite.plugin.PluginProvider;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -1034,7 +1035,7 @@ class ClusterCachesInfo {
                 Stream.concat(
                     cachesOnDisconnect.caches.values().stream(),
                     cachesOnDisconnect.templates.values().stream()
-                ).collect(Collectors.toMap(
+                ).collect(toMap(
                     DynamicCacheDescriptor::cacheName,
                     desc -> {
                         // Preserve static configuration flag if cache is locally configured.
@@ -1067,6 +1068,11 @@ class ClusterCachesInfo {
         }
     }
 
+    /**
+     * Filters discovery data to send through cluster using pending tasks filter.
+     * @param joinDiscoData Discovery data.
+     * @return Filtered discovery data.
+     */
     private CacheJoinNodeDiscoveryData filterJoinNodeDiscoveryData(CacheJoinNodeDiscoveryData joinDiscoData) {
         Collection<AbstractNodePendingTask> tasks = ctx.cache().nodePendingTasks();
 
@@ -1082,7 +1088,7 @@ class ClusterCachesInfo {
             if (discoveryInfo != null) {
                 CacheDiscoveryInfo filteredDiscoveryInfo = new CacheDiscoveryInfo(
                     discoveryInfo.deploymentId(),
-                    task.changedCacheData(),
+                    task.filterCacheData(discoveryInfo.cacheData()),
                     discoveryInfo.cacheType(),
                     discoveryInfo.flags()
                 );

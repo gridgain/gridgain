@@ -15,7 +15,9 @@
  */
 package org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask;
 
+import org.apache.ignite.internal.processors.cache.StoredCacheData;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaAbstractOperation;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Abstract pending task for SQL schema changing operation.
@@ -38,7 +40,14 @@ public abstract class AbstractSchemaChangePendingTask extends AbstractNodePendin
      * Constructor.
      * @param schemaOperation Schema operation.
      */
-    protected AbstractSchemaChangePendingTask(SchemaAbstractOperation schemaOperation) {
+    protected AbstractSchemaChangePendingTask(SchemaAbstractOperation schemaOperation, StoredCacheData cacheData) {
+        super(cacheData);
+
         this.schemaOperation = schemaOperation;
+    }
+
+    /** {@inheritDoc} */
+    public String toString() {
+        return S.toString(AbstractSchemaChangePendingTask.class, this);
     }
 }

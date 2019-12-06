@@ -1588,8 +1588,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         GridCacheContextInfo cacheInfo = idx.registeredCacheInfo(cacheName);
 
-        log.info("Started schema operation=" + op + ", cacheInfo=" + cacheInfo + ", depId=" + depId + ", cacheInfoDepId=" + cacheInfo.dynamicDeploymentId() + ", depIdEqual=" + F.eq(depId, cacheInfo.dynamicDeploymentId()));
-
         if (cacheInfo == null || !F.eq(depId, cacheInfo.dynamicDeploymentId()))
             throw new SchemaOperationException(SchemaOperationException.CODE_CACHE_NOT_FOUND, cacheName);
 
@@ -3183,6 +3181,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         return (key & cacheIdShifted) == cacheIdShifted;
     }
+
     /**
      * Schema operation.
      */

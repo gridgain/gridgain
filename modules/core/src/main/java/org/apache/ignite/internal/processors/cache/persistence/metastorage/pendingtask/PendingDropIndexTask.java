@@ -43,14 +43,17 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
     }
 
     /** */
-    public PendingDropIndexTask(SchemaIndexDropOperation operation, StoredCacheData originalCacheData) {
-        super(operation);
+    public PendingDropIndexTask(SchemaIndexDropOperation operation, StoredCacheData cacheData) {
+        super(operation, cacheData);
+    }
 
-        changedCacheData = new StoredCacheData(originalCacheData);
+    /** {@inheritDoc} */
+    @Override public StoredCacheData filterCacheData(StoredCacheData cacheData) {
+        StoredCacheData filteredCacheData = new StoredCacheData(cacheData);
 
         SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)schemaOperation;
 
-        for (QueryEntity queryEntity : changedCacheData.queryEntities()) {
+        for (QueryEntity queryEntity : storedCacheData.queryEntities()) {
             List<QueryIndex> idxs = new LinkedList<>();
 
             for (QueryIndex idx : queryEntity.getIndexes()) {
@@ -60,6 +63,8 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
 
             queryEntity.setIndexes(idxs);
         }
+
+        return filteredCacheData;
     }
 
     /** {@inheritDoc} */
@@ -71,7 +76,7 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
 
     /** {@inheritDoc} */
     @Override public void execute(GridKernalContext ctx) {
-        String cacheName = changedCacheData.config().getName();
+        String cacheName = storedCacheData.config().getName();
 
         GridCacheContextInfo cacheInfo = ctx.query().getIndexing().registeredCacheInfo(cacheName);
 
@@ -93,8 +98,6 @@ public class PendingDropIndexTask extends AbstractSchemaChangePendingTask {
         }
 
         ctx.query().onLocalOperationFinished(op0, type);
-
-        ctx.cache().removeNodePendingTask(this);
     }
 
     /** {@inheritDoc} */

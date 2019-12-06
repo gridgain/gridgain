@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.cache.persistence.metastorage.pend
 
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
-import org.apache.ignite.internal.processors.cache.StoredCacheData;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaAbstractOperation;
 import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexDropOperation;
 import org.apache.ignite.internal.util.typedef.F;
@@ -43,18 +42,18 @@ public class NodePendingTaskFactory {
      * @return Pending task object, or {@code null} if pending task creation is not needed.
      */
     public @Nullable AbstractNodePendingTask buildTaskIfNeeded(SchemaAbstractOperation operation, IgniteUuid deploymentId) {
+        DynamicCacheDescriptor cacheDesc = ctx.cache().cacheDescriptor(operation.cacheName());
+
+        if (cacheDesc == null
+            || !F.eq(cacheDesc.deploymentId(), deploymentId)
+            || !operation.schemaName().equals(cacheDesc.cacheConfiguration().getSqlSchema()))
+            return null;
+
         if (operation instanceof SchemaIndexDropOperation) {
-            SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)operation;
-
-            DynamicCacheDescriptor cacheDesc = ctx.cache().cacheDescriptor(op0.cacheName());
-
-            if (cacheDesc != null && F.eq(cacheDesc.deploymentId(), deploymentId)) {
-                StoredCacheData cacheData = cacheDesc.toStoredData(ctx.cache().splitter());
-
-                AbstractNodePendingTask task = new PendingDropIndexTask(op0, cacheData);
-
-                return task;
-            }
+            return new PendingDropIndexTask(
+                (SchemaIndexDropOperation)operation,
+                cacheDesc.toStoredData(ctx.cache().splitter())
+            );
         }
 
         return null;

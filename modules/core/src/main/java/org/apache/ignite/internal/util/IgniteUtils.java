@@ -11972,7 +11972,14 @@ public abstract class IgniteUtils {
         }
     }
 
-    public static void awaitForWorkersStop(boolean cancel, Collection<GridWorker> workers, IgniteLogger log) {
+    /**
+     * Stops workers from given collection and waits for their completion.
+     *
+     * @param workers Workers collection.
+     * @param cancel Wheter should cancel workers.
+     * @param log Logger.
+     */
+    public static void awaitForWorkersStop(Collection<GridWorker> workers, boolean cancel, IgniteLogger log) {
         for (GridWorker worker : workers) {
             try {
                 if (cancel)

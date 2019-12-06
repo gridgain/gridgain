@@ -908,7 +908,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @return Tree meta data.
      * @throws IgniteCheckedException If failed.
      */
-    private TreeMetaData treeMeta(long metaPageAddr) throws IgniteCheckedException {
+    private TreeMetaData treeMeta(final long metaPageAddr) throws IgniteCheckedException {
         TreeMetaData meta0 = treeMeta;
 
         if (meta0 != null)
@@ -987,7 +987,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * meta page and get meta page address. Otherwise we will not do the lock and will use the given address.
      * @return Page ID.
      */
-    private long getFirstPageId(long metaId, long metaPage, int lvl, long metaPageAddr) {
+    private long getFirstPageId(long metaId, long metaPage, int lvl, final long metaPageAddr) {
         long pageAddr = metaPageAddr != 0L ? metaPageAddr : readLock(metaId, metaPage); // Meta can't be removed.
 
         try {
@@ -2478,7 +2478,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      *     used as metadata storage, or {@code -1} if we don't have a reuse list and did not do recycling at all.
      * @throws IgniteCheckedException If failed.
      */
-    public long destroy(IgniteInClosure<L> c) throws IgniteCheckedException {
+    public final long destroy(IgniteInClosure<L> c) throws IgniteCheckedException {
         if (!markDestroyed())
             return 0;
 
@@ -2637,7 +2637,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 lockHoldStartTime.set(U.currentTimeMillis());
             }
-
         }
         finally {
             releasePage(pageId, page);
@@ -2655,7 +2654,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /**
      * @return {@code True} if state was changed.
      */
-    protected boolean markDestroyed() {
+    private boolean markDestroyed() {
         return destroyed.compareAndSet(false, true);
     }
 

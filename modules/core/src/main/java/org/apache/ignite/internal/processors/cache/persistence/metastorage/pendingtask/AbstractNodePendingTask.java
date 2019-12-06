@@ -30,23 +30,33 @@ public abstract class AbstractNodePendingTask implements Serializable {
     private static final long serialVersionUID = 0L;
 
     /**
-     * Pending task can change the configuration of persistent cache. In this case in this field should be stored
-     * changed {@link StoredCacheData}, which is used to send cache discovery information through cluster
-     * after node start, but before pending task is completed.
+     * Stored cache data.
      */
-    protected StoredCacheData changedCacheData;
+    protected StoredCacheData storedCacheData;
 
     /** */
     protected AbstractNodePendingTask() {
         /* No op. */
     }
 
+    /** */
+    protected AbstractNodePendingTask(StoredCacheData cacheData) {
+        storedCacheData = cacheData;
+    }
+
     /**
      * @return Changed cache data.
      */
     public StoredCacheData changedCacheData() {
-        return changedCacheData;
+        return storedCacheData;
     }
+
+    /**
+     * Pending task in some cases can change the configuration of persistent cache. In this case this method
+     * should filter {@link StoredCacheData}, before it will be sent through cluster within node join process
+     * when pending task is still not completed.
+     */
+    public abstract StoredCacheData filterCacheData(StoredCacheData cacheData);
 
     /**
      * Short name of pending task is used to build metastorage key for saving this task.

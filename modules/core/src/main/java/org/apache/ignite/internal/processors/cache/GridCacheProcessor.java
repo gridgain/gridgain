@@ -208,7 +208,8 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /** MBean group for cache group metrics */
     private static final String CACHE_GRP_METRICS_MBEAN_GRP = "Cache groups";
 
-    private static final String STORE_PENDING_DELETE_PREFIX = "metastorage-pending-delete-";
+    /** Prefix for metastorage keys for pending tasks. */
+    private static final String STORE_PENDING_TASK_PREFIX = "metastorage-pending-task-";
 
     /** Shared cache context. */
     private GridCacheSharedContext<?, ?> sharedCtx;
@@ -276,13 +277,13 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /** Metastorage synchronization mutex. */
     private final Object metaStorageMux = new Object();
 
-    /** */
-    private final Set<GridWorker> asyncSchemaWorkers = new GridConcurrentHashSet<>();
+    /** Set of workers that executing pending tasks. */
+    private final Set<GridWorker> asyncPendingTaskWorkers = new GridConcurrentHashSet<>();
 
-    /** */
+    /** Count of workers that executing pending tasks. */
     private final AtomicInteger asyncSchemaWorkersCnt = new AtomicInteger(0);
 
-    /** */
+    /** Pending tasks map. */
     private final ConcurrentHashMap<String, AbstractNodePendingTask> pendingTasks = new ConcurrentHashMap<>();
 
     /**
@@ -671,7 +672,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      * @param task Task.
      */
     private void asyncPendingTaskWorker(AbstractNodePendingTask task) {
-        String workerName = "async-schema-cleanup-task-" + asyncSchemaWorkersCnt.getAndIncrement();
+        String workerName = "async-pending-task-executor-" + asyncSchemaWorkersCnt.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
             @Override protected void body() {
@@ -680,20 +681,20 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
                     task.execute(ctx);
 
-                    removeNodePendingTask(task);
-
                     log.info("Execution of pending task completed: " + task.shortName());
                 }
                 catch (Exception e) {
                     log.warning("Could not execute pending task: " + task.shortName(), e);
                 }
                 finally {
-                    asyncSchemaWorkers.remove(this);
+                    removeNodePendingTask(task);
+
+                    asyncPendingTaskWorkers.remove(this);
                 }
             }
         };
 
-        asyncSchemaWorkers.add(worker);
+        asyncPendingTaskWorkers.add(worker);
 
         Thread asyncTask = new IgniteThread(worker);
 
@@ -958,7 +959,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
         sharedCtx.mvcc().onStop();
 
-        awaitForWorkersStop(cancel, asyncSchemaWorkers, log);
+        awaitForWorkersStop(asyncPendingTaskWorkers, cancel, log);
 
         for (CacheGroupContext grp : cacheGrps.values())
             grp.onKernalStop();
@@ -5249,7 +5250,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
             if (pendingTasks.isEmpty()) {
                 try {
                     metastorage.iterate(
-                        STORE_PENDING_DELETE_PREFIX,
+                        STORE_PENDING_TASK_PREFIX,
                         (key, val) -> pendingTasks.put(key, (AbstractNodePendingTask)val),
                         true
                     );
@@ -5285,7 +5286,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      * @return Metastorage key.
      */
     private String pendingDeleteObjectMetastorageKey(AbstractNodePendingTask obj) {
-        return STORE_PENDING_DELETE_PREFIX + obj.shortName();
+        return STORE_PENDING_TASK_PREFIX + obj.shortName();
     }
 
     /**
@@ -5296,35 +5297,23 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     public void addNodePendingTask(AbstractNodePendingTask obj) {
         String objName = pendingDeleteObjectMetastorageKey(obj);
 
-        if (metastorage == null) {
-            synchronized (metaStorageMux) {
-                if (metastorage == null) {
-                    pendingTasks.put(objName, obj);
+        synchronized (metaStorageMux) {
+            pendingTasks.put(objName, obj);
 
-                    return;
+            if (metastorage != null) {
+                ctx.cache().context().database().checkpointReadLock();
+
+                try {
+                    metastorage.write(objName, obj);
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException(e);
+                }
+                finally {
+                    ctx.cache().context().database().checkpointReadUnlock();
                 }
             }
         }
-
-        ctx.cache().context().database().checkpointReadLock();
-
-        try {
-            metastorage.write(objName, obj);
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
-        finally {
-            ctx.cache().context().database().checkpointReadUnlock();
-        }
-    }
-
-    /**
-     * Returns all pending tasks that are still not completed.
-     * @return Pending tasks collection.
-     */
-    public Collection<AbstractNodePendingTask> nodePendingTasks() {
-        return Collections.unmodifiableCollection(pendingTasks.values());
     }
 
     /**
@@ -5335,27 +5324,31 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     public void removeNodePendingTask(AbstractNodePendingTask obj) {
         String objName = pendingDeleteObjectMetastorageKey(obj);
 
-        if (metastorage == null) {
-            synchronized (metaStorageMux) {
-                if (metastorage == null) {
-                    pendingTasks.remove(objName);
+        synchronized (metaStorageMux) {
+            pendingTasks.remove(objName);
 
-                    return;
+            if (metastorage != null) {
+                ctx.cache().context().database().checkpointReadLock();
+
+                try {
+                    metastorage.remove(objName);
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException(e);
+                }
+                finally {
+                    ctx.cache().context().database().checkpointReadUnlock();
                 }
             }
         }
+    }
 
-        ctx.cache().context().database().checkpointReadLock();
-
-        try {
-            metastorage.remove(objName);
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
-        finally {
-            ctx.cache().context().database().checkpointReadUnlock();
-        }
+    /**
+     * Returns all pending tasks that are still not completed.
+     * @return Pending tasks collection.
+     */
+    public Collection<AbstractNodePendingTask> nodePendingTasks() {
+        return Collections.unmodifiableCollection(pendingTasks.values());
     }
 
     /**
