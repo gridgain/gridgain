@@ -136,9 +136,7 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
 
         txMXBean.setOperationsDumpTimeout(100);
 
-        int waitTime = 10_000;
-
-        assertTrue(waitForCondition(logLsnr::check, waitTime));
+        assertTrue(waitForCondition(logLsnr::check, 10_000));
     }
 
     /**

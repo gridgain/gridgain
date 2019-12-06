@@ -355,7 +355,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
     /** */
     @GridToStringExclude
-    private GridTimeoutProcessor.CancelableTask longOpDumpTask;
+    private volatile GridTimeoutProcessor.CancelableTask longOpDumpTask;
 
     /** Indicate error on grid stop. */
     @GridToStringExclude
@@ -1427,15 +1427,21 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param longOpDumpTimeout Long operations dump timeout.
      */
     public void scheduleLongOperationsDumpTask(long longOpDumpTimeout) {
-        if (nonNull(longOpDumpTask))
-            longOpDumpTask.close();
+        synchronized (this) {
+            GridTimeoutProcessor.CancelableTask task = longOpDumpTask;
 
-        if (longOpDumpTimeout > 0) {
-            longOpDumpTask = ctx.timeout().schedule(
-                () -> ctx.cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
-                longOpDumpTimeout,
-                longOpDumpTimeout
-            );
+            if (nonNull(task))
+                task.close();
+
+            if (longOpDumpTimeout > 0) {
+                longOpDumpTask = ctx.timeout().schedule(
+                    () -> ctx.cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
+                    longOpDumpTimeout,
+                    longOpDumpTimeout
+                );
+            }
+            else
+                longOpDumpTask = null;
         }
     }
 
