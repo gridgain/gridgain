@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtools';
+import { dropTestDB, insertFullTestUser, resolveUrl } from '../../environment/envtools';
 import { immutableRole } from '../../roles';
 import * as admin from '../../page-models/pageAdminListOfRegisteredUsers';
 import {pageProfile as profile} from '../../page-models/pageProfile';
@@ -24,7 +24,7 @@ import {userMenu} from '../../components/userMenu';
 fixture('Assumed identity')
     .beforeEach(async(t) => {
         await dropTestDB(admin.TEST_USER.email);
-        await insertTestUser(admin.TEST_USER);
+        await insertFullTestUser(admin.TEST_USER);
         await t.useRole(await immutableRole);
     })
     .afterEach(async() => {

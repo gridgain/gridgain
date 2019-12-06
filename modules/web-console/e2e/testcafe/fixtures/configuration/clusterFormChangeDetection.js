@@ -28,7 +28,7 @@ let regularUser = null;
 
 fixture('Cluster configuration form change detection')
     .before(async() => {
-        await dropTestDB();
+        await dropTestDB(email);
 
         regularUser = await createRegularUser(email);
     })

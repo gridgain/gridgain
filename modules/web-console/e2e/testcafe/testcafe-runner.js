@@ -35,7 +35,7 @@ const startTestcafe = (config) => {
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
-                    .concurrency(os.cpus().length)
+                    .concurrency((os.cpus().length / 2) || 1)
                     .run({ skipJsErrors: true });
             }
             catch (err) {
