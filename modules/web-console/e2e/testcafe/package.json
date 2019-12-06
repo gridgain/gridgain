@@ -29,9 +29,9 @@
     "request": "^2.88.0",
     "request-promise-native": "^1.0.7",
     "sinon": "2.3.8",
-    "testcafe": "1.5.0",
-    "testcafe-angular-selectors": "0.3.0",
-    "testcafe-reporter-teamcity": "1.0.9",
+    "testcafe": "1.7.0",
+    "testcafe-angular-selectors": "0.3.2",
+    "testcafe-reporter-teamcity": "1.0.10",
     "uuid": "3.3.2",
     "ws": "^7.0.1"
   },
