@@ -31,11 +31,13 @@ const startTestcafe = (config) => {
 
                 console.log('Start E2E testing!');
 
+                console.log('CPU count: ' + os.cpus().length);
+
                 return runner
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
-                    .concurrency((os.cpus().length / 2) || 1)
+                    .concurrency(Math.max(os.cpus().length / 2, 2))
                     .run({ skipJsErrors: true });
             }
             catch (err) {
