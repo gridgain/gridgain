@@ -63,16 +63,16 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOC
     @WithSystemProperty(key = IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, value = "5000")
 )
 public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
-    /** */
+    /** Nodes count. */
     private static final int NODES_COUNT = 2;
 
-    /** */
+    /** Number of node that can be restarted during test, if test scenario requires it. */
     private static final int RESTARTED_NODE_NUM = 0;
 
-    /** */
+    /** Number of node that is always alive during tests. */
     private static final int ALWAYS_ALIVE_NODE_NUM = 1;
 
-    /** */
+    /** We imitate long index destroy in these tests, so this is delay for each page to destroy. */
     private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 160;
 
     /** */
@@ -88,14 +88,17 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             ".*?Index drop completed"
         );
 
-    /** */
+    /** Latch that waits for execution of pending task. */
     private CountDownLatch pendingDelLatch;
 
     /** */
     private final LogListener pendingDelFinishedLsnr =
         new CallbackExecutorLogListener(".*?Execution of pending task completed.*", () -> pendingDelLatch.countDown());
 
-    /** */
+    /**
+     * When it is set to true during index deletion, node with number {@link RESTARTED_NODE_NUM} fails to complete
+     * deletion.
+     */
     private final AtomicBoolean blockDestroy = new AtomicBoolean(false);
 
     /** */
@@ -165,7 +168,8 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      * @param restart Whether do the restart of one node.
      * @param rebalance Whether add to topology one more node while the index is being deleted.
      * @param multicolumn Is index multicolumn.
-     *
+     * @param checkWhenOneNodeStopped Whether try to check index and try to recreate it while one node with pending
+     * task is stopped.
      * @throws Exception If failed.
      */
     private void testLongIndexDeletion(
