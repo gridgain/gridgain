@@ -1078,7 +1078,7 @@ class ClusterCachesInfo {
 
         CacheJoinNodeDiscoveryData discoveryData = new CacheJoinNodeDiscoveryData(
             joinDiscoData.deploymentId(),
-            new HashMap<String, CacheDiscoveryInfo>() {{ putAll(joinDiscoData.caches()); }},
+            new HashMap<>(joinDiscoData.caches()),
             joinDiscoData.startCaches()
         );
 

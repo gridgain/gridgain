@@ -636,6 +636,8 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
             sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
                 sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
 
+        asyncPendingTasksExecution();
+
         // Escape if cluster inactive.
         if (!active)
             return;
@@ -5412,11 +5414,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
             GridCacheDatabaseSharedManager.RestoreLogicalState restoreState
         ) throws IgniteCheckedException {
             restorePartitionStates(cacheGroups(), restoreState.partitionRecoveryStates());
-        }
-
-        /** {@inheritDoc} */
-        @Override public void beforeResumeWalLogging(IgniteCacheDatabaseSharedManager mgr) {
-            asyncPendingTasksExecution();
         }
 
         /**

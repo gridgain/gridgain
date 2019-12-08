@@ -170,14 +170,20 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      * @param multicolumn Is index multicolumn.
      * @param checkWhenOneNodeStopped Whether try to check index and try to recreate it while one node with pending
      * task is stopped.
+     * @param dropIdxWhenOneNodeStopped Whether drop index on alive nodes while one node with pending
+     * task is stopped.
      * @throws Exception If failed.
      */
     private void testLongIndexDeletion(
         boolean restart,
         boolean rebalance,
         boolean multicolumn,
-        boolean checkWhenOneNodeStopped
+        boolean checkWhenOneNodeStopped,
+        boolean dropIdxWhenOneNodeStopped
     ) throws Exception {
+        // If not restart, then assume that index is always dropped.
+        boolean dropIdxWhenOneNodeStopped0 = !restart || dropIdxWhenOneNodeStopped;
+
         int nodeCnt = NODES_COUNT;
 
         IgniteEx ignite = startGrids(nodeCnt);
@@ -247,7 +253,8 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
                 checkSelectAndPlan(cacheOnAliveNode, true);
 
-                query(cacheOnAliveNode, "drop index t_idx");
+                if (dropIdxWhenOneNodeStopped0)
+                    query(cacheOnAliveNode, "drop index t_idx");
 
                 forceCheckpoint(aliveNode);
 
@@ -266,7 +273,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             if (checkWhenOneNodeStopped)
                 ignite.cluster().active(true);
 
-            checkSelectAndPlan(cacheOnAliveNode, false);
+            checkSelectAndPlan(cacheOnAliveNode, !dropIdxWhenOneNodeStopped0);
         }
         else
             dropIdx.join();
@@ -276,10 +283,10 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         cache = grid(RESTARTED_NODE_NUM).cache(DEFAULT_CACHE_NAME);
 
-        checkSelectAndPlan(cache, false);
-        checkSelectAndPlan(cacheOnAliveNode, false);
+        checkSelectAndPlan(cache, !dropIdxWhenOneNodeStopped0);
+        checkSelectAndPlan(cacheOnAliveNode, !dropIdxWhenOneNodeStopped0);
 
-        //Trying to recreate index.
+        // Trying to recreate index.
         createIndex(cache, multicolumn);
 
         checkSelectAndPlan(cache, true);
@@ -404,7 +411,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionSimple() throws Exception {
-        testLongIndexDeletion(false, false, false, false);
+        testLongIndexDeletion(false, false, false, false, true);
     }
 
     /**
@@ -415,7 +422,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongMulticolumnIndexDeletion() throws Exception {
-        testLongIndexDeletion(false, false, true, false);
+        testLongIndexDeletion(false, false, true, false, true);
     }
 
     /**
@@ -426,7 +433,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRestart() throws Exception {
-        testLongIndexDeletion(true, false, false, false);
+        testLongIndexDeletion(true, false, false, false, true);
     }
 
     /**
@@ -437,18 +444,30 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLongIndexDeletionWithRebalance() throws Exception {
-        testLongIndexDeletion(false, true, false, false);
+        testLongIndexDeletion(false, true, false, false, true);
     }
 
     /**
      * Tests case when long index deletion operation happens. Checkpoint should run in the middle of index deletion
      * operation. After checkpoint node should restart without fully deleted index tree. While node is stopped,
-     * we should check index and try to recreate it.
+     * we should check index and try to recreate it and do not drop again.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testLongIndexDeletionCheckWhenOneNodeStopped() throws Exception {
-        testLongIndexDeletion(true, false, false, true);
+        testLongIndexDeletion(true, false, false, true, false);
+    }
+
+    /**
+     * Tests case when long index deletion operation happens. Checkpoint should run in the middle of index deletion
+     * operation. After checkpoint node should restart without fully deleted index tree. While node is stopped,
+     * we should check index and try to recreate it and then drop again.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLongIndexDeletionCheckWhenOneNodeStoppedAndDropIndex() throws Exception {
+        testLongIndexDeletion(true, false, false, true, true);
     }
 }
