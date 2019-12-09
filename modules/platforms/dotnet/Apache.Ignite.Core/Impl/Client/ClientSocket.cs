@@ -423,11 +423,10 @@ namespace Apache.Ignite.Core.Impl.Client
                     throw new IgniteClientException(errMsg, null, ClientStatusCode.AuthenticationFailed);
                 }
 
-                // Re-try if possible.
-                // TODO: This is broken - we should retry in any case:
-                // 1) Server is newer - use our own latest version
-                // 2) Server is older - use server version
-                var retry = ServerVersion < version && ServerVersion >= Ver100;
+                // Retry if server version is different and falls within supported version range.
+                var retry = ServerVersion != version &&
+                            ServerVersion >= Ver100 &&
+                            ServerVersion <= CurrentProtocolVersion;
 
                 if (retry)
                 {
