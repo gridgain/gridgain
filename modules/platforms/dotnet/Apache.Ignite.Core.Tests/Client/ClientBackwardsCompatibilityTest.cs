@@ -16,8 +16,10 @@
 
 namespace Apache.Ignite.Core.Tests.Client
 {
+    using System.Linq;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Client;
+    using Apache.Ignite.Core.Log;
     using NUnit.Framework;
 
     /// <summary>
@@ -69,6 +71,14 @@ namespace Apache.Ignite.Core.Tests.Client
             using (var client = GetClient(version))
             {
                 Assert.AreEqual(version, client.ServerVersion);
+
+                var lastLog = GetLogs(client).Last();
+                var expectedLog = string.Format(
+                    "Handshake completed on 127.0.0.1:10800, protocol version = {0}", version);
+                
+                Assert.AreEqual(expectedLog, lastLog.Message);
+                Assert.AreEqual(LogLevel.Debug, lastLog.Level);
+                Assert.AreEqual(nameof(ClientSocket), lastLog.Category);
             }
         }
 
