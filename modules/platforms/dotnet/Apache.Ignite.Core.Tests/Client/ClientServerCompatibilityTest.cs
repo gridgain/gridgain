@@ -29,7 +29,10 @@ namespace Apache.Ignite.Core.Tests.Client
         public void TestCacheOperationsAreSupportedOnAllVersions()
         {
             // TODO: Use Ignite 2.4.0+ for this test
-            // NuGet or Maven? Maven should be a lot less to download!
+            // Use Maven - less to download
+            // We just need a class with Ignition.start() and some config
+            // And pom.xml
+            // Run with mvn exec:java -D"exec.mainClass"="Runner"
         }
     }
 }
