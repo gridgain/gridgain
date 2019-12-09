@@ -2681,6 +2681,8 @@ public class IgniteConfiguration {
      * @see #isAutoActivationEnabled()
      */
     public IgniteConfiguration setAutoActivationEnabled(boolean autoActivation) {
+        log.warning("Property autoActivation deprecated. Use clusterStateOnStart instead.");
+
         this.autoActivation = autoActivation;
 
         return this;
