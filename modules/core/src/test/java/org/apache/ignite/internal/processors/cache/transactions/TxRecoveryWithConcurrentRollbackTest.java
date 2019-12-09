@@ -177,6 +177,8 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
             // Blocks stripe processing for rollback request on node1.
             grid(1).context().getStripedExecutorService().execute(stripe, () -> U.awaitQuiet(stripeBlockLatch));
+            // Dummy task to ensure msg is processed.
+            grid(1).context().getStripedExecutorService().execute(stripe, () -> {});
 
             runAsync(() -> {
                 TestRecordingCommunicationSpi.spi(client).waitForBlocked();
