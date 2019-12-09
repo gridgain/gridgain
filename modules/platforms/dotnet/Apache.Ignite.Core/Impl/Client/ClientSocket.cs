@@ -413,9 +413,10 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     errCode = (ClientStatusCode) stream.ReadInt();
                 }
-                
-                _logger.Debug("Handshake failed on {0}, server protocol version = {1}, status = {2}, message = {3}", 
-                    _socket.RemoteEndPoint, version, errCode, errMsg);
+
+                _logger.Debug("Handshake failed on {0}, requested protocol version = {1}, " +
+                              "server protocol version = {2}, status = {3}, message = {4}",
+                    _socket.RemoteEndPoint, version, ServerVersion, errCode, errMsg);
 
                 // Authentication error is handled immediately.
                 if (errCode == ClientStatusCode.AuthenticationFailed)
