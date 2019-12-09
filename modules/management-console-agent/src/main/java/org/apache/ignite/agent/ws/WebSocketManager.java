@@ -314,8 +314,7 @@ public class WebSocketManager extends GridProcessorAdapter {
 
         if (httpsProxy.isPresent())
             proxyAddr = httpsProxy.get().address().toString();
-
-        if (F.isEmpty(proxyAddr) && httpProxy.isPresent())
+        else if (httpProxy.isPresent())
             proxyAddr = httpProxy.get().address().toString();
 
         if (!F.isEmpty(proxyAddr)) {
