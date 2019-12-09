@@ -51,6 +51,8 @@ namespace Apache.Ignite.Core.Tests.Client
             
             using (var client = GetClient(version, true))
             {
+                Assert.IsFalse(client.GetConfiguration().EnablePartitionAwareness);
+                
                 var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
                 cache.Put(1, 2);
                 Assert.AreEqual(2, cache.Get(1));
