@@ -42,7 +42,7 @@ import static org.apache.ignite.agent.dto.action.Status.RUNNING;
 /**
  * Distributed action service with enabled authentication.
  */
-public class DistributedActionProcessorWithAuthenticationSelfTest extends AbstractActionControllerWithAuthenticationTest {
+public class DistributedActionProcessorWithAuthenticationTest extends AbstractActionControllerWithAuthenticationTest {
     /**
      * Start grid instances.
      */
@@ -63,7 +63,7 @@ public class DistributedActionProcessorWithAuthenticationSelfTest extends Abstra
 
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction")
+            .setAction("IgniteTestActionController.nodeIdAction")
             .setNodeIds(singleton(crdId))
             .setSessionId(sesId);
 
@@ -100,7 +100,7 @@ public class DistributedActionProcessorWithAuthenticationSelfTest extends Abstra
 
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction")
+            .setAction("IgniteTestActionController.nodeIdAction")
             .setNodeIds(nonCrdNodeIds)
             .setSessionId(sesId);
 
@@ -137,7 +137,7 @@ public class DistributedActionProcessorWithAuthenticationSelfTest extends Abstra
 
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction")
+            .setAction("IgniteTestActionController.nodeIdAction")
             .setSessionId(sesId);
 
         executeAction(req, res -> {
@@ -173,7 +173,7 @@ public class DistributedActionProcessorWithAuthenticationSelfTest extends Abstra
 
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdActionWithSleep")
+            .setAction("IgniteTestActionController.nodeIdActionWithSleep")
             .setArgument(5000)
             .setSessionId(sesId);
 
@@ -203,7 +203,7 @@ public class DistributedActionProcessorWithAuthenticationSelfTest extends Abstra
     public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAthentication() {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.numberAction")
+            .setAction("IgniteTestActionController.numberAction")
             .setNodeIds(singleton(cluster.localNode().id()))
             .setArgument(10);
 
@@ -221,7 +221,7 @@ public class DistributedActionProcessorWithAuthenticationSelfTest extends Abstra
     public void shouldSendErrorResponseOnExecutingSecuredActionWithInvalidSessionId() {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.numberAction")
+            .setAction("IgniteTestActionController.numberAction")
             .setNodeIds(singleton(cluster.localNode().id()))
             .setArgument(10)
             .setSessionId(UUID.randomUUID());

@@ -218,7 +218,7 @@ public class WebSocketManager extends GridProcessorAdapter {
      */
     private JettyWebSocketClient createWebSocketClient(URI uri, ManagementConfiguration cfg) throws Exception {
         HttpClient httpClient = new HttpClient(createServerSslFactory(log, cfg));
-        
+
         // TODO GG-18379 Investigate how to establish native websocket connection with proxy.
         configureProxy(log, httpClient, uri);
 

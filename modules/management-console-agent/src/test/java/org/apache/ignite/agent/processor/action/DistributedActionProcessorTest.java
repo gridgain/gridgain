@@ -60,7 +60,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction")
+            .setAction("IgniteTestActionController.nodeIdAction")
             .setNodeIds(singleton(crdId));
 
         executeAction(req, res -> {
@@ -94,7 +94,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
     public void shouldExecuteActionOnNonCoordinatorNodes() throws Exception {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction")
+            .setAction("IgniteTestActionController.nodeIdAction")
             .setNodeIds(nonCrdNodeIds);
 
         executeAction(req, res -> {
@@ -128,7 +128,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
     public void shouldExecuteActionOnAllNodes() throws Exception {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction");
+            .setAction("IgniteTestActionController.nodeIdAction");
 
         executeAction(req, res -> {
             List<TaskResponse> taskResults =
@@ -161,7 +161,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
     public void shouldExecuteActionOnAllNodesWithNodeStop() throws Exception {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdActionWithSleep")
+            .setAction("IgniteTestActionController.nodeIdActionWithSleep")
             .setArgument(5000);
 
         executeActionAndStopNode(req, 1000, 1, res -> {
@@ -190,7 +190,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
     public void shouldSendErrorResponseWithInvalidNodeId() {
         Request req = new Request()
             .setId(UUID.randomUUID())
-            .setAction("ActionControllerForTests.nodeIdAction")
+            .setAction("IgniteTestActionController.nodeIdAction")
             .setNodeIds(singleton(UUID.randomUUID()));
 
         executeAction(req, (res) -> {

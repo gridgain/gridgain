@@ -50,4 +50,20 @@ public class TestActionController {
     public CompletableFuture<Boolean> numberAction(long num) {
         return CompletableFuture.completedFuture(true);
     }
+
+    /**
+     * @return Node ID.
+     */
+    public String nodeIdAction() {
+        return ctx.grid().cluster().localNode().id().toString();
+    }
+
+    /**
+     * @return Node ID.
+     */
+    public String nodeIdActionWithSleep(long ms) throws InterruptedException {
+        Thread.sleep(ms);
+
+        return ctx.grid().cluster().localNode().id().toString();
+    }
 }

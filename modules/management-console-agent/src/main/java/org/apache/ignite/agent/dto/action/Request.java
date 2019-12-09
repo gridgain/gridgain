@@ -134,7 +134,7 @@ public class Request {
 
     /**
      * @param nids Node ID's.
-     * @return This for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public Request setNodeIds(Set<UUID> nids) {
         this.nids = nids;
