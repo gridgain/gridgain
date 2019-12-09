@@ -1137,7 +1137,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             ctx.kernalContext().continuous().onCacheStop(ctx);
 
-            ctx.kernalContext().cache().context().snapshot().onCacheStop(ctx, destroy);
+            if (destroy)
+                ctx.kernalContext().cache().context().snapshot().onCacheStop(ctx, destroy);
 
             ctx.kernalContext().coordinators().onCacheStop(ctx);
 
