@@ -319,7 +319,7 @@ public class WebSocketManager extends GridProcessorAdapter {
             proxyAddr = httpProxy.get().address().toString();
 
         if (!F.isEmpty(proxyAddr)) {
-            mgr.getProperties().put(PROXY_URI, "non_used_schema://" + proxyAddr);
+            mgr.getProperties().put(PROXY_URI, "nonusedschema://" + proxyAddr);
 
             addAuthentication(mgr);
         }

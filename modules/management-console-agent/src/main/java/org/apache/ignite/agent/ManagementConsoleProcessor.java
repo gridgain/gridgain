@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.websocket.DeploymentException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.SessionRegistry;
@@ -120,6 +121,9 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** If first connection error after successful connection. */
     private AtomicBoolean disconnected = new AtomicBoolean();
+
+    /** Guard. */
+    private final ReentrantLock guard = new ReentrantLock();
 
     /**
      * @param ctx Kernal context.
@@ -220,10 +224,17 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        if (isLocalNodeCoordinator(ctx.discovery())) {
-            cfg = readFromMetaStorage();
+        guard.lock();
 
-            connect();
+        try {
+            if (isLocalNodeCoordinator(ctx.discovery()) && (evt == null || connectPool == null)) {
+                cfg = readFromMetaStorage();
+
+                connect();
+            }
+        }
+        finally {
+            guard.unlock();
         }
     }
 
