@@ -28,7 +28,7 @@ namespace Apache.Ignite.Core.Tests.Client
     /// <summary>
     /// Tests thin client with old protocol versions.
     /// </summary>
-    public class ClientCompatibilityTest : ClientTestBase
+    public class ClientProtocolCompatibilityTest : ClientTestBase
     {
         /// <summary>
         /// Tests that basic cache operations are supported on all protocols.
