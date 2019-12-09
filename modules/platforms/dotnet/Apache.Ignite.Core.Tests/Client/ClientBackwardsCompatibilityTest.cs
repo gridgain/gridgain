@@ -44,9 +44,17 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         [Test]
-        public void TestAffinityAwarenessDisablesAutomaticallyOnVersionsOlderThan140()
+        public void TestPartitionAwarenessDisablesAutomaticallyOnVersionsOlderThan140(
+            [Values(0, 1, 2, 3)] short minor)
         {
+            var version = new ClientProtocolVersion(1, minor, 0);
             
+            using (var client = GetClient(version, true))
+            {
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                cache.Put(1, 2);
+                Assert.AreEqual(2, cache.Get(1));
+            }
         }
 
         [Test]
@@ -97,11 +105,12 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Gets the client with specified protocol version.
         /// </summary>
-        private IgniteClient GetClient(ClientProtocolVersion version)
+        private IgniteClient GetClient(ClientProtocolVersion version, bool enablePartitionAwareness = false)
         {
             var cfg = new IgniteClientConfiguration(GetClientConfiguration())
             {
-                ProtocolVersion = version
+                ProtocolVersion = version,
+                EnablePartitionAwareness = enablePartitionAwareness
             };
 
             return (IgniteClient) Ignition.StartClient(cfg);
