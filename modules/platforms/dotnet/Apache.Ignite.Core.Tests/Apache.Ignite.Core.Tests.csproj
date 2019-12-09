@@ -155,6 +155,7 @@
     <Compile Include="Client\ClientProtocolCompatibilityTest.cs" />
     <Compile Include="Client\ClientOpExtensionsTest.cs" />
     <Compile Include="Client\ClientProtocolVersionTest.cs" />
+    <Compile Include="Client\ClientServerCompatibilityTest.cs" />
     <Compile Include="Client\ClientTestBase.cs" />
     <Compile Include="Client\Cluster\ClientClusterTests.cs" />
     <Compile Include="Client\EndpointTest.cs" />
