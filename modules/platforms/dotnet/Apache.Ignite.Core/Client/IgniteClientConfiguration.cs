@@ -116,6 +116,7 @@ namespace Apache.Ignite.Core.Client
             ReconnectDisabled = cfg.ReconnectDisabled;
             EnablePartitionAwareness = cfg.EnablePartitionAwareness;
             Logger = cfg.Logger;
+            ProtocolVersion = cfg.ProtocolVersion;
         }
 
         /// <summary>
