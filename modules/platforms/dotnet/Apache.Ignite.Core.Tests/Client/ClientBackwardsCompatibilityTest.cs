@@ -49,18 +49,40 @@ namespace Apache.Ignite.Core.Tests.Client
         [Test]
         public void TestClientNewerThanServerReconnectsOnServerVersion()
         {
+            // Use a non-existent version that is not supported by the server
+            var version = new ClientProtocolVersion(short.MaxValue, short.MaxValue, short.MaxValue);
+            
+            using (var client = GetClient(version))
+            {
+                Assert.AreEqual(ClientSocket.CurrentProtocolVersion, client.ServerVersion);
+            }
+        }
+
+        /// <summary>
+        /// Tests that old client with new server can negotiate a protocol version.
+        /// </summary>
+        [Test]
+        public void TestClientOlderThanServerConnectsOnClientVersion([Values(0, 1, 2, 3, 4, 5)] short minor)
+        {
+            var version = new ClientProtocolVersion(1, minor, 0);
+
+            using (var client = GetClient(version))
+            {
+                Assert.AreEqual(version, client.ServerVersion);
+            }
+        }
+
+        /// <summary>
+        /// Gets the client with specified protocol version.
+        /// </summary>
+        private IgniteClient GetClient(ClientProtocolVersion version)
+        {
             var cfg = new IgniteClientConfiguration(GetClientConfiguration())
             {
-                // Use a non-existent version that is not supported by the server
-                ProtocolVersion = new ClientProtocolVersion(short.MaxValue, short.MaxValue, short.MaxValue) 
+                ProtocolVersion = version
             };
 
-            using (var client = Ignition.StartClient(cfg))
-            {
-                var clientInternal = (IgniteClient) client;
-                
-                Assert.AreEqual(ClientSocket.CurrentProtocolVersion, clientInternal.ServerVersion);
-            }
+            return (IgniteClient) Ignition.StartClient(cfg);
         }
     }
 }
