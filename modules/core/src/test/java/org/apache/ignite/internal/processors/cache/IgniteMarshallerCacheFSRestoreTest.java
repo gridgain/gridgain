@@ -20,6 +20,8 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -36,7 +38,7 @@ import org.apache.ignite.internal.processors.marshaller.MappingProposedMessage;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.spi.discovery.DiscoveryNotification;
+import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -121,15 +123,15 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test checks a scenario when in multinode cluster one node may read marshaller mapping
-     * from file storage and add it directly to marshaller context with accepted=true flag,
-     * when another node sends a proposed request for the same mapping.
+     * Test checks a scenario when in multinode cluster one node may read marshaller mapping from file storage and add
+     * it directly to marshaller context with accepted=true flag, when another node sends a proposed request for the
+     * same mapping.
      *
-     * In that case the request must not be marked as duplicate and must be processed in a regular way.
-     * No hangs must take place.
+     * In that case the request must not be marked as duplicate and must be processed in a regular way. No hangs must
+     * take place.
      *
-     * @see <a href="https://issues.apache.org/jira/browse/IGNITE-5401">IGNITE-5401</a> JIRA ticket
-     * provides more information about context of this test.
+     * @see <a href="https://issues.apache.org/jira/browse/IGNITE-5401">IGNITE-5401</a> JIRA ticket provides more
+     * information about context of this test.
      *
      * This test must never hang on proposing of MarshallerMapping.
      */
@@ -175,7 +177,7 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
 
         File marshStoreDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "marshaller", false);
 
-        try(FileOutputStream out = new FileOutputStream(new File(marshStoreDir, fileName))) {
+        try (FileOutputStream out = new FileOutputStream(new File(marshStoreDir, fileName))) {
             try (Writer writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
                 writer.write(typeName);
 
@@ -185,8 +187,8 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Verifies scenario that node with corrupted marshaller mapping store must fail on startup
-     * with appropriate error message.
+     * Verifies scenario that node with corrupted marshaller mapping store must fail on startup with appropriate error
+     * message.
      *
      * @see <a href="https://issues.apache.org/jira/browse/IGNITE-6536">IGNITE-6536</a> JIRA provides more information
      * about this case.
@@ -209,7 +211,7 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
             startGrid(0);
         }
         catch (IgniteCheckedException e) {
-            verifyException((IgniteCheckedException) e.getCause());
+            verifyException((IgniteCheckedException)e.getCause());
         }
     }
 
@@ -253,10 +255,14 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
 
             /** {@inheritDoc} */
             @Override public IgniteFuture<?> onDiscovery(
-                DiscoveryNotification notification
+                int type,
+                long topVer,
+                ClusterNode node,
+                Collection<ClusterNode> topSnapshot,
+                Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
             ) {
-                DiscoveryCustomMessage customMsg = notification.getCustomMsgData() == null ? null
-                    : (DiscoveryCustomMessage) U.field(notification.getCustomMsgData(), "delegate");
+                DiscoveryCustomMessage customMsg = data == null ? null
+                    : (DiscoveryCustomMessage)U.field(data, "delegate");
 
                 if (customMsg != null) {
                     //don't want to make this class public, using equality of class name instead of instanceof operator
@@ -271,7 +277,7 @@ public class IgniteMarshallerCacheFSRestoreTest extends GridCommonAbstractTest {
                 }
 
                 if (delegate != null)
-                    return delegate.onDiscovery(notification);
+                    return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, data);
 
                 return new IgniteFinishedFutureImpl<>();
             }
