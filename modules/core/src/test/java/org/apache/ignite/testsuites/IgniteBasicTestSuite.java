@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.ClassPathContentLoggingTest;
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
+import org.apache.ignite.internal.processors.failure.FailureProcessorLoggingTest;
 import org.apache.ignite.failure.FailureHandlerTriggeredTest;
 import org.apache.ignite.failure.OomFailureHandlerTest;
 import org.apache.ignite.failure.StopNodeFailureHandlerTest;
@@ -32,6 +33,7 @@ import org.apache.ignite.internal.GridFailFastNodeFailureDetectionSelfTest;
 import org.apache.ignite.internal.GridLifecycleAwareSelfTest;
 import org.apache.ignite.internal.GridLifecycleBeanSelfTest;
 import org.apache.ignite.internal.GridMBeansTest;
+import org.apache.ignite.internal.GridMbeansMiscTest;
 import org.apache.ignite.internal.GridNodeMetricsLogSelfTest;
 import org.apache.ignite.internal.GridPeerDeploymentRetryModifiedTest;
 import org.apache.ignite.internal.GridPeerDeploymentRetryTest;
@@ -180,6 +182,7 @@ import org.junit.runners.Suite;
     GridNodeMetricsLogSelfTest.class,
     GridLocalIgniteSerializationTest.class,
     GridMBeansTest.class,
+    GridMbeansMiscTest.class,
     TransactionsMXBeanImplTest.class,
     SetTxTimeoutOnPartitionMapExchangeTest.class,
     DiscoveryDataDeserializationFailureHanderTest.class,
@@ -241,6 +244,7 @@ import org.junit.runners.Suite;
     StopNodeOrHaltFailureHandlerTest.class,
     OomFailureHandlerTest.class,
     TransactionIntegrityWithSystemWorkerDeathTest.class,
+    FailureProcessorLoggingTest.class,
 
     AtomicOperationsInTxTest.class,
 
