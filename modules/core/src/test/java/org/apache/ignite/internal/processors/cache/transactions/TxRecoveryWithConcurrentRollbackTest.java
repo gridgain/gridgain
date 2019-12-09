@@ -40,6 +40,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_ASYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.PRIMARY_SYNC;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
@@ -217,10 +218,16 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
         doTestRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail(PRIMARY_SYNC);
     }
 
+    /** */
+    @Test
+    public void testRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail_FULL_ASYNC() throws Exception {
+        doTestRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail(FULL_ASYNC);
+    }
+
     /**
      * Stop near and primary node after primary tx is rolled back with enabled persistence.
      * <p>
-     * Expected result: after restarting a primary partitions are consistent.
+     * Expected result: after restarting a primary node all partitions are consistent.
      */
     private void doTestRecoveryNotBreakingTxAtomicityOnNearAndPrimaryFail(CacheWriteSynchronizationMode syncMode)
         throws Exception {
