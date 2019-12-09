@@ -28,7 +28,7 @@ namespace Apache.Ignite.Core.Tests.Client
     /// <summary>
     /// Tests thin client with old protocol versions.
     /// </summary>
-    public class ClientBackwardsCompatibilityTest : ClientTestBase
+    public class ClientCompatibilityTest : ClientTestBase
     {
         /// <summary>
         /// Tests that basic cache operations are supported on all protocols.
@@ -88,7 +88,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 
                 Assert.AreEqual(expectedMessage, log.Message);
                 Assert.AreEqual(LogLevel.Warn, log.Level);
-                Assert.AreEqual(nameof(ClientFailoverSocket), log.Category);
+                Assert.AreEqual(typeof(ClientFailoverSocket).Name, log.Category);
             }
         }
 
@@ -133,7 +133,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 
                 Assert.AreEqual(expectedLog, lastLog.Message);
                 Assert.AreEqual(LogLevel.Debug, lastLog.Level);
-                Assert.AreEqual(nameof(ClientSocket), lastLog.Category);
+                Assert.AreEqual(typeof(ClientSocket).Name, lastLog.Category);
             }
         }
         

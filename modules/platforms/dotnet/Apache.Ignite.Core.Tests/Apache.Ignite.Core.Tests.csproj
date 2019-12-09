@@ -152,7 +152,7 @@
     <Compile Include="Client\Cache\SqlQueryTestBase.cs" />
     <Compile Include="Client\Cache\TestKey.cs" />
     <Compile Include="Client\Cache\TestKeyWithAffinity.cs" />
-    <Compile Include="Client\ClientBackwardsCompatibilityTest.cs" />
+    <Compile Include="Client\ClientCompatibilityTest.cs" />
     <Compile Include="Client\ClientOpExtensionsTest.cs" />
     <Compile Include="Client\ClientProtocolVersionTest.cs" />
     <Compile Include="Client\ClientTestBase.cs" />
