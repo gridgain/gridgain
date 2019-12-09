@@ -325,7 +325,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 _config.EnablePartitionAwareness = false;
                 
-                _logger.Warn("Affinity awareness has been disabled: server protocol version {0} " +
+                _logger.Warn("Partition awareness has been disabled: server protocol version {0} " +
                              "is lower than required {1}",
                     _socket.ServerVersion,
                     ClientOp.CachePartitions.GetMinVersion()

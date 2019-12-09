@@ -71,7 +71,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 Assert.AreEqual(2, cache.Get(1));
 
                 var log = GetLogs(client).Last();
-                var expectedMessage = string.Format("Affinity awareness has been disabled: server protocol version " +
+                var expectedMessage = string.Format("Partition awareness has been disabled: server protocol version " +
                                                     "{0} is lower than required 1.4.0", version);
                 
                 Assert.AreEqual(expectedMessage, log.Message);
