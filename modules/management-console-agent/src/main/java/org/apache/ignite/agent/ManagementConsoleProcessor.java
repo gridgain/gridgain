@@ -227,7 +227,11 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         guard.lock();
 
         try {
-            if (isLocalNodeCoordinator(ctx.discovery()) && (evt == null || connectPool == null)) {
+            boolean isAgentNotStarted = connectPool == null;
+
+            boolean isCfgChanged = evt == null && discoCache == null;
+
+            if ((isCfgChanged || isAgentNotStarted) && isLocalNodeCoordinator(ctx.discovery())) {
                 cfg = readFromMetaStorage();
 
                 connect();
