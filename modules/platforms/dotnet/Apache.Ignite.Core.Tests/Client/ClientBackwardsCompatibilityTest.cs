@@ -49,6 +49,10 @@ namespace Apache.Ignite.Core.Tests.Client
                 var cluster = client.GetCluster();
 
                 AssertNotSupportedOperation(() => cluster.IsActive(), version, "ClusterIsActive");
+                AssertNotSupportedOperation(() => cluster.SetActive(true), version, "ClusterChangeState");
+                AssertNotSupportedOperation(() => cluster.IsWalEnabled("c"), version, "ClusterGetWalState");
+                AssertNotSupportedOperation(() => cluster.EnableWal("c"), version, "ClusterChangeWalState");
+                AssertNotSupportedOperation(() => cluster.DisableWal("c"), version, "ClusterChangeWalState");
             }
         }
 
