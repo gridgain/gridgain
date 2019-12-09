@@ -29,8 +29,10 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.AddressResolver;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -38,6 +40,12 @@ import org.junit.Test;
  * Contains tests for TcpCommunicationSpi that require multi JVM setup.
  */
 public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
+    /** */
+    private boolean remoteNodePrefersIPv4;
+
+    /** */
+    private boolean replacingAttrSpi;
+
     /** {@inheritDoc} */
     @Override protected boolean isMultiJvm() {
         return true;
@@ -45,7 +53,8 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected List<String> additionalRemoteJvmArgs() {
-        return Collections.singletonList("-Djava.net.preferIPv4Stack=true");
+        return remoteNodePrefersIPv4 ?
+            Collections.singletonList("-Djava.net.preferIPv4Stack=true") : Collections.emptyList();
     }
 
     /**
@@ -79,12 +88,10 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        boolean firstGrid = igniteInstanceName.endsWith("0");
-
-        TcpCommunicationSpi commSpi = new TestCommunicationSpi(firstGrid);
+        TcpCommunicationSpi commSpi = new TestCommunicationSpi(replacingAttrSpi);
         commSpi.setLocalPort(45010);
 
-        if (firstGrid) {
+        if (replacingAttrSpi) {
             commSpi.setLocalAddress("127.0.0.1");
 
             InetSocketAddress extAddr = new InetSocketAddress("localhost", 45010);
@@ -121,9 +128,12 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
      */
     @Test
     public void testIPv6AddressIsSkippedOnNodeNotSupportingIPv6() throws Exception {
+        remoteNodePrefersIPv4 = true;
+        replacingAttrSpi = true;
+
         Ignite g = startGrid(0);
 
-        // This node should wait until any node "from ipFinder" appears, see log messages.
+        replacingAttrSpi = false;
         startGrid(1);
 
         AtomicBoolean cacheCreatedAndLoaded = new AtomicBoolean(false);
@@ -139,6 +149,39 @@ public class TcpCommunicationSpiMultiJvmTest extends GridCommonAbstractTest {
             }
         , "start_cache_thread");
 
-        assertTrue(GridTestUtils.waitForCondition(() -> cacheCreatedAndLoaded.get(), 10_000));
+        assertTrue(GridTestUtils.waitForCondition(cacheCreatedAndLoaded::get, 10_000));
+    }
+
+    /**
+     * Verifies that node supporting IPv6 successfully connects and communicates with node
+     * supporting IPv4 only.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = "java.net.preferIPv4Stack", value = "true")
+    public void testIPv6NodeSuccessfullyConnectesToNodeWithIPv4Only() throws Exception {
+        remoteNodePrefersIPv4 = false;
+        replacingAttrSpi = false;
+
+        IgniteEx ig = startGrid(0);
+
+        replacingAttrSpi = true;
+        startGrid(1);
+
+        AtomicBoolean cacheCreatedAndLoaded = new AtomicBoolean(false);
+
+        GridTestUtils.runAsync(() -> {
+                IgniteCache<Object, Object> cache = ig.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+                for (int i = 0; i < 100; i++) {
+                    cache.put(i, i);
+                }
+
+                cacheCreatedAndLoaded.set(true);
+            }
+            , "start_cache_thread");
+
+        assertTrue(GridTestUtils.waitForCondition(cacheCreatedAndLoaded::get, 10_000));
     }
 }
