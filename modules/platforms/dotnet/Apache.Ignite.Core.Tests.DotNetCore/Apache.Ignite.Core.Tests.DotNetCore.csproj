@@ -138,6 +138,9 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\ClientProtocolVersionTest.cs">
       <Link>ThinClient\ClientProtocolVersionTest.cs</Link>
     </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Client\ClientServerCompatibilityTest.cs">
+      <Link>ThinClient\ClientServerCompatibilityTest.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\ClientTestBase.cs" Link="ThinClient\ClientTestBase.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cluster\ClientClusterTests.cs" Link="ThinClient\Cluster\ClientClusterTests.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\EndpointTest.cs" Link="ThinClient\EndpointTest.cs" />
