@@ -109,19 +109,7 @@ namespace Apache.Ignite.Core.Impl.Client
             _logger = _config.Logger.GetLogger(GetType());
 
             Connect();
-
-            // TODO: Move this check inside Connect(), so that we re-check on reconnect
-            if (_config.EnablePartitionAwareness &&
-                _socket.ServerVersion < ClientOp.CachePartitions.GetMinVersion())
-            {
-                _config.EnablePartitionAwareness = false;
-                _logger.Warn("Affinity awareness has been disabled: server protocol version {0} " +
-                                    "is lower than required {1}",
-                    ClientOp.CachePartitions.GetMinVersion(),
-                    _socket.ServerVersion
-                );
-            }
-        }
+       }
 
         /** <inheritdoc /> */
         public T DoOutInOp<T>(ClientOp opId, Action<IBinaryStream> writeAction, Func<IBinaryStream, T> readFunc,
@@ -329,6 +317,19 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 throw new AggregateException("Failed to establish Ignite thin client connection, " +
                                              "examine inner exceptions for details.", errors);
+            }
+
+            if (_socket != null && 
+                _config.EnablePartitionAwareness && 
+                _socket.ServerVersion < ClientOp.CachePartitions.GetMinVersion())
+            {
+                _config.EnablePartitionAwareness = false;
+                
+                _logger.Warn("Affinity awareness has been disabled: server protocol version {0} " +
+                             "is lower than required {1}",
+                    ClientOp.CachePartitions.GetMinVersion(),
+                    _socket.ServerVersion
+                );
             }
         }
 
