@@ -80,6 +80,7 @@ import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.ssl.SslContextFactory;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.STOP;
 
@@ -223,6 +224,7 @@ public class IgniteConfiguration {
     public static final boolean DFLT_ACTIVE_ON_START = true;
 
     /** Default value for auto-activation flag. */
+    @Deprecated
     public static final boolean DFLT_AUTO_ACTIVATION = true;
 
     /** Default failure detection timeout in millis. */
@@ -526,13 +528,15 @@ public class IgniteConfiguration {
     private DataStorageConfiguration dsCfg;
 
     /** Active on start flag. */
+    @Deprecated
     private boolean activeOnStart = DFLT_ACTIVE_ON_START;
 
-    /** Cluster state on start. */
-    private ClusterState clusterStateOnStart = DFLT_STATE_ON_START;
-
     /** Auto-activation flag. */
+    @Deprecated
     private boolean autoActivation = DFLT_AUTO_ACTIVATION;
+
+    /** Cluster state on start. */
+    private ClusterState clusterStateOnStart;
 
     /** */
     private long longQryWarnTimeout = DFLT_LONG_QRY_WARN_TIMEOUT;
@@ -598,13 +602,13 @@ public class IgniteConfiguration {
          * Order alphabetically for maintenance purposes.
          */
         activeOnStart = cfg.isActiveOnStart();
-        clusterStateOnStart = cfg.getClusterStateOnStart();
         addrRslvr = cfg.getAddressResolver();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();
         authEnabled = cfg.isAuthenticationEnabled();
         autoActivation = cfg.isAutoActivationEnabled();
         binaryCfg = cfg.getBinaryConfiguration();
+        clusterStateOnStart = cfg.getClusterStateOnStart();
         dsCfg = cfg.getDataStorageConfiguration();
         memCfg = cfg.getMemoryConfiguration();
         pstCfg = cfg.getPersistentStoreConfiguration();
@@ -2593,27 +2597,11 @@ public class IgniteConfiguration {
      * Cluster is always inactive on start when Ignite Persistence is enabled.
      *
      * @return Active on start flag value.
-     * @deprecated Use {@link #getClusterStateOnStart()}  instead.
+     * @deprecated Use {@link #getClusterStateOnStart()} instead.
      */
     @Deprecated
     public boolean isActiveOnStart() {
         return activeOnStart;
-    }
-
-    /**
-     * Gets state of cluster on start. If cluster state on start is {@link ClusterState#INACTIVE},
-     * there will be no cache partition map exchanges performed until the cluster is activated. This should
-     * significantly speed up large topology startup time.
-     * <p>
-     * Default value is {@link #DFLT_STATE_ON_START}.
-     * <p>
-     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
-     * Cluster is always {@link ClusterState#INACTIVE} on start when Ignite Persistence is enabled.
-     *
-     * @return State of cluster on start.
-     */
-    public ClusterState getClusterStateOnStart() {
-        return clusterStateOnStart;
     }
 
     /**
@@ -2632,9 +2620,65 @@ public class IgniteConfiguration {
     public IgniteConfiguration setActiveOnStart(boolean activeOnStart) {
         log.warning("Property activeOnStart deprecated. Use clusterStateOnStart instead.");
 
-        return setClusterStateOnStart(activeOnStart ? ClusterState.ACTIVE : ClusterState.INACTIVE);
+        this.activeOnStart = activeOnStart;
+
+        return this;
     }
 
+    /**
+     * Get the flag indicating that cluster is enabled to activate automatically.
+     *
+     * If it is set to {@code true} and BaselineTopology is set as well than cluster activates automatically
+     * when all nodes from the BaselineTopology join the cluster.
+     *
+     * <p>
+     * Default value is {@link #DFLT_AUTO_ACTIVATION}.
+     * <p>
+     *
+     * @return Auto activation enabled flag value.
+     * @deprecated Use {@link IgniteConfiguration#getClusterStateOnStart()} instead.
+     */
+    @Deprecated
+    public boolean isAutoActivationEnabled() {
+        return autoActivation;
+    }
+
+    /**
+     * Sets flag indicating whether the cluster is enabled to activate automatically.
+     * This value should be the same on all nodes in the cluster.
+     *
+     * @param autoActivation Auto activation enabled flag value.
+     * @return {@code this} instance.
+     * @see #isAutoActivationEnabled()
+     * @deprecated Use {@link IgniteConfiguration#setClusterStateOnStart(ClusterState)} instead.
+     */
+    @Deprecated
+    public IgniteConfiguration setAutoActivationEnabled(boolean autoActivation) {
+        log.warning("Property autoActivation deprecated. Use clusterStateOnStart instead.");
+
+        this.autoActivation = autoActivation;
+
+        return this;
+    }
+
+    // TODO: update javadoc.
+    /**
+     * Gets state of cluster on start. If cluster state on start is {@link ClusterState#INACTIVE},
+     * there will be no cache partition map exchanges performed until the cluster is activated. This should
+     * significantly speed up large topology startup time.
+     * <p>
+     * Default value is {@link #DFLT_STATE_ON_START}.
+     * <p>
+     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
+     * Cluster is always {@link ClusterState#INACTIVE} on start when Ignite Persistence is enabled.
+     *
+     * @return State of cluster on start.
+     */
+    public @Nullable ClusterState getClusterStateOnStart() {
+        return clusterStateOnStart;
+    }
+
+    // TODO: update javadoc.
     /**
      * Sets state of cluster on start. This value should be the same on all
      * nodes in the cluster. The state can't be null.
@@ -2651,39 +2695,6 @@ public class IgniteConfiguration {
             throw new NullPointerException("Cluster state on start can't be null.");
 
         this.clusterStateOnStart = state;
-        this.activeOnStart = ClusterState.active(state);
-
-        return this;
-    }
-
-    /**
-     * Get the flag indicating that cluster is enabled to activate automatically.
-     *
-     * If it is set to {@code true} and BaselineTopology is set as well than cluster activates automatically
-     * when all nodes from the BaselineTopology join the cluster.
-     *
-     * <p>
-     * Default value is {@link #DFLT_AUTO_ACTIVATION}.
-     * <p>
-     *
-     * @return Auto activation enabled flag value.
-     */
-    public boolean isAutoActivationEnabled() {
-        return autoActivation;
-    }
-
-    /**
-     * Sets flag indicating whether the cluster is enabled to activate automatically.
-     * This value should be the same on all nodes in the cluster.
-     *
-     * @param autoActivation Auto activation enabled flag value.
-     * @return {@code this} instance.
-     * @see #isAutoActivationEnabled()
-     */
-    public IgniteConfiguration setAutoActivationEnabled(boolean autoActivation) {
-        log.warning("Property autoActivation deprecated. Use clusterStateOnStart instead.");
-
-        this.autoActivation = autoActivation;
 
         return this;
     }

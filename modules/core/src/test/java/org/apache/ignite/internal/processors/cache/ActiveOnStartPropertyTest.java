@@ -131,6 +131,8 @@ public class ActiveOnStartPropertyTest extends GridCommonAbstractTest {
         for (int i=0; i < nodeCnt; i++) {
             assertEquals(activeOnStart, grid(i).configuration().isActiveOnStart());
 
+            assertNull(grid(i).configuration().getClusterStateOnStart());
+
             assertEquals(persistenceEnabled, CU.isPersistenceEnabled(grid(i).configuration()));
 
             // Active on start must be ignored if persistence enabled.
