@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using System;
     using System.Linq;
     using System.Text.RegularExpressions;
+    using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Log;
@@ -33,9 +34,20 @@ namespace Apache.Ignite.Core.Tests.Client
         /// Tests that basic cache operations are supported on all protocols.
         /// </summary>
         [Test]
-        public void TestCacheOperationsAreSupportedOnAllProtocols()
+        public void TestCacheOperationsAreSupportedOnAllProtocols(
+            [Values(0, 1, 2, 3, 4, 5)] short minor)
         {
-            // TODO
+            var version = new ClientProtocolVersion(1, minor, 0);
+            
+            using (var client = GetClient(version, true))
+            {
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                cache.Put(1, -1);
+                cache.PutAll(Enumerable.Range(2, 10).ToDictionary(x => x, x => x));
+                
+                Assert.AreEqual(-1, cache.Get(1));
+                Assert.AreEqual(11, cache.Query(new ScanQuery<int, int>()).GetAll().Count);
+            }
         }
 
         [Test]
