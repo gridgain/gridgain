@@ -23,19 +23,24 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
     public class ListLogger : ILogger
     {
-        /** */
-        private readonly List<string> _messages = new List<string>();
+        private readonly List<Entry> _entries = new List<Entry>();
 
-        /** */
         private readonly object _lock = new object();
 
-        public List<string> Messages
+        private readonly ILogger _wrappedLogger;
+
+        public ListLogger(ILogger wrappedLogger = null)
+        {
+            _wrappedLogger = wrappedLogger;
+        }
+
+        public List<Entry> Entries
         {
             get
             {
                 lock (_lock)
                 {
-                    return _messages.ToList();
+                    return _entries.ToList();
                 }
             }
         }
@@ -44,22 +49,61 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         {
             lock (_lock)
             {
-                _messages.Clear();
+                _entries.Clear();
             }
         }
 
         public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, string category,
             string nativeErrorInfo, Exception ex)
         {
+            if (_wrappedLogger != null)
+            {
+                _wrappedLogger.Log(level, message, args, formatProvider, category, nativeErrorInfo, ex);
+            }
+            
             lock (_lock)
             {
-                _messages.Add(message);
+                if (args != null)
+                {
+                    message = string.Format(formatProvider, message, args);
+                }
+                
+                _entries.Add(new Entry(message, level, category));
             }
         }
 
         public bool IsEnabled(LogLevel level)
         {
             return level == LogLevel.Debug;
+        }
+
+        public class Entry
+        {
+            private readonly string _message;
+            private readonly LogLevel _level;
+            private readonly string _category;
+
+            public Entry(string message, LogLevel level, string category)
+            {
+                _message = message;
+                _level = level;
+                _category = category;
+            }
+
+            public string Message
+            {
+                get { return _message; }
+            }
+
+            public LogLevel Level
+            {
+                get { return _level; }
+            }
+
+            public string Category
+            {
+                get { return _category; }
+            }
         }
     }
 }

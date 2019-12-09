@@ -144,7 +144,7 @@ namespace Apache.Ignite.Core.Tests.Client
             {
                 Endpoints = new List<string> { IPAddress.Loopback.ToString() },
                 SocketTimeout = TimeSpan.FromSeconds(15),
-                Logger = new ConsoleLogger(LogLevel.Trace)
+                Logger = new ListLogger()
             };
         }
 
@@ -195,7 +195,7 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return ToBinary(new Person(id) { DateTime = DateTime.MinValue.ToUniversalTime() });
         }
-
+        
         /// <summary>
         /// Asserts the client configs are equal.
         /// </summary>
