@@ -305,8 +305,10 @@ public class JdbcThinConnection implements Connection {
 
                 streamState = new StreamState((SqlSetStreamingCommand)cmd, cliIo);
 
+                // t0d0 ensure that there should be no timeout for "set streaming" command
+                // t0d0 check behavor for batches as well
                 sendRequest(new JdbcQueryExecuteRequest(JdbcStatementType.ANY_STATEMENT_TYPE,
-                    schema, 1, 1, autoCommit, false, sql, null), stmt, cliIo);
+                    schema, 1, 1, autoCommit, true, sql, null), stmt, cliIo);
 
                 streamState.start();
             }
