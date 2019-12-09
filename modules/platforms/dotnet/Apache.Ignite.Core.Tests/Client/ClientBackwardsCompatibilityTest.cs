@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Client
 {
+    using System;
     using System.Linq;
     using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Client;
@@ -38,9 +39,17 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         [Test]
-        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150()
+        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
+            [Values(0, 1, 2, 3)] short minor)
         {
+            var version = new ClientProtocolVersion(1, minor, 0);
             
+            using (var client = GetClient(version))
+            {
+                var cluster = client.GetCluster();
+
+                AssertNotSupportedOperation(() => cluster.IsActive(), version, "ClusterIsActive");
+            }
         }
 
         [Test]
@@ -110,6 +119,22 @@ namespace Apache.Ignite.Core.Tests.Client
                 Assert.AreEqual(LogLevel.Debug, lastLog.Level);
                 Assert.AreEqual(nameof(ClientSocket), lastLog.Category);
             }
+        }
+        
+        /// <summary>
+        /// Asserts proper exception for non-supported operation.
+        /// </summary>
+        private static void AssertNotSupportedOperation(Action action, ClientProtocolVersion version,
+            string expectedOperationName)
+        {
+            var ex = Assert.Throws<IgniteClientException>(() => action());
+            
+            var expectedMessage = string.Format(
+                "Operation {0} is not supported by protocol version {1}. " +
+                "Minimum protocol version required is 1.5.0.",
+                expectedOperationName, version);
+
+            Assert.AreEqual(expectedMessage, ex.Message);
         }
 
         /// <summary>
