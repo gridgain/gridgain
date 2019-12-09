@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecove
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionState;
@@ -148,6 +149,8 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
 
         CountDownLatch stripeBlockLatch = new CountDownLatch(1);
 
+        int[] stripeHolder = new int[1];
+
         try(final Transaction tx = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
             cache.put(k1, Boolean.TRUE);
             cache.put(k2, Boolean.TRUE);
@@ -163,10 +166,14 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
             assertTrue(txs1.size() == 1);
             assertTrue(txs2.size() == 2);
 
+            // Prevent recovery request for grid1 tx branch to go to grid0.
             TestRecordingCommunicationSpi.spi(grid(1)).blockMessages(GridCacheTxRecoveryRequest.class, grid(0).name());
+            // Prevent finish(false) request processing on node0.
             TestRecordingCommunicationSpi.spi(client).blockMessages(GridNearTxFinishRequest.class, grid(0).name());
 
             int stripe = U.safeAbs(p.tx().xidVersion().hashCode());
+
+            stripeHolder[0] = stripe;
 
             // Blocks stripe processing for rollback request on node1.
             grid(1).context().getStripedExecutorService().execute(stripe, () -> U.awaitQuiet(stripeBlockLatch));
@@ -187,14 +194,18 @@ public class TxRecoveryWithConcurrentRollbackTest extends GridCommonAbstractTest
             // Expected.
         }
 
+        // Wait until tx0 is committed by recovery on node0.
         assertNotNull(txs0);
         txs0.get(0).finishFuture().get();
 
-        // Release rollback request processing.
+        // Release rollback request processing, triggering an attempt to rollback the transaction during recovery.
         stripeBlockLatch.countDown();
 
-        doSleep(1000); // Give some time for finish request to complete.
+        // Wait until finish message is processed.
+        GridTestUtils.waitForCondition(() ->
+            grid(1).context().getStripedExecutorService().queueSize(stripeHolder[0]) == 0, 5_000);
 
+        // Proceed with recovery on grid1 -> grid0. Tx0 is committed so tx1 also should be committed.
         TestRecordingCommunicationSpi.spi(grid(1)).stopBlock();
 
         assertNotNull(txs1);
