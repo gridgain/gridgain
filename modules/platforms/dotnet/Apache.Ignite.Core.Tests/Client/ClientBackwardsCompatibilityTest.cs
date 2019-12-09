@@ -16,6 +16,8 @@
 
 namespace Apache.Ignite.Core.Tests.Client
 {
+    using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Impl.Client;
     using NUnit.Framework;
 
     /// <summary>
@@ -42,6 +44,23 @@ namespace Apache.Ignite.Core.Tests.Client
         public void TestAffinityAwarenessDisablesAutomaticallyOnVersionsOlderThan140()
         {
             
+        }
+
+        [Test]
+        public void TestClientNewerThanServerReconnectsOnServerVersion()
+        {
+            var cfg = new IgniteClientConfiguration(GetClientConfiguration())
+            {
+                // Use a non-existent version that is not supported by the server
+                ProtocolVersion = new ClientProtocolVersion(short.MaxValue, short.MaxValue, short.MaxValue) 
+            };
+
+            using (var client = Ignition.StartClient(cfg))
+            {
+                var clientInternal = (IgniteClient) client;
+                
+                Assert.AreEqual(ClientSocket.CurrentProtocolVersion, clientInternal.ServerVersion);
+            }
         }
     }
 }
