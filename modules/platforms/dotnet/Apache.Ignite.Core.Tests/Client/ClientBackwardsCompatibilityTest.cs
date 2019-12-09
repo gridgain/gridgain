@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System.Linq;
+    using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Log;
@@ -57,6 +58,17 @@ namespace Apache.Ignite.Core.Tests.Client
             using (var client = GetClient(version))
             {
                 Assert.AreEqual(ClientSocket.CurrentProtocolVersion, client.ServerVersion);
+
+                var logs = GetLogs(client);
+                
+                var expectedMessage = "Handshake failed on 127.0.0.1:10800, " +
+                                      "requested protocol version = 32767.32767.32767, server protocol version = , " +
+                                      "status = Fail, message = Unsupported version.";
+
+                var message = Regex.Replace(
+                    logs[2].Message, @"server protocol version = \d\.\d\.\d", "server protocol version = ");
+                
+                Assert.AreEqual(expectedMessage, message);
             }
         }
 
