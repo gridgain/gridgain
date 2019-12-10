@@ -217,6 +217,7 @@
     <Compile Include="EventsTestLocalListeners.cs" />
     <Compile Include="FailureHandlerTest.cs" />
     <Compile Include="Impl\Compute\ComputeImplTest.cs" />
+    <Compile Include="JavaServer.cs" />
     <Compile Include="Log\ConsoleLoggerTest.cs" />
     <Compile Include="PathUtils.cs" />
     <Compile Include="Process\ListDataReader.cs" />
