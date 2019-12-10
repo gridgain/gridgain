@@ -58,13 +58,7 @@ namespace Apache.Ignite.Core.Tests.Client
             
             using (var client = GetClient(version))
             {
-                var cluster = client.GetCluster();
-
-                AssertNotSupportedOperation(() => cluster.IsActive(), version, "ClusterIsActive");
-                AssertNotSupportedOperation(() => cluster.SetActive(true), version, "ClusterChangeState");
-                AssertNotSupportedOperation(() => cluster.IsWalEnabled("c"), version, "ClusterGetWalState");
-                AssertNotSupportedOperation(() => cluster.EnableWal("c"), version, "ClusterChangeWalState");
-                AssertNotSupportedOperation(() => cluster.DisableWal("c"), version, "ClusterChangeWalState");
+                TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(client, version.ToString());
             }
         }
 
@@ -137,10 +131,22 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
         
+        public static void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(IIgniteClient client,
+            string version)
+        {
+            var cluster = client.GetCluster();
+
+            AssertNotSupportedOperation(() => cluster.IsActive(), version, "ClusterIsActive");
+            AssertNotSupportedOperation(() => cluster.SetActive(true), version, "ClusterChangeState");
+            AssertNotSupportedOperation(() => cluster.IsWalEnabled("c"), version, "ClusterGetWalState");
+            AssertNotSupportedOperation(() => cluster.EnableWal("c"), version, "ClusterChangeWalState");
+            AssertNotSupportedOperation(() => cluster.DisableWal("c"), version, "ClusterChangeWalState");
+        }
+        
         /// <summary>
         /// Asserts proper exception for non-supported operation.
         /// </summary>
-        private static void AssertNotSupportedOperation(Action action, ClientProtocolVersion version,
+        private static void AssertNotSupportedOperation(Action action, string version,
             string expectedOperationName)
         {
             var ex = Assert.Throws<IgniteClientException>(() => action());

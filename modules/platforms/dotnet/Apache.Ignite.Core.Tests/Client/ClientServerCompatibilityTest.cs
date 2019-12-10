@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Tests.Client
     public class ClientServerCompatibilityTest
     {
         [Test]
-        public void TestCacheOperationsAreSupportedOnAllVersions([Values("8.7.7", "8.7.8")]string version)
+        public void TestCacheOperationsAreSupportedOnAllVersions([Values("8.4.6", "8.7.8")] string version)
         {
             using (JavaServer.Start(version))
             using (var client = StartClient())
@@ -37,6 +37,18 @@ namespace Apache.Ignite.Core.Tests.Client
                 var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
                 cache.Put(1, 10);
                 Assert.AreEqual(10, cache.Get(1));
+            }
+        }
+
+        [Test]
+        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
+            [Values("8.4.6", "8.7.8")] string version)
+        {
+            using (JavaServer.Start(version))
+            using (var client = StartClient())
+            {
+                ClientProtocolCompatibilityTest.TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
+                    client, version);
             }
         }
 
