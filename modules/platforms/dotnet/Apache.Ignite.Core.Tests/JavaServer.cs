@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Tests
     using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
+    using NUnit.Framework;
 
     /// <summary>
     /// Starts Java server nodes.
@@ -74,12 +75,8 @@ namespace Apache.Ignite.Core.Tests
 
             process.Start();
 
-            // Wait for node to come up using thin client
-            // TODO: Use custom connector port to make sure we check the right node
-            if (process.WaitForExit(5000))
-            {
-                
-            }
+            // TODO: Check with thin client connection
+            Assert.IsTrue(TestUtils.WaitForCondition(() => { }, 7000));
             
             return new DisposeAction(() => process.Kill());
         }
