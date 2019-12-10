@@ -35,6 +35,12 @@ namespace Apache.Ignite.Core.Tests
         /** Maven command to execute the main class. */
         private const string MavenCommandExec = "mvn compile exec:java -D\"exec.mainClass\"=\"Runner\"";
 
+        /** Java server sources path. */
+        private static readonly string JavaServerSourcePath = Path.Combine(
+            TestUtils.GetDotNetSourceDir().FullName,
+            "Apache.Ignite.Core.Tests",
+            "JavaServer"); 
+
         /// <summary>
         /// Starts a server node with a given version.
         /// </summary>
@@ -44,32 +50,19 @@ namespace Apache.Ignite.Core.Tests
         {
             IgniteArgumentCheck.NotNullOrEmpty(version, "version");
 
-            var serverSourcePath = Path.Combine(
-                TestUtils.GetDotNetSourceDir().FullName, 
-                "Apache.Ignite.Core.Tests", 
-                "JavaServer");
-            
-            // Replace version in pom.xml
-            var pomFile = Path.Combine(serverSourcePath, "pom.xml");
-            var pomContent = File.ReadAllText(pomFile);
-            pomContent = Regex.Replace(pomContent, 
-                @"<version>\d\.\d\.\d</version>",
-                string.Format("<version>{0}</version>", version));
-            File.WriteAllText(pomFile, pomContent);
+            ReplaceIgniteVersionInPomFile(version, Path.Combine(JavaServerSourcePath, "pom.xml"));
 
-            var shell = Os.IsWindows ? "cmd.exe" : "/bin/bash";
-            
             var escapedCommand = MavenCommandExec.Replace("\"", "\\\"");
 
             var process = new System.Diagnostics.Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = shell,
+                    FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
                     Arguments = string.Format("-c \"{0}\"", escapedCommand),
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = serverSourcePath,
+                    WorkingDirectory = JavaServerSourcePath,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 }
@@ -78,7 +71,45 @@ namespace Apache.Ignite.Core.Tests
             process.Start();
 
             // Wait for node to come up with a thin client connection.
-            var started = TestUtils.WaitForCondition(() =>
+            var started = WaitForStart();
+
+            if (started)
+            {
+                return new DisposeAction(() => process.Kill());
+            }
+
+            if (!process.HasExited)
+            {
+                process.Kill();
+            }
+
+            var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+            throw new Exception("Failed to start Java node: " + output);
+        }
+
+        private static void ReplaceIgniteVersionInPomFile(string version, string pomFile)
+        {
+            var pomContent = File.ReadAllText(pomFile);
+            pomContent = Regex.Replace(pomContent,
+                @"<version>\d\.\d\.\d</version>",
+                string.Format("<version>{0}</version>", version));
+            File.WriteAllText(pomFile, pomContent);
+        }
+
+        /// <summary>
+        /// Gets client configuration to connect to the Java server.
+        /// </summary>
+        public static IgniteClientConfiguration GetClientConfiguration()
+        {
+            return new IgniteClientConfiguration("127.0.0.1:" + ClientPort);
+        }
+
+        /// <summary>
+        /// Waits for server node to fully start.
+        /// </summary>
+        private static bool WaitForStart()
+        {
+            return TestUtils.WaitForCondition(() =>
             {
                 try
                 {
@@ -95,27 +126,6 @@ namespace Apache.Ignite.Core.Tests
                     return false;
                 }
             }, 7000);
-
-            if (started)
-            {
-                return new DisposeAction(() => process.Kill());
-            }
-
-            if (!process.HasExited)
-            {
-                process.Kill();
-            }
-
-            var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
-            throw new Exception("Failed to start Java node: " + output);
-        }
-
-        /// <summary>
-        /// Gets client configuration to connect to the Java server.
-        /// </summary>
-        public static IgniteClientConfiguration GetClientConfiguration()
-        {
-            return new IgniteClientConfiguration("127.0.0.1:" + ClientPort);
         }
     }
 }
