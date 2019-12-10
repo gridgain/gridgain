@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Configuration;
     using NUnit.Framework;
 
@@ -36,6 +37,41 @@ namespace Apache.Ignite.Core.Tests.Client
             // * Perform cache operation
             // * Shutdown server, start server with old version
             // * Verify that partition awareness disables automatically and cache operations continue to function
+
+            IIgniteClient client = null;
+            var clientConfiguration = new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
+            {
+                EnablePartitionAwareness = true
+            };
+            
+            try
+            {
+                using (StartNewServer())
+                {
+                    client = Ignition.StartClient(clientConfiguration);
+                    var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                    cache.Put(1, 42);
+                    Assert.AreEqual(42, cache.Get(1));
+                    Assert.IsTrue(client.GetConfiguration().EnablePartitionAwareness);
+                }
+
+                Assert.Throws<IgniteClientException>(() => client.GetCacheNames());
+
+                using (StartOldServer())
+                {
+                    var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                    cache.Put(1, 42);
+                    Assert.AreEqual(42, cache.Get(1));
+                    Assert.IsFalse(client.GetConfiguration().EnablePartitionAwareness);
+                }
+            }
+            finally
+            {
+                if (client != null)
+                {
+                    client.Dispose();
+                }
+            }
         }
 
         /// <summary>
