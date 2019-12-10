@@ -24,7 +24,7 @@ fixture('New cluster with cache')
     .beforeEach(async(t) => {
         await prepareUser(t);
     })
-    .after(async(t) => {
+    .afterEach(async(t) => {
         await cleanupUser(t);
     });
 

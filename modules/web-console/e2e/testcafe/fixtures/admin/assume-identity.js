@@ -30,8 +30,10 @@ fixture('Assumed identity')
         await prepareUser(t);
     })
     .afterEach(async(t) => {
-        await dropTestDB(admin.TEST_USER.email);
         await cleanupUser(t);
+    })
+    .after(async(t) => {
+        await dropTestDB(admin.TEST_USER.email);
     });
 
 test('Become user', async(t) => {

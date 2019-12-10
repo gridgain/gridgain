@@ -16,7 +16,7 @@
 
 import {WebSocketHook} from '../../mocks/WebSocketHook';
 import {agentStat, AGENT_DISCONNECTED_GRID} from '../../mocks/agentTasks';
-import {resolveUrl, dropTestDB, insertTestUser, enableDemoMode} from '../../environment/envtools';
+import {resolveUrl, enableDemoMode} from '../../environment/envtools';
 import {prepareUser, cleanupUser} from '../../roles';
 import {errorNotification} from '../../components/notifications';
 

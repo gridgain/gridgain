@@ -16,4 +16,4 @@
 
 import {Selector} from 'testcafe';
 
-export const connectedClustersBadge = Selector('connected-clusters');
+export const connectedClustersBadge = Selector('connected-clusters').find('.connected-cluster-badge__count');

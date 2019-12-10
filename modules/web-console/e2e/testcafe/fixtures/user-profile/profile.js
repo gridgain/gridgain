@@ -28,7 +28,7 @@ fixture('Checking user profile')
         await t.navigateTo(resolveUrl('/settings/profile'));
     })
     .afterEach(async(t) => {
-        await cleanupUser();
+        await cleanupUser(t);
         await dropTestDB(changedEmail);
     });
 

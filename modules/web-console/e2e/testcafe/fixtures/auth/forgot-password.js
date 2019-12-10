@@ -24,11 +24,11 @@ const email = randomEmail();
 fixture('Password reset')
     .page(resolveUrl('/forgot-password'))
     .before(async() => {
-        // await dropTestDB(email);
+        await dropTestDB(email);
         await insertTestUser(email);
     })
     .after(async() => {
-        // await dropTestDB(email);
+        await dropTestDB(email);
     });
 
 test('Incorrect email', async(t) => {

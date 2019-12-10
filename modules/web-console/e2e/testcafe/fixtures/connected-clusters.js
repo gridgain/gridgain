@@ -22,16 +22,15 @@ import {agentStat, FAKE_CLUSTERS} from '../mocks/agentTasks';
 
 fixture('Connected clusters')
     .beforeEach(async (t) => {
-        await prepareUser(t);
         await t.addRequestHooks(t.ctx.ws = new WebSocketHook().use(agentStat(FAKE_CLUSTERS)));
+        await prepareUser(t);
     })
     .afterEach(async (t) => {
-        t.ctx.ws.destroy();
         await cleanupUser(t);
+        t.ctx.ws.destroy();
     });
 
 test('Connected clusters badge', async (t) => {
-    await t
-        .navigateTo(resolveUrl('/settings/profile'))
-        .expect(connectedClustersBadge.textContent).eql('My Connected Clusters: 2');
+    await t.navigateTo(resolveUrl('/settings/profile'));
+    await t.expect(connectedClustersBadge.textContent).eql('2');
 });

@@ -30,24 +30,15 @@ fixture('Checking Ignite queries notebooks list')
         await cleanupUser(t);
     });
 
-test('Testing creating notebook', async(t) => {
+test('Create, Clone, Delete All notebooks', async(t) => {
     await notebooksListPage.createNotebook(notebookName);
-
     await t.expect(Selector('.notebook-name a').withText(notebookName).exists).ok();
-});
-
-test('Testing cloning notebook', async(t) => {
     await notebooksListPage.cloneNotebook(notebookName);
-
     await t.expect(Selector('.notebook-name a').withText(`${notebookName}_1`).exists).ok();
+    await notebooksListPage.deleteAllNotebooks();
+    await t.expect(Selector('.notebook-name a').withText(`${notebookName}_1`).exists).notOk();
 });
 
 test.skip('Testing forbidding of creating notebook with existing name', async(t) => {
     // Todo: Implement this test after investigation on reason of testcafe blocking notebooks API query.
-});
-
-test('Testing deleting notebooks', async(t) => {
-    await notebooksListPage.deleteAllNotebooks();
-
-    await t.expect(Selector('.notebook-name a').withText(`${notebookName}_1`).exists).notOk();
 });
