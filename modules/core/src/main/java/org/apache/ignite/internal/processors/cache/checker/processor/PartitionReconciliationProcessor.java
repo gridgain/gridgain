@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -29,6 +30,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -37,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyV
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
@@ -45,11 +48,17 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.mapPartitionReconciliation;
+import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
 /**
  * The base point of partition reconciliation processing.
@@ -82,14 +91,15 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private final int repairAttempts;
 
     /**
-     *
+     * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg}
+     * while repairing doubtful keys.
      */
-    private final Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys = new HashMap<>();
+    private RepairAlgorithm repairAlg;
 
     /**
      *
      */
-    private final Map<String, Map<Integer, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> fixedKeys = new HashMap<>();
+    private final Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys = new HashMap<>();
 
     /**
      *
@@ -99,7 +109,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      *
      */
-    public PartitionReconciliationProcessor(
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationProcessor(
         IgniteEx ignite,
         GridCachePartitionExchangeManager<Object, Object> exchMgr,
         Collection<String> caches,
@@ -107,16 +117,18 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         int throttlingIntervalMillis,
         int batchSize,
         int recheckAttempts,
-        int repairAttempts
+        int repairAttempts,
+        RepairAlgorithm repairAlg
     ) throws IgniteCheckedException {
         super(ignite, exchMgr, PARALLELISM_LEVEL);
-        this.log = ignite.log().getLogger(this);
+        log = ignite.log().getLogger(this);
         this.caches = caches;
         this.fixMode = fixMode;
         this.throttlingIntervalMillis = throttlingIntervalMillis;
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAttempts = repairAttempts;
+        this.repairAlg = repairAlg;
     }
 
     /**
@@ -160,10 +172,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     throw new RuntimeException("TODO Unsupported type: " + workload);
             }
 
-            if (fixMode)
-                return null;
-            else
-                return prepareResult();
+            return prepareResult();
         }
         catch (InterruptedException e) {
             log.warning("Partition reconciliation was interrupted.", e);
@@ -212,12 +221,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Recheck workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(), workload.partitionId(), startTopVer),
+            new RecheckRequest(new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
+                workload.partitionId(), startTopVer),
             futRes -> {
                 Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys = futRes.get();
 
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
-                    = checkConflicts(workload.recheckKeys(), actualKeys);
+                    = checkConflicts(workload.recheckKeys(), actualKeys,
+                    ignite.cachex(workload.cacheName()).context());
 
                 if (!notResolvingConflicts.isEmpty()) {
                     if (workload.attempt() < recheckAttempts) {
@@ -248,27 +259,37 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Repair workload) throws InterruptedException {
         compute(
             RepairRequestTask.class,
-            new RepairRequest(workload.data(), workload.cacheName(), workload.partitionId(), startTopVer),
+            new RepairRequest(workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
+                repairAttempts),
             futRes -> {
-                Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRecheckAndRepair = futRes.get();
+                RepairResult repairRes = futRes.get();
 
-                // TODO: 04.12.19 Merge finish unmarshal with lambda.
-                if (!keysToRecheckAndRepair.isEmpty()) {
-                    for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry: keysToRecheckAndRepair.entrySet()) {
+                if (!repairRes.repairedKeys().isEmpty())
+                    addToPrintResult(workload.cacheName(), workload.partitionId(), repairRes.repairedKeys());
+                else if (!repairRes.keysToRepair().isEmpty()) {
+
+                    // Repack recheck keys.
+                    Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = new HashMap<>();
+
+                    for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry :
+                        repairRes.keysToRepair().entrySet()) {
+                        KeyCacheObject keyCacheObj;
+
                         try {
-                            dataEntry.getKey().getKey().finishUnmarshal(ignite.cachex(workload.cacheName()).context().cacheObjectContext(), null);
+                            keyCacheObj = unmarshalKey(
+                                dataEntry.getKey().getKey(),
+                                ignite.cachex(workload.cacheName()).context());
                         }
                         catch (IgniteCheckedException e) {
-                            // TODO: 04.12.19
-                            e.printStackTrace();
-                        }
-                    }
+                            U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey().getKey() +
+                                "], key is skipped.");
 
-                    Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys =
-                        keysToRecheckAndRepair.entrySet().stream().collect(Collectors.toMap(
-                            e -> e.getKey().getKey(),
-                            e -> e.getValue().entrySet().stream().
-                                collect(Collectors.toMap(Map.Entry::getKey, e2 -> e2.getValue().version()))));
+                            continue;
+                        }
+
+                        recheckKeys.put(keyCacheObj, dataEntry.getValue().entrySet().stream().
+                            collect(Collectors.toMap(Map.Entry::getKey, e2 -> e2.getValue().version())));
+                    }
 
                     if (workload.attempt() < repairAttempts) {
                         schedule(
@@ -280,9 +301,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 workload.attempt() + 1
                             ));
                     }
-                }
-                else {
-                    // TODO: 04.12.19 Fix with majority.
                 }
             });
     }
@@ -324,6 +342,67 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
                     .computeIfAbsent(partId, k -> new ArrayList<>())
                     .addAll(mapPartitionReconciliation(conflicts, actualKeys, ctx));
+            }
+            catch (IgniteCheckedException e) {
+                log.error("Broken key can't be added to result. ", e);
+            }
+        }
+    }
+
+    /**
+     * Add data to print result.
+     * @param cacheName Cache name.
+     * @param partId Partition Id.
+     * @param repairedKeys Repaired keys.
+     */
+    private void addToPrintResult(
+        String cacheName,
+        int partId,
+        Map<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>> repairedKeys
+    ) {
+        CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
+
+        synchronized (inconsistentKeys) {
+            try {
+                List<Map<UUID, PartitionReconciliationDataRowMeta>> res = new ArrayList<>();
+
+                for (Map.Entry<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>>
+                    entry : repairedKeys.entrySet()) {
+                    Map<UUID, PartitionReconciliationDataRowMeta> map = new HashMap<>();
+
+                    for (Map.Entry<UUID, VersionedValue> uuidBasedEntry : entry.getValue().entrySet()) {
+                        KeyCacheObject key = entry.getKey().get1().getKey();
+
+                        Optional<CacheObject> cacheObjOpt = Optional.ofNullable(uuidBasedEntry.getValue().value());
+
+                        Optional<String> valStr = cacheObjOpt
+                            .flatMap(co -> Optional.ofNullable(co.value(ctx, false)))
+                            .map(Object::toString);
+
+                        key.finishUnmarshal(ctx, null);
+
+                        Object keyVal = key.value(ctx, false);
+
+                        map.put(uuidBasedEntry.getKey(),
+                            new PartitionReconciliationDataRowMeta(
+                                new PartitionReconciliationKeyMeta(
+                                    key.valueBytes(ctx),
+                                    keyVal != null ? keyVal.toString() : null,
+                                    entry.getValue().get(uuidBasedEntry.getKey()).version()
+                                ),
+                                new PartitionReconciliationValueMeta(
+                                    cacheObjOpt.isPresent() ? cacheObjOpt.get().valueBytes(ctx) : null,
+                                    valStr.orElse(null)
+                                ),
+                                entry.getKey().get2()
+                            ));
+                    }
+                    res.add(map);
+                }
+
+                inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
+                    .computeIfAbsent(partId, k -> new ArrayList<>())
+                    .addAll(res);
             }
             catch (IgniteCheckedException e) {
                 log.error("Broken key can't be added to result. ", e);

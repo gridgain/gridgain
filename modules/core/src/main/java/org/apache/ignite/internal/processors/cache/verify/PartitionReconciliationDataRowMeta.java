@@ -23,13 +23,27 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
+/**
+ * Data row meta including information about key, value and repair meta within the context of partition reconciliation.
+ */
 public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Binary and string representation of a versioned key. */
     private PartitionReconciliationKeyMeta keyMeta;
 
+    /** Binary and string representation of a value. */
     private PartitionReconciliationValueMeta valMeta;
+
+    /** Repair meta including:
+     * <ul>
+     *     <li>boolean flag that indicates whether data was fixed or not;</li>
+     *     <li>value that was used to fix entry;</li>
+     *     <li>repair algorithm that was used;</li>
+     * </ul>
+     */
+    private PartitionReconciliationRepairMeta repairMeta;
 
     /**
      * Default constructor for externalization.
@@ -37,6 +51,12 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
     public PartitionReconciliationDataRowMeta() {
     }
 
+    /**
+     * Constructor.
+     *
+     * @param keyMeta Binary and string representation of a versioned key.
+     * @param valMeta Binary and string representation of a value.
+     */
     public PartitionReconciliationDataRowMeta(
         PartitionReconciliationKeyMeta keyMeta,
         PartitionReconciliationValueMeta valMeta) {
@@ -44,10 +64,32 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
         this.valMeta = valMeta;
     }
 
+    /**
+     * Constructor.
+     *
+     * @param keyMeta Binary and string representation of a versioned key.
+     * @param valMeta Binary and string representation of a value.
+     * @param repairMeta Repair meta including:
+     *  <ul>
+     *      <li>boolean flag that indicates whether data was fixed or not;</li>
+     *      <li>value that was used to fix entry;</li>
+     *      <li>repair algorithm that was used;</li>
+     *  </ul>
+     */
+    public PartitionReconciliationDataRowMeta(
+        PartitionReconciliationKeyMeta keyMeta,
+        PartitionReconciliationValueMeta valMeta,
+        PartitionReconciliationRepairMeta repairMeta) {
+        this.keyMeta = keyMeta;
+        this.valMeta = valMeta;
+        this.repairMeta = repairMeta;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(keyMeta);
         out.writeObject(valMeta);
+        out.writeObject(repairMeta);
     }
 
     /** {@inheritDoc} */
@@ -55,6 +97,7 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
         ClassNotFoundException {
         keyMeta = (PartitionReconciliationKeyMeta) in.readObject();
         valMeta = (PartitionReconciliationValueMeta) in.readObject();
+        repairMeta = (PartitionReconciliationRepairMeta) in.readObject();
     }
 
     /** {@inheritDoc} */

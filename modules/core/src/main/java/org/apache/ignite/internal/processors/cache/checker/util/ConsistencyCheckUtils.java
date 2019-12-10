@@ -44,17 +44,24 @@ public class ConsistencyCheckUtils {
      */
     public static Map<KeyCacheObject, Map<UUID, GridCacheVersion>> checkConflicts(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> oldKeys,
-        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys,
+        GridCacheContext cctx
     ) {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> keysWithConflicts = new HashMap<>();
 
         // Actual keys are a subset of old keys.
+        // TODO: 05.12.19 Seems that it's not correct to use keyCacheObject.equals() here.
         for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> keyEntry : oldKeys.entrySet()) {
             Map<UUID, VersionedValue> newVer = actualKeys.get(keyEntry.getKey());
 
             if (newVer != null) {
                 // Elements with min GridCacheVersion should increment
                 if (!checkConsistency(keyEntry.getValue(), newVer))
+                    keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
+                else if (keyEntry.getValue().size() != cctx.affinity().nodesByKey(
+                        keyEntry.getKey().value(cctx.cacheObjectContext(), false),
+                        cctx.affinity().affinityTopologyVersion()).
+                        size())
                     keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
             }
         }

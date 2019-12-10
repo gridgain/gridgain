@@ -27,6 +27,12 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
     FIX_MODE("--fix-mode"),
 
+    /**
+     * Specifies which fix algorithm to use while repairing doubtful keys:
+     * options {@code PartitionReconciliationRepairMeta.RepairAlg}.
+     */
+    FIX_ALG("--fix-alg"),
+
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     VERBOSE("--verbose"),
 

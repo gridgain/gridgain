@@ -16,13 +16,13 @@
 
 package org.apache.ignite.internal.visor.checker;
 
-import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.util.typedef.internal.U;
-
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Set;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Partition reconciliation task arguments.
@@ -52,6 +52,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     private int recheckAttempts;
 
     /**
+     * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg} while repairing
+     * doubtful keys.
+     */
+    private RepairAlgorithm repairAlg;
+
+    /**
      * Default constructor.
      */
     public VisorPartitionReconciliationTaskArg() {
@@ -63,13 +69,14 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, boolean verbose,
-        int throttlingIntervalMillis, int batchSize, int recheckAttempts) {
+        int throttlingIntervalMillis, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg) {
         this.caches = caches;
         this.verbose = verbose;
         this.fixMode = fixMode;
         this.throttlingIntervalMillis = throttlingIntervalMillis;
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
+        this.repairAlg = repairAlg;
     }
 
     /** {@inheritDoc} */
@@ -85,6 +92,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeInt(batchSize);
 
         out.writeInt(recheckAttempts);
+
+        U.writeEnum(out, repairAlg);
     }
 
     /** {@inheritDoc} */
@@ -102,6 +111,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         batchSize = in.readInt();
 
         recheckAttempts = in.readInt();
+
+        repairAlg = RepairAlgorithm.fromOrdinal(in.readByte());
     }
 
     /**
@@ -144,5 +155,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     public boolean verbose() {
         return verbose;
+    }
+
+    /**
+     * @return Specifies which fix algorithm to use: options  while repairing doubtful keys.
+     */
+    public RepairAlgorithm repairAlg() {
+        return repairAlg;
     }
 }

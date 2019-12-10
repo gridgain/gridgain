@@ -16,6 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -28,23 +37,21 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
-
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
@@ -52,20 +59,25 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 /**
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
-public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<PartitionKeyVersion, Map<UUID, VersionedValue>>> {
-    /**
-     *
-     */
+public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairResult> {
+
+    /** */
     private static final long serialVersionUID = 0L;
 
+    /** */
+    public static final int MAX_REPAIR_ATTEMPTS = 3;
+
     /** Injected logger. */
+    @SuppressWarnings("unused")
     @LoggerResource
     private IgniteLogger log;
 
     /** Ignite instance. */
+    @SuppressWarnings("unused")
     @IgniteInstanceResource
     private IgniteEx ignite;
 
+    /** Repair request. */
     private RepairRequest repairReq;
 
     /** {@inheritDoc} */
@@ -78,12 +90,15 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Par
         Map<UUID, Map<KeyCacheObject, Map<UUID, VersionedValue>>> targetNodesToData = new HashMap<>();
 
         for (Map.Entry<KeyCacheObject, Map<UUID, VersionedValue>> dataEntry: repairReq.data().entrySet()) {
-            KeyCacheObject keyCacheObject = null;
+            KeyCacheObject keyCacheObject;
+
             try {
                 keyCacheObject = unmarshalKey(dataEntry.getKey(), ignite.cachex(repairReq.cacheName()).context());
             }
             catch (IgniteCheckedException e) {
-                e.printStackTrace();
+                U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey() + "], key is skipped.");
+
+                continue;
             }
 
             Object key = keyCacheObject.value(
@@ -103,13 +118,15 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Par
             if (data != null && !data.isEmpty()) {
                 // TODO: 03.12.19 Use proper top ver instead of null;
                 // TODO: 03.12.19 PartitionKeyVersion is used in order to prevent finishUnmarshal problem, cause actually we only need keyCacheObject,
-                // TODO: 03.12.19consider using better wrapper here.
+                // TODO: 03.12.19 consider using better wrapper here.
                 jobs.put(
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
                             entry -> new PartitionKeyVersion(null, entry.getKey(), null),
                             entry -> entry.getValue())),
-                        arg.cacheName()),
+                        arg.cacheName(),
+                        repairReq.repairAlg(),
+                        repairReq.repairAttempt()),
                     node);
             }
         }
@@ -127,7 +144,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Par
                         Collectors.toMap(
                             entry -> new PartitionKeyVersion(null, entry.getKey(), null),
                             entry -> entry.getValue())),
-                        arg.cacheName()),
+                        arg.cacheName(),
+                        repairReq.repairAlg(),
+                        repairReq.repairAttempt()),
                     node);
             }
         }
@@ -151,111 +170,264 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Par
     }
 
     /** {@inheritDoc} */
-    @Override public Map<PartitionKeyVersion, Map<UUID, VersionedValue>> reduce(
+    @Override public RepairResult reduce(
         List<ComputeJobResult> results) throws IgniteException {
-        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> res = new HashMap<>();
+        RepairResult aggregatedRepairRes = new RepairResult();
 
-        for (ComputeJobResult result : results)
-            res.putAll(result.getData());
+        for (ComputeJobResult result : results) {
+            RepairResult repairRes = result.getData();
 
-        return res;
+            aggregatedRepairRes.keysToRepair().putAll(repairRes.keysToRepair());
+            aggregatedRepairRes.repairedKeys().putAll(repairRes.repairedKeys());
+        }
+
+        return aggregatedRepairRes;
     }
 
     /**
-     *
+     * Repair job.
      */
-    public static class RepairJob extends ComputeJobAdapter {
-        /**
-         *
-         */
+    private static class RepairJob extends ComputeJobAdapter {
+        /** */
         private static final long serialVersionUID = 0L;
 
         /** Ignite instance. */
+        @SuppressWarnings("unused")
         @IgniteInstanceResource
         private IgniteEx ignite;
 
         /** Injected logger. */
+        @SuppressWarnings("unused")
         @LoggerResource
         private IgniteLogger log;
 
         /** Partition key. */
         private final Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data;
 
+        /** Cache name. */
         private String cacheName;
 
-        public RepairJob(Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data, String cacheName) {
+        /** Repair attempt. */
+        private int repairAttempt;
+
+        /** Repair algorithm to use in case of fixing doubtful keys. */
+        private RepairAlgorithm repairAlg;
+
+        /**
+         * Constructor.
+         *
+         * @param data Keys to repair with corresponding values and version per node.
+         * @param cacheName Cache name.
+         * @param repairAlg Repair algorithm to use in case of fixing doubtful keys.
+         * @param repairAttempt Repair attempt.
+         */
+        @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+        public RepairJob(Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data, String cacheName,
+            RepairAlgorithm repairAlg, int repairAttempt) {
             this.data = data;
             this.cacheName = cacheName;
+            this.repairAlg = repairAlg;
+            this.repairAttempt = repairAttempt;
         }
 
         /** {@inheritDoc} */
-        // TODO: 02.12.19
-        @Override public  Map<PartitionKeyVersion, Map<UUID, VersionedValue>> execute() throws IgniteException {
-            Map<PartitionKeyVersion, Map<UUID, VersionedValue>> recheckedKeys = new HashMap<>();
+        @SuppressWarnings("unchecked") @Override public RepairResult execute() throws IgniteException {
+            Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
 
-            for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry: data.entrySet()) {
+            Map<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
+                new HashMap<>();
 
-                Object key = null;
+            for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
-                    key =  unmarshalKey(
+                    Object key = unmarshalKey(
                         dataEntry.getKey().getKey(),
                         ignite.cachex(cacheName).context()).value(
-                            ignite.cachex(cacheName).context().cacheObjectContext(),
+                        ignite.cachex(cacheName).context().cacheObjectContext(),
                         false);
-                }
-                catch (IgniteCheckedException e) {
-                    // TODO: 03.12.19 Use proper message here.
-                    e.printStackTrace();
-                }
 
-                Map<UUID, VersionedValue> nodeToVersionedValue = dataEntry.getValue();
+                    Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
-                GridCacheVersion maxVer = new GridCacheVersion(0,0,0);
+                    List<ClusterNode> affinityNodes = ignite.cachex(cacheName).context().affinity().nodesByKey(
+                        key,
+                        ignite.cachex(cacheName).context().affinity().affinityTopologyVersion());
 
-                CacheObject maxVal = null;
+                    CacheObject valToFixWith = calculateValueToFixWith(repairAlg, nodeToVersionedValues, affinityNodes);
 
-                // TODO: 03.12.19 Consider using lambda instead.
-                for (VersionedValue versionedValue: nodeToVersionedValue.values()) {
-                    if (versionedValue.version().compareTo(maxVer) > 0) {
-                        maxVer = versionedValue.version();
+                    Boolean keyWasSuccessfullyFixed;
 
-                        maxVal = versionedValue.value();
+                    // TODO: 02.12.19
+                    int rmvQueueMaxSize = 32;
+
+                    // Are there any nodes with missing key?
+                    if (dataEntry.getValue().size() != affinityNodes.size()) {
+                        if (repairAlg == RepairAlgorithm.PRINT_ONLY)
+                            keyWasSuccessfullyFixed = true;
+                        else {
+                            keyWasSuccessfullyFixed = ignite.cache(cacheName).<Boolean>invoke(
+                                key,
+                                new RepairEntryProcessor(
+                                    valToFixWith,
+                                    nodeToVersionedValues,
+                                    rmvQueueMaxSize,
+                                    true));
+
+                            assert keyWasSuccessfullyFixed;
+                        }
+
+                    }
+                    else {
+                        // Is it last repair attempt?
+                        if (repairAttempt == MAX_REPAIR_ATTEMPTS) {
+                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
+                                key,
+                                new RepairEntryProcessor(
+                                    valToFixWith,
+                                    nodeToVersionedValues,
+                                    rmvQueueMaxSize,
+                                    true));
+
+                            assert keyWasSuccessfullyFixed;
+                        }
+                        else {
+                            valToFixWith = calculateValueToFixWith(
+                                RepairAlgorithm.MAX_GRID_CACHE_VERSION,
+                                nodeToVersionedValues,
+                                affinityNodes);
+
+                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
+                                key,
+                                new RepairEntryProcessor(
+                                    valToFixWith,
+                                    nodeToVersionedValues,
+                                    rmvQueueMaxSize,
+                                    false));
+                        }
+                    }
+
+                    if (!keyWasSuccessfullyFixed)
+                        keysToRepairWithNextAttempt.put(dataEntry.getKey(), dataEntry.getValue());
+                    else {
+                        repairedKeys.put(
+                            new T2<>(
+                                dataEntry.getKey(),
+                                new PartitionReconciliationRepairMeta(
+                                    true,
+                                    valToFixWith,
+                                    repairAlg)
+                            ),
+                            dataEntry.getValue());
                     }
                 }
-
-                // TODO: 02.12.19
-                int removeQueueMaxSize = 32;
-
-                // TODO: 03.12.19 Generify with boolean.
-                Boolean keyWasSuccessfullyFixed = (Boolean) ignite.cache(cacheName).invoke(
-                    key,
-                    // TODO: 03.12.19 Given data is excessive for atomic caches.
-                    new RepairEntryProcessor(maxVal, nodeToVersionedValue, removeQueueMaxSize));
-
-                if (!keyWasSuccessfullyFixed) {
-                    recheckedKeys.put(dataEntry.getKey(), dataEntry.getValue());
+                catch (IgniteCheckedException e) {
+                    U.error(log, "Key [" + dataEntry.getKey().getKey() + "] was skipped during repair phase.",
+                        e);
                 }
             }
 
-            return recheckedKeys;
+            return new RepairResult(keysToRepairWithNextAttempt, repairedKeys);
         }
 
-        public class RepairEntryProcessor implements EntryProcessor {
+        /**
+         * Calculate value
+         * @param repairAlg RepairAlgorithm
+         * @param nodeToVersionedValues Map of nodes to corresponding values with values.
+         * @param affinityNodes Affinity nodes.
+         * @return Value to repair with.
+         * @throws IgniteCheckedException If failed to retrieve value from value CacheObject.
+         */
+        @Nullable private CacheObject calculateValueToFixWith(RepairAlgorithm repairAlg,
+            Map<UUID, VersionedValue> nodeToVersionedValues,
+            List<ClusterNode> affinityNodes) throws IgniteCheckedException {
+            CacheObject valToFixWith = null;
+
+            switch (repairAlg) {
+                case PRIMARY:
+                    VersionedValue versionedVal = nodeToVersionedValues.get(affinityNodes.get(0).id());
+
+                    return versionedVal != null ? versionedVal.value() : null;
+
+                case MAJORITY:
+                    Map<String, T2<Integer, CacheObject>> majorityCntr = new HashMap<>();
+
+                    for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
+                        CacheObjectContext cacheObjCtx = ignite.cachex(cacheName).context().cacheObjectContext();
+
+                        byte[] valBytes = versionedValue.value().valueBytes(cacheObjCtx);
+
+                        String valBytesStr = Arrays.toString(valBytes);
+
+                        if (majorityCntr.putIfAbsent(valBytesStr, new T2<>(0, versionedValue.value())) != null)
+                            continue;
+
+                        T2<Integer, CacheObject> valTuple = majorityCntr.get(valBytesStr);
+
+                        valTuple.set1(valTuple.getKey() + 1);
+                    }
+
+                    int maxMajority = -1;
+
+                    for (T2<Integer, CacheObject> majorityValues : majorityCntr.values()) {
+                        if (majorityValues.get1() > maxMajority) {
+                            maxMajority = majorityValues.get1();
+                            valToFixWith = majorityValues.get2();
+                        }
+                    }
+
+                    return valToFixWith;
+
+                case MAX_GRID_CACHE_VERSION:
+                    GridCacheVersion maxVer = new GridCacheVersion(0, 0, 0);
+
+                    for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
+                        if (versionedValue.version().compareTo(maxVer) > 0) {
+                            maxVer = versionedValue.version();
+
+                            valToFixWith = versionedValue.value();
+                        }
+                    }
+
+                    return valToFixWith;
+
+                default:
+                    throw new IllegalArgumentException("Unsupported repair algorithm=[" + repairAlg + ']');
+            }
+        }
+
+        /** Entry processor to repair inconsistent entries. */
+        private static class RepairEntryProcessor implements EntryProcessor {
 
             /** Value to set. */
             private Object val;
 
+            /** Map of nodes to corresponding versioned values */
             Map<UUID, VersionedValue> data;
 
+            /** deferred delete queue max size. */
             private long rmvQueueMaxSize;
 
+            /** Force repair flag. */
+            private boolean forceRepair;
+
             /** */
-            public RepairEntryProcessor(Object val,  Map<UUID, VersionedValue> data, long rmvQueueMaxSize) {
+            @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+            public RepairEntryProcessor(
+                Object val,
+                Map<UUID, VersionedValue> data,
+                long rmvQueueMaxSize,
+                boolean forceRepair) {
                 this.val = val;
                 this.data = data;
                 this.rmvQueueMaxSize = rmvQueueMaxSize;
+                this.forceRepair = forceRepair;
             }
 
+            /**
+             * Do repair logic.
+             * @param entry Entry to fix.
+             * @param arguments Arguments.
+             * @return {@code True} if was successfully repaired, {@code False} otherwise.
+             * @throws EntryProcessorException If failed.
+             */
             @SuppressWarnings("unchecked")
             @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
                 CacheEntry verEntry = (CacheEntry)entry.unwrap(CacheEntry.class);
@@ -264,36 +436,47 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Map<Par
 
                 GridCacheContext cctx = (GridCacheContext)entry.unwrap(GridCacheContext.class);
 
-                UUID localNodeId = cctx.localNodeId();
+                UUID locNodeId = cctx.localNodeId();
 
-                VersionedValue versionedValue = data.get(localNodeId);
+                VersionedValue versionedVal = data.get(locNodeId);
 
                 if (entry.exists()) {
-                    if (currKeyGridCacheVer.compareTo(versionedValue.version()) == 0)
-                        entry.setValue(val);
+                    if (currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
+                        if (val == null)
+                            entry.remove();
+                        else
+                            entry.setValue(val);
+                    }
 
                     return true;
                 }
                 else {
                     if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) != 0) {
-                        if (currKeyGridCacheVer.compareTo(versionedValue.version()) == 0)
-                            entry.setValue(val);
+                        if (currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
+                            if (val == null)
+                                entry.remove();
+                            else
+                                entry.setValue(val);
+                        }
 
                         return true;
                     }
                     else {
                         boolean inEntryTTLBounds =
-                            (System.currentTimeMillis() - versionedValue.recheckStartTime()) <
+                            (System.currentTimeMillis() - versionedVal.recheckStartTime()) <
                                 Long.decode(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
 
                         long currUpdateCntr = cctx.topology().localPartition(
                             cctx.cache().affinity().partition(entry.getKey())).updateCounter();
 
-                        boolean inDeferredDelQueueBounds = ((currUpdateCntr - versionedValue.updateCounter()) <
+                        boolean inDeferredDelQueueBounds = ((currUpdateCntr - versionedVal.updateCounter()) <
                             rmvQueueMaxSize);
 
-                        if (inEntryTTLBounds && inDeferredDelQueueBounds) {
-                            entry.setValue(val);
+                        if ((inEntryTTLBounds && inDeferredDelQueueBounds) || forceRepair) {
+                            if (val == null)
+                                entry.remove();
+                            else
+                                entry.setValue(val);
 
                             return true;
                         }

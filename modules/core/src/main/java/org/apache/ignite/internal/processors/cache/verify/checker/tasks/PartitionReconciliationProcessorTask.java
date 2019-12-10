@@ -47,6 +47,7 @@ import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -104,7 +105,6 @@ public class PartitionReconciliationProcessorTask extends
             Collection<String> caches = reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty() ?
                 ignite.context().cache().publicCacheNames(): reconciliationTaskArg.caches();
 
-            // TODO: 03.12.19 Use proper repair attempts instead of constant here.
             try {
                 return new PartitionReconciliationProcessor(
                     ignite,
@@ -114,7 +114,8 @@ public class PartitionReconciliationProcessorTask extends
                     reconciliationTaskArg.throttlingIntervalMillis(),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
-                    5
+                    RepairRequestTask.MAX_REPAIR_ATTEMPTS,
+                    reconciliationTaskArg.repairAlg()
                 ).execute();
             }
             catch (IgniteCheckedException e) {
