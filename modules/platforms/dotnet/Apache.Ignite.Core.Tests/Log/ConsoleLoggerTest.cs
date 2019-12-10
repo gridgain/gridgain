@@ -25,12 +25,25 @@ namespace Apache.Ignite.Core.Tests.Log
     public class ConsoleLoggerTest
     {
         /// <summary>
+        /// Tests that default constructor sets log level to Warn.
+        /// </summary>
+        [Test]
+        public void TestDefaultConstructorSetsWarnMinLevel()
+        {
+            Assert.AreEqual(LogLevel.Warn, new ConsoleLogger().MinLevel);
+        }
+        
+        /// <summary>
         /// Tests that IsEnabled returns false when specified level is less that MinLevel.
         /// </summary>
         [Test]
-        public void TestIsEnabledReturnsFalseWhenMinLevelIsGreaterThanLevel()
+        [TestCase(LogLevel.Error, LogLevel.Debug, false)]
+        public void TestIsEnabledReturnsFalseWhenMinLevelIsGreaterThanLevel(
+            LogLevel loggerLevel, LogLevel level, bool expectedResult)
         {
-            // TODO: Parametrized test with variants
+            var logger = new ConsoleLogger(loggerLevel);
+            Assert.AreEqual(loggerLevel, logger.MinLevel);
+            Assert.AreEqual(expectedResult, logger.IsEnabled(level));
         }
 
         /// <summary>
