@@ -26,10 +26,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import javax.cache.Cache;
-import javax.cache.event.CacheEntryEvent;
-import javax.cache.event.CacheEntryEventFilter;
-import javax.cache.event.CacheEntryListenerException;
-import javax.cache.event.CacheEntryUpdatedListener;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
@@ -94,18 +90,6 @@ public class GridCacheFullTextQuerySelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * @throws Exception In case of error.
-     */
-    @Test
-    public void testInvalidTextTextQuery() throws Exception {
-        GridTestUtils.assertThrows(log, () -> {
-            checkTextQuery("*", false, false);
-
-            return null;
-        }, IgniteCheckedException.class, "Cannot parse '*': '*' or '?' not allowed as first character in WildcardQuery");
-    }
-
-    /**
      * @throws Exception On error.
      */
     @Test
@@ -126,7 +110,7 @@ public class GridCacheFullTextQuerySelfTest extends GridCommonAbstractTest {
         QueryCursor<Cache.Entry<Integer, Person>> cur = cache.query(qry);
 
         GridTestUtils.assertThrows(log, () -> {
-            cur.getAll();
+            cur.iterator().next();
 
             return null;
         }, IgniteCheckedException.class, "Cannot parse '*': '*' or '?' not allowed as first character in WildcardQuery");
