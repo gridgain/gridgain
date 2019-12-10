@@ -156,6 +156,23 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
     /** {@inheritDoc} */
     @Override public void close() {
         while (state != CLOSED) {
+            // Check that iterator has no data: in this case cancel not needed.
+            try {
+                if (iter != null && !iter.hasNext() && cancel != null)
+                    STATE_UPDATER.set(this, NO_DATA);
+            }
+            catch (Exception e) {
+                // Ignore exception on check iterator
+                // because Iterator.hasNext() may throw error on invalid / error query.
+                STATE_UPDATER.set(this, NO_DATA);
+            }
+
+            if (STATE_UPDATER.compareAndSet(this, NO_DATA, CLOSED)) {
+                closeIter();
+
+                return;
+            }
+
             if (STATE_UPDATER.compareAndSet(this, RESULT_READY, CLOSED)) {
                 if (cancel != null)
                     cancel.cancel();
@@ -169,12 +186,6 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
                 if (cancel != null)
                     cancel.cancel();
 
-                closeIter();
-
-                return;
-            }
-
-            if (STATE_UPDATER.compareAndSet(this, NO_DATA, CLOSED) || (iter != null && !iter.hasNext())) {
                 closeIter();
 
                 return;
