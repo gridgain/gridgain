@@ -37,7 +37,15 @@ namespace Apache.Ignite.Core.Tests.Log
         /// Tests that IsEnabled returns false when specified level is less that MinLevel.
         /// </summary>
         [Test]
+        [TestCase(LogLevel.Error, LogLevel.Error, true)]
+        [TestCase(LogLevel.Error, LogLevel.Warn, false)]
+        [TestCase(LogLevel.Error, LogLevel.Info, false)]
         [TestCase(LogLevel.Error, LogLevel.Debug, false)]
+        [TestCase(LogLevel.Error, LogLevel.Trace, false)]
+        [TestCase(LogLevel.Warn, LogLevel.Error, true)]
+        [TestCase(LogLevel.Warn, LogLevel.Warn, true)]
+        [TestCase(LogLevel.Warn, LogLevel.Info, false)]
+        [TestCase(LogLevel.Warn, LogLevel.Trace, false)]
         public void TestIsEnabledReturnsFalseWhenMinLevelIsGreaterThanLevel(
             LogLevel loggerLevel, LogLevel level, bool expectedResult)
         {
