@@ -21,19 +21,31 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Linq;
     using Apache.Ignite.Core.Log;
 
+    /// <summary>
+    /// Stores log entries in a list.
+    /// </summary>
     public class ListLogger : ILogger
     {
+        /** */
         private readonly List<Entry> _entries = new List<Entry>();
 
+        /** */
         private readonly object _lock = new object();
 
+        /** */
         private readonly ILogger _wrappedLogger;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ListLogger"/> class.
+        /// </summary>
         public ListLogger(ILogger wrappedLogger = null)
         {
             _wrappedLogger = wrappedLogger;
         }
 
+        /// <summary>
+        /// Gets the entries.
+        /// </summary>
         public List<Entry> Entries
         {
             get
@@ -45,6 +57,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
         }
 
+        /// <summary>
+        /// Clears the entries.
+        /// </summary>
         public void Clear()
         {
             lock (_lock)
@@ -53,6 +68,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
         }
 
+        /** <inheritdoc /> */
         public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, string category,
             string nativeErrorInfo, Exception ex)
         {
@@ -72,17 +88,29 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             }
         }
 
+        /** <inheritdoc /> */
         public bool IsEnabled(LogLevel level)
         {
             return level == LogLevel.Debug;
         }
 
+        /// <summary>
+        /// Log entry.
+        /// </summary>
         public class Entry
         {
+            /** */
             private readonly string _message;
+            
+            /** */
             private readonly LogLevel _level;
+            
+            /** */
             private readonly string _category;
 
+            /// <summary>
+            /// Initializes a new instance of <see cref="Entry"/> class.
+            /// </summary>
             public Entry(string message, LogLevel level, string category)
             {
                 _message = message;
@@ -90,16 +118,25 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 _category = category;
             }
 
+            /// <summary>
+            /// Gets the message.
+            /// </summary>
             public string Message
             {
                 get { return _message; }
             }
-
+            
+            /// <summary>
+            /// Gets the level.
+            /// </summary>
             public LogLevel Level
             {
                 get { return _level; }
             }
 
+            /// <summary>
+            /// Gets the category.
+            /// </summary>
             public string Category
             {
                 get { return _category; }
