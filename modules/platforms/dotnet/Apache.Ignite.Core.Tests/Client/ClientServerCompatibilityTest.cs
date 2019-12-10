@@ -53,18 +53,27 @@ namespace Apache.Ignite.Core.Tests.Client
             _clientProtocolVersion = clientProtocolVersion;
         }
 
+        /// <summary>
+        /// Sets up the test fixture.
+        /// </summary>
         [TestFixtureSetUp]
         public void FixtureSetUp()
         {
             _server = JavaServer.Start(_igniteVersion);
         }
 
+        /// <summary>
+        /// Tears down the test fixture.
+        /// </summary>
         [TestFixtureTearDown]
         public void FixtureTearDown()
         {
             _server.Dispose();
         }
 
+        /// <summary>
+        /// Tests that basic cache operations work on all versions.
+        /// </summary>
         [Test]
         public void TestCacheOperationsAreSupportedOnAllVersions()
         {
@@ -76,6 +85,9 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
 
+        /// <summary>
+        /// Tests that cluster operations throw proper exception on older server versions.
+        /// </summary>
         [Test]
         public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150()
         {
@@ -86,6 +98,9 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
         
+        /// <summary>
+        /// Tests that partition awareness disables automatically on older server versions.
+        /// </summary>
         [Test]
         public void TestPartitionAwarenessDisablesAutomaticallyOnVersionsOlderThan140()
         {
@@ -98,18 +113,18 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
 
+        /// <summary>
+        /// Starts the client.
+        /// </summary>
         private static IIgniteClient StartClient()
         {
-            return Ignition.StartClient(GetClientConfiguration());
-        }
-
-        private static IgniteClientConfiguration GetClientConfiguration()
-        {
-            return new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
+            var cfg = new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
             {
                 Logger = new ListLogger(new ConsoleLogger(LogLevel.Trace)),
                 EnablePartitionAwareness = true
             };
+            
+            return Ignition.StartClient(cfg);
         }
     }
 }
