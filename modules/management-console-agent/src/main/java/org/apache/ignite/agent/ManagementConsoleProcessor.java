@@ -140,8 +140,6 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isLocalNodeCoordinator(ctx.discovery())) {
-            agentStarted.set(true);
-
             messagesProc = new ManagementConsoleMessagesProcessor(ctx);
 
             connect();
@@ -225,7 +223,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        if (agentStarted.compareAndSet(false, true) && isLocalNodeCoordinator(ctx.discovery())) {
+        if (isLocalNodeCoordinator(ctx.discovery()) && agentStarted.compareAndSet(false, true)) {
             ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
             cfg = readFromMetaStorage();
