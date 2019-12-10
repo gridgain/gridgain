@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests
     using System.Diagnostics;
     using System.IO;
     using System.Text.RegularExpressions;
+    using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using NUnit.Framework;
@@ -32,9 +33,6 @@ namespace Apache.Ignite.Core.Tests
         /** Maven command to execute the main class. */
         private const string MavenCommandExec = "mvn compile exec:java -D\"exec.mainClass\"=\"Runner\"";
 
-        /** Thin client port for the server node. */
-        private const int ThinClientPort = 10890;
-        
         /// <summary>
         /// Starts a server node with a given version.
         /// </summary>
@@ -75,8 +73,22 @@ namespace Apache.Ignite.Core.Tests
 
             process.Start();
 
-            // TODO: Check with thin client connection
-            Assert.IsTrue(TestUtils.WaitForCondition(() => { }, 7000));
+            // Wait for node to come up with a thin client connection.
+            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            {
+                try
+                {
+                    // Port 10890 is set in Runner.java
+                    using (Ignition.StartClient(new IgniteClientConfiguration("127.0.0.1:10890")))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
+            }, 7000));
             
             return new DisposeAction(() => process.Kill());
         }

@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Tests.Client
 
         [Test]
         public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
-            [Values(0, 1, 2, 3)] short minor)
+            [Values(0, 1, 2, 3, 4)] short minor)
         {
             var version = new ClientProtocolVersion(1, minor, 0);
             
