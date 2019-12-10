@@ -932,6 +932,9 @@
                                         <exclude>**/*.iml</exclude><!--IDEA files-->
                                         <exclude>**/*.csv</exclude><!--CSV files-->
                                         <exclude>**/*.jks</exclude><!--bin-files-->
+                                        <exclude>**/*.p12</exclude><!--bin-files-->
+                                        <exclude>**/*.crt</exclude><!--bin-files-->
+                                        <exclude>**/*.key</exclude><!--bin-files-->
                                         <exclude>**/pom-installed.xml</exclude><!--tmp-files-->
                                         <exclude>**/keystore</exclude><!--bin-files-->
                                         <exclude>**/keystore/*.jks</exclude><!--bin-files-->
@@ -1040,13 +1043,6 @@
                                         <exclude>**/*.ps1</exclude>
                                         <exclude>**/*.json</exclude>
                                         <exclude>**/.dockerignore</exclude>
-                                        <!-- Management console agent -->
-                                        <exclude>src/test/resources/**/*.crt</exclude>
-                                        <exclude>src/test/resources/**/*.jks</exclude>
-                                        <exclude>src/test/resources/**/*.key</exclude>
-                                        <exclude>src/test/resources/**/*.p12</exclude>
-                                        <exclude>src/test/resources/**/*.csr</exclude>
-                                        <exclude>src/test/resources/**/*.cnf</exclude>
                                         <!-- H2 forked module. -->
                                         <exclude>**/org/h2/**</exclude>
                                         <exclude>src/docsrc/**</exclude>
