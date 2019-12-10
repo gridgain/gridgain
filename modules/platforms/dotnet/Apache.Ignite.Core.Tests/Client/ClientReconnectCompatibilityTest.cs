@@ -16,6 +16,8 @@
 
 namespace Apache.Ignite.Core.Tests.Client
 {
+    using System;
+    using Apache.Ignite.Core.Configuration;
     using NUnit.Framework;
 
     /// <summary>
@@ -34,6 +36,30 @@ namespace Apache.Ignite.Core.Tests.Client
             // * Perform cache operation
             // * Shutdown server, start server with old version
             // * Verify that partition awareness disables automatically and cache operations continue to function
+        }
+
+        /// <summary>
+        /// Starts new server node (partition awareness is supported).
+        /// </summary>
+        private static IDisposable StartNewServer()
+        {
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                ClientConnectorConfiguration = new ClientConnectorConfiguration
+                {
+                    Port = JavaServer.ClientPort
+                }
+            };
+
+            return Ignition.Start(cfg);
+        }
+
+        /// <summary>
+        /// Starts old server node (partition awareness is not supported).
+        /// </summary>
+        private static IDisposable StartOldServer()
+        {
+            return JavaServer.Start("2.4.0");
         }
     }
 }

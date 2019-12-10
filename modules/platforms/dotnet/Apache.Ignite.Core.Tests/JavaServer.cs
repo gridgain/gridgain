@@ -29,6 +29,9 @@ namespace Apache.Ignite.Core.Tests
     /// </summary>
     public static class JavaServer
     {
+        /** Client port. */
+        public const int ClientPort = 10890;
+        
         /** Maven command to execute the main class. */
         private const string MavenCommandExec = "mvn compile exec:java -D\"exec.mainClass\"=\"Runner\"";
 
@@ -112,7 +115,7 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         public static IgniteClientConfiguration GetClientConfiguration()
         {
-            return new IgniteClientConfiguration("127.0.0.1:10890");
+            return new IgniteClientConfiguration("127.0.0.1:" + ClientPort);
         }
     }
 }
