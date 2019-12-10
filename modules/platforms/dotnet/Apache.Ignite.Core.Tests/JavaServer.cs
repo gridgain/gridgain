@@ -81,8 +81,10 @@ namespace Apache.Ignite.Core.Tests
                 try
                 {
                     // Port 10890 is set in Runner.java
-                    using (Ignition.StartClient(GetClientConfiguration()))
+                    using (var client = Ignition.StartClient(GetClientConfiguration()))
                     {
+                        // Create cache to ensure valid grid state.
+                        client.GetOrCreateCache<int, int>(typeof(JavaServer).FullName);
                         return true;
                     }
                 }

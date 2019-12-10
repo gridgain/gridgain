@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Client
 {
+    using System;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
@@ -26,12 +27,47 @@ namespace Apache.Ignite.Core.Tests.Client
     /// Differs from <see cref="ClientProtocolCompatibilityTest"/>:
     /// here we actually download and run old Ignite versions instead of changing the protocol version in handshake.
     /// </summary>
+    [TestFixture("2.4.0", "1.0.0")]
+    [TestFixture("2.5.0", "1.0.0")]
+    [TestFixture("2.6.0", "1.0.0")]
+    [TestFixture("2.7.0", "1.0.0")]
+    [TestFixture("2.7.5", "1.0.0")]
+    [TestFixture("2.7.6", "1.0.0")]
     public class ClientServerCompatibilityTest
     {
-        [Test]
-        public void TestCacheOperationsAreSupportedOnAllVersions([Values("8.4.6", "8.7.8")] string version)
+        /** */
+        private readonly string _igniteVersion;
+        
+        /** */
+        private readonly string _clientProtocolVersion;
+
+        /** Server node holder. */
+        private IDisposable _server;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ClientServerCompatibilityTest"/>.
+        /// </summary>
+        public ClientServerCompatibilityTest(string igniteVersion, string clientProtocolVersion)
         {
-            using (JavaServer.Start(version))
+            _igniteVersion = igniteVersion;
+            _clientProtocolVersion = clientProtocolVersion;
+        }
+
+        [TestFixtureSetUp]
+        public void FixtureSetUp()
+        {
+            _server = JavaServer.Start(_igniteVersion);
+        }
+
+        [TestFixtureSetUp]
+        public void FixtureTearDown()
+        {
+            _server.Dispose();
+        }
+
+        [Test]
+        public void TestCacheOperationsAreSupportedOnAllVersions()
+        {
             using (var client = StartClient())
             {
                 var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
@@ -41,14 +77,12 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         [Test]
-        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
-            [Values("8.4.6", "8.7.8")] string version)
+        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150()
         {
-            using (JavaServer.Start(version))
             using (var client = StartClient())
             {
                 ClientProtocolCompatibilityTest.TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
-                    client, version);
+                    client, _clientProtocolVersion);
             }
         }
 
