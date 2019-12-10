@@ -70,12 +70,12 @@ namespace Apache.Ignite.Core.Tests.Log
             {
                 Console.SetOut(writer);
                 
-                var logger = new ConsoleLogger(LogLevel.Debug, new FixedDateTimeProvider());
+                var logger = new ConsoleLogger(LogLevel.Debug, new FixedDateTimeProvider()).GetLogger("my-cat");
                 logger.Warn("warn!");
                 logger.Error(new IgniteException("ex!"), "err!");
                 logger.Trace("trace (ignored)");
 
-                var expectedLog = string.Format("[04:05:06] [Warn] [] warn!{0}[04:05:06] [Error] [] err! " +
+                var expectedLog = string.Format("[04:05:06] [Warn] [my-cat] warn!{0}[04:05:06] [Error] [my-cat] err! " +
                                                 "(exception: Apache.Ignite.Core.Common.IgniteException: ex!){0}",
                     Environment.NewLine);
                 Assert.AreEqual(expectedLog, writer.ToString());
