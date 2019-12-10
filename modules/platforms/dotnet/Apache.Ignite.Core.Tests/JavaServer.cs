@@ -23,7 +23,6 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
-    using NUnit.Framework;
 
     /// <summary>
     /// Starts Java server nodes.
