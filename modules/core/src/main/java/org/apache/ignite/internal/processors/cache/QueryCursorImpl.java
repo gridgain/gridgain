@@ -158,7 +158,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
         while (state != CLOSED) {
             // Check that iterator has no data: in this case cancel not needed.
             try {
-                if (iter != null && !iter.hasNext() && cancel != null)
+                if (iter != null && !iter.hasNext())
                     STATE_UPDATER.set(this, NO_DATA);
             }
             catch (Exception e) {
