@@ -85,6 +85,18 @@ namespace Apache.Ignite.Core.Tests.Client
                     client, _clientProtocolVersion);
             }
         }
+        
+        [Test]
+        public void TestPartitionAwarenessDisablesAutomaticallyOnVersionsOlderThan140()
+        {
+            using (var client = StartClient())
+            {
+                Assert.IsFalse(client.GetConfiguration().EnablePartitionAwareness);
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                cache.Put(1, 2);
+                Assert.AreEqual(2, cache.Get(1));
+            }
+        }
 
         private static IIgniteClient StartClient()
         {
