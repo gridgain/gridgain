@@ -48,9 +48,7 @@ test('With inactive cluster', async(t) => {
             .use(agentStat(INACTIVE_CLUSTER))
     );
 
-    await t
-        .useRole(user)
-        .navigateTo(resolveUrl('/queries/notebooks'));
+    await t.navigateTo(resolveUrl('/queries/notebooks'));
     await notebooks.createNotebook(testNotebookName);
     await t.click(notebooks.getNotebookByName(testNotebookName));
     await paragraph.enterQuery(query, {replace: true});
@@ -70,9 +68,7 @@ test('Sending a request', async(t) => {
             )
     );
 
-    await t
-		.useRole(user)
-        .navigateTo(resolveUrl('/queries/notebooks'));
+    await t.navigateTo(resolveUrl('/queries/notebooks'));
     await notebooks.createNotebook(testNotebookName);
     await t.click(notebooks.getNotebookByName(testNotebookName));
     await paragraph.enterQuery(query, {replace: true});
