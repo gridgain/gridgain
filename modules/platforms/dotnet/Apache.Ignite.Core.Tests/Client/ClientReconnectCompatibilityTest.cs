@@ -17,9 +17,12 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using System.Linq;
     using System.Net.Sockets;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Configuration;
+    using Apache.Ignite.Core.Log;
+    using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
     /// <summary>
@@ -36,7 +39,8 @@ namespace Apache.Ignite.Core.Tests.Client
             IIgniteClient client = null;
             var clientConfiguration = new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
             {
-                EnablePartitionAwareness = true
+                EnablePartitionAwareness = true,
+                Logger = new ListLogger(new ConsoleLogger(LogLevel.Trace))
             };
             
             try
@@ -58,6 +62,10 @@ namespace Apache.Ignite.Core.Tests.Client
                     cache.Put(1, 42);
                     Assert.AreEqual(42, cache.Get(1));
                     Assert.IsFalse(client.GetConfiguration().EnablePartitionAwareness);
+
+                    var log = ((ListLogger) client.GetConfiguration().Logger).Entries.Last();
+                    Assert.AreEqual("Partition awareness has been disabled: " +
+                                    "server protocol version 1.0.0 is lower than required 1.4.0", log.Message);
                 }
             }
             finally
