@@ -16,6 +16,10 @@
 
 namespace Apache.Ignite.Core.Tests.Log
 {
+    using System;
+    using System.IO;
+    using System.Linq;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Log;
     using NUnit.Framework;
 
@@ -60,7 +64,28 @@ namespace Apache.Ignite.Core.Tests.Log
         [Test]
         public void TestLogWritesToConsole()
         {
-            
+            var oldWriter = Console.Out;
+            var writer = new StringWriter();
+
+            try
+            {
+                Console.SetOut(writer);
+                
+                var logger = new ConsoleLogger();
+                logger.Warn("warn!");
+                logger.Error(new IgniteException("ex!"), "err!");
+
+                var lines = writer.ToString()
+                    .Split(Environment.NewLine)
+                    .Select(l => l.Substring(11)); // Trim timestamp
+                
+                // TODO: Inject time provider
+                Assert.AreEqual("[21:10:44] [Warn] [] warn!\n[21:10:44] [Error] [] err! (except...", lines);
+            }
+            finally
+            {
+                Console.SetOut(oldWriter);
+            }
         }
 
         /// <summary>
