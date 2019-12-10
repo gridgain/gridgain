@@ -68,7 +68,8 @@ namespace Apache.Ignite.Core.Tests
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = serverSourcePath,
-                    RedirectStandardOutput = true
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
                 }
             };
 
@@ -95,8 +96,12 @@ namespace Apache.Ignite.Core.Tests
             {
                 return new DisposeAction(() => process.Kill());
             }
-            
-            process.Kill();
+
+            if (!process.HasExited)
+            {
+                process.Kill();
+            }
+
             var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
             throw new Exception("Failed to start Java node: " + output);
         }
