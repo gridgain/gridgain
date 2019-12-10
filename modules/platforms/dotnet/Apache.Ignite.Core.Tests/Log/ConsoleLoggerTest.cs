@@ -24,18 +24,27 @@ namespace Apache.Ignite.Core.Tests.Log
     /// </summary>
     public class ConsoleLoggerTest
     {
+        /// <summary>
+        /// Tests that IsEnabled returns false when specified level is less that MinLevel.
+        /// </summary>
         [Test]
         public void TestIsEnabledReturnsFalseWhenMinLevelIsGreaterThanLevel()
         {
             // TODO: Parametrized test with variants
         }
 
+        /// <summary>
+        /// Tests that logger writes to console.
+        /// </summary>
         [Test]
         public void TestLogWritesToConsole()
         {
             
         }
 
+        /// <summary>
+        /// Tests that logger does not write to console when level is not enabled.
+        /// </summary>
         [Test]
         public void TestLogDoesNotWriteToConsoleWhenLevelIsNotEnabled()
         {

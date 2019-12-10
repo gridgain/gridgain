@@ -167,6 +167,9 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\JavaServer.cs">
       <Link>Common\JavaServer.cs</Link>
     </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Log\ConsoleLoggerTest.cs">
+      <Link>Log\ConsoleLoggerTest.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\PathUtils.cs">
       <Link>PathUtils.cs</Link>
     </Compile>
