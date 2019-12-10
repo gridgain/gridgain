@@ -15,11 +15,26 @@
  */
 
 import org.apache.ignite.Ignition;
+import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+
+import java.util.Collections;
 
 public class Runner {
     public static void main(String[] args) {
-        IgniteConfiguration cfg = new IgniteConfiguration();
+        ClientConnectorConfiguration connectorConfiguration = new ClientConnectorConfiguration().setPort(10890);
+
+        TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder()
+                .setAddresses(Collections.singleton("127.0.0.1:47500..47501"));
+
+        TcpDiscoverySpi discoSpi = new TcpDiscoverySpi().setIpFinder(ipFinder);
+
+        IgniteConfiguration cfg = new IgniteConfiguration()
+                .setClientConnectorConfiguration(connectorConfiguration)
+                .setDiscoverySpi(discoSpi);
+
         Ignition.start(cfg);
     }
 }

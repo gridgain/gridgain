@@ -30,6 +30,9 @@ namespace Apache.Ignite.Core.Tests
     {
         /** Maven command to execute the main class. */
         private const string MavenCommandExec = "mvn compile exec:java -D\"exec.mainClass\"=\"Runner\"";
+
+        /** Thin client port for the server node. */
+        private const int ThinClientPort = 10890;
         
         /// <summary>
         /// Starts a server node with a given version.
