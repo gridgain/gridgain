@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using Apache.Ignite.Core.Client;
-    using Apache.Ignite.Core.Impl.Log;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
@@ -50,7 +49,7 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
             {
-                Logger = new ListLogger(new ConsoleLogger()),
+                Logger = new ListLogger(new ConsoleLogger(LogLevel.Trace)),
                 EnablePartitionAwareness = true
             };
         }

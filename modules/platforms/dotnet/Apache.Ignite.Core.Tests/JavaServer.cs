@@ -67,14 +67,15 @@ namespace Apache.Ignite.Core.Tests
                     Arguments = string.Format("-c \"{0}\"", escapedCommand),
                     UseShellExecute = false,
                     CreateNoWindow = true,
-                    WorkingDirectory = serverSourcePath
+                    WorkingDirectory = serverSourcePath,
+                    RedirectStandardOutput = true
                 }
             };
 
             process.Start();
 
             // Wait for node to come up with a thin client connection.
-            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            var started = TestUtils.WaitForCondition(() =>
             {
                 try
                 {
@@ -88,9 +89,16 @@ namespace Apache.Ignite.Core.Tests
                 {
                     return false;
                 }
-            }, 7000));
+            }, 7000);
+
+            if (started)
+            {
+                return new DisposeAction(() => process.Kill());
+            }
             
-            return new DisposeAction(() => process.Kill());
+            process.Kill();
+            var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+            throw new Exception("Failed to start Java node: " + output);
         }
 
         /// <summary>
