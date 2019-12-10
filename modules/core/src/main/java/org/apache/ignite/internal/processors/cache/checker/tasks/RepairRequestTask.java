@@ -257,7 +257,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                         repairAlg,
                         nodeToVersionedValues,
                         affinityNodes.get(0).id(),
-                        cacheObjCtx);
+                        cacheObjCtx,
+                        affinityNodes.size());
 
                     Boolean keyWasSuccessfullyFixed;
 
@@ -299,7 +300,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                                 RepairAlgorithm.MAX_GRID_CACHE_VERSION,
                                 nodeToVersionedValues,
                                 affinityNodes.get(0).id(),
-                                cacheObjCtx);
+                                cacheObjCtx,
+                                affinityNodes.size());
 
                             keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
                                 key,
@@ -340,13 +342,15 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
          * @param nodeToVersionedValues Map of nodes to corresponding values with values.
          * @param primaryNodeID Primary node id.
          * @param cacheObjCtx Cache object context.
+         * @param affinityNodesCnt nodes count according to affinity.
          * @return Value to repair with.
          * @throws IgniteCheckedException If failed to retrieve value from value CacheObject.
          */
         @Nullable protected CacheObject calculateValueToFixWith(RepairAlgorithm repairAlg,
             Map<UUID, VersionedValue> nodeToVersionedValues,
             UUID primaryNodeID,
-            CacheObjectContext cacheObjCtx) throws IgniteCheckedException {
+            CacheObjectContext cacheObjCtx,
+            int affinityNodesCnt) throws IgniteCheckedException {
             CacheObject valToFixWith = null;
 
             switch (repairAlg) {
@@ -356,7 +360,12 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                     return versionedVal != null ? versionedVal.value() : null;
 
                 case MAJORITY:
+                    if (affinityNodesCnt > nodeToVersionedValues.size() * 2)
+                        return null;
+
                     Map<String, T2<Integer, CacheObject>> majorityCntr = new HashMap<>();
+
+                    majorityCntr.put("", new T2<>(affinityNodesCnt - nodeToVersionedValues.size(), null));
 
                     for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
                         byte[] valBytes = versionedValue.value().valueBytes(cacheObjCtx);
