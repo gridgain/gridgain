@@ -30,21 +30,12 @@ const startTestcafe = (config) => {
                 const runner = testcafe.createRunner();
 
                 console.log('Start E2E testing!');
-
                 console.log('CPU count: ' + os.cpus().length);
 
                 return runner
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
-                    .screenshots({
-                        path: '/home/vsisko/s',
-                        takeOnFails: true,
-                        fullPage: true
-                    })
-                    .video('/home/vsisko/s', {
-                        failedOnly: true
-                    })
                     .concurrency(Math.max(os.cpus().length / 2, 2))
                     .run({ skipJsErrors: true });
             }

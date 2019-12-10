@@ -26,11 +26,11 @@ const testUserBase = {
     industry: 'Banking'
 };
 
-export const createRegularUser = (login = 'a@example.com', password = 'a') => {
-    return _createRegularUser(Object.assign({}, testUserBase, { email: login, password: password }));
-};
+export const randomEmail = () => `testcase+${Math.random()}@example.com`;
 
-const _createRegularUser = async(user) => {
+export const createRegularUser = async(login = 'a@example.com', password = 'a') => {
+    const user = Object.assign({}, testUserBase, { email: login, password: password });
+
     await dropTestDB(user.email);
     await insertFullTestUser(user);
 
@@ -42,8 +42,6 @@ const _createRegularUser = async(user) => {
         await page.login(user.email, user.password);
     });
 };
-
-export const randomEmail = () => `testcase+${Math.random()}@example.com`;
 
 const tempUser = async(email = randomEmail()) => {
     return {
