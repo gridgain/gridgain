@@ -16,6 +16,7 @@
 
 package org.apache.ignite.agent.testsuites;
 
+import org.apache.ignite.agent.ManagementConsoleProcessorTest;
 import org.apache.ignite.agent.action.SessionRegistryTest;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessorTest;
 import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
@@ -47,6 +48,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    ManagementConsoleProcessorTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithAuthenticationBaseTest.class,
     BaselineActionsControllerTest.class,

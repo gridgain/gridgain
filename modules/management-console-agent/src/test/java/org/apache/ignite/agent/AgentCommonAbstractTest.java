@@ -94,6 +94,13 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
 
+        checkThreads();
+    }
+
+    /**
+     * Cheks that all management agent threads was stopped.
+     */
+    protected void checkThreads() {
         List<String> mgmtThreadNames = Thread.getAllStackTraces().keySet().stream()
             .filter(thread -> thread.getName().startsWith("mgmt-"))
             .map(Thread::getName)

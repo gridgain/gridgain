@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
 import javax.websocket.DeploymentException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.SessionRegistry;
@@ -122,8 +121,8 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** If first connection error after successful connection. */
     private AtomicBoolean disconnected = new AtomicBoolean();
 
-    /** Guard. */
-    private final ReentrantLock guard = new ReentrantLock();
+    /** Agent started. */
+    private final AtomicBoolean agentStarted = new AtomicBoolean();
 
     /**
      * @param ctx Kernal context.
@@ -141,6 +140,8 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isLocalNodeCoordinator(ctx.discovery())) {
+            agentStarted.set(true);
+
             messagesProc = new ManagementConsoleMessagesProcessor(ctx);
 
             connect();
@@ -203,7 +204,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         disconnect();
 
-        launchAgentListener(null, null);
+        connect();
     }
 
     /**
@@ -224,21 +225,12 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        guard.lock();
+        if (agentStarted.compareAndSet(false, true) && isLocalNodeCoordinator(ctx.discovery())) {
+            ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-        try {
-            boolean isAgentNotStarted = connectPool == null;
+            cfg = readFromMetaStorage();
 
-            boolean isCfgChanged = evt == null && discoCache == null;
-
-            if ((isCfgChanged || isAgentNotStarted) && isLocalNodeCoordinator(ctx.discovery())) {
-                cfg = readFromMetaStorage();
-
-                connect();
-            }
-        }
-        finally {
-            guard.unlock();
+            connect();
         }
     }
 
