@@ -96,7 +96,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractNodePendingTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.ContinuousTask;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
@@ -208,8 +208,8 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /** MBean group for cache group metrics */
     private static final String CACHE_GRP_METRICS_MBEAN_GRP = "Cache groups";
 
-    /** Prefix for metastorage keys for pending tasks. */
-    private static final String STORE_PENDING_TASK_PREFIX = "metastorage-pending-task-";
+    /** Prefix for metastorage keys for continuous tasks. */
+    private static final String STORE_CONTINUOUS_TASK_PREFIX = "metastorage-continuous-task-";
 
     /** Shared cache context. */
     private GridCacheSharedContext<?, ?> sharedCtx;
@@ -277,14 +277,14 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /** Metastorage synchronization mutex. */
     private final Object metaStorageMux = new Object();
 
-    /** Set of workers that executing pending tasks. */
-    private final Set<GridWorker> asyncPendingTaskWorkers = new GridConcurrentHashSet<>();
+    /** Set of workers that executing continuous tasks. */
+    private final Set<GridWorker> asyncContinuousTaskWorkers = new GridConcurrentHashSet<>();
 
-    /** Count of workers that executing pending tasks. */
-    private final AtomicInteger asyncSchemaWorkersCnt = new AtomicInteger(0);
+    /** Count of workers that executing continuous tasks. */
+    private final AtomicInteger asyncContinuousTasksWorkersCnt = new AtomicInteger(0);
 
-    /** Pending tasks map. */
-    private final ConcurrentHashMap<String, AbstractNodePendingTask> pendingTasks = new ConcurrentHashMap<>();
+    /** Continuous tasks map. */
+    private final ConcurrentHashMap<String, ContinuousTask> continuousTasks = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -539,6 +539,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /** {@inheritDoc} */
     @SuppressWarnings({"unchecked"})
     @Override public void start() throws IgniteCheckedException {
+        ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
         ctx.internalSubscriptionProcessor().registerMetastorageListener(recovery);
         ctx.internalSubscriptionProcessor().registerDatabaseListener(recovery);
 
@@ -577,8 +578,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
         ctx.state().cacheProcessorStarted();
         ctx.authentication().cacheProcessorStarted();
-
-        ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
     }
 
     /**
@@ -636,7 +635,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
             sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
                 sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
 
-        asyncPendingTasksExecution();
+        asyncContinuousTasksExecution();
 
         // Escape if cluster inactive.
         if (!active)
@@ -660,43 +659,43 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /**
      * Starts the asynchronous operation of pending tasks execution.
      */
-    private void asyncPendingTasksExecution() {
-        assert pendingTasks != null;
+    private void asyncContinuousTasksExecution() {
+        assert continuousTasks != null;
 
-        Set<AbstractNodePendingTask> tasks = new HashSet<>(pendingTasks.values());
+        Set<ContinuousTask> tasks = new HashSet<>(continuousTasks.values());
 
-        for (AbstractNodePendingTask task : tasks)
-            asyncPendingTaskWorker(task);
+        for (ContinuousTask task : tasks)
+            asyncContinuousTaskExecute(task);
     }
 
     /**
      * Creates a worker to execute single pending task.
      * @param task Task.
      */
-    private void asyncPendingTaskWorker(AbstractNodePendingTask task) {
-        String workerName = "async-pending-task-executor-" + asyncSchemaWorkersCnt.getAndIncrement();
+    private void asyncContinuousTaskExecute(ContinuousTask task) {
+        String workerName = "async-continuous-task-executor-" + asyncContinuousTasksWorkersCnt.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
             @Override protected void body() {
                 try {
-                    log.info("Executing pending task: " + task.shortName());
+                    log.info("Executing continuous task: " + task.shortName());
 
                     task.execute(ctx);
 
-                    log.info("Execution of pending task completed: " + task.shortName());
+                    log.info("Execution of continuous task completed: " + task.shortName());
                 }
                 catch (Exception e) {
-                    log.warning("Could not execute pending task: " + task.shortName(), e);
+                    log.error("Could not execute continuous task: " + task.shortName(), e);
                 }
                 finally {
-                    removeNodePendingTask(task);
+                    removeContinuousTask(task);
 
-                    asyncPendingTaskWorkers.remove(this);
+                    asyncContinuousTaskWorkers.remove(this);
                 }
             }
         };
 
-        asyncPendingTaskWorkers.add(worker);
+        asyncContinuousTaskWorkers.add(worker);
 
         Thread asyncTask = new IgniteThread(worker);
 
@@ -961,7 +960,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
         sharedCtx.mvcc().onStop();
 
-        awaitForWorkersStop(asyncPendingTaskWorkers, cancel, log);
+        awaitForWorkersStop(asyncContinuousTaskWorkers, cancel, log);
 
         for (CacheGroupContext grp : cacheGrps.values())
             grp.onKernalStop();
@@ -5249,16 +5248,16 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) {
         synchronized (metaStorageMux) {
-            if (pendingTasks.isEmpty()) {
+            if (continuousTasks.isEmpty()) {
                 try {
                     metastorage.iterate(
-                        STORE_PENDING_TASK_PREFIX,
-                        (key, val) -> pendingTasks.put(key, (AbstractNodePendingTask)val),
+                        STORE_CONTINUOUS_TASK_PREFIX,
+                        (key, val) -> continuousTasks.put(key, (ContinuousTask)val),
                         true
                     );
                 }
                 catch (IgniteCheckedException e) {
-                    throw new IgniteException("Failed to iterate pending objects storage.", e);
+                    throw new IgniteException("Failed to iterate continuous tasks storage.", e);
                 }
             }
         }
@@ -5268,13 +5267,13 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
         synchronized (metaStorageMux) {
             try {
-                for (Map.Entry<String, AbstractNodePendingTask> entry : pendingTasks.entrySet()) {
+                for (Map.Entry<String, ContinuousTask> entry : continuousTasks.entrySet()) {
                     if (metastorage.readRaw(entry.getKey()) == null)
                         metastorage.write(entry.getKey(), entry.getValue());
                 }
             }
             catch (IgniteCheckedException e) {
-                throw new IgniteException("Failed to read key from pending objects storage.", e);
+                throw new IgniteException("Failed to read key from continuous tasks storage.", e);
             }
         }
 
@@ -5282,25 +5281,25 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     }
 
     /**
-     * Builds a metastorage key for pending task object.
+     * Builds a metastorage key for continuous task object.
      *
      * @param obj Object.
      * @return Metastorage key.
      */
-    private String pendingDeleteObjectMetastorageKey(AbstractNodePendingTask obj) {
-        return STORE_PENDING_TASK_PREFIX + obj.shortName();
+    private String continuousTaskMetastorageKey(ContinuousTask obj) {
+        return STORE_CONTINUOUS_TASK_PREFIX + obj.shortName();
     }
 
     /**
-     * Adds pending task object.
+     * Adds continuous task object.
      *
      * @param obj Object.
      */
-    public void addNodePendingTask(AbstractNodePendingTask obj) {
-        String objName = pendingDeleteObjectMetastorageKey(obj);
+    public void addContinuousTask(ContinuousTask obj) {
+        String objName = continuousTaskMetastorageKey(obj);
 
         synchronized (metaStorageMux) {
-            pendingTasks.put(objName, obj);
+            continuousTasks.put(objName, obj);
 
             if (metastorage != null) {
                 ctx.cache().context().database().checkpointReadLock();
@@ -5323,11 +5322,11 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      *
      * @param obj Object.
      */
-    public void removeNodePendingTask(AbstractNodePendingTask obj) {
-        String objName = pendingDeleteObjectMetastorageKey(obj);
+    public void removeContinuousTask(ContinuousTask obj) {
+        String objName = continuousTaskMetastorageKey(obj);
 
         synchronized (metaStorageMux) {
-            pendingTasks.remove(objName);
+            continuousTasks.remove(objName);
 
             if (metastorage != null) {
                 ctx.cache().context().database().checkpointReadLock();
@@ -5346,11 +5345,23 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     }
 
     /**
-     * Returns all pending tasks that are still not completed.
-     * @return Pending tasks collection.
+     * Starts continuous task. If task is applied to persistent cache, saves it to metastorage.
+     * @param task Continuous task.
+     * @param ccfg Cache configuration.
      */
-    public Collection<AbstractNodePendingTask> nodePendingTasks() {
-        return Collections.unmodifiableCollection(pendingTasks.values());
+    public void startContinuousTask(ContinuousTask task, CacheConfiguration ccfg) {
+        if (CU.isPersistentCache(ccfg, ctx.config().getDataStorageConfiguration()))
+            addContinuousTask(task);
+
+        asyncContinuousTaskExecute(task);
+    }
+
+    /**
+     * Returns all continuous tasks that are still not completed.
+     * @return Continuous tasks collection.
+     */
+    public Collection<ContinuousTask> continuousTasks() {
+        return Collections.unmodifiableCollection(continuousTasks.values());
     }
 
     /**

@@ -51,7 +51,6 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractNodePendingTask;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
@@ -257,7 +256,7 @@ class ClusterCachesInfo {
      * @throws IgniteCheckedException If configuration validation failed.
      */
     public void onStart(CacheJoinNodeDiscoveryData joinDiscoData) throws IgniteCheckedException {
-        this.joinDiscoData = filterJoinNodeDiscoveryData(joinDiscoData);
+        this.joinDiscoData = joinDiscoData;
 
         Map<String, CacheConfiguration> grpCfgs = new HashMap<>();
 
@@ -1066,38 +1065,6 @@ class ClusterCachesInfo {
 
             return joinDiscoData;
         }
-    }
-
-    /**
-     * Filters discovery data to send through cluster using pending tasks filter.
-     * @param joinDiscoData Discovery data.
-     * @return Filtered discovery data.
-     */
-    private CacheJoinNodeDiscoveryData filterJoinNodeDiscoveryData(CacheJoinNodeDiscoveryData joinDiscoData) {
-        Collection<AbstractNodePendingTask> tasks = ctx.cache().nodePendingTasks();
-
-        CacheJoinNodeDiscoveryData discoveryData = new CacheJoinNodeDiscoveryData(
-            joinDiscoData.deploymentId(),
-            new HashMap<>(joinDiscoData.caches()),
-            joinDiscoData.startCaches()
-        );
-
-        for (AbstractNodePendingTask task : tasks) {
-            CacheDiscoveryInfo discoveryInfo = joinDiscoData.caches().get(task.changedCacheData().config().getName());
-
-            if (discoveryInfo != null) {
-                CacheDiscoveryInfo filteredDiscoveryInfo = new CacheDiscoveryInfo(
-                    discoveryInfo.deploymentId(),
-                    task.filterCacheData(discoveryInfo.cacheData()),
-                    discoveryInfo.cacheType(),
-                    discoveryInfo.flags()
-                );
-
-                discoveryData.caches().put(task.changedCacheData().config().getName(), filteredDiscoveryInfo);
-            }
-        }
-
-        return discoveryData;
     }
 
     /**

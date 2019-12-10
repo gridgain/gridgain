@@ -154,7 +154,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @param stats Statistics holder.
      * @throws IgniteCheckedException If failed.
      */
-    protected H2Tree(
+    public H2Tree(
         GridCacheContext cctx,
         GridH2Table table,
         String name,

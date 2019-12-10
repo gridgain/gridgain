@@ -73,8 +73,6 @@ import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.AbstractNodePendingTask;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.NodePendingTaskFactory;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -213,9 +211,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** Cache name - value typeId pairs for which type mismatch message was logged. */
     private final Set<Long> missedCacheTypes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    /** */
-    private final NodePendingTaskFactory nodePendingTaskFactory;
-
     /**
      * @param ctx Kernal context.
      */
@@ -245,8 +240,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     U.warn(log, "Unsupported IO message: " + msg);
             }
         };
-
-        nodePendingTaskFactory = new NodePendingTaskFactory(ctx);
     }
 
     /** {@inheritDoc} */
@@ -470,11 +463,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             assert oldDesc == null;
 
-            AbstractNodePendingTask pendingNodeTask = nodePendingTaskFactory.buildTaskIfNeeded(msg.operation(), msg.deploymentId());
-
-            if (pendingNodeTask != null)
-                ctx.cache().addNodePendingTask(pendingNodeTask);
-
             // Create schema operation and either trigger it immediately from exchange thread or append to already
             // running operation.
             SchemaOperation schemaOp = new SchemaOperation(msg);
@@ -566,11 +554,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                             + cacheDesc.cacheConfiguration(), e);
                     }
                 }
-
-                AbstractNodePendingTask pendingNodeTask = nodePendingTaskFactory.buildTaskIfNeeded(msg.operation(), proposeMsg.deploymentId());
-
-                if (pendingNodeTask != null)
-                    ctx.cache().removeNodePendingTask(pendingNodeTask);
             }
 
             // Propose message will be used from exchange thread to

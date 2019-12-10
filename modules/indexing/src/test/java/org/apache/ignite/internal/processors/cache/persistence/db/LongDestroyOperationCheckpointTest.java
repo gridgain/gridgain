@@ -79,21 +79,19 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     private final LogListener blockedSysCriticalThreadLsnr =
         LogListener.matches("Blocked system-critical thread has been detected").build();
 
-    /** */
-    private final LogListener idxDropProcLsnr =
-        new MessageOrderLogListener(
-            ".*?Starting index drop",
-            ".*?Checkpoint started.*",
-            ".*?Checkpoint finished.*",
-            ".*?Index drop completed"
-        );
-
-    /** Latch that waits for execution of pending task. */
+    /** Latch that waits for execution of continuous task. */
     private CountDownLatch pendingDelLatch;
+
+    /** Latch that waits for indexes rebuiling. */
+    private CountDownLatch idxsRebuildLatch;
 
     /** */
     private final LogListener pendingDelFinishedLsnr =
-        new CallbackExecutorLogListener(".*?Execution of pending task completed.*", () -> pendingDelLatch.countDown());
+        new CallbackExecutorLogListener(".*?Execution of continuous task completed.*", () -> pendingDelLatch.countDown());
+
+    /** */
+    private final LogListener idxsRebuildFinishedLsnr =
+        new CallbackExecutorLogListener("Indexes rebuilding completed for all caches.", () -> idxsRebuildLatch.countDown());
 
     /**
      * When it is set to true during index deletion, node with number {@link RESTARTED_NODE_NUM} fails to complete
@@ -102,8 +100,13 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     private final AtomicBoolean blockDestroy = new AtomicBoolean(false);
 
     /** */
-    private final ListeningTestLogger testLog =
-        new ListeningTestLogger(false, log(), blockedSysCriticalThreadLsnr, idxDropProcLsnr, pendingDelFinishedLsnr);
+    private final ListeningTestLogger testLog = new ListeningTestLogger(
+        false,
+        log(),
+        blockedSysCriticalThreadLsnr,
+        pendingDelFinishedLsnr,
+        idxsRebuildFinishedLsnr
+    );
 
     /** */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -144,15 +147,14 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         };
 
         blockedSysCriticalThreadLsnr.reset();
-        idxDropProcLsnr.reset();
 
         pendingDelLatch = new CountDownLatch(1);
+        idxsRebuildLatch = new CountDownLatch(1);
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         blockedSysCriticalThreadLsnr.reset();
-        idxDropProcLsnr.reset();
 
         stopAllGrids();
 
@@ -213,8 +215,6 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             testLog.info("Index drop completed");
         });
 
-        idxDropProcLsnr.reset();
-
         dropIdx.start();
 
         // Waiting for some modified pages
@@ -263,31 +263,31 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
             ignite = startGrid(RESTARTED_NODE_NUM);
 
-            pendingDelLatch.await(60, TimeUnit.SECONDS);
-
-            if (pendingDelLatch.getCount() > 0)
-                fail("Test timed out: failed to await for pending task completion.");
+            awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
 
             awaitPartitionMapExchange();
 
-            if (checkWhenOneNodeStopped)
+            if (checkWhenOneNodeStopped) {
                 ignite.cluster().active(true);
+
+                if (dropIdxWhenOneNodeStopped0)
+                    awaitLatch(idxsRebuildLatch, "Failed to wait for indexes rebuilding.");
+            }
 
             checkSelectAndPlan(cacheOnAliveNode, !dropIdxWhenOneNodeStopped0);
         }
         else
-            dropIdx.join();
-
-        if (!restart)
-            assertTrue(idxDropProcLsnr.check());
+            awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
 
         cache = grid(RESTARTED_NODE_NUM).cache(DEFAULT_CACHE_NAME);
 
         checkSelectAndPlan(cache, !dropIdxWhenOneNodeStopped0);
         checkSelectAndPlan(cacheOnAliveNode, !dropIdxWhenOneNodeStopped0);
 
-        // Trying to recreate index.
-        createIndex(cache, multicolumn);
+        if (dropIdxWhenOneNodeStopped0) {
+            // Trying to recreate index.
+            createIndex(cache, multicolumn);
+        }
 
         checkSelectAndPlan(cache, true);
         checkSelectAndPlan(cacheOnAliveNode, true);
@@ -297,6 +297,20 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         validateIndexes(ignite);
 
         assertFalse(blockedSysCriticalThreadLsnr.check());
+    }
+
+    /**
+     * Awaits for latch for 60 seconds and fails, if latch was not counted down.
+     *
+     * @param latch Latch.
+     * @param failMsg Failure message.
+     * @throws InterruptedException If waiting failed.
+     */
+    private void awaitLatch(CountDownLatch latch, String failMsg) throws InterruptedException {
+        latch.await(60, TimeUnit.SECONDS);
+
+        if (latch.getCount() > 0)
+            fail(failMsg);
     }
 
     /** */

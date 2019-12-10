@@ -6124,4 +6124,13 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             return msg + " <failed to create rows string representation>";
         }
     }
+
+    /**
+     * Returns meta page id.
+     *
+     * @return Meta page id.
+     */
+    public long getMetaPageId() {
+        return metaPageId;
+    }
 }

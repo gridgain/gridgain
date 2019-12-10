@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query.h2.database;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,12 +39,14 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.ContinuousTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.ContinuousCleanupIndexTreeTask;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Cursor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -538,6 +541,40 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
                     dropMetaPage(i);
                 }
+            }
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+        finally {
+            if (msgLsnr != null)
+                ctx.io().removeMessageListener(msgTopic, msgLsnr);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void asyncDestroy(boolean rmvIdx) {
+        List<Long> rootPages = new LinkedList<>();
+
+        try {
+            if (cctx.affinityNode() && rmvIdx) {
+                assert cctx.shared().database().checkpointLockIsHeldByThread();
+
+                for (int i = 0; i < segments.length; i++) {
+                    rootPages.add(segments[i].getMetaPageId());
+
+                    dropMetaPage(i);
+                }
+
+                ContinuousTask task = new ContinuousCleanupIndexTreeTask(
+                    rootPages,
+                    cctx.group().name(),
+                    cctx.cache().name(),
+                    table.getSchema().getName(),
+                    idxName
+                );
+
+                cctx.kernalContext().cache().startContinuousTask(task, cctx.config());
             }
         }
         catch (IgniteCheckedException e) {
