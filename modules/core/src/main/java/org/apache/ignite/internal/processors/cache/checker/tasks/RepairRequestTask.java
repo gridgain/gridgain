@@ -187,7 +187,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
     /**
      * Repair job.
      */
-    private static class RepairJob extends ComputeJobAdapter {
+    protected static class RepairJob extends ComputeJobAdapter {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -251,7 +251,13 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                         key,
                         ignite.cachex(cacheName).context().affinity().affinityTopologyVersion());
 
-                    CacheObject valToFixWith = calculateValueToFixWith(repairAlg, nodeToVersionedValues, affinityNodes);
+                    CacheObjectContext cacheObjCtx = ignite.cachex(cacheName).context().cacheObjectContext();
+
+                    CacheObject valToFixWith = calculateValueToFixWith(
+                        repairAlg,
+                        nodeToVersionedValues,
+                        affinityNodes.get(0).id(),
+                        cacheObjCtx);
 
                     Boolean keyWasSuccessfullyFixed;
 
@@ -292,7 +298,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                             valToFixWith = calculateValueToFixWith(
                                 RepairAlgorithm.MAX_GRID_CACHE_VERSION,
                                 nodeToVersionedValues,
-                                affinityNodes);
+                                affinityNodes.get(0).id(),
+                                cacheObjCtx);
 
                             keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
                                 key,
@@ -331,18 +338,20 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
          * Calculate value
          * @param repairAlg RepairAlgorithm
          * @param nodeToVersionedValues Map of nodes to corresponding values with values.
-         * @param affinityNodes Affinity nodes.
+         * @param primaryNodeID Primary node id.
+         * @param cacheObjCtx Cache object context.
          * @return Value to repair with.
          * @throws IgniteCheckedException If failed to retrieve value from value CacheObject.
          */
-        @Nullable private CacheObject calculateValueToFixWith(RepairAlgorithm repairAlg,
+        @Nullable protected CacheObject calculateValueToFixWith(RepairAlgorithm repairAlg,
             Map<UUID, VersionedValue> nodeToVersionedValues,
-            List<ClusterNode> affinityNodes) throws IgniteCheckedException {
+            UUID primaryNodeID,
+            CacheObjectContext cacheObjCtx) throws IgniteCheckedException {
             CacheObject valToFixWith = null;
 
             switch (repairAlg) {
                 case PRIMARY:
-                    VersionedValue versionedVal = nodeToVersionedValues.get(affinityNodes.get(0).id());
+                    VersionedValue versionedVal = nodeToVersionedValues.get(primaryNodeID);
 
                     return versionedVal != null ? versionedVal.value() : null;
 
@@ -350,13 +359,11 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                     Map<String, T2<Integer, CacheObject>> majorityCntr = new HashMap<>();
 
                     for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
-                        CacheObjectContext cacheObjCtx = ignite.cachex(cacheName).context().cacheObjectContext();
-
                         byte[] valBytes = versionedValue.value().valueBytes(cacheObjCtx);
 
                         String valBytesStr = Arrays.toString(valBytes);
 
-                        if (majorityCntr.putIfAbsent(valBytesStr, new T2<>(0, versionedValue.value())) != null)
+                        if (majorityCntr.putIfAbsent(valBytesStr, new T2<>(1, versionedValue.value())) == null)
                             continue;
 
                         T2<Integer, CacheObject> valTuple = majorityCntr.get(valBytesStr);
