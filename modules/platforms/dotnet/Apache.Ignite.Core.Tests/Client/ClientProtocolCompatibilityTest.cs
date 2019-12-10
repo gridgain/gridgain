@@ -50,6 +50,9 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
 
+        /// <summary>
+        /// Tests that cluster operations throw proper exception on older server versions.
+        /// </summary>
         [Test]
         public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
             [Values(0, 1, 2, 3, 4)] short minor)
@@ -62,6 +65,9 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
 
+        /// <summary>
+        /// Tests that partition awareness disables automatically on older server versions.
+        /// </summary>
         [Test]
         public void TestPartitionAwarenessDisablesAutomaticallyOnVersionsOlderThan140(
             [Values(0, 1, 2, 3)] short minor)
@@ -86,6 +92,9 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
 
+        /// <summary>
+        /// Tests that client can connect to old server nodes and negotiate common protocol version. 
+        /// </summary>
         [Test]
         public void TestClientNewerThanServerReconnectsOnServerVersion()
         {
@@ -131,6 +140,9 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
         
+        /// <summary>
+        /// Asserts correct exception for cluster operations.
+        /// </summary>
         public static void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(IIgniteClient client,
             string version)
         {
