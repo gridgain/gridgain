@@ -16,6 +16,10 @@
 
 namespace Apache.Ignite.Core.Tests.Client
 {
+    using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Impl.Log;
+    using Apache.Ignite.Core.Log;
+    using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
     /// <summary>
@@ -26,13 +30,29 @@ namespace Apache.Ignite.Core.Tests.Client
     public class ClientServerCompatibilityTest
     {
         [Test]
-        public void TestCacheOperationsAreSupportedOnAllVersions()
+        public void TestCacheOperationsAreSupportedOnAllVersions([Values("8.7.7", "8.7.8")]string version)
         {
-            // TODO: Use Ignite 2.4.0+ for this test
-            // Use Maven - less to download
-            // We just need a class with Ignition.start() and some config
-            // And pom.xml
-            // Run with mvn exec:java -D"exec.mainClass"="Runner"
+            using (JavaServer.Start(version))
+            using (var client = StartClient())
+            {
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                cache.Put(1, 10);
+                Assert.AreEqual(10, cache.Get(1));
+            }
+        }
+
+        private static IIgniteClient StartClient()
+        {
+            return Ignition.StartClient(GetClientConfiguration());
+        }
+
+        private static IgniteClientConfiguration GetClientConfiguration()
+        {
+            return new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
+            {
+                Logger = new ListLogger(new ConsoleLogger()),
+                EnablePartitionAwareness = true
+            };
         }
     }
 }

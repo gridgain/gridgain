@@ -79,7 +79,7 @@ namespace Apache.Ignite.Core.Tests
                 try
                 {
                     // Port 10890 is set in Runner.java
-                    using (Ignition.StartClient(new IgniteClientConfiguration("127.0.0.1:10890")))
+                    using (Ignition.StartClient(GetClientConfiguration()))
                     {
                         return true;
                     }
@@ -91,6 +91,14 @@ namespace Apache.Ignite.Core.Tests
             }, 7000));
             
             return new DisposeAction(() => process.Kill());
+        }
+
+        /// <summary>
+        /// Gets client configuration to connect to the Java server.
+        /// </summary>
+        public static IgniteClientConfiguration GetClientConfiguration()
+        {
+            return new IgniteClientConfiguration("127.0.0.1:10890");
         }
     }
 }
