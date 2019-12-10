@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 
-import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {prepareUser, cleanupUser} from '../../roles';
 import {PageConfigurationOverview} from '../../page-models/PageConfigurationOverview';
 import {PageConfigurationAdvancedCluster} from '../../page-models/PageConfigurationAdvancedCluster';
 import {configureNavButton} from '../../components/topNavigation';
 
-const email = 'newClusterWithCache@example.com';
-let regularUser = null;
-
 fixture('New cluster with cache')
-    .before(async() => {
-        await dropTestDB(email);
-
-        regularUser = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser);
+        await prepareUser(t);
     })
-    .after(async(t) => await dropTestDB(email));
+    .after(async(t) => {
+        await cleanupUser(t);
+    });
 
 test(`New cluster name doesn't disappear`, async(t) => {
     const overview = new PageConfigurationOverview();

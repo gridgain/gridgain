@@ -16,13 +16,16 @@
 
 import { Selector } from 'testcafe';
 import { resolveUrl } from '../environment/envtools';
-import { immutableRole } from '../roles';
+import { prepareUser, cleanupUser } from '../roles';
 import { queriesNavButton, configureNavButton } from '../components/topNavigation';
 
 fixture('Checking Ingite main menu')
     .beforeEach(async(t) => {
-        await t.useRole(await immutableRole);
+        await prepareUser(t);
         await t.navigateTo(resolveUrl('/'));
+    })
+    .afterEach(async(t) => {
+        await cleanupUser(t);
     });
 
 test('Ignite main menu smoke test', async(t) => {

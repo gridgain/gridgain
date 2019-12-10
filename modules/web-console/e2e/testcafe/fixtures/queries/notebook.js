@@ -20,8 +20,8 @@ import {
     cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery,
     FAKE_CLUSTERS, SIMPLE_QUERY_RESPONSE, FAKE_CACHES, INACTIVE_CLUSTER
 } from '../../mocks/agentTasks';
-import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl,} from '../../environment/envtools';
+import {prepareUser, cleanupUser} from '../../roles';
 import {Paragraph, showQueryDialog, confirmClearQueryDialog} from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
 
@@ -32,15 +32,12 @@ const query = `SELECT * FROM Person;`;
 const paragraph = new Paragraph('Query');
 
 fixture('Notebook')
-    .before(async(t) => {
-        await dropTestDB(email);
-        user = await createRegularUser(email)
+    .beforeEach(async(t) => {
+        await prepareUser(t);
     })
     .afterEach(async(t) => {
         t.ctx.ws.destroy();
-    })
-    .after(async () => {
-        await dropTestDB(email);
+        await cleanupUser(t);
     });
 
 test('With inactive cluster', async(t) => {

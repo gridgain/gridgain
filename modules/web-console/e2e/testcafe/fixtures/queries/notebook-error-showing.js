@@ -20,19 +20,12 @@ import {
     cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery,
     FAKE_CLUSTERS, SIMPLE_FAILED_QUERY_RESPONSE, FAKE_CACHES
 } from '../../mocks/agentTasks';
-import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {prepareUser, cleanupUser} from '../../roles';
 import {Paragraph, showStacktraceDialog} from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
 
-const email = 'query.error@example.com';
-let user = null;
-
 fixture('Notebook')
-    .before(async() => {
-        await dropTestDB(email);
-        user = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
         await t.addRequestHooks(
             t.ctx.ws = new WebSocketHook()
@@ -42,10 +35,11 @@ fixture('Notebook')
                     simeplFakeSQLQuery(_.first(_.keys(FAKE_CLUSTERS.clusters[0].nodes)), SIMPLE_FAILED_QUERY_RESPONSE)
                 )
         );
+        await prepareUser(t);
     })
     .afterEach(async(t) => {
         t.ctx.ws.destroy();
-        await dropTestDB(email);
+        await cleanupUser(t);
     });
 
 test('Show stack trace on query failure.', async(t) => {
@@ -53,9 +47,7 @@ test('Show stack trace on query failure.', async(t) => {
     const query = `SELECT * FROM Person;`;
     const paragraph = new Paragraph('Query');
 
-    await t
-		.useRole(user)
-        .navigateTo(resolveUrl('/queries/notebooks'));
+    await t.navigateTo(resolveUrl('/queries/notebooks'));
     await notebooks.createNotebook('Foo');
     await t.click(notebooks.getNotebookByName('Foo'));
     await paragraph.enterQuery(query, {replace: true});

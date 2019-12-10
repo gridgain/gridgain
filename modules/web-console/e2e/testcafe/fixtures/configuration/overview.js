@@ -15,8 +15,8 @@
  */
 
 import {getLocationPathname, scrollIntoView, scrollToPageBottom} from '../../helpers';
-import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {prepareUser, cleanupUser} from '../../roles';
 import {PageConfigurationOverview} from '../../page-models/PageConfigurationOverview';
 import {PageConfigurationBasic} from '../../page-models/PageConfigurationBasic';
 import * as pageConfiguration from '../../components/pageConfiguration';
@@ -27,21 +27,16 @@ import {successNotification} from '../../components/notifications';
 import * as models from '../../page-models/pageConfigurationAdvancedModels';
 import {configureNavButton} from '../../components/topNavigation';
 
-const email = 'cfg-overview@example.com';
-let regularUser = null;
-
 const repeat = (times, fn) => [...Array(times).keys()].reduce((acc, i) => acc.then(() => fn(i)), Promise.resolve());
 
 fixture('Configuration overview')
-    .before(async(t) => {
-        await dropTestDB(email);
-
-        regularUser = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`));
+        await prepareUser(t);
+        await t.navigateTo(resolveUrl(`/configuration/overview`));
     })
-    .after(async(t) => await dropTestDB(email));
+    .afterEach(async(t) => {
+        await cleanupUser(t);
+    });
 
 const overviewPage = new PageConfigurationOverview();
 const basicConfigPage = new PageConfigurationBasic();

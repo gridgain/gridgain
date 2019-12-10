@@ -17,12 +17,15 @@
 import { Selector } from 'testcafe';
 import { AngularJSSelector } from 'testcafe-angular-selectors';
 import { resolveUrl } from '../environment/envtools';
-import { immutableRole } from '../roles';
+import { prepareUser, cleanupUser } from '../roles';
 
 fixture('Checking admin panel')
     .beforeEach(async(t) => {
-        await t.useRole(await immutableRole);
+        await prepareUser(t);
         await t.navigateTo(resolveUrl('/settings/admin'));
+    })
+    .afterEach(async(t) => {
+        await cleanupUser(t);
     });
 
 const setNotificationsButton = Selector('button').withText('Set user notifications');

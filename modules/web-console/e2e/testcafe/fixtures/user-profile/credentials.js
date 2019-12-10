@@ -14,27 +14,19 @@
  * limitations under the License.
  */
 
-import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtools';
-import { createRegularUser } from '../../roles';
+import { resolveUrl } from '../../environment/envtools';
+import { prepareUser, cleanupUser } from '../../roles';
 import {pageProfile} from '../../page-models/pageProfile';
 import {confirmation} from '../../components/confirmation';
 import {successNotification} from '../../components/notifications';
 
-const email = 'cred.change@example.com';
-let regularUser = null;
-
 fixture('Checking user credentials change')
-    .before(async() => {
-        await dropTestDB(email);
-
-        regularUser = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser);
+        await prepareUser(t);
         await t.navigateTo(resolveUrl('/settings/profile'));
     })
-    .after(async() => {
-        await dropTestDB(email);
+    .afterEach(async(t) => {
+        await cleanupUser(t);
     });
 
 test('Testing secure token change', async(t) => {

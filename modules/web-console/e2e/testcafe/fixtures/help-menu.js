@@ -15,14 +15,17 @@
  */
 
 import {resolveUrl} from '../environment/envtools';
-import {immutableRole} from '../roles';
+import {prepareUser, cleanupUser} from '../roles';
 import * as helpMenu from '../components/helpMenu';
 import {userMenu} from '../components/userMenu';
 import * as gettingStarted from '../components/gettingStartedDialog';
 
 fixture('Help menu')
     .beforeEach(async(t) => {
-        await t.useRole(await immutableRole);
+        await prepareUser(t);
+    })
+    .afterEach(async(t) => {
+        await cleanupUser(t);
     });
 
 test.page(resolveUrl('/'))('Help menu items', async(t) => {

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {cleanupUser, prepareUser} from '../../roles';
 import {PageConfigurationOverview} from '../../page-models/PageConfigurationOverview';
 import {PageConfigurationAdvancedCluster} from '../../page-models/PageConfigurationAdvancedCluster';
 import {advancedNavButton} from '../../components/pageConfiguration';
@@ -23,19 +23,13 @@ import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfigurat
 import {confirmation} from '../../components/confirmation';
 import {scrollIntoView} from '../../helpers';
 
-const email = 'changeDetection@example.com';
-let regularUser = null;
-
 fixture('Cluster configuration form change detection')
-    .before(async() => {
-        await dropTestDB(email);
-
-        regularUser = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser);
+        await prepareUser(t);
     })
-    .after(async(t) => await dropTestDB(email));
+    .afterEach(async(t) => {
+        await cleanupUser(t);
+    });
 
 test.skip('New cluster change detection', async(t) => {
     const overview = new PageConfigurationOverview();

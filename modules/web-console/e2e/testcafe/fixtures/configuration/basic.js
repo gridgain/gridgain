@@ -14,27 +14,20 @@
  * limitations under the License.
  */
 
-import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {prepareUser, cleanupUser} from '../../roles';
 import {PageConfigurationBasic} from '../../page-models/PageConfigurationBasic';
 import {successNotification} from '../../components/notifications';
 import {scrollIntoView, scrollToPageBottom} from '../../helpers';
 
-const email = 'basic@example.com';
-let regularUser = null;
-
 fixture('Basic configuration')
-    .before(async() => {
-        await dropTestDB(email);
-
-        regularUser = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
-        await t
-            .useRole(regularUser)
-            .navigateTo(resolveUrl('/configuration/new/basic'));
+        await prepareUser(t);
+        await t.navigateTo(resolveUrl('/configuration/new/basic'));
     })
-    .after(async(t) => await dropTestDB(email));
+    .afterEach(async(t) => {
+        await cleanupUser(t);
+    });
 
 test('Check selector picker version list', async(t) => {
     const knownSupportedVersions = ['Ignite 2.7', 'Ignite 2.6', 'Ignite 2.5', 'Ignite 2.4', 'Ignite 2.3', 'Ignite 2.1', 'Ignite 2.0', 'Ignite 1.x'];

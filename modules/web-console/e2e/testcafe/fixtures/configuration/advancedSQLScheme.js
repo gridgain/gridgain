@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
-import {createRegularUser} from '../../roles';
+import {resolveUrl} from '../../environment/envtools';
+import {prepareUser, cleanupUser} from '../../roles';
 import {pageAdvancedConfiguration} from '../../components/pageAdvancedConfiguration';
 import {
     createModelButton,
@@ -29,25 +29,18 @@ import {
 import {createCacheButton} from '../../page-models/pageConfigurationAdvancedCaches';
 import {successNotification} from '../../components/notifications';
 
-const email = 'advancedSQLScheme@example.com';
-let regularUser = null;
-
 const KEY_CLS = 'test.cls.name.Key';
 const VALUE_CLS = 'test.cls.name.Value';
 const INVALID_TYPE = '1.type';
 
 fixture('Advanced SQL scheme configuration')
-    .before(async() => {
-        await dropTestDB(email);
-
-        regularUser = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
-        await t
-            .useRole(regularUser)
-            .navigateTo(resolveUrl('/configuration/new/advanced/models'));
+        await prepareUser(t);
+        await t.navigateTo(resolveUrl('/configuration/new/advanced/models'));
     })
-    .after(async(t) => await dropTestDB(email));
+    .afterEach(async(t) => {
+        await cleanupUser(t);
+    });
 
 test('Base required fields checked on save.', async(t) => {
     await t.click(createModelButton)

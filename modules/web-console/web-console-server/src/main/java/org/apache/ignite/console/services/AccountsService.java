@@ -166,7 +166,7 @@ public class AccountsService implements UserDetailsService {
     }
 
     /**
-     * Delete account by ID.
+     * Get list of registered accounts.
      *
      * @return All registered accounts.
      */

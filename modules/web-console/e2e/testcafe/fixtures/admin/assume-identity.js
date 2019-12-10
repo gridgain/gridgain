@@ -15,24 +15,28 @@
  */
 
 import { dropTestDB, insertFullTestUser, resolveUrl } from '../../environment/envtools';
-import { immutableRole } from '../../roles';
+import { prepareUser, cleanupUser } from '../../roles';
 import * as admin from '../../page-models/pageAdminListOfRegisteredUsers';
 import {pageProfile as profile} from '../../page-models/pageProfile';
 import * as notifications from '../../components/permanentNotifications';
 import {userMenu} from '../../components/userMenu';
 
 fixture('Assumed identity')
-    .beforeEach(async(t) => {
+    .before(async() => {
         await dropTestDB(admin.TEST_USER.email);
         await insertFullTestUser(admin.TEST_USER);
-        await t.useRole(await immutableRole);
     })
-    .afterEach(async() => {
+    .beforeEach(async(t) => {
+        await prepareUser(t);
+    })
+    .afterEach(async(t) => {
         await dropTestDB(admin.TEST_USER.email);
+        await cleanupUser(t);
     });
 
 test('Become user', async(t) => {
     await t.navigateTo(resolveUrl('/settings/admin'));
+    await t.typeText(admin.usersTable.findFilter('Email'), admin.TEST_USER.email, {paste: true});
     await t.click(admin.userNameCell.withText('User Name'));
     await admin.usersTable.performAction('Become this user');
     await t

@@ -15,14 +15,20 @@
  */
 
 import {resolveUrl} from '../../environment/envtools';
-import {immutableRole} from '../../roles';
+import {cleanupUser, prepareUser} from '../../roles';
 import {userMenu} from '../../components/userMenu';
 import {pageSignin} from '../../page-models/pageSignin';
 
-fixture('Logout');
+fixture('Logout')
+    .beforeEach(async(t) => {
+        await prepareUser(t);
+    })
+    .afterEach(async(t) => {
+        await cleanupUser(t);
+    });
 
 test('Successful logout', async(t) => {
-    await t.useRole(await immutableRole).navigateTo(resolveUrl('/settings/profile'));
+    await t.navigateTo(resolveUrl('/settings/profile'));
     await userMenu.clickOption('Log out');
     await t.expect(pageSignin.selector.exists).ok('Goes to sign in page after logout');
 });

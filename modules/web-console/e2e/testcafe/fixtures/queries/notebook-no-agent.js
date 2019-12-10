@@ -17,7 +17,7 @@
 import {WebSocketHook} from '../../mocks/WebSocketHook';
 import {agentStat, AGENT_DISCONNECTED_GRID} from '../../mocks/agentTasks';
 import {resolveUrl, dropTestDB, insertTestUser, enableDemoMode} from '../../environment/envtools';
-import {immutableRole} from '../../roles';
+import {prepareUser, cleanupUser} from '../../roles';
 import {errorNotification} from '../../components/notifications';
 
 fixture('Notebook')
@@ -26,14 +26,15 @@ fixture('Notebook')
             t.ctx.ws = new WebSocketHook()
                 .use(agentStat(AGENT_DISCONNECTED_GRID))
         );
+        await prepareUser(t);
+        await enableDemoMode();
     })
     .afterEach(async(t) => {
         t.ctx.ws.destroy();
+        await cleanupUser(t);
     });
 
 test('Opening a notebook with disconnected agent', async(t) => {
-    await t.useRole(await immutableRole);
-    await enableDemoMode();
     await t.navigateTo(resolveUrl('/notebook/demo'));
     await t.expect(errorNotification.withText('Failed to find connected agent for this account').exists).notOk('No errors on opening of page when agent is disconnected.');
 });

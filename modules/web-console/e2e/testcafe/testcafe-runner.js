@@ -37,6 +37,14 @@ const startTestcafe = (config) => {
                     .src(config.fixturesPathsArray)
                     .browsers(config.browsers)
                     .reporter(config.reporter)
+                    .screenshots({
+                        path: '/home/vsisko/s',
+                        takeOnFails: true,
+                        fullPage: true
+                    })
+                    .video('/home/vsisko/s', {
+                        failedOnly: true
+                    })
                     .concurrency(Math.max(os.cpus().length / 2, 2))
                     .run({ skipJsErrors: true });
             }

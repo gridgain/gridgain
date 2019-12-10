@@ -26,8 +26,6 @@ const testUserBase = {
     industry: 'Banking'
 };
 
-export const immutableUser = Object.assign({}, testUserBase, { email: 'immutable@example.com', password: 'a' });
-
 export const createRegularUser = (login = 'a@example.com', password = 'a') => {
     return _createRegularUser(Object.assign({}, testUserBase, { email: login, password: password }));
 };
@@ -45,4 +43,21 @@ const _createRegularUser = async(user) => {
     });
 };
 
-export const immutableRole = _createRegularUser(immutableUser);
+export const randomEmail = () => `testcase+${Math.random()}@example.com`;
+
+const tempUser = async(email = randomEmail()) => {
+    return {
+        role: await createRegularUser(email),
+        dispose: async() => await dropTestDB(email)
+    };
+};
+
+export const prepareUser = async(t) => {
+    const {role, dispose} = await tempUser();
+    t.ctx.dispose = dispose;
+    await t.useRole(role);
+};
+
+export const cleanupUser = async(t) => {
+    await t.ctx.dispose();
+};

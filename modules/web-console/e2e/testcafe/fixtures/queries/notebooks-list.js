@@ -14,27 +14,20 @@
  * limitations under the License.
  */
 import { Selector } from 'testcafe';
-import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtools';
-import { createRegularUser } from '../../roles';
+import { resolveUrl } from '../../environment/envtools';
+import { prepareUser, cleanupUser } from '../../roles';
 import { PageQueriesNotebooksList } from '../../page-models/PageQueries';
 
-const email = 'notebook@example.com';
-let regularUser = null;
 const notebooksListPage = new PageQueriesNotebooksList();
 const notebookName = 'test_notebook';
 
 fixture('Checking Ignite queries notebooks list')
-    .before(async() => {
-        await dropTestDB(email);
-
-        regularUser = await createRegularUser(email);
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser);
+        await prepareUser(t);
         await t.navigateTo(resolveUrl('/queries/notebooks'));
     })
-    .after(async() => {
-        await dropTestDB(email);
+    .afterEach(async(t) => {
+        await cleanupUser(t);
     });
 
 test('Testing creating notebook', async(t) => {

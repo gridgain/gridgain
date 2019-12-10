@@ -15,7 +15,7 @@
  */
 
 import {resolveUrl} from '../../environment/envtools';
-import {immutableRole} from '../../roles';
+import {prepareUser, cleanupUser} from '../../roles';
 import {
     agentStat,
     AGENT_ONLY_NO_CLUSTER,
@@ -28,9 +28,13 @@ import {importDBButton, importDBDialog} from '../../page-models/importFromDataba
 import {errorNotification} from '../../components/notifications';
 
 fixture('Import from database dialog')
-    .beforeEach(async(t) =>
-        await t.useRole(await immutableRole).navigateTo(resolveUrl(`/configuration/overview`))
-    );
+    .beforeEach(async(t) => {
+        await prepareUser(t);
+        await t.navigateTo(resolveUrl(`/configuration/overview`))
+    })
+    .afterEach(async(t) => {
+        await cleanupUser(t);
+    });
 
 test('Dialog has valid state when JDBC drivers are not available', async(t) => {
     await t.addRequestHooks(

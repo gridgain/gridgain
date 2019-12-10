@@ -14,26 +14,21 @@
  * limitations under the License.
  */
 
-import { dropTestDB, insertTestUser, resolveUrl } from '../../environment/envtools';
-import { createRegularUser } from '../../roles';
+import { dropTestDB, resolveUrl } from '../../environment/envtools';
+import { randomEmail, prepareUser, cleanupUser } from '../../roles';
 import {pageProfile} from '../../page-models/pageProfile';
 
-const originalEmail = 'original@example.com';
-const changedEmail = 'r.roe@example.com';
+const changedEmail = randomEmail();
 
 let regularUser = null;
 
 fixture('Checking user profile')
-    .before(async() => {
-        await dropTestDB(changedEmail);
-        regularUser = await createRegularUser(originalEmail);
-    })
     .beforeEach(async(t) => {
-        await t.useRole(regularUser);
+        await prepareUser(t);
         await t.navigateTo(resolveUrl('/settings/profile'));
     })
-    .after(async() => {
-        await dropTestDB(originalEmail);
+    .afterEach(async(t) => {
+        await cleanupUser();
         await dropTestDB(changedEmail);
     });
 

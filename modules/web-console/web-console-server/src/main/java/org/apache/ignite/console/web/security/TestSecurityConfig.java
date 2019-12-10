@@ -46,7 +46,7 @@ public class TestSecurityConfig extends SecurityConfig {
 
     /** {@inheritDoc} */
     @Override protected void configure(HttpSecurity http) throws Exception {
-        http .authorizeRequests().antMatchers(TEST_PATH).anonymous();
+        http .authorizeRequests().antMatchers(TEST_PATH).permitAll();
 
         super.configure(http);
 
