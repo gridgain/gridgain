@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests
     using System;
     using System.Diagnostics;
     using System.IO;
+    using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
 
@@ -44,13 +45,19 @@ namespace Apache.Ignite.Core.Tests
                 "Apache.Ignite.Core.Tests", 
                 "JavaServer");
             
-            // TODO: Replace version in pom.xml
+            // Replace version in pom.xml
+            var pomFile = Path.Combine(serverSourcePath, "pom.xml");
+            var pomContent = File.ReadAllText(pomFile);
+            pomContent = Regex.Replace(pomContent, 
+                @"<version>\d\.\d\.\d</version>",
+                string.Format("<version>{0}</version>", version));
+            File.WriteAllText(pomFile, pomContent);
 
             var shell = Os.IsWindows ? "cmd.exe" : "/bin/bash";
             
             var escapedCommand = MavenCommandExec.Replace("\"", "\\\"");
 
-            var process = new Process
+            var process = new System.Diagnostics.Process
             {
                 StartInfo = new ProcessStartInfo
                 {
