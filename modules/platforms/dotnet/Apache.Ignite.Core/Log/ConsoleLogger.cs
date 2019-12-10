@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Log
 {
     using System;
     using System.Text;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Logs to Console.
@@ -29,6 +30,9 @@ namespace Apache.Ignite.Core.Log
     {
         /** Minimum level to log. */
         private readonly LogLevel _minLevel;
+
+        /** DateTime provider. */
+        private readonly IDateTimeProvider _dateTimeProvider;
 
         /// <summary>
         /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
@@ -43,9 +47,20 @@ namespace Apache.Ignite.Core.Log
         /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
         /// </summary>
         /// <param name="minLevel">Minimum level to be logged. Any levels lower than that are ignored.</param>
-        public ConsoleLogger(LogLevel minLevel)
+        public ConsoleLogger(LogLevel minLevel) : this(minLevel, new LocalDateTimeProvider())
+        {
+            // No-op.
+        }
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
+        /// </summary>
+        /// <param name="minLevel">Minimum level to be logged. Any levels lower than that are ignored.</param>
+        /// <param name="dateTimeProvider">DateTime provider.</param>
+        public ConsoleLogger(LogLevel minLevel, IDateTimeProvider dateTimeProvider)
         {
             _minLevel = minLevel;
+            _dateTimeProvider = dateTimeProvider ?? new LocalDateTimeProvider();
         }
 
         /// <summary>
@@ -75,7 +90,8 @@ namespace Apache.Ignite.Core.Log
                 return;
             }
 
-            var sb = new StringBuilder().AppendFormat("[{0:HH:mm:ss}] [{1}] [{2}] ", DateTime.Now, level, category);
+            var sb = new StringBuilder().AppendFormat(
+                "[{0:HH:mm:ss}] [{1}] [{2}] ", _dateTimeProvider.Now(), level, category);
             
             if (args != null)
             {

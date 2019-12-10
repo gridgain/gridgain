@@ -97,6 +97,8 @@
     <Compile Include="Impl\Transactions\TransactionCollectionImpl.cs" />
     <Compile Include="Impl\Unmanaged\UnmanagedThread.cs" />
     <Compile Include="Log\ConsoleLogger.cs" />
+    <Compile Include="Log\IDateTimeProvider.cs" />
+    <Compile Include="Log\LocalDateTimeProvider.cs" />
     <Compile Include="Ssl\ISslContextFactory.cs" />
     <Compile Include="Configuration\ClientConnectorConfiguration.cs" />
     <Compile Include="Datastream\DataStreamerDefaults.cs" />

@@ -71,16 +71,12 @@ namespace Apache.Ignite.Core.Tests.Log
             {
                 Console.SetOut(writer);
                 
-                var logger = new ConsoleLogger();
+                var logger = new ConsoleLogger(LogLevel.Trace, new FixedDateTimeProvider());
                 logger.Warn("warn!");
                 logger.Error(new IgniteException("ex!"), "err!");
 
-                var lines = writer.ToString()
-                    .Split(Environment.NewLine)
-                    .Select(l => l.Substring(11)); // Trim timestamp
-                
                 // TODO: Inject time provider
-                Assert.AreEqual("[21:10:44] [Warn] [] warn!\n[21:10:44] [Error] [] err! (except...", lines);
+                Assert.AreEqual("[04:05:06] [Warn] [] warn!\n[21:10:44] [Error] [] err! (except...", writer.ToString());
             }
             finally
             {

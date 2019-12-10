@@ -170,6 +170,9 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Log\ConsoleLoggerTest.cs">
       <Link>Log\ConsoleLoggerTest.cs</Link>
     </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Log\FixedDateTimeProvider.cs">
+      <Link>Log\FixedDateTimeProvider.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\PathUtils.cs">
       <Link>PathUtils.cs</Link>
     </Compile>
