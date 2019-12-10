@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cluster;
 
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
@@ -102,6 +104,7 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.lesserOf;
+import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_STATE_ON_START;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -402,10 +405,33 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** {@inheritDoc} */
     @Override public void start() throws IgniteCheckedException {
-        inMemoryMode = !CU.isPersistenceEnabled(ctx.config());
+        IgniteConfiguration cfg = ctx.config();
 
-        // Start first node as inactive if persistence is enabled.
-        ClusterState stateOnStart = inMemoryMode ? ctx.config().getClusterStateOnStart() : INACTIVE;
+        inMemoryMode = !CU.isPersistenceEnabled(cfg);
+
+        ClusterState stateOnStart;
+
+        if (inMemoryMode) {
+            stateOnStart = cfg.getClusterStateOnStart();
+
+            boolean activeOnStartSetted = getBooleanFieldFromConfig(cfg, "activeOnStartSetted", false);
+
+            if (activeOnStartSetted) {
+                if (stateOnStart != null)
+                    log.warning("Property `activeOnStart` will be ignored due to the property `clusterStateOnStart` is presented.");
+                else
+                    stateOnStart = cfg.isActiveOnStart() ? ACTIVE : INACTIVE;
+            }
+            else if (stateOnStart == null)
+                stateOnStart = DFLT_STATE_ON_START;
+        }
+        else {
+            // Start first node as inactive if persistence is enabled.
+            stateOnStart = INACTIVE;
+
+            if (cfg.getClusterStateOnStart() != null && getBooleanFieldFromConfig(cfg, "autoActivationSetted", false))
+                log.warning("Property `autoActivation` will be ignored due to the property `clusterStateOnStart` is presented.");
+        }
 
         globalState = DiscoveryDataClusterState.createState(stateOnStart, null, 0);
 
@@ -442,14 +468,22 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             return joinFut;
         }
-        else if (!ctx.clientNode()
+        else
+        {
+            ClusterState targetState = ctx.config().getClusterStateOnStart();
+
+            if (targetState == null)
+                targetState = ctx.config().isAuthenticationEnabled() ? ACTIVE : INACTIVE;
+
+            if (!ctx.clientNode()
                 && !ctx.isDaemon()
-                && ctx.config().isAutoActivationEnabled()
                 && !active(state)
+                && ClusterState.active(targetState)
                 && !inMemoryMode
                 && isBaselineSatisfied(state.baselineTopology(), discoCache.serverNodes())
-        )
-            changeGlobalState(true, state.baselineTopology().currentBaseline(), false);
+            )
+                changeGlobalState(targetState, state.baselineTopology().currentBaseline(), false);
+        }
 
         return null;
     }
@@ -1872,6 +1906,43 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         assert newState != null;
 
         return ClusterState.active(state) && newState == INACTIVE;
+    }
+
+    /**
+     * Gets from given config {@code cfg} field with name {@code fieldName} and type boolean.
+     *
+     * @param cfg Config.
+     * @param fieldName Name of field.
+     * @param defaultValue Default value of field, if field is not presented or empty.
+     * @return Value of field, or {@code defaultValue} in case of any errors.
+     */
+    private boolean getBooleanFieldFromConfig(IgniteConfiguration cfg, String fieldName, boolean defaultValue) {
+        A.notNull(cfg, "cfg");
+        A.notNull(fieldName, "fieldName");
+
+        Field field = U.findField(IgniteConfiguration.class, fieldName);
+
+        try {
+            if (field != null) {
+                field.setAccessible(true);
+
+                boolean val = defaultValue;
+
+                try {
+                    val = field.getBoolean(cfg);
+                }
+                catch (IllegalAccessException | IllegalArgumentException | NullPointerException  e) {
+                    log.error("Can't get value of field with name " + fieldName + " from config: " + cfg, e);
+                }
+
+                return val;
+            }
+        }
+        catch (SecurityException e) {
+            log.error("Can't get field with name " + fieldName + " from config: " + cfg + " due to security reasons", e);
+        }
+
+        return defaultValue;
     }
 
     /** {@inheritDoc} */

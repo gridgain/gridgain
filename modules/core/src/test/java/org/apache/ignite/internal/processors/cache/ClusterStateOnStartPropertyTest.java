@@ -279,6 +279,8 @@ public class ClusterStateOnStartPropertyTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void checkBothPropertiesPersistent(ClusterState state, boolean autoActivation) throws Exception {
+        persistence = true;
+
         this.state = state;
         this.autoActivation = autoActivation;
 

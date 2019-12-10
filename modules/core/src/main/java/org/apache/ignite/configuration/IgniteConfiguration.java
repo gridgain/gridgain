@@ -531,9 +531,15 @@ public class IgniteConfiguration {
     @Deprecated
     private boolean activeOnStart = DFLT_ACTIVE_ON_START;
 
+    /** activeOnStart property was setted explicitlly flag. */
+    private boolean activeOnStartSetted;
+
     /** Auto-activation flag. */
     @Deprecated
     private boolean autoActivation = DFLT_AUTO_ACTIVATION;
+
+    /** activeOnStartSetted property was setted explicitlly flag. */
+    private boolean autoActivationSetted;
 
     /** Cluster state on start. */
     private ClusterState clusterStateOnStart;
@@ -602,11 +608,13 @@ public class IgniteConfiguration {
          * Order alphabetically for maintenance purposes.
          */
         activeOnStart = cfg.isActiveOnStart();
+        activeOnStartSetted = cfg.activeOnStartSetted;
         addrRslvr = cfg.getAddressResolver();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();
         authEnabled = cfg.isAuthenticationEnabled();
         autoActivation = cfg.isAutoActivationEnabled();
+        autoActivationSetted = cfg.autoActivationSetted;
         binaryCfg = cfg.getBinaryConfiguration();
         clusterStateOnStart = cfg.getClusterStateOnStart();
         dsCfg = cfg.getDataStorageConfiguration();
@@ -2622,6 +2630,8 @@ public class IgniteConfiguration {
 
         this.activeOnStart = activeOnStart;
 
+        activeOnStartSetted = true;
+
         return this;
     }
 
@@ -2657,6 +2667,8 @@ public class IgniteConfiguration {
         log.warning("Property autoActivation deprecated. Use clusterStateOnStart instead.");
 
         this.autoActivation = autoActivation;
+
+        autoActivationSetted = true;
 
         return this;
     }
