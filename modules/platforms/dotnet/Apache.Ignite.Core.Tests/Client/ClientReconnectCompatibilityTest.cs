@@ -32,12 +32,6 @@ namespace Apache.Ignite.Core.Tests.Client
         [Test]
         public void TestReconnectToOldNodeDisablesPartitionAwareness()
         {
-            // TODO:
-            // * Start servers of new version with Partition Awareness.
-            // * Perform cache operation
-            // * Shutdown server, start server with old version
-            // * Verify that partition awareness disables automatically and cache operations continue to function
-
             IIgniteClient client = null;
             var clientConfiguration = new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
             {
