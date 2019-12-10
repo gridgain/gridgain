@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Tests.Log
 {
     using System;
     using System.IO;
-    using System.Linq;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Log;
     using NUnit.Framework;
@@ -71,26 +70,20 @@ namespace Apache.Ignite.Core.Tests.Log
             {
                 Console.SetOut(writer);
                 
-                var logger = new ConsoleLogger(LogLevel.Trace, new FixedDateTimeProvider());
+                var logger = new ConsoleLogger(LogLevel.Debug, new FixedDateTimeProvider());
                 logger.Warn("warn!");
                 logger.Error(new IgniteException("ex!"), "err!");
+                logger.Trace("trace (ignored)");
 
-                // TODO: Inject time provider
-                Assert.AreEqual("[04:05:06] [Warn] [] warn!\n[21:10:44] [Error] [] err! (except...", writer.ToString());
+                var expectedLog = string.Format("[04:05:06] [Warn] [] warn!{0}[04:05:06] [Error] [] err! " +
+                                                "(exception: Apache.Ignite.Core.Common.IgniteException: ex!){0}",
+                    Environment.NewLine);
+                Assert.AreEqual(expectedLog, writer.ToString());
             }
             finally
             {
                 Console.SetOut(oldWriter);
             }
-        }
-
-        /// <summary>
-        /// Tests that logger does not write to console when level is not enabled.
-        /// </summary>
-        [Test]
-        public void TestLogDoesNotWriteToConsoleWhenLevelIsNotEnabled()
-        {
-            
         }
     }
 }
