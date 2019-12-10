@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using System.Net.Sockets;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Configuration;
     using NUnit.Framework;
@@ -49,7 +50,7 @@ namespace Apache.Ignite.Core.Tests.Client
                     Assert.IsTrue(client.GetConfiguration().EnablePartitionAwareness);
                 }
 
-                Assert.Throws<IgniteClientException>(() => client.GetCacheNames());
+                Assert.Throws<SocketException>(() => client.GetCacheNames());
 
                 using (StartOldServer())
                 {
