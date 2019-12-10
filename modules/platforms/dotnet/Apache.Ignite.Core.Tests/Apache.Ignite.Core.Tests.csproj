@@ -501,6 +501,8 @@
     <Content Include="Config\ssl.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="JavaServer\pom.xml" />
+    <Content Include="JavaServer\src\main\java\Runner.java" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Config\Apache.Ignite.exe.config.test">
