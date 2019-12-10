@@ -270,7 +270,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             if (checkWhenOneNodeStopped) {
                 ignite.cluster().active(true);
 
-                if (dropIdxWhenOneNodeStopped0)
+                if (!dropIdxWhenOneNodeStopped0)
                     awaitLatch(idxsRebuildLatch, "Failed to wait for indexes rebuilding.");
             }
 
