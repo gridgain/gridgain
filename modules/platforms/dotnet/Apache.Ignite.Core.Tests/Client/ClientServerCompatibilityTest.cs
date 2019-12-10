@@ -28,11 +28,11 @@ namespace Apache.Ignite.Core.Tests.Client
     /// here we actually download and run old Ignite versions instead of changing the protocol version in handshake.
     /// </summary>
     [TestFixture("2.4.0", "1.0.0")]
-    [TestFixture("2.5.0", "1.0.0")]
-    [TestFixture("2.6.0", "1.0.0")]
-    [TestFixture("2.7.0", "1.0.0")]
-    [TestFixture("2.7.5", "1.0.0")]
-    [TestFixture("2.7.6", "1.0.0")]
+    [TestFixture("2.5.0", "1.1.0")]
+    [TestFixture("2.6.0", "1.1.0")]
+    [TestFixture("2.7.0", "1.2.0")]
+    [TestFixture("2.7.5", "1.2.0")]
+    [TestFixture("2.7.6", "1.2.0")]
     public class ClientServerCompatibilityTest
     {
         /** */
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Tests.Client
             _server = JavaServer.Start(_igniteVersion);
         }
 
-        [TestFixtureSetUp]
+        [TestFixtureTearDown]
         public void FixtureTearDown()
         {
             _server.Dispose();
