@@ -17,13 +17,19 @@
 namespace Apache.Ignite.Core.Tests
 {
     using System;
+    using System.Diagnostics;
+    using System.IO;
     using Apache.Ignite.Core.Impl.Common;
+    using Apache.Ignite.Core.Impl.Unmanaged;
 
     /// <summary>
     /// Starts Java server nodes.
     /// </summary>
     public static class JavaServer
     {
+        /** Maven command to execute the main class. */
+        private const string MavenCommandExec = "mvn compile exec:java -D\"exec.mainClass\"=\"Runner\"";
+        
         /// <summary>
         /// Starts a server node with a given version.
         /// </summary>
@@ -32,10 +38,40 @@ namespace Apache.Ignite.Core.Tests
         public static IDisposable Start(string version)
         {
             IgniteArgumentCheck.NotNullOrEmpty(version, "version");
+
+            var serverSourcePath = Path.Combine(
+                TestUtils.GetDotNetSourceDir().FullName, 
+                "Apache.Ignite.Core.Tests", 
+                "JavaServer");
             
-            // TODO:
-            // mvn compile exec:java -D"exec.mainClass"="Runner"
-            return null;
+            // TODO: Replace version in pom.xml
+
+            var shell = Os.IsWindows ? "cmd.exe" : "/bin/bash";
+            
+            var escapedCommand = MavenCommandExec.Replace("\"", "\\\"");
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = shell,
+                    Arguments = string.Format("-c \"{0}\"", escapedCommand),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = serverSourcePath
+                }
+            };
+
+            process.Start();
+
+            // Wait for node to come up using thin client
+            // TODO: Use custom connector port to make sure we check the right node
+            if (process.WaitForExit(5000))
+            {
+                
+            }
+            
+            return new DisposeAction(() => process.Kill());
         }
     }
 }
