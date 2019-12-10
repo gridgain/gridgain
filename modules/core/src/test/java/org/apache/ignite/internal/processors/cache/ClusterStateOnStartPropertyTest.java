@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -23,6 +25,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -40,6 +44,9 @@ import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_AUTO_ACTI
 public class ClusterStateOnStartPropertyTest extends GridCommonAbstractTest {
     /** */
     private static final int NODES_CNT = 2;
+
+    /** */
+    private Map<String, LogListener> logListeners = new HashMap<>();
 
     /** */
     private ClusterState state;
@@ -71,6 +78,23 @@ public class ClusterStateOnStartPropertyTest extends GridCommonAbstractTest {
 
         if (activeOnStart != null)
             cfg.setActiveOnStart(activeOnStart);
+
+        // Warn messages must be printed only if both options (old and new) are presented.
+        if (autoActivation != null || activeOnStart != null) {
+            ListeningTestLogger testLog = new ListeningTestLogger(false, log);
+
+            LogListener lsnr = LogListener.matches(
+                persistence ?
+                    "Property `autoActivation` will be ignored due to the property `clusterStateOnStart` is presented." :
+                    "Property `activeOnStart` will be ignored due to the property `clusterStateOnStart` is presented."
+            ).build();
+
+            testLog.registerListener(lsnr);
+
+            logListeners.put(igniteInstanceName, lsnr);
+
+            cfg.setGridLogger(testLog);
+        }
 
         return cfg;
     }
@@ -264,9 +288,10 @@ public class ClusterStateOnStartPropertyTest extends GridCommonAbstractTest {
             checkNodeConfig(grid(i).configuration(), false, state, null, activeOnStart);
 
             assertEquals(state, grid(i).cluster().state());
-
-            // TODO: Check log warn about usage old and new property together.
         }
+
+        for (String name : logListeners.keySet())
+            assertTrue(name, logListeners.get(name).check());
     }
 
     /**
@@ -291,10 +316,11 @@ public class ClusterStateOnStartPropertyTest extends GridCommonAbstractTest {
         for (int i=0; i < NODES_CNT; i++) {
             checkNodeConfig(grid(i).configuration(), true, state, autoActivation, null);
 
-            assertEquals(state, grid(i).cluster().state());
-
-            // TODO: Check log warn about usage old and new property together.
+            assertEquals(ACTIVE, grid(i).cluster().state());
         }
+
+        for (String name : logListeners.keySet())
+            assertTrue(name, logListeners.get(name).check());
 
         stopAllGrids();
 
@@ -342,7 +368,7 @@ public class ClusterStateOnStartPropertyTest extends GridCommonAbstractTest {
         for (int i=0; i < NODES_CNT; i++) {
             checkNodeConfig(grid(i).configuration(), true, state, null, null);
 
-            assertEquals(state, grid(i).cluster().state());
+            assertEquals(ACTIVE, grid(i).cluster().state());
         }
 
         stopAllGrids();

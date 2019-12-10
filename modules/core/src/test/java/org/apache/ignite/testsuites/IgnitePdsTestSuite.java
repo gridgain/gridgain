@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.ActiveOnStartPropertyTest;
 import org.apache.ignite.internal.processors.cache.AutoActivationPropertyTest;
+import org.apache.ignite.internal.processors.cache.ClusterStateOnStartPropertyTest;
 import org.apache.ignite.internal.processors.cache.IgniteClusterActivateDeactivateTestWithPersistence;
 import org.apache.ignite.internal.processors.cache.IgnitePdsDataRegionMetricsTxTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheConfigurationFileConsistencyCheckTest;
@@ -197,5 +198,6 @@ public class IgnitePdsTestSuite {
 
         GridTestUtils.addTestIfNeeded(suite, ActiveOnStartPropertyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, AutoActivationPropertyTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ClusterStateOnStartPropertyTest.class, ignoredTests);
     }
 }
