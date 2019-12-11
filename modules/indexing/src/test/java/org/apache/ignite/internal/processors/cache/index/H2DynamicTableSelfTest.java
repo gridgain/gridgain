@@ -49,7 +49,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
@@ -1598,24 +1597,6 @@ public class H2DynamicTableSelfTest extends AbstractSchemaSelfTest {
      */
     private void execute(String sql) {
         execute(client(), sql);
-    }
-
-    /**
-     * Check that a property in given descriptor is present and has parameters as expected.
-     * @param desc Descriptor.
-     * @param name Property name.
-     * @param type Expected property type.
-     * @param isKey {@code true} if the property is expected to belong to key, {@code false} is it's expected to belong
-     *     to value.
-     */
-    private void assertProperty(QueryTypeDescriptorImpl desc, String name, Class<?> type, boolean isKey) {
-        GridQueryProperty p = desc.property(name);
-
-        assertNotNull(name, p);
-
-        assertEquals(type, p.type());
-
-        assertEquals(isKey, p.key());
     }
 
     /**

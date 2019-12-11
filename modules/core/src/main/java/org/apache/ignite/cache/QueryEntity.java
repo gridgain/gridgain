@@ -78,6 +78,10 @@ public class QueryEntity implements Serializable {
     @GridToStringInclude
     private Set<String> keyFields;
 
+    /** Set of field names that belong to both the key and value. */
+    @GridToStringInclude
+    private Set<String> keyValueFields;
+
     /** Aliases. */
     @GridToStringInclude
     private Map<String, String> aliases = new HashMap<>();
@@ -122,6 +126,7 @@ public class QueryEntity implements Serializable {
 
         fields = new LinkedHashMap<>(other.fields);
         keyFields = other.keyFields != null ? new HashSet<>(other.keyFields) : null;
+        keyValueFields = other.keyValueFields != null ? new HashSet<>(other.keyValueFields) : null;
 
         aliases = new HashMap<>(other.aliases);
         idxs = other.idxs != null ? new ArrayList<>(other.idxs) : null;
@@ -457,6 +462,27 @@ public class QueryEntity implements Serializable {
      */
     public QueryEntity setKeyFields(Set<String> keyFields) {
         this.keyFields = keyFields;
+
+        return this;
+    }
+
+    /**
+     * Gets query fields for this query pair that belong to both the key and value.
+     *
+     * @return Set of names of fields that belong to both the key and value.
+     */
+    public Set<String> getKeyValueFields() {
+        return keyValueFields;
+    }
+
+    /**
+     * Sets query fields for this query pair that belong to both the key and value.
+     *
+     * @param keyValueFields Set of names of fields that belong to both the key and value.
+     * @return {@code this} for chaining.
+     */
+    public QueryEntity setKeyValueFields(Set<String> keyValueFields) {
+        this.keyValueFields = keyValueFields;
 
         return this;
     }
@@ -914,6 +940,7 @@ public class QueryEntity implements Serializable {
             F.eq(valueFieldName, entity.valueFieldName) &&
             F.eq(fields, entity.fields) &&
             F.eq(keyFields, entity.keyFields) &&
+            F.eq(keyValueFields, entity.keyValueFields) &&
             F.eq(aliases, entity.aliases) &&
             F.eqNotOrdered(idxs, entity.idxs) &&
             F.eq(tableName, entity.tableName) &&
@@ -925,8 +952,8 @@ public class QueryEntity implements Serializable {
 
     /** {@inheritDoc} */
     @Override public int hashCode() {
-        return Objects.hash(keyType, valType, keyFieldName, valueFieldName, fields, keyFields, aliases, idxs,
-            tableName, _notNullFields, defaultFieldValues, fieldsPrecision, fieldsScale);
+        return Objects.hash(keyType, valType, keyFieldName, valueFieldName, fields, keyFields, keyValueFields, aliases,
+            idxs, tableName, _notNullFields, defaultFieldValues, fieldsPrecision, fieldsScale);
     }
 
     /** {@inheritDoc} */

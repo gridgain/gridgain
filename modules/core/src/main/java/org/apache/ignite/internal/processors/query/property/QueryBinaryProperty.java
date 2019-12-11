@@ -26,9 +26,8 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.binary.BinaryObjectExImpl;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
+import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Binary property.
@@ -52,8 +51,8 @@ public class QueryBinaryProperty implements GridQueryProperty {
     /** Result class. */
     private Class<?> type;
 
-    /** */
-    private volatile int isKeyProp;
+    /** Defines where value should be extracted from: cache entry's key or value. */
+    private final PropertyMembership membership;
 
     /** Binary field to speed-up deserialization. */
     private volatile BinaryField field;
@@ -83,7 +82,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
      * @param propName Property name.
      * @param parent Parent property.
      * @param type Result type.
-     * @param key {@code true} if key property, {@code false} otherwise, {@code null}  if unknown.
+     * @param membership Whether the property belongs to the cache entry's key, value or both.
      * @param alias Field alias.
      * @param notNull {@code true} if null value is not allowed.
      * @param defaultValue Default value.
@@ -91,7 +90,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
      * @param scale Scale.
      */
     public QueryBinaryProperty(GridKernalContext ctx, String propName, QueryBinaryProperty parent,
-        Class<?> type, @Nullable Boolean key, String alias, boolean notNull, Object defaultValue,
+        Class<?> type, PropertyMembership membership, String alias, boolean notNull, Object defaultValue,
         int precision, int scale) {
         this.ctx = ctx;
 
@@ -102,10 +101,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
         this.parent = parent;
         this.type = type;
         this.notNull = notNull;
-
-        if (key != null)
-            this.isKeyProp = key ? 1 : -1;
-
+        this.membership = membership;
         this.defaultValue = defaultValue;
         this.precision = precision;
         this.scale = scale;
@@ -125,33 +121,14 @@ public class QueryBinaryProperty implements GridQueryProperty {
                 throw new IgniteCheckedException("Non-binary object received as a result of property extraction " +
                     "[parent=" + parent + ", propName=" + propName + ", obj=" + obj + ']');
         }
-        else {
-            int isKeyProp0 = isKeyProp;
-
-            if (isKeyProp0 == 0) {
-                // Key is allowed to be a non-binary object here.
-                // We check value before key consistently with ClassProperty.
-                if (val instanceof BinaryObject && ((BinaryObject)val).hasField(propName))
-                    isKeyProp = isKeyProp0 = -1;
-                else if (key instanceof BinaryObject && ((BinaryObject)key).hasField(propName))
-                    isKeyProp = isKeyProp0 = 1;
-                else {
-                    if (!warned) {
-                        U.warn(log, "Neither key nor value have property \"" + propName + "\" " +
-                            "(is cache indexing configured correctly?)");
-
-                        warned = true;
-                    }
-
-                    return null;
-                }
-            }
-
-            obj = isKeyProp0 == 1 ? key : val;
-        }
+        else
+            // Extract property value from the Key object if property belongs to both the Key and Value
+            // (if membership is PropertyMembership.KEY_VALUE)
+            obj = membership == PropertyMembership.VALUE ? val : key;
 
         if (obj instanceof BinaryObject) {
-            BinaryObject obj0 = (BinaryObject) obj;
+            BinaryObject obj0 = (BinaryObject)obj;
+
             return fieldValue(obj0);
         }
         else if (obj instanceof BinaryObjectBuilder) {
@@ -165,8 +142,23 @@ public class QueryBinaryProperty implements GridQueryProperty {
 
     /** {@inheritDoc} */
     @Override public void setValue(Object key, Object val, Object propVal) throws IgniteCheckedException {
-        Object obj = key() ? key : val;
+        if (membership() != PropertyMembership.VALUE)
+            setValue(key, val, propVal, key);
 
+        if (membership() != PropertyMembership.KEY)
+            setValue(key, val, propVal, val);
+    }
+
+    /**
+     * Sets this property value for the given object.
+     *
+     * @param key Key.
+     * @param val Value.
+     * @param propVal Property value.
+     * @param obj The object to set the property of.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void setValue(Object key, Object val, Object propVal, Object obj) throws IgniteCheckedException {
         if (obj == null)
             return;
 
@@ -272,14 +264,8 @@ public class QueryBinaryProperty implements GridQueryProperty {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean key() {
-        int isKeyProp0 = isKeyProp;
-
-        if (isKeyProp0 == 0)
-            throw new IllegalStateException("Ownership flag not set for binary property. Have you set 'keyFields'" +
-                " property of QueryEntity in programmatic or XML configuration?");
-
-        return isKeyProp0 == 1;
+    @Override public PropertyMembership membership() {
+        return membership;
     }
 
     /** {@inheritDoc} */
