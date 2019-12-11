@@ -250,32 +250,6 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
-        /// Tests the incorrect protocol version error.
-        /// </summary>
-        [Test]
-        [Category(TestUtils.CategoryIntensive)]
-        public void TestIncorrectProtocolVersionError()
-        {
-            using (Ignition.Start(TestUtils.GetTestConfiguration()))
-            {
-                // ReSharper disable once ObjectCreationAsStatement
-                var ex = Assert.Throws<IgniteClientException>(() =>
-                    new ClientSocket(GetClientConfiguration(),
-                        new DnsEndPoint(
-                            "localhost",
-                            ClientConnectorConfiguration.DefaultPort,
-                            AddressFamily.InterNetwork),
-                        null,
-                        new ClientProtocolVersion(-1, -1, -1)));
-
-                Assert.AreEqual(ClientStatusCode.Fail, ex.StatusCode);
-
-                Assert.IsTrue(Regex.IsMatch(ex.Message, "Client handshake failed: 'Unsupported version.'. " +
-                                "Client version: -1.-1.-1. Server version: [0-9]+.[0-9]+.[0-9]+"));
-            }
-        }
-
-        /// <summary>
         /// Tests that connector can be disabled.
         /// </summary>
         [Test]
