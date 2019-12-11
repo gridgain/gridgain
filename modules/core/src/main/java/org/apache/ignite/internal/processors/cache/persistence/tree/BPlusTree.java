@@ -2465,7 +2465,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     public final long destroy() throws IgniteCheckedException {
-        return destroy(null);
+        return destroy(null, false);
     }
 
     /**
@@ -2478,8 +2478,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      *     used as metadata storage, or {@code -1} if we don't have a reuse list and did not do recycling at all.
      * @throws IgniteCheckedException If failed.
      */
-    public final long destroy(IgniteInClosure<L> c) throws IgniteCheckedException {
-        if (!markDestroyed())
+    public final long destroy(IgniteInClosure<L> c, boolean forceDestroy) throws IgniteCheckedException {
+        if (!forceDestroy && !markDestroyed())
             return 0;
 
         if (reuseList == null)
@@ -2654,7 +2654,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     /**
      * @return {@code True} if state was changed.
      */
-    private boolean markDestroyed() {
+    public boolean markDestroyed() {
         return destroyed.compareAndSet(false, true);
     }
 

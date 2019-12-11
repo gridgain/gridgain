@@ -44,6 +44,9 @@ public class ContinuousCleanupIndexTreeTask implements ContinuousTask {
     private List<Long> rootPages;
 
     /** */
+    private transient List<H2Tree> trees;
+
+    /** */
     private String cacheGrpName;
 
     /** */
@@ -58,12 +61,14 @@ public class ContinuousCleanupIndexTreeTask implements ContinuousTask {
     /** */
     public ContinuousCleanupIndexTreeTask(
         List<Long> rootPages,
+        List<H2Tree> trees,
         String cacheGrpName,
         String cacheName,
         String schemaName,
         String idxName
     ) {
         this.rootPages = rootPages;
+        this.trees = trees;
         this.cacheGrpName = cacheGrpName;
         this.cacheName = cacheName;
         this.schemaName = schemaName;
@@ -77,76 +82,80 @@ public class ContinuousCleanupIndexTreeTask implements ContinuousTask {
 
     /** {@inheritDoc} */
     @Override public void execute(GridKernalContext ctx) {
-        GridCacheContext cctx = ctx.cache().context().cacheContext(CU.cacheId(cacheName));
+        List<H2Tree> trees0 = trees;
 
-        List<BPlusTree> trees = new LinkedList<>();
+        if (trees0 == null) {
+            trees0 = new ArrayList<>(rootPages.size());
 
-        IoStatisticsHolderIndex stats = new IoStatisticsHolderIndex(
-            SORTED_INDEX,
-            cctx.name(),
-            idxName,
-            cctx.kernalContext().metric(),
-            cctx.group().statisticsHolderData()
-        );
+            GridCacheContext cctx = ctx.cache().context().cacheContext(CU.cacheId(cacheName));
 
-        for (int i = 0; i < rootPages.size(); i++) {
-            Long rootPage = rootPages.get(i);
+            IoStatisticsHolderIndex stats = new IoStatisticsHolderIndex(
+                SORTED_INDEX,
+                cctx.name(),
+                idxName,
+                cctx.kernalContext().metric(),
+                cctx.group().statisticsHolderData()
+            );
 
-            assert rootPage != null;
+            for (int i = 0; i < rootPages.size(); i++) {
+                Long rootPage = rootPages.get(i);
 
-            // Below we create a fake index tree using it's root page, stubbing some parameters,
-            // because we just going to free memory pages that are occupied by tree structure.
-            try {
-                String treeName = "deletedTree_" + i + "_" + shortName();
+                assert rootPage != null;
 
-                H2TreeIndex.IndexColumnsInfo unwrappedColsInfo =
-                    new H2TreeIndex.IndexColumnsInfo(H2Utils.EMPTY_COLUMNS, new ArrayList<>(), 0, 0);
+                // Below we create a fake index tree using it's root page, stubbing some parameters,
+                // because we just going to free memory pages that are occupied by tree structure.
+                try {
+                    String treeName = "deletedTree_" + i + "_" + shortName();
 
-                H2TreeIndex.IndexColumnsInfo wrappedColsInfo =
-                    new H2TreeIndex.IndexColumnsInfo(H2Utils.EMPTY_COLUMNS, new ArrayList<>(), 0, 0);
+                    H2TreeIndex.IndexColumnsInfo unwrappedColsInfo =
+                        new H2TreeIndex.IndexColumnsInfo(H2Utils.EMPTY_COLUMNS, new ArrayList<>(), 0, 0);
 
-                BPlusTree tree = new H2Tree(
-                    cctx,
-                    null,
-                    treeName,
-                    idxName,
-                    cacheName,
-                    null,
-                    cctx.offheap().reuseListForIndex(treeName),
-                    CU.cacheGroupId(cacheName, cacheGrpName),
-                    cacheGrpName,
-                    cctx.dataRegion().pageMemory(),
-                    ctx.cache().context().wal(),
-                    cctx.offheap().globalRemoveId(),
-                    rootPage,
-                    false,
-                    unwrappedColsInfo,
-                    wrappedColsInfo,
-                    new AtomicInteger(0),
-                    false,
-                    false,
-                    false,
-                    null,
-                    ctx.failure(),
-                    null,
-                    stats
-                );
+                    H2TreeIndex.IndexColumnsInfo wrappedColsInfo =
+                        new H2TreeIndex.IndexColumnsInfo(H2Utils.EMPTY_COLUMNS, new ArrayList<>(), 0, 0);
 
-                trees.add(tree);
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
+                    H2Tree tree = new H2Tree(
+                        cctx,
+                        null,
+                        treeName,
+                        idxName,
+                        cacheName,
+                        null,
+                        cctx.offheap().reuseListForIndex(treeName),
+                        CU.cacheGroupId(cacheName, cacheGrpName),
+                        cacheGrpName,
+                        cctx.dataRegion().pageMemory(),
+                        ctx.cache().context().wal(),
+                        cctx.offheap().globalRemoveId(),
+                        rootPage,
+                        false,
+                        unwrappedColsInfo,
+                        wrappedColsInfo,
+                        new AtomicInteger(0),
+                        false,
+                        false,
+                        false,
+                        null,
+                        ctx.failure(),
+                        null,
+                        stats
+                    );
+
+                    trees0.add(tree);
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException(e);
+                }
             }
         }
 
         ctx.cache().context().database().checkpointReadLock();
 
         try {
-            for (int i = 0; i < trees.size(); i++) {
-                BPlusTree tree = trees.get(i);
+            for (int i = 0; i < trees0.size(); i++) {
+                BPlusTree tree = trees0.get(i);
 
                 try {
-                    tree.destroy();
+                    tree.destroy(null, true);
                 }
                 catch (IgniteCheckedException e) {
                     throw new IgniteException(e);

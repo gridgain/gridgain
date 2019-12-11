@@ -96,6 +96,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.ContinuousTask;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
@@ -657,7 +658,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     }
 
     /**
-     * Starts the asynchronous operation of pending tasks execution.
+     * Starts the asynchronous operation of pending tasks execution. Is called on start.
      */
     private void asyncContinuousTasksExecution() {
         assert continuousTasks != null;
@@ -665,14 +666,15 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         Set<ContinuousTask> tasks = new HashSet<>(continuousTasks.values());
 
         for (ContinuousTask task : tasks)
-            asyncContinuousTaskExecute(task);
+            asyncContinuousTaskExecute(task, true);
     }
 
     /**
      * Creates a worker to execute single pending task.
      * @param task Task.
+     * @param dropTaskIfFailed Whether to delete task from metastorage, if it has failed.
      */
-    private void asyncContinuousTaskExecute(ContinuousTask task) {
+    private void asyncContinuousTaskExecute(ContinuousTask task, boolean dropTaskIfFailed) {
         String workerName = "async-continuous-task-executor-" + asyncContinuousTasksWorkersCnt.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
@@ -683,13 +685,16 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
                     task.execute(ctx);
 
                     log.info("Execution of continuous task completed: " + task.shortName());
+
+                    removeContinuousTask(task);
                 }
                 catch (Exception e) {
                     log.error("Could not execute continuous task: " + task.shortName(), e);
+
+                    if (dropTaskIfFailed)
+                        removeContinuousTask(task);
                 }
                 finally {
-                    removeContinuousTask(task);
-
                     asyncContinuousTaskWorkers.remove(this);
                 }
             }
@@ -954,13 +959,13 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
         GridCachePartitionExchangeManager<Object, Object> exch = context().exchange();
 
+        awaitForWorkersStop(asyncContinuousTaskWorkers, false, log);
+
         // Stop exchange manager first so that we call onKernalStop on all caches.
         // No new caches should be added after this point.
         exch.onKernalStop(cancel);
 
         sharedCtx.mvcc().onStop();
-
-        awaitForWorkersStop(asyncContinuousTaskWorkers, cancel, log);
 
         for (CacheGroupContext grp : cacheGrps.values())
             grp.onKernalStop();
@@ -5287,7 +5292,18 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      * @return Metastorage key.
      */
     private String continuousTaskMetastorageKey(ContinuousTask obj) {
-        return STORE_CONTINUOUS_TASK_PREFIX + obj.shortName();
+        String k = STORE_CONTINUOUS_TASK_PREFIX + obj.shortName();
+
+        if (k.length() > MetastorageTree.MAX_KEY_LEN) {
+            int hashLenLimit = 5;
+
+            String hash = String.valueOf(k.hashCode());
+
+            k = k.substring(0, MetastorageTree.MAX_KEY_LEN - hashLenLimit) +
+                (hash.length() > hashLenLimit ? hash.substring(0, hashLenLimit) : hash);
+        }
+
+        return k;
     }
 
     /**
@@ -5353,7 +5369,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         if (CU.isPersistentCache(ccfg, ctx.config().getDataStorageConfiguration()))
             addContinuousTask(task);
 
-        asyncContinuousTaskExecute(task);
+        asyncContinuousTaskExecute(task, false);
     }
 
     /**

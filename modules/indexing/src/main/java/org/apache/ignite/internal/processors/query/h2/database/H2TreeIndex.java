@@ -554,20 +554,27 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
     /** {@inheritDoc} */
     @Override public void asyncDestroy(boolean rmvIdx) {
-        List<Long> rootPages = new LinkedList<>();
+        List<Long> rootPages = new ArrayList<>(segments.length);
+        List<H2Tree> trees = new ArrayList<>(segments.length);
 
         try {
             if (cctx.affinityNode() && rmvIdx) {
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
 
                 for (int i = 0; i < segments.length; i++) {
-                    rootPages.add(segments[i].getMetaPageId());
+                    H2Tree tree = segments[i];
+
+                    tree.markDestroyed();
+
+                    rootPages.add(tree.getMetaPageId());
+                    trees.add(tree);
 
                     dropMetaPage(i);
                 }
 
                 ContinuousTask task = new ContinuousCleanupIndexTreeTask(
                     rootPages,
+                    trees,
                     cctx.group().name(),
                     cctx.cache().name(),
                     table.getSchema().getName(),
