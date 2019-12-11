@@ -45,6 +45,7 @@ public interface GridClientClusterState {
 
     /**
      * Changes cluster state to {@code newState}.
+     *
      * @param newState New cluster state.
      * @throws GridClientException If the request to change the cluster state failed.
      */
