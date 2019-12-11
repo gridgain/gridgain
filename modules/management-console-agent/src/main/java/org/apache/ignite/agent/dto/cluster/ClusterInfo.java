@@ -128,7 +128,7 @@ public class ClusterInfo {
     }
 
     /**
-     * @return @{code True} if cluster running in memory mode.
+     * @return {@code true} if cluster running in memory mode.
      */
     public boolean isPersistenceEnabled() {
         return isPersistenceEnabled;

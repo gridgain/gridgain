@@ -93,7 +93,7 @@ public class QueryResult {
     }
 
     /**
-     * @return @{code true} if query has more results.
+     * @return {@code true} if query has more results.
      */
     public boolean isHasMore() {
         return hasMore;

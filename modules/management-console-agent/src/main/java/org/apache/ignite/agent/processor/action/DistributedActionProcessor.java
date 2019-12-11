@@ -43,6 +43,9 @@ import static org.apache.ignite.agent.utils.AgentUtils.getErrorCode;
  * Distributed action service.
  */
 public class DistributedActionProcessor extends GridProcessorAdapter {
+    /** Authenticate action name. */
+    public static final String AUTHENTICATE_ACTION_NAME = "SecurityActions.authenticate";
+
     /** Websocket manager. */
     private final WebSocketManager mgr;
 
@@ -83,7 +86,8 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
      */
     private void executeAction(ClusterGroup grp, Request req) {
         OperationSecurityContext secCtx = null;
-        boolean isAuthenticateAct = "SecurityActions.authenticate".equals(req.getAction());
+
+        boolean isAuthenticateAct = AUTHENTICATE_ACTION_NAME.equals(req.getAction());
         boolean isSecurityNeeded = !isAuthenticateAct && (ctx.security().enabled() || ctx.authentication().enabled());
 
         try {
@@ -107,12 +111,12 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
                 try {
                     sendTaskResponse(f.get());
                 }
-                catch (Exception e) {
+                catch (Throwable e) {
                     sendFailedTaskResponse(req.getId(), e);
                 }
             });
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             sendFailedTaskResponse(req.getId(), e);
         }
         finally {

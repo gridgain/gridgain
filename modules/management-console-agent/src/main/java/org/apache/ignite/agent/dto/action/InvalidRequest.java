@@ -23,12 +23,12 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class InvalidRequest extends Request {
     /** Cause. */
-    private Exception cause;
+    private Throwable cause;
 
     /**
      * @return Cause.
      */
-    public Exception getCause() {
+    public Throwable getCause() {
         return cause;
     }
 
@@ -36,7 +36,7 @@ public class InvalidRequest extends Request {
      * @param cause Cause.
      * @return {@code This} for chaining method calls.
      */
-    public InvalidRequest setCause(Exception cause) {
+    public InvalidRequest setCause(Throwable cause) {
         this.cause = cause;
 
         return this;

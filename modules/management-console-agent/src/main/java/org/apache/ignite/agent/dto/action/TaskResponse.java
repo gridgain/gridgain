@@ -17,6 +17,7 @@
 package org.apache.ignite.agent.dto.action;
 
 import java.util.UUID;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * DTO for task response.
@@ -47,6 +48,7 @@ public class TaskResponse {
      */
     public TaskResponse setId(UUID id) {
         this.id = id;
+
         return this;
     }
 
@@ -63,6 +65,7 @@ public class TaskResponse {
      */
     public TaskResponse setJobCount(int jobCnt) {
         this.jobCnt = jobCnt;
+
         return this;
     }
 
@@ -79,6 +82,7 @@ public class TaskResponse {
      */
     public TaskResponse setNodeConsistentId(String nodeConsistentId) {
         this.nodeConsistentId = nodeConsistentId;
+
         return this;
     }
 
@@ -95,6 +99,12 @@ public class TaskResponse {
      */
     public TaskResponse setStatus(Status status) {
         this.status = status;
+
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(TaskResponse.class, this);
     }
 }

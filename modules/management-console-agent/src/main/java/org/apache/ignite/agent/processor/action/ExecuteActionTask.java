@@ -35,6 +35,7 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.compute.ComputeTaskNoResultCache;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.JobContextResource;
@@ -50,6 +51,7 @@ import static org.apache.ignite.compute.ComputeJobResultPolicy.WAIT;
 /**
  * Execute action task.
  */
+@GridInternal
 @ComputeTaskNoResultCache
 public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse> {
     /** Ignite. */

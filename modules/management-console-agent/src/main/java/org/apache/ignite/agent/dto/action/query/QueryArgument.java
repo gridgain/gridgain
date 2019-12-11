@@ -121,7 +121,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if distributed joins should be used.
+     * @return {@code true} if distributed joins should be used.
      */
     public boolean isDistributedJoins() {
         return distributedJoins;
@@ -138,7 +138,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if enforce join order should be used.
+     * @return {@code true} if enforce join order should be used.
      */
     public boolean isEnforceJoinOrder() {
         return enforceJoinOrder;
@@ -155,7 +155,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if query should be executed on local node.
+     * @return {@code true} if query should be executed on local node.
      */
     public boolean isLocal() {
         return isLoc;
@@ -188,7 +188,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if it's lazy query.
+     * @return {@code true} if it's lazy query.
      */
     public boolean isLazy() {
         return lazy;
@@ -205,7 +205,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if it's collocated query.
+     * @return {@code true} if it's collocated query.
      */
     public boolean isCollocated() {
         return collocated;

@@ -54,6 +54,7 @@ public class JobResponse {
      */
     public JobResponse setRequestId(UUID reqId) {
         this.reqId = reqId;
+
         return this;
     }
 
@@ -70,6 +71,7 @@ public class JobResponse {
      */
     public JobResponse setResult(Object res) {
         this.res = res;
+
         return this;
     }
 
@@ -86,6 +88,7 @@ public class JobResponse {
      */
     public JobResponse setError(ResponseError error) {
         this.error = error;
+
         return this;
     }
 
@@ -102,6 +105,7 @@ public class JobResponse {
      */
     public JobResponse setStatus(Status status) {
         this.status = status;
+
         return this;
     }
 
@@ -117,6 +121,7 @@ public class JobResponse {
      */
     public JobResponse setTimestamp(long ts) {
         this.ts = ts;
+
         return this;
     }
 
@@ -133,6 +138,7 @@ public class JobResponse {
      */
     public JobResponse setNodeConsistentId(String nodeConsistentId) {
         this.nodeConsistentId = nodeConsistentId;
+
         return this;
     }
 

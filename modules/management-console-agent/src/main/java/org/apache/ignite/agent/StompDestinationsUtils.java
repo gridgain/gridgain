@@ -53,7 +53,7 @@ public class StompDestinationsUtils {
     private static final String EVENTS_DEST = CLUSTER_PREFIX_DEST + "/events/";
 
     /**
-     * @param clusterId Cluster id.
+     * @param clusterId Cluster ID.
      * @return Cluster topology destination.
      */
     public static String buildClusterTopologyDest(UUID clusterId) {
@@ -61,7 +61,7 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
+     * @param clusterId Cluster ID.
      * @return Cluster node configuration.
      */
     public static String buildClusterNodeConfigurationDest(UUID clusterId) {
@@ -69,7 +69,7 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
+     * @param clusterId Cluster ID.
      * @return Save span destination.
      */
     public static String buildSaveSpanDest(UUID clusterId) {
@@ -91,8 +91,8 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
-     * @param reqId request id.
+     * @param clusterId Cluster ID.
+     * @param reqId request ID.
      * @return Task response destination.
      */
     public static String buildActionTaskResponseDest(UUID clusterId, UUID reqId) {
@@ -100,8 +100,8 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
-     * @param reqId request id.
+     * @param clusterId Cluster ID.
+     * @param reqId request ID.
      * @return Job response destination.
      */
     public static String buildActionJobResponseDest(UUID clusterId, UUID reqId) {
@@ -116,7 +116,7 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
+     * @param clusterId Cluster ID.
      * @return Action request topic.
      */
     public static String buildActionRequestTopic(UUID clusterId) {
@@ -124,7 +124,7 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
+     * @param clusterId Cluster ID.
      * @return Send cluster info destination.
      */
     public static String buildClusterDest(UUID clusterId) {
@@ -132,7 +132,7 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
+     * @param clusterId Cluster ID.
      * @return Cluster caches information destination.
      */
     public static String buildClusterCachesInfoDest(UUID clusterId) {
@@ -140,7 +140,7 @@ public class StompDestinationsUtils {
     }
 
     /**
-     * @param clusterId Cluster id.
+     * @param clusterId Cluster ID.
      * @return Cluster caches sql metadata destination.
      */
     public static String buildClusterCachesSqlMetaDest(UUID clusterId) {

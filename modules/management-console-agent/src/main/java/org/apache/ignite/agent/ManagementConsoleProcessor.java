@@ -98,7 +98,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** Metric processor. */
     private MetricsProcessor metricProc;
 
-    /** Action service. */
+    /** Actions dispatcher. */
     private ActionDispatcher actDispatcher;
 
     /** Distributed action processor. */

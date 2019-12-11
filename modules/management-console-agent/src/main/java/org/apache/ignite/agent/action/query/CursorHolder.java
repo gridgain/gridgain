@@ -50,7 +50,7 @@ public class CursorHolder implements AutoCloseable, Iterator {
     }
 
     /**
-     * @return @{code true} if this cursor from scan query.
+     * @return {@code true} if this cursor from scan query.
      */
     public boolean scanCursor() {
         return isScanCursor;
