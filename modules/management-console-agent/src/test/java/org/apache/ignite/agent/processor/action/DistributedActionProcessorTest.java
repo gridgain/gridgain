@@ -42,9 +42,7 @@ import static org.apache.ignite.agent.dto.action.Status.RUNNING;
  * Test for distributed action service.
  */
 public class DistributedActionProcessorTest extends AbstractActionControllerTest {
-    /**
-     * Start grid instances.
-     */
+    /** {@inheritDoc} */
     @Before
     @Override public void startup() throws Exception {
         startup0(3);

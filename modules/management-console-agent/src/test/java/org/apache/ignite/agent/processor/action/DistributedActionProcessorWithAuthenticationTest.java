@@ -43,9 +43,7 @@ import static org.apache.ignite.agent.dto.action.Status.RUNNING;
  * Distributed action service with enabled authentication.
  */
 public class DistributedActionProcessorWithAuthenticationTest extends AbstractActionControllerWithAuthenticationTest {
-    /**
-     * Start grid instances.
-     */
+    /** {@inheritDoc} */
     @Before
     @Override public void startup() throws Exception {
         startup0(3);
