@@ -77,7 +77,7 @@ namespace Apache.Ignite.Core.Tests
             var listDataReader = new ListDataReader();
             process.AttachProcessConsoleReader(listDataReader, new IgniteProcessConsoleOutputReader());
             
-            var processWrapper = new DisposeAction(() => process.ForceKill());
+            var processWrapper = new DisposeAction(() => process.KillTree());
 
             // Wait for node to come up with a thin client connection.
             if (WaitForStart())

@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
@@ -77,41 +78,6 @@ namespace Apache.Ignite.Core.Tests
                 ResumeThread(pOpenThread);
             }
         }
-
-        /// <summary>
-        /// Kills the process forcibly.
-        /// </summary>
-        /// <param name="process">Process.</param>
-        public static void ForceKill(this System.Diagnostics.Process process)
-        {
-            if (Os.IsWindows)
-            {
-                // For some reason process.Kill() hangs with Java processes, use taskkill instead.
-                var proc = new System.Diagnostics.Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "cmd.exe",
-                        Arguments = "/c taskkill /f /t /pid " + process.Id,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-
-                proc.Start();
-                proc.WaitForExit();
-            }
-            else
-            {
-                // TODO: Should we kill the tree here too?
-                process.Kill();
-            }
-
-            if (!process.WaitForExit(3000))
-            {
-                throw new Exception("Failed to kill process: " + process.Id);
-            }
-        }
         
         /// <summary>
         /// Attaches the process console reader.
@@ -143,6 +109,108 @@ namespace Apache.Ignite.Core.Tests
                 while (!proc.HasExited)
                     outReader.OnOutput(proc, reader.ReadLine(), err);
             }) {IsBackground = true}.Start();
+        }
+               
+        public static void KillTree(this System.Diagnostics.Process process)
+        {
+            process.KillTree(TimeSpan.FromSeconds(2));
+        }
+
+        public static void KillTree(this System.Diagnostics.Process process, TimeSpan timeout)
+        {
+            if (Os.IsWindows)
+            {
+                string stdout;
+                RunProcessAndWaitForExit(
+                    "taskkill",
+                    string.Format("/T /F /PID {0}", process.Id),
+                    timeout,
+                    out stdout);
+            }
+            else
+            {
+                var children = new HashSet<int>();
+                GetAllChildIdsUnix(process.Id, children, timeout);
+                foreach (var childId in children)
+                {
+                    KillProcessUnix(childId, timeout);
+                }
+                KillProcessUnix(process.Id, timeout);
+            }
+            
+            if (!process.WaitForExit(1000))
+            {
+                throw new Exception("Failed to kill process: " + process.Id);
+            }
+        }
+
+        private static int RunProcessAndWaitForExit(string fileName, string arguments, TimeSpan timeout, 
+            out string stdout)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                UseShellExecute = false
+            };
+
+            var process = new System.Diagnostics.Process {StartInfo = startInfo};
+
+            stdout = null;
+            if (process.WaitForExit((int)timeout.TotalMilliseconds))
+            {
+                stdout = process.StandardOutput.ReadToEnd();
+            }
+            else
+            {
+                process.Kill();
+            }
+
+            return process.ExitCode;
+        }
+
+        private static void GetAllChildIdsUnix(int parentId, ISet<int> children, TimeSpan timeout)
+        {
+            string stdout;
+            var exitCode = RunProcessAndWaitForExit(
+                "pgrep",
+                string.Format("-P {0}", parentId),
+                timeout,
+                out stdout);
+
+            if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
+            {
+                using (var reader = new StringReader(stdout))
+                {
+                    while (true)
+                    {
+                        var text = reader.ReadLine();
+                        if (text == null)
+                        {
+                            return;
+                        }
+
+                        int id;
+                        if (int.TryParse(text, out id))
+                        {
+                            children.Add(id);
+                            // Recursively get the children
+                            GetAllChildIdsUnix(id, children, timeout);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void KillProcessUnix(int processId, TimeSpan timeout)
+        {
+            string stdout;
+            RunProcessAndWaitForExit(
+                "kill",
+                string.Format("-TERM {0}", processId),
+                timeout,
+                out stdout);
         }
     }
 }
