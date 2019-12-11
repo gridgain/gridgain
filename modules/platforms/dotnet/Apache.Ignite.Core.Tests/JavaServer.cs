@@ -52,14 +52,14 @@ namespace Apache.Ignite.Core.Tests
 
             ReplaceIgniteVersionInPomFile(version, Path.Combine(JavaServerSourcePath, "pom.xml"));
 
-            var escapedCommand = MavenCommandExec.Replace("\"", "\\\"");
-
             var process = new System.Diagnostics.Process
             {
                 StartInfo = new ProcessStartInfo
                 {
                     FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
-                    Arguments = string.Format("-c \"{0}\"", escapedCommand),
+                    Arguments = Os.IsWindows 
+                        ? string.Format("/c \"{0}\"", MavenCommandExec)
+                        : string.Format("-c \"{0}\"", MavenCommandExec.Replace("\"", "\\\"")),
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = JavaServerSourcePath,
