@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
+    using Apache.Ignite.Core.Tests.Process;
 
     /// <summary>
     /// Starts Java server nodes.
@@ -69,6 +70,8 @@ namespace Apache.Ignite.Core.Tests
             };
 
             process.Start();
+            var outputReader = new ListDataReader();
+            IgniteProcess.AttachProcessConsoleReader(process, outputReader);
 
             // Wait for node to come up with a thin client connection.
             var started = WaitForStart();
@@ -82,9 +85,8 @@ namespace Apache.Ignite.Core.Tests
             {
                 process.Kill();
             }
-
-            var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
-            throw new Exception("Failed to start Java node: " + output);
+            
+            throw new Exception("Failed to start Java node: " + string.Join(",", outputReader.GetOutput()));
         }
 
         private static void ReplaceIgniteVersionInPomFile(string version, string pomFile)
@@ -125,7 +127,7 @@ namespace Apache.Ignite.Core.Tests
                 {
                     return false;
                 }
-            }, 7000);
+            }, 15000);
         }
     }
 }
