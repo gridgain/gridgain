@@ -35,13 +35,13 @@ namespace Apache.Ignite.Core.Tests
         public const int ClientPort = 10890;
         
         /** Maven command to execute the main class. */
-        private const string MavenCommandExec = "mvn compile exec:java -D\"exec.mainClass\"=\"Runner\"";
+        private const string MavenCommandExec = "compile exec:java -D\"exec.mainClass\"=\"Runner\"";
 
         /** Java server sources path. */
         private static readonly string JavaServerSourcePath = Path.Combine(
             TestUtils.GetDotNetSourceDir().FullName,
             "Apache.Ignite.Core.Tests",
-            "JavaServer"); 
+            "JavaServer");
 
         /// <summary>
         /// Starts a server node with a given version.
@@ -58,10 +58,8 @@ namespace Apache.Ignite.Core.Tests
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
-                    Arguments = Os.IsWindows 
-                        ? string.Format("/c \"{0}\"", MavenCommandExec)
-                        : string.Format("-c \"{0}\"", MavenCommandExec.Replace("\"", "\\\"")),
+                    FileName = GetMaven(),
+                    Arguments = MavenCommandExec,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = JavaServerSourcePath,
