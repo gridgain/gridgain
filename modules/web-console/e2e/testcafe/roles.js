@@ -50,8 +50,8 @@ const tempUser = async(email = randomEmail()) => {
     };
 };
 
-export const prepareUser = async(t) => {
-    const {role, dispose} = await tempUser();
+export const prepareUser = async(t, email) => {
+    const {role, dispose} = await tempUser(email);
     t.ctx.dispose = dispose;
     await t.useRole(role);
 };
