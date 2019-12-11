@@ -218,6 +218,7 @@ namespace Apache.Ignite.Core.Client
         
         /// <summary>
         /// Gets or sets the logger.
+        /// If no logger is set, <see cref="ConsoleLogger"/> is used.
         /// </summary>
         public ILogger Logger { get; set; }
 
