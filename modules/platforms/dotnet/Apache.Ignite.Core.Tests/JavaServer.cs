@@ -103,7 +103,7 @@ namespace Apache.Ignite.Core.Tests
         {
             var pomContent = File.ReadAllText(pomFile);
             pomContent = Regex.Replace(pomContent,
-                @"<version>\d\.\d\.\d</version>",
+                @"<version>\d+\.\d+\.\d+</version>",
                 string.Format("<version>{0}</version>", version));
             File.WriteAllText(pomFile, pomContent);
         }
