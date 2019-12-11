@@ -16,7 +16,6 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
