@@ -72,18 +72,22 @@ namespace Apache.Ignite.Core.Tests
             process.Start();
             var outputReader = new ListDataReader();
             IgniteProcess.AttachProcessConsoleReader(process, outputReader);
+            
+            var processWrapper = new DisposeAction(() =>
+            {
+                process.Kill();
+                process.WaitForExit();
+            });
 
             // Wait for node to come up with a thin client connection.
-            var started = WaitForStart();
-
-            if (started)
+            if (WaitForStart())
             {
-                return new DisposeAction(() => process.Kill());
+                return processWrapper;
             }
 
             if (!process.HasExited)
             {
-                process.Kill();
+                processWrapper.Dispose();
             }
             
             throw new Exception("Failed to start Java node: " + string.Join(",", outputReader.GetOutput()));
