@@ -43,6 +43,9 @@ namespace Apache.Ignite.Core.Tests
             "Apache.Ignite.Core.Tests",
             "JavaServer");
 
+        /** Full path to Maven binary. */
+        private static readonly string MavenPath = GetMaven();
+
         /// <summary>
         /// Starts a server node with a given version.
         /// </summary>
@@ -53,13 +56,15 @@ namespace Apache.Ignite.Core.Tests
             IgniteArgumentCheck.NotNullOrEmpty(version, "version");
 
             ReplaceIgniteVersionInPomFile(version, Path.Combine(JavaServerSourcePath, "pom.xml"));
-
+            
             var process = new System.Diagnostics.Process
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    FileName = GetMaven(),
-                    Arguments = MavenCommandExec,
+                    FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
+                    Arguments = Os.IsWindows 
+                        ? string.Format("/c \"{0} {1}\"", MavenPath, MavenCommandExec)
+                        : string.Format("-c \"{0} {1}\"", MavenPath, MavenCommandExec.Replace("\"", "\\\"")),
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = JavaServerSourcePath,
@@ -145,7 +150,7 @@ namespace Apache.Ignite.Core.Tests
                 .Select(x => Path.Combine(x, "bin", "mvn"))
                 .SelectMany(x => extensions.Select(ext => x + ext))
                 .Where(File.Exists)
-                .FirstOrDefault();
+                .FirstOrDefault() ?? "mvn";
         }
     }
 }
