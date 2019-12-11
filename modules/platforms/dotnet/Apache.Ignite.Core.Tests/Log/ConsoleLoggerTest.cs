@@ -49,8 +49,7 @@ namespace Apache.Ignite.Core.Tests.Log
         [TestCase(LogLevel.Warn, LogLevel.Warn, true)]
         [TestCase(LogLevel.Warn, LogLevel.Info, false)]
         [TestCase(LogLevel.Warn, LogLevel.Trace, false)]
-        public void TestIsEnabledReturnsFalseWhenMinLevelIsGreaterThanLevel(
-            LogLevel loggerLevel, LogLevel level, bool expectedResult)
+        public void TestIsEnabled(LogLevel loggerLevel, LogLevel level, bool expectedResult)
         {
             var logger = new ConsoleLogger(loggerLevel);
             Assert.AreEqual(loggerLevel, logger.MinLevel);
