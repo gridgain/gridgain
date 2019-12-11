@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static string GetMaven()
         {
-            var extensions = Os.IsWindows ? new[] {".cmd", ".bat"} : new string[0];
+            var extensions = Os.IsWindows ? new[] {".cmd", ".bat"} : new[] {string.Empty};
             
             return new[] {"MAVEN_HOME", "M2_HOME", "M3_HOME", "MVN_HOME"}
                 .Select(Environment.GetEnvironmentVariable)
