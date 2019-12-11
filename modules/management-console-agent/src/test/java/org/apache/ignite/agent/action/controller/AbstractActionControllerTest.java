@@ -71,7 +71,8 @@ public abstract class AbstractActionControllerTest extends AgentCommonAbstractTe
      */
     protected void startup0(int instancesCnt) throws Exception {
         IgniteEx ignite = startGrids(instancesCnt);
-        changeManagementConsoleUri(ignite);
+
+        changeManagementConsoleConfig(ignite);
 
         cluster = ignite.cluster();
         cluster.active(true);

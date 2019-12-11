@@ -16,6 +16,7 @@
 
 package org.apache.ignite.agent.testsuites;
 
+import org.apache.ignite.agent.ManagementConsoleProcessorTest;
 import org.apache.ignite.agent.action.SessionRegistryTest;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationReaderTest;
 import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
@@ -38,6 +39,9 @@ import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
 import org.apache.ignite.agent.ws.RetryableSenderTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerSSLTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerTwoWaySSLTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -46,6 +50,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    ManagementConsoleProcessorTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithAuthenticationBaseTest.class,
     BaselineActionsControllerTest.class,
@@ -53,6 +58,8 @@ import org.junit.runners.Suite;
     ClusterActionsControllerTest.class,
     ClusterInfoProcessorTest.class,
     ManagementConsoleMessagesProcessorTest.class,
+    DistributedActionProcessorTest.class,
+    DistributedActionProcessorWithAuthenticationTest.class,
     IgniteConfigurationWrapperTest.class,
     MetricsProcessorTest.class,
     QueryActionsControllerTest.class,
@@ -66,8 +73,9 @@ import org.junit.runners.Suite;
     RetryableSenderTest.class,
     RequestDeserializerTest.class,
     TopologySnapshotTest.class,
-    DistributedActionProcessorTest.class,
-    DistributedActionProcessorWithAuthenticationTest.class,
+    WebSocketManagerTest.class,
+    WebSocketManagerSSLTest.class,
+    WebSocketManagerTwoWaySSLTest.class
 })
 public class AgentTestSuite {
 }
