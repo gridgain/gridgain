@@ -179,6 +179,9 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\ProcessExtensions.cs">
       <Link>Common\ProcessExtensions.cs</Link>
     </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Process\IgniteProcessCompositeOutputReader.cs">
+      <Link>Process\IgniteProcessCompositeOutputReader.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Process\IgniteProcessConsoleOutputReader.cs">
       <Link>Process\IgniteProcessConsoleOutputReader.cs</Link>
     </Compile>
