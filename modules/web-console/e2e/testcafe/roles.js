@@ -28,7 +28,14 @@ const testUserBase = {
 
 export const randomEmail = () => `testcase+${Math.random()}@example.com`;
 
-export const createRegularUser = async(login = 'a@example.com', password = 'a') => {
+/**
+ * Create test user and execute login action.
+ *
+ * @param {string} login Email for user registration.
+ * @param {string} password Password for user registration.
+ * @return {Promise<Role>} Role to use in testcafe tests.
+ */
+export const createUserRole = async(login = 'a@example.com', password = 'a') => {
     const user = Object.assign({}, testUserBase, { email: login, password: password });
 
     await dropTestDB(user.email);
@@ -45,17 +52,28 @@ export const createRegularUser = async(login = 'a@example.com', password = 'a') 
 
 const tempUser = async(email = randomEmail()) => {
     return {
-        role: await createRegularUser(email),
+        role: await createUserRole(email),
         dispose: async() => await dropTestDB(email)
     };
 };
 
+/**
+ * Prepare new user to use in testcafe test.
+ *
+ * @param t Test controller.
+ * @param {string} email Email for user creation.
+ */
 export const prepareUser = async(t, email) => {
     const {role, dispose} = await tempUser(email);
     t.ctx.dispose = dispose;
     await t.useRole(role);
 };
 
+/**
+ * Remove user that was created for specified test controller.
+ *
+ * @param t Test controller.
+ */
 export const cleanupUser = async(t) => {
     await t.ctx.dispose();
 };
