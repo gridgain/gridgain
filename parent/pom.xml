@@ -932,7 +932,7 @@
                                         <exclude>**/*.iml</exclude><!--IDEA files-->
                                         <exclude>**/*.csv</exclude><!--CSV files-->
                                         <exclude>**/*.jks</exclude><!--bin-files-->
-                                        <exclude>**/*.p12</exclude><!--bin-files-->
+                                        <exclude>**/*.p12</exclude><!--cert-files-->
                                         <exclude>**/*.crt</exclude><!--bin-files-->
                                         <exclude>**/*.key</exclude><!--bin-files-->
                                         <exclude>**/pom-installed.xml</exclude><!--tmp-files-->
