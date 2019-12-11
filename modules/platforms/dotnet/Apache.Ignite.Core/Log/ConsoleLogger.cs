@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Log
 {
     using System;
     using System.Text;
-    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Logs to Console.

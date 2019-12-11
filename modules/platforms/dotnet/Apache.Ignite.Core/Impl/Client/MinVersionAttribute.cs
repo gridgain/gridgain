@@ -22,10 +22,10 @@ namespace Apache.Ignite.Core.Impl.Client
     /// Version attribute for <see cref="ClientOp"/>.
     /// </summary>
     [AttributeUsage(AttributeTargets.Field)]
-    internal class MinVersionAttribute : Attribute
+    internal sealed class MinVersionAttribute : Attribute
     {
         /** */
-        private ClientProtocolVersion _version;
+        private readonly ClientProtocolVersion _version;
 
         /// <summary>
         /// Initializes a new instance of <see cref="MinVersionAttribute"/> class.
