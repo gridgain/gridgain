@@ -130,7 +130,7 @@ namespace Apache.Ignite.Core.Tests
                 {
                     return false;
                 }
-            }, 15000);
+            }, 30000);
         }
     }
 }
