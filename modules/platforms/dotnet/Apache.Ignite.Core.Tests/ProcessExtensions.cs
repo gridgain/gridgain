@@ -156,6 +156,7 @@ namespace Apache.Ignite.Core.Tests
             };
 
             var process = new System.Diagnostics.Process {StartInfo = startInfo};
+            process.Start();
 
             stdout = null;
             if (process.WaitForExit((int)timeout.TotalMilliseconds))
