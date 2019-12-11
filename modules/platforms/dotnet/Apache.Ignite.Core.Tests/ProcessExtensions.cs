@@ -118,17 +118,18 @@ namespace Apache.Ignite.Core.Tests
         {
             if (Os.IsWindows)
             {
-                string stdout;
-                Execute("taskkill", string.Format("/T /F /PID {0}", process.Id), out stdout);
+                Execute("taskkill", string.Format("/T /F /PID {0}", process.Id));
             }
             else
             {
                 var children = new HashSet<int>();
                 GetProcessChildIdsUnix(process.Id, children);
+                
                 foreach (var childId in children)
                 {
                     KillProcessUnix(childId);
                 }
+                
                 KillProcessUnix(process.Id);
             }
             
@@ -141,7 +142,7 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Runs a process and waits for exit.
         /// </summary>
-        private static int Execute(string file, string args, out string output)
+        private static void Execute(string file, string args, params IIgniteProcessOutputReader[] readers)
         {
             var startInfo = new ProcessStartInfo
             {
@@ -154,17 +155,11 @@ namespace Apache.Ignite.Core.Tests
             var process = new System.Diagnostics.Process {StartInfo = startInfo};
             process.Start();
 
-            if (process.WaitForExit(1000))
+            process.AttachProcessConsoleReader(readers);
+            if (!process.WaitForExit(1000))
             {
-                output = process.StandardOutput.ReadToEnd();
-            }
-            else
-            {
-                output = null;
                 process.Kill();
             }
-
-            return process.ExitCode;
         }
 
         /// <summary>
@@ -172,30 +167,16 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static void GetProcessChildIdsUnix(int parentId, ISet<int> children)
         {
-            string stdout;
-            var exitCode = Execute("pgrep", string.Format("-P {0}", parentId), out stdout);
+            var reader = new ListDataReader();
+            Execute("pgrep", string.Format("-P {0}", parentId), reader);
 
-            if (exitCode != 0 || string.IsNullOrEmpty(stdout))
+            foreach (var line in reader.GetOutput())
             {
-                return;
-            }
-            
-            using (var reader = new StringReader(stdout))
-            {
-                while (true)
+                int id;
+                if (int.TryParse(line, out id))
                 {
-                    var text = reader.ReadLine();
-                    if (text == null)
-                    {
-                        return;
-                    }
-
-                    int id;
-                    if (int.TryParse(text, out id))
-                    {
-                        children.Add(id);
-                        GetProcessChildIdsUnix(id, children);
-                    }
+                    children.Add(id);
+                    GetProcessChildIdsUnix(id, children);
                 }
             }
         }
@@ -205,8 +186,7 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static void KillProcessUnix(int processId)
         {
-            string stdout;
-            Execute("kill", string.Format("-TERM {0}", processId), out stdout);
+            Execute("kill", string.Format("-TERM {0}", processId));
         }
     }
 }
