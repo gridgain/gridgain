@@ -16,8 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.query;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -70,6 +73,61 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
                 unregisterQuery();
 
             throw e;
+        }
+    }
+
+    /** Re-implements to track thrown exceptions on query error / cancel. */
+    @Override public List<T> getAll() {
+        List<T> all = new ArrayList<>();
+
+        try {
+            Iterator<T> iter = iter(); // Implicitly calls iterator() to do all checks.
+
+            while (iter.hasNext())
+                all.add(iter.next());
+
+            return all;
+        }
+        catch (Exception e) {
+            failReason = e;
+
+            if (QueryUtils.wasCancelled(failReason))
+                unregisterQuery();
+
+            throw e;
+        }
+        finally {
+            // Update state if the results is read to end
+            STATE_UPDATER.compareAndSet(this, State.RESULT_READY, State.NO_DATA);
+
+            close();
+        }
+    }
+
+    /** {@inheritDoc}
+     * NB: if the method changed please change also RegisteredQueryCursor#getAll(QueryCursorEx.Consumer<T>)
+     * because it re-implements this logic to track exceptions on query registry.
+     */
+    @Override public void getAll(QueryCursorEx.Consumer<T> clo) throws IgniteCheckedException {
+        try {
+            Iterator<T> iter = iter(); // Implicitly calls iterator() to do all checks.
+
+            while (iter.hasNext())
+                clo.consume(iter.next());
+        }
+        catch (Exception e) {
+            failReason = e;
+
+            if (QueryUtils.wasCancelled(failReason))
+                unregisterQuery();
+
+            throw e;
+        }
+        finally {
+            // Update state if the results is read to end
+            STATE_UPDATER.compareAndSet(this, State.RESULT_READY, State.NO_DATA);
+
+            close();
         }
     }
 

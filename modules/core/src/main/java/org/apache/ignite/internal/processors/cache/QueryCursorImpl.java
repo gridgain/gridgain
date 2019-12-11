@@ -42,7 +42,7 @@ import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.
  */
 public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T> {
     /** */
-    private static final AtomicReferenceFieldUpdater<QueryCursorImpl, State> STATE_UPDATER =
+    protected static final AtomicReferenceFieldUpdater<QueryCursorImpl, State> STATE_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(QueryCursorImpl.class, State.class, "state");
 
     /** Query executor. */
@@ -117,7 +117,10 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
         return iter;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritDoc}
+     * NB: if the method changed please change also RegisteredQueryCursor#getAll() because it re-implements this logic
+     * to track exceptions on query registry.
+     */
     @Override public List<T> getAll() {
         List<T> all = new ArrayList<>();
 
@@ -137,7 +140,10 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
         return all;
     }
 
-    /** {@inheritDoc} */
+     /** {@inheritDoc}
+     * NB: if the method changed please change also RegisteredQueryCursor#getAll(QueryCursorEx.Consumer<T>)
+     * because it re-implements this logic to track exceptions on query registry.
+     */
     @Override public void getAll(QueryCursorEx.Consumer<T> clo) throws IgniteCheckedException {
         try {
             Iterator<T> iter = iter(); // Implicitly calls iterator() to do all checks.
