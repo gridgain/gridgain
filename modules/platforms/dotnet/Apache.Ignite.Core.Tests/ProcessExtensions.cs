@@ -105,8 +105,11 @@ namespace Apache.Ignite.Core.Tests
             {
                 process.Kill();
             }
-            
-            process.WaitForExit();
+
+            if (!process.WaitForExit(3000))
+            {
+                throw new Exception("Failed to kill process: " + process.Id);
+            }
         }
         
         /// <summary>
