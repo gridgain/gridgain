@@ -473,7 +473,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             ClusterState targetState = ctx.config().getClusterStateOnStart();
 
             if (targetState == null)
-                targetState = ctx.config().isAuthenticationEnabled() ? ACTIVE : INACTIVE;
+                targetState = ctx.config().isAutoActivationEnabled() ? ACTIVE : INACTIVE;
 
             if (!ctx.clientNode()
                 && !ctx.isDaemon()
