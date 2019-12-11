@@ -111,31 +111,25 @@ namespace Apache.Ignite.Core.Tests
             }) {IsBackground = true}.Start();
         }
                
-        public static void KillTree(this System.Diagnostics.Process process)
-        {
-            process.KillTree(TimeSpan.FromSeconds(2));
-        }
-
-        public static void KillTree(this System.Diagnostics.Process process, TimeSpan timeout)
+        /// <summary>
+        /// Kills process tree.
+        /// </summary>
+        public static void KillProcessTree(this System.Diagnostics.Process process)
         {
             if (Os.IsWindows)
             {
                 string stdout;
-                RunProcessAndWaitForExit(
-                    "taskkill",
-                    string.Format("/T /F /PID {0}", process.Id),
-                    timeout,
-                    out stdout);
+                Execute("taskkill", string.Format("/T /F /PID {0}", process.Id), out stdout);
             }
             else
             {
                 var children = new HashSet<int>();
-                GetAllChildIdsUnix(process.Id, children, timeout);
+                GetProcessChildIdsUnix(process.Id, children);
                 foreach (var childId in children)
                 {
-                    KillProcessUnix(childId, timeout);
+                    KillProcessUnix(childId);
                 }
-                KillProcessUnix(process.Id, timeout);
+                KillProcessUnix(process.Id);
             }
             
             if (!process.WaitForExit(1000))
@@ -144,13 +138,15 @@ namespace Apache.Ignite.Core.Tests
             }
         }
 
-        private static int RunProcessAndWaitForExit(string fileName, string arguments, TimeSpan timeout, 
-            out string stdout)
+        /// <summary>
+        /// Runs a process and waits for exit.
+        /// </summary>
+        private static int Execute(string file, string args, out string output)
         {
             var startInfo = new ProcessStartInfo
             {
-                FileName = fileName,
-                Arguments = arguments,
+                FileName = file,
+                Arguments = args,
                 RedirectStandardOutput = true,
                 UseShellExecute = false
             };
@@ -158,60 +154,59 @@ namespace Apache.Ignite.Core.Tests
             var process = new System.Diagnostics.Process {StartInfo = startInfo};
             process.Start();
 
-            stdout = null;
-            if (process.WaitForExit((int)timeout.TotalMilliseconds))
+            if (process.WaitForExit(1000))
             {
-                stdout = process.StandardOutput.ReadToEnd();
+                output = process.StandardOutput.ReadToEnd();
             }
             else
             {
+                output = null;
                 process.Kill();
             }
 
             return process.ExitCode;
         }
 
-        private static void GetAllChildIdsUnix(int parentId, ISet<int> children, TimeSpan timeout)
+        /// <summary>
+        /// Gets process child ids.
+        /// </summary>
+        private static void GetProcessChildIdsUnix(int parentId, ISet<int> children)
         {
             string stdout;
-            var exitCode = RunProcessAndWaitForExit(
-                "pgrep",
-                string.Format("-P {0}", parentId),
-                timeout,
-                out stdout);
+            var exitCode = Execute("pgrep", string.Format("-P {0}", parentId), out stdout);
 
-            if (exitCode == 0 && !string.IsNullOrEmpty(stdout))
+            if (exitCode != 0 || string.IsNullOrEmpty(stdout))
             {
-                using (var reader = new StringReader(stdout))
+                return;
+            }
+            
+            using (var reader = new StringReader(stdout))
+            {
+                while (true)
                 {
-                    while (true)
+                    var text = reader.ReadLine();
+                    if (text == null)
                     {
-                        var text = reader.ReadLine();
-                        if (text == null)
-                        {
-                            return;
-                        }
+                        return;
+                    }
 
-                        int id;
-                        if (int.TryParse(text, out id))
-                        {
-                            children.Add(id);
-                            // Recursively get the children
-                            GetAllChildIdsUnix(id, children, timeout);
-                        }
+                    int id;
+                    if (int.TryParse(text, out id))
+                    {
+                        children.Add(id);
+                        GetProcessChildIdsUnix(id, children);
                     }
                 }
             }
         }
 
-        private static void KillProcessUnix(int processId, TimeSpan timeout)
+        /// <summary>
+        /// Kills Unix process.
+        /// </summary>
+        private static void KillProcessUnix(int processId)
         {
             string stdout;
-            RunProcessAndWaitForExit(
-                "kill",
-                string.Format("-TERM {0}", processId),
-                timeout,
-                out stdout);
+            Execute("kill", string.Format("-TERM {0}", processId), out stdout);
         }
     }
 }
