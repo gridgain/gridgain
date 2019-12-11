@@ -216,7 +216,7 @@ public class IgniteConfiguration {
     @Deprecated
     public static final boolean DFLT_LATE_AFF_ASSIGNMENT = true;
 
-    /** Default value for active on start flag. */
+    /** Default value for cluster state on start. */
     public static final ClusterState DFLT_STATE_ON_START = ClusterState.ACTIVE;
 
     /** Default value for active on start flag. */
@@ -2673,36 +2673,35 @@ public class IgniteConfiguration {
         return this;
     }
 
-    // TODO: update javadoc.
     /**
-     * Gets state of cluster on start. If cluster state on start is {@link ClusterState#INACTIVE},
-     * there will be no cache partition map exchanges performed until the cluster is activated. This should
-     * significantly speed up large topology startup time.
+     * Gets state of cluster on start.
+     * <br/>
+     * For <b>in-memory cluster</b> this state will be applied to the first started node. If
+     * cluster state on start is {@link ClusterState#INACTIVE}, there will be no cache partition map exchanges
+     * performed until the cluster is activated. This should significantly speed up large topology startup time.
+     * <br/>
+     * For <b>persistent cluster</b> If state is differ from {@link ClusterState#INACTIVE} and BaselineTopology is set
+     * as well than cluster moves to given cluster state when all nodes from the BaselineTopology join the cluster.
      * <p>
      * Default value is {@link #DFLT_STATE_ON_START}.
      * <p>
-     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
-     * Cluster is always {@link ClusterState#INACTIVE} on start when Ignite Persistence is enabled.
      *
-     * @return State of cluster on start.
+     * @return State of cluster on start or {@code null}, if property wasn't set. {@code Null} means that default
+     * value will be used.
      */
     public @Nullable ClusterState getClusterStateOnStart() {
         return clusterStateOnStart;
     }
 
-    // TODO: update javadoc.
     /**
-     * Sets state of cluster on start. This value should be the same on all
-     * nodes in the cluster. The state can't be null.
-     * <p>
-     * This flag is ignored when Ignite Persistence is enabled see {@link DataStorageConfiguration}.
-     * Cluster is always {@link ClusterState#INACTIVE} on start when Ignite Persistence is enabled.
+     * Sets state of cluster on start.
      *
-     * @param state Cluster state on start value.
-     * @return {@code this} instance.
-     * @see #getClusterStateOnStart()
+     * @param state New cluster state on start.
+     * @return {@code this} for chaining.
+     * @throws NullPointerException If {@code state} is {@code null}.
+     * @see #getClusterStateOnStart() 
      */
-    public IgniteConfiguration setClusterStateOnStart(ClusterState state) {
+    public IgniteConfiguration setClusterStateOnStart(ClusterState state) throws NullPointerException {
         if (state == null)
             throw new NullPointerException("Cluster state on start can't be null.");
 
