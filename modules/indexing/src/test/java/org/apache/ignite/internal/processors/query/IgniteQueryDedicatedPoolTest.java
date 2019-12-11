@@ -16,13 +16,14 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import javax.cache.Cache;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import javax.cache.Cache;
+import java.util.concurrent.CyclicBarrier;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.QueryCursor;
@@ -32,6 +33,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.cache.CacheEntryImpl;
@@ -40,16 +42,43 @@ import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingSpi;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.SystemPropertiesRule;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
+
+import static java.util.Objects.nonNull;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_STARVATION_CHECK_INTERVAL;
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Ensures that SQL queries are executed in a dedicated thread pool.
  */
 public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
+    /** Class rule. */
+    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
+
     /** Name of the cache for test */
     private static final String CACHE_NAME = "query_pool_test";
+
+    /** Listener log messages. */
+    private static ListeningTestLogger testLog;
+
+    /** Query thread pool size. */
+    private Integer qryPoolSize;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        testLog = new ListeningTestLogger(false, log);
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -60,7 +89,8 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(gridName);
+        IgniteConfiguration cfg = super.getConfiguration(gridName)
+            .setGridLogger(testLog);
 
         CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
@@ -76,6 +106,9 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
 
         cfg.setIndexingSpi(new TestIndexingSpi());
 
+        if (nonNull(qryPoolSize))
+            cfg.setQueryThreadPoolSize(qryPoolSize);
+
         return cfg;
     }
 
@@ -84,6 +117,8 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
         super.afterTest();
 
         stopAllGrids();
+
+        testLog.clearListeners();
     }
 
     /**
@@ -160,6 +195,48 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
 
             cursor.close();
         }
+    }
+
+    /**
+     * Test for messages about query pool starvation in the logs.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_STARVATION_CHECK_INTERVAL, value = "10")
+    public void testContainsStarvationQryPoolInLog() throws Exception {
+        qryPoolSize = 1;
+
+        IgniteEx clientNode = startGrid("client");
+
+        IgniteCache<Integer, Integer> cache = clientNode.cache(CACHE_NAME);
+        cache.put(0, 0);
+
+        int qrySize = 10;
+
+        CyclicBarrier barrier = new CyclicBarrier(qrySize);
+
+        LogListener logLsnr = LogListener.matches("Possible thread pool starvation detected (no task completed in " +
+            "last 10ms, is query thread pool size large enough?)").build();
+
+        testLog.registerListener(logLsnr);
+
+        for (int i = 0; i < qrySize; i++) {
+            runAsync(() -> {
+                barrier.await();
+
+                cache.query(new ScanQuery<>((o, o2) -> {
+                        doSleep(500);
+
+                        return true;
+                    })
+                ).getAll();
+
+                return null;
+            });
+        }
+
+        assertTrue(waitForCondition(logLsnr::check, 10_000));
     }
 
     /**
