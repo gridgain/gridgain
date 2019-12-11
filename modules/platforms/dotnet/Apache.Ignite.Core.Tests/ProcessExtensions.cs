@@ -103,6 +103,7 @@ namespace Apache.Ignite.Core.Tests
             }
             else
             {
+                // TODO: Should we kill the tree here too?
                 process.Kill();
             }
 
