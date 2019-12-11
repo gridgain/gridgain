@@ -73,11 +73,7 @@ namespace Apache.Ignite.Core.Tests
             var outputReader = new ListDataReader();
             IgniteProcess.AttachProcessConsoleReader(process, outputReader);
             
-            var processWrapper = new DisposeAction(() =>
-            {
-                process.Kill();
-                process.WaitForExit();
-            });
+            var processWrapper = new DisposeAction(() => process.ForceKill());
 
             // Wait for node to come up with a thin client connection.
             if (WaitForStart())
@@ -93,6 +89,9 @@ namespace Apache.Ignite.Core.Tests
             throw new Exception("Failed to start Java node: " + string.Join(",", outputReader.GetOutput()));
         }
 
+        /// <summary>
+        /// Updates pom.xml with given Ignite version.
+        /// </summary>
         private static void ReplaceIgniteVersionInPomFile(string version, string pomFile)
         {
             var pomContent = File.ReadAllText(pomFile);

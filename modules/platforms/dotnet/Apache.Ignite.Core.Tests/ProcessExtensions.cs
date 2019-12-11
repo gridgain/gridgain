@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests
     using System.Diagnostics;
     using System.Linq;
     using System.Runtime.InteropServices;
+    using Apache.Ignite.Core.Impl.Unmanaged;
 
     /// <summary>
     /// Process extensions.
@@ -72,6 +73,37 @@ namespace Apache.Ignite.Core.Tests
 
                 ResumeThread(pOpenThread);
             }
+        }
+
+        /// <summary>
+        /// Kills the process forcibly.
+        /// </summary>
+        /// <param name="process">Process.</param>
+        public static void ForceKill(this System.Diagnostics.Process process)
+        {
+            if (Os.IsWindows)
+            {
+                // For some reason process.Kill() hangs with Java processes, use taskkill instead.
+                var proc = new System.Diagnostics.Process
+                {
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = "/c taskkill /f /im " + process.Id,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                proc.Start();
+                proc.WaitForExit();
+            }
+            else
+            {
+                process.Kill();
+            }
+            
+            process.WaitForExit();
         }
     }
 }
