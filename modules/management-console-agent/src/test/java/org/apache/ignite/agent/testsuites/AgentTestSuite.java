@@ -17,6 +17,7 @@
 package org.apache.ignite.agent.testsuites;
 
 import org.apache.ignite.agent.ManagementConsoleProcessorTest;
+import org.apache.ignite.agent.ManagementConsoleProcessorTest.ManagementConsoleProcessorWithMockContextTest;
 import org.apache.ignite.agent.action.SessionRegistryTest;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessorTest;
 import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
@@ -38,6 +39,9 @@ import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
 import org.apache.ignite.agent.ws.RetryableSenderTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerSSLTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerTwoWaySSLTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -47,6 +51,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     ManagementConsoleProcessorTest.class,
+    ManagementConsoleProcessorWithMockContextTest.class,
     SessionRegistryTest.class,
     ActionControllerAnnotationProcessorTest.class,
     ActionControllerBaseTest.class,
@@ -67,7 +72,10 @@ import org.junit.runners.Suite;
     EventsExporterTest.class,
     SpanExporterTest.class,
     MetricsProcessorTest.class,
-    RetryableSenderTest.class
+    RetryableSenderTest.class,
+    WebSocketManagerTest.class,
+    WebSocketManagerSSLTest.class,
+    WebSocketManagerTwoWaySSLTest.class
 })
 public class AgentTestSuite {
 }

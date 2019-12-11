@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.processor.AbstractServiceTest;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.junit.Test;
@@ -33,43 +34,66 @@ import static org.mockito.Mockito.when;
 /**
  * Management console processor test.
  */
-public class ManagementConsoleProcessorTest extends AbstractServiceTest {
+public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
     /**
-     * GG-26201 - Testcase 5:
-     *
-     * 1. Mock `isTracingEnabled()` method to return false
-     * 2. Verify the warning message** is present in log after start
-     *
-     * ** "Current Ignite configuration does not support tracing functionality and management console agent will
-     * not collect traces (consider adding ignite-opencensus module to classpath)."
+     * The onKernalStop method should correct close all agent threads.
      */
     @Test
-    public void shouldNotCreateSpanExporterIfNodeNotSupportTracingFeature() {
-        GridKernalContext ctx = getMockContext();
+    public void shouldCorrectStartAgentOnAnotherNode_When_Coordinator_And_AnotherNode_IsStopping() throws Exception {
+        IgniteEx ignite = startGrids(3);
 
-        GridEventStorageManager evt = mock(GridEventStorageManager.class);
+        changeManagementConsoleConfig(ignite);
 
-        when(ctx.event()).thenReturn(evt);
+        stopGrid(0, true);
 
-        ClusterNode node = mock(ClusterNode.class);
+        stopGrid(2, true);
 
-        when(node.isClient()).thenReturn(true);
+        stopGrid(1, true);
 
-        when(ctx.discovery().localNode()).thenReturn(node);
+        checkThreads();
+    }
 
-        GridIoManager ioMgr = mock(GridIoManager.class);
+    /**
+     * Management console processor with mock context test.
+     */
+    public static class ManagementConsoleProcessorWithMockContextTest extends AbstractServiceTest {
+        /**
+         * GG-26201 - Testcase 5:
+         *
+         * 1. Mock `isTracingEnabled()` method to return false
+         * 2. Verify the warning message** is present in log after start
+         *
+         * ** "Current Ignite configuration does not support tracing functionality and management console agent will
+         * not collect traces (consider adding ignite-opencensus module to classpath)."
+         */
+        @Test
+        public void shouldNotCreateSpanExporterIfNodeNotSupportTracingFeature() {
+            GridKernalContext ctx = getMockContext();
 
-        when(ctx.io()).thenReturn(ioMgr);
+            GridEventStorageManager evt = mock(GridEventStorageManager.class);
 
-        ManagementConsoleProcessor proc = spy(new ManagementConsoleProcessor(ctx));
+            when(ctx.event()).thenReturn(evt);
 
-        doReturn(false).when(proc).isTracingEnabled();
+            ClusterNode node = mock(ClusterNode.class);
 
-        proc.onKernalStart(true);
+            when(node.isClient()).thenReturn(true);
 
-        IgniteLogger log = ctx.log(ManagementConsoleProcessor.class);
+            when(ctx.discovery().localNode()).thenReturn(node);
 
-        verify(log).warning("Current Ignite configuration does not support tracing functionality and management" +
-            " console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);
+            GridIoManager ioMgr = mock(GridIoManager.class);
+
+            when(ctx.io()).thenReturn(ioMgr);
+
+            ManagementConsoleProcessor proc = spy(new ManagementConsoleProcessor(ctx));
+
+            doReturn(false).when(proc).isTracingEnabled();
+
+            proc.onKernalStart(true);
+
+            IgniteLogger log = ctx.log(ManagementConsoleProcessor.class);
+
+            verify(log).warning("Current Ignite configuration does not support tracing functionality and management" +
+                " console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);
+        }
     }
 }

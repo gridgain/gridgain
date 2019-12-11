@@ -51,7 +51,7 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
     public void shouldSendInitialSpans() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -74,7 +74,7 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
 
         IgniteEx ignite_2 = startGrid(1);
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         assertWithPoll(() -> {
             List<Span> spans = getAllSpans(cluster.id());
@@ -97,7 +97,7 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
     public void shouldSendSpansFromFirstNodeWithTracing_And_NoSpansFromSecondNodeWithDisabledTracing() throws Exception {
         IgniteEx ignite = startGrid(0);
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -124,7 +124,7 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
     public void shouldSendSpansFromSecondNodeWithTracing_And_NoSpansFromFirstNodeWithDisabledTracing() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid(getTestIgniteInstanceName(0) + "without-tracing", getIgniteConfigurationWithoutTracing());
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -156,7 +156,7 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
     public void shouldNotSendSpansWithDisabledTracingOnAllNodes() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid(getTestIgniteInstanceName(0) + "without-tracing", getIgniteConfigurationWithoutTracing());
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 

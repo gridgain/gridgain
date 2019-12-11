@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.agent.dto.NodeConfiguration;
+import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import org.junit.Test;
 import static java.lang.String.valueOf;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.apache.ignite.events.EventType.EVT_CLUSTER_ACTIVATED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
@@ -41,7 +43,8 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     @Test
     public void shouldSendNodeJoinEvent() throws Exception {
         IgniteEx ignite = startGrid(0);
-        changeManagementConsoleUri(ignite);
+
+        changeManagementConsoleConfig(ignite);
 
         startGrid(1);
 
@@ -67,7 +70,7 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     public void shouldSendActivationEvent() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -87,13 +90,51 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     }
 
     /**
+     * Should send initial states to backend.
+     */
+    @Test
+    public void shouldSendInitialSpans() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+
+        changeManagementConsoleConfig(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+
+        cluster.active(true);
+
+        assertWithPoll(() -> interceptor.getPayload(buildSaveSpanDest(cluster.id())) != null);
+    }
+
+    /**
+     * Should send spans.
+     */
+    @Test
+    public void shouldSendSpans() throws Exception {
+        IgniteEx ignite_1 = startGrid(0);
+
+        changeManagementConsoleConfig(ignite_1);
+
+        IgniteCluster cluster = ignite_1.cluster();
+
+        cluster.active(true);
+
+        assertWithPoll(
+            () -> {
+                List<Span> spans = interceptor.getListPayload(buildSaveSpanDest(cluster.id()), Span.class);
+
+                return spans != null && !spans.isEmpty();
+            }
+        );
+    }
+
+    /**
      * Should send node configuration.
      */
     @Test
     public void shouldSendNodeConfiguration() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
 
-        changeManagementConsoleUri(ignite_1);
+        changeManagementConsoleConfig(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
 
