@@ -452,20 +452,6 @@ public class FilePageStore implements PageStore {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public void readHeader(ByteBuffer buf) throws IgniteCheckedException {
-        init();
-
-        try {
-            assert buf.remaining() == headerSize();
-
-            readWithFailover(buf, 0);
-        }
-        catch (IOException e) {
-            throw new StorageException("Failed to read header [file=" + getFileAbsolutePath() + "]", e);
-        }
-    }
-
     /**
      * @throws StorageException If failed to initialize store file.
      */

@@ -39,6 +39,7 @@ import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
+import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointWriteProgressSupplier;
@@ -560,16 +561,8 @@ public class PageMemoryImplTest extends GridCommonAbstractTest {
         /** */
         private Map<FullPageId, byte[]> storedPages = new HashMap<>();
 
-        /** {@inheritDoc} */
-        @Override public void read(int grpId, long pageId, ByteBuffer pageBuf) throws IgniteCheckedException {
-            FullPageId fullPageId = new FullPageId(pageId, grpId);
-
-            byte[] bytes = storedPages.get(fullPageId);
-
-            if (bytes != null)
-                pageBuf.put(bytes);
-            else
-                pageBuf.put(new byte[PAGE_SIZE]);
+        @Override public PageStore getStore(int grpId, int partId) throws IgniteCheckedException {
+            return null;
         }
 
         /** {@inheritDoc} */

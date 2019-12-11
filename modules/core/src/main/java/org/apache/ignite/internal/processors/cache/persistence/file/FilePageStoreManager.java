@@ -500,55 +500,10 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     }
 
     /** {@inheritDoc} */
-    @Override public void read(int grpId, long pageId, ByteBuffer pageBuf) throws IgniteCheckedException {
-        read(grpId, pageId, pageBuf, false);
-    }
-
-    /**
-     * Will preserve crc in buffer if keepCrc is true.
-     *
-     * @param grpId Group ID.
-     * @param pageId Page ID.
-     * @param pageBuf Page buffer.
-     * @param keepCrc Keep CRC flag.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void read(int grpId, long pageId, ByteBuffer pageBuf, boolean keepCrc) throws IgniteCheckedException {
-        PageStore store = getStore(grpId, PageIdUtils.partId(pageId));
-
-        try {
-            store.read(pageId, pageBuf, keepCrc);
-
-            assert keepCrc || PageIO.getCrc(pageBuf) == 0: store.size() - store.pageOffset(pageId);
-
-            cctx.kernalContext().compress().decompressPage(pageBuf, store.getPageSize());
-        }
-        catch (StorageException e) {
-            cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-
-            throw e;
-        }
-    }
-
-    /** {@inheritDoc} */
     @Override public boolean exists(int grpId, int partId) throws IgniteCheckedException {
         PageStore store = getStore(grpId, partId);
 
         return store.exists();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void readHeader(int grpId, int partId, ByteBuffer buf) throws IgniteCheckedException {
-        PageStore store = getStore(grpId, partId);
-
-        try {
-            store.readHeader(buf);
-        }
-        catch (StorageException e) {
-            cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
-
-            throw e;
-        }
     }
 
     /** {@inheritDoc} */
@@ -1161,7 +1116,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      *
      * Note: visible for testing.
      */
-    public PageStore getStore(int grpId, int partId) throws IgniteCheckedException {
+    @Override public PageStore getStore(int grpId, int partId) throws IgniteCheckedException {
         CacheStoreHolder holder = getHolder(grpId);
 
         if (holder == null)

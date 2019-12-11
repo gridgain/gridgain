@@ -58,6 +58,7 @@ import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
+import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
@@ -906,7 +907,8 @@ public class PageMemoryImpl implements PageMemoryEx {
                 long actualPageId = 0;
 
                 try {
-                    storeMgr.read(grpId, pageId, buf);
+                    PageStore pageStore = storeMgr.getStore(grpId, PageIdUtils.partId(pageId));
+                    pageStore.read(pageId, buf, false);
 
                     statHolder.trackPhysicalAndLogicalRead(pageAddr);
 
@@ -925,6 +927,11 @@ public class PageMemoryImpl implements PageMemoryEx {
                     statHolder.trackPhysicalAndLogicalRead(pageAddr);
 
                     memMetrics.onPageRead();
+                }
+                catch (StorageException e) {
+                    ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
+
+                    throw e;
                 }
                 finally {
                     rwLock.writeUnlock(lockedPageAbsPtr + PAGE_LOCK_OFFSET,
