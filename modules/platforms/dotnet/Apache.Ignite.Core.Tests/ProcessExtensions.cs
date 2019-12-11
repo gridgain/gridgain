@@ -89,7 +89,7 @@ namespace Apache.Ignite.Core.Tests
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = "cmd.exe",
-                        Arguments = "/c taskkill /f /im " + process.Id,
+                        Arguments = "/c taskkill /f /t /pid " + process.Id,
                         UseShellExecute = false,
                         CreateNoWindow = true
                     }
