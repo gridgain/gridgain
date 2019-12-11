@@ -54,7 +54,7 @@ namespace Apache.Ignite.Core.Tests.Client
                     Assert.IsTrue(client.GetConfiguration().EnablePartitionAwareness);
                 }
 
-                Assert.Throws<SocketException>(() => client.GetCacheNames());
+                Assert.Catch(() => client.GetCacheNames());
 
                 using (StartOldServer())
                 {

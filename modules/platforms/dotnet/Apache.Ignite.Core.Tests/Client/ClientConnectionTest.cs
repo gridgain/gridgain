@@ -31,6 +31,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Common;
+    using Apache.Ignite.Core.Log;
     using NUnit.Framework;
 
     /// <summary>
@@ -190,7 +191,8 @@ namespace Apache.Ignite.Core.Tests.Client
 
             var clientCfg = new IgniteClientConfiguration
             {
-                Endpoints = new[] {"localhost:2000"}
+                Endpoints = new[] {"localhost:2000"},
+                Logger = new ConsoleLogger()
             };
 
             using (Ignition.Start(servCfg))
