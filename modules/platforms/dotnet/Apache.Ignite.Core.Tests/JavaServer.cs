@@ -74,8 +74,8 @@ namespace Apache.Ignite.Core.Tests
             };
 
             process.Start();
-            var outputReader = new ListDataReader();
-            process.AttachProcessConsoleReader(outputReader);
+            var listDataReader = new ListDataReader();
+            process.AttachProcessConsoleReader(listDataReader, new IgniteProcessConsoleOutputReader());
             
             var processWrapper = new DisposeAction(() => process.ForceKill());
 
@@ -90,7 +90,7 @@ namespace Apache.Ignite.Core.Tests
                 processWrapper.Dispose();
             }
             
-            throw new Exception("Failed to start Java node: " + string.Join(",", outputReader.GetOutput()));
+            throw new Exception("Failed to start Java node: " + string.Join(",", listDataReader.GetOutput()));
         }
 
         /// <summary>

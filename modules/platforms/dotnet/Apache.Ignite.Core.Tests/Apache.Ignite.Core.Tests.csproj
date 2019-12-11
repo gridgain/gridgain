@@ -222,6 +222,7 @@
     <Compile Include="Log\ConsoleLoggerTest.cs" />
     <Compile Include="Log\FixedDateTimeProvider.cs" />
     <Compile Include="PathUtils.cs" />
+    <Compile Include="Process\IgniteProcessCompositeOutputReader.cs" />
     <Compile Include="Process\ListDataReader.cs" />
     <Compile Include="Log\ConcurrentMemoryTarget.cs" />
     <Compile Include="Log\DefaultLoggerTest.cs" />

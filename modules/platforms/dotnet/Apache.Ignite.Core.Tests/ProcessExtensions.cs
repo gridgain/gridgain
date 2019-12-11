@@ -113,9 +113,11 @@ namespace Apache.Ignite.Core.Tests
         /// Attaches the process console reader.
         /// </summary>
         public static void AttachProcessConsoleReader(this System.Diagnostics.Process proc, 
-            IIgniteProcessOutputReader outReader = null)
+            params IIgniteProcessOutputReader[] outReaders)
         {
-            outReader = outReader ?? new IgniteProcessConsoleOutputReader();
+            var outReader = outReaders == null || outReaders.Length == 0
+                ? (IIgniteProcessOutputReader) new IgniteProcessConsoleOutputReader()
+                : new IgniteProcessCompositeOutputReader(outReaders);
 
             Attach(proc, proc.StandardOutput, outReader, false);
             Attach(proc, proc.StandardError, outReader, true);
