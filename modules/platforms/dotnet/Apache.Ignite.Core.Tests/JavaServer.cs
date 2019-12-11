@@ -28,6 +28,9 @@ namespace Apache.Ignite.Core.Tests
 
     /// <summary>
     /// Starts Java server nodes.
+    /// Uses Maven project in JavaServer folder to download and run arbitrary release
+    /// (Maven is the fastest way to download a release (we only need the core jar, bare minimum).
+    /// Server node sets thin client port to 10890.
     /// </summary>
     public static class JavaServer
     {
