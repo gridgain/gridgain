@@ -63,7 +63,7 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
          * @param ctx Kernal context.
          */
         public FilePageStoreManagerChild(GridKernalContext ctx) {
-            super(ctx);
+            super(ctx.config());
         }
     }
 

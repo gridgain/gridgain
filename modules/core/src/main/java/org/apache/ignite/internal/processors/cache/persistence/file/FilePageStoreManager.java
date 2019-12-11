@@ -140,6 +140,9 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
     /** Marshaller. */
     private final Marshaller marshaller;
 
+    /** Class loader to be used with marshaller. */
+    private final ClassLoader clsLdr;
+
     /**
      * Executor to disallow running code that modifies data in idxCacheStores concurrently with cleanup of file page
      * store.
@@ -148,9 +151,6 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
     /** */
     private final Map<Integer, CacheStoreHolder> idxCacheStores;
-
-    /** */
-    private final IgniteConfiguration igniteCfg;
 
     /**
      * File IO factory for page store, by default is taken from {@link #dsCfg}.
@@ -181,13 +181,11 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
         new GridStripedReadWriteLock(Math.max(Runtime.getRuntime().availableProcessors(), 8));
 
     /**
-     * @param ctx Kernal context.
+     * @param igniteCfg Kernal context.
      */
-    public FilePageStoreManager(GridKernalContext ctx) {
-        igniteCfg = ctx.config();
-
+    public FilePageStoreManager(IgniteConfiguration igniteCfg) {
         cleanupAsyncExecutor =
-            new LongOperationAsyncExecutor(ctx.igniteInstanceName(), ctx.config().getGridLogger());
+            new LongOperationAsyncExecutor(igniteCfg.getIgniteInstanceName(), igniteCfg.getGridLogger());
 
         idxCacheStores = new IdxCacheStores<>(cleanupAsyncExecutor);
 
@@ -199,7 +197,9 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
         pageStoreV1FileIoFactory = pageStoreFileIoFactory = dsCfg.getFileIOFactory();
 
-        marshaller =  MarshallerUtils.jdkMarshaller(ctx.igniteInstanceName());
+        marshaller =  MarshallerUtils.jdkMarshaller(igniteCfg.getIgniteInstanceName());
+
+        clsLdr = U.resolveClassLoader(igniteCfg);
     }
 
     /** {@inheritDoc} */
@@ -650,7 +650,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
             FileVersionCheckingFactory pageStoreFactory = new FileVersionCheckingFactory(
                 pageStoreFileIoFactory,
                 pageStoreV1FileIoFactory,
-                igniteCfg.getDataStorageConfiguration()
+                dsCfg
             );
 
             if (encrypted) {
@@ -914,7 +914,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      */
     private StoredCacheData readCacheData(File conf) throws IgniteCheckedException {
         try (InputStream stream = new BufferedInputStream(new FileInputStream(conf))) {
-            return marshaller.unmarshal(stream, U.resolveClassLoader(igniteCfg));
+            return marshaller.unmarshal(stream, clsLdr);
         }
         catch (IgniteCheckedException | IOException e) {
                 throw new IgniteCheckedException("An error occurred during cache configuration loading from file [file=" +

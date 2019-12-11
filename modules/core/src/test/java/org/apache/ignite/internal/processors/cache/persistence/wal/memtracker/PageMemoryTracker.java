@@ -181,7 +181,7 @@ public class PageMemoryTracker implements IgnitePlugin {
      */
     IgnitePageStoreManager createPageStoreManager() {
         if (isEnabled()) {
-            return new FilePageStoreManager(gridCtx) {
+            return new FilePageStoreManager(gridCtx.config()) {
                 @Override public void shutdownForCacheGroup(CacheGroupContext grp,
                     boolean destroy) throws IgniteCheckedException {
                     super.shutdownForCacheGroup(grp, destroy);
