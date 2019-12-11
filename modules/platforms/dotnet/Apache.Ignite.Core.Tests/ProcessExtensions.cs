@@ -18,9 +18,12 @@ namespace Apache.Ignite.Core.Tests
 {
     using System;
     using System.Diagnostics;
+    using System.IO;
     using System.Linq;
     using System.Runtime.InteropServices;
+    using System.Threading;
     using Apache.Ignite.Core.Impl.Unmanaged;
+    using Apache.Ignite.Core.Tests.Process;
 
     /// <summary>
     /// Process extensions.
@@ -104,6 +107,36 @@ namespace Apache.Ignite.Core.Tests
             }
             
             process.WaitForExit();
+        }
+        
+        /// <summary>
+        /// Attaches the process console reader.
+        /// </summary>
+        public static void AttachProcessConsoleReader(this System.Diagnostics.Process proc, 
+            IIgniteProcessOutputReader outReader = null)
+        {
+            outReader = outReader ?? new IgniteProcessConsoleOutputReader();
+
+            Attach(proc, proc.StandardOutput, outReader, false);
+            Attach(proc, proc.StandardError, outReader, true);
+        }
+        
+        
+        /// <summary>
+        /// Attach output reader to the process.
+        /// </summary>
+        /// <param name="proc">Process.</param>
+        /// <param name="reader">Process stream reader.</param>
+        /// <param name="outReader">Output reader.</param>
+        /// <param name="err">Whether this is error stream.</param>
+        private static void Attach(System.Diagnostics.Process proc, StreamReader reader, 
+            IIgniteProcessOutputReader outReader, bool err)
+        {
+            new Thread(() =>
+            {
+                while (!proc.HasExited)
+                    outReader.OnOutput(proc, reader.ReadLine(), err);
+            }) {IsBackground = true}.Start();
         }
     }
 }

@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests
     using System;
     using System.Diagnostics;
     using System.IO;
+    using System.Linq;
     using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Common;
@@ -71,7 +72,7 @@ namespace Apache.Ignite.Core.Tests
 
             process.Start();
             var outputReader = new ListDataReader();
-            IgniteProcess.AttachProcessConsoleReader(process, outputReader);
+            process.AttachProcessConsoleReader(outputReader);
             
             var processWrapper = new DisposeAction(() => process.ForceKill());
 
@@ -131,6 +132,21 @@ namespace Apache.Ignite.Core.Tests
                     return false;
                 }
             }, 30000);
+        }
+
+        /// <summary>
+        /// Gets maven path. 
+        /// </summary>
+        private static string GetMaven()
+        {
+            // TODO: Check /usr/bin/mvn?
+            // TODO: Linux binary name?
+            return new[] {"MAVEN_HOME", "M2_HOME", "M3_HOME", "MVN_HOME"}
+                .Select(Environment.GetEnvironmentVariable)
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Select(x => Path.Combine(x, "mvn.bat"))
+                .Where(File.Exists)
+                .FirstOrDefault();
         }
     }
 }
