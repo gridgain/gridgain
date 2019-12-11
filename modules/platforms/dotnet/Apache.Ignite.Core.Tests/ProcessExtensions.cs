@@ -149,6 +149,7 @@ namespace Apache.Ignite.Core.Tests
                 FileName = file,
                 Arguments = args,
                 RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 UseShellExecute = false
             };
 
