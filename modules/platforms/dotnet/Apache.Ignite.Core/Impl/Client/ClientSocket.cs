@@ -763,7 +763,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Validates op code against current protocol version.
         /// </summary>
-        /// <param name="opId"></param>
+        /// <param name="opId">Op code.</param>
         private void ValidateOp(ClientOp opId)
         {
             var minVersion = opId.GetMinVersion();
