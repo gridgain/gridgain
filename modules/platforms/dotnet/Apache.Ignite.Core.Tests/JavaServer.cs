@@ -139,12 +139,13 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static string GetMaven()
         {
-            // TODO: Check /usr/bin/mvn?
-            // TODO: Linux binary name?
+            var extensions = Os.IsWindows ? new[] {".cmd", ".bat"} : new string[0];
+            
             return new[] {"MAVEN_HOME", "M2_HOME", "M3_HOME", "MVN_HOME"}
                 .Select(Environment.GetEnvironmentVariable)
                 .Where(x => !string.IsNullOrEmpty(x))
-                .Select(x => Path.Combine(x, "mvn.bat"))
+                .Select(x => Path.Combine(x, "bin", "mvn"))
+                .SelectMany(x => extensions.Select(ext => x + ext))
                 .Where(File.Exists)
                 .FirstOrDefault();
         }
