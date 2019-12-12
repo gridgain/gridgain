@@ -38,14 +38,14 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.ContinuousTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.LocalContinuousTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.ContinuousCleanupIndexTreeTask;
+import org.apache.ignite.internal.processors.query.h2.LocalContinuousCleanupIndexTreeTask;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Cursor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -571,7 +571,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     dropMetaPage(i);
                 }
 
-                ContinuousTask task = new ContinuousCleanupIndexTreeTask(
+                LocalContinuousTask task = new LocalContinuousCleanupIndexTreeTask(
                     rootPages,
                     trees,
                     cctx.group().name(),
@@ -580,7 +580,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     idxName
                 );
 
-                cctx.kernalContext().cache().startContinuousTask(task, cctx.config());
+                cctx.kernalContext().cache().startLocalContinuousTask(task, cctx.config());
             }
         }
         catch (IgniteCheckedException e) {

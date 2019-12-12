@@ -23,7 +23,7 @@ import org.apache.ignite.internal.GridKernalContext;
  * for case when node with persistence fails before operation is completed. After start, node reads it's
  * pending continuous tasks from metastorage and completes them.
  */
-public interface ContinuousTask extends Serializable {
+public interface LocalContinuousTask extends Serializable {
     /**
      * Short name of the task is used to build metastorage key for saving this task.
      *

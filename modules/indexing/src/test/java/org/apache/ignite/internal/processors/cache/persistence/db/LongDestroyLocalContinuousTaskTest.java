@@ -46,6 +46,7 @@ import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskResult;
 import org.apache.ignite.testframework.CallbackExecutorLogListener;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.MessageOrderLogListener;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -61,7 +62,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOC
 @SystemPropertiesList(
     @WithSystemProperty(key = IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, value = "5000")
 )
-public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
+public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
     /** Nodes count. */
     private static final int NODES_COUNT = 2;
 
@@ -86,14 +87,23 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
     /** */
     private final LogListener pendingDelFinishedLsnr =
-        new CallbackExecutorLogListener(".*?Execution of continuous task completed.*", () -> pendingDelLatch.countDown());
+        new CallbackExecutorLogListener(".*?Execution of local continuous task completed.*", () -> pendingDelLatch.countDown());
 
     /** */
     private final LogListener idxsRebuildFinishedLsnr =
         new CallbackExecutorLogListener("Indexes rebuilding completed for all caches.", () -> idxsRebuildLatch.countDown());
 
+    /** */
+    private final LogListener taskLifecycleListener =
+        new MessageOrderLogListener(
+            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC.T_IDX",
+            ".*?Could not execute local continuous task: DROP_SQL_INDEX-PUBLIC.T_IDX",
+            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC.T_IDX",
+            ".*?Execution of local continuous task completed: DROP_SQL_INDEX-PUBLIC.T_IDX"
+        );
+
     /**
-     * When it is set to true during index deletion, node with number {@link RESTARTED_NODE_NUM} fails to complete
+     * When it is set to true during index deletion, node with number {@link #RESTARTED_NODE_NUM} fails to complete
      * deletion.
      */
     private final AtomicBoolean blockDestroy = new AtomicBoolean(false);
@@ -104,7 +114,8 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         log(),
         blockedSysCriticalThreadLsnr,
         pendingDelFinishedLsnr,
-        idxsRebuildFinishedLsnr
+        idxsRebuildFinishedLsnr,
+        taskLifecycleListener
     );
 
     /** */
@@ -187,40 +198,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
 
         int nodeCnt = NODES_COUNT;
 
-        IgniteEx ignite = startGrids(nodeCnt);
-
-        ignite.cluster().active(true);
-
-        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-        query(cache, "create table t (id integer primary key, p integer, f integer, p integer) with \"BACKUPS=1\"");
-
-        createIndex(cache, multicolumn);
-
-        for (int i = 0; i < 5_000; i++)
-            query(cache, "insert into t (id, p, f) values (?, ?, ?)", i, i, i);
-
-        forceCheckpoint();
-
-        checkSelectAndPlan(cache, true);
-
-        final IgniteCache<Integer, Integer> finalCache = cache;
-
-        Thread dropIdx = new Thread(() -> {
-            testLog.info("Starting index drop");
-
-            finalCache.query(new SqlFieldsQuery("drop index t_idx")).getAll();
-
-            testLog.info("Index drop completed");
-        });
-
-        dropIdx.start();
-
-        // Waiting for some modified pages
-        doSleep(500);
-
-        // Now checkpoint will happen during index deletion before it completes.
-        forceCheckpoint();
+        Ignite ignite = prepareAndPopulateCluster(nodeCnt, multicolumn);
 
         Ignite aliveNode = grid(ALWAYS_ALIVE_NODE_NUM);
 
@@ -278,7 +256,7 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
         else
             awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
 
-        cache = grid(RESTARTED_NODE_NUM).cache(DEFAULT_CACHE_NAME);
+        IgniteCache<Integer, Integer> cache = grid(RESTARTED_NODE_NUM).cache(DEFAULT_CACHE_NAME);
 
         checkSelectAndPlan(cache, !dropIdxWhenOneNodeStopped0);
         checkSelectAndPlan(cacheOnAliveNode, !dropIdxWhenOneNodeStopped0);
@@ -312,7 +290,11 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             fail(failMsg);
     }
 
-    /** */
+    /**
+     * Validates indexes on {@link #RESTARTED_NODE_NUM} and {@link #ALWAYS_ALIVE_NODE_NUM}.
+     *
+     * @param ignite Ignite instance.
+     */
     private void validateIndexes(Ignite ignite) {
         Set<UUID> nodeIds = new HashSet<UUID>() {{
             add(grid(RESTARTED_NODE_NUM).cluster().localNode().id());
@@ -352,7 +334,12 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
             assertFalse(res.hasIssues());
     }
 
-    /** */
+    /**
+     * Logs index validation issues.
+     *
+     * @param caption Caption of log messages.
+     * @param map Map containing issues.
+     */
     private void logIssuesFromMap(String caption, Map<?, ValidateIndexesPartitionResult> map) {
         List<String> partResIssues = new LinkedList<>();
 
@@ -414,6 +401,45 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
      */
     private List<List<?>> query(IgniteCache<Integer, Integer> cache, String qry, Object... args) {
         return cache.query(new SqlFieldsQuery(qry).setArgs(args)).getAll();
+    }
+
+    /**
+     * Starts cluster and populates with data.
+     *
+     * @param nodeCnt Nodes count.
+     * @param multicolumn Is index multicolumn.
+     * @return Ignite instance.
+     * @throws Exception If failed.
+     */
+    private IgniteEx prepareAndPopulateCluster(int nodeCnt, boolean multicolumn) throws Exception {
+        IgniteEx ignite = startGrids(nodeCnt);
+
+        ignite.cluster().active(true);
+
+        IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        query(cache, "create table t (id integer primary key, p integer, f integer, p integer) with \"BACKUPS=1\"");
+
+        createIndex(cache, multicolumn);
+
+        for (int i = 0; i < 5_000; i++)
+            query(cache, "insert into t (id, p, f) values (?, ?, ?)", i, i, i);
+
+        forceCheckpoint();
+
+        checkSelectAndPlan(cache, true);
+
+        final IgniteCache<Integer, Integer> finalCache = cache;
+
+        new Thread(() -> finalCache.query(new SqlFieldsQuery("drop index t_idx")).getAll()).start();
+
+        // Waiting for some modified pages
+        doSleep(500);
+
+        // Now checkpoint will happen during index deletion before it completes.
+        forceCheckpoint();
+
+        return ignite;
     }
 
     /**
@@ -482,5 +508,41 @@ public class LongDestroyOperationCheckpointTest extends GridCommonAbstractTest {
     @Test
     public void testLongIndexDeletionCheckWhenOneNodeStoppedAndDropIndex() throws Exception {
         testLongIndexDeletion(true, false, false, true, true);
+    }
+
+    /**
+     * Tests that local task lifecycle was correct.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDestroyTaskLifecycle() throws Exception {
+        taskLifecycleListener.reset();
+
+        IgniteEx ignite = prepareAndPopulateCluster(1, false);
+
+        IgniteCache<Integer, Integer> cache = ignite.cache(DEFAULT_CACHE_NAME);
+
+        checkSelectAndPlan(cache, false);
+
+        ignite.cluster().active(false);
+
+        ignite.cluster().active(true);
+
+        ignite.cache(DEFAULT_CACHE_NAME);
+
+        doSleep(1000);
+
+        blockDestroy.set(true);
+
+        stopGrid(RESTARTED_NODE_NUM);
+
+        blockDestroy.set(false);
+
+        startGrid(RESTARTED_NODE_NUM);
+
+        awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
+
+        assertTrue(taskLifecycleListener.check());
     }
 }
