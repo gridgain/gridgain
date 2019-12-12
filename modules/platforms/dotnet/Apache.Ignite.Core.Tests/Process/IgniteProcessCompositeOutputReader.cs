@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests.Process
 {
-    using System;
     using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Common;
 
