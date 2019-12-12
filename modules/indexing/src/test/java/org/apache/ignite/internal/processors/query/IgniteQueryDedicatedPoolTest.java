@@ -81,13 +81,6 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-
-        startGrid("server");
-    }
-
-    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName)
             .setGridLogger(testLog);
@@ -127,6 +120,8 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSqlQueryUsesDedicatedThreadPool() throws Exception {
+        startGrid("server");
+
         try (Ignite client = startGrid("client")) {
             IgniteCache<Integer, Integer> cache = client.cache(CACHE_NAME);
 
@@ -156,6 +151,8 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
      */
     @Test
     public void testScanQueryUsesDedicatedThreadPool() throws Exception {
+        startGrid("server");
+
         try (Ignite client = startGrid("client")) {
             IgniteCache<Integer, Integer> cache = client.cache(CACHE_NAME);
 
@@ -180,6 +177,8 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSpiQueryUsesDedicatedThreadPool() throws Exception {
+        startGrid("server");
+
         try (Ignite client = startGrid("client")) {
             IgniteCache<Byte, Byte> cache = client.cache(CACHE_NAME);
 
@@ -207,12 +206,14 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
     public void testContainsStarvationQryPoolInLog() throws Exception {
         qryPoolSize = 1;
 
+        startGrid("server");
+
         IgniteEx clientNode = startGrid("client");
 
         IgniteCache<Integer, Integer> cache = clientNode.cache(CACHE_NAME);
         cache.put(0, 0);
 
-        int qrySize = 10;
+        int qrySize = 2;
 
         CyclicBarrier barrier = new CyclicBarrier(qrySize);
 
