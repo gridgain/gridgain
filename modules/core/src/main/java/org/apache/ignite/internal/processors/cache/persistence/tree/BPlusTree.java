@@ -2473,6 +2473,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * are trying to read or update the tree after destroy beginning).
      *
      * @param c Visitor closure. Visits only leaf pages.
+     * @param forceDestroy Whether to proceed with destroying, even if tree is already marked as destroyed (see
+     * {@link #markDestroyed()}).
      * @return Number of pages recycled from this tree. If the tree was destroyed by someone else concurrently returns
      *     {@code 0}, otherwise it should return at least {@code 2} (for meta page and root page), unless this tree is
      *     used as metadata storage, or {@code -1} if we don't have a reuse list and did not do recycling at all.

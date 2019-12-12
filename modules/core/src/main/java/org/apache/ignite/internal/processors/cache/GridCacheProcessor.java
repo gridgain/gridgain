@@ -959,6 +959,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
         GridCachePartitionExchangeManager<Object, Object> exch = context().exchange();
 
+        // Waiting for workers, but not cacelling them, trying to complete running tasks.
         awaitForWorkersStop(asyncContinuousTaskWorkers, false, log);
 
         // Stop exchange manager first so that we call onKernalStop on all caches.
