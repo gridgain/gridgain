@@ -33,6 +33,7 @@ namespace Apache.Ignite.Core.Tests.Client
     [TestFixture("2.7.0", "1.2.0")]
     [TestFixture("2.7.5", "1.2.0")]
     [TestFixture("2.7.6", "1.2.0")]
+    [Category(TestUtils.CategoryIntensive)]
     public class ClientServerCompatibilityTest
     {
         /** */

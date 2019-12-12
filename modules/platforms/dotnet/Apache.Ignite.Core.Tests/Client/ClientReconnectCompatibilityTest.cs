@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
     using System.Linq;
-    using System.Net.Sockets;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Log;
@@ -28,6 +27,7 @@ namespace Apache.Ignite.Core.Tests.Client
     /// <summary>
     /// Tests thin client compatibility with reconnect.
     /// </summary>
+    [Category(TestUtils.CategoryIntensive)]    
     public class ClientReconnectCompatibilityTest
     {
         /// <summary>
