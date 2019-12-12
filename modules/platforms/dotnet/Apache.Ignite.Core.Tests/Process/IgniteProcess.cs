@@ -195,7 +195,7 @@ namespace Apache.Ignite.Core.Tests.Process
             Debug.Assert(proc != null);
 
             // 3. Attach output readers to avoid hangs.
-            proc.AttachProcessConsoleReader(outReader);
+            proc.AttachProcessConsoleReader(outReader ?? DfltOutReader);
 
             return proc;
         }
