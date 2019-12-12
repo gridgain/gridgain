@@ -26,12 +26,16 @@ import org.apache.ignite.agent.dto.metric.MetricSchema;
 import org.apache.ignite.agent.dto.metric.MetricValueConsumer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
+import org.apache.ignite.spi.metric.ObjectMetric;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -89,7 +93,7 @@ public class MetricsExporterTest {
 
         for (MetricRegistry reg : generateMetrics().values()) {
             for (Metric m : reg) {
-                byte type;
+                byte type = -1;
 
                 if (m instanceof BooleanMetric)
                     type = 0;
@@ -99,10 +103,21 @@ public class MetricsExporterTest {
                     type = 2;
                 else if (m instanceof DoubleMetric)
                     type = 3;
-                else
-                    throw new IllegalArgumentException("Unknown metric type.");
+                else if (m instanceof LongAdderMetric)
+                    type = 2;
 
-                map.put(m.name(), type);
+                if (m instanceof HitRateMetric)
+                    map.put(m.name() + ".60000", (byte)2);
+                else if (m instanceof HistogramMetric) {
+                    map.put(m.name() + ".60000", (byte)2);
+                    map.put(m.name() + ".inf", (byte)2);
+                }
+                else {
+                    if (type == -1)
+                        throw new IllegalArgumentException("Unknown metric type.");
+
+                    map.put(m.name(), type);
+                }
             }
         }
 
@@ -149,7 +164,7 @@ public class MetricsExporterTest {
 
         for (MetricRegistry reg : metrics.values()) {
             for (Metric m : reg) {
-                byte type;
+                byte type = -1;
 
                 if (m instanceof BooleanMetric)
                     type = 0;
@@ -159,10 +174,21 @@ public class MetricsExporterTest {
                     type = 2;
                 else if (m instanceof DoubleMetric)
                     type = 3;
-                else
-                    throw new IllegalArgumentException("Unknown metric type.");
+                else if (m instanceof LongAdderMetric)
+                    type = 2;
 
-                map.put(m.name(), type);
+                if (m instanceof HitRateMetric)
+                    map.put(m.name() + ".60000", (byte)2);
+                else if (m instanceof HistogramMetric) {
+                    map.put(m.name() + ".60000", (byte)2);
+                    map.put(m.name() + ".inf", (byte)2);
+                }
+                else {
+                    if (type == -1)
+                        throw new IllegalArgumentException("Unknown metric type.");
+
+                    map.put(m.name(), type);
+                }
             }
         }
 
@@ -204,7 +230,7 @@ public class MetricsExporterTest {
 
             metrics.put(grpName, reg);
 
-            for (int j = 0; j < 16;) {
+            for (int j = 0; j < 14;) {
                 reg.booleanMetric(namePref + "bool." + j++, "description");
 
                 reg.intMetric(namePref + "int." + j++, "description");
@@ -212,6 +238,12 @@ public class MetricsExporterTest {
                 reg.longMetric(namePref + "long." + j++, "description");
 
                 reg.doubleMetric(namePref + "double." + j++, "description");
+
+                reg.hitRateMetric(namePref + "hirtate." + j++, "description", 60_000, 10);
+
+                reg.longAdderMetric(namePref + "longadder." + j++, "description");
+
+                reg.histogram(namePref + "histogram." + j++, new long[] {60_000}, "description");
             }
         }
 
