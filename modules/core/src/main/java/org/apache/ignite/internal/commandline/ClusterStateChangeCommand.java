@@ -45,9 +45,9 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
     @Override public void printUsage(Logger log) {
         Map<String, String> params = new LinkedHashMap<>();
 
-        params.put(ACTIVE.toString(), "Activate cluster.");
+        params.put(ACTIVE.toString(), "Activate cluster. Cache updates are allowed");
         params.put(INACTIVE.toString(), "Deactivate cluster.");
-        params.put(ACTIVE_READ_ONLY.toString(), "Enable cluster read-only mode. Cluster will be activated, if was " + INACTIVE.toString() + ".");
+        params.put(ACTIVE_READ_ONLY.toString(), "Activate cluster. Cache updates are denied.");
 
         Command.usage(log, "Change cluster state:", SET_STATE, params, or(ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
     }
@@ -61,7 +61,7 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
 
     /** {@inheritDoc} */
     @Override public String confirmationPrompt() {
-        return "Warning: the command will " + stateName() + " a cluster \"" + clusterName + "\".";
+        return "Warning: the command will change state of cluster with name \"" + clusterName + "\" to " + state + ".";
     }
 
     /** {@inheritDoc} */
@@ -95,23 +95,6 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
     /** {@inheritDoc} */
     @Override public ClusterState arg() {
         return state;
-    }
-
-    /** */
-    private String stateName() {
-        switch (state) {
-            case ACTIVE:
-                return "activate";
-
-            case INACTIVE:
-                return "deactivate";
-
-            case ACTIVE_READ_ONLY:
-                return "enable read-only mode on";
-
-            default:
-                throw new IllegalArgumentException("" + state);
-        }
     }
 
     /** {@inheritDoc} */

@@ -319,7 +319,7 @@ public abstract class GridClientConnection {
             throws GridClientClosedException, GridClientConnectionResetException;
 
     /**
-     * Change grid global state.
+     * Changes grid global state.
      *
      * @param state New cluster state.
      * @param destNodeId Destination node id.
@@ -341,7 +341,7 @@ public abstract class GridClientConnection {
 
 
     /**
-     * Get current grid state.
+     * Gets current grid global state.
      *
      * @param destNodeId Destination node id.
      * @throws GridClientConnectionResetException In case of error.
