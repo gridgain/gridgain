@@ -129,9 +129,6 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** Agent started. */
     private final AtomicBoolean agentStarted = new AtomicBoolean();
 
-    /** Is all features enabled. */
-    private boolean isMgmtConsoleFeaturesEnabled;
-
     /**
      * @param ctx Kernal context.
      */
@@ -141,10 +138,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        isMgmtConsoleFeaturesEnabled = ReadableDistributedMetaStorage.isSupported(ctx) &&
-            allNodesSupports(ctx, ctx.discovery().discoCache().allNodes(), CLUSTER_ID_AND_TAG);
-
-        if (isMgmtConsoleFeaturesEnabled) {
+        if (isManagementConsoleFeaturesEnabled()) {
             this.metaStorage = ctx.distributedMetastorage();
             this.evtsExporter = new EventsExporter(ctx);
             this.metricExporter = new MetricsExporter(ctx);
@@ -181,7 +175,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        if (isMgmtConsoleFeaturesEnabled) {
+        if (isManagementConsoleFeaturesEnabled()) {
             ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
             quiteStop(messagesProc);
@@ -214,7 +208,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void configuration(ManagementConfiguration cfg) {
-        if (isMgmtConsoleFeaturesEnabled) {
+        if (isManagementConsoleFeaturesEnabled()) {
             ManagementConfiguration oldCfg = configuration();
 
             if (oldCfg.isEnabled() != cfg.isEnabled())
