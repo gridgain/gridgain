@@ -29,12 +29,11 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
-import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.cache.persistence.file.LongOperationAsyncExecutor;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -50,20 +49,10 @@ import static java.util.Collections.singletonList;
  */
 public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implements Serializable {
     /** */
-    private static class FilePageStoreManagerChild extends FilePageStoreManager {
+    private static class LongOperationAsyncExecutorChild extends LongOperationAsyncExecutor {
         /** */
-        static class LongOperationAsyncExecutorChild extends LongOperationAsyncExecutor {
-            /** */
-            public LongOperationAsyncExecutorChild(String igniteInstanceName, IgniteLogger log) {
-                super(igniteInstanceName, log);
-            }
-        }
-
-        /**
-         * @param ctx Kernal context.
-         */
-        public FilePageStoreManagerChild(GridKernalContext ctx) {
-            super(ctx.config());
+        public LongOperationAsyncExecutorChild(String igniteInstanceName, IgniteLogger log) {
+            super(igniteInstanceName, log);
         }
     }
 
@@ -196,8 +185,8 @@ public class CleanupRestoredCachesSlowTest extends GridCommonAbstractTest implem
      */
     @Test
     public void testLongOperationAsyncExecutor() throws Throwable {
-        FilePageStoreManagerChild.LongOperationAsyncExecutorChild executor =
-            new FilePageStoreManagerChild.LongOperationAsyncExecutorChild("test", new NullLogger());
+        LongOperationAsyncExecutorChild executor =
+            new LongOperationAsyncExecutorChild("test", new NullLogger());
 
         final AtomicInteger ai = new AtomicInteger(1);
 
