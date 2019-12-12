@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -45,7 +46,8 @@ public class ConsistencyCheckUtils {
     public static Map<KeyCacheObject, Map<UUID, GridCacheVersion>> checkConflicts(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> oldKeys,
         Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys,
-        GridCacheContext cctx
+        GridCacheContext cctx,
+        AffinityTopologyVersion startTopVer
     ) {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> keysWithConflicts = new HashMap<>();
 
@@ -58,10 +60,8 @@ public class ConsistencyCheckUtils {
                 // Elements with min GridCacheVersion should increment
                 if (!checkConsistency(keyEntry.getValue(), newVer))
                     keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
-                else if (keyEntry.getValue().size() != cctx.affinity().nodesByKey(
-                        keyEntry.getKey().value(cctx.cacheObjectContext(), false),
-                        cctx.affinity().affinityTopologyVersion()).
-                        size())
+                else if (keyEntry.getValue().size() != cctx.topology().owners(
+                    keyEntry.getKey().partition(), startTopVer).size())
                     keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
             }
         }

@@ -223,7 +223,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
                     = checkConflicts(workload.recheckKeys(), actualKeys,
-                    ignite.cachex(workload.cacheName()).context());
+                    ignite.cachex(workload.cacheName()).context(), startTopVer);
 
                 if (!notResolvingConflicts.isEmpty()) {
                     if (workload.attempt() < recheckAttempts) {

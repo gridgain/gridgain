@@ -36,6 +36,7 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -116,7 +117,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
             Map<KeyCacheObject, Map<UUID, VersionedValue>> data = targetNodesToData.remove(node.id());
 
             if (data != null && !data.isEmpty()) {
-                // TODO: 03.12.19 Use proper top ver instead of null;
                 // TODO: 03.12.19 PartitionKeyVersion is used in order to prevent finishUnmarshal problem, cause actually we only need keyCacheObject,
                 // TODO: 03.12.19 consider using better wrapper here.
                 jobs.put(
@@ -126,7 +126,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                             entry -> entry.getValue())),
                         arg.cacheName(),
                         repairReq.repairAlg(),
-                        repairReq.repairAttempt()),
+                        repairReq.repairAttempt(),
+                        repairReq.startTopologyVersion(),
+                        repairReq.partitionId()),
                     node);
             }
         }
@@ -136,7 +138,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
             for (Map<KeyCacheObject, Map<UUID, VersionedValue>> data : targetNodesToData.values()) {
                 // TODO: 03.12.19 Use random node instead.
                 ClusterNode node = subgrid.iterator().next();
-                // TODO: 03.12.19 Use proper top ver instead of null;
                 // TODO: 03.12.19 PartitionKeyVersion is used in order to prevent finishUnmarshal problem, cause actually we only need keyCacheObject,
                 // TODO: 03.12.19consider using better wrapper here.
                 jobs.put(
@@ -146,7 +147,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                             entry -> entry.getValue())),
                         arg.cacheName(),
                         repairReq.repairAlg(),
-                        repairReq.repairAttempt()),
+                        repairReq.repairAttempt(),
+                        repairReq.startTopologyVersion(),
+                        repairReq.partitionId()),
                     node);
             }
         }
@@ -213,6 +216,12 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
         /** Repair algorithm to use in case of fixing doubtful keys. */
         private RepairAlgorithm repairAlg;
 
+        /** Start topology version. */
+        private AffinityTopologyVersion startTopVer;
+
+        /** Partition id. */
+        private int partId;
+
         /**
          * Constructor.
          *
@@ -220,14 +229,18 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
          * @param cacheName Cache name.
          * @param repairAlg Repair algorithm to use in case of fixing doubtful keys.
          * @param repairAttempt Repair attempt.
+         * @param startTopVer Start topology version.
+         * @param partId Partition Id.
          */
         @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
         public RepairJob(Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data, String cacheName,
-            RepairAlgorithm repairAlg, int repairAttempt) {
+            RepairAlgorithm repairAlg, int repairAttempt, AffinityTopologyVersion startTopVer, int partId) {
             this.data = data;
             this.cacheName = cacheName;
             this.repairAlg = repairAlg;
             this.repairAttempt = repairAttempt;
+            this.startTopVer = startTopVer;
+            this.partId = partId;
         }
 
         /** {@inheritDoc} */
@@ -247,9 +260,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
 
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
-                    List<ClusterNode> affinityNodes = ctx.affinity().nodesByKey(
-                        key,
-                        ctx.affinity().affinityTopologyVersion());
+                    int ownersNodesSize = ctx.topology().owners(partId, startTopVer).size();
+
+                    UUID primaryUUID = ctx.affinity().nodesByKey(key,startTopVer).get(0).id();
 
                     Boolean keyWasSuccessfullyFixed;
 
@@ -259,16 +272,16 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                     CacheObject valToFixWith = null;
 
                     // Are there any nodes with missing key?
-                    if (dataEntry.getValue().size() != affinityNodes.size()) {
+                    if (dataEntry.getValue().size() != ownersNodesSize) {
                         if (repairAlg == RepairAlgorithm.PRINT_ONLY)
                             keyWasSuccessfullyFixed = true;
                         else {
                             valToFixWith = calculateValueToFixWith(
                                 repairAlg,
                                 nodeToVersionedValues,
-                                affinityNodes.get(0).id(),
+                                primaryUUID,
                                 cacheObjCtx,
-                                affinityNodes.size());
+                                ownersNodesSize);
 
                             keyWasSuccessfullyFixed = ignite.cache(cacheName).<Boolean>invoke(
                                 key,
@@ -276,7 +289,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                                     valToFixWith,
                                     nodeToVersionedValues,
                                     rmvQueueMaxSize,
-                                    true));
+                                    true,
+                                    startTopVer));
 
                             assert keyWasSuccessfullyFixed;
                         }
@@ -287,9 +301,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                             valToFixWith = calculateValueToFixWith(
                                 repairAlg,
                                 nodeToVersionedValues,
-                                affinityNodes.get(0).id(),
+                                primaryUUID,
                                 cacheObjCtx,
-                                affinityNodes.size());
+                                ownersNodesSize);
 
                             keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
                                 key,
@@ -297,7 +311,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                                     valToFixWith,
                                     nodeToVersionedValues,
                                     rmvQueueMaxSize,
-                                    true));
+                                    true,
+                                    startTopVer));
 
                             assert keyWasSuccessfullyFixed;
                         }
@@ -305,9 +320,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                             valToFixWith = calculateValueToFixWith(
                                 RepairAlgorithm.MAX_GRID_CACHE_VERSION,
                                 nodeToVersionedValues,
-                                affinityNodes.get(0).id(),
+                                primaryUUID,
                                 cacheObjCtx,
-                                affinityNodes.size());
+                                ownersNodesSize);
 
                             keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
                                 key,
@@ -315,7 +330,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                                     valToFixWith,
                                     nodeToVersionedValues,
                                     rmvQueueMaxSize,
-                                    false));
+                                    false,
+                                    startTopVer));
                         }
                     }
 
@@ -430,17 +446,22 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
             /** Force repair flag. */
             private boolean forceRepair;
 
+            /** Start topology version. */
+            private AffinityTopologyVersion startTopVer;
+
             /** */
             @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
             public RepairEntryProcessor(
                 Object val,
                 Map<UUID, VersionedValue> data,
                 long rmvQueueMaxSize,
-                boolean forceRepair) {
+                boolean forceRepair,
+                AffinityTopologyVersion startTopVer) {
                 this.val = val;
                 this.data = data;
                 this.rmvQueueMaxSize = rmvQueueMaxSize;
                 this.forceRepair = forceRepair;
+                this.startTopVer = startTopVer;
             }
 
             /**
@@ -457,6 +478,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                 Comparable currKeyGridCacheVer = verEntry.version();
 
                 GridCacheContext cctx = (GridCacheContext)entry.unwrap(GridCacheContext.class);
+
+                if (!cctx.affinity().affinityTopologyVersion().equals(startTopVer))
+                    throw new EntryProcessorException("Topology version was changed");
 
                 UUID locNodeId = cctx.localNodeId();
 
