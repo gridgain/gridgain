@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Tests
     using System.Threading;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using Apache.Ignite.Core.Tests.Process;
+    using NUnit.Framework;
 
     /// <summary>
     /// Process extensions.
@@ -187,6 +188,10 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static void KillProcessUnix(int processId)
         {
+#if NETCOREAPP2_0 ||  NETCOREAPP3_0
+            TestContext.Progress.Write("Killing process: " + processId);
+#endif
+            
             Execute("kill", string.Format("-TERM {0}", processId));
         }
     }

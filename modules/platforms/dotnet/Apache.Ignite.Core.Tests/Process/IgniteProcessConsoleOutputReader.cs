@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Process
 {
     using System;
     using System.Diagnostics;
+    using NUnit.Framework;
 
     /// <summary>
     /// Output reader pushing data to the console.
@@ -34,6 +35,13 @@ namespace Apache.Ignite.Core.Tests.Process
         public void OnOutput(Process proc, string data, bool err)
         {
             Console.WriteLine(err ? ErrFormat : OutFormat, proc.Id, data);
+            
+#if NETCOREAPP2_0 ||  NETCOREAPP3_0
+            if (!string.IsNullOrWhiteSpace(data))
+            {
+                TestContext.Progress.Write(err ? ErrFormat : OutFormat, proc.Id, data);
+            }
+#endif
         }
     }
 }
