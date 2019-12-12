@@ -18,6 +18,13 @@ import { Selector } from 'testcafe';
 import { AngularJSSelector } from 'testcafe-angular-selectors';
 import { dropTestDB, insertTestUser, resolveUrl } from '../environment/envtools';
 import { createRegularUser } from '../roles';
+import * as pageListOfUsers from '../page-models/pageAdminListOfRegisteredUsers';
+import {PageConfigurationBasic} from "../page-models/PageConfigurationBasic";
+import {pageAdvancedConfiguration} from '../components/pageAdvancedConfiguration';
+import * as pageAdvancedModel from '../page-models/pageConfigurationAdvancedModels';
+import {pageProfile} from '../page-models/pageProfile';
+import {successNotification} from "../components/notifications";
+import {advancedNavButton} from '../components/pageConfiguration';
 
 const regularUser = createRegularUser();
 
@@ -63,4 +70,114 @@ test('Testing setting notifications', async(t) => {
     await t
         .expect(Selector('.wch-notification', { visibilityCheck: false } ).visible)
         .notOk();
+});
+
+const _createBaseModel = async(t, keyType, valueType) => {
+    await t.click(pageAdvancedConfiguration.modelsNavButton)
+        .click(pageAdvancedModel.createModelButton)
+        .click(pageAdvancedModel.general.generatePOJOClasses.control)
+        .typeText(pageAdvancedModel.general.keyType.control, keyType, {paste: true})
+        .typeText(pageAdvancedModel.general.valueType.control, valueType, {paste: true});
+
+    await pageAdvancedModel.general.queryMetadata.selectOption('Annotations');
+
+    await t.click(pageAdvancedConfiguration.saveButton);
+};
+
+test.only('Validation of user metrics data', async(t) => {
+    await t.resizeWindow(1920, 1080);
+
+    const page = new PageConfigurationBasic();
+
+    await page.cachesList.addItem();
+    await page.cachesList.addItem();
+
+    await page.save();
+
+    await t.click(advancedNavButton);
+    await _createBaseModel(t, 'test.Key1', 'test.Value1');
+    await _createBaseModel(t, 'test.Key2', 'test.Value2');
+    await _createBaseModel(t, 'test.Key3', 'test.Value3');
+
+    await pageAdvancedConfiguration.save();
+
+    await t.navigateTo(resolveUrl('/settings/profile'));
+
+    const newFirstName = 'newFirstName';
+    const newLastName = 'newLastName';
+    const newEmail = `1+${t.ctx.email}`;
+    const newCompaty = 'newcompaty';
+    const newCountry = 'United States';
+
+    await t
+        .typeText(pageProfile.firstName.control, newFirstName, {replace: true, paste: true})
+        .typeText(pageProfile.lastName.control, newLastName, {replace: true, paste: true})
+        .typeText(pageProfile.email.control, newEmail, {replace: true, paste: true})
+        .typeText(pageProfile.company.control, newCompaty, {replace: true, paste: true});
+    await pageProfile.country.selectOption(newCountry);
+    await t.click(pageProfile.saveChangesButton)
+        .expect(successNotification.withText('Profile saved.').exists).ok();
+
+    t.ctx.email = newEmail;
+
+    await t.navigateTo(resolveUrl('/settings/admin'));
+
+    await t.typeText(pageListOfUsers.usersTable.findFilter('Email'), newEmail, {paste: true})
+        .expect(pageListOfUsers.usersTable.findCell(0, 'User').textContent).contains(`${newFirstName} ${newLastName}`)
+        .expect(pageListOfUsers.usersTable.findCell(0, 'Email').textContent).contains(newEmail)
+        .expect(pageListOfUsers.usersTable.findCell(0, 'Company').textContent).contains(newCompaty)
+        .expect(pageListOfUsers.usersTable.findCell(0, 'Country').textContent).contains('USA');
+
+    // const lastLoginStr = await pageListOfUsers.usersTable.findCell(0, 'Last login').textContent;
+    // const lastActiveStr = await pageListOfUsers.usersTable.findCell(0, 'Last activity').textContent;
+    //
+    // const na = 'N/A';
+    //
+    // await t.debug();
+    //
+    // await t.expect(lastLoginStr).notEql(na)
+    //     .expect(lastActiveStr).notEql(na);
+    //
+    // const lastLogin = Date.parse(lastLoginStr);
+    // const lastActive = Date.parse(lastActiveStr);
+    //
+    // const start = t.ctx.startTime;
+    // const now = Date.now();
+    //
+    // await t.expect(start < lastLogin && now > lastLogin).ok()
+    //     .expect(start < lastActive && now > lastActive).ok()
+
+    // Check count of user clusters.
+    await t.expect(pageListOfUsers.usersTable.findCell(0, 5).textContent).eql('1')
+        // Check count of user SQL models.
+        .expect(pageListOfUsers.usersTable.findCell(0, 6).textContent).eql('3')
+        // Check count of user caches.
+        .expect(pageListOfUsers.usersTable.findCell(0, 7).textContent).eql('2');
+})
+.before(async(t) => {
+    const d = new Date();
+
+    d.setSeconds(0, 0);
+
+    t.ctx.startTime = d.getTime();
+    t.ctx.email = 'a@example.com';
+    t.ctx.user = createRegularUser(t.ctx.email);
+
+    const user = {
+        password: 'a',
+        email: t.ctx.email,
+        firstName: 'John',
+        lastName: 'Doe',
+        company: 'TestCompany',
+        country: 'Canada',
+        industry: 'Banking'
+    };
+
+    await dropTestDB(t.ctx.email);
+    await insertTestUser(user);
+    await t.useRole(t.ctx.user)
+        .navigateTo(resolveUrl('/configuration/new/basic'))
+})
+.after(async(t) => {
+    await dropTestDB(t.ctx.email);
 });
