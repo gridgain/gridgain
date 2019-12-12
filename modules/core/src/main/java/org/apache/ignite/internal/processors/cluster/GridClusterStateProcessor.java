@@ -414,9 +414,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (inMemoryMode) {
             stateOnStart = cfg.getClusterStateOnStart();
 
-            boolean activeOnStartSetted = getBooleanFieldFromConfig(cfg, "activeOnStartSetted", false);
+            boolean activeOnStartSet = getBooleanFieldFromConfig(cfg, "activeOnStartPropSetFlag", false);
 
-            if (activeOnStartSetted) {
+            if (activeOnStartSet) {
                 if (stateOnStart != null)
                     log.warning("Property `activeOnStart` will be ignored due to the property `clusterStateOnStart` is presented.");
                 else
@@ -429,7 +429,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             // Start first node as inactive if persistence is enabled.
             stateOnStart = INACTIVE;
 
-            if (cfg.getClusterStateOnStart() != null && getBooleanFieldFromConfig(cfg, "autoActivationSetted", false))
+            if (cfg.getClusterStateOnStart() != null && getBooleanFieldFromConfig(cfg, "autoActivationPropSetFlag", false))
                 log.warning("Property `autoActivation` will be ignored due to the property `clusterStateOnStart` is presented.");
         }
 

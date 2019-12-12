@@ -28,7 +28,7 @@ public enum ClusterState {
     /** Cluster activated. All cache operations are allowed. */
     ACTIVE,
 
-    /** Cluster activated. Only read from cache operations are allowed. */
+    /** Cluster activated. Cache read operation allowed, Cache data change operation aren't allowed. */
     ACTIVE_READ_ONLY;
 
     /** Enumerated values. */

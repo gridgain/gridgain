@@ -531,15 +531,15 @@ public class IgniteConfiguration {
     @Deprecated
     private boolean activeOnStart = DFLT_ACTIVE_ON_START;
 
-    /** activeOnStart property was setted explicitlly flag. */
-    private boolean activeOnStartSetted;
+    /** Indicates that activeOnStart property was set explicitly. */
+    private boolean activeOnStartPropSetFlag;
 
     /** Auto-activation flag. */
     @Deprecated
     private boolean autoActivation = DFLT_AUTO_ACTIVATION;
 
-    /** activeOnStartSetted property was setted explicitlly flag. */
-    private boolean autoActivationSetted;
+    /** Indicates that autoActivation property was set explicitly. */
+    private boolean autoActivationPropSetFlag;
 
     /** Cluster state on start. */
     private ClusterState clusterStateOnStart;
@@ -608,13 +608,13 @@ public class IgniteConfiguration {
          * Order alphabetically for maintenance purposes.
          */
         activeOnStart = cfg.isActiveOnStart();
-        activeOnStartSetted = cfg.activeOnStartSetted;
+        activeOnStartPropSetFlag = cfg.activeOnStartPropSetFlag;
         addrRslvr = cfg.getAddressResolver();
         allResolversPassReq = cfg.isAllSegmentationResolversPassRequired();
         atomicCfg = cfg.getAtomicConfiguration();
         authEnabled = cfg.isAuthenticationEnabled();
         autoActivation = cfg.isAutoActivationEnabled();
-        autoActivationSetted = cfg.autoActivationSetted;
+        autoActivationPropSetFlag = cfg.autoActivationPropSetFlag;
         binaryCfg = cfg.getBinaryConfiguration();
         clusterStateOnStart = cfg.getClusterStateOnStart();
         dsCfg = cfg.getDataStorageConfiguration();
@@ -2630,7 +2630,7 @@ public class IgniteConfiguration {
 
         this.activeOnStart = activeOnStart;
 
-        activeOnStartSetted = true;
+        activeOnStartPropSetFlag = true;
 
         return this;
     }
@@ -2668,7 +2668,7 @@ public class IgniteConfiguration {
 
         this.autoActivation = autoActivation;
 
-        autoActivationSetted = true;
+        autoActivationPropSetFlag = true;
 
         return this;
     }
