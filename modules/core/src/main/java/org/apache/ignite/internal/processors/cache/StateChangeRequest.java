@@ -46,6 +46,7 @@ public class StateChangeRequest {
 
     /**
      * @param msg Message.
+     * @param bltHistItem Baseline history item.
      * @param prevState Previous cluster state.
      * @param topVer State change topology versoin.
      */

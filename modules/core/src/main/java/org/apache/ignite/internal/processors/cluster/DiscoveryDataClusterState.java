@@ -96,6 +96,7 @@ public class DiscoveryDataClusterState implements Serializable {
 
     /**
      * @param state Current cluster state.
+     * @param baselineTopology Baseline topology associated with this state.
      * @return State instance.
      */
     static DiscoveryDataClusterState createState(

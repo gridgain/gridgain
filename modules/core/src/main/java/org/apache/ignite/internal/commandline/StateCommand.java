@@ -71,7 +71,7 @@ public class StateCommand implements Command<Void> {
                     break;
 
                 default:
-                    throw new IllegalArgumentException("Unknown state: " + clusterState);
+                    throw new IllegalStateException("Unknown state: " + clusterState);
             }
         }
         catch (Throwable e) {

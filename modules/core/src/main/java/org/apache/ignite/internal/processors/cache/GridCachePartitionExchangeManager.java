@@ -47,7 +47,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
@@ -704,15 +703,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
             exchActions.deactivate() && evtMngr.isRecordable(EVT_CLUSTER_DEACTIVATED) ||
             exchActions.changedClusterState() && evtMngr.isRecordable(EVT_CLUSTER_STATE_CHANGED)
         ) {
-            AffinityTopologyVersion affVer;
-
-            try {
-                affVer = fut.get();
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e);
-            }
-
             List<Event> evts = new ArrayList<>(2);
 
             ClusterNode locNode = cctx.kernalContext().discovery().localNode();
