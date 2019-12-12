@@ -180,6 +180,7 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName, IgniteTestResources rsrcs) {
         return new IgniteConfiguration()
             .setAuthenticationEnabled(false)
+            .setLocalHost("127.0.0.1")
             .setIgniteInstanceName(igniteInstanceName)
             .setMetricsLogFrequency(0)
             .setQueryThreadPoolSize(16)
