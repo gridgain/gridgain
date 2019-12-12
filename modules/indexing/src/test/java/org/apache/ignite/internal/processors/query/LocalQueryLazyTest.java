@@ -115,7 +115,8 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test must not hang on CREATE INDEX. Table lock must be unlocked by .
+     * Test must not hang on CREATE INDEX. Table lock must be not locked by opened lazy iterator of local query
+     * (was locked before fix).
      * @throws Exception On error.
      */
     @Test
@@ -126,7 +127,6 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
         awaitPartitionMapExchange(true, true, null);
 
         try (FieldsQueryCursor cur = sql(g0,"SELECT * FROM test")) {
-
             Iterator<List<?>> it = cur.iterator();
 
             it.next();
