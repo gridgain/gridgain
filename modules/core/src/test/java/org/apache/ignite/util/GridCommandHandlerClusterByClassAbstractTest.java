@@ -21,6 +21,7 @@ import java.util.Set;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.util.stream.Collectors.toSet;
 import static java.util.stream.Stream.of;
@@ -45,6 +46,10 @@ public abstract class GridCommandHandlerClusterByClassAbstractTest extends GridC
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
+        log.warning("Threads dump beforeTests: ");
+
+        U.dumpThreads(log);
+
         crd = startGrids(SERVER_NODE_CNT);
 
         crd.cluster().baselineAutoAdjustEnabled(false);
@@ -61,6 +66,10 @@ public abstract class GridCommandHandlerClusterByClassAbstractTest extends GridC
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        log.warning("Threads dump afterTests: ");
+
+        U.dumpThreads(log);
     }
 
     /** {@inheritDoc} */
