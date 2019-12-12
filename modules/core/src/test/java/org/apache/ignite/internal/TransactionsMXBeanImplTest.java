@@ -24,6 +24,7 @@ import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.transactions.TransactionProxyImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -31,6 +32,7 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -116,27 +118,76 @@ public class TransactionsMXBeanImplTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test to verify the change "Operations dump timeout" to display
-     * long running transactions.
+     * Test for changing lrt timeout and their appearance before default
+     * timeout through MXBean.
      *
      * @throws Exception If failed.
      */
     @Test
     @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "60000")
-    public void testOperationsDumpTimeout() throws Exception {
+    public void testOperationsDumpTimeoutPositive() throws Exception {
+        checkLongOperationsDumpTimeout(60_000, 100, 10_000, true);
+    }
+
+    /**
+     * Test to disable the LRT by setting timeout to 0.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
+    public void testOperationsDumpTimeoutZero() throws Exception {
+        checkLongOperationsDumpTimeout(100, 0, 1_000, false);
+    }
+
+    /**
+     * Test to disable the LRT by setting timeout to -1.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT, value = "100")
+    public void testOperationsDumpTimeoutNegative() throws Exception {
+        checkLongOperationsDumpTimeout(100, -1, 1_000, false);
+    }
+
+    /**
+     * Checking changes and receiving lrt through MXBean.
+     *
+     * @param defTimeout Default lrt timeout.
+     * @param newTimeout New lrt timeout.
+     * @param waitTimeTx Waiting time for a lrt.
+     * @param expectTx Expect or not a lrt to log.
+     * @throws Exception If failed.
+     */
+    private void checkLongOperationsDumpTimeout(
+        long defTimeout,
+        long newTimeout,
+        long waitTimeTx,
+        boolean expectTx
+    ) throws Exception {
         IgniteEx ignite = startGrid(0);
 
         TransactionsMXBean txMXBean = txMXBean(0);
 
-        ignite.transactions().txStart();
+        assertEquals(defTimeout, txMXBean.getOperationsDumpTimeoutLocal());
 
-        LogListener logLsnr = matches("First 10 long running transactions").build();
+        Transaction tx = ignite.transactions().txStart();
 
-        testLog.registerListener(logLsnr);
+        LogListener lrtLogLsnr = matches("First 10 long running transactions [total=1]").build();
+        LogListener txLogLsnr = matches(((TransactionProxyImpl)tx).tx().xidVersion().toString()).build();
 
-        txMXBean.setOperationsDumpTimeout(100);
+        testLog.registerListener(lrtLogLsnr);
+        testLog.registerListener(txLogLsnr);
 
-        assertTrue(waitForCondition(logLsnr::check, 10_000));
+        txMXBean.setOperationsDumpTimeoutLocal(newTimeout);
+
+        assertEquals(newTimeout, ignite.context().cache().context().tm().longOperationsDumpTimeout());
+
+        if (expectTx)
+            assertTrue(waitForCondition(() -> lrtLogLsnr.check() && txLogLsnr.check(), waitTimeTx));
+        else
+            assertFalse(waitForCondition(() -> lrtLogLsnr.check() && txLogLsnr.check(), waitTimeTx));
     }
 
     /**
