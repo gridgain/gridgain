@@ -36,7 +36,7 @@ fixture('Assumed identity')
         await dropTestDB(admin.TEST_USER.email);
     });
 
-test('Become user', async(t) => {
+test.skip('Become user', async(t) => {
     await t.navigateTo(resolveUrl('/settings/admin'));
     await t.typeText(admin.usersTable.findFilter('Email'), admin.TEST_USER.email, {paste: true});
     await t.click(admin.userNameCell.withText('User Name'));
