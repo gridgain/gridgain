@@ -38,7 +38,6 @@ import static org.apache.ignite.console.messages.WebConsoleMessageSource.message
 import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
 import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.hamcrest.CoreMatchers.containsString;
-import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -49,7 +48,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(
-    webEnvironment = RANDOM_PORT,
     classes = {MockUserDetailsServiceConfiguration.class, TestGridConfiguration.class},
     properties = {"agent.file.regexp=empty.zip"}
 )
@@ -58,7 +56,7 @@ public class AgentDownloadControllerSelfTest {
     @Autowired
     private AgentDownloadController agentDownloadController;
 
-    /** Configuration for a web application.ø */
+    /** Configuration for a web application. */
     @Autowired
     private WebApplicationContext ctx;
 

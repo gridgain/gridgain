@@ -30,9 +30,7 @@ export class DialogAdminCreateUser {
         email: null,
         password: null,
         firstName: null,
-        lastName: null,
-        company: null,
-        country: null
+        lastName: null
     };
 
     serverError: string | null = null;

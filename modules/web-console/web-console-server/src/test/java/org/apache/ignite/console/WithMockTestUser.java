@@ -28,8 +28,13 @@ import org.springframework.security.test.context.support.WithSecurityContext;
 public @interface WithMockTestUser {
     /** User email. */
     String username() default "test@test.com";
+
     /** User password */
     String password() default "password";
+
     /** Agent token. */
     String token() default "token";
+
+    /** Indicates whether the user is admin. */
+    boolean admin() default false;
 }

@@ -118,6 +118,7 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData
 import org.apache.ignite.spi.discovery.DiscoveryMetricsProvider;
 import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
+import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiDataExchange;
 import org.apache.ignite.spi.discovery.DiscoverySpiHistorySupport;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
@@ -499,6 +500,14 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                     if (consistentId != null)
                         node.setConsistentId(consistentId);
                 }
+            }
+
+            /** {@inheritDoc} */
+            @Override
+            public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
+                Collection<ClusterNode> topSnapshot,
+                Map<Long, Collection<ClusterNode>> topHist, DiscoverySpiCustomMessage data) {
+                return onDiscovery(new DiscoveryNotification(type, topVer, node, topSnapshot, topHist, data, null));
             }
 
             /** {@inheritDoc} */

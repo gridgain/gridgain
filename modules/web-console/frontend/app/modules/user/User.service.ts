@@ -80,7 +80,6 @@ export default function UserFactory(
 
             sessionStorage.removeItem('demoMode');
         },
-
         async save(user: Partial<User>): Promise<User> {
             try {
                 const {data: updatedUser} = await $http.post<User>('/api/v1/profile/save', user);
