@@ -45,7 +45,7 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
     @Override public void printUsage(Logger log) {
         Map<String, String> params = new LinkedHashMap<>();
 
-        params.put(ACTIVE.toString(), "Activate cluster. Cache updates are allowed");
+        params.put(ACTIVE.toString(), "Activate cluster. Cache updates are allowed.");
         params.put(INACTIVE.toString(), "Deactivate cluster.");
         params.put(ACTIVE_READ_ONLY.toString(), "Activate cluster. Cache updates are denied.");
 

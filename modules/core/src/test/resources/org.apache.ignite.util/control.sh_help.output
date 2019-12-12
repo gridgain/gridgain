@@ -22,9 +22,9 @@ This utility can do the following commands:
     control.(sh|bat) --set-state INACTIVE|ACTIVE|ACTIVE_READ_ONLY [--yes]
 
     Parameters:
-      ACTIVE            - Activate cluster.
+      ACTIVE            - Activate cluster. Cache updates are allowed.
       INACTIVE          - Deactivate cluster.
-      ACTIVE_READ_ONLY  - Enable cluster read-only mode. Cluster will be activated, if was INACTIVE.
+      ACTIVE_READ_ONLY  - Activate cluster. Cache updates are denied.
 
   Print cluster baseline topology:
     control.(sh|bat) --baseline
