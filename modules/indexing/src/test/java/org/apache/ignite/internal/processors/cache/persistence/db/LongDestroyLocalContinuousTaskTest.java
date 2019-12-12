@@ -247,6 +247,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
             if (checkWhenOneNodeStopped) {
                 ignite.cluster().active(true);
 
+                // If index was dropped, we need to wait it's rebuild on restarted node.
                 if (!dropIdxWhenOneNodeStopped0)
                     awaitLatch(idxsRebuildLatch, "Failed to wait for indexes rebuilding.");
             }
@@ -261,10 +262,9 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
         checkSelectAndPlan(cache, !dropIdxWhenOneNodeStopped0);
         checkSelectAndPlan(cacheOnAliveNode, !dropIdxWhenOneNodeStopped0);
 
-        if (dropIdxWhenOneNodeStopped0) {
-            // Trying to recreate index.
+        // Trying to recreate index if it was dropped.
+        if (dropIdxWhenOneNodeStopped0)
             createIndex(cache, multicolumn);
-        }
 
         checkSelectAndPlan(cache, true);
         checkSelectAndPlan(cacheOnAliveNode, true);
