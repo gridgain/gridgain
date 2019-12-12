@@ -239,37 +239,37 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
 
             for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
-                    Object key = unmarshalKey(
-                        dataEntry.getKey().getKey(),
-                        ignite.cachex(cacheName).context()).value(
-                        ignite.cachex(cacheName).context().cacheObjectContext(),
-                        false);
+                    GridCacheContext ctx = ignite.cachex(cacheName).context();
+
+                    CacheObjectContext cacheObjCtx = ctx.cacheObjectContext();
+
+                    Object key = unmarshalKey(dataEntry.getKey().getKey(), ctx).value(cacheObjCtx, false);
 
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
-                    List<ClusterNode> affinityNodes = ignite.cachex(cacheName).context().affinity().nodesByKey(
+                    List<ClusterNode> affinityNodes = ctx.affinity().nodesByKey(
                         key,
-                        ignite.cachex(cacheName).context().affinity().affinityTopologyVersion());
-
-                    CacheObjectContext cacheObjCtx = ignite.cachex(cacheName).context().cacheObjectContext();
-
-                    CacheObject valToFixWith = calculateValueToFixWith(
-                        repairAlg,
-                        nodeToVersionedValues,
-                        affinityNodes.get(0).id(),
-                        cacheObjCtx,
-                        affinityNodes.size());
+                        ctx.affinity().affinityTopologyVersion());
 
                     Boolean keyWasSuccessfullyFixed;
 
                     // TODO: 02.12.19
                     int rmvQueueMaxSize = 32;
 
+                    CacheObject valToFixWith = null;
+
                     // Are there any nodes with missing key?
                     if (dataEntry.getValue().size() != affinityNodes.size()) {
                         if (repairAlg == RepairAlgorithm.PRINT_ONLY)
                             keyWasSuccessfullyFixed = true;
                         else {
+                            valToFixWith = calculateValueToFixWith(
+                                repairAlg,
+                                nodeToVersionedValues,
+                                affinityNodes.get(0).id(),
+                                cacheObjCtx,
+                                affinityNodes.size());
+
                             keyWasSuccessfullyFixed = ignite.cache(cacheName).<Boolean>invoke(
                                 key,
                                 new RepairEntryProcessor(
@@ -280,11 +280,17 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
 
                             assert keyWasSuccessfullyFixed;
                         }
-
                     }
                     else {
                         // Is it last repair attempt?
                         if (repairAttempt == MAX_REPAIR_ATTEMPTS) {
+                            valToFixWith = calculateValueToFixWith(
+                                repairAlg,
+                                nodeToVersionedValues,
+                                affinityNodes.get(0).id(),
+                                cacheObjCtx,
+                                affinityNodes.size());
+
                             keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
                                 key,
                                 new RepairEntryProcessor(
@@ -467,8 +473,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                     return true;
                 }
                 else {
-                    if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) != 0) {
-                        if (currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
+                    if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
+                        if (versionedVal == null || currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
                             if (val == null)
                                 entry.remove();
                             else
@@ -480,7 +486,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                     else {
                         boolean inEntryTTLBounds =
                             (System.currentTimeMillis() - versionedVal.recheckStartTime()) <
-                                Long.decode(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
+                                Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
 
                         long currUpdateCntr = cctx.topology().localPartition(
                             cctx.cache().affinity().partition(entry.getKey())).updateCounter();

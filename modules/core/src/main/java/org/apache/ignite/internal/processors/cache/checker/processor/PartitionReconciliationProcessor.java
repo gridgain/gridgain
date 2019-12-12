@@ -87,9 +87,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /** Amount of potentially inconsistent keys recheck attempts. */
     private final int recheckAttempts;
 
-    /** Amount of potentially inconsistent keys repair attempts. */
-    private final int repairAttempts;
-
     /**
      * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg}
      * while repairing doubtful keys.
@@ -117,7 +114,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         int throttlingIntervalMillis,
         int batchSize,
         int recheckAttempts,
-        int repairAttempts,
         RepairAlgorithm repairAlg
     ) throws IgniteCheckedException {
         super(ignite, exchMgr, PARALLELISM_LEVEL);
@@ -127,7 +123,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         this.throttlingIntervalMillis = throttlingIntervalMillis;
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
-        this.repairAttempts = repairAttempts;
         this.repairAlg = repairAlg;
     }
 
@@ -260,7 +255,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         compute(
             RepairRequestTask.class,
             new RepairRequest(workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
-                repairAttempts),
+                workload.attempt()),
             futRes -> {
                 RepairResult repairRes = futRes.get();
 
@@ -291,7 +286,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                             collect(Collectors.toMap(Map.Entry::getKey, e2 -> e2.getValue().version())));
                     }
 
-                    if (workload.attempt() < repairAttempts) {
+                    if (workload.attempt() < RepairRequestTask.MAX_REPAIR_ATTEMPTS) {
                         schedule(
                             new Recheck(
                                 recheckKeys,

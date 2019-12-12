@@ -114,7 +114,6 @@ public class PartitionReconciliationProcessorTask extends
                     reconciliationTaskArg.throttlingIntervalMillis(),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
-                    RepairRequestTask.MAX_REPAIR_ATTEMPTS,
                     reconciliationTaskArg.repairAlg()
                 ).execute();
             }

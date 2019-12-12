@@ -39,7 +39,9 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Repair;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -71,12 +73,7 @@ public class PartitionReconciliationProcessorTest {
     /**
      *
      */
-    private static final int MAX_RECHECK_ATTEPMTS = 3;
-
-    /**
-     *
-     */
-    private static final int MAX_REPAIR_ATTEPMTS = 3;
+    private static final int MAX_RECHECK_ATTEMPTS = 3;
 
     /**
      *
@@ -228,7 +225,8 @@ public class PartitionReconciliationProcessorTest {
         actualKey.put(nodeId2, new VersionedValue(null, ver2, 1, 1));
         sameRes.put(key, actualKey);
 
-        processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEPMTS, MAX_REPAIR_ATTEPMTS))
+        processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
+            RepairRequestTask.MAX_REPAIR_ATTEMPTS))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, sameRes)
             .execute();
 
@@ -265,7 +263,7 @@ public class PartitionReconciliationProcessorTest {
             when(igniteMock.log()).thenReturn(Mockito.mock(IgniteLogger.class));
 
             return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, 0,
-                10, MAX_RECHECK_ATTEPMTS, MAX_REPAIR_ATTEPMTS);
+                10, MAX_RECHECK_ATTEMPTS);
         }
 
         /**
@@ -274,8 +272,8 @@ public class PartitionReconciliationProcessorTest {
         public MockedProcessor(IgniteEx ignite,
             GridCachePartitionExchangeManager<Object, Object> exchMgr,
             Collection<String> caches, boolean fixMode, int throttlingIntervalMillis, int batchSize,
-            int recheckAttempts, int repairAttempts) throws IgniteCheckedException {
-            super(ignite, exchMgr, caches, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts, repairAttempts);
+            int recheckAttempts) throws IgniteCheckedException {
+            super(ignite, exchMgr, caches, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts, RepairAlgorithm.MAJORITY);
         }
 
         /** {@inheritDoc} */

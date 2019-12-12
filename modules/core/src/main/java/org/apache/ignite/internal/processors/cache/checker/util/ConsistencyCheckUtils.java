@@ -74,7 +74,8 @@ public class ConsistencyCheckUtils {
      */
     public static boolean checkConsistency(Map<UUID, GridCacheVersion> oldKeyVer,
         Map<UUID, VersionedValue> actualKeyVer) {
-        assert oldKeyVer.size() > 1;
+
+        assert !oldKeyVer.isEmpty();
 
         if (actualKeyVer.isEmpty())
             return true;
