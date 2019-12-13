@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using System.Xml;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Log;
     using NUnit.Framework;
 
@@ -180,12 +181,75 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
-        /// Tests logger configuration.
+        /// Tests that logger is used by default.
         /// </summary>
         [Test]
-        public void TestLoggerConfiguration()
+        public void TestDefaultLoggerWritesToConsole()
         {
-            // TODO: ???
+            using (Ignition.Start(TestUtils.GetTestConfiguration()))
+            {
+                var cfg = new IgniteClientConfiguration("127.0.0.1")
+                {
+                    ProtocolVersion = new ClientProtocolVersion(1, 0, 0),
+                    EnablePartitionAwareness = true
+                };
+                Assert.IsInstanceOf<ConsoleLogger>(cfg.Logger);
+
+                var oldWriter = Console.Out;
+                var writer = new StringWriter();
+
+                try
+                {
+                    Console.SetOut(writer);
+
+                    using (var client = Ignition.StartClient(cfg))
+                    {
+                        Assert.AreSame(cfg.Logger, client.GetConfiguration().Logger);
+                        StringAssert.Contains("Partition awareness has been disabled", writer.ToString());
+                    }
+                }
+                finally
+                {
+                    Console.SetOut(oldWriter);
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// Tests that logger is used by default.
+        /// </summary>
+        [Test]
+        public void TestNullLoggerDoesNotWriteToConsole()
+        {
+            using (Ignition.Start(TestUtils.GetTestConfiguration()))
+            {
+                var cfg = new IgniteClientConfiguration("127.0.0.1")
+                {
+                    ProtocolVersion = new ClientProtocolVersion(1, 0, 0),
+                    EnablePartitionAwareness = true,
+                    Logger = null
+                };
+
+                var oldWriter = Console.Out;
+                var writer = new StringWriter();
+
+                try
+                {
+                    Console.SetOut(writer);
+
+                    using (var client = Ignition.StartClient(cfg))
+                    {
+                        Assert.IsNull(client.GetConfiguration().Logger);
+                        Assert.IsTrue(string.IsNullOrEmpty(writer.ToString()));
+                    }
+                }
+                finally
+                {
+                    Console.SetOut(oldWriter);
+                }
+
+            }
         }
 
         /// <summary>
