@@ -18,6 +18,7 @@ package org.apache.ignite.console.services;
 
 import org.apache.ignite.console.common.SessionAttribute;
 import org.apache.ignite.console.tx.TransactionManager;
+import org.apache.ignite.internal.util.typedef.F;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.Session;
 import org.springframework.session.SessionRepository;
@@ -60,7 +61,7 @@ public class SessionsService {
         txMgr.doInTransaction(() -> {
             ExpiringSession ses = getSession(attr.getSessionId());
 
-            if (ses != null) {
+            if (ses != null && !F.eq(ses.getAttribute(attr.getName()), val)) {
                 ses.setAttribute(attr.getName(), val);
 
                 sesRepo.save(ses);
