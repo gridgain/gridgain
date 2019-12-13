@@ -121,7 +121,7 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             var cfg = new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
             {
-                Logger = new ListLogger(new ConsoleLogger(LogLevel.Trace)),
+                Logger = new ListLogger(new ConsoleLogger {MinLevel = LogLevel.Trace}),
                 EnablePartitionAwareness = true
             };
             

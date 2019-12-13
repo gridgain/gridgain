@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Tests.Client
             var clientConfiguration = new IgniteClientConfiguration(JavaServer.GetClientConfiguration())
             {
                 EnablePartitionAwareness = true,
-                Logger = new ListLogger(new ConsoleLogger(LogLevel.Trace))
+                Logger = new ListLogger(new ConsoleLogger {MinLevel = LogLevel.Trace})
             };
             
             try
