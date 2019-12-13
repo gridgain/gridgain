@@ -561,7 +561,9 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     ) throws Exception {
         assertNotSame(initialState, targetState);
 
-        stateOnStart = initialState;
+        if (!persistenceEnabled())
+            stateOnStart = initialState;
+
         testSpi = true;
 
         startWithCaches1(srvs, clients);
