@@ -15,10 +15,6 @@
  */
 package org.apache.ignite.internal.processors.cache;
 
-import java.lang.management.ManagementFactory;
-import javax.management.MBeanServer;
-import javax.management.MBeanServerInvocationHandler;
-import javax.management.ObjectName;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridJobExecuteRequest;
@@ -26,7 +22,6 @@ import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.TransactionsMXBean;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -186,14 +181,11 @@ public class GridCacheLongRunningTransactionDiagnosticsTest extends GridCommonAb
      *
      */
     private TransactionsMXBean txMXBean(int igniteInt) throws Exception {
-        ObjectName mbeanName = U.makeMBeanName(getTestIgniteInstanceName(igniteInt), "Transactions",
-            TransactionsMXBeanImpl.class.getSimpleName());
-
-        MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
-
-        if (!mbeanSrv.isRegistered(mbeanName))
-            fail("MBean is not registered: " + mbeanName.getCanonicalName());
-
-        return MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, TransactionsMXBean.class, true);
+        return getMxBean(
+            getTestIgniteInstanceName(igniteInt),
+            "Transactions",
+            TransactionsMXBean.class,
+            TransactionsMXBeanImpl.class
+        );
     }
 }
