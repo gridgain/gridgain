@@ -34,6 +34,8 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.systemview.walker.SqlQueryHistoryViewWalker;
+import org.apache.ignite.internal.managers.systemview.walker.SqlQueryViewWalker;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -168,12 +170,12 @@ public class RunningQueryManager {
             "out of memory protection. This metric number included in the general 'failed' metric.");
 
         ctx.systemView().registerView(SQL_QRY_VIEW, SQL_QRY_VIEW_DESC,
-            SqlQueryView.class,
+            new SqlQueryViewWalker(),
             runs.values(),
             SqlQueryView::new);
 
         ctx.systemView().registerView(SQL_QRY_HIST_VIEW, SQL_QRY_HIST_VIEW_DESC,
-            SqlQueryHistoryView.class,
+            new SqlQueryHistoryViewWalker(),
             qryHistTracker.queryHistory().values(),
             SqlQueryHistoryView::new);
     }
