@@ -57,12 +57,13 @@ namespace Apache.Ignite.Core.Tests.Client
             // Empty (root element name does not matter).
             var cfg = IgniteClientConfiguration.FromXml("<foo />");
             Assert.AreEqual(new IgniteClientConfiguration().ToXml(), cfg.ToXml());
+            Assert.IsInstanceOf<ConsoleLogger>(cfg.Logger);
 
             // Properties.
-            cfg = IgniteClientConfiguration.FromXml("<a host='h' port='123' />");
+            cfg = IgniteClientConfiguration.FromXml("<a host='h' port='123'><logger type='null' /></a>");
             Assert.AreEqual("h", cfg.Host);
             Assert.AreEqual(123, cfg.Port);
-            Assert.IsInstanceOf<ConsoleLogger>(cfg.Logger);
+            Assert.IsNull(cfg.Logger);
 
             // Full config.
             var fullCfg = new IgniteClientConfiguration
@@ -107,7 +108,21 @@ namespace Apache.Ignite.Core.Tests.Client
                 cfg = IgniteClientConfiguration.FromXml(xmlReader);
 
                 Assert.AreEqual(cfg.ToXml(), fullCfg.ToXml());
+                Assert.AreEqual(cfg.ToXml(), IgniteClientConfiguration.FromXml(cfg.ToXml()).ToXml());
             }
+        }
+
+        /// <summary>
+        /// Tests ToXml and back.
+        /// </summary>
+        [Test]
+        public void TestFromXmlRoundtrip()
+        {
+            var cfg = new IgniteClientConfiguration();
+            Assert.AreEqual(cfg.ToXml(), IgniteClientConfiguration.FromXml(cfg.ToXml()).ToXml());
+
+            cfg.Logger = null;
+            Assert.AreEqual(cfg.ToXml(), IgniteClientConfiguration.FromXml(cfg.ToXml()).ToXml());
         }
 
         /// <summary>
@@ -121,7 +136,8 @@ namespace Apache.Ignite.Core.Tests.Client
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?>" + Environment.NewLine +
                             "<igniteClientConfiguration " +
                             "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
-                            Environment.NewLine + "  <logger />" + Environment.NewLine + "</igniteClientConfiguration>",
+                            Environment.NewLine + "  <logger type=\"null\" />" + Environment.NewLine + 
+                            "</igniteClientConfiguration>",
                 emptyConfig.ToXml());
 
             // Some properties.
@@ -135,7 +151,8 @@ namespace Apache.Ignite.Core.Tests.Client
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?>" + Environment.NewLine +
                             "<igniteClientConfiguration host=\"myHost\" port=\"123\" " +
                             "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
-                            Environment.NewLine + "  <logger />" + Environment.NewLine + "</igniteClientConfiguration>",
+                            Environment.NewLine + "  <logger type=\"null\" />" + Environment.NewLine + 
+                            "</igniteClientConfiguration>",
                 cfg.ToXml());
 
             // Nested objects.
@@ -158,7 +175,7 @@ namespace Apache.Ignite.Core.Tests.Client
 
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?><fooBar " +
                             "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
-                            "<logger /></fooBar>",
+                            "<logger type=\"null\" /></fooBar>",
                 sb.ToString());
         }
 
