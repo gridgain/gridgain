@@ -68,7 +68,7 @@ public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
     public String stringView(boolean verbose) {
         return verbose ? strView + " hex=[" + U.byteArray2HexString(binaryView) + "] ver=[topVer=" +
             ver.topologyVersion() + ", order=" + ver.order() + ", nodeOrder=" + ver.nodeOrder() + ']' :
-            HIDDEN_DATA + " ver=[topVer=" + ver.topologyVersion() + ", order=" + ver.order() + ", nodeOrder=" +
-                ver.nodeOrder() + ']';
+            HIDDEN_DATA + (ver != null ? " ver=[topVer=" + ver.topologyVersion() + ", order=" + ver.order() +
+                ", nodeOrder=" + ver.nodeOrder() : "") + ']';
     }
 }
