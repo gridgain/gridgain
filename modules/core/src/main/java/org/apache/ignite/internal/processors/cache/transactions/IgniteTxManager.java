@@ -48,6 +48,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.managers.systemview.walker.TransactionViewWalker;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
@@ -393,7 +394,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         txCollisionsDumpInterval(collisionsDumpInterval());
 
         cctx.kernalContext().systemView().registerView(TXS_MON_LIST, TXS_MON_LIST_DESC,
-            TransactionView.class,
+            new TransactionViewWalker(),
             new ReadOnlyCollectionView2X<>(idMap.values(), nearIdMap.values()),
             TransactionView::new);
     }

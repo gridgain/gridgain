@@ -60,6 +60,7 @@ import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
+import org.apache.ignite.internal.managers.systemview.walker.ComputeTaskViewWalker;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cluster.IgniteChangeGlobalStateSupport;
@@ -170,7 +171,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
         execTasks = sysreg.longAdderMetric(TOTAL_EXEC_TASKS, "Total executed tasks.");
 
         ctx.systemView().registerView(TASKS_VIEW, TASKS_VIEW_DESC,
-            ComputeTaskView.class,
+            new ComputeTaskViewWalker(),
             tasks.values(),
             ComputeTaskView::new);
 

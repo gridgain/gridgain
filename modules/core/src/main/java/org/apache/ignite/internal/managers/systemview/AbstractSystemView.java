@@ -28,9 +28,6 @@ abstract class AbstractSystemView<R> implements SystemView<R> {
     /** Description of the view. */
     private final String desc;
 
-    /** Class of the row */
-    private final Class<R> rowCls;
-
     /**
      * Row attribute walker.
      *
@@ -41,22 +38,14 @@ abstract class AbstractSystemView<R> implements SystemView<R> {
     /**
      * @param name Name.
      * @param desc Description.
-     * @param rowCls Row class.
      * @param walker Walker.
      */
-    AbstractSystemView(String name, String desc, Class<R> rowCls, SystemViewRowAttributeWalker<R> walker) {
-        A.notNull(rowCls, "rowCls");
+    AbstractSystemView(String name, String desc, SystemViewRowAttributeWalker<R> walker) {
         A.notNull(walker, "walker");
 
         this.name = name;
         this.desc = desc;
-        this.rowCls = rowCls;
         this.walker = walker;
-    }
-
-    /** {@inheritDoc} */
-    @Override public Class<R> rowClass() {
-        return rowCls;
     }
 
     /** {@inheritDoc} */

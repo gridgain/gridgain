@@ -2604,7 +2604,16 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             if (sysMetricsPackages.stream().anyMatch(clsName::startsWith))
                 continue;
 
-            Class c = Class.forName(clsName);
+            Class c;
+
+            try {
+                c = Class.forName(clsName);
+            }
+            catch (ClassNotFoundException e) {
+                log.warning("Failed to load class: " + clsName);
+
+                continue;
+            }
 
             for (Class interf : c.getInterfaces()) {
                 for (Method m : interf.getMethods()) {
