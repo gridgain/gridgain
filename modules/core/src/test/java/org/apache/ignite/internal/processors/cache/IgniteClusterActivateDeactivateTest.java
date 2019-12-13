@@ -913,6 +913,9 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         startWithCaches1(srvs, clients);
 
+        if (persistenceEnabled() && ClusterState.active(initialState))
+            grid(0).cluster().state(initialState);
+
         checkClusterState(nodesCnt, initialState);
 
         if (!ClusterState.active(initialState))
