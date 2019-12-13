@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Log
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
 
     /// <summary>
     /// Returns <see cref="DateTime.Now"/>.
@@ -26,6 +27,8 @@ namespace Apache.Ignite.Core.Log
         /// <summary>
         /// Default instance.
         /// </summary>
+        [SuppressMessage("Microsoft.Security", "CA2104:DoNotDeclareReadOnlyMutableReferenceTypes", 
+            Justification = "Type is immutable.")]
         public static readonly LocalDateTimeProvider Instance = new LocalDateTimeProvider();
         
         /** <inheritDoc /> */
