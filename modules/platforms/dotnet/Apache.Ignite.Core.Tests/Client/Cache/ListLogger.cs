@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Collections.Generic;
     using System.Linq;
     using Apache.Ignite.Core.Log;
+    using NUnit.Framework;
 
     /// <summary>
     /// Stores log entries in a list.
@@ -72,6 +73,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, string category,
             string nativeErrorInfo, Exception ex)
         {
+            Assert.NotNull(message);
+            
             if (_wrappedLogger != null)
             {
                 _wrappedLogger.Log(level, message, args, formatProvider, category, nativeErrorInfo, ex);
@@ -113,6 +116,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             /// </summary>
             public Entry(string message, LogLevel level, string category)
             {
+                Assert.NotNull(message);
+                
                 _message = message;
                 _level = level;
                 _category = category;
