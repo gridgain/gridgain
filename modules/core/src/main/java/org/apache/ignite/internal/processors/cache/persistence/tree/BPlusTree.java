@@ -2481,7 +2481,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @throws IgniteCheckedException If failed.
      */
     public final long destroy(IgniteInClosure<L> c, boolean forceDestroy) throws IgniteCheckedException {
-        if (!forceDestroy && !markDestroyed())
+        if (!markDestroyed() && !forceDestroy)
             return 0;
 
         if (reuseList == null)
