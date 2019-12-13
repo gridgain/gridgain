@@ -25,6 +25,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using System.Xml;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Log;
     using NUnit.Framework;
 
     /// <summary>
@@ -61,6 +62,7 @@ namespace Apache.Ignite.Core.Tests.Client
             cfg = IgniteClientConfiguration.FromXml("<a host='h' port='123' />");
             Assert.AreEqual("h", cfg.Host);
             Assert.AreEqual(123, cfg.Port);
+            Assert.IsInstanceOf<ConsoleLogger>(cfg.Logger);
 
             // Full config.
             var fullCfg = new IgniteClientConfiguration
@@ -91,7 +93,11 @@ namespace Apache.Ignite.Core.Tests.Client
                     "bar:123",
                     "baz:100..103"
                 },
-                EnablePartitionAwareness = true
+                EnablePartitionAwareness = true,
+                Logger = new ConsoleLogger
+                {
+                    MinLevel = LogLevel.Debug
+                }
             };
 
             using (var xmlReader = XmlReader.Create(Path.Combine("Config", "Client", "IgniteClientConfiguration.xml")))
@@ -154,6 +160,15 @@ namespace Apache.Ignite.Core.Tests.Client
                             "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
                             "<logger /></fooBar>",
                 sb.ToString());
+        }
+
+        /// <summary>
+        /// Tests logger configuration.
+        /// </summary>
+        [Test]
+        public void TestLoggerConfiguration()
+        {
+            // TODO: ???
         }
 
         /// <summary>

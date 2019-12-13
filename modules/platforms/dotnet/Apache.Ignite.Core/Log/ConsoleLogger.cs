@@ -27,48 +27,25 @@ namespace Apache.Ignite.Core.Log
     /// </summary>
     public class ConsoleLogger : ILogger
     {
-        /** Minimum level to log. */
-        private readonly LogLevel _minLevel;
-
-        /** DateTime provider. */
-        private readonly IDateTimeProvider _dateTimeProvider;
-
         /// <summary>
         /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
         /// Uses <see cref="LogLevel.Warn"/> minimum level.
         /// </summary>
-        public ConsoleLogger() : this(LogLevel.Warn)
+        public ConsoleLogger()
         {
-            // No-op.
-        }
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
-        /// </summary>
-        /// <param name="minLevel">Minimum level to be logged. Any levels lower than that are ignored.</param>
-        public ConsoleLogger(LogLevel minLevel) : this(minLevel, new LocalDateTimeProvider())
-        {
-            // No-op.
-        }
-
-        /// <summary>
-        /// Initializes a new instance of <see cref="ConsoleLogger"/> class.
-        /// </summary>
-        /// <param name="minLevel">Minimum level to be logged. Any levels lower than that are ignored.</param>
-        /// <param name="dateTimeProvider">DateTime provider.</param>
-        public ConsoleLogger(LogLevel minLevel, IDateTimeProvider dateTimeProvider)
-        {
-            _minLevel = minLevel;
-            _dateTimeProvider = dateTimeProvider ?? new LocalDateTimeProvider();
+            MinLevel = LogLevel.Warn;
         }
 
         /// <summary>
         /// Gets the minimum level to be logged. Any levels lower than that are ignored.
+        /// Default is <see cref="LogLevel.Warn"/>.
         /// </summary>
-        public LogLevel MinLevel
-        {
-            get { return _minLevel; }
-        }
+        public LogLevel MinLevel { get; set; }
+        
+        /// <summary>
+        /// Gets or sets DateTime provider.
+        /// </summary>
+        public IDateTimeProvider DateTimeProvider { get; set; }
 
         /// <summary>
         /// Logs the specified message.
@@ -89,8 +66,10 @@ namespace Apache.Ignite.Core.Log
                 return;
             }
 
+            var dateTimeProvider = DateTimeProvider ?? LocalDateTimeProvider.Instance;
+
             var sb = new StringBuilder().AppendFormat(
-                "[{0:HH:mm:ss}] [{1}] [{2}] ", _dateTimeProvider.Now(), level, category);
+                "[{0:HH:mm:ss}] [{1}] [{2}] ", dateTimeProvider.Now(), level, category);
             
             if (args != null)
             {
@@ -116,7 +95,7 @@ namespace Apache.Ignite.Core.Log
         /// <returns>Value indicating whether the specified log level is enabled</returns>
         public bool IsEnabled(LogLevel level)
         {
-            return level >= _minLevel;
+            return level >= MinLevel;
         }
     }
 }

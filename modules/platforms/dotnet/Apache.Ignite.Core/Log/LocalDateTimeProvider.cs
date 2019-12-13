@@ -23,6 +23,11 @@ namespace Apache.Ignite.Core.Log
     /// </summary>
     public class LocalDateTimeProvider : IDateTimeProvider
     {
+        /// <summary>
+        /// Default instance.
+        /// </summary>
+        public static readonly LocalDateTimeProvider Instance = new LocalDateTimeProvider();
+        
         /** <inheritDoc /> */
         public DateTime Now()
         {

@@ -51,7 +51,7 @@ namespace Apache.Ignite.Core.Tests.Log
         [TestCase(LogLevel.Warn, LogLevel.Trace, false)]
         public void TestIsEnabled(LogLevel loggerLevel, LogLevel level, bool expectedResult)
         {
-            var logger = new ConsoleLogger(loggerLevel);
+            var logger = new ConsoleLogger {MinLevel = loggerLevel};
             Assert.AreEqual(loggerLevel, logger.MinLevel);
             Assert.AreEqual(expectedResult, logger.IsEnabled(level));
         }
@@ -69,7 +69,11 @@ namespace Apache.Ignite.Core.Tests.Log
             {
                 Console.SetOut(writer);
                 
-                var logger = new ConsoleLogger(LogLevel.Debug, new FixedDateTimeProvider()).GetLogger("my-cat");
+                var logger = new ConsoleLogger
+                {
+                    MinLevel = LogLevel.Debug,
+                    DateTimeProvider = new FixedDateTimeProvider()
+                }.GetLogger("my-cat");
                 logger.Warn("warn!");
                 logger.Error(new IgniteException("ex!"), "err!");
                 logger.Trace("trace (ignored)");

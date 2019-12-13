@@ -144,9 +144,9 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return new IgniteClientConfiguration
             {
-                Endpoints = new List<string> { IPAddress.Loopback.ToString() },
+                Endpoints = new List<string> {IPAddress.Loopback.ToString()},
                 SocketTimeout = TimeSpan.FromSeconds(15),
-                Logger = new ListLogger(new ConsoleLogger(LogLevel.Trace))
+                Logger = new ListLogger(new ConsoleLogger {MinLevel = LogLevel.Trace})
             };
         }
 
