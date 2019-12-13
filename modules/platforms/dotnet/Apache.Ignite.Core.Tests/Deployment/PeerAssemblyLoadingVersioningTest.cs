@@ -23,7 +23,6 @@ namespace Apache.Ignite.Core.Tests.Deployment
     using Apache.Ignite.Core.Deployment;
     using Apache.Ignite.Core.Discovery.Tcp;
     using Apache.Ignite.Core.Discovery.Tcp.Static;
-    using Apache.Ignite.Core.Tests.Process;
     using NUnit.Framework;
 
     /// <summary>
