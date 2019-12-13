@@ -69,6 +69,7 @@ namespace Apache.Ignite.Core.Client
             SocketReceiveBufferSize = DefaultSocketBufferSize;
             TcpNoDelay = DefaultTcpNoDelay;
             SocketTimeout = DefaultSocketTimeout;
+            Logger = new ConsoleLogger();
         }
 
         /// <summary>
@@ -218,7 +219,7 @@ namespace Apache.Ignite.Core.Client
         
         /// <summary>
         /// Gets or sets the logger.
-        /// If no logger is set, <see cref="ConsoleLogger"/> is used.
+        /// Default is <see cref="ConsoleLogger"/>. Set to <c>null</c> to disable logging.
         /// </summary>
         public ILogger Logger { get; set; }
 

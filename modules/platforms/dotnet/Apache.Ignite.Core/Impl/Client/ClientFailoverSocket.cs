@@ -30,6 +30,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Client.Cache;
+    using Apache.Ignite.Core.Impl.Log;
     using Apache.Ignite.Core.Log;
 
     /// <summary>
@@ -101,13 +102,8 @@ namespace Apache.Ignite.Core.Impl.Client
                 throw new IgniteClientException("Failed to resolve all specified hosts.");
             }
 
-            if (_config.Logger == null)
-            {
-                _config.Logger = new ConsoleLogger();
-            }
-
-            _logger = _config.Logger.GetLogger(GetType());
-
+            _logger = (_config.Logger ?? NoopLogger.Instance).GetLogger(GetType());
+            
             Connect();
        }
 
@@ -319,12 +315,12 @@ namespace Apache.Ignite.Core.Impl.Client
                                              "examine inner exceptions for details.", errors);
             }
 
-            if (_socket != null && 
-                _config.EnablePartitionAwareness && 
+            if (_socket != null &&
+                _config.EnablePartitionAwareness &&
                 _socket.ServerVersion < ClientOp.CachePartitions.GetMinVersion())
             {
                 _config.EnablePartitionAwareness = false;
-                
+
                 _logger.Warn("Partition awareness has been disabled: server protocol version {0} " +
                              "is lower than required {1}",
                     _socket.ServerVersion,

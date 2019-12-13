@@ -31,6 +31,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
+    using Apache.Ignite.Core.Impl.Log;
     using Apache.Ignite.Core.Log;
 
     /// <summary>
@@ -127,7 +128,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
             _topVerCallback = topVerCallback;
             _timeout = clientConfiguration.SocketTimeout;
-            _logger = (clientConfiguration.Logger ?? new ConsoleLogger()).GetLogger(GetType());
+            _logger = (clientConfiguration.Logger ?? NoopLogger.Instance).GetLogger(GetType());
 
             _socket = Connect(clientConfiguration, endPoint, _logger);
             _stream = GetSocketStream(_socket, clientConfiguration, host);
