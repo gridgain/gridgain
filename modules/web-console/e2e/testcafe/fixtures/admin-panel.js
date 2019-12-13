@@ -25,6 +25,7 @@ import * as pageAdvancedModel from '../page-models/pageConfigurationAdvancedMode
 import {pageProfile} from '../page-models/pageProfile';
 import {successNotification} from "../components/notifications";
 import {advancedNavButton} from '../components/pageConfiguration';
+import {scrollToPageBottom} from "../helpers";
 
 const regularUser = createRegularUser();
 
@@ -75,7 +76,11 @@ test('Testing setting notifications', async(t) => {
 const _createBaseModel = async(t, keyType, valueType) => {
     await t.click(pageAdvancedConfiguration.modelsNavButton)
         .click(pageAdvancedModel.createModelButton)
-        .click(pageAdvancedModel.general.generatePOJOClasses.control)
+        .click(pageAdvancedModel.general.generatePOJOClasses.control);
+
+    await scrollToPageBottom();
+
+    await t.click(pageAdvancedModel.sqlQuery.panel.heading)
         .typeText(pageAdvancedModel.general.keyType.control, keyType, {paste: true})
         .typeText(pageAdvancedModel.general.valueType.control, valueType, {paste: true});
 
@@ -89,10 +94,12 @@ test.only('Validation of user metrics data', async(t) => {
 
     const page = new PageConfigurationBasic();
 
+    await scrollToPageBottom();
     await page.cachesList.addItem();
+    await scrollToPageBottom();
     await page.cachesList.addItem();
 
-    await page.save();
+    await page.saveWithoutDownload();
 
     await t.click(advancedNavButton);
     await _createBaseModel(t, 'test.Key1', 'test.Value1');
@@ -105,47 +112,44 @@ test.only('Validation of user metrics data', async(t) => {
 
     const newFirstName = 'newFirstName';
     const newLastName = 'newLastName';
-    const newEmail = `1+${t.ctx.email}`;
     const newCompaty = 'newcompaty';
     const newCountry = 'United States';
 
     await t
         .typeText(pageProfile.firstName.control, newFirstName, {replace: true, paste: true})
         .typeText(pageProfile.lastName.control, newLastName, {replace: true, paste: true})
-        .typeText(pageProfile.email.control, newEmail, {replace: true, paste: true})
         .typeText(pageProfile.company.control, newCompaty, {replace: true, paste: true});
     await pageProfile.country.selectOption(newCountry);
     await t.click(pageProfile.saveChangesButton)
         .expect(successNotification.withText('Profile saved.').exists).ok();
 
-    t.ctx.email = newEmail;
-
     await t.navigateTo(resolveUrl('/settings/admin'));
 
-    await t.typeText(pageListOfUsers.usersTable.findFilter('Email'), newEmail, {paste: true})
+    const emailFilterSelector = pageListOfUsers.usersTable.findFilter('Email');
+    const emailCellSelector = pageListOfUsers.usersTable.findCell(0, 'Email');
+
+    await t.typeText(emailFilterSelector, t.ctx.email, {paste: true})
         .expect(pageListOfUsers.usersTable.findCell(0, 'User').textContent).contains(`${newFirstName} ${newLastName}`)
-        .expect(pageListOfUsers.usersTable.findCell(0, 'Email').textContent).contains(newEmail)
+        .expect(emailCellSelector.textContent).contains(t.ctx.email)
         .expect(pageListOfUsers.usersTable.findCell(0, 'Company').textContent).contains(newCompaty)
         .expect(pageListOfUsers.usersTable.findCell(0, 'Country').textContent).contains('USA');
 
-    // const lastLoginStr = await pageListOfUsers.usersTable.findCell(0, 'Last login').textContent;
-    // const lastActiveStr = await pageListOfUsers.usersTable.findCell(0, 'Last activity').textContent;
-    //
-    // const na = 'N/A';
-    //
-    // await t.debug();
-    //
-    // await t.expect(lastLoginStr).notEql(na)
-    //     .expect(lastActiveStr).notEql(na);
-    //
-    // const lastLogin = Date.parse(lastLoginStr);
-    // const lastActive = Date.parse(lastActiveStr);
-    //
-    // const start = t.ctx.startTime;
-    // const now = Date.now();
-    //
-    // await t.expect(start < lastLogin && now > lastLogin).ok()
-    //     .expect(start < lastActive && now > lastActive).ok()
+    const lastLoginStr = await pageListOfUsers.usersTable.findCell(0, 'Last login').textContent;
+    const lastActiveStr = await pageListOfUsers.usersTable.findCell(0, 'Last activity').textContent;
+
+    const na = 'N/A';
+
+    await t.expect(lastLoginStr).notEql(na)
+        .expect(lastActiveStr).notEql(na);
+
+    const lastLogin = Date.parse(lastLoginStr);
+    const lastActive = Date.parse(lastActiveStr);
+
+    const start = t.ctx.startTime;
+    const now = Date.now();
+
+    await t.expect(start <= lastLogin && now >= lastLogin).ok()
+        .expect(start <= lastActive && now >= lastActive).ok();
 
     // Check count of user clusters.
     await t.expect(pageListOfUsers.usersTable.findCell(0, 5).textContent).eql('1')
@@ -153,6 +157,21 @@ test.only('Validation of user metrics data', async(t) => {
         .expect(pageListOfUsers.usersTable.findCell(0, 6).textContent).eql('3')
         // Check count of user caches.
         .expect(pageListOfUsers.usersTable.findCell(0, 7).textContent).eql('2');
+
+    await t.navigateTo(resolveUrl('/settings/profile'));
+
+    const newEmail = `1+${t.ctx.email}`;
+
+    await t.typeText(pageProfile.email.control, newEmail, {replace: true, paste: true})
+        .click(pageProfile.saveChangesButton)
+        .expect(successNotification.withText('Profile saved.').exists).ok();
+
+    t.ctx.email = newEmail;
+
+    await t.navigateTo(resolveUrl('/settings/admin'));
+
+    await t.typeText(emailFilterSelector, newEmail, {paste: true})
+        .expect(emailCellSelector.textContent).contains(t.ctx.email)
 })
 .before(async(t) => {
     const d = new Date();
