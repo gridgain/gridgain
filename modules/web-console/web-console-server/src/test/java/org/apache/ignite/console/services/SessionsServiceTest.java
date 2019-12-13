@@ -123,7 +123,7 @@ public class SessionsServiceTest {
             SessionAttribute attr = new SessionAttribute(ses.getId(), "testAttribute");
 
             for (int i = 0; i < 10; i++)
-                sesSrvc.update(attr, "test");
+                sesSrvc.update(attr, "test" + i);
         });
 
         pool.shutdown();
