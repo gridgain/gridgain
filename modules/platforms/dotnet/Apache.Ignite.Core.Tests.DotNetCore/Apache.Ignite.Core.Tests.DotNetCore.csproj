@@ -138,12 +138,6 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\ClientProtocolVersionTest.cs">
       <Link>ThinClient\ClientProtocolVersionTest.cs</Link>
     </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Client\ClientReconnectCompatibilityTest.cs">
-      <Link>ThinClient\ClientReconnectCompatibilityTest.cs</Link>
-    </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Client\ClientServerCompatibilityTest.cs">
-      <Link>ThinClient\ClientServerCompatibilityTest.cs</Link>
-    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\ClientTestBase.cs" Link="ThinClient\ClientTestBase.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cluster\ClientClusterTests.cs" Link="ThinClient\Cluster\ClientClusterTests.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\EndpointTest.cs" Link="ThinClient\EndpointTest.cs" />
@@ -164,9 +158,6 @@
     </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\EventsTestLocalListeners.cs" Link="Common\EventsTestLocalListeners.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\IgniteConfigurationTest.cs" Link="Common\IgniteConfigurationTest.cs" />
-    <Compile Include="..\Apache.Ignite.Core.Tests\JavaServer.cs">
-      <Link>Common\JavaServer.cs</Link>
-    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Log\ConsoleLoggerTest.cs">
       <Link>Log\ConsoleLoggerTest.cs</Link>
     </Compile>
@@ -175,21 +166,6 @@
     </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\PathUtils.cs">
       <Link>PathUtils.cs</Link>
-    </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\ProcessExtensions.cs">
-      <Link>Common\ProcessExtensions.cs</Link>
-    </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Process\IgniteProcessCompositeOutputReader.cs">
-      <Link>Process\IgniteProcessCompositeOutputReader.cs</Link>
-    </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Process\IgniteProcessConsoleOutputReader.cs">
-      <Link>Process\IgniteProcessConsoleOutputReader.cs</Link>
-    </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Process\IIgniteProcessOutputReader.cs">
-      <Link>Process\IIgniteProcessOutputReader.cs</Link>
-    </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Process\ListDataReader.cs">
-      <Link>Process\ListDataReader.cs</Link>
     </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\ProjectFilesTest.cs">
       <Link>Common\ProjectFilesTest.cs</Link>
