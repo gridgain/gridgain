@@ -204,6 +204,13 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         private static void WriteComplexProperty(object obj, XmlWriter writer, Type valueType)
         {
+            if (obj == null)
+            {
+                // Happens with reference-type properties that have non-null default value.
+                // Example: IgniteClientConfiguration.Logger
+                return;
+            }
+            
             var props = GetNonDefaultProperties(obj).OrderBy(x => x.Name).ToList();
 
             var realType = obj.GetType();
@@ -573,7 +580,10 @@ namespace Apache.Ignite.Core.Impl.Common
         /// </summary>
         private static IEnumerable<PropertyInfo> GetNonDefaultProperties(object obj)
         {
-            Debug.Assert(obj != null);
+            if (obj == null)
+            {
+                Debug.Assert(obj != null);
+            }
 
             return obj.GetType().GetProperties()
                 .Where(p => p.GetIndexParameters().Length == 0 &&  // Skip indexed properties.

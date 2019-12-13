@@ -111,28 +111,33 @@ namespace Apache.Ignite.Core.Tests.Client
         public void TestToXml()
         {
             // Empty config.
+            var emptyConfig = new IgniteClientConfiguration {Logger = null};
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?>" + Environment.NewLine +
                             "<igniteClientConfiguration " +
-                            "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\" />",
-                new IgniteClientConfiguration().ToXml());
+                            "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
+                            Environment.NewLine + "  <logger />" + Environment.NewLine + "</igniteClientConfiguration>",
+                emptyConfig.ToXml());
 
             // Some properties.
             var cfg = new IgniteClientConfiguration
             {
                 Host = "myHost",
-                Port = 123
+                Port = 123,
+                Logger = null
             };
 
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?>" + Environment.NewLine +
                             "<igniteClientConfiguration host=\"myHost\" port=\"123\" " +
-                            "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\" />",
+                            "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
+                            Environment.NewLine + "  <logger />" + Environment.NewLine + "</igniteClientConfiguration>",
                 cfg.ToXml());
 
             // Nested objects.
             cfg = new IgniteClientConfiguration
             {
                 SocketSendBufferSize = 2,
-                BinaryConfiguration = new BinaryConfiguration {CompactFooter = false}
+                BinaryConfiguration = new BinaryConfiguration {CompactFooter = false},
+                Logger = null
             };
 
             Assert.IsTrue(cfg.ToXml().Contains("<binaryConfiguration compactFooter=\"false\" />"), cfg.ToXml());
@@ -142,11 +147,12 @@ namespace Apache.Ignite.Core.Tests.Client
 
             using (var xmlWriter = XmlWriter.Create(sb))
             {
-                new IgniteClientConfiguration().ToXml(xmlWriter, "fooBar");
+                new IgniteClientConfiguration {Logger = null}.ToXml(xmlWriter, "fooBar");
             }
 
             Assert.AreEqual("<?xml version=\"1.0\" encoding=\"utf-16\"?><fooBar " +
-                            "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\" />",
+                            "xmlns=\"http://ignite.apache.org/schema/dotnet/IgniteClientConfigurationSection\">" +
+                            "<logger /></fooBar>",
                 sb.ToString());
         }
 
