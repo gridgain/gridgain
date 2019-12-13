@@ -117,6 +117,8 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         public static void KillProcessTree(this System.Diagnostics.Process process)
         {
+            process.EnableRaisingEvents = true;
+            
             if (Os.IsWindows)
             {
                 Execute("taskkill", string.Format("/T /F /PID {0}", process.Id));
@@ -134,6 +136,10 @@ namespace Apache.Ignite.Core.Tests
                 KillProcessUnix(process.Id);
             }
             
+            // TODO: This fails on Linux if being ran with some other tests (TestAuthenticationLongToken).
+            // Process becomes a zombie for some reason (.NET Core bug?)
+            // https://github.com/dotnet/corefx/issues/19695
+            // https://stackoverflow.com/questions/43515360/net-core-process-start-leaving-defunct-child-process-behind
             if (!process.WaitForExit(10000))
             {
                 throw new Exception("Failed to kill process: " + process.Id);
