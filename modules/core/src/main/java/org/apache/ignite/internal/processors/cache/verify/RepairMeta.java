@@ -16,21 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.verify;
 
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.util.typedef.internal.U;
+
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
-/**
- * Repair meta including:
- * <ul>
- * <li>boolean flag that indicates whether data was fixed or not;</li>
- * <li>value that was used to fix entry;</li>
- * <li>repair algorithm that was used;</li>
- * </ul>
- */
-public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject {
+public class RepairMeta extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -38,7 +32,7 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
     private boolean fixed;
 
     /** Value that was used to fix entry. */
-    private PartitionReconciliationValueMeta val;
+    private CacheObject val;
 
     /** Repair algorithm that was used. */
     private RepairAlgorithm repairAlg;
@@ -46,7 +40,7 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
     /**
      * Default constructor for externalization.
      */
-    public PartitionReconciliationRepairMeta() {
+    public RepairMeta() {
     }
 
     /**
@@ -56,7 +50,7 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
      * @param val Value that was used to fix entry.
      * @param repairAlg Repair algorithm that was used.
      */
-    public PartitionReconciliationRepairMeta(boolean fixed, PartitionReconciliationValueMeta val,
+    public RepairMeta(boolean fixed, CacheObject val,
         RepairAlgorithm repairAlg) {
         this.fixed = fixed;
         this.val = val;
@@ -74,7 +68,7 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
     @Override
     protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         fixed = in.readBoolean();
-        val = (PartitionReconciliationValueMeta)in.readObject();
+        val = (CacheObject)in.readObject();
         repairAlg = RepairAlgorithm.fromOrdinal(in.readByte());
     }
 
@@ -88,7 +82,7 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
     /**
      * @return Value that was used to fix entry.
      */
-    public PartitionReconciliationValueMeta value() {
+    public CacheObject value() {
         return val;
     }
 
@@ -97,10 +91,5 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
      */
     public RepairAlgorithm repairAlg() {
         return repairAlg;
-    }
-
-    public String stringView(boolean verbose) {
-        return "fixed=" + fixed + ", new_val=" + (val != null ? val.stringView(verbose) : "null") +
-            ", repairAlg=" + repairAlg;
     }
 }

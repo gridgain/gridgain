@@ -16,15 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.verify;
 
-import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.tostring.GridToStringInclude;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.internal.util.typedef.internal.U;
-
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult.HIDDEN_DATA;
 
 public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
     /** */
@@ -35,8 +34,6 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
 
     private String strView;
 
-    private GridCacheVersion keyVer;
-
     /**
      * Default constructor for externalization.
      */
@@ -44,18 +41,15 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
     }
 
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public PartitionReconciliationKeyMeta(byte[] binaryView, String strView,
-        GridCacheVersion keyVer) {
+    public PartitionReconciliationKeyMeta(byte[] binaryView, String strView) {
         this.binaryView = binaryView;
         this.strView = strView;
-        this.keyVer = keyVer;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeByteArray(out, binaryView);
         U.writeString(out, strView);
-        out.writeObject(keyVer);
     }
 
     /** {@inheritDoc} */
@@ -63,11 +57,9 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
         ClassNotFoundException {
         binaryView = U.readByteArray(in);
         strView = U.readString(in);
-        keyVer = (GridCacheVersion) in.readObject();
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(PartitionReconciliationKeyMeta.class, this);
+    public String stringView(boolean verbose) {
+        return verbose ? strView + " hex=[" + U.byteArray2HexString(binaryView) + ']' : HIDDEN_DATA;
     }
 }

@@ -16,12 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
-import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
-import org.apache.ignite.internal.util.typedef.T2;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
+import org.apache.ignite.internal.util.typedef.T2;
 
 /** Result of {@code RepairResultTask}. */
 public class RepairResult {
@@ -31,7 +30,7 @@ public class RepairResult {
 
     /** Repaired keys. */
     // TODO: 05.12.19 I don't like idea of tuple here.
-    private Map<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
+    private Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
         new HashMap<>();
 
     /**
@@ -48,7 +47,7 @@ public class RepairResult {
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public RepairResult(
         Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepair,
-        Map<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>> repairedKeys) {
+        Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys) {
         this.keysToRepair = keysToRepair;
         this.repairedKeys = repairedKeys;
     }
@@ -65,7 +64,7 @@ public class RepairResult {
      * @return Repaired keys.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public Map<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>> repairedKeys() {
+    public Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys() {
         return repairedKeys;
     }
 }
