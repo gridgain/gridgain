@@ -140,6 +140,8 @@ namespace Apache.Ignite.Core.Tests
             // Process becomes a zombie for some reason (.NET Core bug?)
             // https://github.com/dotnet/corefx/issues/19695
             // https://stackoverflow.com/questions/43515360/net-core-process-start-leaving-defunct-child-process-behind
+            
+            // THIS HAS TO DO WITH SIGNALS REDEFINED BY JVM!!!
             if (!process.WaitForExit(10000))
             {
                 throw new Exception("Failed to kill process: " + process.Id);
