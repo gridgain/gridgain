@@ -89,7 +89,10 @@ const _createBaseModel = async(t, keyType, valueType) => {
     await t.click(pageAdvancedConfiguration.saveButton);
 };
 
-test.only('Validation of user metrics data', async(t) => {
+test.meta({
+    testPlan: 'https://ggsystems.atlassian.net/browse/GG-26393',
+    testCase: '1'
+})('Validation of user metrics data', async(t) => {
     await t.resizeWindow(1920, 1080);
 
     const page = new PageConfigurationBasic();
