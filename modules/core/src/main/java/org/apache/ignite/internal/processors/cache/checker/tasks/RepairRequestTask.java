@@ -479,6 +479,11 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
 
                 GridCacheContext cctx = (GridCacheContext)entry.unwrap(GridCacheContext.class);
 
+                AffinityTopologyVersion currTopVer = cctx.affinity().affinityTopologyVersion();
+
+                if (!cctx.shared().exchange().lastAffinityChangedTopologyVersion((currTopVer)).equals(startTopVer))
+                    throw new EntryProcessorException("Topology version was changed");
+
                 if (!cctx.affinity().affinityTopologyVersion().equals(startTopVer))
                     throw new EntryProcessorException("Topology version was changed");
 
