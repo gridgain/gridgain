@@ -1093,7 +1093,9 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      * @throws IgniteCheckedException If failed.
      */
     public Collection<PageStore> getStores(int grpId) throws IgniteCheckedException {
-        return getHolder(grpId).cacheStores();
+        CacheStore cacheStore = getHolder(grpId);
+        
+        return cacheStore != null ? cacheStore.cacheStores() : null;
     }
 
     /**
