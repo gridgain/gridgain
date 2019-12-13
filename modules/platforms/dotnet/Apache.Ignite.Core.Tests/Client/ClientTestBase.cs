@@ -83,6 +83,7 @@ namespace Apache.Ignite.Core.Tests.Client
         public void FixtureTearDown()
         {
             Ignition.StopAll(true);
+            Client.Dispose();
         }
 
         /// <summary>

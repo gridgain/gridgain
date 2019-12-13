@@ -192,7 +192,7 @@ namespace Apache.Ignite.Core.Tests
             TestContext.Progress.Write("Killing process: " + processId);
 #endif
             
-            Execute("kill", string.Format("-TERM {0}", processId));
+            Execute("kill", string.Format("-KILL {0}", processId));
         }
     }
 }
