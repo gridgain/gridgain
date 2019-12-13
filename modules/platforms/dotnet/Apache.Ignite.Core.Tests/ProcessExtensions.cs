@@ -25,7 +25,6 @@ namespace Apache.Ignite.Core.Tests
     using System.Threading;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using Apache.Ignite.Core.Tests.Process;
-    using NUnit.Framework;
 
     /// <summary>
     /// Process extensions.
@@ -136,11 +135,8 @@ namespace Apache.Ignite.Core.Tests
                 KillProcessUnix(process.Id);
             }
             
-            // TODO: This fails on Linux if being ran after any other tests that USE PERSISTENCE
-            // Process becomes a zombie for some reason (.NET Core bug?)
-            // https://github.com/dotnet/corefx/issues/19695
-            // https://stackoverflow.com/questions/43515360/net-core-process-start-leaving-defunct-child-process-behind
-            // What does persistence do on system level? Any kinds of signals redefined?
+            // NOTE: This can hang on Linux if being ran after anything that uses Ignite Persistence.
+            // Process becomes a zombie for some reason (Java meddling with SIGCHLD?)
             if (!process.WaitForExit(10000))
             {
                 throw new Exception("Failed to kill process: " + process.Id);
@@ -195,10 +191,6 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static void KillProcessUnix(int processId)
         {
-#if NETCOREAPP2_0 ||  NETCOREAPP3_0
-            TestContext.Progress.Write("Killing process: " + processId);
-#endif
-            
             Execute("kill", string.Format("-KILL {0}", processId));
         }
     }

@@ -25,7 +25,6 @@ namespace Apache.Ignite.Core.Tests
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Unmanaged;
     using Apache.Ignite.Core.Tests.Process;
-    using NUnit.Framework;
 
     /// <summary>
     /// Starts Java server nodes.
@@ -61,10 +60,6 @@ namespace Apache.Ignite.Core.Tests
 
             ReplaceIgniteVersionInPomFile(version, Path.Combine(JavaServerSourcePath, "pom.xml"));
             
-#if NETCOREAPP2_0 ||  NETCOREAPP3_0
-            TestContext.Progress.Write("Maven detected at: " + MavenPath);
-#endif
-            
             var process = new System.Diagnostics.Process
             {
                 StartInfo = new ProcessStartInfo
@@ -82,10 +77,6 @@ namespace Apache.Ignite.Core.Tests
             };
 
             process.Start();
-            
-#if NETCOREAPP2_0 ||  NETCOREAPP3_0
-            TestContext.Progress.Write("Maven command process started: " + process.Id);
-#endif
             
             var listDataReader = new ListDataReader();
             process.AttachProcessConsoleReader(listDataReader, new IgniteProcessConsoleOutputReader());
