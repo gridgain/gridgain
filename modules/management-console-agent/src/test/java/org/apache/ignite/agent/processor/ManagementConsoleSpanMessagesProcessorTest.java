@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.configuration.DataRegionConfiguration;
