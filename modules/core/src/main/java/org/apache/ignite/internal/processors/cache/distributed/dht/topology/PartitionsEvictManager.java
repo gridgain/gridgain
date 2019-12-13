@@ -86,7 +86,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     private final Map<Integer, GroupEvictionContext> evictionGroupsMap = new ConcurrentHashMap<>();
 
     /**
-     * Evicted partitions for printing to log.
+     * Evicted partitions for printing to log. It works under {@link #mux}.
      */
     private final Map<Integer, Set<EvictPartition>> logEvictPartByGrps = new HashMap<>();
 
@@ -276,7 +276,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         evictPartJoiner.add("[grpId=" + grpId + ", grpName=" + grpName + ", " + partByReasonStr + ']');
                     });
 
-                    log.info("Evicted partitions " + evictPartJoiner);
+                    log.info("Partitions marked for eviction " + evictPartJoiner);
 
                     logEvictPartByGrps.clear();
                 }
@@ -688,14 +688,14 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
          * @param partId Partition.
          * @param reason Reason for eviction.
          */
-        public EvictPartition(int partId, byte reason) {
+        EvictPartition(int partId, byte reason) {
             this.partId = partId;
             this.reason = reason;
         }
 
         /** {@inheritDoc} */
         @Override public int hashCode() {
-            return Integer.hashCode(partId);
+            return partId;
         }
 
         /** {@inheritDoc} */
