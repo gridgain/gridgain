@@ -37,6 +37,7 @@ import org.apache.ignite.configuration.SqlConnectorConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.direct.DirectMessageWriter;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.managers.systemview.walker.ClientConnectionViewWalker;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext;
@@ -204,7 +205,7 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
                     registerMBean();
 
                 ctx.systemView().registerView(CLI_CONN_VIEW, CLI_CONN_VIEW_DESC,
-                    ClientConnectionView.class,
+                    new ClientConnectionViewWalker(),
                     srv.sessions(),
                     ClientConnectionView::new);
             }
