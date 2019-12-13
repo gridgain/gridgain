@@ -136,12 +136,11 @@ namespace Apache.Ignite.Core.Tests
                 KillProcessUnix(process.Id);
             }
             
-            // TODO: This fails on Linux if being ran with some other tests (TestAuthenticationLongToken).
+            // TODO: This fails on Linux if being ran after any other tests that USE PERSISTENCE
             // Process becomes a zombie for some reason (.NET Core bug?)
             // https://github.com/dotnet/corefx/issues/19695
             // https://stackoverflow.com/questions/43515360/net-core-process-start-leaving-defunct-child-process-behind
-            
-            // THIS HAS TO DO WITH SIGNALS REDEFINED BY JVM!!!
+            // What does persistence do on system level? Any kinds of signals redefined?
             if (!process.WaitForExit(10000))
             {
                 throw new Exception("Failed to kill process: " + process.Id);
