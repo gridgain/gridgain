@@ -186,41 +186,33 @@ namespace Apache.Ignite.Core.Tests.Client
         [Test]
         public void TestDefaultLoggerWritesToConsole()
         {
-            using (Ignition.Start(TestUtils.GetTestConfiguration()))
+            IgniteClientConfiguration cfg = null;
+            
+            TestConsoleLogging(c => { cfg = c;}, (client, log) =>
             {
-                var cfg = new IgniteClientConfiguration("127.0.0.1")
-                {
-                    ProtocolVersion = new ClientProtocolVersion(1, 0, 0),
-                    EnablePartitionAwareness = true
-                };
-                Assert.IsInstanceOf<ConsoleLogger>(cfg.Logger);
-
-                var oldWriter = Console.Out;
-                var writer = new StringWriter();
-
-                try
-                {
-                    Console.SetOut(writer);
-
-                    using (var client = Ignition.StartClient(cfg))
-                    {
-                        Assert.AreSame(cfg.Logger, client.GetConfiguration().Logger);
-                        StringAssert.Contains("Partition awareness has been disabled", writer.ToString());
-                    }
-                }
-                finally
-                {
-                    Console.SetOut(oldWriter);
-                }
-
-            }
+                Assert.AreSame(cfg.Logger, client.GetConfiguration().Logger);
+                StringAssert.Contains("Partition awareness has been disabled", log);
+            });
         }
 
         /// <summary>
         /// Tests that logger is used by default.
         /// </summary>
         [Test]
-        public void TestNullLoggerDoesNotWriteToConsole()
+        public void TestNullLoggerDisablesLogging()
+        {
+            TestConsoleLogging(cfg => cfg.Logger = null, (client, log) =>
+            {
+                Assert.IsNull(client.GetConfiguration().Logger);
+                Assert.IsTrue(string.IsNullOrEmpty(log));
+            });
+        }
+
+        /// <summary>
+        /// Tests console logging.
+        /// </summary>
+        private static void TestConsoleLogging(Action<IgniteClientConfiguration> configAction,
+            Action<IIgniteClient, string> assertAction)
         {
             using (Ignition.Start(TestUtils.GetTestConfiguration()))
             {
@@ -228,8 +220,9 @@ namespace Apache.Ignite.Core.Tests.Client
                 {
                     ProtocolVersion = new ClientProtocolVersion(1, 0, 0),
                     EnablePartitionAwareness = true,
-                    Logger = null
                 };
+
+                configAction(cfg);
 
                 var oldWriter = Console.Out;
                 var writer = new StringWriter();
@@ -240,8 +233,7 @@ namespace Apache.Ignite.Core.Tests.Client
 
                     using (var client = Ignition.StartClient(cfg))
                     {
-                        Assert.IsNull(client.GetConfiguration().Logger);
-                        Assert.IsTrue(string.IsNullOrEmpty(writer.ToString()));
+                        assertAction(client, writer.ToString());
                     }
                 }
                 finally
