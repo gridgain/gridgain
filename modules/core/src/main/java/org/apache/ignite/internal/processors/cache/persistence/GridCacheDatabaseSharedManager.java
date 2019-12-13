@@ -424,8 +424,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     /** Pointer to a memory recovery record that should be included into the next checkpoint record. */
     private volatile WALPointer memoryRecoveryRecordPtr;
 
-    /** Lock for history preloading. */
-    private ReentrantLock lockForHistoryPreloading = new ReentrantLock();
+    /** Lock for releasing history for preloading. */
+    private ReentrantLock releaseHistForPreloadingLock = new ReentrantLock();
 
     /**
      * @param ctx Kernal context.
@@ -1871,7 +1871,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public void releaseHistoryForPreloading() {
-        lockForHistoryPreloading.lock();
+        releaseHistForPreloadingLock.lock();
 
         try {
             for (Map.Entry<T2<Integer, Integer>, T2<Long, WALPointer>> e : reservedForPreloading.entrySet()) {
@@ -1888,7 +1888,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             reservedForPreloading.clear();
         }
         finally {
-            lockForHistoryPreloading.unlock();
+            releaseHistForPreloadingLock.unlock();
         }
     }
 
