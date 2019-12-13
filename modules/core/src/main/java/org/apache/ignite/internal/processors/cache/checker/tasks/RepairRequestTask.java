@@ -484,9 +484,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                 if (!cctx.shared().exchange().lastAffinityChangedTopologyVersion((currTopVer)).equals(startTopVer))
                     throw new EntryProcessorException("Topology version was changed");
 
-                if (!cctx.affinity().affinityTopologyVersion().equals(startTopVer))
-                    throw new EntryProcessorException("Topology version was changed");
-
                 UUID locNodeId = cctx.localNodeId();
 
                 VersionedValue versionedVal = data.get(locNodeId);
