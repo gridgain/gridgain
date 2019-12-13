@@ -17,12 +17,11 @@
 package org.apache.ignite.agent.utils;
 
 import java.util.UUID;
-import org.apache.ignite.IgniteAuthenticationException;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Test for agent utils.

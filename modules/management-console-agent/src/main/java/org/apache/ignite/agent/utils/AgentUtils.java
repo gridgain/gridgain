@@ -42,7 +42,6 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
-import static org.springframework.util.StringUtils.trimTrailingCharacter;
 
 /**
  * Utility methods.
