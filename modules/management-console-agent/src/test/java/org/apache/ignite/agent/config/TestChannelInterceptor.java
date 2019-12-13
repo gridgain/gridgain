@@ -88,6 +88,14 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
 
     /**
      * @param dest Destination.
+     * @param clazz Clazz.
+     */
+    public <T> List<List<T>> getAllListPayloads(String dest, Class<T> clazz) {
+        return fromNullableCollection(messages.get(dest)).map(p -> mapListPayload(p, clazz)).collect(Collectors.toList());
+    }
+
+    /**
+     * @param dest Destination.
      */
     public <T> T getPayload(String dest, Class<T> clazz) {
         Object payload = getPayload(dest);
@@ -101,17 +109,7 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
     public <T> List<T> getListPayload(String dest, Class<T> clazz) {
         Object payload = F.last(messages.get(dest));
 
-        if (payload == null)
-            return null;
-
-        JavaType type = mapper.getTypeFactory().constructCollectionType(List.class, clazz);
-
-        try {
-            return mapper.readValue((byte[]) payload, type);
-        }
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        return mapListPayload(payload, clazz);
     }
 
     /**
@@ -142,5 +140,30 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
         catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * @param payload Payload.
+     * @param clazz Clazz.
+     */
+    private <T> List<T> mapListPayload(Object payload, Class<T> clazz) {
+        if (payload == null)
+            return null;
+
+        JavaType type = mapper.getTypeFactory().constructCollectionType(List.class, clazz);
+
+        try {
+            return mapper.readValue((byte[]) payload, type);
+        }
+        catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Remove all messages.
+     */
+    public void clearMessages() {
+        messages = new ConcurrentHashMap<>();
     }
 }
