@@ -86,7 +86,7 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
     boolean client;
 
     /** */
-    private ClusterState stateOnStart = ACTIVE;
+    private ClusterState stateOnStart;
 
     /** */
     CacheConfiguration[] ccfgs;
@@ -118,7 +118,8 @@ public class IgniteClusterActivateDeactivateTest extends GridCommonAbstractTest 
 
         cfg.setClientMode(client);
 
-        cfg.setClusterStateOnStart(stateOnStart);
+        if (stateOnStart != null)
+            cfg.setClusterStateOnStart(stateOnStart);
 
         if (ccfgs != null) {
             cfg.setCacheConfiguration(ccfgs);
