@@ -135,17 +135,17 @@ public class ConsistencyCheckUtils {
     /**
      *
      */
-    public static List<Map<UUID, PartitionReconciliationDataRowMeta>> mapPartitionReconciliation(
+    public static List<PartitionReconciliationDataRowMeta> mapPartitionReconciliation(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,
         Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys,
         CacheObjectContext ctx
     ) throws IgniteCheckedException {
-        List<Map<UUID, PartitionReconciliationDataRowMeta>> brokenKeys = new ArrayList<>();
+        List<PartitionReconciliationDataRowMeta> brokenKeys = new ArrayList<>();
 
         for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> entry : conflicts.entrySet()) {
             KeyCacheObject key = entry.getKey();
 
-            Map<UUID, PartitionReconciliationDataRowMeta> map = new HashMap<>();
+            Map<UUID, PartitionReconciliationValueMeta> valMap = new HashMap<>();
 
             for (Map.Entry<UUID, GridCacheVersion> versionEntry : entry.getValue().entrySet()) {
                 UUID nodeId = versionEntry.getKey();
@@ -154,27 +154,26 @@ public class ConsistencyCheckUtils {
                     .flatMap(keyVersions -> Optional.ofNullable(keyVersions.get(nodeId)))
                     .map(VersionedValue::value);
 
-                Optional<String> valStr = cacheObjOpt
-                    .flatMap(co -> Optional.ofNullable(co.value(ctx, false)))
-                    .map(Object::toString);
-
                 Object keyVal = key.value(ctx, false);
 
-                map.put(nodeId,
+                valMap.put(
+                    nodeId,
+                    cacheObjOpt.isPresent() ?
+                        new PartitionReconciliationValueMeta(
+                            cacheObjOpt.get().valueBytes(ctx),
+                            cacheObjOpt.get().value(ctx, false),
+                            versionEntry.getValue())
+                        :
+                        null);
+
+                brokenKeys.add(
                     new PartitionReconciliationDataRowMeta(
                         new PartitionReconciliationKeyMeta(
                             key.valueBytes(ctx),
-                            keyVal != null ? keyVal.toString() : null,
-                            versionEntry.getValue()
-                        ),
-                        new PartitionReconciliationValueMeta(
-                            cacheObjOpt.isPresent() ? cacheObjOpt.get().valueBytes(ctx) : null,
-                            valStr.orElse(null)
-                        )
+                            keyVal != null ? keyVal.toString() : null),
+                        valMap
                     ));
             }
-
-            brokenKeys.add(map);
         }
 
         return brokenKeys;

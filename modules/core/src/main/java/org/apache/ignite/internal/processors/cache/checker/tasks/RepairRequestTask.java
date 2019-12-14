@@ -45,8 +45,8 @@ import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyV
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
-import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -247,7 +247,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
         @SuppressWarnings("unchecked") @Override public RepairResult execute() throws IgniteException {
             Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
 
-            Map<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
+            Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
                 new HashMap<>();
 
             for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
@@ -341,7 +341,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                         repairedKeys.put(
                             new T2<>(
                                 dataEntry.getKey(),
-                                new PartitionReconciliationRepairMeta(
+                                new RepairMeta(
                                     true,
                                     valToFixWith,
                                     repairAlg)

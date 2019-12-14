@@ -16,13 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.verify;
 
-import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.jetbrains.annotations.Nullable;
-
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTransferObject {
     /** */

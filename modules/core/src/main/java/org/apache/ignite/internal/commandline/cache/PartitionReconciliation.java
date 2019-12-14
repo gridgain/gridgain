@@ -291,7 +291,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 ((Consumer<String>)(pw::write)).accept(prepareHeaderMeta());
 
                 if (res != null)
-                    res.print(pw::write);
+                    res.print(pw::write, args.verbose);
 
                 pw.flush();
             }
@@ -299,12 +299,12 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 printer.accept("Unable to write report to file " + f.getAbsolutePath() + " " + e.getMessage() + "\n");
 
                 if (res != null)
-                    res.print(printer);
+                    res.print(printer, args.verbose);
             }
         }
         else {
             if (res != null)
-                res.print(printer);
+                res.print(printer, args.verbose);
         }
     }
 

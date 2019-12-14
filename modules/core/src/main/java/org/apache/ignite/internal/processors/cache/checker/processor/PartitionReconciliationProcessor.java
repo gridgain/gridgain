@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -96,7 +97,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      *
      */
-    private final Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys = new HashMap<>();
+    private final Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
     /**
      *
@@ -146,7 +147,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 if (topologyChanged()) {
                     log.warning("Topology was changed. Partition reconciliation task was stopped.");
 
-                    return new PartitionReconciliationResult(Collections.emptyMap());
+                    // TODO: 13.12.19 Add exception to result and probably partially available data.
+                    return new PartitionReconciliationResult();
                 }
 
                 if (isEmpty() && live) {
@@ -172,12 +174,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         catch (InterruptedException e) {
             log.warning("Partition reconciliation was interrupted.", e);
 
-            return new PartitionReconciliationResult(Collections.emptyMap());
+            // TODO: 13.12.19 Add exception to result and probably partially available data.
+            return new PartitionReconciliationResult();
         }
         catch (IgniteCheckedException e) {
             log.error("Unexpected error.", e);
 
-            return new PartitionReconciliationResult(Collections.emptyMap());
+            // TODO: 13.12.19 Add exception to result and probably partially available data.
+            return new PartitionReconciliationResult();
         }
     }
 
@@ -353,46 +357,58 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void addToPrintResult(
         String cacheName,
         int partId,
-        Map<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>> repairedKeys
+        Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys
     ) {
         CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
 
         synchronized (inconsistentKeys) {
             try {
-                List<Map<UUID, PartitionReconciliationDataRowMeta>> res = new ArrayList<>();
+                List<PartitionReconciliationDataRowMeta> res = new ArrayList<>();
 
-                for (Map.Entry<T2<PartitionKeyVersion, PartitionReconciliationRepairMeta>, Map<UUID, VersionedValue>>
+                for (Map.Entry<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>>
                     entry : repairedKeys.entrySet()) {
-                    Map<UUID, PartitionReconciliationDataRowMeta> map = new HashMap<>();
+                    Map<UUID, PartitionReconciliationValueMeta> valMap = new HashMap<>();
 
                     for (Map.Entry<UUID, VersionedValue> uuidBasedEntry : entry.getValue().entrySet()) {
-                        KeyCacheObject key = entry.getKey().get1().getKey();
-
                         Optional<CacheObject> cacheObjOpt = Optional.ofNullable(uuidBasedEntry.getValue().value());
 
-                        Optional<String> valStr = cacheObjOpt
-                            .flatMap(co -> Optional.ofNullable(co.value(ctx, false)))
-                            .map(Object::toString);
-
-                        key.finishUnmarshal(ctx, null);
-
-                        Object keyVal = key.value(ctx, false);
-
-                        map.put(uuidBasedEntry.getKey(),
-                            new PartitionReconciliationDataRowMeta(
-                                new PartitionReconciliationKeyMeta(
-                                    key.valueBytes(ctx),
-                                    keyVal != null ? keyVal.toString() : null,
-                                    entry.getValue().get(uuidBasedEntry.getKey()).version()
-                                ),
+                        valMap.put(
+                            uuidBasedEntry.getKey(),
+                            cacheObjOpt.isPresent() ?
                                 new PartitionReconciliationValueMeta(
-                                    cacheObjOpt.isPresent() ? cacheObjOpt.get().valueBytes(ctx) : null,
-                                    valStr.orElse(null)
-                                ),
-                                entry.getKey().get2()
-                            ));
+                                    cacheObjOpt.get().valueBytes(ctx),
+                                    cacheObjOpt.get().value(ctx, false),
+                                    uuidBasedEntry.getValue().version())
+                                :
+                                null);
                     }
-                    res.add(map);
+
+                    KeyCacheObject key = entry.getKey().get1().getKey();
+
+                    key.finishUnmarshal(ctx, null);
+
+                    Object keyVal = key.value(ctx, false);
+
+                    RepairMeta repairMeta = entry.getKey().get2();
+
+                    Optional<CacheObject> cacheObjRepairValOpt = Optional.ofNullable(repairMeta.value());
+
+                    res.add(
+                        new PartitionReconciliationDataRowMeta(
+                            new PartitionReconciliationKeyMeta(
+                                key.valueBytes(ctx),
+                                keyVal != null ? keyVal.toString() : null),
+                            valMap,
+                            new PartitionReconciliationRepairMeta(
+                                repairMeta.fixed(),
+                                cacheObjRepairValOpt.isPresent() ?
+                                    new PartitionReconciliationValueMeta(
+                                        cacheObjRepairValOpt.get().valueBytes(ctx),
+                                        cacheObjRepairValOpt.get().value(ctx, false),
+                                        null)
+                                    :
+                                    null,
+                                repairMeta.repairAlg())));
                 }
 
                 inconsistentKeys.computeIfAbsent(cacheName, k -> new HashMap<>())
@@ -410,7 +426,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private PartitionReconciliationResult prepareResult() {
         synchronized (inconsistentKeys) {
-            return new PartitionReconciliationResult(inconsistentKeys);
+            return new PartitionReconciliationResult(
+                ignite.cluster().nodes().stream().collect(Collectors.toMap(
+                    ClusterNode::id,
+                    n -> n.consistentId().toString())),
+                inconsistentKeys);
         }
     }
 }

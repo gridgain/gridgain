@@ -16,12 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.verify;
 
-import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.util.typedef.internal.S;
-
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Map;
+import java.util.UUID;
+import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Data row meta including information about key, value and repair meta within the context of partition reconciliation.
@@ -33,14 +35,17 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
     /** Binary and string representation of a versioned key. */
     private PartitionReconciliationKeyMeta keyMeta;
 
-    /** Binary and string representation of a value. */
-    private PartitionReconciliationValueMeta valMeta;
+    /** Binary and string representation of a values per corresponding node ids. */
+    private Map<UUID, PartitionReconciliationValueMeta> valMeta;
 
-    /** Repair meta including:
+    /** Binary and string representation of a value. */
+
+    /**
+     * Repair meta including:
      * <ul>
-     *     <li>boolean flag that indicates whether data was fixed or not;</li>
-     *     <li>value that was used to fix entry;</li>
-     *     <li>repair algorithm that was used;</li>
+     * <li>boolean flag that indicates whether data was fixed or not;</li>
+     * <li>value that was used to fix entry;</li>
+     * <li>repair algorithm that was used;</li>
      * </ul>
      */
     private PartitionReconciliationRepairMeta repairMeta;
@@ -59,7 +64,7 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
      */
     public PartitionReconciliationDataRowMeta(
         PartitionReconciliationKeyMeta keyMeta,
-        PartitionReconciliationValueMeta valMeta) {
+        Map<UUID, PartitionReconciliationValueMeta> valMeta) {
         this.keyMeta = keyMeta;
         this.valMeta = valMeta;
     }
@@ -70,15 +75,15 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
      * @param keyMeta Binary and string representation of a versioned key.
      * @param valMeta Binary and string representation of a value.
      * @param repairMeta Repair meta including:
-     *  <ul>
-     *      <li>boolean flag that indicates whether data was fixed or not;</li>
-     *      <li>value that was used to fix entry;</li>
-     *      <li>repair algorithm that was used;</li>
-     *  </ul>
+     * <ul>
+     * <li>boolean flag that indicates whether data was fixed or not;</li>
+     * <li>value that was used to fix entry;</li>
+     * <li>repair algorithm that was used;</li>
+     * </ul>
      */
     public PartitionReconciliationDataRowMeta(
         PartitionReconciliationKeyMeta keyMeta,
-        PartitionReconciliationValueMeta valMeta,
+        Map<UUID, PartitionReconciliationValueMeta> valMeta,
         PartitionReconciliationRepairMeta repairMeta) {
         this.keyMeta = keyMeta;
         this.valMeta = valMeta;
@@ -88,16 +93,38 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(keyMeta);
-        out.writeObject(valMeta);
+        U.writeMap(out, valMeta);
         out.writeObject(repairMeta);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException,
         ClassNotFoundException {
-        keyMeta = (PartitionReconciliationKeyMeta) in.readObject();
-        valMeta = (PartitionReconciliationValueMeta) in.readObject();
-        repairMeta = (PartitionReconciliationRepairMeta) in.readObject();
+        keyMeta = (PartitionReconciliationKeyMeta)in.readObject();
+        valMeta = U.readMap(in);
+        repairMeta = (PartitionReconciliationRepairMeta)in.readObject();
+    }
+
+    /**
+     * @return Binary and string representation of a versioned key.
+     */
+    public PartitionReconciliationKeyMeta keyMeta() {
+        return keyMeta;
+    }
+
+    /**
+     * @return Binary and string representation of a values per corresponding node ids.
+     */
+    public Map<UUID, PartitionReconciliationValueMeta> valueMeta() {
+        return valMeta;
+    }
+
+    /**
+     * @return Repair meta including: <ul> <li>boolean flag that indicates whether data was fixed or not;</li> <li>value
+     * that was used to fix entry;</li> <li>repair algorithm that was used;</li> </ul>
+     */
+    public PartitionReconciliationRepairMeta repairMeta() {
+        return repairMeta;
     }
 
     /** {@inheritDoc} */

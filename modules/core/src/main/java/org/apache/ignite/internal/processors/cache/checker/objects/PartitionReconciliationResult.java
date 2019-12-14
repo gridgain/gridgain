@@ -28,13 +28,20 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    private Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys;
+    /** A sequence of characters that is used to hide sensitive data in case of non-verbose mode. */
+    public static final String HIDDEN_DATA = "*****";
+
+    /** Map of node ids to node consitent ids. */
+    private Map<UUID, String> nodesIdsToConsistenseIdsMap;
+
+    private Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys;
 
     private Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches;
 
@@ -48,15 +55,19 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationResult (
-        Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys) {
+        Map<UUID, String> nodesIdsToConsistenseIdsMap,
+        Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys) {
+        this.nodesIdsToConsistenseIdsMap = nodesIdsToConsistenseIdsMap;
         this.inconsistentKeys = inconsistentKeys;
     }
 
     public PartitionReconciliationResult(
-        Map<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>> inconsistentKeys,
+        Map<UUID, String> nodesIdsToConsistenseIdsMap,
+        Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches,
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
             skippedEntries) {
+        this.nodesIdsToConsistenseIdsMap = nodesIdsToConsistenseIdsMap;
         this.inconsistentKeys = inconsistentKeys;
         this.skippedCaches = skippedCaches;
         this.skippedEntries = skippedEntries;
@@ -64,6 +75,8 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
+        U.writeMap(out, nodesIdsToConsistenseIdsMap);
+
         U.writeMap(out, inconsistentKeys);
 
         U.writeCollection(out, skippedCaches);
@@ -74,6 +87,8 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in)
         throws IOException, ClassNotFoundException {
+        nodesIdsToConsistenseIdsMap = U.readMap(in);
+
         inconsistentKeys = U.readMap(in);
 
         skippedCaches = U.readSet(in);
@@ -81,40 +96,44 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
         skippedEntries = U.readMap(in);
     }
 
-    public void print(Consumer<String> printer) {
+    public void print(Consumer<String> printer, boolean verbose) {
         if (inconsistentKeys != null && !inconsistentKeys.isEmpty()) {
             printer.accept("\nINCONSISTENT KEYS:\n\n");
 
-            for (Map.Entry<String, Map<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>>>
+            printer.accept("<cacheName>\n");
+            printer.accept("\t<partitionId>\n");
+            printer.accept("\t\t<key>\n");
+            printer.accept("\t\t\t<nodeConsistentId>, <nodeId>: <value> <version>\n");
+            printer.accept("\t\t\t...\n");
+            printer.accept("\t\t\t<info on whether confilct is fixed>\n\n");
+
+            for (Map.Entry<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>>
                 cacheBoundedInconsistentKeysEntry : inconsistentKeys.entrySet()) {
 
                 String cacheName = cacheBoundedInconsistentKeysEntry.getKey();
 
-                for (Map.Entry<Integer, List<Map<UUID, PartitionReconciliationDataRowMeta>>> partitionBoundedInconsistentKeysEntry
+                printer.accept(cacheName + "\n");
+
+                for (Map.Entry<Integer, List<PartitionReconciliationDataRowMeta>> partitionBoundedInconsistentKeysEntry
                     : cacheBoundedInconsistentKeysEntry.getValue().entrySet()) {
-                    for (Map<UUID, PartitionReconciliationDataRowMeta> inconsistentKey: partitionBoundedInconsistentKeysEntry.getValue()) {
-                        StringBuilder recordBuilder = new StringBuilder();
+                    Integer part = partitionBoundedInconsistentKeysEntry.getKey();
 
-                        Integer part = partitionBoundedInconsistentKeysEntry.getKey();
+                    printer.accept("\t" + part + "\n");
 
-                        recordBuilder.append("Inconsistent key found: [cache='").append(cacheName).append("'");
+                    for (PartitionReconciliationDataRowMeta inconsistentDataRow :
+                        partitionBoundedInconsistentKeysEntry.getValue()) {
+                        printer.accept("\t\t" + inconsistentDataRow.keyMeta().stringView(verbose) + "\n");
 
-                        recordBuilder.append(", partition=").append(part);
-
-                        for (Map.Entry<UUID, PartitionReconciliationDataRowMeta> nodesBoundedInconsistentKeysEntry
-                            : inconsistentKey.entrySet()) {
-                            UUID nodeId = nodesBoundedInconsistentKeysEntry.getKey();
-
-                            PartitionReconciliationDataRowMeta dataRow = nodesBoundedInconsistentKeysEntry.getValue();
-
-                            recordBuilder.append(", nodeId=").append(nodeId);
-
-                            recordBuilder.append(", dataRow=").append(dataRow);
+                        for (Map.Entry<UUID, PartitionReconciliationValueMeta> valMap :
+                            inconsistentDataRow.valueMeta().entrySet()) {
+                            printer.accept("\t\t\t" + nodesIdsToConsistenseIdsMap.get(valMap.getKey()) + " " +
+                                U.id8(valMap.getKey()) + ": " + valMap.getValue().stringView(verbose) + "\n");
                         }
 
-                        recordBuilder.append("]\n");
-
-                        printer.accept(recordBuilder.toString());
+                        if (inconsistentDataRow.repairMeta() != null) {
+                            printer.accept("\n\t\t\t" +
+                                inconsistentDataRow.repairMeta().stringView(verbose) + "\n\n");
+                        }
                     }
                 }
             }
