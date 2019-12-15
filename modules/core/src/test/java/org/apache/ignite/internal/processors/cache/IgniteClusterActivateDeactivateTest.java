@@ -61,16 +61,14 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.lesserOf;
 import static org.apache.ignite.testframework.GridTestUtils.assertActive;
-import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertInactive;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
-import static org.junit.Assert.assertTrue;
 
 /**
  *
