@@ -31,7 +31,9 @@ namespace Apache.Ignite.Core.Log
             Justification = "Type is immutable.")]
         public static readonly LocalDateTimeProvider Instance = new LocalDateTimeProvider();
         
-        /** <inheritDoc /> */
+        /// <summary>
+        /// Gets current <see cref="DateTime"/>.
+        /// </summary>
         public DateTime Now()
         {
             return DateTime.Now;

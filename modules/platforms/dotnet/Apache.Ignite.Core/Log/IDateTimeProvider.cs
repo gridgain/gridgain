@@ -24,7 +24,7 @@ namespace Apache.Ignite.Core.Log
     public interface IDateTimeProvider
     {
         /// <summary>
-        /// Gets current DateTime.
+        /// Gets current <see cref="DateTime"/>.
         /// </summary>
         DateTime Now();
     }
