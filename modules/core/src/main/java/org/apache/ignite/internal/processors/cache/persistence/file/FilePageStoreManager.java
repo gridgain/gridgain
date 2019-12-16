@@ -41,6 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -1068,7 +1069,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
 
                 CacheStore holder0 = null;
 
-                if (gDesc != null && CU.isPersistentCache(gDesc.config(), cctx.gridConfig().getDataStorageConfiguration())) {
+                if (gDesc != null && CU.isPersistentCache(gDesc.config(), dsCfg)) {
                     try {
                         holder0 = initForCache(gDesc, gDesc.config());
                     }
@@ -1094,7 +1095,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      */
     public Collection<PageStore> getStores(int grpId) throws IgniteCheckedException {
         CacheStore cacheStore = getHolder(grpId);
-        
+
         return cacheStore != null ? cacheStore.cacheStores() : null;
     }
 
