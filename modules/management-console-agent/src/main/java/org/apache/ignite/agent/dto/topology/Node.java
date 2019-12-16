@@ -76,6 +76,7 @@ public class Node {
      *
      * @param nid Node ID.
      * @param consistentId Consistent ID.
+     * @param order Node order.
      * @param client Client flag.
      * @param baselineNode Is baseline node.
      * @param attrs Node attributes.
@@ -155,7 +156,7 @@ public class Node {
     }
 
     /**
-     * @param order Order.
+     * @param order Node order. Will return {@code -1} for baseline node.
      * @return {@code This} for chaining method calls.
      */
     public Node setOrder(long order) {
