@@ -40,7 +40,7 @@ public class QueryArgument {
     /** Enforce join order flag. */
     private boolean enforceJoinOrder;
 
-    /** Is should be run local. */
+    /** Is should be run locally. */
     private boolean isLoc;
 
     /** Result batch size. */
