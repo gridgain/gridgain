@@ -204,7 +204,12 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_STARVATION_CHECK_INTERVAL, value = "10")
     public void testContainsStarvationQryPoolInLog() throws Exception {
-        checkStarvationQryPoolInLog(10_000, true);
+        checkStarvationQryPoolInLog(
+            10_000,
+            "Possible thread pool starvation detected (no task completed in last 10ms, is query thread pool size " +
+                "large enough?)",
+            true
+        );
     }
 
     /**
@@ -215,17 +220,22 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_STARVATION_CHECK_INTERVAL, value = "0")
     public void testNotContainsStarvationQryPoolInLog() throws Exception {
-        checkStarvationQryPoolInLog(1_000, false);
+        checkStarvationQryPoolInLog(
+            1_000,
+            "Possible thread pool starvation detected (no task completed in",
+            false
+        );
     }
 
     /**
      * Check messages about starvation query pool in log.
      *
      * @param checkTimeout Check timeout.
+     * @param findLogMsg Log message of interest.
      * @param contains Expect whether or not messages are in log.
      * @throws Exception If failed.
      */
-    private void checkStarvationQryPoolInLog(long checkTimeout, boolean contains) throws Exception {
+    private void checkStarvationQryPoolInLog(long checkTimeout, String findLogMsg ,boolean contains) throws Exception {
         qryPoolSize = 1;
 
         startGrid("server");
@@ -239,8 +249,7 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
 
         CyclicBarrier barrier = new CyclicBarrier(qrySize);
 
-        LogListener logLsnr = LogListener.matches("Possible thread pool starvation detected (no task completed in " +
-            "last 10ms, is query thread pool size large enough?)").build();
+        LogListener logLsnr = LogListener.matches(findLogMsg).build();
 
         testLog.registerListener(logLsnr);
 
