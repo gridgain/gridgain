@@ -24,6 +24,8 @@ namespace Apache.Ignite.Core.Tests.Client
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
+    using Apache.Ignite.Core.Impl.Client;
+    using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
@@ -81,6 +83,7 @@ namespace Apache.Ignite.Core.Tests.Client
         public void FixtureTearDown()
         {
             Ignition.StopAll(true);
+            Client.Dispose();
         }
 
         /// <summary>
@@ -141,8 +144,9 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             return new IgniteClientConfiguration
             {
-                Endpoints = new List<string> { IPAddress.Loopback.ToString() },
-                SocketTimeout = TimeSpan.FromSeconds(15)
+                Endpoints = new List<string> {IPAddress.Loopback.ToString()},
+                SocketTimeout = TimeSpan.FromSeconds(15),
+                Logger = new ListLogger(new ConsoleLogger {MinLevel = LogLevel.Trace})
             };
         }
 
@@ -194,6 +198,17 @@ namespace Apache.Ignite.Core.Tests.Client
             return ToBinary(new Person(id) { DateTime = DateTime.MinValue.ToUniversalTime() });
         }
 
+        /// <summary>
+        /// Gets the logs.
+        /// </summary>
+        protected List<ListLogger.Entry> GetLogs(IIgniteClient client)
+        {
+            var igniteClient = (IgniteClient) client;
+            var logger = igniteClient.GetConfiguration().Logger;
+            var listLogger = (ListLogger) logger;
+            return listLogger.Entries;
+        }
+        
         /// <summary>
         /// Asserts the client configs are equal.
         /// </summary>
