@@ -61,6 +61,18 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     /** Set SSL context factory to ignite. */
     private static boolean setSslCtxFactoryToIgnite;
 
+    /** Suppoerted ciphers. */
+    private static String[] supportedCiphers;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        setSslCtxFactoryToCli = false;
+        setSslCtxFactoryToIgnite = false;
+        supportedCiphers = null;
+    }
+
     /** {@inheritDoc} */
     @SuppressWarnings("deprecation")
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -201,6 +213,26 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
             "&sslFactory=" + TestSSLFactory.class.getName())) {
+            checkConnection(conn);
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCustomCiphers() throws Exception {
+        setSslCtxFactoryToCli = true;
+        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
+        sslCtxFactory = getTestSslContextFactory();
+
+        startGrids(1);
+
+        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+            "&cipherSuites=TLS_RSA_WITH_NULL_SHA256")) {
             checkConnection(conn);
         }
         finally {
@@ -400,7 +432,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Default algorithm definitions for TrustManager and/or KeyManager are invalid");
+            }, SQLException.class, "Unsupported keystore algorithm.");
         }
         finally {
             stopAllGrids();
@@ -458,6 +490,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     private static Factory<SSLContext> getTestSslContextFactory() {
         SslContextFactory factory = new SslContextFactory();
 
+        factory.setCipherSuites(supportedCiphers);
         factory.setKeyStoreFilePath(SRV_KEY_STORE_PATH);
         factory.setKeyStorePassword("123456".toCharArray());
         factory.setTrustStoreFilePath(TRUST_KEY_STORE_PATH);

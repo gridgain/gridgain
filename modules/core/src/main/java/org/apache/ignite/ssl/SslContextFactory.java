@@ -20,21 +20,31 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.configuration.Factory;
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.util.typedef.internal.A;
 
 /**
@@ -337,6 +347,8 @@ public class SslContextFactory implements Factory<SSLContext> {
     private SSLContext createSslContext() throws SSLException {
         checkParameters();
 
+        final KeyManager[] keyMgrs;
+
         try {
             KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(keyAlgorithm);
 
@@ -344,18 +356,40 @@ public class SslContextFactory implements Factory<SSLContext> {
 
             keyMgrFactory.init(keyStore, keyStorePwd);
 
-            TrustManager[] mgrs = trustMgrs;
+            keyMgrs = keyMgrFactory.getKeyManagers();
+        }
+        catch (UnrecoverableKeyException e) {
+            throw new SSLException("Could not recover keys from client keystore.", e);
+        }
+        catch (NoSuchAlgorithmException e) {
+            throw new SSLException("Unsupported keystore algorithm.", e);
+        }
+        catch (KeyStoreException e) {
+            throw new SSLException("Could not create client KeyStore instance.", e);
+        }
 
-            if (mgrs == null) {
+        TrustManager[] trustMgrs = this.trustMgrs;
+
+        if (trustMgrs == null) {
+            try {
+
                 TrustManagerFactory trustMgrFactory = TrustManagerFactory.getInstance(keyAlgorithm);
 
                 KeyStore trustStore = loadKeyStore(trustStoreType, trustStoreFilePath, trustStorePwd);
 
                 trustMgrFactory.init(trustStore);
 
-                mgrs = trustMgrFactory.getTrustManagers();
+                trustMgrs = trustMgrFactory.getTrustManagers();
             }
+            catch (NoSuchAlgorithmException e) {
+                throw new SSLException("Unsupported keystore algorithm.", e);
+            }
+            catch (KeyStoreException e) {
+                throw new SSLException("Could not create trust KeyStore instance.", e);
+            }
+        }
 
+        try {
             SSLContext ctx = SSLContext.getInstance(proto);
 
             if (cipherSuites != null || protocols != null) {
@@ -370,12 +404,16 @@ public class SslContextFactory implements Factory<SSLContext> {
                 ctx = new SSLContextWrapper(ctx, sslParameters);
             }
 
-            ctx.init(keyMgrFactory.getKeyManagers(), mgrs, null);
+
+            ctx.init(keyMgrs, trustMgrs, null);
 
             return ctx;
         }
-        catch (GeneralSecurityException e) {
-            throw new SSLException("Failed to initialize SSL context " + parameters(), e);
+        catch (NoSuchAlgorithmException e) {
+            throw new SSLException(proto + " is not a valid SSL protocol.", e);
+        }
+        catch (KeyManagementException e) {
+            throw new SSLException("Cannot init SSL context.", e);
         }
     }
 
