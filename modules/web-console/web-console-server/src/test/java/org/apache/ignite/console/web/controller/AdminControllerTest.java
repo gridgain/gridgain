@@ -17,7 +17,7 @@
 package org.apache.ignite.console.web.controller;
 
 import java.util.Collection;
-import org.apache.ignite.console.TestGridConfiguration;
+import org.apache.ignite.console.AbstractSelfTest;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.services.AdminService;
@@ -26,13 +26,9 @@ import org.apache.ignite.console.web.model.SignUpRequest;
 import org.apache.ignite.console.web.model.UserResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -42,24 +38,18 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.junit4.SpringRunner;
 
-import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
-import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
 import static org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME;
 
 /**
  * Tests for admin controller.
  */
-@RunWith(SpringRunner.class)
 @ActiveProfiles("test")
-@SpringBootTest(classes = {TestGridConfiguration.class}, webEnvironment = RANDOM_PORT)
-public class AdminControllerTest {
+public class AdminControllerTest extends AbstractSelfTest {
     /** Administration email. */
     private static final String ADMIN_EMAIL = "admin@test.com";
 
@@ -85,24 +75,6 @@ public class AdminControllerTest {
     /** Latest cookies. */
     private String latestCookies;
 
-    /**
-     * @throws Exception If failed.
-     */
-    @BeforeClass
-    public static void setup() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @AfterClass
-    public static void tearDown() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-    
     /** */
     @Before
     public void init() {

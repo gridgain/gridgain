@@ -84,10 +84,12 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
                 if (email == null)
                     ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, email = acc.getEmail());
 
+                sessionsCache.put(ses.getId(), new MapSession(ses));
+                
                 accToSesIdx.add(email, ses.getId());
             }
-
-            sessionsCache.put(ses.getId(), new MapSession(ses));
+            else
+                sessionsCache.put(ses.getId(), new MapSession(ses));
         });
     }
 
