@@ -16,15 +16,12 @@
 
 import {Selector} from 'testcafe';
 
-export const importDBButton = Selector('.btn-ignite').withText('Import from Database');
+export const _previewDialog = Selector('modal-preview-project').find('.modal-dialog');
 
-export const _importDBDialog = Selector('h4').withText('Import domain models from database').parent('.modal-dialog');
-
-export const importDBDialog = {
-    dialog: _importDBDialog,
-    nextAction: _importDBDialog.find('button').withText('Next'),
-    saveAction: _importDBDialog.find('button').withText('Save'),
-    importImpossibleMsg: _importDBDialog.find('div').withText('Domain model could not be imported'),
-    driverSelectorField: _importDBDialog.find('#jdbcDriverJarInput'),
-    packageNameInput: _importDBDialog.find('#domainPackageNameInput')
+export const previewDialog = {
+    dialog: _previewDialog,
+    loadingOverview: _previewDialog.find('.loading'),
+    treeLabel: _previewDialog.find('.tree-label'),
+    textContent: _previewDialog.find('.ace_content'),
+    textComponent: _previewDialog.find('textarea')
 };
