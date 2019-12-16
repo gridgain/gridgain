@@ -17,20 +17,16 @@
 package org.apache.ignite.console.services;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.ignite.console.TestGridConfiguration;
+import org.apache.ignite.console.AbstractSelfTest;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
 import org.apache.ignite.console.json.JsonArray;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.web.model.SignUpRequest;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -38,15 +34,12 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.session.ExpiringSession;
 import org.springframework.session.FindByIndexNameSessionRepository;
-import org.springframework.test.context.junit4.SpringRunner;
 
 import static java.util.concurrent.TimeUnit.DAYS;
 import static junit.framework.TestCase.assertTrue;
 import static org.apache.ignite.console.common.Utils.SPRING_SECURITY_CONTEXT;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
-import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
-import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -54,9 +47,7 @@ import static org.mockito.Mockito.verify;
 /**
  * Admin service test.
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestGridConfiguration.class})
-public class AdminServiceTest {
+public class AdminServiceTest extends AbstractSelfTest {
     /** */
     private static final long MILLIS_IN_A_DAY = DAYS.toMillis(1);
 
@@ -71,24 +62,6 @@ public class AdminServiceTest {
     /** Sessions. */
     @Autowired
     private FindByIndexNameSessionRepository<ExpiringSession> sesRepo;
-
-    /**
-     * @throws Exception If failed.
-     */
-    @BeforeClass
-    public static void setup() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @AfterClass
-    public static void tearDown() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
 
     /**
      * Should publish event with ACCOUNT_DELETE type.

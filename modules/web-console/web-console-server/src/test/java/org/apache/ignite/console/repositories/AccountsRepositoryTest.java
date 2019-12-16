@@ -18,47 +18,19 @@ package org.apache.ignite.console.repositories;
 
 import java.util.UUID;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.console.TestGridConfiguration;
+import org.apache.ignite.console.AbstractSelfTest;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
-
-import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
-import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 
 /**
  * Accounts repository test.
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = TestGridConfiguration.class)
-public class AccountsRepositoryTest {
+public class AccountsRepositoryTest extends AbstractSelfTest {
     /** Accounts repository. */
     @Autowired
     private AccountsRepository accountsRepo;
-
-    /**
-     * @throws Exception If failed.
-     */
-    @BeforeClass
-    public static void setup() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @AfterClass
-    public static void tearDown() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
 
     /**
      * Should throw account not found.
