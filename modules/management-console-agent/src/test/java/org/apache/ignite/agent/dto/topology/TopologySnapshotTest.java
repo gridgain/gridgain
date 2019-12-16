@@ -119,8 +119,10 @@ public class TopologySnapshotTest {
 
             if (consistentNodeId_2.equals(node.getConsistentId())) {
                 assertTrue(node.isOnline());
-                assertEquals(2, node.getOrder());
                 assertFalse(node.isBaselineNode());
+                assertEquals(2, node.getOrder());
+                assertFalse(node.isClient());
+                assertEquals(clusterNodeId_2, node.getNodeId());
             }
         }
     }
@@ -146,6 +148,8 @@ public class TopologySnapshotTest {
 
         clusterNode_1.setAttributes(Collections.emptyMap());
 
+        clusterNode_1.order(1);
+
         UUID crdId = UUID.fromString("c-c-c-c-c");
 
         TopologySnapshot top = TopologySnapshot.topology(
@@ -163,6 +167,7 @@ public class TopologySnapshotTest {
             if (consistentNodeId_1.equals(node.getConsistentId())) {
                 assertTrue(node.isOnline());
                 assertFalse(node.isBaselineNode());
+                assertEquals(1, node.getOrder());
                 assertFalse(node.isClient());
                 assertEquals(clusterNodeId_1, node.getNodeId());
             }
