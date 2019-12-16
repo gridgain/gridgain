@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.console.TestGridConfiguration;
+import org.apache.ignite.console.AbstractSelfTest;
 import org.apache.ignite.console.common.SessionAttribute;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.json.JsonObject;
@@ -28,20 +28,13 @@ import org.apache.ignite.console.services.SessionsService;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketRequest;
 import org.apache.ignite.internal.util.typedef.F;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.socket.WebSocketSession;
 
-import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
-import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.apache.ignite.console.utils.Utils.entriesToMap;
 import static org.apache.ignite.console.utils.Utils.entry;
 import static org.apache.ignite.console.utils.Utils.fromJson;
@@ -61,9 +54,7 @@ import static org.mockito.Mockito.when;
 /**
  *  Transition service test.
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestGridConfiguration.class})
-public class BrowsersServiceSelfTest {
+public class BrowsersServiceSelfTest extends AbstractSelfTest {
     /** Browsers service. */
     @Autowired
     private BrowsersService browsersSrvc;
@@ -83,24 +74,6 @@ public class BrowsersServiceSelfTest {
     /** Ignite instance. */
     @Autowired
     private Ignite ignite;
-
-    /**
-     * @throws Exception If failed.
-     */
-    @BeforeClass
-    public static void setup() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @AfterClass
-    public static void tearDown() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
 
     /** */
     @Test

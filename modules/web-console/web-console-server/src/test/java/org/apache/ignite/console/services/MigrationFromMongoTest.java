@@ -24,7 +24,7 @@ import com.mongodb.client.MongoDatabase;
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.console.TestGridConfiguration;
+import org.apache.ignite.console.AbstractSelfTest;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.migration.MigrationFromMongo;
 import org.apache.ignite.console.repositories.AccountsRepository;
@@ -33,25 +33,17 @@ import org.bson.types.ObjectId;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
-import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
-import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
  * Test migration from MongoDB.
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(
-    classes = {TestGridConfiguration.class},
-    properties = {"migration.mongo.db.url=mongodb://localhost:27017/console"}
-)
-public class MigrationFromMongoTest {
+@SpringBootTest(properties = {"migration.mongo.db.url=mongodb://localhost:27017/console"})
+public class MigrationFromMongoTest extends AbstractSelfTest {
     /** */
     private static final String MONGO_DB_URL = "mongodb://localhost:27017/console";
 
@@ -86,25 +78,17 @@ public class MigrationFromMongoTest {
     private static MongoServer mongoSrv;
 
     /**
-     * @throws Exception If failed.
      */
     @BeforeClass
-    public static void setup() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-
+    public static void setup() {
         mongoSrv = new MongoServer(new MemoryBackend());
         mongoSrv.bind("localhost", 27017);
     }
 
     /**
-     * @throws Exception If failed.
      */
     @AfterClass
-    public static void tearDown() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-
+    public static void tearDown() {
         mongoSrv.shutdown();
     }
 

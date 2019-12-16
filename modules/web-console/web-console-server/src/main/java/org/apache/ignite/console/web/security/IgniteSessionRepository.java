@@ -78,17 +78,18 @@ public class IgniteSessionRepository implements FindByIndexNameSessionRepository
         txMgr.doInTransaction(() -> {
             Account acc = getPrincipal(ses);
 
-            String sesId = ses.getId();
-
             if (acc != null) {
-                String email = acc.getEmail();
+                String email = ses.getAttribute(PRINCIPAL_NAME_INDEX_NAME);
 
-                ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, acc.getEmail());
+                if (email == null)
+                    ses.setAttribute(PRINCIPAL_NAME_INDEX_NAME, email = acc.getEmail());
 
-                accToSesIdx.add(email, sesId);
+                sessionsCache.put(ses.getId(), new MapSession(ses));
+
+                accToSesIdx.add(email, ses.getId());
             }
-
-            sessionsCache.put(ses.getId(), new MapSession(ses));
+            else
+                sessionsCache.put(ses.getId(), new MapSession(ses));
         });
     }
 
