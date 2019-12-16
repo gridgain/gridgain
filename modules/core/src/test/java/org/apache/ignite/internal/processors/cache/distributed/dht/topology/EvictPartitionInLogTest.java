@@ -264,8 +264,6 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
     private Collection<Integer> parseContentCompactStr(String str) {
         assertNotNull(str);
 
-        S.compact(null);
-
         return of(str.split(","))
             .map(String::trim)
             .flatMap(s -> {
