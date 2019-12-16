@@ -507,20 +507,22 @@ public interface IgniteMXBean {
     public void resetMetrics(String registry);
 
     /**
-     * Checks cluster state. See {@link ClusterState}.
+     * Checks cluster state.
      *
-     * @return Current cluster state.
+     * @return String representation of current cluster state.
+     * See {@link ClusterState}.
      */
     @MXBeanDescription("Checks cluster state.")
-    public ClusterState clusterState();
+    public String clusterState();
 
     /**
-     * Changes current cluster state. See {@link ClusterState}.
+     * Changes current cluster state.
      *
-     * @param state New cluster state.
+     * @param state String representation of new cluster state.
+     * See {@link ClusterState}
      */
     @MXBeanDescription("Changes current cluster state.")
     @MXBeanParametersNames("state")
     @MXBeanParametersDescriptions("New cluster state.")
-    public void clusterState(ClusterState state);
+    public void clusterState(String state);
 }
