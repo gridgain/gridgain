@@ -17,6 +17,7 @@
 package org.apache.ignite.agent.testsuites;
 
 import org.apache.ignite.agent.ManagementConsoleProcessorTest;
+import org.apache.ignite.agent.ManagementConsoleProcessorTest.ManagementConsoleProcessorWithMockContextTest;
 import org.apache.ignite.agent.action.SessionRegistryTest;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationReaderTest;
 import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
@@ -33,11 +34,13 @@ import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
 import org.apache.ignite.agent.processor.CacheChangesProcessorTest;
 import org.apache.ignite.agent.processor.ClusterInfoProcessorTest;
 import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessorTest;
+import org.apache.ignite.agent.processor.ManagementConsoleSpanMessagesProcessorTest;
 import org.apache.ignite.agent.processor.action.DistributedActionProcessorTest;
 import org.apache.ignite.agent.processor.action.DistributedActionProcessorWithAuthenticationTest;
 import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
+import org.apache.ignite.agent.utils.AgentUtilsTest;
 import org.apache.ignite.agent.ws.RetryableSenderTest;
 import org.apache.ignite.agent.ws.WebSocketManagerTest;
 import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerSSLTest;
@@ -51,28 +54,31 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     ManagementConsoleProcessorTest.class,
+    ManagementConsoleProcessorWithMockContextTest.class,
+    SessionRegistryTest.class,
+    ActionControllerAnnotationReaderTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithAuthenticationBaseTest.class,
     BaselineActionsControllerTest.class,
-    CacheChangesProcessorTest.class,
     ClusterActionsControllerTest.class,
-    ClusterInfoProcessorTest.class,
-    ManagementConsoleMessagesProcessorTest.class,
-    DistributedActionProcessorTest.class,
-    DistributedActionProcessorWithAuthenticationTest.class,
-    IgniteConfigurationWrapperTest.class,
-    MetricsProcessorTest.class,
     QueryActionsControllerTest.class,
     QueryActionsControllerWithParametersTest.class,
-    QueryRegistryTest.class,
-    SessionRegistryTest.class,
     SecurityActionsControllerTest.class,
-    ActionControllerAnnotationReaderTest.class,
-    SpanExporterTest.class,
-    EventsExporterTest.class,
-    RetryableSenderTest.class,
+    QueryRegistryTest.class,
+    IgniteConfigurationWrapperTest.class,
     RequestDeserializerTest.class,
     TopologySnapshotTest.class,
+    CacheChangesProcessorTest.class,
+    ClusterInfoProcessorTest.class,
+    ManagementConsoleMessagesProcessorTest.class,
+    ManagementConsoleSpanMessagesProcessorTest.class,
+    DistributedActionProcessorTest.class,
+    DistributedActionProcessorWithAuthenticationTest.class,
+    EventsExporterTest.class,
+    SpanExporterTest.class,
+    MetricsProcessorTest.class,
+    AgentUtilsTest.class,
+    RetryableSenderTest.class,
     WebSocketManagerTest.class,
     WebSocketManagerSSLTest.class,
     WebSocketManagerTwoWaySSLTest.class
