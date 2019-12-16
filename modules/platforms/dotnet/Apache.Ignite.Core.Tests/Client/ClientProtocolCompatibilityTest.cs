@@ -107,7 +107,7 @@ namespace Apache.Ignite.Core.Tests.Client
         /// Tests that old client with new server can negotiate a protocol version.
         /// </summary>
         [Test]
-        public void TestClientOlderThanServerConnectsOnClientVersion([Values(0, 1, 2, 3, 4, 5)] short minor)
+        public void TestClientOlderThanServerConnectsOnClientVersion([Values(0, 1, 2, 3, 4)] short minor)
         {
             var version = new ClientProtocolVersion(1, minor, 0);
 
