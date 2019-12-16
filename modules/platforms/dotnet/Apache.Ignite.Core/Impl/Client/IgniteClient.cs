@@ -163,6 +163,7 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        [ExcludeFromCodeCoverage]
         public IIgnite GetIgnite()
         {
             throw GetClientNotSupportedException();
@@ -200,18 +201,21 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        [ExcludeFromCodeCoverage]
         public IgniteConfiguration Configuration
         {
             get { throw GetClientNotSupportedException(); }
         }
 
         /** <inheritDoc /> */
+        [ExcludeFromCodeCoverage]
         public HandleRegistry HandleRegistry
         {
             get { throw GetClientNotSupportedException(); }
         }
 
         /** <inheritDoc /> */
+        [ExcludeFromCodeCoverage]
         public ClusterNodeImpl GetNode(Guid? id)
         {
             throw GetClientNotSupportedException();
@@ -224,12 +228,14 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        [ExcludeFromCodeCoverage]
         public PluginProcessor PluginProcessor
         {
             get { throw GetClientNotSupportedException(); }
         }
 
         /** <inheritDoc /> */
+        [ExcludeFromCodeCoverage]
         public IDataStreamer<TK, TV> GetDataStreamer<TK, TV>(string cacheName, bool keepBinary)
         {
             throw GetClientNotSupportedException();
