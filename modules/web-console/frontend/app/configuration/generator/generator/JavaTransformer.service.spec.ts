@@ -42,6 +42,9 @@ suite('Java transformer tests', () => {
     const _addCacheConfiguration = (cfg, cacheCfg, count = 1) => {
         const caches = find(cfg.properties, {name: 'cacheConfiguration'});
 
+        // Creation from sting 10x faster then cloneDeep.
+        const cacheCfgStr = JSON.stringify(cacheCfg);
+
         if (caches) {
             for (let i = 0; i < count; i++) {
                 const nameProp = {
@@ -50,7 +53,7 @@ suite('Java transformer tests', () => {
                     value: `Cache${i}`
                 };
 
-                const cache = cloneDeep(cacheCfg);
+                const cache = JSON.parse(cacheCfgStr);
 
                 cache.properties.push(nameProp);
                 caches.items.push(cache);
