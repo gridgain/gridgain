@@ -55,21 +55,6 @@ public class TestGridConfiguration {
         return new IgniteSessionRepository(10_000L, ignite, txMgr);
     }
 
-    /**
-     * We overriding ignite creation bean for cases where the application context
-     * needs to be recreated with the already running ignite instance.
-     *
-     * @param cfg Grid configuration.
-     */
-    @Bean(destroyMethod = "close")
-    public IgniteEx igniteInstance(@Autowired IgniteConfiguration cfg) throws IgniteCheckedException {
-        IgniteEx ignite = (IgniteEx) IgnitionEx.start(cfg, false);
-
-        ignite.cluster().active(true);
-
-        return ignite;
-    }
-
     @Bean
     public RestTemplateBuilder restTemplateBuilder() {
         return new RestTemplateBuilder().requestFactory(SimpleClientHttpRequestFactory.class);
