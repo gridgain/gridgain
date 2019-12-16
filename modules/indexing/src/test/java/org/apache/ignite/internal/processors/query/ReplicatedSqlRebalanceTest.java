@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -52,8 +51,6 @@ public class ReplicatedSqlRebalanceTest extends AbstractIndexingCommonTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setCacheMode(CacheMode.REPLICATED)
-            // t0d0 check!
-            .setRebalanceMode(CacheRebalanceMode.ASYNC)
             .setIndexedTypes(Integer.class, Integer.class);
 
         return super.getConfiguration(igniteInstanceName)
