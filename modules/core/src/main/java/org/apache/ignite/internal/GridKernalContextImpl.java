@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
@@ -92,6 +93,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.processors.tracing.TracingProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
+import org.apache.ignite.internal.stat.IoStatisticsManager;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
 import org.apache.ignite.internal.util.StripedExecutor;
@@ -328,6 +330,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
+    private ManagementConsoleProcessorAdapter mgmtConsoleProc;
+
+    /** */
+    @GridToStringExclude
     private List<GridComponent> comps = new LinkedList<>();
 
     /** */
@@ -444,6 +450,9 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** Recovery mode flag. Flag is set to {@code false} when discovery manager started. */
     private boolean recoveryMode = true;
 
+    /** IO statistics manager. */
+    private IoStatisticsManager ioStatMgr;
+
     /**
      * No-arg constructor is required by externalization.
      */
@@ -543,6 +552,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
                 log.debug("Failed to load spring component, will not be able to extract userVersion from " +
                     "META-INF/ignite.xml.");
         }
+
+        ioStatMgr = new IoStatisticsManager();
     }
 
     /** {@inheritDoc} */
@@ -680,6 +691,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             diagnosticProcessor = (DiagnosticProcessor)comp;
         else if (comp instanceof RollingUpgradeProcessor)
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
+        else if (comp instanceof ManagementConsoleProcessorAdapter)
+            mgmtConsoleProc = (ManagementConsoleProcessorAdapter)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();
@@ -1195,6 +1208,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         return internalSubscriptionProc;
     }
 
+    /** {@inheritDoc} */
+    @Override public IoStatisticsManager ioStats() {
+        return ioStatMgr;
+    }
+
     /**
      * @param disconnected Disconnected flag.
      */
@@ -1255,6 +1273,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public RollingUpgradeProcessor rollingUpgrade() {
         return rollingUpgradeProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ManagementConsoleProcessorAdapter managementConsole() {
+        return mgmtConsoleProc;
     }
 
     /** {@inheritDoc} */

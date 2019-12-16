@@ -20,6 +20,12 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.IgniteFeatures.INDEXING;
+import static org.apache.ignite.internal.IgniteFeatures.MANAGEMENT_CONSOLE;
+import static org.apache.ignite.internal.IgniteFeatures.TRACING;
+import static org.apache.ignite.internal.IgniteFeatures.WC_SCHEDULING_NOT_AVAILABLE;
+import static org.apache.ignite.internal.IgniteFeatures.allFeatures;
+
 /**
  * The test checks that some features is not available in ignite core module.
  */
@@ -34,19 +40,27 @@ public class FeaturesIsNotAvailableTest extends GridCommonAbstractTest {
         stopGrid();
     }
 
-    /**
-     * @throws Exception If failed.
-     */
+    /** */
     @Test
-    public void indexingFeatureIsNotAvailable() throws Exception {
-        assertFalse(IgniteFeatures.nodeSupports(IgniteFeatures.allFeatures(grid().context()), IgniteFeatures.INDEXING));
+    public void testIndexingFeatureIsNotAvailable() {
+        assertFalse(IgniteFeatures.nodeSupports(allFeatures(grid().context()), INDEXING));
     }
 
-    /**
-     * @throws Exception If failed.
-     */
+    /** */
     @Test
-    public void schedulingFeatureIsNotAvailable() throws Exception {
-        assertTrue(IgniteFeatures.nodeSupports(IgniteFeatures.allFeatures(grid().context()), IgniteFeatures.WC_SCHEDULING_NOT_AVAILABLE));
+    public void testTracingFeatureIsNotAvailable() {
+        assertFalse(IgniteFeatures.nodeSupports(allFeatures(grid().context()), TRACING));
+    }
+
+    /** */
+    @Test
+    public void testManagementConsoleFeatureIsNotAvailable() {
+        assertFalse(IgniteFeatures.nodeSupports(allFeatures(grid().context()), MANAGEMENT_CONSOLE));
+    }
+
+    /** */
+    @Test
+    public void schedulingFeatureIsNotAvailable() {
+        assertTrue(IgniteFeatures.nodeSupports(allFeatures(grid().context()), WC_SCHEDULING_NOT_AVAILABLE));
     }
 }

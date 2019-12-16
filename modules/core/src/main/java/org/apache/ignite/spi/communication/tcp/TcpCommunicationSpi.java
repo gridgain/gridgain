@@ -478,7 +478,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                             ", rmtAddr=" + ses.remoteAddress() + ']');
 
                     try {
-                        if (ctxInitLatch.getCount() == 0 || !isHandshakeWaitSupported()) {
+                        boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
+
+                        if (client || ctxInitLatch.getCount() == 0 || !isHandshakeWaitSupported()) {
                             if (log.isDebugEnabled())
                                 log.debug("Sending local node ID to newly accepted session: " + ses);
 
@@ -3448,6 +3450,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         }
 
         for (InetSocketAddress addr : addrs) {
+            if (addr.isUnresolved())
+                continue;
+
             TimeoutStrategy connTimeoutStgy = new ExponentialBackoffTimeoutStrategy(
                 totalTimeout,
                 failureDetectionTimeoutEnabled() ? DFLT_INITIAL_TIMEOUT : connTimeout,
@@ -4197,7 +4202,10 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return Node ID message.
      */
     private NodeIdMessage nodeIdMessage() {
-        return new NodeIdMessage(safeLocalNodeId());
+        final UUID locNodeId = (ignite instanceof IgniteEx) ? ((IgniteEx)ignite).context().localNodeId() :
+            safeLocalNodeId();
+
+        return new NodeIdMessage(locNodeId);
     }
 
     /**

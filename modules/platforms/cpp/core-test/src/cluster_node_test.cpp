@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
 #include <boost/test/unit_test.hpp>
 
 #include <ignite/ignition.h>
@@ -234,8 +236,8 @@ BOOST_AUTO_TEST_CASE(IgniteGetOrder)
 
     BOOST_REQUIRE(nodes.size() == 2);
 
-    long order1 = nodes[0].GetOrder();
-    long order2 = nodes[1].GetOrder();
+    int64_t order1 = nodes[0].GetOrder();
+    int64_t order2 = nodes[1].GetOrder();
 
     BOOST_REQUIRE(order1 > 0 && order2 > 0);
 }
@@ -258,3 +260,5 @@ BOOST_AUTO_TEST_CASE(IgniteGetVersion)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
+
+#endif // GRIDGAIN_ENABLE_CLUSTER_API

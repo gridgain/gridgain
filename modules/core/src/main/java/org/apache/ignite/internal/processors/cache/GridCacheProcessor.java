@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import javax.management.MBeanServer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -37,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import javax.management.MBeanServer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -901,6 +901,17 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     @SuppressWarnings({"unchecked"})
     private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy) {
+        stopCache(cache, cancel, destroy, true);
+    }
+
+    /**
+     * @param cache Cache to stop.
+     * @param cancel Cancel flag.
+     * @param destroy Destroy data flag. Setting to <code>true</code> will remove all cache data.
+     * @param clearDbObjects If {@code false} DB objects don't removed (used for cache.close() on client node).
+     */
+    @SuppressWarnings({"unchecked"})
+    private void stopCache(GridCacheAdapter<?, ?> cache, boolean cancel, boolean destroy, boolean clearDbObjects) {
         GridCacheContext ctx = cache.context();
 
         try {
@@ -920,7 +931,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
-            ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || destroy);
+            if (!clearDbObjects)
+                ctx.kernalContext().query().getIndexing().closeCacheOnClient(ctx.name());
+            else
+                ctx.kernalContext().query().onCacheStop(cacheInfo, !cache.context().group().persistenceEnabled() || destroy);
 
             if (isNearEnabled(ctx)) {
                 GridDhtCacheAdapter dht = ctx.near().dht();
@@ -1928,10 +1942,28 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param cctx Cache context.
      */
     private void stopCacheSafely(GridCacheContext<?, ?> cctx) {
+        stopCacheSafely(cctx, true);
+    }
+
+    /**
+     * Stops cache under checkpoint lock.
+     *
+     * @param cctx Cache context.
+     * @param clearDbObjects If {@code false} DB objects don't removed (used for cache.close() on client node).
+     * The parameters was added due to make differ between cache.close() on client node and distributed destroy cache
+     * (e.g. call cache.destroy()).
+     *
+     * Before add the parameter {@code clearDbObjects}:
+     * when on client node is joined we initialize H2 objects for all caches in cluster,
+     * but on client cache.close() we destroy part of created objects,
+     * making impossible running SQL queries on that cache;
+     * clientCache.close() should restore status quo of state right after client join instead).
+     */
+    private void stopCacheSafely(GridCacheContext<?, ?> cctx, boolean clearDbObjects) {
         sharedCtx.database().checkpointReadLock();
 
         try {
-            prepareCacheStop(cctx.name(), false);
+            prepareCacheStop(cctx.name(), false, clearDbObjects);
 
             if (!cctx.group().hasCaches())
                 stopCacheGroup(cctx.group().groupId());
@@ -2468,6 +2500,16 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return Stopped cache context.
      */
     public GridCacheContext<?, ?> prepareCacheStop(String cacheName, boolean destroy) {
+        return prepareCacheStop(cacheName, destroy, true);
+    }
+
+    /**
+     * @param cacheName Cache name.
+     * @param destroy Cache data destroy flag. Setting to <code>true</code> will remove all cache data.
+     * @param clearDbObjects If {@code false} DB objects don't removed (used for cache.close() on client node).
+     * @return Stopped cache context.
+     */
+    public GridCacheContext<?, ?> prepareCacheStop(String cacheName, boolean destroy, boolean clearDbObjects) {
         assert sharedCtx.database().checkpointLockIsHeldByThread();
 
         GridCacheAdapter<?, ?> cache = caches.remove(cacheName);
@@ -2479,7 +2521,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             onKernalStop(cache, true);
 
-            stopCache(cache, true, destroy);
+            stopCache(cache, true, destroy, clearDbObjects);
 
             return ctx;
         }
@@ -2572,12 +2614,22 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                 jCacheProxies.remove(cctx.name());
 
-                stopCacheSafely(cctx);
+                closeCacheOnNotAffinityNode(cctx);
             }
             finally {
                 sharedCtx.io().writeUnlock();
             }
         }
+    }
+
+    /**
+     * @param cctx Cache context to close.
+     */
+    private void closeCacheOnNotAffinityNode(GridCacheContext cctx) {
+        if (ctx.query().moduleEnabled())
+            stopCacheSafely(cctx, false);
+        else
+            stopCacheSafely(cctx);
     }
 
     /**

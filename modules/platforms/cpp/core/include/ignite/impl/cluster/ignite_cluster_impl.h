@@ -17,6 +17,8 @@
 #ifndef _IGNITE_IMPL_CLUSTER_IGNITE_CLUSTER_IMPL
 #define _IGNITE_IMPL_CLUSTER_IGNITE_CLUSTER_IMPL
 
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
 #include <ignite/common/concurrent.h>
 #include <ignite/jni/java.h>
 
@@ -88,19 +90,33 @@ namespace ignite
                 bool IsWalEnabled(std::string cacheName);
 
                 /**
+                 * Get a cluster group consisting from the local node.
+                 *
+                 * @return Cluster group consisting from the local node.
+                 */
+                ignite::cluster::ClusterGroup ForLocal();
+
+                /**
+                 * Get local grid node.
+                 *
+                 * @return Local node.
+                 */
+                ignite::cluster::ClusterNode GetLocalNode();
+
+                /**
                  * Set baseline topology constructed from the cluster topology of the given version.
                  * The method succeeds only if the cluster topology has not changed.
                  *
                  * @param topVer Topology version.
                  */
-                void SetBaselineTopologyVersion(long topVer);
+                void SetBaselineTopologyVersion(int64_t topVer);
 
                 /**
                  * Set transaction timeout on partition map exchange.
                  *
                  * @param timeout Timeout in milliseconds.
                  */
-                void SetTxTimeoutOnPartitionMapExchange(long timeout);
+                void SetTxTimeoutOnPartitionMapExchange(int64_t timeout);
 
                 /**
                  * Ping node.
@@ -116,14 +132,14 @@ namespace ignite
                  * @param version Topology version.
                  * @return Nodes collection for the requested topology version.
                  */
-                std::vector<ignite::cluster::ClusterNode> GetTopology(long version);
+                std::vector<ignite::cluster::ClusterNode> GetTopology(int64_t version);
 
                 /**
                  * Get current topology version.
                  *
                  * @return Current topology version.
                  */
-                long GetTopologyVersion();
+                int64_t GetTopologyVersion();
 
                 /**
                  * Get cluster group consisting of all cluster nodes.
@@ -142,4 +158,5 @@ namespace ignite
     }
 }
 
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 #endif //_IGNITE_IMPL_CLUSTER_IGNITE_CLUSTER_IMPL

@@ -37,6 +37,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.demo.service.DemoCachesLoadService;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.console.utils.Utils;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.typedef.F;
@@ -162,7 +163,7 @@ public class RestExecutorSelfTest {
     private JsonNode toJson(RestResult res) throws IOException {
         assertNotNull(res);
 
-        String data = res.getData();
+        String data = res.getResponse();
 
         assertNotNull(data);
         assertFalse(data.isEmpty());

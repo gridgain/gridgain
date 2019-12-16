@@ -14,12 +14,35 @@
  * limitations under the License.
  */
 
+import _ from 'lodash';
+
 export const taskResult = (result) => ({
-    data: {result},
+    response: {result},
     error: null,
     sessionToken: null,
-    status: 0
+    successStatus: 0
 });
+
+/**
+ * Generate features set with ids from 0 to 95.
+ *
+ * @param {Array<number>} excluded Array with features to exclude.
+ * @return {string} Base64 coded string of enabled features.
+ */
+export const generateIgniteFeatures = (excluded = []) => {
+    const res = Buffer.alloc(12);
+
+    for (let i = 0; i < res.length * 8; i ++) {
+        if (_.indexOf(excluded, i) < 0) {
+            const idx = Math.floor(i / (res.BYTES_PER_ELEMENT * 8));
+            const shift = i % (res.BYTES_PER_ELEMENT * 8);
+
+            res[idx] = res[idx] ^ (1 << shift);
+        }
+    }
+
+    return res.toString('base64');
+};
 
 export const DFLT_FAILURE_RESPONSE = {message: 'Expected error'};
 
@@ -64,13 +87,15 @@ export const simeplFakeSQLQuery = (nid, response) => (ws) => {
     });
 };
 
+export const WC_SCHEDULING_NOT_AVAILABLE = 24;
+
 const CLUSTER_1 = {
     id: '70831a7c-2b5e-4c11-8c08-5888911d5962',
     name: 'Cluster 1',
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: '+/l9',
+    supportedFeatures: generateIgniteFeatures([WC_SCHEDULING_NOT_AVAILABLE]),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe3': {
             address: '10.0.75.1',
@@ -85,7 +110,7 @@ const CLUSTER_2 = {
     clusterVersion: '8.8.0-SNAPSHOT',
     active: true,
     secured: false,
-    supportedFeatures: '+/l9',
+    supportedFeatures: generateIgniteFeatures([WC_SCHEDULING_NOT_AVAILABLE]),
     nodes: {
         '143048f1-b5b8-47d6-9239-fed76222efe4': {
             address: '10.0.75.1',
@@ -185,4 +210,18 @@ export const agentStat = (clusters) => (ws) => {
  */
 export const errorResponseForEventType = (eventType) => (ws) => {
     ws.errorOn(eventType, () => DFLT_FAILURE_RESPONSE);
+};
+
+export const TEST_JDBC_IMPORT_DATA = {
+    drivers: [{
+        'jdbcDriverJar': 'test-driver.jar',
+        'jdbcDriverClass': 'test.dvired.cls',
+        'jdbcDriverImplVersion': 'test.version'
+    }]
+};
+
+export const schemaImportRequest = (requestData) => (ws) => {
+    ws.on('schemaImport:drivers', (e) => {
+        return requestData.drivers;
+    });
 };

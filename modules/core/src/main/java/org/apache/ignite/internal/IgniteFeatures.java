@@ -63,8 +63,9 @@ public enum IgniteFeatures {
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
 
-    /** Support of cluster read-only mode. */
-    CLUSTER_READ_ONLY_MODE(9),
+//    TODO: https://ggsystems.atlassian.net/browse/GG-25084
+//    /** Support of cluster read-only mode. */
+//    CLUSTER_READ_ONLY_MODE(9),
 
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
@@ -108,7 +109,13 @@ public enum IgniteFeatures {
     WC_SCHEDULING_NOT_AVAILABLE(24),
 
     /** Support of DR-specific visor tasks used by control utility. */
-    DR_CONTROL_UTILITY(25);
+    DR_CONTROL_UTILITY(25),
+
+    /** */
+    TRACING(26),
+
+    /***/
+    MANAGEMENT_CONSOLE(28);
 
     /**
      * Unique feature identifier.
@@ -216,6 +223,14 @@ public enum IgniteFeatures {
 
             // Add only when indexing is enabled.
             if (INDEXING == value && !ctx.query().moduleEnabled())
+                continue;
+
+            // Add only when tracing is enabled.
+            if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
+                continue;
+
+            // Add only when management console is enabled.
+            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 
             // Add only when scheduling is disabled.

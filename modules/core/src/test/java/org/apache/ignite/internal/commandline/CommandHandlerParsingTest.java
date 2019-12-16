@@ -282,7 +282,8 @@ public class CommandHandlerParsingTest {
             cmd == CommandList.WAL ||
             cmd == CommandList.ROLLING_UPGRADE ||
             cmd == CommandList.CLUSTER_CHANGE_TAG ||
-            cmd == CommandList.DATA_CENTER_REPLICATION;
+            cmd == CommandList.DATA_CENTER_REPLICATION ||
+            cmd == CommandList.MANAGEMENT;
     }
 
 
@@ -355,9 +356,7 @@ public class CommandHandlerParsingTest {
             checkCommonParametersCorrectlyParsed(cmd, args, false);
 
             switch (cmd) {
-                case DEACTIVATE:
-                case READ_ONLY_DISABLE:
-                case READ_ONLY_ENABLE: {
+                case DEACTIVATE: {
                     args = parseArgs(asList(cmd.text(), "--yes"));
 
                     checkCommonParametersCorrectlyParsed(cmd, args, true);

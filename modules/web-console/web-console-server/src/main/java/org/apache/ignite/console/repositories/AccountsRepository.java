@@ -32,6 +32,7 @@ import org.springframework.security.authentication.AuthenticationServiceExceptio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Repository;
 
+import static org.apache.ignite.console.common.Utils.normalizeEmail;
 import static org.apache.ignite.console.errors.Errors.checkDatabaseNotAvailable;
 
 /**
@@ -60,7 +61,7 @@ public class AccountsRepository {
 
         txMgr.registerStarter(() ->
             accountsTbl = new Table<Account>(ignite, "wc_accounts")
-                .addUniqueIndex(a -> a.getUsername().trim().toLowerCase(),
+                .addUniqueIndex(a -> normalizeEmail(a.getEmail()),
                     (acc) -> messages.getMessageWithArgs("err.account-with-email-exists", acc.getUsername()))
                 .addUniqueIndex(Account::getToken,
                     (acc) -> messages.getMessageWithArgs("err.account-with-token-exists", acc.getToken()))
@@ -103,7 +104,7 @@ public class AccountsRepository {
     public Account getByEmail(String email) throws UsernameNotFoundException {
         return txMgr.doInTransaction(() -> {
             try {
-                Account account = accountsTbl.getByIndex(email);
+                Account account = accountsTbl.getByIndex(normalizeEmail(email));
 
                 if (account == null)
                     throw new UsernameNotFoundException(email);
@@ -127,24 +128,30 @@ public class AccountsRepository {
     }
 
     /**
+     * Put first user marker.
+     */
+    @SuppressWarnings("unchecked")
+    public void putFirstUserMarker() {
+        IgniteCache cache = accountsTbl.cache();
+
+        cache.put(FIRST_USER_MARKER_KEY, FIRST_USER_MARKER_KEY);
+    }
+
+    /**
      * Save account.
      *
      * @param acc Account to save.
      * @return Saved account.
      * @throws IgniteException if failed to save account.
      */
-    @SuppressWarnings("unchecked")
     public Account create(Account acc) throws AuthenticationServiceException {
         return txMgr.doInTransaction(() -> {
             boolean firstUser = !hasUsers();
 
             acc.setAdmin(firstUser);
 
-            if (firstUser) {
-                IgniteCache cache = accountsTbl.cache();
-
-                cache.put(FIRST_USER_MARKER_KEY, FIRST_USER_MARKER_KEY);
-            }
+            if (firstUser)
+                putFirstUserMarker();
 
             save(acc);
 
