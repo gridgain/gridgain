@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Common
+namespace Apache.Ignite.Core.Tests.Log
 {
     using System;
+    using Apache.Ignite.Core.Log;
 
     /// <summary>
-    /// Factory that produces instances of a specific type.
-    /// Implementation can be passed over the wire and thus should be marked with <see cref="SerializableAttribute"/>.
+    /// Provides fixed DateTime for tests.
     /// </summary>
-    public interface IFactory<out T>
+    public class FixedDateTimeProvider : IDateTimeProvider
     {
-        /// <summary>
-        /// Creates an instance of type <typeparamref name="T" />.
-        /// </summary>
-        /// <returns>New instance of type <typeparamref name="T" />.</returns>
-        T CreateInstance();
+        /** Fixed DateTime. */
+        public static DateTime DateTime = new DateTime(2001, 2, 3, 4, 5, 6);
+        
+        /** <inheritDoc /> */
+        public DateTime Now()
+        {
+            return DateTime;
+        }
     }
 }
