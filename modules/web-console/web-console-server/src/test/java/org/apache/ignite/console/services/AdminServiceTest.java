@@ -50,7 +50,6 @@ import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME;
 
 /**
  * Admin service test.
