@@ -525,4 +525,12 @@ public interface IgniteMXBean {
     @MXBeanParametersNames("state")
     @MXBeanParametersDescriptions("New cluster state.")
     public void clusterState(String state);
+
+    /**
+     * Gets last cluster state change operation.
+     *
+     * @return Unix time of last cluster state change operation.
+     */
+    @MXBeanDescription("Unix time of last cluster state change operation.")
+    public long lastClusterStateChangeTime();
 }

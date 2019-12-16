@@ -4421,6 +4421,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /** {@inheritDoc} */
+    @Override public long lastClusterStateChangeTime() {
+        return ctx.state().lastStateChangeTime();
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(IgniteKernal.class, this);
     }
