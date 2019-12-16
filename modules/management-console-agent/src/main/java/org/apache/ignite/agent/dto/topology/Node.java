@@ -50,6 +50,9 @@ public class Node {
     private String consistentId;
 
     /** */
+    private long order;
+
+    /** */
     private boolean client;
 
     /** */
@@ -80,12 +83,14 @@ public class Node {
     public Node(
         UUID nid,
         Object consistentId,
+        long order,
         boolean client,
         boolean baselineNode,
         Map<String, Object> attrs
     ) {
         this.nid = nid;
         this.consistentId = String.valueOf(consistentId);
+        this.order = order;
         this.client = client;
         this.baselineNode = baselineNode;
         this.attrs = attrs
@@ -93,6 +98,7 @@ public class Node {
             .stream()
             .filter(e -> ATTRS.contains(e.getKey()))
             .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
     }
 
     /**
@@ -101,7 +107,7 @@ public class Node {
      * @param node Cluster node.
      */
     public Node(ClusterNode node) {
-        this(node.id(), node.consistentId(), node.isClient(), false, node.attributes());
+        this(node.id(), node.consistentId(), node.order(), node.isClient(), false, node.attributes());
     }
 
     /**
@@ -110,7 +116,7 @@ public class Node {
      * @param node Baseline node.
      */
     public Node(BaselineNode node) {
-        this(null, node.consistentId(), false, true, node.attributes());
+        this(null, node.consistentId(), -1, false, true, node.attributes());
     }
 
     /**
@@ -139,6 +145,23 @@ public class Node {
      */
     public void setConsistentId(String consistentId) {
         this.consistentId = consistentId;
+    }
+
+    /**
+     * @return Order.
+     */
+    public long getOrder() {
+        return order;
+    }
+
+    /**
+     * @param order Order.
+     * @return {@code This} for chaining method calls.
+     */
+    public Node setOrder(long order) {
+        this.order = order;
+
+        return this;
     }
 
     /**
