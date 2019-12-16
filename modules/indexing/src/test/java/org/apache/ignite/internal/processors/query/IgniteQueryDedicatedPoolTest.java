@@ -204,6 +204,28 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_STARVATION_CHECK_INTERVAL, value = "10")
     public void testContainsStarvationQryPoolInLog() throws Exception {
+        checkStarvationQryPoolInLog(10_000, true);
+    }
+
+    /**
+     * Test to verify that there are no query pool starvation messages in log.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_STARVATION_CHECK_INTERVAL, value = "0")
+    public void testNotContainsStarvationQryPoolInLog() throws Exception {
+        checkStarvationQryPoolInLog(1_000, false);
+    }
+
+    /**
+     * Check messages about starvation query pool in log.
+     *
+     * @param checkTimeout Check timeout.
+     * @param contains Expect whether or not messages are in log.
+     * @throws Exception If failed.
+     */
+    private void checkStarvationQryPoolInLog(long checkTimeout, boolean contains) throws Exception {
         qryPoolSize = 1;
 
         startGrid("server");
@@ -237,7 +259,10 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
             });
         }
 
-        assertTrue(waitForCondition(logLsnr::check, 10_000));
+        if (contains)
+            assertTrue(waitForCondition(logLsnr::check, checkTimeout));
+        else
+            assertFalse(waitForCondition(logLsnr::check, checkTimeout));
     }
 
     /**
