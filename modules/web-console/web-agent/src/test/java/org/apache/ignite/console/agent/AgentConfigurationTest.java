@@ -16,6 +16,8 @@
 
 package org.apache.ignite.console.agent;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.URL;
 import org.junit.Test;
 
@@ -25,6 +27,29 @@ import static junit.framework.TestCase.assertNull;
  * Agent configuration tests.
  */
 public class AgentConfigurationTest {
+    /**
+     * GG-25379 Test case 1:
+     * 1. Start agent with test-empty.properties
+     * 2. Verify the User is prompted for token(s)
+     * 3. Enter single token
+     * 4. Verify the Agent configuration initialized with the token provided, without throwing errors/exceptions.
+     */
+    @Test
+    public void shoudPromptForToken() {
+        InputStream prev = System.in;
+
+        try {
+            URL cfgUrl = AgentConfiguration.class.getClassLoader().getResource("test-empty.properties");
+
+            System.setIn(new ByteArrayInputStream("test-token\n\n".getBytes()));
+
+            AgentLauncher.parseArgs(new String[] {"-c", cfgUrl.getFile()});
+        }
+        finally {
+            System.setIn(prev);
+        }
+    }
+
     /**
      * Should correctly load values from file with empty properties.
      *

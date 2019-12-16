@@ -28,7 +28,6 @@ import java.security.KeyStore;
 import java.security.ProtectionDomain;
 import java.security.UnrecoverableKeyException;
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -39,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import javax.crypto.SecretKey;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.console.websocket.WebSocketResponse;
 import org.apache.ignite.internal.util.typedef.F;
@@ -53,10 +53,9 @@ import org.eclipse.jetty.client.util.BasicAuthentication;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.websocket.api.Session;
 
-import javax.crypto.SecretKey;
-
 import static java.net.Proxy.NO_PROXY;
 import static java.net.Proxy.Type.SOCKS;
+import static java.util.Collections.emptyList;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.eclipse.jetty.client.api.Authentication.ANY_REALM;
@@ -334,7 +333,7 @@ public class AgentUtils {
      */
     public static List<String> split(String s) {
         if (F.isEmpty(s))
-            return Collections.emptyList();
+            return emptyList();
 
         return Arrays.stream(s.trim().split(","))
                 .map(String::trim)
