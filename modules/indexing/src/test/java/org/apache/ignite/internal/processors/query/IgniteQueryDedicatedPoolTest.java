@@ -236,6 +236,8 @@ public class IgniteQueryDedicatedPoolTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     private void checkStarvationQryPoolInLog(long checkTimeout, String findLogMsg ,boolean contains) throws Exception {
+        assertNotNull(findLogMsg);
+
         qryPoolSize = 1;
 
         startGrid("server");
