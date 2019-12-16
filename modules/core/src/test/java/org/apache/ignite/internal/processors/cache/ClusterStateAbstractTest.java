@@ -143,7 +143,21 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
 
         checkInactive(nodesCount());
 
+        long timeOnStart = crd.context().state().lastStateChangeTime();
+
+        assertNotSame(0, timeOnStart);
+        assertTrue(String.valueOf(timeOnStart), timeOnStart > 0);
+
         crd.cluster().state(initialState);
+
+        if (initialState == INACTIVE)
+            assertEquals(timeOnStart, crd.context().state().lastStateChangeTime());
+        else {
+            long activationTime = crd.context().state().lastStateChangeTime();
+
+            assertNotSame(timeOnStart, activationTime);
+            assertTrue(activationTime + " " + timeOnStart, activationTime > timeOnStart);
+        }
 
         checkClusterState(nodesCount(), initialState);
 
