@@ -16,6 +16,8 @@
 
 package org.apache.ignite.agent.testsuites;
 
+import org.apache.ignite.agent.ManagementConsoleProcessorTest;
+import org.apache.ignite.agent.ManagementConsoleProcessorTest.ManagementConsoleProcessorWithMockContextTest;
 import org.apache.ignite.agent.action.SessionRegistryTest;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationProcessorTest;
 import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
@@ -32,10 +34,14 @@ import org.apache.ignite.agent.dto.topology.TopologySnapshotTest;
 import org.apache.ignite.agent.processor.CacheChangesProcessorTest;
 import org.apache.ignite.agent.processor.ClusterInfoProcessorTest;
 import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessorTest;
+import org.apache.ignite.agent.processor.ManagementConsoleSpanMessagesProcessorTest;
 import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
 import org.apache.ignite.agent.ws.RetryableSenderTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerSSLTest;
+import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerTwoWaySSLTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -44,26 +50,32 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    ManagementConsoleProcessorTest.class,
+    ManagementConsoleProcessorWithMockContextTest.class,
+    SessionRegistryTest.class,
+    ActionControllerAnnotationProcessorTest.class,
     ActionControllerBaseTest.class,
     ActionControllerWithAuthenticationBaseTest.class,
     BaselineActionsControllerTest.class,
-    CacheChangesProcessorTest.class,
     ClusterActionsControllerTest.class,
-    ClusterInfoProcessorTest.class,
-    ManagementConsoleMessagesProcessorTest.class,
-    IgniteConfigurationWrapperTest.class,
-    MetricsProcessorTest.class,
     QueryActionsControllerTest.class,
     QueryActionsControllerWithParametersTest.class,
-    QueryRegistryTest.class,
-    SessionRegistryTest.class,
     SecurityActionsControllerTest.class,
-    ActionControllerAnnotationProcessorTest.class,
-    SpanExporterTest.class,
-    EventsExporterTest.class,
-    RetryableSenderTest.class,
+    QueryRegistryTest.class,
+    IgniteConfigurationWrapperTest.class,
     RequestDeserializerTest.class,
-    TopologySnapshotTest.class
+    TopologySnapshotTest.class,
+    CacheChangesProcessorTest.class,
+    ClusterInfoProcessorTest.class,
+    ManagementConsoleMessagesProcessorTest.class,
+    ManagementConsoleSpanMessagesProcessorTest.class,
+    EventsExporterTest.class,
+    SpanExporterTest.class,
+    MetricsProcessorTest.class,
+    RetryableSenderTest.class,
+    WebSocketManagerTest.class,
+    WebSocketManagerSSLTest.class,
+    WebSocketManagerTwoWaySSLTest.class
 })
 public class AgentTestSuite {
 }
