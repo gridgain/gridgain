@@ -130,7 +130,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         "SSL protocol name", null, null, false, null);
 
     /** SSL: Supported SSL cipher suites. */
-    private StringProperty cipherSuites = new StringProperty("cipherSuites",
+    private StringProperty sslCipherSuites = new StringProperty("sslCipherSuites",
         "Supported SSL ciphers", null,
         null, false, null);
 
@@ -238,7 +238,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private final ConnectionProperty [] propsArray = {
         distributedJoins, enforceJoinOrder, collocated, replicatedOnly, autoCloseServerCursor,
         tcpNoDelay, lazy, socketSendBuffer, socketReceiveBuffer, skipReducerOnUpdate, nestedTxMode,
-        sslMode, sslProtocol, sslKeyAlgorithm,
+        sslMode, sslCipherSuites, sslProtocol, sslKeyAlgorithm,
         sslClientCertificateKeyStoreUrl, sslClientCertificateKeyStorePassword, sslClientCertificateKeyStoreType,
         sslTrustCertificateKeyStoreUrl, sslTrustCertificateKeyStorePassword, sslTrustCertificateKeyStoreType,
         sslTrustAll, sslFactory,
@@ -427,13 +427,13 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    @Override public String getCipherSuites() {
-        return cipherSuites.value();
+    @Override public String getSslCipherSuites() {
+        return sslCipherSuites.value();
     }
 
     /** {@inheritDoc} */
-    @Override public void setCipherSuites(String cipherSuites) {
-        this.cipherSuites.setValue(cipherSuites);
+    @Override public void setSslCipherSuites(String sslCipherSuites) {
+        this.sslCipherSuites.setValue(sslCipherSuites);
     }
 
     /** {@inheritDoc} */

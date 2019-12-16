@@ -232,8 +232,62 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
         startGrids(1);
 
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
-            "&cipherSuites=TLS_RSA_WITH_NULL_SHA256")) {
+            "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
+            "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+            "&sslClientCertificateKeyStorePassword=123456" +
+            "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+            "&sslTrustCertificateKeyStorePassword=123456")) {
             checkConnection(conn);
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInvalidCustomCiphers() throws Exception {
+        setSslCtxFactoryToCli = true;
+        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
+        sslCtxFactory = getTestSslContextFactory();
+
+        startGrids(1);
+
+        try {
+            GridTestUtils.assertThrows(log, () -> {
+                return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                    "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                    "&sslClientCertificateKeyStorePassword=123456" +
+                    "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                    "&sslTrustCertificateKeyStorePassword=123456");
+            }, SQLException.class, "Failed to SSL connect to server");
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testInvalidCustomCiphers2() throws Exception {
+        setSslCtxFactoryToCli = true;
+        sslCtxFactory = getTestSslContextFactory();
+
+        startGrids(1);
+
+        try {
+            GridTestUtils.assertThrows(log, () -> {
+                return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                    "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
+                    "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                    "&sslClientCertificateKeyStorePassword=123456" +
+                    "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                    "&sslTrustCertificateKeyStorePassword=123456");
+            }, SQLException.class, "Failed to SSL connect to server");
         }
         finally {
             stopAllGrids();
@@ -284,7 +338,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not open client key store");
+            }, SQLException.class, "Failed to initialize key store (key store file was not found):");
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -296,7 +350,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not open client key store");
+            }, SQLException.class, "Failed to initialize key store (I/O error occurred):");
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -308,7 +362,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not open trusted key store");
+            }, SQLException.class, "Failed to initialize key store (key store file was not found):");
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -320,7 +374,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not open trusted key store");
+            }, SQLException.class, "Failed to initialize key store (I/O error occurred):");
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -333,7 +387,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not create client KeyStore instance");
+            }, SQLException.class, "Failed to initialize key store (security exception occurred) [type=INVALID,");
 
             GridTestUtils.assertThrows(log, new Callable<Object>() {
                 @Override public Object call() throws Exception {
@@ -346,7 +400,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not create trust KeyStore instance");
+            }, SQLException.class, "Failed to initialize key store (security exception occurred) [type=INVALID,");
         }
         finally {
             stopAllGrids();
@@ -461,7 +515,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Could not create client KeyStore");
+            }, SQLException.class, "Failed to initialize key store (security exception occurred) [type=INVALID_TYPE");
         }
         finally {
             stopAllGrids();

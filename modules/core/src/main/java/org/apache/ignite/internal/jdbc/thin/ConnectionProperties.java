@@ -216,16 +216,16 @@ public interface ConnectionProperties {
      *
      * @return SSL cipher suites.
      */
-    public String getCipherSuites();
+    public String getSslCipherSuites();
 
     /**
      * Override default cipher suites.
      *
      * <p>See more at JSSE Reference Guide.
      *
-     * @param cipherSuites SSL cipher suites.
+     * @param sslCipherSuites SSL cipher suites.
      */
-     public void setCipherSuites(String cipherSuites);
+     public void setSslCipherSuites(String sslCipherSuites);
 
     /**
      * Gets algorithm that will be used to create a key manager.

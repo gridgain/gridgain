@@ -94,7 +94,7 @@ public class JdbcThinSSLUtil {
      */
     private static SSLSocketFactory getSSLSocketFactory(ConnectionProperties connProps) throws SQLException {
         String sslFactory = connProps.getSslFactory();
-        String cipherSuites = connProps.getCipherSuites();
+        String cipherSuites = connProps.getSslCipherSuites();
         String cliCertKeyStoreUrl = connProps.getSslClientCertificateKeyStoreUrl();
         String cliCertKeyStorePwd = connProps.getSslClientCertificateKeyStorePassword();
         String cliCertKeyStoreType = connProps.getSslClientCertificateKeyStoreType();
@@ -156,16 +156,16 @@ public class JdbcThinSSLUtil {
 
         f.setProtocol(sslProtocol);
 
+        f.setKeyAlgorithm(keyAlgorithm);
+
+        f.setKeyStoreFilePath(cliCertKeyStoreUrl);
+        f.setKeyStoreType(cliCertKeyStoreType);
+        f.setKeyStorePassword((cliCertKeyStorePwd == null) ? EMPTY_CHARS :
+            cliCertKeyStorePwd.toCharArray());
+
         if (connProps.isSslTrustAll())
             f.setTrustManagers(TRUST_ALL_MANAGER);
         else {
-            f.setKeyAlgorithm(keyAlgorithm);
-
-            f.setKeyStoreFilePath(cliCertKeyStoreUrl);
-            f.setKeyStoreType(cliCertKeyStoreType);
-            f.setKeyStorePassword((cliCertKeyStorePwd == null) ? EMPTY_CHARS :
-                cliCertKeyStorePwd.toCharArray());
-
             f.setTrustStoreFilePath(trustCertKeyStoreUrl);
             f.setTrustStoreType(trustCertKeyStoreType);
             f.setTrustStorePassword((trustCertKeyStorePwd == null) ? EMPTY_CHARS
