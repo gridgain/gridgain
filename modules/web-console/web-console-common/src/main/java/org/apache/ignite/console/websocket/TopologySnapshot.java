@@ -41,7 +41,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
-import static org.apache.ignite.internal.visor.util.VisorTaskUtils.sortAddresses;
+import static org.apache.ignite.internal.util.IgniteUtils.sortAddresses;
 import static org.apache.ignite.internal.visor.util.VisorTaskUtils.splitAddresses;
 
 /**

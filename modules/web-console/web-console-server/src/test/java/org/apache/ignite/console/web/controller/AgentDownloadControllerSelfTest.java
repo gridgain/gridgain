@@ -83,7 +83,7 @@ public class AgentDownloadControllerSelfTest extends AbstractSelfTest {
     @Test
     @WithMockTestUser
     public void shouldReturnNotFoundInWorkDir() throws Exception {
-        ReflectionTestUtils.setField(agentDownloadController, "agentFolderName", "src/test/resources");
+        ReflectionTestUtils.setField(agentDownloadController, "agentFolderName", "src/test/wrong-resources");
 
         mvc.perform(get("/api/v1/downloads/agent").with(user(TEST_EMAIL)))
             .andExpect(status().is5xxServerError())

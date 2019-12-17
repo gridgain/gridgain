@@ -140,13 +140,12 @@
         <zkclient.version>0.5</zkclient.version>
         <zookeeper.version>3.4.14</zookeeper.version>
         <zstd.version>1.3.7-2</zstd.version>
-        <web-console.ignite.version>8.7.5</web-console.ignite.version>
+        <web-console.ignite.version>8.7.9</web-console.ignite.version>
         <opencensus.version>0.22.0</opencensus.version>
         <awaitility.version>3.1.6</awaitility.version>
         <tyrus.standalon.client.version>1.15</tyrus.standalon.client.version>
         <reflections.version>0.9.11</reflections.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
-
 
         <!-- Maven plugins versions -->
         <maven.javadoc.plugin.version>2.10.4</maven.javadoc.plugin.version>
@@ -295,6 +294,11 @@
         <repository>
             <id>GridGain External Repository</id>
             <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+        </repository>
+        <!-- TODO: GG-26340 REMOVE when 8.7.9 will be released -->
+        <repository>
+            <id>GridGain Staging Repository</id>
+            <url>https://gridgainsystems.com/nexus/content/repositories/gridgain_staging-3389</url>
         </repository>
     </repositories>
 
