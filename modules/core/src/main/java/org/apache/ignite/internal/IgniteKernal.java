@@ -1422,7 +1422,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     }
 
     /**
-     * Scheduling tasks for dumping long operations.
+     * Scheduling tasks for dumping long operations. Closes current task
+     * (if any) and if the {@code longOpDumpTimeout > 0} schedules a new task
+     * with a new timeout, delay and start period equal to
+     * {@code longOpDumpTimeout}, otherwise task is deleted.
      *
      * @param longOpDumpTimeout Long operations dump timeout.
      */

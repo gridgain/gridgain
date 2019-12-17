@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheReturnCompletableWra
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheVersionedFuture;
 import org.apache.ignite.internal.processors.cache.GridDeferredAckMessageSender;
+import org.apache.ignite.internal.processors.cache.LongOperationsDumpSettingsClosure;
 import org.apache.ignite.internal.processors.cache.LongRunningTxTimeDumpSettingsClosure;
 import org.apache.ignite.internal.processors.cache.TxOwnerDumpRequestAllowedSettingClosure;
 import org.apache.ignite.internal.processors.cache.TxTimeoutOnPartitionMapExchangeChangeMessage;
@@ -130,6 +131,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TX;
+import static org.apache.ignite.internal.IgniteFeatures.LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
@@ -2948,6 +2950,20 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         broadcastToNodesSupportingFeature(
             new LongRunningTxTimeDumpSettingsClosure(null, null, limit),
             LRT_SYSTEM_USER_TIME_DUMP_SETTINGS
+        );
+    }
+
+    /**
+     * Setting (for all nodes) a timeout (in millis) for printing long-running
+     * transactions as well as transactions that cannot receive locks for all
+     * their keys for a long time. Set less than or equal {@code 0} to disable.
+     *
+     * @param longOpsDumpTimeout Long operations dump timeout.
+     */
+    public void longOperationsDumpTimeoutDistributed(long longOpsDumpTimeout) {
+        broadcastToNodesSupportingFeature(
+            new LongOperationsDumpSettingsClosure(longOpsDumpTimeout),
+            LONG_OPERATIONS_DUMP_TIMEOUT
         );
     }
 

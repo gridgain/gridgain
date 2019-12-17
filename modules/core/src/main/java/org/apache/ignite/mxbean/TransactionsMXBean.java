@@ -219,30 +219,30 @@ public interface TransactionsMXBean {
     public void setTransactionTimeDumpSamplesPerSecondLimit(int limit);
 
     /**
-     * Setting a timeout (in millis) on local node for printing long-running
-     * transactions as well as transactions that cannot receive locks for all
-     * their keys for a long time. Set {@code 0} to disable.
+     * Setting a timeout (in millis) for printing long-running transactions as
+     * well as transactions that cannot receive locks for all their keys for a
+     * long time. Set less than or equal {@code 0} to disable.
      *
      * @param timeout Timeout.
      */
     @MXBeanDescription(
-        "Setting a timeout (in millis) on local node for printing long-running transactions as well as transactions " +
-            "that cannot receive locks for all their keys for a long time. Set {@code 0} to disable."
+        "Setting a timeout (in millis) for printing long-running transactions as well as transactions that cannot " +
+            "receive locks for all their keys for a long time. Set less than or equal {@code 0} to disable."
     )
     @MXBeanParametersNames("timeout")
     @MXBeanParametersDescriptions("Long operations dump timeout.")
-    void setOperationsDumpTimeoutLocal(long timeout);
+    void setLongOperationsDumpTimeout(long timeout);
 
     /**
-     * Returns a timeout (in millis) on local node for printing long-running
-     * transactions as well as transactions that cannot receive locks for all
-     * their keys for a long time. Returns <code>0</code> if not set.
+     * Returns a timeout (in millis) for printing long-running transactions as
+     * well as transactions that cannot receive locks for all their keys for a
+     * long time. Returns {@code 0} or less if not set.
      *
      * @return Timeout.
      */
     @MXBeanDescription(
-        "Returns a timeout (in millis) on local node for printing long-running transactions as well as transactions " +
-            "that cannot receive locks for all their keys for a long time. Returns <code>0</code> if not set."
+        "Returns a timeout (in millis) for printing long-running transactions as well as transactions that cannot " +
+            "receive locks for all their keys for a long time. Returns {@code 0} or less if not set."
     )
-    long getOperationsDumpTimeoutLocal();
+    long getLongOperationsDumpTimeout();
 }

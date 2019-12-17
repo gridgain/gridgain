@@ -171,14 +171,12 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public void setOperationsDumpTimeoutLocal(long timeout) {
-        ctx.cache().context().tm().longOperationsDumpTimeout(timeout);
-
-        ((IgniteKernal)ctx.grid()).scheduleLongOperationsDumpTask(timeout);
+    @Override public void setLongOperationsDumpTimeout(long timeout) {
+        ctx.cache().context().tm().longOperationsDumpTimeoutDistributed(timeout);
     }
 
     /** {@inheritDoc} */
-    @Override public long getOperationsDumpTimeoutLocal() {
+    @Override public long getLongOperationsDumpTimeout() {
         return ctx.cache().context().tm().longOperationsDumpTimeout();
     }
 
