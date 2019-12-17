@@ -457,7 +457,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "TLSv1.13 is not a valid SSL protocol");
+            }, SQLException.class, "Unsupported SSL protocol: TLSv1.13");
         }
         finally {
             stopAllGrids();
@@ -486,7 +486,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
                     return null;
                 }
-            }, SQLException.class, "Unsupported keystore algorithm.");
+            }, SQLException.class, "Unsupported keystore algorithm: INVALID");
         }
         finally {
             stopAllGrids();

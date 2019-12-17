@@ -23,9 +23,7 @@ import java.io.InputStream;
 import java.security.GeneralSecurityException;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
@@ -353,14 +351,12 @@ public class SslContextFactory implements Factory<SSLContext> {
 
             keyMgrs = keyMgrFactory.getKeyManagers();
         }
-        catch (UnrecoverableKeyException e) {
-            throw new SSLException("Could not recover keys from client keystore.", e);
-        }
         catch (NoSuchAlgorithmException e) {
-            throw new SSLException("Unsupported keystore algorithm.", e);
+            throw new SSLException("Unsupported keystore algorithm: " + keyAlgorithm, e);
         }
-        catch (KeyStoreException e) {
-            throw new SSLException("Could not create client KeyStore instance.", e);
+        catch (GeneralSecurityException e) {
+            throw new SSLException("Failed to initialize key store (security exception occurred) [type=" +
+                keyStoreType + ", keyStorePath=" + keyStoreFilePath + ']', e);
         }
 
         TrustManager[] trustMgrs = this.trustMgrs;
@@ -377,10 +373,11 @@ public class SslContextFactory implements Factory<SSLContext> {
                 trustMgrs = trustMgrFactory.getTrustManagers();
             }
             catch (NoSuchAlgorithmException e) {
-                throw new SSLException("Unsupported keystore algorithm.", e);
+                throw new SSLException("Unsupported keystore algorithm: " + keyAlgorithm, e);
             }
-            catch (KeyStoreException e) {
-                throw new SSLException("Could not create trust KeyStore instance.", e);
+            catch (GeneralSecurityException e) {
+                throw new SSLException("Failed to initialize key store (security exception occurred) [type=" +
+                    keyStoreType + ", keyStorePath=" + keyStoreFilePath + ']', e);
             }
         }
 
@@ -399,16 +396,15 @@ public class SslContextFactory implements Factory<SSLContext> {
                 ctx = new SSLContextWrapper(ctx, sslParameters);
             }
 
-
             ctx.init(keyMgrs, trustMgrs, null);
 
             return ctx;
         }
         catch (NoSuchAlgorithmException e) {
-            throw new SSLException(proto + " is not a valid SSL protocol.", e);
+            throw new SSLException("Unsupported SSL protocol: " + proto, e);
         }
         catch (KeyManagementException e) {
-            throw new SSLException("Cannot init SSL context.", e);
+            throw new SSLException("Failed to initialized SSL context.", e);
         }
     }
 
@@ -484,21 +480,21 @@ public class SslContextFactory implements Factory<SSLContext> {
      * @return Initialized key store.
      * @throws SSLException If key store could not be initialized.
      */
-    private KeyStore loadKeyStore(String keyStoreType, String storeFilePath, char[] keyStorePwd) throws SSLException {
-        InputStream input = null;
-
+    private KeyStore loadKeyStore(String keyStoreType, String storeFilePath, char[] keyStorePwd)
+        throws SSLException {
         try {
             KeyStore keyStore = KeyStore.getInstance(keyStoreType);
 
-            input = openFileInputStream(storeFilePath);
+            try (InputStream input = openFileInputStream(storeFilePath)) {
 
-            keyStore.load(input, keyStorePwd);
+                keyStore.load(input, keyStorePwd);
 
-            return keyStore;
+                return keyStore;
+            }
         }
         catch (GeneralSecurityException e) {
             throw new SSLException("Failed to initialize key store (security exception occurred) [type=" +
-                keyStoreType + ", keyStorePath=" + storeFilePath + ']', e);
+                keyStoreType + ", keyStorePath=" + keyStoreFilePath + ']', e);
         }
         catch (FileNotFoundException e) {
             throw new SSLException("Failed to initialize key store (key store file was not found): [path=" +
@@ -506,15 +502,6 @@ public class SslContextFactory implements Factory<SSLContext> {
         }
         catch (IOException e) {
             throw new SSLException("Failed to initialize key store (I/O error occurred): " + storeFilePath, e);
-        }
-        finally {
-            if (input != null) {
-                try {
-                    input.close();
-                }
-                catch (IOException ignored) {
-                }
-            }
         }
     }
 
