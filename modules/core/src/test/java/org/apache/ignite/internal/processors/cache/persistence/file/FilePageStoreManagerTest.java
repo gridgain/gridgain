@@ -47,6 +47,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.FILE_SUFFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.META_STORAGE_NAME;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for {@link FilePageStoreManager} class.
@@ -68,6 +69,13 @@ public class FilePageStoreManagerTest {
 
     /** */
     private String consId = UUID.randomUUID().toString().replace('-', '_');
+
+    /** File suffix of a file from cache working directory that should not be cleaned up by FilePageStoreManager. */
+    private static final String RANDOM_FILE_SUFFIX = ".dat";
+
+    /** Directory name that should not be cleaned up by FilePageStoreManager on cleanPersistenceSpace method call
+     * as it doesn't match pattern of directory name to delete. */
+    private static final String RANDOM_DIR_NAME = "randomDir";
 
     /** */
     @Before public void beforeTest() throws Exception {
@@ -144,6 +152,19 @@ public class FilePageStoreManagerTest {
 
         File[] survivedDirs = dataFilesPath.toFile().listFiles();
         assertEquals(2, survivedDirs.length);
+
+        boolean metastorageDirSurvived = false;
+        boolean randomDirSurvived = false;
+
+        for (File dir : survivedDirs) {
+            if (dir.getName().equals(META_STORAGE_NAME))
+                metastorageDirSurvived = true;
+            else if (dir.getName().equals(RANDOM_DIR_NAME))
+                randomDirSurvived = true;
+        }
+
+        assertTrue(metastorageDirSurvived);
+        assertTrue(randomDirSurvived);
     }
 
     /**
@@ -185,11 +206,17 @@ public class FilePageStoreManagerTest {
 
         Path cacheWorkDir = createAndFillDirectoryForCache(dataFilesPath, cacheCfg);
 
-        assertEquals(3, cacheWorkDir.toFile().listFiles().length);
+        File[] cacheDirFiles = cacheWorkDir.toFile().listFiles();
+
+        assertEquals(3, cacheDirFiles.length);
 
         fileMgr.cleanupPersistentSpace(cacheCfg);
 
-        assertEquals(1, cacheWorkDir.toFile().listFiles().length);
+        cacheDirFiles = cacheWorkDir.toFile().listFiles();
+
+        assertEquals(1, cacheDirFiles.length);
+
+        assertTrue(cacheDirFiles[0].getName().endsWith(RANDOM_FILE_SUFFIX));
     }
 
     /**
@@ -202,12 +229,11 @@ public class FilePageStoreManagerTest {
     private void createMixedDirectories(Path basePath) throws IgniteCheckedException {
         String cacheDirName = CACHE_DIR_PREFIX + "101";
         String cacheGroupDirName = CACHE_GRP_DIR_PREFIX + "101";
-        String randomDirName = "randomDir";
 
         U.ensureDirectory(basePath.resolve(cacheDirName), null, null);
         U.ensureDirectory(basePath.resolve(cacheGroupDirName), null, null);
         U.ensureDirectory(basePath.resolve(META_STORAGE_NAME), null, null);
-        U.ensureDirectory(basePath.resolve(randomDirName), null, null);
+        U.ensureDirectory(basePath.resolve(RANDOM_DIR_NAME), null, null);
     }
 
     /**
@@ -222,7 +248,7 @@ public class FilePageStoreManagerTest {
         String cacheDirName;
         String igniteCacheFileName0 = "part0" + FILE_SUFFIX;
         String igniteCacheFileName1 = "part1" + FILE_SUFFIX;
-        String randomFileName = "randFile.dat";
+        String randomFileName = "randFile" + RANDOM_FILE_SUFFIX;
 
         if (cacheCfg.getGroupName() != null)
             cacheDirName = CACHE_GRP_DIR_PREFIX + cacheCfg.getGroupName();
