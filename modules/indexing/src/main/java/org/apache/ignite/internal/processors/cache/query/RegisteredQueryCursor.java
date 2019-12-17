@@ -48,11 +48,12 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
      * @param iterExec Query executor.
      * @param cancel Cancellation closure.
      * @param runningQryMgr Running query manager.
+     * @param lazy Lazy mode flag.
      * @param qryId Registered running query id.
      */
     public RegisteredQueryCursor(Iterable<T> iterExec, GridQueryCancel cancel, RunningQueryManager runningQryMgr,
-        Long qryId) {
-        super(iterExec, cancel);
+        boolean lazy, Long qryId) {
+        super(iterExec, cancel, true, lazy);
 
         assert runningQryMgr != null;
         assert qryId != null;
@@ -97,9 +98,6 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
             throw e;
         }
         finally {
-            // Update state if the results is read to end
-            STATE_UPDATER.compareAndSet(this, State.RESULT_READY, State.NO_DATA);
-
             close();
         }
     }
@@ -124,9 +122,6 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
             throw e;
         }
         finally {
-            // Update state if the results is read to end
-            STATE_UPDATER.compareAndSet(this, State.RESULT_READY, State.NO_DATA);
-
             close();
         }
     }
