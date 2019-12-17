@@ -26,9 +26,13 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -36,13 +40,25 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.LongListReuseBag;
+import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.query.h2.H2RowCache;
+import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
+import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesPartitionResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTask;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskArg;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskResult;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.CallbackExecutorLogListener;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -51,6 +67,7 @@ import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
@@ -75,6 +92,9 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
     /** We imitate long index destroy in these tests, so this is delay for each page to destroy. */
     private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 160;
 
+    /** Index name. */
+    private static final String IDX_NAME = "T_IDX";
+
     /** */
     private final LogListener blockedSysCriticalThreadLsnr =
         LogListener.matches("Blocked system-critical thread has been detected").build();
@@ -96,10 +116,10 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
     /** */
     private final LogListener taskLifecycleListener =
         new MessageOrderLogListener(
-            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC.T_IDX",
-            ".*?Could not execute local continuous task: DROP_SQL_INDEX-PUBLIC.T_IDX",
-            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC.T_IDX",
-            ".*?Execution of local continuous task completed: DROP_SQL_INDEX-PUBLIC.T_IDX"
+            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
+            ".*?Could not execute local continuous task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
+            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
+            ".*?Execution of local continuous task completed: DROP_SQL_INDEX-PUBLIC." + IDX_NAME
         );
 
     /**
@@ -117,6 +137,9 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
         idxsRebuildFinishedLsnr,
         taskLifecycleListener
     );
+
+    /** */
+    private H2TreeIndex.H2TreeFactory regularH2TreeFactory;
 
     /** */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -144,17 +167,9 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
 
-        BPlusTree.destroyClosure = () -> {
-            doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
+        regularH2TreeFactory = H2TreeIndex.h2TreeFactory;
 
-            if (Thread.currentThread() instanceof IgniteThread) {
-                IgniteThread thread = (IgniteThread)Thread.currentThread();
-
-                if (thread.getIgniteInstanceName().endsWith(String.valueOf(RESTARTED_NODE_NUM))
-                    && blockDestroy.compareAndSet(true, false))
-                    throw new RuntimeException("Aborting destroy (test).");
-            }
-        };
+        H2TreeIndex.h2TreeFactory = H2TreeTest::new;
 
         blockedSysCriticalThreadLsnr.reset();
 
@@ -165,6 +180,8 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         blockedSysCriticalThreadLsnr.reset();
+
+        H2TreeIndex.h2TreeFactory = regularH2TreeFactory;
 
         stopAllGrids();
 
@@ -231,7 +248,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
                 checkSelectAndPlan(cacheOnAliveNode, true);
 
                 if (dropIdxWhenOneNodeStopped0)
-                    query(cacheOnAliveNode, "drop index t_idx");
+                    query(cacheOnAliveNode, "drop index " + IDX_NAME);
 
                 forceCheckpoint(aliveNode);
 
@@ -284,9 +301,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
      * @throws InterruptedException If waiting failed.
      */
     private void awaitLatch(CountDownLatch latch, String failMsg) throws InterruptedException {
-        latch.await(60, TimeUnit.SECONDS);
-
-        if (latch.getCount() > 0)
+        if (!latch.await(60, TimeUnit.SECONDS))
             fail(failMsg);
     }
 
@@ -362,7 +377,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
         String plan = query(cache, "explain select id, p from t where p = 0")
             .get(0).get(0).toString();
 
-        assertEquals(plan, idxShouldExist, plan.toUpperCase().contains("T_IDX"));
+        assertEquals(plan, idxShouldExist, plan.toUpperCase().contains(IDX_NAME));
 
         // Trying to do a select.
         String val = query(cache, "select p from t where p = 100").get(0).get(0).toString();
@@ -377,7 +392,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
      * @param multicolumn Whether index is multicolumn.
      */
     private void createIndex(IgniteCache<Integer, Integer> cache, boolean multicolumn) {
-        query(cache, "create index t_idx on t (p" + (multicolumn ? ", f)" : ")"));
+        query(cache, "create index " + IDX_NAME + " on t (p" + (multicolumn ? ", f)" : ")"));
     }
 
     /**
@@ -431,7 +446,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
 
         final IgniteCache<Integer, Integer> finalCache = cache;
 
-        new Thread(() -> finalCache.query(new SqlFieldsQuery("drop index t_idx")).getAll()).start();
+        new Thread(() -> finalCache.query(new SqlFieldsQuery("drop index " + IDX_NAME)).getAll()).start();
 
         // Waiting for some modified pages
         doSleep(500);
@@ -529,9 +544,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
 
         ignite.cluster().active(true);
 
-        ignite.cache(DEFAULT_CACHE_NAME);
-
-        doSleep(1000);
+        ignite.cache(DEFAULT_CACHE_NAME).indexReadyFuture().get();
 
         blockDestroy.set(true);
 
@@ -544,5 +557,115 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
         awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
 
         assertTrue(taskLifecycleListener.check());
+    }
+
+    /**
+     *
+     */
+    private class H2TreeTest extends H2Tree {
+        /**
+         * Constructor.
+         *
+         * @param cctx Cache context.
+         * @param table Owning table.
+         * @param name Tree name.
+         * @param idxName Name of index.
+         * @param cacheName Cache name.
+         * @param tblName Table name.
+         * @param reuseList Reuse list.
+         * @param grpId Cache group ID.
+         * @param grpName
+         * @param pageMem Page memory.
+         * @param wal Write ahead log manager.
+         * @param globalRmvId
+         * @param metaPageId Meta page ID.
+         * @param initNew Initialize new index.
+         * @param unwrappedColsInfo
+         * @param wrappedColsInfo
+         * @param maxCalculatedInlineSize
+         * @param pk {@code true} for primary key.
+         * @param affinityKey {@code true} for affinity key.
+         * @param mvccEnabled Mvcc flag.
+         * @param rowCache Row cache.
+         * @param failureProcessor if the tree is corrupted.
+         * @param log Logger.
+         * @param stats Statistics holder.
+         * @throws IgniteCheckedException If failed.
+         */
+        public H2TreeTest(
+            GridCacheContext cctx,
+            GridH2Table table,
+            String name,
+            String idxName,
+            String cacheName,
+            String tblName,
+            ReuseList reuseList,
+            int grpId,
+            String grpName,
+            PageMemory pageMem,
+            IgniteWriteAheadLogManager wal,
+            AtomicLong globalRmvId,
+            long metaPageId,
+            boolean initNew,
+            H2TreeIndex.IndexColumnsInfo unwrappedColsInfo,
+            H2TreeIndex.IndexColumnsInfo wrappedColsInfo,
+            AtomicInteger maxCalculatedInlineSize,
+            boolean pk,
+            boolean affinityKey,
+            boolean mvccEnabled,
+            @Nullable H2RowCache rowCache,
+            @Nullable FailureProcessor failureProcessor,
+            IgniteLogger log, IoStatisticsHolder stats
+        ) throws IgniteCheckedException {
+            super(
+                cctx,
+                table,
+                name,
+                idxName,
+                cacheName,
+                tblName,
+                reuseList,
+                grpId,
+                grpName,
+                pageMem,
+                wal,
+                globalRmvId,
+                metaPageId,
+                initNew,
+                unwrappedColsInfo,
+                wrappedColsInfo,
+                maxCalculatedInlineSize,
+                pk,
+                affinityKey,
+                mvccEnabled,
+                rowCache,
+                failureProcessor,
+                log,
+                stats
+            );
+        }
+
+        /** {@inheritDoc} */
+        @Override protected long destroyDownPages(
+            LongListReuseBag bag,
+            long pageId,
+            long fwdId,
+            int lvl,
+            IgniteInClosure<H2Row> c,
+            AtomicLong lockHoldStartTime,
+            long lockMaxTime
+        ) throws IgniteCheckedException {
+            doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
+
+            if (Thread.currentThread() instanceof IgniteThread) {
+                IgniteThread thread = (IgniteThread)Thread.currentThread();
+
+                if (thread.getIgniteInstanceName().endsWith(String.valueOf(RESTARTED_NODE_NUM))
+                    && blockDestroy.compareAndSet(true, false))
+                    throw new RuntimeException("Aborting destroy (test).");
+            }
+
+            return super.destroyDownPages(bag, pageId, fwdId, lvl, c, lockHoldStartTime, lockMaxTime);
+        }
     }
 }

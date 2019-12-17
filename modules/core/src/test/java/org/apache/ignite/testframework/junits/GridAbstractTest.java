@@ -95,7 +95,6 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
@@ -257,12 +256,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     private transient PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
 
-    /**
-     * Destroy closure for {@link BPlusTree}, it can be saved here and overridden for test purposes,
-     * then it must be restored using value of this field.
-     */
-    private transient IgniteRunnable regularDestroyClosure;
-
     /** */
     static {
         System.setProperty(IGNITE_ALLOW_ATOMIC_OPS_IN_TX, "false");
@@ -343,8 +336,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      */
     protected void beforeTestsStarted() throws Exception {
         regularPageHndWrapper = BPlusTree.pageHndWrapper == null ? ((tree, hnd) -> hnd) : BPlusTree.pageHndWrapper;
-
-        regularDestroyClosure = BPlusTree.destroyClosure;
     }
 
     /**
@@ -358,8 +349,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected void afterTestsStopped() throws Exception {
         //restoring page handler wrapper and destroy closure
         BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
-
-        BPlusTree.destroyClosure = regularDestroyClosure;
     }
 
     /**

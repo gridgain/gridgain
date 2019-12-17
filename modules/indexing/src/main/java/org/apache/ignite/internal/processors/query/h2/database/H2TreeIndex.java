@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -33,13 +34,18 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
+import org.apache.ignite.internal.pagemem.PageMemory;
+import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.LocalContinuousTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
+import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
@@ -146,6 +152,9 @@ public class H2TreeIndex extends H2TreeIndexBase {
             onMessage0(locNode.id(), msg);
         }
     };
+
+    /** Override it for test purposes. */
+    public static H2TreeFactory h2TreeFactory = H2Tree::new;
 
     /** Query context registry. */
     private final QueryContextRegistry qryCtxRegistry;
@@ -290,7 +299,7 @@ public class H2TreeIndex extends H2TreeIndexBase {
             try {
                 RootPage page = getMetaPage(cctx, treeName, i);
 
-                segments[i] = new H2Tree(
+                segments[i] = h2TreeFactory.create(
                     cctx,
                     tbl,
                     treeName,
@@ -1007,5 +1016,38 @@ public class H2TreeIndex extends H2TreeIndexBase {
         public List<InlineIndexHelper> inlineIdx() {
             return inlineIdx;
         }
+    }
+
+    /**
+     * Interface for {@link H2Tree} factory class.
+     */
+    public static interface H2TreeFactory {
+        /** */
+        public H2Tree create(
+            GridCacheContext cctx,
+            GridH2Table table,
+            String name,
+            String idxName,
+            String cacheName,
+            String tblName,
+            ReuseList reuseList,
+            int grpId,
+            String grpName,
+            PageMemory pageMem,
+            IgniteWriteAheadLogManager wal,
+            AtomicLong globalRmvId,
+            long metaPageId,
+            boolean initNew,
+            H2TreeIndex.IndexColumnsInfo unwrappedColsInfo,
+            H2TreeIndex.IndexColumnsInfo wrappedColsInfo,
+            AtomicInteger maxCalculatedInlineSize,
+            boolean pk,
+            boolean affinityKey,
+            boolean mvccEnabled,
+            @Nullable H2RowCache rowCache,
+            @Nullable FailureProcessor failureProcessor,
+            IgniteLogger log,
+            IoStatisticsHolder stats
+        ) throws IgniteCheckedException;
     }
 }

@@ -282,7 +282,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     private final Set<GridWorker> asyncLocalContinuousTaskWorkers = new GridConcurrentHashSet<>();
 
     /** Count of workers that executing local continuous tasks. */
-    private final AtomicInteger asyncLocalContinuousTasksWorkersCnt = new AtomicInteger(0);
+    private final AtomicInteger asyncLocalContinuousTasksWorkersCntr = new AtomicInteger(0);
 
     /** Continuous tasks map. */
     private final ConcurrentHashMap<String, LocalContinuousTask> localContinuousTasks = new ConcurrentHashMap<>();
@@ -663,9 +663,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     private void asyncLocalContinuousTasksExecution() {
         assert localContinuousTasks != null;
 
-        Set<LocalContinuousTask> tasks = new HashSet<>(localContinuousTasks.values());
-
-        for (LocalContinuousTask task : tasks)
+        for (LocalContinuousTask task : localContinuousTasks.values())
             asyncLocalContinuousTaskExecute(task, true);
     }
 
@@ -675,7 +673,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      * @param dropTaskIfFailed Whether to delete task from metastorage, if it has failed.
      */
     private void asyncLocalContinuousTaskExecute(LocalContinuousTask task, boolean dropTaskIfFailed) {
-        String workerName = "async-local-continuous-task-executor-" + asyncLocalContinuousTasksWorkersCnt.getAndIncrement();
+        String workerName = "async-local-continuous-task-executor-" + asyncLocalContinuousTasksWorkersCntr.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
             @Override protected void body() {
@@ -959,7 +957,7 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
         GridCachePartitionExchangeManager<Object, Object> exch = context().exchange();
 
-        // Waiting for workers, but not cacelling them, trying to complete running tasks.
+        // Waiting for workers, but not cancelling them, trying to complete running tasks.
         awaitForWorkersStop(asyncLocalContinuousTaskWorkers, false, log);
 
         // Stop exchange manager first so that we call onKernalStop on all caches.
