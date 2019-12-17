@@ -35,17 +35,14 @@ import {previewDialog} from '../../page-models/previewProjectDialog';
 
 const overviewPage = new PageConfigurationOverview();
 
-const regularUser = createRegularUser();
-
 fixture('Import from database dialog')
-    .before(async(t) => {
+    .beforeEach(async(t) => {
         await dropTestDB();
         await insertTestUser();
+        await t.useRole(await createRegularUser()).navigateTo(resolveUrl(`/configuration/overview`))
     })
-    .beforeEach(async(t) =>
-        await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`))
-    )
     .afterEach(async(t) => {
+        await dropTestDB();
         t.ctx.ws.destroy();
     })
     .after(async(t) => await dropTestDB());
@@ -106,6 +103,9 @@ test('Base check of model import and project preview', async(t) => {
         .expect(previewDialog.textContent.textContent).contains('<version>test.version</version>');
 })
 .before(async(t) => {
+    await dropTestDB();
+    await insertTestUser();
+
     await t.addRequestHooks(
         t.ctx.ws = new WebSocketHook()
             .use(
@@ -114,7 +114,7 @@ test('Base check of model import and project preview', async(t) => {
             )
     );
 
-    await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`));
+    await t.useRole(await createRegularUser()).navigateTo(resolveUrl(`/configuration/overview`));
 });
 
 test('Base check of model import or different data types', async(t) => {
@@ -139,6 +139,9 @@ test('Base check of model import or different data types', async(t) => {
     }
 })
 .before(async(t) => {
+    await dropTestDB();
+    await insertTestUser();
+
     t.ctx.importData = _.cloneDeep(TEST_JDBC_IMPORT_DATA);
     t.ctx.importData.tables[0].columns = [];
 
@@ -161,5 +164,5 @@ test('Base check of model import or different data types', async(t) => {
             )
     );
 
-    await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`));
+    await t.useRole(await createRegularUser()).navigateTo(resolveUrl(`/configuration/overview`));
 });

@@ -23,5 +23,6 @@ export const previewDialog = {
     loadingOverview: _previewDialog.find('.loading'),
     treeLabel: _previewDialog.find('.tree-label'),
     textContent: _previewDialog.find('.ace_content'),
-    textComponent: _previewDialog.find('textarea')
+    textComponent: _previewDialog.find('textarea'),
+    closeButton: _previewDialog.find('button').withText('Close')
 };
