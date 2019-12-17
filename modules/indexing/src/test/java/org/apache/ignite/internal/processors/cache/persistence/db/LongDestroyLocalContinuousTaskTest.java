@@ -90,7 +90,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
     private static final int ALWAYS_ALIVE_NODE_NUM = 1;
 
     /** We imitate long index destroy in these tests, so this is delay for each page to destroy. */
-    private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 160;
+    private static final long TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY = 300;
 
     /** Index name. */
     private static final String IDX_NAME = "T_IDX";
