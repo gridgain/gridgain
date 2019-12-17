@@ -38,10 +38,10 @@ public class StompDestinationsUtils {
     private static final String CLUSTER_NODE_CONFIGURATION = CLUSTER_PREFIX_DEST + "/node-config/";
 
     /** Cluster action task response destination. */
-    private static final String CLUSTER_ACTION_TASK_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action-task/";
+    private static final String CLUSTER_ACTION_TASK_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action/task/";
 
     /** Cluster action job response destination. */
-    private static final String CLUSTER_ACTION_JOB_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action-job/";
+    private static final String CLUSTER_ACTION_JOB_RESPONSE_DEST = CLUSTER_PREFIX_DEST + "/action/job/";
 
     /** Span destination. */
     private static final String SPAN_DEST = "/app/agent/spans/";
