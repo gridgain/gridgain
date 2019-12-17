@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader.la
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -25,6 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -98,6 +100,13 @@ public class ExchangeLatchManager {
     /** Map (topology version -> joined node on this version). This map is needed to exclude joined nodes from latch participants. */
     @GridToStringExclude
     private final ConcurrentMap<AffinityTopologyVersion, ClusterNode> joinedNodes = new ConcurrentHashMap<>();
+
+    /** This map holds version on which ack message have been received before local latch was created. */
+    private final ConcurrentSkipListMap<AffinityTopologyVersion, GridFutureAdapter<Object>> awaitedLatchVersions =
+        new ConcurrentSkipListMap<>();
+
+    /** Topology version of last created latch. It needs for support {@link #awaitedLatchVersions}. */
+    private volatile AffinityTopologyVersion topVerOfLastLatch = null;
 
     /** Lock. */
     private final ReentrantLock lock = new ReentrantLock();
@@ -206,8 +215,8 @@ public class ExchangeLatchManager {
     /**
      * Creates new latch with specified {@code id} and {@code topVer} or returns existing latch.
      *
-     * Participants of latch are calculated from given {@code topVer} as alive server nodes.
-     * If local node is coordinator {@code ServerLatch} instance will be created, otherwise {@code ClientLatch} instance.
+     * Participants of latch are calculated from given {@code topVer} as alive server nodes. If local node is
+     * coordinator {@code ServerLatch} instance will be created, otherwise {@code ClientLatch} instance.
      *
      * @param id Latch id.
      * @param topVer Latch topology version.
@@ -232,12 +241,36 @@ public class ExchangeLatchManager {
 
             Collection<ClusterNode> participants = getLatchParticipants(topVer);
 
-            return coordinator.isLocal()
+            Latch createdLatch = coordinator.isLocal()
                 ? createServerLatch(latchUid, participants)
                 : createClientLatch(latchUid, coordinator, participants);
+
+            updateLastLatchVersion(topVer);
+
+            return createdLatch;
         }
         finally {
             lock.unlock();
+        }
+    }
+
+    /**
+     * Update last latch version and notify corresponded waiters if their exist.
+     *
+     * @param topVer New topology version.
+     */
+    private void updateLastLatchVersion(AffinityTopologyVersion topVer) {
+        topVerOfLastLatch = topVer;
+
+        if (!awaitedLatchVersions.isEmpty()) {
+            Iterator<Map.Entry<AffinityTopologyVersion, GridFutureAdapter<Object>>> it =
+                awaitedLatchVersions.headMap(topVer, true).entrySet().iterator();
+
+            while (it.hasNext()) {
+                it.next().getValue().onDone();
+
+                it.remove();
+            }
         }
     }
 
@@ -363,6 +396,38 @@ public class ExchangeLatchManager {
     }
 
     /**
+     * Processes ack message immediately or delay processing until local latch will be created.
+     *
+     * @param from Node sent ack.
+     * @param message Ack message.
+     */
+    private void processAck(UUID from, LatchAckMessage message) {
+        lock.lock();
+
+        try {
+            if (!isLocalLatchCreated(message.topVer())) {
+                awaitedLatchVersions.computeIfAbsent(message.topVer(), (k) -> new GridFutureAdapter<>())
+                    .listen((f) -> processAck0(from, message));
+
+                return;
+            }
+        }
+        finally {
+            lock.unlock();
+        }
+
+        processAck0(from, message);
+    }
+
+    /**
+     * @param topVer Topology version.
+     * @return {@code true} if local latch have been created already.
+     */
+    private boolean isLocalLatchCreated(AffinityTopologyVersion topVer) {
+        return topVerOfLastLatch != null && topVer.compareTo(topVerOfLastLatch) <= 0;
+    }
+
+    /**
      * Processes ack message from given {@code from} node.
      *
      * Completes client latch in case of final ack message.
@@ -372,7 +437,7 @@ public class ExchangeLatchManager {
      * @param from Node sent ack.
      * @param message Ack message.
      */
-    private void processAck(UUID from, LatchAckMessage message) {
+    private void processAck0(UUID from, LatchAckMessage message) {
         lock.lock();
 
         try {
