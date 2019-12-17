@@ -27,6 +27,7 @@ import org.apache.ignite.console.services.ActivitiesServiceTest;
 import org.apache.ignite.console.services.AdminServiceTest;
 import org.apache.ignite.console.services.MigrationFromMongoTest;
 import org.apache.ignite.console.services.NotificationServiceTest;
+import org.apache.ignite.console.services.SessionsServiceTest;
 import org.apache.ignite.console.web.controller.AdminControllerTest;
 import org.apache.ignite.console.web.controller.AgentDownloadControllerSelfTest;
 import org.apache.ignite.console.web.security.PasswordEncoderTest;
@@ -41,22 +42,24 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    TableSelfTest.class,
+    IsolatedCacheFullApiSelfTest.class,
+    IsolatedDiscoverySpiSelfTest.class,
+    NotificationEventListenerTest.class,
     AccountsRepositoryTest.class,
+    ConfigurationsRepositoryTest.class,
     AccountsServiceTest.class,
     ActivitiesServiceTest.class,
     AdminServiceTest.class,
     AdminControllerTest.class,
+    MigrationFromMongoTest.class,
+    NotificationServiceTest.class,
+    SessionsServiceTest.class,
+    AdminControllerTest.class,
     AgentDownloadControllerSelfTest.class,
+    PasswordEncoderTest.class,
     AgentsServiceSelfTest.class,
     BrowsersServiceSelfTest.class,
-    ConfigurationsRepositoryTest.class,
-    IsolatedCacheFullApiSelfTest.class,
-    IsolatedDiscoverySpiSelfTest.class,
-    MigrationFromMongoTest.class,
-    NotificationEventListenerTest.class,
-    NotificationServiceTest.class,
-    PasswordEncoderTest.class,
-    TableSelfTest.class,
     TransitionServiceSelfTest.class
 })
 public class WebConsoleTestSuite {

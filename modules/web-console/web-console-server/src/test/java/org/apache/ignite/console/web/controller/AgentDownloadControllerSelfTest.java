@@ -16,18 +16,14 @@
 
 package org.apache.ignite.console.web.controller;
 
+import org.apache.ignite.console.AbstractSelfTest;
 import org.apache.ignite.console.MockUserDetailsServiceConfiguration;
-import org.apache.ignite.console.TestGridConfiguration;
 import org.apache.ignite.console.WithMockTestUser;
 import org.junit.After;
-import org.junit.AfterClass;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -35,8 +31,6 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.apache.ignite.console.MockUserDetailsServiceConfiguration.TEST_EMAIL;
 import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
-import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
-import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -46,12 +40,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Tests for agent download controller.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(
-    classes = {MockUserDetailsServiceConfiguration.class, TestGridConfiguration.class},
+    classes = {MockUserDetailsServiceConfiguration.class},
     properties = {"agent.file.regexp=empty.zip"}
 )
-public class AgentDownloadControllerSelfTest {
+public class AgentDownloadControllerSelfTest extends AbstractSelfTest {
     /** Agent download controller. */
     @Autowired
     private AgentDownloadController agentDownloadController;
@@ -62,24 +55,6 @@ public class AgentDownloadControllerSelfTest {
 
     /** Endpoint for server-side Spring MVC test support */
     private MockMvc mvc;
-
-    /**
-     * @throws Exception If failed.
-     */
-    @BeforeClass
-    public static void setup() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @AfterClass
-    public static void tearDown() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
 
     /** */
     @Before

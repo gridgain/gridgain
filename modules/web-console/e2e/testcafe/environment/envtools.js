@@ -39,6 +39,10 @@ const insertTestUser = (user = testUser) => {
         .catch((err) => {throw err.message;});
 };
 
+/**
+ * Removes users and their data
+ * @param user User email mask
+ */
 const dropTestDB = (mask = '@example.com') => {
     return request({
         method: 'DELETE',

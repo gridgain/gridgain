@@ -558,7 +558,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out op with affinity awareness.
+        /// Does the out op with Partition Awareness.
         /// </summary>
         private void DoOutOpAffinity(ClientOp opId, TK key)
         {
@@ -566,7 +566,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out op with affinity awareness.
+        /// Does the out op with Partition Awareness.
         /// </summary>
         private void DoOutOpAffinity(ClientOp opId, TK key, TV val)
         {
@@ -574,7 +574,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out op with affinity awareness.
+        /// Does the out op with Partition Awareness.
         /// </summary>
         private Task DoOutOpAsync(ClientOp opId, Action<BinaryWriter> writeAction = null)
         {
@@ -582,7 +582,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out op with affinity awareness.
+        /// Does the out op with Partition Awareness.
         /// </summary>
         private Task DoOutOpAffinityAsync(ClientOp opId, TK key, Action<BinaryWriter> writeAction = null)
         {
@@ -600,7 +600,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out in op with affinity awareness.
+        /// Does the out in op with Partition Awareness.
         /// </summary>
         private T DoOutInOpAffinity<T>(ClientOp opId, TK key, Func<IBinaryStream, T> readFunc)
         {
@@ -614,7 +614,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out in op with affinity awareness.
+        /// Does the out in op with Partition Awareness.
         /// </summary>
         private T DoOutInOpAffinity<T>(ClientOp opId, TK key, Action<BinaryWriter> writeAction,
             Func<IBinaryStream, T> readFunc)
@@ -629,7 +629,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out in op with affinity awareness.
+        /// Does the out in op with Partition Awareness.
         /// </summary>
         private T DoOutInOpAffinity<T>(ClientOp opId, TK key, TV val, Func<IBinaryStream, T> readFunc)
         {
@@ -657,7 +657,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out in op with affinity awareness.
+        /// Does the out in op with Partition Awareness.
         /// </summary>
         private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Action<BinaryWriter> writeAction,
             Func<IBinaryStream, T> readFunc)
@@ -667,7 +667,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out in op with affinity awareness.
+        /// Does the out in op with Partition Awareness.
         /// </summary>
         private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, TV val, Func<IBinaryStream, T> readFunc)
         {
@@ -685,7 +685,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         }
 
         /// <summary>
-        /// Does the out in op with affinity awareness.
+        /// Does the out in op with Partition Awareness.
         /// </summary>
         private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Func<IBinaryStream, T> readFunc)
         {

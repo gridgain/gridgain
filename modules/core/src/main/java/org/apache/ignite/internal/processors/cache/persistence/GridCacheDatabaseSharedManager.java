@@ -2756,8 +2756,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         CacheGroupContext ctx = cctx.cache().cacheGroup(rbRec.groupId());
 
                         if (ctx != null && !ctx.isLocal()) {
-                            ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
-                                rbRec.range());
+                            try {
+                                // Ensure the partition store exists.
+                                ctx.topology().forceCreatePartition(rbRec.partitionId());
+
+                                ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
+                                    rbRec.range());
+                            }
+                            catch (IgniteCheckedException e) {
+                                throw new IgniteException(e);
+                            }
                         }
                     }
                     finally {

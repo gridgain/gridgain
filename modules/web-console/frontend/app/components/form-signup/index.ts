@@ -25,8 +25,8 @@ export interface ISignupData {
     firstName: string,
     lastName: string,
     phone?: string,
-    company: string,
-    country: string
+    company?: string,
+    country?: string
 }
 
 export interface ISignupFormController extends ng.IFormController {
