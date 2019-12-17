@@ -94,7 +94,7 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
     private boolean closed;
 
     /** Canceled. */
-    private boolean canceled;
+    private volatile boolean canceled;
 
     /** Fetch size interceptor. */
     final H2QueryFetchSizeInterceptor fetchSizeInterceptor;
@@ -250,7 +250,7 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
      * @throws IgniteCheckedException On error.
      */
     private synchronized boolean fetchNext() throws IgniteCheckedException {
-        if (page == null)
+        if (canceled)
             throw new QueryCancelledException();
 
         if (rowIter != null && rowIter.hasNext()) {
