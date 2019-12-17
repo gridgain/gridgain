@@ -1868,8 +1868,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 return "activate cluster in read-only mode";
 
             default:
-                throw new IllegalArgumentException("Unknown cluster state: " + state);
-
+                throw new IllegalStateException("Unknown cluster state: " + state);
         }
     }
 
