@@ -278,6 +278,8 @@ export class IgniteChartController {
 
         await import('chartjs-plugin-streaming');
 
+        if (!this.ctx) return;
+
         this.chart = new Chart(this.ctx, this.config);
         this.changeXRange(this.currentRange);
     }
