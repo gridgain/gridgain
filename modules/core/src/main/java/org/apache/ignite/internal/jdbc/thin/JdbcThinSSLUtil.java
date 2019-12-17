@@ -172,8 +172,8 @@ public class JdbcThinSSLUtil {
                 : trustCertKeyStorePwd.toCharArray());
         }
 
-        if (cipherSuites != null)
-            f.setCipherSuites(cipherSuites);
+        if (!F.isEmpty(cipherSuites))
+            f.setCipherSuites(cipherSuites.split(","));
 
         try {
             final SSLContext sslContext = f.create();
