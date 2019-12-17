@@ -16,6 +16,15 @@
 
 import {Selector, t} from 'testcafe';
 
+/**
+ * Find a selector for a table cell by the specified parameters.
+ *
+ * @param {Selector} table Table selector to find a cell selector.
+ * @param {number} rowIndex Row index to get a cell selector.
+ * @param {string|number} columnId Column identificator to get a cell selector. Column label or column index.
+ *     Use negative index to find in fixed columns.
+ * @type {Selector} A table cell selector.
+ */
 const findCell = Selector((table, rowIndex, columnId) => {
     const _findRowElement = (table, containerSelector, columnId) => {
         const columnIndex = typeof columnId === 'string' ? [].constructor.from(
