@@ -19,31 +19,57 @@ package org.apache.ignite.console.agent;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.List;
 import org.junit.Test;
 
-import static junit.framework.TestCase.assertNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.apache.ignite.console.agent.AgentUtils.split;
 
 /**
  * Agent configuration tests.
  */
 public class AgentConfigurationTest {
     /**
-     * GG-25379 Test case 1:
-     * 1. Start agent with test-empty.properties
-     * 2. Verify the User is prompted for token(s)
-     * 3. Enter single token
-     * 4. Verify the Agent configuration initialized with the token provided, without throwing errors/exceptions.
+     * @param fileName Configuration file name.
+     * @return Parsed configuration.
      */
-    @Test
-    public void shoudPromptForToken() {
+    private AgentConfiguration parse(String fileName) {
+        URL cfgUrl = AgentConfiguration.class.getClassLoader().getResource(fileName);
+
+        assertNotNull(cfgUrl);
+
+        AgentConfiguration cfg = AgentLauncher.parseArgs(new String[]{"-c", cfgUrl.getFile()});
+
+        assertNotNull(cfg);
+
+        return cfg;
+    }
+
+
+    /**
+     * Test that agent will accept tokens from user input.
+     *
+     * @param userInput User input.
+     */
+    private void testWithUserPrompt(String userInput) {
         InputStream prev = System.in;
 
         try {
-            URL cfgUrl = AgentConfiguration.class.getClassLoader().getResource("test-empty.properties");
+            // Emulate user input from keyboard.
+            System.setIn(new ByteArrayInputStream((userInput + "\n\n").getBytes()));
 
-            System.setIn(new ByteArrayInputStream("test-token\n\n".getBytes()));
+            AgentConfiguration cfg = parse("test-empty.properties");
 
-            AgentLauncher.parseArgs(new String[] {"-c", cfgUrl.getFile()});
+            assertNotNull(cfg);
+
+            List<String> tokens = split(userInput);
+
+            assertEquals(tokens.size(), cfg.tokens().size());
+
+            for (int i = 0; i < tokens.size(); i++)
+                assertEquals(tokens.get(i), cfg.tokens().get(i));
         }
         finally {
             System.setIn(prev);
@@ -51,15 +77,41 @@ public class AgentConfigurationTest {
     }
 
     /**
-     * Should correctly load values from file with empty properties.
+     * GG-25379 Test case 1:
+     * 1. Start agent with "test-empty.properties".
+     * 2. Verify the User is prompted for token.
+     * 3. Enter single token.
+     * 4. Verify the Agent configuration initialized with the token provided, without throwing errors/exceptions.
+     */
+    @Test
+    public void shouldPromptForSingleToken() {
+        testWithUserPrompt("one-token");
+    }
+
+    /**
+     * GG-25379 Testcase 2:
+     * 1. Start agent with "test-empty.properties".
+     * 2. Verify the User is prompted for tokens.
+     * 3. Enter multiple tokens: "aa, bb,cc, ".
+     * 4. Verify the Agent configuration initialized with the tokens provided, without throwing errors/exceptions.
+     */
+    @Test
+    public void shouldPromptForSeveralTokens() {
+        testWithUserPrompt("aa, bb,cc, ");
+    }
+
+    /**
+     * GG-25379 Testcase 3:
+     * 1. Load configuration from "test-empty.properties".
+     * 2. Verify that all fields [tokens, serverUri, nodeURIs, nodeLogin, nodePassword, driversFolder, nodeKeyStore,
+     *     nodeKeyStorePassword, nodeTrustStore, nodeTrustStorePassword, serverKeyStore, serverKeyStorePassword,
+     *     serverTrustStore, serverTrustStorePassword, cipherSuites] are populated with null.
      *
      * @throws Exception If failed.
      */
     @Test
     public void shouldLoadConfigWithEmptyValues() throws Exception {
         AgentConfiguration cfg = new AgentConfiguration();
-
-        URL cfgUrl = AgentConfiguration.class.getClassLoader().getResource("test-empty.properties");
 
         assertNull(cfg.tokens());
         assertNull(cfg.serverUri());
@@ -76,6 +128,10 @@ public class AgentConfigurationTest {
         assertNull(cfg.serverTrustStore());
         assertNull(cfg.serverTrustStorePassword());
         assertNull(cfg.cipherSuites());
+
+        URL cfgUrl = AgentConfiguration.class.getClassLoader().getResource("test-empty.properties");
+
+        assertNotNull(cfgUrl);
 
         cfg.load(cfgUrl);
 
@@ -97,7 +153,9 @@ public class AgentConfigurationTest {
     }
 
     /**
-     * Should correctly load values from file with empty properties.
+     * GG-25379 Testcase 4:
+     * 1. Load configuration from "test-empty-lists.properties".
+     * 2. Verify that all fields [tokens, serverUri, nodeURIs] are populated with null.
      *
      * @throws Exception If failed.
      */
@@ -105,16 +163,47 @@ public class AgentConfigurationTest {
     public void shouldLoadConfigWithEmptyLists() throws Exception {
         AgentConfiguration cfg = new AgentConfiguration();
 
-        URL cfgUrl = AgentConfiguration.class.getClassLoader().getResource("test-empty-lists.properties");
-
         assertNull(cfg.tokens());
         assertNull(cfg.nodeURIs());
         assertNull(cfg.cipherSuites());
+
+        URL cfgUrl = AgentConfiguration.class.getClassLoader().getResource("test-empty-lists.properties");
+
+        assertNotNull(cfgUrl);
 
         cfg.load(cfgUrl);
 
         assertNull(cfg.tokens());
         assertNull(cfg.nodeURIs());
+        assertNull(cfg.cipherSuites());
+    }
+
+    /**
+     * GG-25379 Testcase 7:
+     * 1. Start agent with "test-token-only.properties".
+     * 2. Verify the values used:
+     *    tokens: token1234
+     *    node-uri: http:localhost:8080
+     *    server-uri: http:localhost:3000
+     */
+    @Test
+    public void shouldLoadTokenAndUseDefaults() {
+        AgentConfiguration cfg = parse("test-token-only.properties");
+
+        assertEquals("token1234", cfg.tokens().get(0));
+        assertEquals("http://localhost:8080", cfg.nodeURIs().get(0));
+        assertEquals("ws://localhost:3000", cfg.serverUri());
+        assertNull(cfg.nodeLogin());
+        assertNull(cfg.nodePassword());
+        assertNull(cfg.driversFolder());
+        assertNull(cfg.nodeKeyStore());
+        assertNull(cfg.nodeKeyStorePassword());
+        assertNull(cfg.nodeTrustStore());
+        assertNull(cfg.nodeTrustStorePassword());
+        assertNull(cfg.serverKeyStore());
+        assertNull(cfg.serverKeyStorePassword());
+        assertNull(cfg.serverTrustStore());
+        assertNull(cfg.serverTrustStorePassword());
         assertNull(cfg.cipherSuites());
     }
 }

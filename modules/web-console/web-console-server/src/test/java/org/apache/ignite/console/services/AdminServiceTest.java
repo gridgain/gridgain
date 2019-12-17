@@ -36,17 +36,18 @@ import org.springframework.session.ExpiringSession;
 import org.springframework.session.FindByIndexNameSessionRepository;
 
 import static java.util.concurrent.TimeUnit.DAYS;
-import static junit.framework.TestCase.assertTrue;
 import static org.apache.ignite.console.common.Utils.SPRING_SECURITY_CONTEXT;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_CREATE_BY_ADMIN;
 import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_DELETE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
  * Admin service test.
  */
+@SuppressWarnings("rawtypes")
 public class AdminServiceTest extends AbstractSelfTest {
     /** */
     private static final long MILLIS_IN_A_DAY = DAYS.toMillis(1);
@@ -67,7 +68,7 @@ public class AdminServiceTest extends AbstractSelfTest {
      * Should publish event with ACCOUNT_DELETE type.
      */
     @Test
-    public void shouldPublishUserCreareAndDeleteEvent() {
+    public void shouldPublishUserCreateAndDeleteEvent() {
         Account acc = adminSrvc.registerUser(signUpRequest("delete@delete.com"));
 
         adminSrvc.delete(acc.getId());
