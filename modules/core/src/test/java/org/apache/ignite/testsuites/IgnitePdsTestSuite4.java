@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelo
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.HeapArrayLockStackTest;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.OffHeapLockStackTest;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileDownloaderTest;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManagerTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
@@ -69,6 +70,7 @@ public class IgnitePdsTestSuite4 {
         addRealPageStoreTestsNotForDirectIo(suite, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, FileDownloaderTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, FilePageStoreManagerTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsTaskCancelingTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgniteClusterActivateDeactivateTestWithPersistenceAndMemoryReuse.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsPartitionPreloadTest.class, ignoredTests);
