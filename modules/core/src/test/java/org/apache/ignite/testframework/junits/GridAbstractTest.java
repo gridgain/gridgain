@@ -349,6 +349,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
 
         clearStaticLogClasses.forEach(this::clearStaticClassLog);
+        clearStaticLogClasses.clear();
     }
 
     /**
