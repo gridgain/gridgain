@@ -333,6 +333,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
         try {
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
+                "&sslTrustAll=true" +
                 "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                 "&sslClientCertificateKeyStorePassword=123456" +
                 "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
