@@ -324,7 +324,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testDisabledCustomCipher() throws Exception {
-        setSslCtxFactoryToCli = true;
+        setSslCtxFactoryToIgnite = true;
         supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
         sslCtxFactory = getTestSslContextFactory();
 
