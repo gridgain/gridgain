@@ -241,7 +241,7 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
 
     /** */
     public void unlockTables() {
-        if (ses != null && ses.isLazyQueryExecution())
+        if (ses.isLazyQueryExecution())
             GridH2Table.unlockTables(ses);
     }
 

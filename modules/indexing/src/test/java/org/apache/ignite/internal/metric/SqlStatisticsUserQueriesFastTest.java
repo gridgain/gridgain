@@ -21,11 +21,16 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -282,7 +287,6 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
 
     /**
      * Check general failure metric if local select failed.
-     *
      */
     @Test
     public void testLocalSelectFailed() {
@@ -299,12 +303,77 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
     }
 
     /**
+     * Check general failure metric if local select failed.
+     */
+    @Test
+    public void testLocalLazySelectFailedOnIterator() {
+        final Iterator<List<?>> it = cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")
+            .setLocal(true)
+            .setLazy(true)).iterator();
+
+        assertMetricsIncrementedOnlyOnReducer(() -> {
+                try {
+                    it.next();
+
+                    fail("Exception must be thrown");
+                }
+                catch (CacheException | IgniteSQLException e) {
+                    // Expected exception.
+                }
+            },
+            "failed");
+    }
+
+    /**
      * Check cancel metric if local select cancelled.
      */
     @Test
     public void testLocalSelectCanceled() {
         assertMetricsIncrementedOnlyOnReducer(() ->
                 startAndKillQuery(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)").setLocal(true)),
+            "success",
+            "failed",
+            "canceled");
+    }
+
+    /**
+     * Check cancel metric if local select cancelled.
+     */
+    @Test
+    public void testLocalLazySelectCanceledOnIterator() {
+        assertMetricsIncrementedOnlyOnReducer(() -> {
+                IgniteInternalFuture qryCanceled = runAsyncX(() -> GridTestUtils.assertThrowsAnyCause(
+                    log,
+                    () -> {
+                        Iterator<List<?>> it = jcache(REDUCER_IDX).query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(ID)")
+                            .setLocal(true)
+                            .setLazy(true)).iterator();
+
+                        while (it.hasNext())
+                            it.next();
+
+                        return null;
+                    },
+                    QueryCancelledException.class,
+                    null)
+                );
+
+                try {
+                    SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
+
+                    // We perform async kill and hope it does it's job in some time.
+                    killAsyncAllQueriesOn(REDUCER_IDX);
+
+                    TimeUnit.SECONDS.sleep(WAIT_FOR_KILL_SEC);
+
+                    SuspendQuerySqlFunctions.resumeQueryExecution();
+
+                    qryCanceled.get(WAIT_OP_TIMEOUT_SEC, TimeUnit.SECONDS);
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            },
             "success",
             "failed",
             "canceled");

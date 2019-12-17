@@ -65,7 +65,10 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
     /** {@inheritDoc} */
     @Override protected Iterator<T> iter() {
         try {
-            return super.iter();
+            if (lazy())
+                return new RegisteredIterator(super.iter());
+            else
+                return super.iter();
         }
         catch (Exception e) {
             failReason = e;
@@ -74,55 +77,6 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
                 unregisterQuery();
 
             throw e;
-        }
-    }
-
-    /** Re-implements to track thrown exceptions on query error / cancel. */
-    @Override public List<T> getAll() {
-        List<T> all = new ArrayList<>();
-
-        try {
-            Iterator<T> iter = iter(); // Implicitly calls iterator() to do all checks.
-
-            while (iter.hasNext())
-                all.add(iter.next());
-
-            return all;
-        }
-        catch (Exception e) {
-            failReason = e;
-
-            if (QueryUtils.wasCancelled(failReason))
-                unregisterQuery();
-
-            throw e;
-        }
-        finally {
-            close();
-        }
-    }
-
-    /** {@inheritDoc}
-     * NB: if the method changed please change also RegisteredQueryCursor#getAll(QueryCursorEx.Consumer<T>)
-     * because it re-implements this logic to track exceptions on query registry.
-     */
-    @Override public void getAll(QueryCursorEx.Consumer<T> clo) throws IgniteCheckedException {
-        try {
-            Iterator<T> iter = iter(); // Implicitly calls iterator() to do all checks.
-
-            while (iter.hasNext())
-                clo.consume(iter.next());
-        }
-        catch (Exception e) {
-            failReason = e;
-
-            if (QueryUtils.wasCancelled(failReason))
-                unregisterQuery();
-
-            throw e;
-        }
-        finally {
-            close();
         }
     }
 
@@ -139,5 +93,56 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
     private void unregisterQuery(){
         if (unregistered.compareAndSet(false, true))
             runningQryMgr.unregister(qryId, failReason);
+    }
+
+    /**
+     *
+     */
+    private class RegisteredIterator implements Iterator<T> {
+        /** Delegate iterator. */
+        final Iterator<T> delegateIt;
+
+        /**
+         * @param it Result set iterator.
+         */
+        private RegisteredIterator(Iterator<T> it) {
+            delegateIt = it;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean hasNext() {
+            try {
+                return delegateIt.hasNext();
+            }
+            catch (Exception e) {
+                failReason = e;
+
+                if (QueryUtils.wasCancelled(failReason))
+                    unregisterQuery();
+
+                throw e;
+            }
+            finally {
+                close();
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public T next() {
+            try {
+                return delegateIt.next();
+            }
+            catch (Exception e) {
+                failReason = e;
+
+                if (QueryUtils.wasCancelled(failReason))
+                    unregisterQuery();
+
+                throw e;
+            }
+            finally {
+                close();
+            }
+        }
     }
 }

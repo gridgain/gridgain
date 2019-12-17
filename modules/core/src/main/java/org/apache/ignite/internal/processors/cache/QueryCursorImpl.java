@@ -159,15 +159,17 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
     /** {@inheritDoc} */
     @Override public void close() {
         while (state != CLOSED) {
-            try {
+            if (lazy) {
                 //In lazy mode: check that iterator has no data: in this case cancel.cancel() shouldn't be called.
-                if (lazy && iter != null && !iter.hasNext())
-                    STATE_UPDATER.compareAndSet(this, EXECUTION, RESULT_READY);
-            }
-            catch (Exception e) {
-                // Ignore exception on check iterator
-                // because Iterator.hasNext() may throw error on invalid / error query.
-                STATE_UPDATER.compareAndSet(this, RESULT_READY, CLOSED);
+                try {
+                    if (iter != null && !iter.hasNext())
+                        STATE_UPDATER.compareAndSet(this, EXECUTION, RESULT_READY);
+                }
+                catch (Exception e) {
+                    // Ignore exception on check iterator
+                    // because Iterator.hasNext() may throw error on invalid / error query.
+                    STATE_UPDATER.compareAndSet(this, EXECUTION, CLOSED);
+                }
             }
 
             if (STATE_UPDATER.compareAndSet(this, RESULT_READY, CLOSED)) {
@@ -253,6 +255,13 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
      */
     public PartitionResult partitionResult() {
         return partRes;
+    }
+
+    /**
+     * @return Lazy mode flag.
+     */
+    protected boolean lazy() {
+        return lazy;
     }
 
     /**
