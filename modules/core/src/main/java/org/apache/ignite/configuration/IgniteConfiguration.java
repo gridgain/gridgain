@@ -48,6 +48,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
@@ -2626,7 +2627,7 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setActiveOnStart(boolean activeOnStart) {
-        log.warning("Property activeOnStart deprecated. Use clusterStateOnStart instead.");
+        U.warn(log, "Property activeOnStart deprecated. Use clusterStateOnStart instead.");
 
         this.activeOnStart = activeOnStart;
 
@@ -2664,7 +2665,7 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setAutoActivationEnabled(boolean autoActivation) {
-        log.warning("Property autoActivation deprecated. Use clusterStateOnStart instead.");
+        U.warn(log, "Property autoActivation deprecated. Use clusterStateOnStart instead.");
 
         this.autoActivation = autoActivation;
 
