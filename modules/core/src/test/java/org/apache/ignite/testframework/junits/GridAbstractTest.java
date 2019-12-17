@@ -142,6 +142,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
 
+import static java.util.Collections.newSetFromMap;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISCO_FAILED_CLIENT_RECONNECT_DELAY;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
@@ -149,7 +150,6 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
-import static org.apache.ignite.internal.util.GridArgumentCheck.notNull;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.testframework.config.GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER;
@@ -201,6 +201,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             runTest(base);
         }
     };
+
+    /** Classes for which you want to clear the static log. */
+    private static final Collection<Class<?>> clearStaticLogClasses = newSetFromMap(new ConcurrentHashMap<>());
 
     /** Allows easy repeating for test. */
     @Rule public transient RepeatRule repeatRule = new RepeatRule();
@@ -344,6 +347,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected void afterTestsStopped() throws Exception {
         //restoring page handler wrapper
         BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
+
+        clearStaticLogClasses.forEach(this::clearStaticClassLog);
     }
 
     /**
@@ -2674,9 +2679,21 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * reset the static class log.
      *
      * @param cls Class.
-     * */
+     */
     protected void clearStaticLog(Class<?> cls) {
-        notNull(cls, "cls");
+        assertNotNull(cls);
+
+        clearStaticLogClasses.add(cls);
+        clearStaticClassLog(cls);
+    }
+
+    /**
+     * Clearing the static log for the class.
+     *
+     * @param cls Class.
+     */
+    private void clearStaticClassLog(Class<?> cls) {
+        assertNotNull(cls);
 
         ((AtomicReference<IgniteLogger>)getFieldValue(cls, "logRef")).set(null);
         setFieldValue(cls, "log", null);

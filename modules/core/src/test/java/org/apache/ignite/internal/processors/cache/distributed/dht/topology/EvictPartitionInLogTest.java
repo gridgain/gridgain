@@ -145,7 +145,7 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
 
         Map<Integer, Collection<Integer>> parseParts = new ConcurrentHashMap<>();
 
-        LogListener logLsnr = logListener("clearing",parseParts, DEFAULT_CACHE_NAMES);
+        LogListener logLsnr = logListener("clearing", parseParts, DEFAULT_CACHE_NAMES);
         testLog.registerListener(logLsnr);
 
         List<GridCacheAdapter<Object, Object>> internalCaches = of(DEFAULT_CACHE_NAMES)
@@ -259,7 +259,7 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
      * Parse contents of compact string after a {@link S#compact(Collection)}.
      *
      * @param str Compact string content.
-     * @return
+     * @return Parsed numbers.
      */
     private Collection<Integer> parseContentCompactStr(String str) {
         assertNotNull(str);
