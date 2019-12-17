@@ -552,17 +552,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
-            if (readOnly(discoClusterState.lastState()) || readOnly(globalState.state())) {
+            if (readOnly(discoClusterState.lastState()) || readOnly(globalState.state()))
                 ctx.cache().context().readOnlyMode(readOnly(globalState.state()));
 
-                if (readOnly(globalState.state())) {
-                    ctx.cache().context().database().forceCheckpoint("Cluster read-only mode enabled");
-
-                    log.info("Read-only mode is enabled");
-                }
-                else
-                    log.info("Read-only mode is disabled");
-            }
+            log.info("Cluster state was changed from " + discoClusterState.lastState() + " to " + globalState.state());
 
             if (!ClusterState.active(globalState.state()))
                 ctx.cache().context().readOnlyMode(false);

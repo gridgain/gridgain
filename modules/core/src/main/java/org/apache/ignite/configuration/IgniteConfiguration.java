@@ -2681,7 +2681,7 @@ public class IgniteConfiguration {
      * performed until the cluster is activated. This should significantly speed up large topology startup time.
      * <br/>
      * For <b>persistent cluster</b> If state is differ from {@link ClusterState#INACTIVE} and BaselineTopology is set
-     * as well than cluster moves to given cluster state when all nodes from the BaselineTopology join the cluster.
+     * as well then cluster moves to given cluster state when all nodes from the BaselineTopology join the cluster.
      * <p>
      * Default value is {@link #DFLT_STATE_ON_START}.
      * <p>
