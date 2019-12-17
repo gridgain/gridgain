@@ -33,6 +33,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -66,11 +67,16 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-
         setSslCtxFactoryToCli = false;
         setSslCtxFactoryToIgnite = false;
         supportedCiphers = null;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
     }
 
     /** {@inheritDoc} */
