@@ -53,6 +53,8 @@ namespace Apache.Ignite.Core.Impl.Client
         CacheGetOrCreateWithConfiguration = 1054,
         CacheGetConfiguration = 1055,
         CacheDestroy = 1056,
+        
+        [MinVersion(1, 4, 0)]
         CachePartitions = 1101,
         
         // Queries.
@@ -70,9 +72,16 @@ namespace Apache.Ignite.Core.Impl.Client
         BinaryTypePut = 3003,
 
         // Cluster.
+        [MinVersion(1, 5, 0)]
         ClusterIsActive = 4000,
+        
+        [MinVersion(1, 5, 0)]
         ClusterChangeState = 4001,
+        
+        [MinVersion(1, 5, 0)]
         ClusterChangeWalState = 4002,
+        
+        [MinVersion(1, 5, 0)]
         ClusterGetWalState = 4003
     }
 }
