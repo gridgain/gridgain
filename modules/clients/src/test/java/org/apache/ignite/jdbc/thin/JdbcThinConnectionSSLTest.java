@@ -224,20 +224,38 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testCustomCiphers() throws Exception {
+    public void testCustomCiphersOnClient() throws Exception {
         setSslCtxFactoryToCli = true;
-        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
         sslCtxFactory = getTestSslContextFactory();
 
         startGrids(1);
 
-        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
-            "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
-            "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
-            "&sslClientCertificateKeyStorePassword=123456" +
-            "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
-            "&sslTrustCertificateKeyStorePassword=123456")) {
-            checkConnection(conn);
+        try {
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
+
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslCipherSuites=TLS_RSA_WITH_AES_256_CBC_SHA256" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
+
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA256" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
         }
         finally {
             stopAllGrids();
@@ -248,16 +266,43 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testInvalidCustomCiphers() throws Exception {
+    public void testCustomCiphersOnServer() throws Exception {
         setSslCtxFactoryToCli = true;
-        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
+        supportedCiphers = new String[] {"TLS_RSA_WITH_AES_256_CBC_SHA256"};
         sslCtxFactory = getTestSslContextFactory();
 
         startGrids(1);
 
         try {
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
+
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslCipherSuites=TLS_RSA_WITH_AES_256_CBC_SHA256" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
+
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA256" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
+
             GridTestUtils.assertThrows(log, () -> {
                 return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                    "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
                     "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                     "&sslClientCertificateKeyStorePassword=123456" +
                     "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
@@ -273,16 +318,25 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      * @throws Exception If failed.
      */
     @Test
-    public void testInvalidCustomCiphers2() throws Exception {
+    public void testDisabledCustomCipher() throws Exception {
         setSslCtxFactoryToCli = true;
+        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
         sslCtxFactory = getTestSslContextFactory();
 
         startGrids(1);
 
         try {
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
+
             GridTestUtils.assertThrows(log, () -> {
                 return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
-                    "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
                     "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                     "&sslClientCertificateKeyStorePassword=123456" +
                     "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
