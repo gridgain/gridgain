@@ -273,4 +273,9 @@ public class WalCommands implements Command<T2<String, String>> {
     @Override public String name() {
         return WAL.toCommandName();
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean experimental() {
+        return true;
+    }
 }
