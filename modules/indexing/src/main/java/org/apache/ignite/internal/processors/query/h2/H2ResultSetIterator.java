@@ -94,7 +94,7 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
     private boolean closed;
 
     /** Canceled. */
-    private volatile boolean canceled;
+    private boolean canceled;
 
     /** Fetch size interceptor. */
     final H2QueryFetchSizeInterceptor fetchSizeInterceptor;
