@@ -84,6 +84,5 @@ namespace Apache.Ignite.Core.Impl.Client
         ClusterGroupGetNodeIds = 5100,
         [MinVersion(1, 5, 0)]
         ClusterGroupGetNodesInfo = 5101
-
     }
 }

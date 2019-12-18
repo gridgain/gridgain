@@ -131,7 +131,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
         [Test]
         public void TestClusterGroupThrowsExceptionInCaseOfUnknownNodes()
         {
-            var invalidNodeIds = new List<Guid> {Guid.Empty};
+            var invalidNodeIds = new[] {Guid.Empty};
             var clusterGroup = (ClientClusterGroup) Client.GetCluster();
 
             var cfg = GetIgniteConfiguration();
@@ -156,7 +156,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             IClientClusterNode node = clusterGroup.GetNode();
 
             // Set the wrong ids, but keep the same topology version.
-            var invalidNodeIds = new List<Guid> {Guid.NewGuid(), Guid.Empty};
+            var invalidNodeIds = new[] {Guid.NewGuid(), Guid.Empty};
             clusterGroup.UpdateTopology(1L, invalidNodeIds);
 
             Assert.AreSame(node, clusterGroup.GetNode());
