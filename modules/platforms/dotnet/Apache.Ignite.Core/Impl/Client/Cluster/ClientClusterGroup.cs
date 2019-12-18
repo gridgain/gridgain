@@ -37,8 +37,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** Attribute: platform. */
         private const string AttrPlatform = "org.apache.ignite.platform";
 
-        /** Platform. */
-        private const string Platform = "dotnet";
+        /** Platform: .NET. */
+        private const string PlatformDotNet = "dotnet";
 
         /** Ignite. */
         private readonly IgniteClient _ignite;
@@ -69,6 +69,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         internal ClientClusterGroup(IgniteClient ignite, Marshaller marsh)
             : this(ignite, marsh, ClientClusterGroupProjection.Empty)
         {
+            // No-op.
         }
 
         /// <summary>
@@ -101,7 +102,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritDoc /> */
         public IClientClusterGroup ForDotNet()
         {
-            return ForAttribute(AttrPlatform, Platform);
+            return ForAttribute(AttrPlatform, PlatformDotNet);
         }
 
         /** <inheritDoc /> */

@@ -22,8 +22,7 @@ namespace Apache.Ignite.Core.Client
 
     /// <summary>
     /// Interface representing a single cluster node obtained through a thin client.
-    /// You can get a list of all nodes in grid by calling <see cref="IClientClusterGroup.GetNodes"/> 
-    /// on <see cref="IIgniteClient"/> instance.
+    /// You can get a list of all nodes in grid by calling <see cref="IClientClusterGroup.GetNodes"/>.
     /// <para />
     /// You can use Ignite node attributes to provide static information about a node.
     /// This information is initialized once within grid, during node startup, and
