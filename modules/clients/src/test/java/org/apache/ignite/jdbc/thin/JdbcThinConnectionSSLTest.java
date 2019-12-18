@@ -17,6 +17,7 @@
 package org.apache.ignite.jdbc.thin;
 
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -325,13 +326,16 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testDisabledCustomCipher() throws Exception {
-        setSslCtxFactoryToCli = true;
-        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
-        sslCtxFactory = getTestSslContextFactory();
-
-        startGrids(1);
+        final String oldSecurity = Security.getProperty("jdk.tls.disabledAlgorithms");
+        Security.setProperty("jdk.tls.disabledAlgorithms", "");
 
         try {
+            setSslCtxFactoryToCli = true;
+            supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
+            sslCtxFactory = getTestSslContextFactory();
+
+            startGrids(1);
+
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
                 "&sslTrustAll=true" +
@@ -349,17 +353,9 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                     "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
                     "&sslTrustCertificateKeyStorePassword=123456");
             }, SQLException.class, "Failed to SSL connect to server");
-
-            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
-                "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
-                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
-                "&sslClientCertificateKeyStorePassword=123456" +
-                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
-                "&sslTrustCertificateKeyStorePassword=123456")) {
-                checkConnection(conn);
-            }
         }
         finally {
+            Security.setProperty("jdk.tls.disabledAlgorithms", oldSecurity);
             stopAllGrids();
         }
     }

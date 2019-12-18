@@ -69,7 +69,7 @@ public class JdbcThinSSLUtil {
      * @throws IOException On IO error in handshake.
      * @return SSL socket.
      */
-    public static SSLSocket createSSLSocket(InetSocketAddress addr, ConnectionProperties connProps) throws SQLException, IOException {
+    public static SSLSocket createSSLSocket(InetSocketAddress addr, ConnectionProperties connProps) throws SQLException {
         try {
             SSLSocketFactory sslSocketFactory = getSSLSocketFactory(connProps);
 
