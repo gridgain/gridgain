@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -396,7 +397,7 @@ public class RestExecutorSelfTest {
 
             // See: https://www.eclipse.org/jetty/documentation/current/configuring-form-size.html
             // The default maximum size Jetty permits is 200000 bytes and 1000 keys.
-            // We have 4 standart keys: cmd, attr, mtr, caches. And 996 random keys.
+            // We have 4 standart keys: [cmd, attr, mtr, caches] and 996 random keys.
             for (int i = 0; i < 996; i++) {
                 String param = UUID.randomUUID().toString();
 
@@ -447,39 +448,6 @@ public class RestExecutorSelfTest {
         }
     }
 
-    /**
-     * @param msg Dbg msg.
-     */
-    private void debug(String msg) {
-        System.out.println("[" + System.currentTimeMillis() + "] [" + Thread.currentThread().getName() + "] " + msg);
-    }
-
-    /**
-     * @param fut Future to check.
-     * @throws Exception If failed.
-     */
-    private void asserFutureIsDone(Future<Boolean> fut, String qry) throws Exception {
-        int cnt = 10;
-
-        while (!fut.isDone() && cnt > 0) {
-            debug(qry + cnt);
-
-            U.sleep(1000);
-
-            cnt--;
-        }
-
-        assertTrue(fut.isDone());
-
-        try {
-            debug(qry + " fut result: " +  fut.get());
-            // assertFalse(fut.get());
-        }
-        catch (Throwable e) {
-            debug(qry + " Err: " + e.getMessage());
-        }
-    }
-
     /** */
     @Test
     public void testLongRunningQueries() throws Throwable {
@@ -497,14 +465,13 @@ public class RestExecutorSelfTest {
             Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(30) from \"CarCache\".Car"));
             Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select * from \"CarCache\".Car"));
 
-            assertFalse(fut1.isDone()); // First query should take >= 3 sec.
-            assertFalse(fut2.isDone()); // Second query should take ~ 1 sec.
-            assertFalse(fut1.isDone()); // At this point first query should be in progress.
-            asserFutureIsDone(fut2, " q2: ");    // Second query should finish.
-            asserFutureIsDone(fut1, " q1: ");    // First  query should finish.
+            assertFalse(fut1.isDone());
+            assertFalse(fut2.isDone());
+            assertFalse(fut2.get(1L, TimeUnit.SECONDS));
 
-            Future<Boolean> fut3 = executor.submit(() -> executeQuery(exec, "select count(*) from \"CarCache\".Car"));
-            asserFutureIsDone(fut3, " q3: ");    // First  query should finish.
+            assertFalse(fut1.isDone());
+            assertTrue(fut2.isDone());
+            assertFalse(fut1.get(4L, TimeUnit.SECONDS));
         }
     }
 
@@ -513,8 +480,6 @@ public class RestExecutorSelfTest {
      * @param qry Query text.
      */
     private boolean executeQuery(RestExecutor exec, String qry) throws Exception {
-        debug(qry + " start");
-
         try {
             JsonObject params = new JsonObject()
                 .add("cmd", GridRestCommand.EXE.key())
@@ -554,14 +519,9 @@ public class RestExecutorSelfTest {
 
             taskRes = json.get("result").get("result");
 
-            debug(qry + " finish");
-
-            debug(qry + " res: " + taskRes.toString());
-
             return taskRes.get("hasMore").asBoolean();
         }
         catch (Throwable e) {
-            debug(qry + " Err2: " + e.getMessage());
             throw U.cast(e);
         }
     }
