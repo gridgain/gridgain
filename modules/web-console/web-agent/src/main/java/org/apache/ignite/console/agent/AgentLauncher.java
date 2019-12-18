@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
@@ -31,6 +30,8 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.bridge.SLF4JBridgeHandler;
+
+import static org.apache.ignite.console.agent.AgentUtils.split;
 
 /**
  * Ignite Web Console Agent launcher.
@@ -146,7 +147,7 @@ public class AgentLauncher {
 
             String tokens = String.valueOf(readPassword("Enter security tokens separated by comma: "));
 
-            cfg.tokens(new ArrayList<>(Arrays.asList(tokens.trim().split(","))));
+            cfg.tokens(split(tokens));
         }
 
         if (!F.isEmpty(cfg.passwordsStore()) && F.isEmpty(cfg.passwordsStorePassword())) {

@@ -16,13 +16,17 @@
 
 package org.apache.ignite.console.agent;
 
+import java.net.URL;
 import org.apache.ignite.IgniteException;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import static org.apache.ignite.console.agent.AgentUtils.getPasswordFromKeyStore;
+import static org.apache.ignite.console.agent.AgentUtils.secured;
+import static org.apache.ignite.console.agent.AgentUtils.split;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Agent utils tests.
@@ -33,11 +37,23 @@ public class AgentUtilsTest {
     public final ExpectedException ruleForExpEx = ExpectedException.none();
 
     /**
+     * @param fileName File name.
+     * @return File path.
+     */
+    private String path(String fileName) {
+        URL res = AgentUtilsTest.class.getClassLoader().getResource(fileName);
+
+        assertNotNull(res);
+
+        return res.getPath();
+    }
+
+    /**
      * Should return passwords from key store.
      */
     @Test
     public void shouldReturnPasswordFromKeyStore() {
-        String path = AgentUtilsTest.class.getClassLoader().getResource("passwords.p12").getPath();
+        String path = path("passwords.p12");
         String nodePwd = getPasswordFromKeyStore("node-password", path, "123456");
         String nodeKeyStorePwd = getPasswordFromKeyStore("node-key-store-password", path, "123456");
         String nodeTrustStorePwd = getPasswordFromKeyStore("node-trust-store-password", path, "123456");
@@ -59,7 +75,7 @@ public class AgentUtilsTest {
         ruleForExpEx.expect(IgniteException.class);
         ruleForExpEx.expectMessage("Failed to read password from key store, please check key store password");
 
-        String path = AgentUtilsTest.class.getClassLoader().getResource("passwords.p12").getPath();
+        String path = path("passwords.p12");
         getPasswordFromKeyStore("node-password", path, "12345678");
     }
 
@@ -80,7 +96,7 @@ public class AgentUtilsTest {
     @Test
     public void shouldThrowExceptionIfPasswordNotExistsInKeyStore() {
         String name = "node-node-password";
-        String path = AgentUtilsTest.class.getClassLoader().getResource("passwords.p12").getPath();
+        String path = path("passwords.p12");
 
         ruleForExpEx.expect(IgniteException.class);
         ruleForExpEx.expectMessage(String.format("Failed to find password in key store: [name=%s, keyStorePath=%s]", name, path));
@@ -97,5 +113,33 @@ public class AgentUtilsTest {
         ruleForExpEx.expectMessage("Empty path to key store with passwords");
 
         getPasswordFromKeyStore("node-password", "", "123456");
+    }
+
+    /**
+     * GG-25379 Testcase 5: Should correctly generate secured string.
+     */
+    @Test
+    public void shouldGenerateSecureString() {
+        assertEquals("", secured((String)null));
+        assertEquals("", secured(""));
+        assertEquals("1", secured("1"));
+        assertEquals("*2", secured("12"));
+        assertEquals("**3", secured("123"));
+        assertEquals("***4", secured("1234"));
+        assertEquals("*2345", secured("12345"));
+        assertEquals("**3456", secured("123456"));
+    }
+
+    /**
+     * GG-25379 Testcase 6: Should correctly split comma-separated string.
+     */
+    @Test
+    public void shouldSplitCorrectly() {
+        assertEquals(0, split(null).size());
+        assertEquals(0, split("").size());
+        assertEquals(0, split(",,,").size());
+        assertEquals(0, split(", ,   , ").size());
+        assertEquals(3, split("1,2,3, ").size());
+        assertEquals(4, split(" 1, 2, 3, 4 ").size());
     }
 }
