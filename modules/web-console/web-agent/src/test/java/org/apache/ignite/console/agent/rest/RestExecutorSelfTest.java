@@ -520,7 +520,8 @@ public class RestExecutorSelfTest {
             taskRes = json.get("result").get("result");
 
             return taskRes.get("hasMore").asBoolean();
-        } catch (Throwable e) {
+        }
+        catch (Throwable e) {
             throw U.cast(e);
         }
     }
