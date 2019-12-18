@@ -272,6 +272,8 @@ public abstract class AbstractWalRecordsIterator
         }
         catch (IOException | IgniteCheckedException e) {
             if (e instanceof WalSegmentTailReachedException) {
+                curRec=null;
+
                 throw new WalSegmentTailReachedException(
                     "WAL segment tail reached. [idx=" + hnd.idx() +
                         ", isWorkDir=" + hnd.workDir() + ", serVer=" + hnd.ser() +
@@ -283,8 +285,11 @@ public abstract class AbstractWalRecordsIterator
             if (!(e instanceof SegmentEofException) && !(e instanceof EOFException)) {
                 IgniteCheckedException e0 = handleRecordException(e, actualFilePtr);
 
-                if (e0 != null)
+                if (e0 != null) {
+                    curRec=null;
+
                     throw e0;
+                }
             }
 
             return null;
