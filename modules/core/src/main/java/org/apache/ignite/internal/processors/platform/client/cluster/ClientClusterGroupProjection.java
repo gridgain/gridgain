@@ -51,11 +51,8 @@ public class ClientClusterGroupProjection {
      * @return Projection.
      */
     public static ClientClusterGroupProjection read(BinaryRawReader reader) {
-        if (!reader.readBoolean())
-            return new ClientClusterGroupProjection(null);
-
         int cnt = reader.readInt();
-        ProjectionItem[] items = new ProjectionItem[cnt];
+        ProjectionItem[] items = cnt == 0 ? null : new ProjectionItem[cnt];
         for (int i = 0; i < cnt; i++) {
             short code = reader.readShort();
             switch (code) {

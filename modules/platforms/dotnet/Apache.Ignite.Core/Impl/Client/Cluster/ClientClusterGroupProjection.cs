@@ -85,13 +85,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="writer">Binary writer.</param>
         public void Write(IBinaryRawWriter writer)
         {
-            if (_filter.Count == 0)
-            {
-                writer.WriteBoolean(false);
-                return;
-            }
-
-            writer.WriteBoolean(true);
             writer.WriteInt(_filter.Count);
 
             foreach (var item in _filter)
