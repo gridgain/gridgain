@@ -53,6 +53,8 @@ public class RetryableSenderTest {
 
         with().pollInterval(100, MILLISECONDS).await().atMost(1, SECONDS)
             .until(() -> !results.isEmpty() && results.get(0).size() == 1);
+
+        snd.stop(true);
     }
 
     /**
@@ -88,6 +90,8 @@ public class RetryableSenderTest {
         shouldSnd.set(true);
 
         with().pollInterval(100, MILLISECONDS).await().atMost(10, SECONDS).until(() -> results.size() == 2);
+
+        snd.stop(true);
     }
 
     /**
@@ -112,6 +116,8 @@ public class RetryableSenderTest {
 
         with().pollInterval(100, MILLISECONDS).await().atMost(1, SECONDS)
             .until(() -> !results.isEmpty() && results.get(1).size() == 7);
+
+        snd.stop(true);
     }
 
     /**
@@ -146,5 +152,7 @@ public class RetryableSenderTest {
         shouldSnd.set(true);
 
         with().pollInterval(100, MILLISECONDS).await().atMost(10, SECONDS).until(() -> results.size() == 2);
+
+        snd.stop(true);
     }
 }
