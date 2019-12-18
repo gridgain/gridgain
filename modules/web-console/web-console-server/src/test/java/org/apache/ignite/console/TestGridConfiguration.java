@@ -17,12 +17,8 @@
 package org.apache.ignite.console;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.security.IgniteSessionRepository;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgnitionEx;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.web.client.RestTemplateBuilder;
