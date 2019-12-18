@@ -182,6 +182,8 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
                 if (cancel != null)
                     cancel.cancel();
 
+                closeIter();
+
                 return;
             }
 

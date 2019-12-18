@@ -69,11 +69,16 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      * Setup.
      */
     @Override protected void beforeTestsStarted() throws Exception {
-        SuspendQuerySqlFunctions.refresh();
-
         startGrids(2);
 
         cache = createCacheFrom(grid(REDUCER_IDX));
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        SuspendQuerySqlFunctions.refresh();
     }
 
     /** {@inheritDoc} */
