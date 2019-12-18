@@ -17,7 +17,11 @@
 package org.apache.ignite.internal.processors.query.h2.twostep.msg;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.Map;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 import org.h2.value.Value;
@@ -29,6 +33,10 @@ import static org.h2.util.StringUtils.convertBytesToHex;
  * H2 Java Object.
  */
 public class GridH2JavaObject extends GridH2ValueMessage {
+    /** Flag to disable container (collection) objects detach. Changed by reflection in tests. */
+    private static final boolean DISABLE_OBJECTS_IN_CONTAINER_DETACH =
+        Boolean.getBoolean(IgniteSystemProperties.SQL_DISABLE_OBJECTS_IN_CONTAINER_DETACH);
+
     /** */
     private byte[] b;
 
@@ -45,7 +53,47 @@ public class GridH2JavaObject extends GridH2ValueMessage {
     public GridH2JavaObject(Value val) {
         assert val.getType().getValueType() == Value.JAVA_OBJECT : val.getType();
 
+        if (!DISABLE_OBJECTS_IN_CONTAINER_DETACH)
+            allowDetachForSimpleContainers(val.getObject());
+
         b = val.getBytesNoCopy();
+    }
+
+    /**
+     * Allows detach for binary objects in containers to avoid excessive memory usage.
+     *
+     * @param obj Object to proccess.
+     */
+    private void allowDetachForSimpleContainers(Object obj) {
+        if (obj instanceof Collection) {
+            Collection col = (Collection)obj;
+
+            for (Object x : col) {
+                if (x instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x).detachAllowed(true);
+            }
+        }
+        else if (obj instanceof Object[]) {
+            Object[] arr = (Object[])obj;
+
+            for (Object x : arr) {
+                if (x instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x).detachAllowed(true);
+            }
+        }
+        else if (obj instanceof Map) {
+            Map map = (Map)obj;
+
+            for (Object x0 : map.entrySet()) {
+                Map.Entry x = (Map.Entry)x0;
+
+                if (x.getKey() instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x.getKey()).detachAllowed(true);
+
+                if (x.getValue() instanceof BinaryObjectImpl)
+                    ((BinaryObjectImpl)x.getValue()).detachAllowed(true);
+            }
+        }
     }
 
     /** {@inheritDoc} */

@@ -965,6 +965,9 @@ public class BinaryWriterExImpl implements BinaryWriter, BinaryRawWriterEx, Obje
         if (po == null)
             out.writeByte(GridBinaryMarshaller.NULL);
         else {
+            // Detach object if possible to not write more bytes than needed
+            po = po.detach();
+
             byte[] poArr = po.array();
 
             out.unsafeEnsure(1 + 4 + poArr.length + 4);
