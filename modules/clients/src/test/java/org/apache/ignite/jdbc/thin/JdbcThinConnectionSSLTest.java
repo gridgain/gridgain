@@ -17,7 +17,6 @@
 package org.apache.ignite.jdbc.thin;
 
 import java.security.NoSuchAlgorithmException;
-import java.security.Security;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -34,11 +33,14 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 /**
  * SSL connection test.
  */
+
+@WithSystemProperty(key = "jdk.tls.disabledAlgorithms", value = "")
 @SuppressWarnings("ThrowableNotThrown")
 public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     /** Client key store path. */
@@ -324,23 +326,19 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     /**
      * @throws Exception If failed.
      *
-     * Note: Disabled cipher suite can be enabled via Java Security property "jdk.tls.disabledAlgorithms"
-     * or in <JRE_8_HOME>/lib/security/java.security file.
+     * Note: Disabled cipher suite can be enabled via Java Security property "jdk.tls.disabledAlgorithms" or in
+     * <JRE_8_HOME>/lib/security/java.security file.
      *
      * Note: java.security file location may be changed for Java 9+ version
      */
     @Test
     public void testDisabledCustomCipher() throws Exception {
-        final String oldDisabledAlgs = Security.getProperty("jdk.tls.disabledAlgorithms");
-        Security.setProperty("jdk.tls.disabledAlgorithms", "");
+        setSslCtxFactoryToCli = true;
+        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
+        sslCtxFactory = getTestSslContextFactory();
 
+        startGrids(1);
         try {
-            setSslCtxFactoryToCli = true;
-            supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
-            sslCtxFactory = getTestSslContextFactory();
-
-            startGrids(1);
-
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
                 "&sslTrustAll=true" +
@@ -360,7 +358,6 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
             }, SQLException.class, "Failed to SSL connect to server");
         }
         finally {
-            Security.setProperty("jdk.tls.disabledAlgorithms", oldDisabledAlgs);
             stopAllGrids();
         }
     }
