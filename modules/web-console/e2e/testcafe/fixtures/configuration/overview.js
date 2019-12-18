@@ -27,17 +27,14 @@ import {successNotification} from '../../components/notifications';
 import * as models from '../../page-models/pageConfigurationAdvancedModels';
 import {configureNavButton} from '../../components/topNavigation';
 
-const regularUser = createRegularUser();
-
 const repeat = (times, fn) => [...Array(times).keys()].reduce((acc, i) => acc.then(() => fn(i)), Promise.resolve());
 
 fixture('Configuration overview')
-    .before(async(t) => {
+    .beforeEach(async(t) => {
         await dropTestDB();
         await insertTestUser();
-    })
-    .beforeEach(async(t) => {
-        await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`));
+
+        await t.useRole(createRegularUser()).navigateTo(resolveUrl(`/configuration/overview`));
     })
     .after(async(t) => await dropTestDB());
 
