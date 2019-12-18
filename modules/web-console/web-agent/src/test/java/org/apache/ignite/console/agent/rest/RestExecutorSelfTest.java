@@ -463,15 +463,15 @@ public class RestExecutorSelfTest {
             ExecutorService executor = Executors.newFixedThreadPool(2);
 
             Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(30) from \"CarCache\".Car"));
-            Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select count(*) from \"CarCache\".Car"));
+            Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select * from \"CarCache\".Car"));
 
             assertFalse(fut1.isDone());
             assertFalse(fut2.isDone());
-            assertFalse(fut2.get(1L, TimeUnit.SECONDS));
+            assertFalse(fut2.get(3L, TimeUnit.SECONDS));
 
             assertFalse(fut1.isDone());
             assertTrue(fut2.isDone());
-            assertFalse(fut1.get(4L, TimeUnit.SECONDS));
+            assertFalse(fut1.get(6L, TimeUnit.SECONDS));
         }
     }
 
