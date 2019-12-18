@@ -665,7 +665,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
         GridTestUtils.assertThrowsAnyCause(log, () -> {
             ignite.cache(DEFAULT_CACHE_NAME).query(
                 new SqlFieldsQuery("select * from Integer where _key in " +
-                    "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()")
+                    "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledMoreThan(128)")
                     .setLocal(true)
             ).getAll();
 
