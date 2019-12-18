@@ -31,7 +31,8 @@ public class IgniteSqlMergeIndexedValue2Benchmark extends IgniteCacheAbstractBen
         int key = nextRandom(args.range());
 
         Person2 p = new Person2(key);
-        cache.query(new SqlFieldsQuery("merge into Person2(_key, val1, val2) values (?, ?)").setArgs(key, p.val1(), p.val2()));
+        cache.query(new SqlFieldsQuery("merge into Person2(_key, val1, val2) values (?, ?, ?)")
+            .setArgs(key, p.val1(), p.val2()));
 
         return true;
     }
