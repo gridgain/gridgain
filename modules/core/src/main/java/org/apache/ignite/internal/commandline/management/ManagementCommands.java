@@ -286,4 +286,9 @@ public class ManagementCommands implements Command<ManagementArguments> {
         log.info("Management session expiration timeout: " + cfg.getSecuritySessionExpirationTimeout());
         log.info("");
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean experimental() {
+        return true;
+    }
 }
