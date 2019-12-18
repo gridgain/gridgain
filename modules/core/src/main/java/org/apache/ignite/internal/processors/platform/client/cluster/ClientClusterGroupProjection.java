@@ -19,8 +19,6 @@ package org.apache.ignite.internal.processors.platform.client.cluster;
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.cluster.ClusterGroup;
 
-import java.util.function.Function;
-
 /**
  * Client cluster group projection representation.
  * Decodes a remote projection request from a client node.
@@ -32,20 +30,23 @@ public class ClientClusterGroupProjection {
     /** */
     private static final short SERVER_NODES = 2;
 
-    /** Cluster group factory method. */
-    private final Function<ClusterGroup, ClusterGroup> clusterGrpFactory;
+    /**
+     * Projection items.
+     */
+    private final ProjectionItem[] prjItems;
 
     /**
      * Constructor.
      *
-     * @param clusterGrpFactory Cluster Group builder.
+     * @param prjItems Projection items.
      */
-    private ClientClusterGroupProjection(Function<ClusterGroup, ClusterGroup> clusterGrpFactory){
-        this.clusterGrpFactory = clusterGrpFactory;
+    private ClientClusterGroupProjection(ProjectionItem[] prjItems) {
+        this.prjItems = prjItems;
     }
 
     /**
      * Reads projection from a stream.
+     *
      * @param reader Reader.
      * @return Projection.
      */
@@ -53,31 +54,24 @@ public class ClientClusterGroupProjection {
         if (!reader.readBoolean())
             return new ClientClusterGroupProjection(null);
 
-        Function<ClusterGroup, ClusterGroup> factory = clusterGrp ->
-        {
-            int cnt = reader.readInt();
-            for (int i = 0; i < cnt; i++) {
-                short code = reader.readShort();
-                switch (code) {
-                    case ATTRIBUTE: {
-                        String attName = reader.readString();
-                        String attrVal = reader.readString();
-                        clusterGrp = clusterGrp.forAttribute(attName, attrVal);
-                        break;
-                    }
-                    case SERVER_NODES: {
-                        clusterGrp = reader.readBoolean()
-                                ? clusterGrp.forServers()
-                                : clusterGrp.forClients();
-                        break;
-                    }
-                    default:
-                        throw new UnsupportedOperationException("Unknown code: " + code);
+        int cnt = reader.readInt();
+        ProjectionItem[] items = new ProjectionItem[cnt];
+        for (int i = 0; i < cnt; i++) {
+            short code = reader.readShort();
+            switch (code) {
+                case ATTRIBUTE: {
+                    items[i] = new ForAttributeProjectionItem(reader);
+                    break;
                 }
+                case SERVER_NODES: {
+                    items[i] = new ForServerNodesProjectionItem(reader);
+                    break;
+                }
+                default:
+                    throw new UnsupportedOperationException("Unknown code: " + code);
             }
-            return clusterGrp;
-        };
-        return new ClientClusterGroupProjection(factory);
+        }
+        return new ClientClusterGroupProjection(items);
     }
 
     /**
@@ -86,10 +80,82 @@ public class ClientClusterGroupProjection {
      * @param clusterGrp Source cluster group.
      * @return New cluster group instance with the projection.
      */
-    public ClusterGroup apply(ClusterGroup clusterGrp){
-        if(clusterGrpFactory == null)
-            return clusterGrp;
+    public ClusterGroup apply(ClusterGroup clusterGrp) {
+        if (prjItems != null) {
+            for (ProjectionItem item : prjItems)
+                clusterGrp = item.apply(clusterGrp);
+        }
+        return clusterGrp;
+    }
 
-        return clusterGrpFactory.apply(clusterGrp);
+    /**
+     * Projection item.
+     */
+    private interface ProjectionItem {
+        /**
+         * Applies projection to the cluster group.
+         *
+         * @param clusterGrp Cluster group.
+         * @return Cluster group with current projection.
+         */
+        ClusterGroup apply(ClusterGroup clusterGrp);
+    }
+
+    /**
+     * Attribute projection item.
+     */
+    private static final class ForAttributeProjectionItem implements ProjectionItem {
+        /**
+         * Attribute name.
+         */
+        private final String name;
+
+        /**
+         * Attribute value.
+         */
+        private final String val;
+
+        /**
+         * Ctor.
+         *
+         * @param reader Reader.
+         */
+        public ForAttributeProjectionItem(BinaryRawReader reader) {
+            name = reader.readString();
+            val = reader.readString();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override public ClusterGroup apply(ClusterGroup clusterGrp) {
+            return clusterGrp.forAttribute(name, val);
+        }
+    }
+
+    /**
+     * Represents server nodes only projection item.
+     */
+    private static final class ForServerNodesProjectionItem implements ProjectionItem {
+        /**
+         * Is for server nodes only.
+         */
+        private final Boolean isForSrvNodes;
+
+        /**
+         * Ctor.
+         *
+         * @param reader Reader.
+         */
+        public ForServerNodesProjectionItem(BinaryRawReader reader) {
+            isForSrvNodes = reader.readBoolean();
+        }
+
+        /**
+         * {@inheritDoc}
+         */
+        @Override public ClusterGroup apply(ClusterGroup clusterGrp) {
+            return isForSrvNodes ? clusterGrp.forServers() : clusterGrp.forClients();
+        }
     }
 }

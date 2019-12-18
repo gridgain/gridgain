@@ -56,6 +56,10 @@ public class ClientClusterGroupGetNodeIdsResponse extends ClientResponse {
         // we return outdated top ver to the callee. But this race is benign, the only
         // possible side effect is that the user will re-request nodes and we will return
         // the same set of nodes but with more recent topology version.
-        writer.writeUuidArray(nodeIds);
+        writer.writeInt(nodeIds.length);
+        for (UUID node: nodeIds) {
+            writer.writeLong(node.getMostSignificantBits());
+            writer.writeLong(node.getLeastSignificantBits());
+        }
     }
 }

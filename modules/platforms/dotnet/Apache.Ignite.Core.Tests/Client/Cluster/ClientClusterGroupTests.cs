@@ -30,8 +30,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
     [TestFixture]
     public class ClientClusterGroupTests : ClientTestBase
     {
-        private const string ExpectedErrorMessage =
-            "'name' argument should not be null or empty.\r\nParameter name: name";
+        private static readonly string ExpectedErrorMessage =
+            "'name' argument should not be null or empty." + Environment.NewLine + "Parameter name: name";
 
         /// <summary>
         /// Test thin client cluster group returns the same nodes collection as thick one.

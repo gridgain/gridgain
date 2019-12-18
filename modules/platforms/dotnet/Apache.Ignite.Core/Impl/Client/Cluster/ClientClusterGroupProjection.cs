@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private interface IProjectionItem
         {
             /// <summary>
-            /// Writes the projection item to output fuffer.
+            /// Writes the projection item to output buffer.
             /// </summary>
             /// <param name="writer">Binary writer.</param>
             void Write(IBinaryRawWriter writer);

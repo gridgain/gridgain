@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private readonly Func<IClientClusterNode, bool> _predicate;
 
         /** Node ids collection. */
-        private IList<Guid> _nodeIds;
+        private Guid[] _nodeIds;
 
         /// <summary>
         /// Constructor.
@@ -161,7 +161,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             Debug.Assert(_nodeIds != null, "At least one topology update should have occurred.");
 
             // Local lookup with a native predicate is a trade off between complexity and consistency.
-            var nodesList = new List<IClientClusterNode>(_nodeIds.Count);
+            var nodesList = new List<IClientClusterNode>();
             foreach (Guid nodeId in _nodeIds)
             {
                 IClientClusterNode node = _ignite.GetClientNode(nodeId);
@@ -178,7 +178,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// Request topology information.
         /// </summary>
         /// <returns>Topology version with nodes identifiers.</returns>rns>
-        private Tuple<long, List<Guid>> RequestTopologyInformation(long oldTopVer)
+        private Tuple<long, Guid[]> RequestTopologyInformation(long oldTopVer)
         {
             Action<IBinaryRawWriter> writeAction = writer =>
             {
@@ -186,7 +186,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 _projection.Write(writer);
             };
 
-            Func<IBinaryRawReader, Tuple<long, List<Guid>>> readFunc = reader =>
+            Func<IBinaryRawReader, Tuple<long, Guid[]>> readFunc = reader =>
             {
                 if (!reader.ReadBoolean())
                 {
@@ -195,12 +195,29 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 }
 
                 long remoteTopVer = reader.ReadLong();
-
-                List<Guid> nodeIds = reader.ReadGuidArray().Cast<Guid>().ToList();
-                return Tuple.Create(remoteTopVer, nodeIds);
+                return Tuple.Create(remoteTopVer, ReadNodeIds(reader));
             };
 
             return DoOutInOp(ClientOp.ClusterGroupGetNodeIds, writeAction, readFunc);
+        }
+
+        /// <summary>
+        /// Reads node ids.
+        /// </summary>
+        /// <param name="reader">Reader.</param>
+        /// <returns>Node ids array.</returns>
+        private static Guid[] ReadNodeIds(IBinaryRawReader reader)
+        {
+            int nodesCount = reader.ReadInt();
+
+            var nodeIds = new Guid[nodesCount];
+            for (int i = 0; i < nodesCount; i++)
+            {
+                var stream = ((BinaryReader) reader).Stream;
+                nodeIds[i] = BinaryUtils.ReadGuid(stream);
+            }
+
+            return nodeIds;
         }
 
         /// <summary>
@@ -208,7 +225,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// </summary>
         /// <param name="remoteTopVer">Remote topology version.</param>
         /// <param name="nodeIds">Node ids.</param>
-        internal void UpdateTopology(long remoteTopVer, List<Guid> nodeIds)
+        internal void UpdateTopology(long remoteTopVer, Guid[] nodeIds)
         {
             lock (_syncRoot)
             {
@@ -227,9 +244,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// This method will filter only unknown node ids that
         /// have not been serialized inside IgniteClient before.
         /// </summary>
-        /// <param name="nodeIds">Node ids collection.</param>
+        /// <param name="nodeIds">Node ids array.</param>
         /// <returns>Collection of <see cref="IClusterNode"/> instances.</returns>
-        private void RequestNodesInfo(IEnumerable<Guid> nodeIds)
+        private void RequestNodesInfo(Guid[] nodeIds)
         {
             var unknownNodes = nodeIds.Where(nodeId => !_ignite.ContainsNode(nodeId)).ToList();
             if (unknownNodes.Count > 0)
