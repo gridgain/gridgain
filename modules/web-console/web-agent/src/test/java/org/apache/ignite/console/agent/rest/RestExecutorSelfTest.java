@@ -496,6 +496,9 @@ public class RestExecutorSelfTest {
             assertFalse(fut1.isDone()); // At this point first query should be in progress.
             asserFutureIsDone(fut2, " q2: ");    // Second query should finish.
             asserFutureIsDone(fut1, " q1: ");    // First  query should finish.
+
+            Future<Boolean> fut3 = executor.submit(() -> executeQuery(exec, "select count(*) from \"CarCache\".Car"));
+            asserFutureIsDone(fut3, " q3: ");    // First  query should finish.
         }
     }
 
@@ -504,6 +507,8 @@ public class RestExecutorSelfTest {
      * @param qry Query text.
      */
     private boolean executeQuery(RestExecutor exec, String qry) throws Exception {
+        System.out.println(System.currentTimeMillis() + " " + qry + " start");
+
         try {
             JsonObject params = new JsonObject()
                 .add("cmd", GridRestCommand.EXE.key())
@@ -543,9 +548,14 @@ public class RestExecutorSelfTest {
 
             taskRes = json.get("result").get("result");
 
+            System.out.println(System.currentTimeMillis() + " " + qry + " finish");
+
+            System.out.println(System.currentTimeMillis() + " " + qry + ": " + taskRes.toString());
+
             return taskRes.get("hasMore").asBoolean();
         }
         catch (Throwable e) {
+            System.out.println(System.currentTimeMillis() + " " + qry + " " + e.getMessage());
             throw U.cast(e);
         }
     }
