@@ -323,10 +323,15 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
     /**
      * @throws Exception If failed.
+     *
+     * Note: Disabled cipher suite can be enabled via Java Security property "jdk.tls.disabledAlgorithms"
+     * or in <JRE_8_HOME>/lib/security/java.security file.
+     *
+     * Note: java.security file location may be changed for Java 9+ version
      */
     @Test
     public void testDisabledCustomCipher() throws Exception {
-        final String oldSecurity = Security.getProperty("jdk.tls.disabledAlgorithms");
+        final String oldDisabledAlgs = Security.getProperty("jdk.tls.disabledAlgorithms");
         Security.setProperty("jdk.tls.disabledAlgorithms", "");
 
         try {
@@ -355,7 +360,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
             }, SQLException.class, "Failed to SSL connect to server");
         }
         finally {
-            Security.setProperty("jdk.tls.disabledAlgorithms", oldSecurity);
+            Security.setProperty("jdk.tls.disabledAlgorithms", oldDisabledAlgs);
             stopAllGrids();
         }
     }
