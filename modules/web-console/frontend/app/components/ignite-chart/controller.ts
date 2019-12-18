@@ -239,7 +239,7 @@ export class IgniteChartController {
 
         this.config = _.merge(this.config, this.chartOptions);
 
-        const chartModule = await import('chart.js');
+        const chartModule = await import(/* webpackChunkName: "chart.js" */ 'chart.js');
         const Chart = chartModule.default;
 
         Chart.Tooltip.positioners.yCenter = (elements) => {
@@ -276,7 +276,7 @@ export class IgniteChartController {
             }
         });
 
-        await import('chartjs-plugin-streaming');
+        await import(/* webpackChunkName: "chartjs-plugin-streaming" */ 'chartjs-plugin-streaming');
 
         if (!this.ctx) return;
 
