@@ -203,7 +203,7 @@ public class JdbcThinConnection implements Connection {
     private int netTimeout;
 
     /** Query timeout. */
-    private int qryTimeout;
+    private final @Nullable Integer qryTimeout;
 
     /** Background periodical maintenance: query timeouts and reconnection handler. */
     private final ScheduledExecutorService maintenanceExecutor = Executors.newScheduledThreadPool(2);
@@ -230,7 +230,7 @@ public class JdbcThinConnection implements Connection {
         autoCommit = true;
         txIsolation = Connection.TRANSACTION_NONE;
         netTimeout = connProps.getConnectionTimeout();
-        qryTimeout = connProps.getQueryTimeout();
+                qryTimeout = connProps.getQueryTimeout();
 
         schema = JdbcUtils.normalizeSchema(connProps.getSchema());
 
@@ -350,8 +350,8 @@ public class JdbcThinConnection implements Connection {
 
         JdbcThinStatement stmt = new JdbcThinStatement(this, resSetHoldability, schema);
 
-        // t0d0 timeout from connection properties
-//        stmt.setQueryTimeout(qryTimeout);
+        if (qryTimeout != null)
+            stmt.setQueryTimeout(qryTimeout);
 
         synchronized (stmtsMux) {
             stmts.add(stmt);

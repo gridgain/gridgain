@@ -220,7 +220,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     private IntegerProperty qryTimeout = new IntegerProperty("queryTimeout",
         "Sets the number of seconds the driver will wait for a <code>Statement</code> object to execute." +
             " Zero means there is no limits.",
-        0L, false, 0, Integer.MAX_VALUE);
+        null, false, 0, Integer.MAX_VALUE);
 
     /** JDBC connection timeout. */
     private IntegerProperty connTimeout = new IntegerProperty("connectionTimeout",

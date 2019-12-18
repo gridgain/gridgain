@@ -912,15 +912,6 @@ public class JdbcThinStatement implements Statement {
     }
 
     /**
-     * Sets timeout in milliseconds.
-     *
-     * @param timeout Timeout.
-     */
-    void timeout(int timeout) {
-        this.timeout = timeout;
-    }
-
-    /**
      * @return Connection.
      */
     JdbcThinConnection connection() {
