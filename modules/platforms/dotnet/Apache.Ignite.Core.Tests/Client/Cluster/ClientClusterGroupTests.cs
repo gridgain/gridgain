@@ -171,7 +171,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cluster
             TestDelegate action = () => Client.GetCluster().ForPredicate(null);
 
             var ex = Assert.Throws<ArgumentNullException>(action);
-            Assert.AreEqual("Value cannot be null.\r\nParameter name: p", ex.Message);
+            Assert.AreEqual("Value cannot be null." + Environment.NewLine + "Parameter name: p", ex.Message);
         }
 
         /// <summary>
