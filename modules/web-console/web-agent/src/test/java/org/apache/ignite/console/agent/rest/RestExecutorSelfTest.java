@@ -464,8 +464,14 @@ public class RestExecutorSelfTest {
 
         assertTrue(fut.isDone());
 
-        System.out.println(System.currentTimeMillis() + qry + fut.get());
-        // assertFalse(fut.get());
+        try {
+            System.out.println(System.currentTimeMillis() + qry + fut.get());
+            // assertFalse(fut.get());
+        }
+        catch (Throwable e) {
+            System.out.println(qry + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /** */
