@@ -249,7 +249,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <returns>Collection of <see cref="IClusterNode"/> instances.</returns>
         private void RequestNodesInfo(Guid[] nodeIds)
         {
-            var unknownNodes = nodeIds.Where(nodeId => !_ignite.ContainsNode(nodeId)).ToList();
+            var unknownNodes = new List<Guid>(nodeIds.Length);
+            foreach (var nodeId in nodeIds)
+            {
+                if (!_ignite.ContainsNode(nodeId))
+                {
+                    unknownNodes.Add(nodeId);
+                }
+            }
+            
             if (unknownNodes.Count > 0)
             {
                 RequestRemoteNodesDetails(unknownNodes);
@@ -262,14 +270,19 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="ids">Node identifiers.</param>
         private void RequestRemoteNodesDetails(List<Guid> ids)
         {
-            Action<IBinaryRawWriter> writeAction = writer =>
+            Action<IBinaryStream> writeAction = stream =>
             {
-                writer.WriteGuidArray(ids.Select(id => new Guid?(id)).ToArray());
+                stream.WriteInt(ids.Count);
+                foreach (var id in ids)
+                {
+                    BinaryUtils.WriteGuid(id, stream);
+                }
             };
-
-            Func<IBinaryRawReader, bool> readFunc = reader =>
+            
+            Func<IBinaryStream, bool> readFunc = stream =>
             {
-                var cnt = reader.ReadInt();
+                var cnt = stream.ReadInt();
+                var reader = _marsh.StartUnmarshal(stream);
                 for (var i = 0; i < cnt; i++)
                 {
                     _ignite.SaveClientClusterNode(reader);
@@ -278,7 +291,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 return true;
             };
 
-            DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, writeAction, readFunc);
+            _ignite.Socket.DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, writeAction, readFunc);
+
         }
 
         /// <summary>
