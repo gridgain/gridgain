@@ -25,11 +25,10 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -448,6 +447,23 @@ public class RestExecutorSelfTest {
         }
     }
 
+    /**
+     * @param fut Future to check.
+     * @throws Exception If failed.
+     */
+    private void asserFutureIsDone(Future<Boolean> fut) throws Exception {
+        int cnt = 10;
+
+        while (!fut.isDone() && cnt > 0) {
+            U.sleep(1000);
+
+            cnt--;
+        }
+
+        assertTrue(fut.isDone());
+        assertFalse(fut.get());
+    }
+
     /** */
     @Test
     public void testLongRunningQueries() throws Throwable {
@@ -465,13 +481,11 @@ public class RestExecutorSelfTest {
             Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(30) from \"CarCache\".Car"));
             Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select * from \"CarCache\".Car"));
 
-            assertFalse(fut1.isDone());
-            assertFalse(fut2.isDone());
-            assertFalse(fut2.get(3L, TimeUnit.SECONDS));
-
-            assertFalse(fut1.isDone());
-            assertTrue(fut2.isDone());
-            assertFalse(fut1.get(6L, TimeUnit.SECONDS));
+            assertFalse(fut1.isDone()); // First query should take >= 3 sec.
+            assertFalse(fut2.isDone()); // Second query should take ~ 1 sec.
+            assertFalse(fut1.isDone()); // At this point first query should be in progress.
+            asserFutureIsDone(fut2);    // Second query should finish.
+            asserFutureIsDone(fut1);    // First  query should finish.
         }
     }
 
