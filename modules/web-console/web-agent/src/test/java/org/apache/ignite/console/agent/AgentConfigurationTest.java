@@ -19,13 +19,11 @@ package org.apache.ignite.console.agent;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
-import java.util.List;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.apache.ignite.console.agent.AgentUtils.split;
 
 /**
  * Agent configuration tests.
@@ -52,8 +50,9 @@ public class AgentConfigurationTest {
      * Test that agent will accept tokens from user input.
      *
      * @param userInput User input.
+     * @param tokens Expected tokens in configuration.
      */
-    private void testWithUserPrompt(String userInput) {
+    private void testWithUserPrompt(String userInput, String... tokens) {
         InputStream prev = System.in;
 
         try {
@@ -64,12 +63,10 @@ public class AgentConfigurationTest {
 
             assertNotNull(cfg);
 
-            List<String> tokens = split(userInput);
+            assertEquals(tokens.length, cfg.tokens().size());
 
-            assertEquals(tokens.size(), cfg.tokens().size());
-
-            for (int i = 0; i < tokens.size(); i++)
-                assertEquals(tokens.get(i), cfg.tokens().get(i));
+            for (int i = 0; i < tokens.length; i++)
+                assertEquals(tokens[i], cfg.tokens().get(i));
         }
         finally {
             System.setIn(prev);
@@ -85,7 +82,7 @@ public class AgentConfigurationTest {
      */
     @Test
     public void shouldPromptForSingleToken() {
-        testWithUserPrompt("one-token");
+        testWithUserPrompt("one-token", "one-token");
     }
 
     /**
@@ -97,7 +94,7 @@ public class AgentConfigurationTest {
      */
     @Test
     public void shouldPromptForSeveralTokens() {
-        testWithUserPrompt("aa, bb,cc, ");
+        testWithUserPrompt("aa,, bb,cc, ", "aa", "bb", "cc");
     }
 
     /**
