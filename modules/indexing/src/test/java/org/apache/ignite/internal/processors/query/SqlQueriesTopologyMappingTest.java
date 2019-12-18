@@ -69,6 +69,18 @@ public class SqlQueriesTopologyMappingTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
+    public void testPartitionedQueryWithNodeFilter() throws Exception {
+        checkQueryWithNodeFilter(CacheMode.PARTITIONED);
+    }
+
+    /** */
+    @Test
+    public void testReplicatedQueryWithNodeFilter() throws Exception {
+        checkQueryWithNodeFilter(CacheMode.REPLICATED);
+    }
+
+    /** */
+    @Test
     public void testLocalCacheQueryMapping() throws Exception {
         IgniteEx ign0 = startGrid(0);
 
@@ -108,6 +120,33 @@ public class SqlQueriesTopologyMappingTest extends AbstractIndexingCommonTest {
         cache.put(1, 2);
 
         blockRebalanceSupplyMessages(ign0, DEFAULT_CACHE_NAME, getTestIgniteInstanceName(1));
+
+        startGrid(1);
+
+        client = true;
+
+        startGrid(10);
+
+        for (Ignite ign : G.allGrids()) {
+            List<List<?>> res = ign.cache(DEFAULT_CACHE_NAME)
+                .query(new SqlFieldsQuery("select * from Integer")).getAll();
+
+            assertEquals(1, res.size());
+            assertEqualsCollections(Arrays.asList(1, 2), res.get(0));
+        }
+    }
+
+    /** */
+    private void checkQueryWithNodeFilter(CacheMode cacheMode) throws Exception {
+        IgniteEx ign0 = startGrid(0);
+        String name0 = ign0.name();
+
+        IgniteCache<Object, Object> cache = ign0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+            .setCacheMode(cacheMode)
+            .setNodeFilter(node -> name0.equals(node.attribute(ATTR_IGNITE_INSTANCE_NAME)))
+            .setIndexedTypes(Integer.class, Integer.class));
+
+        cache.put(1, 2);
 
         startGrid(1);
 
