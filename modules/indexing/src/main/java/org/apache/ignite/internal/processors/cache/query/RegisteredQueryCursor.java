@@ -122,9 +122,6 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
 
                 throw e;
             }
-            finally {
-                close();
-            }
         }
 
         /** {@inheritDoc} */
@@ -139,9 +136,6 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
                     unregisterQuery();
 
                 throw e;
-            }
-            finally {
-                close();
             }
         }
     }

@@ -27,6 +27,7 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -307,12 +308,13 @@ public class SqlStatisticsUserQueriesFastTest extends UserQueriesTestBase {
      */
     @Test
     public void testLocalLazySelectFailedOnIterator() {
-        final Iterator<List<?>> it = cache.query(new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")
-            .setLocal(true)
-            .setLazy(true)).iterator();
-
         assertMetricsIncrementedOnlyOnReducer(() -> {
-                try {
+                try (FieldsQueryCursor<List<?>> cur = cache.query(
+                    new SqlFieldsQuery("SELECT * FROM TAB WHERE ID = failFunction()")
+                        .setLocal(true)
+                        .setLazy(true))) {
+                    Iterator<List<?>> it = cur.iterator();
+
                     it.next();
 
                     fail("Exception must be thrown");
