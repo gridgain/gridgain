@@ -448,6 +448,13 @@ public class RestExecutorSelfTest {
     }
 
     /**
+     * @param msg Dbg msg.
+     */
+    private void debug(String msg) {
+        System.out.println("[" + System.currentTimeMillis() + "] [" + Thread.currentThread().getName() + "] " + msg);
+    }
+
+    /**
      * @param fut Future to check.
      * @throws Exception If failed.
      */
@@ -455,7 +462,7 @@ public class RestExecutorSelfTest {
         int cnt = 10;
 
         while (!fut.isDone() && cnt > 0) {
-            System.out.println(System.currentTimeMillis() + qry + cnt);
+            debug(qry + cnt);
 
             U.sleep(1000);
 
@@ -465,12 +472,11 @@ public class RestExecutorSelfTest {
         assertTrue(fut.isDone());
 
         try {
-            System.out.println(System.currentTimeMillis() + qry + fut.get());
+            debug(qry + " fut result: " +  fut.get());
             // assertFalse(fut.get());
         }
         catch (Throwable e) {
-            System.out.println(qry + e.getMessage());
-            e.printStackTrace();
+            debug(qry + " Err: " + e.getMessage());
         }
     }
 
@@ -507,7 +513,7 @@ public class RestExecutorSelfTest {
      * @param qry Query text.
      */
     private boolean executeQuery(RestExecutor exec, String qry) throws Exception {
-        System.out.println(System.currentTimeMillis() + " " + qry + " start");
+        debug(qry + " start");
 
         try {
             JsonObject params = new JsonObject()
@@ -548,14 +554,14 @@ public class RestExecutorSelfTest {
 
             taskRes = json.get("result").get("result");
 
-            System.out.println(System.currentTimeMillis() + " " + qry + " finish");
+            debug(qry + " finish");
 
-            System.out.println(System.currentTimeMillis() + " " + qry + ": " + taskRes.toString());
+            debug(qry + " res: " + taskRes.toString());
 
             return taskRes.get("hasMore").asBoolean();
         }
         catch (Throwable e) {
-            System.out.println(System.currentTimeMillis() + " " + qry + " " + e.getMessage());
+            debug(qry + " Err2: " + e.getMessage());
             throw U.cast(e);
         }
     }
