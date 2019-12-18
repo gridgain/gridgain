@@ -40,13 +40,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public void SetActive(bool isActive)
         {
-            DoOutInOp<object>(ClientOp.ClusterChangeState, w => w.WriteBoolean(isActive), null);
+            DoOutInOp<object>(ClientOp.ClusterChangeState, w => w.WriteBool(isActive), null);
         }
 
         /** <inheritdoc /> */
         public bool IsActive()
         {
-            return DoOutInOp(ClientOp.ClusterIsActive, null, r => r.ReadBoolean());
+            return DoOutInOp(ClientOp.ClusterIsActive, null, r => r.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -59,6 +59,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 w.WriteString(cacheName);
                 w.WriteBoolean(false);
             };
+            
             return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBoolean());
         }
 
@@ -72,6 +73,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 w.WriteString(cacheName);
                 w.WriteBoolean(true);
             };
+            
             return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBoolean());
         }
 

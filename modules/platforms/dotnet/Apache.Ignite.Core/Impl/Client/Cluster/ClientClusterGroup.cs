@@ -291,7 +291,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 return true;
             };
 
-            _ignite.Socket.DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, writeAction, readFunc);
+            DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, writeAction, readFunc);
         }
 
         /// <summary>
@@ -300,8 +300,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         protected T DoOutInOp<T>(ClientOp opId, Action<IBinaryRawWriter> writeAction,
             Func<IBinaryRawReader, T> readFunc)
         {
-            return _ignite.Socket.DoOutInOp(opId, stream => WriteRequest(writeAction, stream),
-                stream => ReadRequest(readFunc, stream), HandleError<T>);
+            return DoOutInOp(opId, stream => WriteRequest(writeAction, stream), 
+                stream => ReadRequest(readFunc, stream));
+        }
+
+        /// <summary>
+        /// Does the out in op.
+        /// </summary>
+        protected T DoOutInOp<T>(ClientOp opId, Action<IBinaryStream> writeAction,
+            Func<IBinaryStream, T> readFunc)
+        {
+            return _ignite.Socket.DoOutInOp(opId, writeAction, readFunc, HandleError<T>);
         }
 
         /// <summary>
