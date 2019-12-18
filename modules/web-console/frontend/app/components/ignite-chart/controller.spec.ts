@@ -17,7 +17,7 @@
 import {IgniteChartController} from './controller';
 import {assert} from 'chai';
 
-suite.only('ignite-chart component', () => {
+suite('ignite-chart component', () => {
     test('Destroy before init', async() => {
         const instance = new IgniteChartController(
             [],
