@@ -451,10 +451,12 @@ public class RestExecutorSelfTest {
      * @param fut Future to check.
      * @throws Exception If failed.
      */
-    private void asserFutureIsDone(Future<Boolean> fut) throws Exception {
+    private void asserFutureIsDone(Future<Boolean> fut, String qry) throws Exception {
         int cnt = 10;
 
         while (!fut.isDone() && cnt > 0) {
+            System.out.println(System.currentTimeMillis() + qry + cnt);
+
             U.sleep(1000);
 
             cnt--;
@@ -484,8 +486,8 @@ public class RestExecutorSelfTest {
             assertFalse(fut1.isDone()); // First query should take >= 3 sec.
             assertFalse(fut2.isDone()); // Second query should take ~ 1 sec.
             assertFalse(fut1.isDone()); // At this point first query should be in progress.
-            asserFutureIsDone(fut2);    // Second query should finish.
-            asserFutureIsDone(fut1);    // First  query should finish.
+            asserFutureIsDone(fut2, " q2: ");    // Second query should finish.
+            asserFutureIsDone(fut1, " q1: ");    // First  query should finish.
         }
     }
 
