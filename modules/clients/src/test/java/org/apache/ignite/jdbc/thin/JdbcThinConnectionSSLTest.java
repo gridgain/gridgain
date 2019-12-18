@@ -69,6 +69,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
         setSslCtxFactoryToCli = false;
         setSslCtxFactoryToIgnite = false;
         supportedCiphers = null;
+        sslCtxFactory = null;
     }
 
     /** {@inheritDoc} */
@@ -324,7 +325,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testDisabledCustomCipher() throws Exception {
-        setSslCtxFactoryToIgnite = true;
+        setSslCtxFactoryToCli = true;
         supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
         sslCtxFactory = getTestSslContextFactory();
 
@@ -428,6 +429,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testInvalidKeystoreConfig() throws Exception {
         setSslCtxFactoryToCli = true;
+        sslCtxFactory = getTestSslContextFactory();
 
         startGrids(1);
 
