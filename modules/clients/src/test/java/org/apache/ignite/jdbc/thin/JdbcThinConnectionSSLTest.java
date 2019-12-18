@@ -17,6 +17,7 @@
 package org.apache.ignite.jdbc.thin;
 
 import java.security.NoSuchAlgorithmException;
+import java.security.Security;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -33,15 +34,16 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.ssl.SslContextFactory;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 /**
  * SSL connection test.
  */
-@WithSystemProperty(key = "jdk.tls.disabledAlgorithms", value = "")
 @SuppressWarnings("ThrowableNotThrown")
 public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
+    /** */
+    private static String DISABLED_ALGORITHMS;
+
     /** Client key store path. */
     private static final String CLI_KEY_STORE_PATH = U.getIgniteHome() +
         "/modules/clients/src/test/keystore/client.jks";
@@ -65,6 +67,22 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
     /** Suppoerted ciphers. */
     private static String[] supportedCiphers;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        // Allow disabled cipher suites.
+        DISABLED_ALGORITHMS = Security.getProperty("jdk.tls.disabledAlgorithms");
+        Security.setProperty("jdk.tls.disabledAlgorithms", "");
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        Security.setProperty("jdk.tls.disabledAlgorithms", DISABLED_ALGORITHMS);
+    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
