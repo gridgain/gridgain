@@ -39,7 +39,6 @@ import org.junit.Test;
 /**
  * SSL connection test.
  */
-
 @WithSystemProperty(key = "jdk.tls.disabledAlgorithms", value = "")
 @SuppressWarnings("ThrowableNotThrown")
 public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
