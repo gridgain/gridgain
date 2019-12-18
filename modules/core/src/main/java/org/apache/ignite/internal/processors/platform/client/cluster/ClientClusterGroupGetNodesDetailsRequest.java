@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.platform.client.cluster;
 
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
@@ -40,7 +41,11 @@ public class ClientClusterGroupGetNodesDetailsRequest extends ClientRequest {
      */
     public ClientClusterGroupGetNodesDetailsRequest(BinaryRawReader reader) {
         super(reader);
-        nodeIds = reader.readUuidArray();
+        int cnt = reader.readInt();
+        nodeIds = new UUID[cnt];
+        for (int i = 0; i < cnt; i++) {
+            nodeIds[i] = new UUID(reader.readLong(), reader.readLong());
+        }
     }
 
     /** {@inheritDoc} */

@@ -292,7 +292,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             };
 
             _ignite.Socket.DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, writeAction, readFunc);
-
         }
 
         /// <summary>
