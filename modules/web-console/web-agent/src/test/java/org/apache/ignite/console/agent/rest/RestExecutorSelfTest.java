@@ -395,7 +395,10 @@ public class RestExecutorSelfTest {
                 .add("mtr", false)
                 .add("caches", false);
 
-            for (int i = 0; i < 1000; i++) {
+            // See: https://www.eclipse.org/jetty/documentation/current/configuring-form-size.html
+            // The default maximum size Jetty permits is 200000 bytes and 1000 keys.
+            // We have 4 standart keys: cmd, attr, mtr, caches. And 996 random keys.
+            for (int i = 0; i < 996; i++) {
                 String param = UUID.randomUUID().toString();
 
                 params.add(param, param);
@@ -460,7 +463,7 @@ public class RestExecutorSelfTest {
             ExecutorService executor = Executors.newFixedThreadPool(2);
 
             Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(30) from \"CarCache\".Car"));
-            Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select * from \"CarCache\".Car"));
+            Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select count(*) from \"CarCache\".Car"));
 
             assertFalse(fut1.isDone());
             assertFalse(fut2.isDone());
