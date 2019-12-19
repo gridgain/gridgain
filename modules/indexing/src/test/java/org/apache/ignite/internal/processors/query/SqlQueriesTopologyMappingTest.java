@@ -57,14 +57,14 @@ public class SqlQueriesTopologyMappingTest extends AbstractIndexingCommonTest {
 
     /** */
     @Test
-    public void testPartitionedQueryWithRebalace() throws Exception {
-        checkQueryWithRebalace(CacheMode.PARTITIONED);
+    public void testPartitionedQueryWithRebalance() throws Exception {
+        checkQueryWithRebalance(CacheMode.PARTITIONED);
     }
 
     /** */
     @Test
-    public void testReplicatedQueryWithRebalace() throws Exception {
-        checkQueryWithRebalace(CacheMode.REPLICATED);
+    public void testReplicatedQueryWithRebalance() throws Exception {
+        checkQueryWithRebalance(CacheMode.REPLICATED);
     }
 
     /** */
@@ -110,7 +110,7 @@ public class SqlQueriesTopologyMappingTest extends AbstractIndexingCommonTest {
     }
 
     /** */
-    private void checkQueryWithRebalace(CacheMode cacheMode) throws Exception {
+    private void checkQueryWithRebalance(CacheMode cacheMode) throws Exception {
         IgniteEx ign0 = startGrid(0);
 
         IgniteCache<Object, Object> cache = ign0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
