@@ -35,16 +35,5 @@ namespace Apache.Ignite.Core.Impl.Client
             // TODO: Check usages and probably inline all of them.
             return socket.DoOutInOp(opId, ctx => writeAction(ctx.Stream), readFunc, errorFunc);
         }
-
-        /// <summary>
-        /// Performs a send-receive operation asynchronously.
-        /// </summary>
-        public static Task<T> DoOutInOpAsync<T>(this IClientSocket socket,  ClientOp opId, 
-            Action<IBinaryStream> writeAction,  Func<IBinaryStream, T> readFunc,
-            Func<ClientStatusCode, string, T> errorFunc = null)
-        {
-            // TODO: Check usages and probably inline all of them.
-            return socket.DoOutInOpAsync(opId, ctx => writeAction(ctx.Stream), readFunc, errorFunc);
-        }
     }
 }
