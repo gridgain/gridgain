@@ -44,7 +44,7 @@ import org.junit.Test;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 
 /**
- *
+ * Tests that full rebalance is not triggered instead of historical one when client node stops during PME
  */
 public class FullHistoricalReproducer extends GridCommonAbstractTest {
     /** Cache name. */
@@ -102,27 +102,27 @@ public class FullHistoricalReproducer extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
     public void testSimple() throws Exception {
-        startGrids(3);
+        startGrids(2);
 
-        IgniteEx ig1 = grid(1);
+        IgniteEx ig0 = grid(0);
 
-        ig1.cluster().active(true);
+        ig0.cluster().active(true);
 
-        IgniteCache<Object, Object> cache1 = ig1.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache = ig0.cache(CACHE_NAME);
 
         startClientGrid(5);
 
         final int entryCnt = PARTS_CNT * 1000;
 
         for (int i = 0; i < entryCnt; i++)
-            cache1.put(i, i);
+            cache.put(i, i);
 
         forceCheckpoint();
 
-        stopGrid(2);
+        stopGrid(1);
 
         for (int i = 0; i < entryCnt; i++)
-            cache1.put(i, i + 100);
+            cache.put(i, i + 100);
 
         forceCheckpoint();
 
@@ -130,10 +130,8 @@ public class FullHistoricalReproducer extends GridCommonAbstractTest {
 
         final CountDownLatch hangingPmeStartedLatch = new CountDownLatch(1);
 
-        ig1.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
+        ig0.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onInitAfterTopologyLock(GridDhtPartitionsExchangeFuture fut) {
-                System.out.println("onInitAfterTopologyLock");
-
                 try {
                     hangingPmeStartedLatch.countDown();
 
@@ -147,7 +145,7 @@ public class FullHistoricalReproducer extends GridCommonAbstractTest {
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
             try {
-                startGrid(2);
+                startGrid(1);
 
                 awaitPartitionMapExchange();
             }
