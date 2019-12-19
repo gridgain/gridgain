@@ -164,7 +164,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOp(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), s => ReadCacheEntries(s.Reader));
+            return DoOutInOp(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), 
+                s => ReadCacheEntries(s.Stream));
         }
 
         /** <inheritDoc /> */
@@ -173,7 +174,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(keys, "keys");
 
             return DoOutInOpAsync(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), 
-                s => ReadCacheEntries(s.Reader));
+                s => ReadCacheEntries(s.Stream));
         }
 
         /** <inheritDoc /> */
@@ -951,8 +952,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Reads the cache entries.
         /// </summary>
-        private ICollection<ICacheEntry<TK, TV>> ReadCacheEntries(IBinaryRawReader reader)
+        private ICollection<ICacheEntry<TK, TV>> ReadCacheEntries(IBinaryStream stream)
         {
+            var reader = _marsh.StartUnmarshal(stream, _keepBinary);
+
             var cnt = reader.ReadInt();
             var res = new List<ICacheEntry<TK, TV>>(cnt);
 
