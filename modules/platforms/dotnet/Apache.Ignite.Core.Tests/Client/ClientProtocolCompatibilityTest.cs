@@ -142,25 +142,6 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
-        /// Tests that WithExpiryPolicy throws proper exception on older server versions.
-        /// </summary>
-        /// <param name="minor"></param>
-        [Test]
-        public void TestWithExpiryPolicyThrowCorrectExceptionOnVersionsOlderThan150(
-            [Values(0, 1, 2, 3, 4)] short minor)
-        {
-            var version = new ClientProtocolVersion(1, minor, 0);
-            
-            using (var client = GetClient(version))
-            {
-                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
-                var cacheWithExpiry = cache.WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(1), null, null));
-
-                AssertNotSupportedOperation(() => cacheWithExpiry.Put(1, 2), version.ToString(), "WithExpiryPolicy");
-            }
-        }
-        
-        /// <summary>
         /// Asserts correct exception for cluster operations.
         /// </summary>
         public static void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(IIgniteClient client,
@@ -178,7 +159,7 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Asserts proper exception for non-supported operation.
         /// </summary>
-        private static void AssertNotSupportedOperation(Action action, string version,
+        public static void AssertNotSupportedOperation(Action action, string version,
             string expectedOperationName)
         {
             var ex = Assert.Throws<IgniteClientException>(() => action());

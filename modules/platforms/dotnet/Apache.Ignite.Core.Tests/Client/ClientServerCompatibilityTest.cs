@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
@@ -111,6 +112,23 @@ namespace Apache.Ignite.Core.Tests.Client
                 var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
                 cache.Put(1, 2);
                 Assert.AreEqual(2, cache.Get(1));
+            }
+        }
+        
+        /// <summary>
+        /// Tests that WithExpiryPolicy throws proper exception on older server versions.
+        /// </summary>
+        /// <param name="minor"></param>
+        [Test]
+        public void TestWithExpiryPolicyThrowCorrectExceptionOnVersionsOlderThan150()
+        {
+            using (var client = StartClient())
+            {
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                var cacheWithExpiry = cache.WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(1), null, null));
+
+                ClientProtocolCompatibilityTest.AssertNotSupportedOperation(
+                    () => cacheWithExpiry.Put(1, 2), _clientProtocolVersion, "WithExpiryPolicy");
             }
         }
 
