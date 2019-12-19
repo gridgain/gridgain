@@ -541,6 +541,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /** <inheritDoc /> */
         public CacheClientConfiguration GetConfiguration()
         {
+            // TODO: There is a race with ServerVersion - use RequestContext/ResponseContext
             return DoOutInOp(ClientOp.CacheGetConfiguration, null,
                 s => new CacheClientConfiguration(s, _ignite.ServerVersion));
         }
@@ -576,6 +577,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(plc, "plc");
 
+            // TODO: check version, but not here?
+            // We could check MinVersion, but with reconnect and rolling upgrade this does not really work.
             return new CacheClient<TK, TV>(_ignite, _name, _keepBinary, plc);
         }
 
@@ -751,7 +754,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             if (writeAction != null)
             {
-
                 writeAction(writer);
 
                 _marsh.FinishMarshal(writer);
