@@ -34,6 +34,8 @@ fixture('Configuration overview')
         await dropTestDB();
         await insertTestUser();
 
+        await t.resizeWindow(1080, 1920);
+
         await t.useRole(createRegularUser()).navigateTo(resolveUrl(`/configuration/overview`));
     })
     .after(async(t) => await dropTestDB());
@@ -65,8 +67,6 @@ test('Cluster edit basic/advanced redirect based on caches amount', async(t) => 
     const clusterName = 'Seven caches cluster';
     const clusterEditLink = overviewPage.clustersTable.findCell(0, 'Name').find('a');
     const cachesAmountThreshold = 5;
-
-    await t.resizeWindow(1080, 1920);
 
     await t.click(overviewPage.createClusterConfigButton);
     await repeat(cachesAmountThreshold, async() => {
