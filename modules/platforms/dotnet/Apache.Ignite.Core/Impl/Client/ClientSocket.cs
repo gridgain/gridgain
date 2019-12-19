@@ -205,7 +205,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// Performs a send-receive operation asynchronously.
         /// </summary>
         public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
+            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
             // Encode.
             var reqMsg = WriteMessage(writeAction, opId);

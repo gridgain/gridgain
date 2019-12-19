@@ -490,7 +490,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            return DoOutInOpAffinity(ClientOp.CacheRemoveIfEquals, key, val, r => r.ReadBool());
+            return DoOutInOpAffinity(ClientOp.CacheRemoveIfEquals, key, val, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -533,7 +533,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /** <inheritDoc /> */
         public long GetSize(params CachePeekMode[] modes)
         {
-            return DoOutInOp(ClientOp.CacheGetSize, w => WritePeekModes(modes, w.Stream), s => s.ReadLong());
+            return DoOutInOp(ClientOp.CacheGetSize, w => WritePeekModes(modes, w.Stream), ctx => ctx.Stream.ReadLong());
         }
 
         /** <inheritDoc /> */
@@ -545,9 +545,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /** <inheritDoc /> */
         public CacheClientConfiguration GetConfiguration()
         {
-            // TODO: There is a race with ServerVersion - use RequestContext/ResponseContext
             return DoOutInOp(ClientOp.CacheGetConfiguration, null,
-                s => new CacheClientConfiguration(s, _ignite.Socket.ServerVersion));
+                ctx => new CacheClientConfiguration(ctx.Stream, ctx.ProtocolVersion));
         }
 
         /** <inheritDoc /> */
@@ -629,7 +628,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// Does the out in op.
         /// </summary>
         private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc)
+            Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOp(opId, ctx => WriteRequest(writeAction, ctx),
                 readFunc, HandleError<T>);
@@ -638,7 +637,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op with Partition Awareness.
         /// </summary>
-        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, Func<IBinaryStream, T> readFunc)
+        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
@@ -653,7 +652,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// Does the out in op with Partition Awareness.
         /// </summary>
         private T DoOutInOpAffinity<T>(ClientOp opId, TK key, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc)
+            Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
@@ -667,7 +666,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op with Partition Awareness.
         /// </summary>
-        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, TV val, Func<IBinaryStream, T> readFunc)
+        private T DoOutInOpAffinity<T>(ClientOp opId, TK key, TV val, Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
@@ -723,7 +722,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op with Partition Awareness.
         /// </summary>
-        private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Func<IBinaryStream, T> readFunc)
+        private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinityAsync(opId,
                 stream => WriteRequest(w => w.Writer.WriteObjectDetached(key), stream),
