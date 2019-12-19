@@ -21,6 +21,7 @@ import { Bean } from './Beans';
 import AbstractTransformer from './AbstractTransformer';
 import StringBuilder from './StringBuilder';
 import VersionService from 'app/services/Version.service';
+import crawl from 'tree-crawl';
 
 const versionService = new VersionService();
 
@@ -798,139 +799,31 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         return sb;
     }
 
-    static _collectMapImports(prop) {
-        const imports = [];
-
-        imports.push(prop.ordered ? 'java.util.LinkedHashMap' : 'java.util.HashMap');
-        imports.push(prop.keyClsName);
-        imports.push(prop.valClsName);
-
-        if (prop.keyClsGenericType)
-            imports.push(prop.keyClsGenericType);
-
-        if (prop.valClsGenericType)
-            imports.push(prop.valClsGenericType);
-
-        return imports;
-    }
-
-    static collectBeanImports(bean) {
-        const imports = [bean.clsName];
-
-        _.forEach(bean.arguments, (arg) => {
-            switch (arg.clsName) {
-                case 'BEAN':
-                    imports.push(...this.collectBeanImports(arg.value));
-
-                    break;
-                case 'java.lang.Class':
-                    imports.push(this.javaTypes.fullClassName(arg.value));
-
-                    break;
-
-                case 'MAP':
-                    imports.push(...this._collectMapImports(arg));
-
-                    break;
-                default:
-                    imports.push(arg.clsName);
-            }
-        });
-
-        imports.push(...this.collectPropertiesImports(bean.properties));
-
-        if (_.includes(STORE_FACTORY, bean.clsName))
-            imports.push('javax.sql.DataSource', 'javax.cache.configuration.Factory');
-
-        return imports;
-    }
-
     /**
-     * @param {Array.<Object>} props
-     * @returns {Array.<String>}
+     * Filter and sort list of required imports.
+     *
+     * @param {Set.<String>} imports List of imports to process.
+     * @return {Array.<String>} List of sorted imports.
+     * @private
      */
-    static collectPropertiesImports(props) {
-        const imports = [];
-
-        _.forEach(props, (prop) => {
-            switch (prop.clsName) {
-                case 'DATA_SOURCE':
-                    imports.push(prop.value.clsName);
-
-                    break;
-                case 'PROPERTY':
-                case 'PROPERTY_CHAR':
-                case 'PROPERTY_INT':
-                    imports.push('java.io.InputStream', 'java.util.Properties');
-
-                    break;
-                case 'BEAN':
-                    imports.push(...this.collectBeanImports(prop.value));
-
-                    break;
-                case 'ARRAY':
-                    if (!prop.varArg)
-                        imports.push(prop.typeClsName);
-
-                    if (this._isBean(prop.typeClsName))
-                        _.forEach(prop.items, (item) => imports.push(...this.collectBeanImports(item)));
-
-                    if (prop.typeClsName === 'java.lang.Class')
-                        _.forEach(prop.items, (item) => imports.push(item));
-
-                    break;
-                case 'COLLECTION':
-                    imports.push(prop.typeClsName);
-
-                    if (this._isBean(prop.typeClsName)) {
-                        _.forEach(prop.items, (item) => imports.push(...this.collectBeanImports(item)));
-
-                        imports.push(prop.implClsName);
-                    }
-                    else if (prop.implClsName === 'java.util.ArrayList')
-                        imports.push('java.util.Arrays');
-                    else
-                        imports.push(prop.implClsName);
-
-                    break;
-                case 'ENUM_COLLECTION':
-                    imports.push(prop.typeClsName);
-
-                    if (prop.implClsName === 'java.util.ArrayList')
-                        imports.push('java.util.Arrays');
-                    else
-                        imports.push(prop.implClsName);
-
-                    break;
-                case 'MAP':
-                    imports.push(...this._collectMapImports(prop));
-
-                    break;
-                default:
-                    if (!this.javaTypesNonEnum.nonEnum(prop.clsName))
-                        imports.push(prop.clsName);
-            }
-        });
-
-        return imports;
-    }
-
     static _prepareImports(imports) {
-        return _.sortedUniq(_.sortBy(_.filter(imports, (cls) => !_.startsWith(cls, 'java.lang.') && _.includes(cls, '.'))));
+        return _.sortBy(_.filter([...imports.values()], (cls) => !_.startsWith(cls, 'java.lang.') && _.includes(cls, '.')));
     }
 
     /**
-     * @param {Bean} bean
-     * @returns {Array.<String>}
+     * Collect list of static imports.
+     *
+     * @param {Bean} bean Configuration metadata object.
+     * @returns {Set.<String>} Set of static imports.
      */
     static collectStaticImports(bean) {
-        const imports = [];
+        const imports = new Set();
 
         _.forEach(bean.properties, (prop) => {
             switch (prop.clsName) {
                 case 'EVENT_TYPES':
                     _.forEach(prop.eventTypes, (grp) => {
-                        imports.push(`${grp.class}.${grp.value}`);
+                        imports.add(`${grp.class}.${grp.value}`);
                     });
 
                     break;
@@ -938,7 +831,7 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                 case 'MAP':
                     if (prop.valClsNameShow === 'EVENTS') {
                         _.forEach(prop.entries, (lnr) => {
-                            _.forEach(lnr.eventTypes, (type) => imports.push(`${type.class}.${type.label}`));
+                            _.forEach(lnr.eventTypes, (type) => imports.add(`${type.class}.${type.label}`));
                         });
                     }
 
@@ -991,6 +884,123 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
     }
 
     /**
+     * Collect list of imports for specified configuration.
+     *
+     * @param {Bean} cfg Configuration metadata object.
+     * @returns {Set.<String>} Set of used imports.
+     */
+    static collectConfigurationImports(cfg) {
+        const imports = new Set();
+
+        const addImport = (value) => {
+            if (value)
+                imports.add(value);
+        };
+
+        const gatherImports = (prop) => {
+            if (!prop || !prop.clsName)
+                return;
+
+            switch (prop.clsName) {
+                case 'DATA_SOURCE':
+                    addImport(prop.value.clsName);
+                    break;
+
+                case 'PROPERTY':
+                case 'PROPERTY_CHAR':
+                case 'PROPERTY_INT':
+                    addImport('java.io.InputStream');
+                    addImport('java.util.Properties');
+                    break;
+
+                case 'BEAN':
+                    addImport(prop.typeClsName);
+                    break;
+
+                case 'ARRAY':
+                    if (!prop.varArg)
+                        addImport(prop.typeClsName);
+
+                    break;
+
+                case 'COLLECTION':
+                    addImport(prop.typeClsName);
+
+                    if (this._isBean(prop.typeClsName))
+                        addImport(prop.implClsName);
+                    else if (prop.implClsName === 'java.util.ArrayList')
+                        addImport('java.util.Arrays');
+                    else
+                        addImport(prop.implClsName);
+
+                    break;
+
+                case 'ENUM_COLLECTION':
+                    addImport(prop.typeClsName);
+
+                    if (prop.implClsName === 'java.util.ArrayList')
+                        addImport('java.util.Arrays');
+                    else
+                        addImport(prop.implClsName);
+
+                    break;
+
+                case 'MAP':
+                    addImport(prop.ordered ? 'java.util.LinkedHashMap' : 'java.util.HashMap');
+                    addImport(prop.keyClsName);
+                    addImport(prop.valClsName);
+
+                    if (prop.keyClsGenericType)
+                        addImport(prop.keyClsGenericType);
+
+                    if (prop.valClsGenericType)
+                        addImport(prop.valClsGenericType);
+
+                    break;
+
+                case 'java.lang.Class':
+                    addImport(this.javaTypes.fullClassName(prop.value));
+                    break;
+
+                default:
+                    addImport(prop.clsName);
+            }
+
+            if (_.includes(STORE_FACTORY, prop.clsName)) {
+                addImport('javax.sql.DataSource');
+                addImport('javax.cache.configuration.Factory');
+            }
+        };
+
+        crawl(cfg, gatherImports, {
+            getChildren: (node, context) => {
+                if (!node)
+                    return [];
+
+                if (node.clsName === 'BEAN')
+                    return [node.value];
+
+                if (node.clsName === 'ARRAY' || node.clsName === 'COLLECTION')
+                    return node.items;
+
+                if (node.clsName === 'MAP') {
+                    if (node.name === 'localEventListeners')
+                        return _.map(node.entries, (e) => e[node.keyField]);
+
+                    return node.entries;
+                }
+
+                return [...(node.arguments || []), ...(node.properties || [])];
+            }
+        });
+
+        if (imports.has('oracle.jdbc.pool.OracleDataSource'))
+            imports.add('java.sql.SQLException');
+
+        return imports;
+    }
+
+    /**
      * Build Java startup class with configuration.
      *
      * @param {Bean} cfg
@@ -1008,39 +1018,29 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
         sb.append(`package ${pkg};`);
         sb.emptyLine();
 
-        const imports = this.collectBeanImports(cfg);
+        const imports = this.collectConfigurationImports(cfg);
 
         const nearCacheBeans = [];
 
-        if (nonEmpty(clientNearCaches)) {
-            imports.push('org.apache.ignite.configuration.NearCacheConfiguration');
+        _.forEach(clientNearCaches, (cache) => {
+            const nearCacheBean = this.generator.cacheNearClient(cache, available);
 
-            _.forEach(clientNearCaches, (cache) => {
-                const nearCacheBean = this.generator.cacheNearClient(cache, available);
+            nearCacheBean.cacheName = cache.name;
 
-                nearCacheBean.cacheName = cache.name;
+            this.collectConfigurationImports(nearCacheBean).forEach((imp) => imports.add(imp));
 
-                imports.push(...this.collectBeanImports(nearCacheBean));
+            nearCacheBeans.push(nearCacheBean);
+        });
 
-                nearCacheBeans.push(nearCacheBean);
-            });
-        }
-
-        if (_.includes(imports, 'oracle.jdbc.pool.OracleDataSource'))
-            imports.push('java.sql.SQLException');
-
-        const hasProps = this.hasProperties(cfg);
-
-        if (hasProps)
-            imports.push('java.util.Properties', 'java.io.InputStream');
+        const hasProps = imports.has('java.util.Properties');
 
         _.forEach(this._prepareImports(imports), (cls) => sb.append(`import ${cls};`));
 
         sb.emptyLine();
 
-        const staticImports = this._prepareImports(this.collectStaticImports(cfg));
+        const staticImports = this.collectStaticImports(cfg);
 
-        if (staticImports.length) {
+        if (staticImports.size) {
             _.forEach(this._prepareImports(staticImports), (cls) => sb.append(`import static ${cls};`));
 
             sb.emptyLine();
