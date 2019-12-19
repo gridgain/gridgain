@@ -108,7 +108,7 @@ namespace Apache.Ignite.Core.Impl.Client
        }
 
         /** <inheritdoc /> */
-        public T DoOutInOp<T>(ClientOp opId, Action<IBinaryStream> writeAction, Func<IBinaryStream, T> readFunc,
+        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction, Func<IBinaryStream, T> readFunc,
             Func<ClientStatusCode, string, T> errorFunc = null)
         {
             return GetSocket().DoOutInOp(opId, writeAction, readFunc, errorFunc);
@@ -147,7 +147,8 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritdoc /> */
-        public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<IBinaryStream> writeAction, Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
+        public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction, 
+            Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
             return GetSocket().DoOutInOpAsync(opId, writeAction, readFunc, errorFunc);
         }
@@ -406,7 +407,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 DoOutInOp(
                     ClientOp.CachePartitions,
-                    s => WriteDistributionMapRequest(cacheId, s),
+                    s => WriteDistributionMapRequest(cacheId, s.Stream),
                     s => ReadDistributionMapResponse(s));
             }
         }
