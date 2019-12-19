@@ -19,7 +19,7 @@ import {pageSignin} from '../../page-models/pageSignin';
 import {userMenu} from '../../components/userMenu';
 import {WebSocketHook} from "../../mocks/WebSocketHook";
 
-fixture.only('Login')
+fixture('Login')
     .page(resolveUrl('/signin'))
     .before(async() => {
         await dropTestDB();
@@ -40,7 +40,13 @@ fixture.only('Login')
 test('Ivalid email', async(t) => {
     await t
         .typeText(pageSignin.email.control, 'aa')
-        .expect(pageSignin.email.getError('email').exists).ok('Marks field as invalid')
+        .typeText(pageSignin.password.control, 'wrong', {replace: true})
+        .click(pageSignin.signinButton)
+        .expect(pageSignin.email.getError('email').exists).ok('Marks field as invalid');
+
+    await t
+        .wait(1000)
+        .expect(t.ctx.touched).eql(false, 'Check that web socket not created');
 });
 
 test('Unknown email', async(t) => {
