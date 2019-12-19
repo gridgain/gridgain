@@ -118,7 +118,6 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Tests that WithExpiryPolicy throws proper exception on older server versions.
         /// </summary>
-        /// <param name="minor"></param>
         [Test]
         public void TestWithExpiryPolicyThrowCorrectExceptionOnVersionsOlderThan150()
         {
