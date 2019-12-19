@@ -74,7 +74,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Writer.
         /// </summary>
-        public IBinaryWriter Writer
+        public BinaryWriter Writer
         {
             get { return _writer ?? (_writer = _marshaller.StartMarshal(_stream)); }
         }

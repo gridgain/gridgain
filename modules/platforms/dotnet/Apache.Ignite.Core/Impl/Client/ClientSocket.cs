@@ -583,7 +583,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         private RequestMessage WriteMessage(Action<ClientRequestContext> writeAction, ClientOp opId)
         {
-            ValidateOp(opId);
+            ClientUtils.ValidateOp(opId, ServerVersion);
             
             var requestId = Interlocked.Increment(ref _requestId);
             
@@ -775,26 +775,6 @@ namespace Apache.Ignite.Core.Impl.Client
                     }
                 }
             }
-        }
-        
-        /// <summary>
-        /// Validates op code against current protocol version.
-        /// </summary>
-        /// <param name="opId">Op code.</param>
-        private void ValidateOp(ClientOp opId)
-        {
-            var minVersion = opId.GetMinVersion();
-
-            if (ServerVersion >= minVersion)
-            {
-                return;
-            }
-
-            var message = string.Format("Operation {0} is not supported by protocol version {1}. " +
-                                        "Minimum protocol version required is {2}.", 
-                opId, ServerVersion, minVersion);
-                
-            throw new IgniteClientException(message);
         }
 
         /// <summary>

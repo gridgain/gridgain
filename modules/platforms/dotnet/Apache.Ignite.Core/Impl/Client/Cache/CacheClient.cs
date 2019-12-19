@@ -732,31 +732,31 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Func<IBinaryStream, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinityAsync(opId,
-                stream => WriteRequest(w => w.WriteObjectDetached(key), stream),
+                stream => WriteRequest(w => w.Writer.WriteObjectDetached(key), stream),
                 readFunc, _id, key, HandleError<T>);
         }
 
         /// <summary>
         /// Writes the request.
         /// </summary>
-        private void WriteRequest(Action<BinaryWriter> writeAction, IBinaryStream stream)
+        private void WriteRequest(Action<ClientRequestContext> writeAction, ClientRequestContext ctx)
         {
-            stream.WriteInt(_id);
+            ctx.Stream.WriteInt(_id);
 
-            var writer = _marsh.StartMarshal(stream);
             if (_expiryPolicy != null)
             {
-                stream.WriteByte((byte) ClientCacheRequestFlag.WithExpiryPolicy);
-                ExpiryPolicySerializer.WritePolicy(writer, _expiryPolicy);
+                ClientUtils.ValidateOp(
+                    ClientCacheRequestFlag.WithExpiryPolicy, ctx.ProtocolVersion, ClientSocket.Ver150);
+                
+                ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.WithExpiryPolicy);
+                ExpiryPolicySerializer.WritePolicy(ctx.Writer, _expiryPolicy);
             }
             else
-                stream.WriteByte((byte) ClientCacheRequestFlag.None); // Flags (skipStore, etc).
+                ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.None); // Flags (skipStore, etc).
 
             if (writeAction != null)
             {
-                writeAction(writer);
-
-                _marsh.FinishMarshal(writer);
+                writeAction(ctx);
             }
         }
 

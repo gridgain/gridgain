@@ -119,7 +119,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         public T DoOutInOpAffinity<T, TKey>(
             ClientOp opId,
-            Action<IBinaryStream> writeAction,
+            Action<ClientRequestContext> writeAction,
             Func<IBinaryStream, T> readFunc,
             int cacheId,
             TKey key,
@@ -135,7 +135,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         public Task<T> DoOutInOpAffinityAsync<T, TKey>(
             ClientOp opId,
-            Action<IBinaryStream> writeAction,
+            Action<ClientRequestContext> writeAction,
             Func<IBinaryStream, T> readFunc,
             int cacheId,
             TKey key,
