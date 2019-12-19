@@ -135,7 +135,6 @@ public class RestExecutorSelfTest {
 
         IgniteConfiguration cfg = new IgniteConfiguration();
 
-        cfg.setIgniteInstanceName(UUID.randomUUID().toString());
         cfg.setDiscoverySpi(discoverySpi);
 
         CacheConfiguration<Integer, String> dfltCacheCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
