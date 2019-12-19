@@ -333,7 +333,7 @@ export default angular
 
                 lastUser = user;
 
-                // Start agent only if user successfully logged in.
+                // Connect to web socket only if user successfully logged in.
                 if (user)
                     agentMgr.connect();
             });
