@@ -31,13 +31,13 @@ namespace Apache.Ignite.Core.Impl.Client
         /// Performs a send-receive operation.
         /// </summary>
         T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null);
+            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null);
 
         /// <summary>
         /// Performs a send-receive operation asynchronously.
         /// </summary>
         Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null);
+            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null);
 
         /// <summary>
         /// Gets the server version.

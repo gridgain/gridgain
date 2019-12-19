@@ -189,7 +189,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// Performs a send-receive operation.
         /// </summary>
         public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
+            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
             // Encode.
             var reqMsg = WriteMessage(writeAction, opId);
@@ -311,7 +311,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Decodes the response that we got from <see cref="HandleResponse"/>.
         /// </summary>
-        private T DecodeResponse<T>(BinaryHeapStream stream, Func<IBinaryStream, T> readFunc,
+        private T DecodeResponse<T>(BinaryHeapStream stream, Func<ClientResponseContext, T> readFunc,
             Func<ClientStatusCode, string, T> errorFunc)
         {
             ClientStatusCode statusCode;
@@ -340,7 +340,9 @@ namespace Apache.Ignite.Core.Impl.Client
 
             if (statusCode == ClientStatusCode.Success)
             {
-                return readFunc != null ? readFunc(stream) : default(T);
+                return readFunc != null 
+                    ? readFunc(new ClientResponseContext(stream, _marsh, ServerVersion)) 
+                    : default(T);
             }
 
             var msg = BinaryUtils.Marshaller.StartUnmarshal(stream).ReadString();

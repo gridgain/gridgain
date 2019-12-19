@@ -108,7 +108,8 @@ namespace Apache.Ignite.Core.Impl.Client
        }
 
         /** <inheritdoc /> */
-        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction, Func<IBinaryStream, T> readFunc,
+        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction, 
+            Func<ClientResponseContext, T> readFunc,
             Func<ClientStatusCode, string, T> errorFunc = null)
         {
             return GetSocket().DoOutInOp(opId, writeAction, readFunc, errorFunc);
@@ -120,7 +121,7 @@ namespace Apache.Ignite.Core.Impl.Client
         public T DoOutInOpAffinity<T, TKey>(
             ClientOp opId,
             Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc,
+            Func<ClientResponseContext, T> readFunc,
             int cacheId,
             TKey key,
             Func<ClientStatusCode, string, T> errorFunc = null)
