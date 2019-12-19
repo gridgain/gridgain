@@ -23,7 +23,7 @@ const BROWSERS = ['chromium:headless --no-sandbox']; // For example: ['chrome', 
 const FIXTURES_PATHS = glob.sync('./fixtures/**/*.js');
 
 const testcafeRunnerConfig = {
-    browsers: [process.env.BROWSERS] || BROWSERS,
+    browsers: BROWSERS,
     reporter: process.env.REPORTER || 'spec',
     fixturesPathsArray: FIXTURES_PATHS
 };
