@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using System;
     using System.Linq;
     using System.Text.RegularExpressions;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Client;
@@ -137,6 +138,25 @@ namespace Apache.Ignite.Core.Tests.Client
                 Assert.AreEqual(expectedLog, lastLog.Message);
                 Assert.AreEqual(LogLevel.Debug, lastLog.Level);
                 Assert.AreEqual(typeof(ClientSocket).Name, lastLog.Category);
+            }
+        }
+
+        /// <summary>
+        /// Tests that WithExpiryPolicy throws proper exception on older server versions.
+        /// </summary>
+        /// <param name="minor"></param>
+        [Test]
+        public void TestWithExpiryPolicyThrowCorrectExceptionOnVersionsOlderThan150(
+            [Values(0, 1, 2, 3, 4)] short minor)
+        {
+            var version = new ClientProtocolVersion(1, minor, 0);
+            
+            using (var client = GetClient(version))
+            {
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                var cacheWithExpiry = cache.WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(1), null, null));
+
+                AssertNotSupportedOperation(() => cacheWithExpiry.Put(1, 2), version.ToString(), "WithExpiryPolicy");
             }
         }
         
