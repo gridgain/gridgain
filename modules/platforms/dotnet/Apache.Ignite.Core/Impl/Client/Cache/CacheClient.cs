@@ -126,7 +126,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinity(ClientOp.CacheGet, key, UnmarshalNotNull<TV>);
+            return DoOutInOpAffinity(ClientOp.CacheGet, key, ctx => UnmarshalNotNull<TV>(ctx));
         }
 
         /** <inheritDoc /> */
@@ -134,8 +134,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheGet, key, w => w.Writer.WriteObjectDetached(key), 
-                UnmarshalNotNull<TV>);
+            return DoOutInOpAffinityAsync(ClientOp.CacheGet, key, w => w.Writer.WriteObjectDetached(key),
+                ctx => UnmarshalNotNull<TV>(ctx));
         }
 
         /** <inheritDoc /> */
