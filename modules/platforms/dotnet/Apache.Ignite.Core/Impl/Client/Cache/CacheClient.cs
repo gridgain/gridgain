@@ -547,7 +547,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             // TODO: There is a race with ServerVersion - use RequestContext/ResponseContext
             return DoOutInOp(ClientOp.CacheGetConfiguration, null,
-                s => new CacheClientConfiguration(s, _ignite.ServerVersion));
+                s => new CacheClientConfiguration(s, _ignite.Socket.ServerVersion));
         }
 
         /** <inheritDoc /> */
