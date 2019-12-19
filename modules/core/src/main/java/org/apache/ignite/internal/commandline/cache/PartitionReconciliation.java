@@ -272,15 +272,18 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         return options.toString();
     }
 
+    /**
+     * @return String with folder of results and their locations.
+     */
     private String prepareResultFolders(
         Map<UUID, String> nodeIdsToFolders,
-        Map<UUID, String> nodesIdsToConsistenseIdsMap
+        Map<UUID, String> nodesIdsToConsistenceIdsMap
     ) {
         SB out = new SB("partition_reconciliation task prepared result where line is " +
             "- <nodeConsistentId>, <nodeId> : <folder> \n");
 
         for (Map.Entry<UUID, String> entry : nodeIdsToFolders.entrySet()) {
-            String consId = nodesIdsToConsistenseIdsMap.get(entry.getKey());
+            String consId = nodesIdsToConsistenceIdsMap.get(entry.getKey());
 
             out
                 .a(consId + " " + entry.getKey() + " : " + entry.getValue())
