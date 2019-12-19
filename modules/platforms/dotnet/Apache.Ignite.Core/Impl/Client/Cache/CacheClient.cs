@@ -971,14 +971,5 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             return res;
         }
-
-        /// <summary>
-        /// Writes key and value.
-        /// </summary>
-        private static void WriteKeyVal(BinaryWriter w, TK key, TV val)
-        {
-            w.WriteObjectDetached(key);
-            w.WriteObjectDetached(val);
-        }
     }
 }
