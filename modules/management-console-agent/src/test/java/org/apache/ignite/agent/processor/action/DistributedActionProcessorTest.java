@@ -30,6 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Collections.singleton;
+import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
@@ -68,13 +69,8 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
 
-            if (runningTask.isPresent() && completedTask.isPresent()) {
-                UUID id = res.stream()
-                    .map(r -> UUID.fromString(r.getResult().toString()))
-                    .findFirst().get();
-
-                return res.size() == completedTask.get().getJobCount() && id.equals(crdId);
-            }
+            if (runningTask.isPresent() && completedTask.isPresent())
+                return res.size() == completedTask.get().getJobCount();
 
             return false;
         });
@@ -105,7 +101,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             if (runningTask.isPresent() && completedTask.isPresent()) {
                 Set<UUID> results = res.stream()
                     .map(r -> UUID.fromString(r.getResult().toString()))
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 return res.size() == completedTask.get().getJobCount() && results.equals(nonCrdNodeIds);
             }
@@ -114,7 +110,12 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
         });
 
         List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
-        boolean responsesHasCorrectConsistentIds = responses.stream().allMatch(r -> nonCrdNodeConsistentIds.contains(r.getNodeConsistentId()));
+        boolean responsesHasCorrectConsistentIds = nonCrdNodeConsistentIds.containsAll(
+            responses
+                .stream()
+                .map(JobResponse::getNodeConsistentId)
+                .collect(toSet())
+        );
 
         assertTrue(responsesHasCorrectConsistentIds);
     }
@@ -138,7 +139,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             if (runningTask.isPresent() && completedTask.isPresent()) {
                 Set<UUID> results = res.stream()
                     .map(r -> UUID.fromString(r.getResult().toString()))
-                    .collect(Collectors.toSet());
+                    .collect(toSet());
 
                 return res.size() == completedTask.get().getJobCount() && results.equals(allNodeIds);
             }
@@ -147,7 +148,12 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
         });
 
         List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
-        boolean responsesHasCorrectConsistentIds = responses.stream().allMatch(r -> allNodeConsistentIds.contains(r.getNodeConsistentId()));
+        boolean responsesHasCorrectConsistentIds = allNodeConsistentIds.containsAll(
+            responses
+                .stream()
+                .map(JobResponse::getNodeConsistentId)
+                .collect(toSet())
+        );
 
         assertTrue(responsesHasCorrectConsistentIds);
     }
