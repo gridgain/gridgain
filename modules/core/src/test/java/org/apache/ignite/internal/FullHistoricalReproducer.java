@@ -101,7 +101,7 @@ public class FullHistoricalReproducer extends GridCommonAbstractTest {
      */
     @Test
     @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
-    public void testSimple() throws Exception {
+    public void testFullRebalanceNotTriggeredWhenClientNodeStopsDuringPme() throws Exception {
         startGrids(2);
 
         IgniteEx ig0 = grid(0);
