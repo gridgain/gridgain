@@ -25,14 +25,5 @@ namespace Apache.Ignite.Core.Impl.Client
     /// </summary>
     internal static class ClientSocketExtensions
     {
-        /// <summary>
-        /// Performs a send-receive operation.
-        /// </summary>
-        public static T DoOutInOp<T>(this IClientSocket socket, ClientOp opId, Action<IBinaryStream> writeAction,
-            Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
-        {
-            // TODO: Check usages and probably inline all of them.
-            return socket.DoOutInOp(opId, ctx => writeAction(ctx.Stream), ctx => readFunc(ctx.Stream), errorFunc);
-        }
     }
 }

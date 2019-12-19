@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /** <inheritdoc /> */
         public BinaryType GetBinaryType(int typeId)
         {
-            return _socket.DoOutInOp(ClientOp.BinaryTypeGet, s => s.WriteInt(typeId),
+            return _socket.DoOutInOp(ClientOp.BinaryTypeGet, ctx => ctx.Stream.WriteInt(typeId),
                 ctx => ctx.Stream.ReadBool() ? new BinaryType(ctx.Reader, true) : null);
         }
 
