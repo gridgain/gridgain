@@ -164,7 +164,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOp(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), s => ReadCacheEntries(s));
+            return DoOutInOp(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), s => ReadCacheEntries(s.Reader));
         }
 
         /** <inheritDoc /> */
@@ -172,7 +172,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOpAsync(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), s => ReadCacheEntries(s));
+            return DoOutInOpAsync(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), 
+                s => ReadCacheEntries(s.Reader));
         }
 
         /** <inheritDoc /> */
@@ -201,7 +202,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinity(ClientOp.CacheContainsKey, key, r => r.ReadBool());
+            return DoOutInOpAffinity(ClientOp.CacheContainsKey, key, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -209,7 +210,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheContainsKey, key, r => r.ReadBool());
+            return DoOutInOpAffinityAsync(ClientOp.CacheContainsKey, key, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -217,7 +218,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOp(ClientOp.CacheContainsKeys, w => w.Writer.WriteEnumerable(keys), r => r.ReadBool());
+            return DoOutInOp(ClientOp.CacheContainsKeys, w => w.Writer.WriteEnumerable(keys), ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -225,7 +226,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOpAsync(ClientOp.CacheContainsKeys, w => w.Writer.WriteEnumerable(keys), r => r.ReadBool());
+            return DoOutInOpAsync(ClientOp.CacheContainsKeys, w => w.Writer.WriteEnumerable(keys), ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -236,8 +237,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             // Filter is a binary object for all platforms.
             // For .NET it is a CacheEntryFilterHolder with a predefined id (BinaryTypeId.CacheEntryPredicateHolder).
             return DoOutInOp(ClientOp.QueryScan, w => WriteScanQuery(w.Writer, scanQuery),
-                s => new ClientQueryCursor<TK, TV>(
-                    _ignite, s.ReadLong(), _keepBinary, s, ClientOp.QueryScanCursorGetPage));
+                ctx => new ClientQueryCursor<TK, TV>(
+                    _ignite, ctx.Stream.ReadLong(), _keepBinary, ctx.Stream, ClientOp.QueryScanCursorGetPage));
         }
 
         /** <inheritDoc /> */
@@ -249,8 +250,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(sqlQuery.QueryType, "sqlQuery.QueryType");
 
             return DoOutInOp(ClientOp.QuerySql, w => WriteSqlQuery(w.Writer, sqlQuery),
-                s => new ClientQueryCursor<TK, TV>(
-                    _ignite, s.ReadLong(), _keepBinary, s, ClientOp.QuerySqlCursorGetPage));
+                ctx => new ClientQueryCursor<TK, TV>(
+                    _ignite, ctx.Stream.ReadLong(), _keepBinary, ctx.Stream, ClientOp.QuerySqlCursorGetPage));
         }
 
         /** <inheritDoc /> */
@@ -260,16 +261,16 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(sqlFieldsQuery.Sql, "sqlFieldsQuery.Sql");
 
             return DoOutInOp(ClientOp.QuerySqlFields,
-                w => WriteSqlFieldsQuery(w.Writer, sqlFieldsQuery),
-                s => GetFieldsCursor(s));
+                ctx => WriteSqlFieldsQuery(ctx.Writer, sqlFieldsQuery),
+                ctx => GetFieldsCursor(ctx));
         }
 
         /** <inheritDoc /> */
         public IQueryCursor<T> Query<T>(SqlFieldsQuery sqlFieldsQuery, Func<IBinaryRawReader, int, T> readerFunc)
         {
             return DoOutInOp(ClientOp.QuerySqlFields,
-                w => WriteSqlFieldsQuery(w.Writer, sqlFieldsQuery, false),
-                s => GetFieldsCursorNoColumnNames(s, readerFunc));
+                ctx => WriteSqlFieldsQuery(ctx.Writer, sqlFieldsQuery, false),
+                ctx => GetFieldsCursorNoColumnNames(ctx.Stream, readerFunc));
         }
 
         /** <inheritDoc /> */
@@ -330,7 +331,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            return DoOutInOpAffinity(ClientOp.CachePutIfAbsent, key, val, s => s.ReadBool());
+            return DoOutInOpAffinity(ClientOp.CachePutIfAbsent, key, val, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -339,7 +340,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            return DoOutInOpAffinityAsync(ClientOp.CachePutIfAbsent, key, val, s => s.ReadBool());
+            return DoOutInOpAffinityAsync(ClientOp.CachePutIfAbsent, key, val, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -366,7 +367,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            return DoOutInOpAffinity(ClientOp.CacheReplace, key, val, s => s.ReadBool());
+            return DoOutInOpAffinity(ClientOp.CacheReplace, key, val, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -375,7 +376,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheReplace, key, val, s => s.ReadBool());
+            return DoOutInOpAffinityAsync(ClientOp.CacheReplace, key, val, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -385,12 +386,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(oldVal, "oldVal");
             IgniteArgumentCheck.NotNull(newVal, "newVal");
 
-            return DoOutInOpAffinity(ClientOp.CacheReplaceIfEquals, key, w =>
+            return DoOutInOpAffinity(ClientOp.CacheReplaceIfEquals, key, ctx =>
             {
-                w.Writer.WriteObjectDetached(key);
-                w.Writer.WriteObjectDetached(oldVal);
-                w.Writer.WriteObjectDetached(newVal);
-            }, s => s.ReadBool());
+                ctx.Writer.WriteObjectDetached(key);
+                ctx.Writer.WriteObjectDetached(oldVal);
+                ctx.Writer.WriteObjectDetached(newVal);
+            }, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -400,12 +401,12 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(oldVal, "oldVal");
             IgniteArgumentCheck.NotNull(newVal, "newVal");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheReplaceIfEquals, key, w =>
+            return DoOutInOpAffinityAsync(ClientOp.CacheReplaceIfEquals, key, ctx =>
             {
-                w.Writer.WriteObjectDetached(key);
-                w.Writer.WriteObjectDetached(oldVal);
-                w.Writer.WriteObjectDetached(newVal);
-            }, s => s.ReadBool());
+                ctx.Writer.WriteObjectDetached(key);
+                ctx.Writer.WriteObjectDetached(oldVal);
+                ctx.Writer.WriteObjectDetached(newVal);
+            }, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -473,7 +474,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinity(ClientOp.CacheRemoveKey, key, r => r.ReadBool());
+            return DoOutInOpAffinity(ClientOp.CacheRemoveKey, key, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -481,7 +482,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheRemoveKey, key, r => r.ReadBool());
+            return DoOutInOpAffinityAsync(ClientOp.CacheRemoveKey, key, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -499,7 +500,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheRemoveIfEquals, key, val, r => r.ReadBool());
+            return DoOutInOpAffinityAsync(ClientOp.CacheRemoveIfEquals, key, val, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -533,13 +534,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /** <inheritDoc /> */
         public long GetSize(params CachePeekMode[] modes)
         {
-            return DoOutInOp(ClientOp.CacheGetSize, w => WritePeekModes(modes, w.Stream), ctx => ctx.Stream.ReadLong());
+            return DoOutInOp(ClientOp.CacheGetSize, w => WritePeekModes(modes, w.Stream), 
+                ctx => ctx.Stream.ReadLong());
         }
 
         /** <inheritDoc /> */
         public Task<long> GetSizeAsync(params CachePeekMode[] modes)
         {
-            return DoOutInOpAsync(ClientOp.CacheGetSize, w => WritePeekModes(modes, w.Stream), s => s.ReadLong());
+            return DoOutInOpAsync(ClientOp.CacheGetSize, w => WritePeekModes(modes, w.Stream), 
+                ctx => ctx.Stream.ReadLong());
         }
 
         /** <inheritDoc /> */
@@ -685,7 +688,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// Does the out in op.
         /// </summary>
         private Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc)
+            Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAsync(opId, stream => WriteRequest(writeAction, stream),
                 readFunc, HandleError<T>);
@@ -695,7 +698,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// Does the out in op with Partition Awareness.
         /// </summary>
         private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Action<ClientRequestContext> writeAction,
-            Func<IBinaryStream, T> readFunc)
+            Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinityAsync(opId, stream => WriteRequest(writeAction, stream),
                 readFunc, _id, key, HandleError<T>);
@@ -704,7 +707,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out in op with Partition Awareness.
         /// </summary>
-        private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, TV val, Func<IBinaryStream, T> readFunc)
+        private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, TV val, Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOpAffinityAsync(
                 opId,
@@ -756,8 +759,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Unmarshals the value, throwing an exception for nulls.
         /// </summary>
-        private T UnmarshalNotNull<T>(IBinaryStream stream)
+        private T UnmarshalNotNull<T>(ClientResponseContext ctx)
         {
+            var stream = ctx.Stream;
             var hdr = stream.ReadByte();
 
             if (hdr == BinaryUtils.HdrNull)
@@ -773,8 +777,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Unmarshals the value, wrapping in a cache result.
         /// </summary>
-        private CacheResult<T> UnmarshalCacheResult<T>(IBinaryStream stream)
+        private CacheResult<T> UnmarshalCacheResult<T>(ClientResponseContext ctx)
         {
+            var stream = ctx.Stream;
             var hdr = stream.ReadByte();
 
             if (hdr == BinaryUtils.HdrNull)
@@ -869,25 +874,25 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Gets the fields cursor.
         /// </summary>
-        private ClientFieldsQueryCursor GetFieldsCursor(IBinaryStream s)
+        private ClientFieldsQueryCursor GetFieldsCursor(ClientResponseContext ctx)
         {
-            var cursorId = s.ReadLong();
-            var columnNames = ClientFieldsQueryCursor.ReadColumns(_marsh.StartUnmarshal(s));
+            var cursorId = ctx.Stream.ReadLong();
+            var columnNames = ClientFieldsQueryCursor.ReadColumns(ctx.Reader);
 
-            return new ClientFieldsQueryCursor(_ignite, cursorId, _keepBinary, s,
+            return new ClientFieldsQueryCursor(_ignite, cursorId, _keepBinary, ctx.Stream,
                 ClientOp.QuerySqlFieldsCursorGetPage, columnNames);
         }
 
         /// <summary>
         /// Gets the fields cursor.
         /// </summary>
-        private ClientQueryCursorBase<T> GetFieldsCursorNoColumnNames<T>(IBinaryStream s,
+        private ClientQueryCursorBase<T> GetFieldsCursorNoColumnNames<T>(IBinaryStream stream,
             Func<IBinaryRawReader, int, T> readerFunc)
         {
-            var cursorId = s.ReadLong();
-            var columnCount = s.ReadInt();
+            var cursorId = stream.ReadLong();
+            var columnCount = stream.ReadInt();
 
-            return new ClientQueryCursorBase<T>(_ignite, cursorId, _keepBinary, s,
+            return new ClientQueryCursorBase<T>(_ignite, cursorId, _keepBinary, stream,
                 ClientOp.QuerySqlFieldsCursorGetPage, r => readerFunc(r, columnCount));
         }
 
@@ -946,10 +951,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Reads the cache entries.
         /// </summary>
-        private ICollection<ICacheEntry<TK, TV>> ReadCacheEntries(IBinaryStream stream)
+        private ICollection<ICacheEntry<TK, TV>> ReadCacheEntries(IBinaryRawReader reader)
         {
-            var reader = _marsh.StartUnmarshal(stream, _keepBinary);
-
             var cnt = reader.ReadInt();
             var res = new List<ICacheEntry<TK, TV>>(cnt);
 

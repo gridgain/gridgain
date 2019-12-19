@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Impl.Client
             Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
             // TODO: Check usages and probably inline all of them.
-            return socket.DoOutInOp(opId, ctx => writeAction(ctx.Stream), readFunc, errorFunc);
+            return socket.DoOutInOp(opId, ctx => writeAction(ctx.Stream), ctx => readFunc(ctx.Stream), errorFunc);
         }
     }
 }
