@@ -16,7 +16,11 @@
 
 import IgniteJavaTransformer from './JavaTransformer.service';
 import {assert} from 'chai';
-import {outdent} from 'outdent/lib';
+import cloneDeep from 'lodash/cloneDeep';
+import find from 'lodash/find';
+import forEach from 'lodash/forEach';
+
+import * as testData from './JavaTransformer.service.data.spec';
 
 suite('Java transformer tests', () => {
     const caches = [{
@@ -35,67 +39,68 @@ suite('Java transformer tests', () => {
         return generated.substring(generated.indexOf(startMarker));
     };
 
+    const _addCacheConfiguration = (cfg, cacheCfg, count = 1) => {
+        const caches = find(cfg.properties, {name: 'cacheConfiguration'});
+
+        // Creation from sting 10x faster then cloneDeep.
+        const cacheCfgStr = JSON.stringify(cacheCfg);
+
+        if (caches) {
+            for (let i = 0; i < count; i++) {
+                const nameProp = {
+                    clsName: 'java.lang.String',
+                    name: 'name',
+                    value: `Cache${i}`
+                };
+
+                const cache = JSON.parse(cacheCfgStr);
+
+                cache.properties.push(nameProp);
+                caches.items.push(cache);
+            }
+        }
+    };
+
     test('Cluster activation for cluster with persistence', () => {
-        assert.equal(_generate(false),
-            outdent`
-                public class TestClassName {
-                    /**
-                     * <p>
-                     * Utility to load caches from database.
-                     * <p>
-                     * How to use:
-                     * <ul>
-                     *     <li>Start cluster.</li>
-                     *     <li>Start this utility and wait while load complete.</li>
-                     * </ul>
-                     * 
-                     * @param args Command line arguments, none required.
-                     * @throws Exception If failed.
-                     **/
-                    public static void main(String[] args) throws Exception {
-                        try (Ignite ignite = Ignition.start("TestCfg.xml")) {
-                            System.out.println(">>> Loading caches...");
-                
-                            System.out.println(">>> Loading cache: testCache");
-                            ignite.cache("testCache").loadCache(null);
-                
-                            System.out.println(">>> All caches loaded!");
-                        }
-                    }
-                }
-                `
+        assert.equal(_generate(false), testData.CACHE_LOAD_WO_PERSISTENCE_CONTENT);
+        assert.equal(_generate(true), testData.CACHE_LOAD_WITH_PERSISTENCE_CONTENT);
+    });
+
+    test('Should generate valid list of imports', () => {
+        const configuration = cloneDeep(testData.TEST_CONFIGURATION);
+
+        _addCacheConfiguration(configuration, testData.TEST_CACHE);
+
+        const imports = IgniteJavaTransformer._prepareImports(
+            IgniteJavaTransformer.collectConfigurationImports(configuration)
         );
 
-        assert.equal(_generate(true),
-            outdent`
-                public class TestClassName {
-                    /**
-                     * <p>
-                     * Utility to load caches from database.
-                     * <p>
-                     * How to use:
-                     * <ul>
-                     *     <li>Start cluster.</li>
-                     *     <li>Start this utility and wait while load complete.</li>
-                     * </ul>
-                     * 
-                     * @param args Command line arguments, none required.
-                     * @throws Exception If failed.
-                     **/
-                    public static void main(String[] args) throws Exception {
-                        try (Ignite ignite = Ignition.start("TestCfg.xml")) {
-                            ignite.cluster().active(true);
-                
-                            System.out.println(">>> Loading caches...");
-                
-                            System.out.println(">>> Loading cache: testCache");
-                            ignite.cache("testCache").loadCache(null);
-                
-                            System.out.println(">>> All caches loaded!");
-                        }
-                    }
-                }
-                `
+        assert.equal(testData.EXPECTED_IMPORTS.length, imports.length);
+
+        forEach(testData.EXPECTED_IMPORTS,
+            (expectedImport) => assert.equal(true, imports.indexOf(expectedImport) >= 0)
         );
     });
+
+    test('Should generate valid list of static imports', () => {
+        const configuration = cloneDeep(testData.TEST_CONFIGURATION);
+
+        const imports = IgniteJavaTransformer._prepareImports(
+            IgniteJavaTransformer.collectStaticImports(configuration)
+        );
+
+        assert.equal(testData.EXPECTED_STATIC_IMPORTS.length, imports.length);
+
+        forEach(testData.EXPECTED_STATIC_IMPORTS,
+            (expectedImport) => assert.equal(true, imports.indexOf(expectedImport) >= 0)
+        );
+    });
+
+    test('Should generate list of imports for big configuration without exceptions', () => {
+        const configuration = cloneDeep(testData.TEST_CONFIGURATION);
+
+        _addCacheConfiguration(configuration, testData.TEST_CACHE, 4000);
+
+        IgniteJavaTransformer.collectConfigurationImports(configuration);
+    }).timeout(0);
 });
