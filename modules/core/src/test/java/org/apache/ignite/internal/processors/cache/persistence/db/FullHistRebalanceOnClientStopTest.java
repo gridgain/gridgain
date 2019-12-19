@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal;
+package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCache;
@@ -28,6 +28,9 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -46,7 +49,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_
 /**
  * Tests that full rebalance is not triggered instead of historical one when client node stops during PME
  */
-public class FullHistoricalReproducer extends GridCommonAbstractTest {
+public class FullHistRebalanceOnClientStopTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cache";
 
@@ -223,14 +226,14 @@ public class FullHistoricalReproducer extends GridCommonAbstractTest {
         public static void cleanup() {
             synchronized (mux) {
                 topVersForHist = false;
-                topVersForFull= false;
+                topVersForFull = false;
             }
         }
 
         /** {@inheritDoc} */
         @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC) throws IgniteSpiException {
             if (((GridIoMessage)msg).message() instanceof GridDhtPartitionDemandMessage) {
-                GridDhtPartitionDemandMessage demandMsg = (GridDhtPartitionDemandMessage) ((GridIoMessage)msg).message();
+                GridDhtPartitionDemandMessage demandMsg = (GridDhtPartitionDemandMessage)((GridIoMessage)msg).message();
 
                 IgniteDhtDemandedPartitionsMap map = demandMsg.partitions();
 
