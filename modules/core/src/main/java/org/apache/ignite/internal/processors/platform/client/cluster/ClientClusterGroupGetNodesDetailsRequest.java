@@ -16,29 +16,42 @@
 
 package org.apache.ignite.internal.processors.platform.client.cluster;
 
-import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.internal.processors.platform.client.ClientBooleanResponse;
+import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.internal.binary.BinaryUtils;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
+import java.util.Arrays;
+import java.util.UUID;
+
 /**
- * Cluster status request.
+ * Cluster group get nodes details request.
  */
-public class ClientClusterIsActiveRequest extends ClientRequest {
+public class ClientClusterGroupGetNodesDetailsRequest extends ClientRequest {
+    /** Node ids. */
+    private final UUID[] nodeIds;
+
     /**
      * Constructor.
      *
      * @param reader Reader.
      */
-    public ClientClusterIsActiveRequest(BinaryRawReader reader) {
+    public ClientClusterGroupGetNodesDetailsRequest(BinaryRawReader reader) {
         super(reader);
+        int cnt = reader.readInt();
+        nodeIds = new UUID[cnt];
+        for (int i = 0; i < cnt; i++) {
+            nodeIds[i] = new UUID(reader.readLong(), reader.readLong());
+        }
     }
 
     /** {@inheritDoc} */
     @Override public ClientResponse process(ClientConnectionContext ctx) {
-        IgniteCluster cluster = ctx.kernalContext().grid().cluster();
-        return new ClientBooleanResponse(requestId(), cluster.active());
+        IgniteClusterEx cluster = ctx.kernalContext().grid().cluster();
+        ClusterGroup clusterGrp = cluster.forNodeIds(Arrays.asList(nodeIds));
+        return new ClientClusterGroupGetNodesDetailsResponse(requestId(), clusterGrp.nodes());
     }
 }
