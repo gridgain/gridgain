@@ -168,7 +168,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
                 catch (Exception e) {
                     // Ignore exception on check iterator
                     // because Iterator.hasNext() may throw error on invalid / error query.
-                    STATE_UPDATER.compareAndSet(this, EXECUTION, CLOSED);
+                    STATE_UPDATER.compareAndSet(this, EXECUTION, RESULT_READY);
                 }
             }
 
