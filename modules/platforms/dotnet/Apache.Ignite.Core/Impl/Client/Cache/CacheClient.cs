@@ -181,7 +181,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            DoOutOpAffinity(ClientOp.CachePut, key, val);
+            DoOutInOpAffinity<object>(ClientOp.CachePut, key, val, null);
         }
 
         /** <inheritDoc /> */
@@ -614,14 +614,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /// <summary>
         /// Does the out op with Partition Awareness.
         /// </summary>
-        private void DoOutOpAffinity(ClientOp opId, TK key, TV val)
-        {
-            DoOutInOpAffinity<object>(opId, key, val, null);
-        }
-
-        /// <summary>
-        /// Does the out op with Partition Awareness.
-        /// </summary>
         private Task DoOutOpAsync(ClientOp opId, Action<ClientRequestContext> writeAction = null)
         {
             return DoOutInOpAsync<object>(opId, writeAction, null);
@@ -641,7 +633,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<IBinaryStream, T> readFunc)
         {
-            return _ignite.Socket.DoOutInOp(opId, stream => WriteRequest(writeAction, stream),
+            return _ignite.Socket.DoOutInOp(opId, ctx => WriteRequest(writeAction, ctx),
                 readFunc, HandleError<T>);
         }
 
