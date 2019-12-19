@@ -1179,11 +1179,13 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
 
         DataStorageConfiguration dsCfg = cfg.getDataStorageConfiguration();
 
-        capDefaultMaxSize(dsCfg.getDefaultDataRegionConfiguration());
+        if (dsCfg != null) {
+            capDefaultMaxSize(dsCfg.getDefaultDataRegionConfiguration());
 
-        if (dsCfg.getDataRegionConfigurations() != null) {
-            for (DataRegionConfiguration region : dsCfg.getDataRegionConfigurations())
-                capDefaultMaxSize(region);
+            if (dsCfg.getDataRegionConfigurations() != null) {
+                for (DataRegionConfiguration region : dsCfg.getDataRegionConfigurations())
+                    capDefaultMaxSize(region);
+            }
         }
 
         return cfg;
