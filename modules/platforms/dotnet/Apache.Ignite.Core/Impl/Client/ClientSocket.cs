@@ -188,7 +188,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Performs a send-receive operation.
         /// </summary>
-        public T DoOutInOp<T>(ClientOp opId, Action<IBinaryStream> writeAction,
+        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
             // Encode.
@@ -204,7 +204,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Performs a send-receive operation asynchronously.
         /// </summary>
-        public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<IBinaryStream> writeAction,
+        public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
             // Encode.
@@ -581,7 +581,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Writes the message to a byte array.
         /// </summary>
-        private RequestMessage WriteMessage(Action<IBinaryStream> writeAction, ClientOp opId)
+        private RequestMessage WriteMessage(Action<ClientRequestContext> writeAction, ClientOp opId)
         {
             ValidateOp(opId);
             
@@ -598,7 +598,9 @@ namespace Apache.Ignite.Core.Impl.Client
 
             if (writeAction != null)
             {
-                writeAction(stream);
+                var ctx = new ClientRequestContext(stream, _marsh, ServerVersion);
+                writeAction(ctx);
+                ctx.FinishMarshal();
             }
 
             stream.WriteInt(0, stream.Position - 4); // Write message size.

@@ -27,13 +27,13 @@ namespace Apache.Ignite.Core.Impl.Client
     internal class ClientRequestContext
     {
         /** */
-        private readonly ClientSocket _socket;
-        
-        /** */
         private readonly IBinaryStream _stream;
         
         /** */
         private readonly Marshaller _marshaller;
+
+        /** */
+        private readonly ClientProtocolVersion _protocolVersion;
 
         /** */
         private BinaryWriter _writer;
@@ -41,18 +41,17 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Initializes a new instance of <see cref="ClientRequestContext"/> class.
         /// </summary>
-        /// <param name="socket">The actual socket to be used for this request.</param>
-        /// <param name="stream"></param>
-        /// <param name="marshaller"></param>
-        public ClientRequestContext(ClientSocket socket, IBinaryStream stream, Marshaller marshaller)
+        /// <param name="stream">Stream.</param>
+        /// <param name="marshaller">Marshaller.</param>
+        /// <param name="protocolVersion">Protocol version to be used for this request.</param>
+        public ClientRequestContext(IBinaryStream stream, Marshaller marshaller, ClientProtocolVersion protocolVersion)
         {
-            Debug.Assert(socket != null);
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
             
-            _socket = socket;
             _stream = stream;
             _marshaller = marshaller;
+            _protocolVersion = protocolVersion;
         }
 
         /// <summary>
@@ -61,7 +60,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         public ClientProtocolVersion ProtocolVersion
         {
-            get { return _socket.ServerVersion; }
+            get { return _protocolVersion; }
         }
 
         /// <summary>
