@@ -112,6 +112,9 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Logger. */
         private readonly ILogger _logger;
 
+        /** Marshaller. */
+        private readonly Marshaller _marsh;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientSocket" /> class.
         /// </summary>
@@ -120,13 +123,19 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <param name="host">The host name (required for SSL).</param>
         /// <param name="version">Protocol version.</param>
         /// <param name="topVerCallback">Topology version update callback.</param>
+        /// <param name="marshaller">Marshaller.</param>
         public ClientSocket(IgniteClientConfiguration clientConfiguration, EndPoint endPoint, string host,
-            ClientProtocolVersion? version = null,
-            Action<AffinityTopologyVersion> topVerCallback = null)
+            ClientProtocolVersion? version, Action<AffinityTopologyVersion> topVerCallback,
+            Marshaller marshaller)
         {
             Debug.Assert(clientConfiguration != null);
+            Debug.Assert(endPoint != null);
+            Debug.Assert(!string.IsNullOrWhiteSpace(host));
+            Debug.Assert(topVerCallback != null);
+            Debug.Assert(marshaller != null);
 
             _topVerCallback = topVerCallback;
+            _marsh = marshaller;
             _timeout = clientConfiguration.SocketTimeout;
             _logger = (clientConfiguration.Logger ?? NoopLogger.Instance).GetLogger(GetType());
 
