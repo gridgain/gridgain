@@ -32,6 +32,7 @@ namespace Apache.Ignite.Core.Impl.Client
         public static T DoOutInOp<T>(this IClientSocket socket, ClientOp opId, Action<IBinaryStream> writeAction,
             Func<IBinaryStream, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
         {
+            // TODO: Check usages and probably inline all of them.
             return socket.DoOutInOp(opId, ctx => writeAction(ctx.Stream), readFunc, errorFunc);
         }
 
@@ -42,6 +43,7 @@ namespace Apache.Ignite.Core.Impl.Client
             Action<IBinaryStream> writeAction,  Func<IBinaryStream, T> readFunc,
             Func<ClientStatusCode, string, T> errorFunc = null)
         {
+            // TODO: Check usages and probably inline all of them.
             return socket.DoOutInOpAsync(opId, ctx => writeAction(ctx.Stream), readFunc, errorFunc);
         }
     }
