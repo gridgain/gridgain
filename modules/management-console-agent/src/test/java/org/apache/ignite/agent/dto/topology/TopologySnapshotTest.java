@@ -55,6 +55,8 @@ public class TopologySnapshotTest {
             consistentNodeId_1
         );
 
+        clusterNode_1.order(1);
+
         clusterNode_1.setAttributes(Collections.emptyMap());
 
         UUID clusterNodeId_2 = UUID.fromString("e-e-e-e-e");
@@ -70,6 +72,8 @@ public class TopologySnapshotTest {
             IgniteProductVersion.fromString("1.2.3-0-DEV"),
             consistentNodeId_2
         );
+
+        clusterNode_2.order(2);
 
         clusterNode_2.setAttributes(Collections.emptyMap());
 
@@ -102,18 +106,23 @@ public class TopologySnapshotTest {
             if (consistentNodeId_1.equals(node.getConsistentId())) {
                 assertTrue(node.isOnline());
                 assertTrue(node.isBaselineNode());
+                assertEquals(1, node.getOrder());
                 assertFalse(node.isClient());
                 assertEquals(clusterNodeId_1, node.getNodeId());
             }
 
             if (consistentNodeIdOffline.equals(node.getConsistentId())) {
                 assertFalse(node.isOnline());
+                assertEquals(-1, node.getOrder());
                 assertTrue(node.isBaselineNode());
             }
 
             if (consistentNodeId_2.equals(node.getConsistentId())) {
                 assertTrue(node.isOnline());
                 assertFalse(node.isBaselineNode());
+                assertEquals(2, node.getOrder());
+                assertFalse(node.isClient());
+                assertEquals(clusterNodeId_2, node.getNodeId());
             }
         }
     }
@@ -139,6 +148,8 @@ public class TopologySnapshotTest {
 
         clusterNode_1.setAttributes(Collections.emptyMap());
 
+        clusterNode_1.order(1);
+
         UUID crdId = UUID.fromString("c-c-c-c-c");
 
         TopologySnapshot top = TopologySnapshot.topology(
@@ -156,6 +167,7 @@ public class TopologySnapshotTest {
             if (consistentNodeId_1.equals(node.getConsistentId())) {
                 assertTrue(node.isOnline());
                 assertFalse(node.isBaselineNode());
+                assertEquals(1, node.getOrder());
                 assertFalse(node.isClient());
                 assertEquals(clusterNodeId_1, node.getNodeId());
             }
