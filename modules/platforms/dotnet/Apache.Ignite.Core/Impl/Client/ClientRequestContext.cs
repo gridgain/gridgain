@@ -36,8 +36,7 @@ namespace Apache.Ignite.Core.Impl.Client
         private readonly Marshaller _marshaller;
 
         /** */
-        private BinaryWriter _writer = null;
-            
+        private BinaryWriter _writer;
 
         /// <summary>
         /// Initializes a new instance of <see cref="ClientRequestContext"/> class.
