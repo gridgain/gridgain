@@ -50,7 +50,8 @@ export class IgniteChartController {
     ranges = RANGE_RATE_PRESET;
     currentRange = this.ranges[0];
     maxRangeInMilliseconds = RANGE_RATE_PRESET[RANGE_RATE_PRESET.length - 1].value * 60 * 1000;
-    ctx = (this.$element.find('canvas')[0] as HTMLCanvasElement).getContext('2d');
+    canvas: JQuery<HTMLCanvasElement>;
+    ctx: CanvasRenderingContext2D;
     localHistory = [];
     updateIsBusy = false;
 
@@ -60,10 +61,9 @@ export class IgniteChartController {
     xRangeUpdateInProgress?: boolean;
     chartColors: string[];
 
-    static $inject = ['$element', 'IgniteChartColors', '$filter', '$translate'];
+    static $inject = ['IgniteChartColors', '$filter', '$translate'];
 
     constructor(
-        private $element: JQLite,
         private IgniteChartColors: Array<string>,
         private $filter: ng.IFilterService,
         private $translate: ng.translate.ITranslateService
@@ -73,7 +73,11 @@ export class IgniteChartController {
         if (this.chart)
             this.chart.destroy();
 
-        this.$element = this.ctx = this.chart = null;
+        this.ctx = this.chart = null;
+    }
+
+    $postLink() {
+        if (this.canvas) this.ctx = this.canvas[0].getContext('2d');
     }
 
     $onInit() {
@@ -235,7 +239,7 @@ export class IgniteChartController {
 
         this.config = _.merge(this.config, this.chartOptions);
 
-        const chartModule = await import('chart.js');
+        const chartModule = await import(/* webpackChunkName: "chart.js" */ 'chart.js');
         const Chart = chartModule.default;
 
         Chart.Tooltip.positioners.yCenter = (elements) => {
@@ -272,7 +276,9 @@ export class IgniteChartController {
             }
         });
 
-        await import('chartjs-plugin-streaming');
+        await import(/* webpackChunkName: "chartjs-plugin-streaming" */ 'chartjs-plugin-streaming');
+
+        if (!this.ctx) return;
 
         this.chart = new Chart(this.ctx, this.config);
         this.changeXRange(this.currentRange);
