@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {isPersistenceEnabled} from './configuration-checker.js'
+import {isPersistenceEnabled} from './configuration-checker';
 import {assert} from 'chai';
 
 suite('Test of configuration checker', () => {

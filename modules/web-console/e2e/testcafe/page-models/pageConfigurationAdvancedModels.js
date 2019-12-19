@@ -19,6 +19,8 @@ import {FormField} from '../components/FormField';
 import {isVisible} from '../helpers';
 import {PanelCollapsible} from '../components/PanelCollapsible';
 
+export const advancedSqlSchemeMenu = Selector('.pca-menu-link').withText('SQL Scheme');
+
 export const createModelButton = Selector('pc-items-table footer-slot .link-success').filter(isVisible);
 export const createModelTitle = Selector('h2').withText('Create model');
 export const editModelTitle = Selector('h2').withText('Edit model');
@@ -78,5 +80,6 @@ export const cacheStore = {
     dbSchema: new FormField({id: 'databaseSchemaInput'}),
     dbTable: new FormField({id: 'databaseTableInput'}),
     keyFields: cacheStoreFieldPanel('Key fields'),
-    valueFields: cacheStoreFieldPanel('Value fields')
+    valueFields: cacheStoreFieldPanel('Value fields'),
+    fieldViewItem: Selector('list-editable-item-view')
 };
