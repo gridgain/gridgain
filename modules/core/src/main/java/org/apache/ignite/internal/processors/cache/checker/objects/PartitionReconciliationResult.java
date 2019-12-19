@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,22 +33,27 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+/**
+ *
+ */
 public class PartitionReconciliationResult extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** A sequence of characters that is used to hide sensitive data in case of non-verbose mode. */
     public static final String HIDDEN_DATA = "*****";
 
     /** Map of node ids to node consitent ids. */
-    private Map<UUID, String> nodesIdsToConsistenseIdsMap;
+    private Map<UUID, String> nodesIdsToConsistenseIdsMap = new HashMap<>();
 
-    private Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys;
+    private Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
-    private Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches;
+    private Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches = new HashSet<>();
 
     private Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
-        skippedEntries;
+        skippedEntries = new HashMap<>();
 
     /**
      * Default constructor for externalization.
@@ -54,7 +61,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     public PartitionReconciliationResult() {
     }
 
-    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationResult (
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationResult(
         Map<UUID, String> nodesIdsToConsistenseIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys) {
         this.nodesIdsToConsistenseIdsMap = nodesIdsToConsistenseIdsMap;
@@ -179,5 +186,46 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
                 }
             }
         }
+    }
+
+    /**
+     *
+     */
+    public void merge(PartitionReconciliationResult outer) {
+        this.nodesIdsToConsistenseIdsMap.putAll(outer.nodesIdsToConsistenseIdsMap);
+
+        this.inconsistentKeys.putAll(outer.inconsistentKeys);
+
+        this.skippedCaches.addAll(outer.skippedCaches);
+
+        this.skippedEntries.putAll(outer.skippedEntries);
+    }
+
+    /**
+     *
+     */
+    public Map<UUID, String> nodesIdsToConsistenseIdsMap() {
+        return nodesIdsToConsistenseIdsMap;
+    }
+
+    /**
+     *
+     */
+    public Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys() {
+        return inconsistentKeys;
+    }
+
+    /**
+     *
+     */
+    public Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches() {
+        return skippedCaches;
+    }
+
+    /**
+     *
+     */
+    public Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries() {
+        return skippedEntries;
     }
 }

@@ -16,7 +16,7 @@
 
 package org.apache.ignite.internal.visor.checker;
 
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
@@ -27,13 +27,13 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
  */
 @GridInternal
 public class VisorPartitionReconciliationTask extends VisorOneNodeTask<VisorPartitionReconciliationTaskArg,
-    PartitionReconciliationResult> {
+    ReconciliationResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
-    @Override protected VisorJob<VisorPartitionReconciliationTaskArg, PartitionReconciliationResult> job(
+    @Override protected VisorJob<VisorPartitionReconciliationTaskArg, ReconciliationResult> job(
         VisorPartitionReconciliationTaskArg arg) {
         return new VisorPartitionReconciliationJob(arg, debug, PartitionReconciliationProcessorTask.class);
     }

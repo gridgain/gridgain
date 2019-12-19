@@ -45,8 +45,8 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** Amount of potentially inconsistent keys recheck attempts. */
     RECHECK_ATTEMPTS ("--recheck-attempts"),
 
-    /** File to write output report to. */
-    OUTPUT_FILE ("--file");
+    /** Print result to console. */
+    CONSOLE("--console");
 
     /** Option name. */
     private final String name;

@@ -16,13 +16,11 @@
 
 package org.apache.ignite.internal.commandline.cache;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -36,6 +34,7 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
@@ -50,7 +49,6 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PART
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_ALG;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_MODE;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.OUTPUT_FILE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.THROTTLING_INTERVAL_MILLIS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.VERBOSE;
@@ -92,8 +90,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             "Print data to result with sensitive information: keys and values.");
         paramsDesc.put(FIX_ALG.toString(),
             "Specifies which repair algorithm to use for doubtful keys.");
-        paramsDesc.put(OUTPUT_FILE.toString(),
-            "File to write output report to.");
 
         usageCache(
             log,
@@ -101,7 +97,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             desc,
             paramsDesc,
             optional(FIX_MODE), optional(THROTTLING_INTERVAL_MILLIS), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
-            optional(VERBOSE), optional(FIX_ALG), optional(OUTPUT_FILE), optional(CACHES));
+            optional(VERBOSE), optional(FIX_ALG), optional(CACHES));
     }
 
     /** {@inheritDoc} */
@@ -140,16 +136,18 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             args.caches,
             args.fixMode,
             args.verbose,
+            args.console,
             args.throttlingIntervalMillis,
             args.batchSize,
             args.recheckAttempts,
             args.repairAlg
         );
 
-        PartitionReconciliationResult res =
+        ReconciliationResult res =
             executeTask(client, VisorPartitionReconciliationTask.class, taskArg, clientCfg);
 
-        print(res, log::info, args.outputFile);
+        if(args.console)
+            print(res, log::info);
     }
 
     /** {@inheritDoc} */
@@ -157,6 +155,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         Set<String> cacheNames = null;
         boolean fixMode = false;
         boolean verbose = false;
+        boolean console = false;
         int throttlingIntervalMillis = -1;
         int batchSize = DEFAULT_BATCH_SIZE;
         int recheckAttempts = DEFAULT_RECHECK_ATTEMPTS;
@@ -195,6 +194,11 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
                         break;
 
+                    case CONSOLE:
+                        console = true;
+
+                        break;
+
                     case THROTTLING_INTERVAL_MILLIS:
                         // TODO: 20.11.19 Use proper message here. 
                         String throttlingIntervalMillisStr = argIter.nextArg("The cache filter should be specified. The following " +
@@ -224,17 +228,11 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         recheckAttempts = Integer.valueOf(recheckAttemptsStr);
 
                         break;
-
-                    case OUTPUT_FILE:
-                        // TODO: 29.11.19 Proper message and optionality.
-                        outputFile = argIter.nextArg("");
-
-                        break;
                 }
             }
         }
 
-        args = new Arguments(cacheNames, fixMode, verbose, throttlingIntervalMillis, batchSize, recheckAttempts,
+        args = new Arguments(cacheNames, fixMode, verbose, console, throttlingIntervalMillis, batchSize, recheckAttempts,
             outputFile, repairAlg);
     }
 
@@ -268,11 +266,28 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             .a("], throttling-interval-millis=[" + args.throttlingIntervalMillis)
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
-            .a("], file=[" + args.outputFile + "]")
             .a("], fix-alg=[" + args.repairAlg + "]")
             .a("\n");
 
         return options.toString();
+    }
+
+    private String prepareResultFolders(
+        Map<UUID, String> nodeIdsToFolders,
+        Map<UUID, String> nodesIdsToConsistenseIdsMap
+    ) {
+        SB out = new SB("partition_reconciliation task prepared result where line is " +
+            "- <nodeConsistentId>, <nodeId> : <folder> \n");
+
+        for (Map.Entry<UUID, String> entry : nodeIdsToFolders.entrySet()) {
+            String consId = nodesIdsToConsistenseIdsMap.get(entry.getKey());
+
+            out
+                .a(consId + " " + entry.getKey() + " : " + entry.getValue())
+                .a("\n");
+        }
+
+        return out.toString();
     }
 
     /**
@@ -281,31 +296,14 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
      * @param printer Printer.
      * @param outputFile Output file name.
      */
-    private void print(PartitionReconciliationResult res, Consumer<String> printer, String outputFile) {
+    private void print(ReconciliationResult res, Consumer<String> printer) {
+        PartitionReconciliationResult reconciliationRes = res.partitionReconciliationResult();
+
         printer.accept(prepareHeaderMeta());
 
-        if (args.outputFile != null) {
-            File f = new File(outputFile);
+        printer.accept(prepareResultFolders(res.nodeIdToFolder(), reconciliationRes.nodesIdsToConsistenseIdsMap()));
 
-            try (PrintWriter pw = new PrintWriter(f)) {
-                ((Consumer<String>)(pw::write)).accept(prepareHeaderMeta());
-
-                if (res != null)
-                    res.print(pw::write, args.verbose);
-
-                pw.flush();
-            }
-            catch (FileNotFoundException e) {
-                printer.accept("Unable to write report to file " + f.getAbsolutePath() + " " + e.getMessage() + "\n");
-
-                if (res != null)
-                    res.print(printer, args.verbose);
-            }
-        }
-        else {
-            if (res != null)
-                res.print(printer, args.verbose);
-        }
+        reconciliationRes.print(printer, args.verbose);
     }
 
     /**
@@ -323,6 +321,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         private boolean verbose;
 
         /** */
+        private boolean console;
+
+        /** */
         private int throttlingIntervalMillis;
 
         /** */
@@ -330,9 +331,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         /** */
         private int recheckAttempts;
-
-        /** */
-        private String outputFile;
 
         /** */
         private RepairAlgorithm repairAlg;
@@ -348,15 +346,16 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          * @param recheckAttempts Amount of recheck attempts.
          * @param outputFile File to write output report to.
          */
-        public Arguments(Set<String> caches, boolean fixMode, boolean verbose, int throttlingIntervalMillis,
+        public Arguments(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
+            int throttlingIntervalMillis,
             int batchSize, int recheckAttempts, String outputFile, RepairAlgorithm repairAlg) {
             this.caches = caches;
             this.fixMode = fixMode;
             this.verbose = verbose;
+            this.console = console;
             this.throttlingIntervalMillis = throttlingIntervalMillis;
             this.batchSize = batchSize;
             this.recheckAttempts = recheckAttempts;
-            this.outputFile = outputFile;
             this.repairAlg = repairAlg;
         }
 
@@ -400,6 +399,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          */
         public boolean verbose() {
             return verbose;
+        }
+
+        /**
+         * @return Print to console.
+         */
+        public boolean console() {
+            return console;
         }
 
         /**

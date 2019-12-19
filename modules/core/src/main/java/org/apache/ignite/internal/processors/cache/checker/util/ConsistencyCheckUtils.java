@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.checker.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,6 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -35,11 +39,19 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.internal.U;
+
+import static java.io.File.separatorChar;
 
 /**
  *
  */
 public class ConsistencyCheckUtils {
+    /**
+     * Folder with local result of reconciliation.
+     */
+    public static final String RECONCILIATION_DIR = "reconciliation";
+
     /**
      *
      */
@@ -177,5 +189,29 @@ public class ConsistencyCheckUtils {
         }
 
         return brokenKeys;
+    }
+
+    /**
+     *
+     * @param consId Consistence Id.
+     * @param startTime Operation start time.
+     */
+    public static File createLocalResultFile(
+        ClusterNode locNode,
+        LocalDateTime startTime
+    ) throws IgniteCheckedException, IOException {
+        String maskId = U.maskForFileName(locNode.consistentId().toString());
+
+        File dir = new File(U.defaultWorkDirectory() + separatorChar + RECONCILIATION_DIR);
+
+        if (!dir.exists())
+            dir.mkdir();
+
+        File file = new File(dir.getPath() + separatorChar + maskId + "_" + startTime.toString());
+
+        if (!file.exists())
+            file.createNewFile();
+
+        return file;
     }
 }

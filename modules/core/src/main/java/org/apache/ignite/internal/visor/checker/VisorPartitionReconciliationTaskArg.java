@@ -39,6 +39,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
     private boolean fixMode;
 
+    /** Print result to console. */
+    private boolean console;
+
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     private boolean verbose;
 
@@ -68,10 +71,11 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      * Constructor.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, boolean verbose,
+    public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
         int throttlingIntervalMillis, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg) {
         this.caches = caches;
         this.verbose = verbose;
+        this.console = console;
         this.fixMode = fixMode;
         this.throttlingIntervalMillis = throttlingIntervalMillis;
         this.batchSize = batchSize;
@@ -86,6 +90,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeBoolean(fixMode);
 
         out.writeBoolean(verbose);
+
+        out.writeBoolean(console);
 
         out.writeInt(throttlingIntervalMillis);
 
@@ -105,6 +111,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         fixMode = in.readBoolean();
 
         verbose = in.readBoolean();
+
+        console = in.readBoolean();
 
         throttlingIntervalMillis = in.readInt();
 
@@ -155,6 +163,13 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     public boolean verbose() {
         return verbose;
+    }
+
+    /**
+     * @return {@code true} if print result to console.
+     */
+    public boolean console() {
+        return console;
     }
 
     /**
