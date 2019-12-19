@@ -134,7 +134,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheGet, key, w => w.Writer.WriteObjectDetached(key),
+            return DoOutInOpAffinityAsync(ClientOp.CacheGet, key, ctx => ctx.Writer.WriteObjectDetached(key),
                 ctx => UnmarshalNotNull<TV>(ctx));
         }
 
@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutInOpAffinityAsync(ClientOp.CacheGet, key, w => w.Writer.WriteObjectDetached(key),
+            return DoOutInOpAffinityAsync(ClientOp.CacheGet, key, ctx => ctx.Writer.WriteObjectDetached(key),
                 UnmarshalCacheResult<TV>);
         }
 
@@ -164,7 +164,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOp(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), 
+            return DoOutInOp(ClientOp.CacheGetAll, ctx => ctx.Writer.WriteEnumerable(keys), 
                 s => ReadCacheEntries(s.Stream));
         }
 
@@ -173,7 +173,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOpAsync(ClientOp.CacheGetAll, w => w.Writer.WriteEnumerable(keys), 
+            return DoOutInOpAsync(ClientOp.CacheGetAll, ctx => ctx.Writer.WriteEnumerable(keys), 
                 s => ReadCacheEntries(s.Stream));
         }
 
@@ -192,9 +192,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             IgniteArgumentCheck.NotNull(key, "key");
             IgniteArgumentCheck.NotNull(val, "val");
 
-            return DoOutOpAffinityAsync(ClientOp.CachePut, key, w => {
-                w.Writer.WriteObjectDetached(key);
-                w.Writer.WriteObjectDetached(val);
+            return DoOutOpAffinityAsync(ClientOp.CachePut, key, ctx => {
+                ctx.Writer.WriteObjectDetached(key);
+                ctx.Writer.WriteObjectDetached(val);
             });
         }
 
@@ -219,7 +219,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOp(ClientOp.CacheContainsKeys, w => w.Writer.WriteEnumerable(keys), ctx => ctx.Stream.ReadBool());
+            return DoOutInOp(ClientOp.CacheContainsKeys, ctx => ctx.Writer.WriteEnumerable(keys), 
+                ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -227,7 +228,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutInOpAsync(ClientOp.CacheContainsKeys, w => w.Writer.WriteEnumerable(keys), ctx => ctx.Stream.ReadBool());
+            return DoOutInOpAsync(ClientOp.CacheContainsKeys, ctx => ctx.Writer.WriteEnumerable(keys), 
+                ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritDoc /> */
@@ -415,7 +417,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(vals, "vals");
 
-            DoOutOp(ClientOp.CachePutAll, w => w.Writer.WriteDictionary(vals));
+            DoOutOp(ClientOp.CachePutAll, ctx => ctx.Writer.WriteDictionary(vals));
         }
 
         /** <inheritDoc /> */
@@ -423,7 +425,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(vals, "vals");
 
-            return DoOutOpAsync(ClientOp.CachePutAll, w => w.Writer.WriteDictionary(vals));
+            return DoOutOpAsync(ClientOp.CachePutAll, ctx => ctx.Writer.WriteDictionary(vals));
         }
 
         /** <inheritDoc /> */
@@ -451,7 +453,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutOpAffinityAsync(ClientOp.CacheClearKey, key, w => w.Writer.WriteObjectDetached(key));
+            return DoOutOpAffinityAsync(ClientOp.CacheClearKey, key, ctx => ctx.Writer.WriteObjectDetached(key));
         }
 
         /** <inheritDoc /> */
@@ -459,7 +461,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            DoOutOp(ClientOp.CacheClearKeys, w => w.Writer.WriteEnumerable(keys));
+            DoOutOp(ClientOp.CacheClearKeys, ctx => ctx.Writer.WriteEnumerable(keys));
         }
 
         /** <inheritDoc /> */
@@ -467,7 +469,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutOpAsync(ClientOp.CacheClearKeys, w => w.Writer.WriteEnumerable(keys));
+            return DoOutOpAsync(ClientOp.CacheClearKeys, ctx => ctx.Writer.WriteEnumerable(keys));
         }
 
         /** <inheritDoc /> */
@@ -509,7 +511,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            DoOutOp(ClientOp.CacheRemoveKeys, w => w.Writer.WriteEnumerable(keys));
+            DoOutOp(ClientOp.CacheRemoveKeys, ctx => ctx.Writer.WriteEnumerable(keys));
         }
 
         /** <inheritDoc /> */
@@ -517,7 +519,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutOpAsync(ClientOp.CacheRemoveKeys, w => w.Writer.WriteEnumerable(keys));
+            return DoOutOpAsync(ClientOp.CacheRemoveKeys, ctx => ctx.Writer.WriteEnumerable(keys));
         }
 
         /** <inheritDoc /> */
@@ -645,7 +647,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
-                ctx => WriteRequest(w => w.Writer.WriteObjectDetached(key), ctx),
+                ctx => WriteRequest(c => c.Writer.WriteObjectDetached(key), ctx),
                 readFunc,
                 _id,
                 key,
@@ -660,7 +662,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
-                stream => WriteRequest(writeAction, stream),
+                ctx => WriteRequest(writeAction, ctx),
                 readFunc,
                 _id,
                 key,
@@ -674,11 +676,11 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             return _ignite.Socket.DoOutInOpAffinity(
                 opId,
-                stream => WriteRequest(w =>
+                ctx => WriteRequest(c =>
                 {
-                    w.Writer.WriteObjectDetached(key);
-                    w.Writer.WriteObjectDetached(val);
-                }, stream),
+                    c.Writer.WriteObjectDetached(key);
+                    c.Writer.WriteObjectDetached(val);
+                }, ctx),
                 readFunc,
                 _id,
                 key,
@@ -691,7 +693,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
             Func<ClientResponseContext, T> readFunc)
         {
-            return _ignite.Socket.DoOutInOpAsync(opId, stream => WriteRequest(writeAction, stream),
+            return _ignite.Socket.DoOutInOpAsync(opId, ctx => WriteRequest(writeAction, ctx),
                 readFunc, HandleError<T>);
         }
 
@@ -701,7 +703,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private Task<T> DoOutInOpAffinityAsync<T>(ClientOp opId, TK key, Action<ClientRequestContext> writeAction,
             Func<ClientResponseContext, T> readFunc)
         {
-            return _ignite.Socket.DoOutInOpAffinityAsync(opId, stream => WriteRequest(writeAction, stream),
+            return _ignite.Socket.DoOutInOpAffinityAsync(opId, ctx => WriteRequest(writeAction, ctx),
                 readFunc, _id, key, HandleError<T>);
         }
 
@@ -712,11 +714,11 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             return _ignite.Socket.DoOutInOpAffinityAsync(
                 opId,
-                stream => WriteRequest(w =>
+                ctx => WriteRequest(c =>
                 {
-                    w.Writer.WriteObjectDetached(key);
-                    w.Writer.WriteObjectDetached(val);
-                }, stream),
+                    c.Writer.WriteObjectDetached(key);
+                    c.Writer.WriteObjectDetached(val);
+                }, ctx),
                 readFunc,
                 _id,
                 key,
