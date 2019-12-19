@@ -37,7 +37,7 @@ fixture('Login')
         t.ctx.ws.destroy();
     });
 
-test('Ivalid email', async(t) => {
+test('Invalid email', async(t) => {
     await t
         .typeText(pageSignin.email.control, 'aa')
         .typeText(pageSignin.password.control, 'wrong', {replace: true})
