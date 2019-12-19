@@ -84,7 +84,10 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         public void FinishMarshal()
         {
-            _marshaller.FinishMarshal(_writer);
+            if (_writer != null)
+            {
+                _marshaller.FinishMarshal(_writer);
+            }
         }
     }
 }
