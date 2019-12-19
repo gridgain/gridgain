@@ -87,6 +87,7 @@
     <Compile Include="Impl\Cache\QueryMetricsImpl.cs" />
     <Compile Include="Impl\Client\ClientOpExtensions.cs" />
     <Compile Include="Impl\Client\ClientRequestContext.cs" />
+    <Compile Include="Impl\Client\ClientResponseContext.cs" />
     <Compile Include="Impl\Client\ClientSocketExtensions.cs" />
     <Compile Include="Impl\Client\ClientUtils.cs" />
     <Compile Include="Impl\Client\Cluster\ClientCluster.cs" />

@@ -21,9 +21,9 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary.IO;
 
     /// <summary>
-    /// Request context.
+    /// Response context.
     /// </summary>
-    internal class ClientRequestContext
+    internal class ClientResponseContext
     {
         /** */
         private readonly IBinaryStream _stream;
@@ -35,15 +35,15 @@ namespace Apache.Ignite.Core.Impl.Client
         private readonly ClientProtocolVersion _protocolVersion;
 
         /** */
-        private BinaryWriter _writer;
-
+        private BinaryReader _reader;
+        
         /// <summary>
-        /// Initializes a new instance of <see cref="ClientRequestContext"/> class.
+        /// Initializes a new instance of <see cref="ClientResponseContext"/> class.
         /// </summary>
         /// <param name="stream">Stream.</param>
         /// <param name="marshaller">Marshaller.</param>
-        /// <param name="protocolVersion">Protocol version to be used for this request.</param>
-        public ClientRequestContext(IBinaryStream stream, Marshaller marshaller, ClientProtocolVersion protocolVersion)
+        /// <param name="protocolVersion">Protocol version to be used for this response.</param>
+        public ClientResponseContext(IBinaryStream stream, Marshaller marshaller, ClientProtocolVersion protocolVersion)
         {
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
@@ -52,9 +52,9 @@ namespace Apache.Ignite.Core.Impl.Client
             _marshaller = marshaller;
             _protocolVersion = protocolVersion;
         }
-
+        
         /// <summary>
-        /// Protocol version to be used for this request.
+        /// Protocol version that is used to read this response.
         /// (Takes partition awareness, failover and reconnect into account).
         /// </summary>
         public ClientProtocolVersion ProtocolVersion
@@ -71,22 +71,11 @@ namespace Apache.Ignite.Core.Impl.Client
         }
         
         /// <summary>
-        /// Writer.
+        /// Reader.
         /// </summary>
-        public BinaryWriter Writer
+        public BinaryReader Reader
         {
-            get { return _writer ?? (_writer = _marshaller.StartMarshal(_stream)); }
-        }
-
-        /// <summary>
-        /// Finishes marshal session for this request (if any).
-        /// </summary>
-        public void FinishMarshal()
-        {
-            if (_writer != null)
-            {
-                _marshaller.FinishMarshal(_writer);
-            }
+            get { return _reader ?? (_reader = _marshaller.StartUnmarshal(_stream)); }
         }
     }
 }

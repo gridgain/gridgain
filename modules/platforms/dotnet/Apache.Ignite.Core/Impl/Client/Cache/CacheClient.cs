@@ -581,8 +581,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(plc, "plc");
 
-            // TODO: check version, but not here?
-            // We could check MinVersion, but with reconnect and rolling upgrade this does not really work.
             return new CacheClient<TK, TV>(_ignite, _name, _keepBinary, plc);
         }
 
