@@ -24,8 +24,8 @@ export const pageSignin = {
     selector: Selector('page-signin'),
     async login(email, password) {
         return await t
-            .typeText(this.email.control, email)
-            .typeText(this.password.control, password)
+            .typeText(this.email.control, email, {paste: true})
+            .typeText(this.password.control, password, {paste: true})
             .click(this.signinButton);
     }
 };

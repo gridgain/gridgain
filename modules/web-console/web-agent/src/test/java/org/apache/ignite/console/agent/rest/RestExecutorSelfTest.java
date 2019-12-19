@@ -26,10 +26,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -37,6 +37,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.demo.service.DemoCachesLoadService;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.console.utils.Utils;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.typedef.F;
@@ -162,7 +163,7 @@ public class RestExecutorSelfTest {
     private JsonNode toJson(RestResult res) throws IOException {
         assertNotNull(res);
 
-        String data = res.getData();
+        String data = res.getResponse();
 
         assertNotNull(data);
         assertFalse(data.isEmpty());
@@ -394,7 +395,10 @@ public class RestExecutorSelfTest {
                 .add("mtr", false)
                 .add("caches", false);
 
-            for (int i = 0; i < 1000; i++) {
+            // See: https://www.eclipse.org/jetty/documentation/current/configuring-form-size.html
+            // The default maximum size Jetty permits is 200000 bytes and 1000 keys.
+            // We have 4 standart keys: [cmd, attr, mtr, caches] and 996 random keys.
+            for (int i = 0; i < 996; i++) {
                 String param = UUID.randomUUID().toString();
 
                 params.add(param, param);
@@ -516,7 +520,8 @@ public class RestExecutorSelfTest {
             taskRes = json.get("result").get("result");
 
             return taskRes.get("hasMore").asBoolean();
-        } catch (Throwable e) {
+        }
+        catch (Throwable e) {
             throw U.cast(e);
         }
     }

@@ -16,8 +16,10 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.console.agent.AgentConfigurationTest;
 import org.apache.ignite.console.agent.AgentLauncherTest;
 import org.apache.ignite.console.agent.AgentUtilsTest;
+import org.apache.ignite.console.agent.WebSocketRouterTest;
 import org.apache.ignite.console.agent.rest.RestExecutorSelfTest;
 import org.apache.ignite.websocket.SerializationTests;
 import org.junit.runner.RunWith;
@@ -28,8 +30,10 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    AgentConfigurationTest.class,
     AgentLauncherTest.class,
     AgentUtilsTest.class,
+    WebSocketRouterTest.class,
     RestExecutorSelfTest.class,
     SerializationTests.class
 })

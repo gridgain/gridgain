@@ -20,12 +20,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.service.IgniteServiceConfigVariationsFullApiTest;
 import org.apache.ignite.testframework.configvariations.ConfigParameter;
 import org.apache.ignite.testframework.configvariations.ConfigVariationsTestSuiteBuilder;
 import org.apache.ignite.testframework.configvariations.Parameters;
 import org.apache.ignite.testframework.junits.DynamicSuite;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 
@@ -34,6 +36,9 @@ import org.junit.runner.RunWith;
  */
 @RunWith(DynamicSuite.class)
 public class IgniteServiceConfigVariationsFullApiTestSuite {
+    /** Old service grid property. */
+    private static String oldSrvcGridProp;
+
     /** */
     @SuppressWarnings("unchecked")
     private static final ConfigParameter<IgniteConfiguration>[][] PARAMS = new ConfigParameter[][] {
@@ -43,7 +48,20 @@ public class IgniteServiceConfigVariationsFullApiTestSuite {
     /** Activate service grid for test it. */
     @BeforeClass
     public static void init() {
-        System.setProperty("IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED", "true");
+        oldSrvcGridProp = System.getProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
+
+        // Enable event-driven service grid implementation unless legacy implementation is directly enforced.
+        if (oldSrvcGridProp == null)
+            System.setProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED, "true");
+    }
+
+    /**
+     * Returns previous value of service grid property.
+     */
+    @AfterClass
+    public static void cleanUp() {
+        if (oldSrvcGridProp == null)
+            System.clearProperty(IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
     }
 
     /** */

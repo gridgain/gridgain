@@ -598,9 +598,9 @@ public class JdbcThinTcpIo {
     }
 
     /**
-     * @return True if affinity awareness supported, false otherwise.
+     * @return True if Partition Awareness supported, false otherwise.
      */
-    boolean isAffinityAwarenessSupported() {
+    boolean isPartitionAwarenessSupported() {
         assert srvProtoVer != null;
 
         return srvProtoVer.compareTo(VER_2_8_0) >= 0;

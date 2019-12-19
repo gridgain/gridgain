@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
- /**
-  * @file
-  * Declares ignite::cluster::IgniteCluster class.
-  */
-
 #ifndef _IGNITE_CLUSTER_IGNITE_CLUSTER
 #define _IGNITE_CLUSTER_IGNITE_CLUSTER
+
+#ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
+/**
+ * @file
+ * Declares ignite::cluster::IgniteCluster class.
+ */
 
 #include <ignite/cluster/cluster_group.h>
 
@@ -84,6 +86,20 @@ namespace ignite
             bool IsWalEnabled(std::string cacheName);
 
             /**
+             * Get a cluster group consisting from the local node.
+             *
+             * @return Cluster group consisting from the local node.
+             */
+            cluster::ClusterGroup ForLocal();
+
+            /**
+             * Get local grid node.
+             *
+             * @return Local node.
+             */
+            cluster::ClusterNode GetLocalNode();
+
+            /**
              * Set baseline topology constructed from the cluster topology of the given version.
              * The method succeeds only if the cluster topology has not changed.
              *
@@ -133,5 +149,7 @@ namespace ignite
         };
     }
 }
+
+#endif // GRIDGAIN_ENABLE_CLUSTER_API
 
 #endif //_IGNITE_CLUSTER_IGNITE_CLUSTER

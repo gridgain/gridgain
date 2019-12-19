@@ -57,7 +57,7 @@ export const columnDefsFn = ($translate: ng.translate.ITranslateService) => [
                     value='COL_FIELD'
                 ></connected-clusters-cell-status>
                 <connected-clusters-cell-logout
-                    ng-if='row.entity.secured && grid.appScope.$ctrl.agentMgr.hasCredentials(row.entity.id)'
+                    ng-if='row.entity.secured'
                     cluster-id='row.entity.id'
                 ></connected-clusters-cell-logout>
             </div>

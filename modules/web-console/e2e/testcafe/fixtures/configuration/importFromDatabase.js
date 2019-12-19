@@ -16,9 +16,15 @@
 
 import {dropTestDB, insertTestUser, resolveUrl} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
-import {agentStat, AGENT_ONLY_NO_CLUSTER, errorResponseForEventType} from '../../mocks/agentTasks';
+import {
+    agentStat,
+    AGENT_ONLY_NO_CLUSTER,
+    errorResponseForEventType,
+    schemaImportRequest,
+    TEST_JDBC_IMPORT_DATA
+} from '../../mocks/agentTasks';
 import {WebSocketHook} from '../../mocks/WebSocketHook';
-import {importDBButton, importDBDialog, importDBImpossibleMsg} from '../../page-models/importFromDatabaseDialog'
+import {importDBButton, importDBDialog} from '../../page-models/importFromDatabaseDialog'
 import {errorNotification} from '../../components/notifications';
 
 const regularUser = createRegularUser();
@@ -31,7 +37,7 @@ fixture('Import from database dialog')
     .beforeEach(async(t) =>
         await t.useRole(regularUser).navigateTo(resolveUrl(`/configuration/overview`))
     )
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 test('Dialog has valid state when JDBC drivers are not available', async(t) => {
     await t.addRequestHooks(
@@ -43,7 +49,22 @@ test('Dialog has valid state when JDBC drivers are not available', async(t) => {
     );
 
     await t.click(importDBButton);
-    await t.expect(importDBDialog.visible).ok('Import from Database dialog should be visible');
+    await t.expect(importDBDialog.dialog.visible).ok('Import from Database dialog should be visible');
     await t.expect(errorNotification.exists).ok('Error notification should be visible');
-    await t.expect(importDBImpossibleMsg.exists).ok('Steps to fix problem should be visible');
+    await t.expect(importDBDialog.importImpossibleMsg.exists).ok('Steps to fix problem should be visible');
+});
+
+test('Dialog has valid state when JDBC drivers are available', async(t) => {
+    await t.addRequestHooks(
+        t.ctx.ws = new WebSocketHook()
+            .use(
+                agentStat(AGENT_ONLY_NO_CLUSTER),
+                schemaImportRequest(TEST_JDBC_IMPORT_DATA)
+            )
+    );
+
+    await t.click(importDBButton);
+    await t.expect(importDBDialog.dialog.visible).ok('Import from Database dialog should be visible');
+    await t.expect(errorNotification.exists).notOk('No error notifications should be visible');
+    await t.expect(importDBDialog.driverSelectorField.exists).ok('Driver configuration panel should be visible')
 });

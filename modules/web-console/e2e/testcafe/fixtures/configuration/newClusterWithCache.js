@@ -30,7 +30,7 @@ fixture('New cluster with cache')
     .beforeEach(async(t) => {
         await t.useRole(regularUser);
     })
-    .after(dropTestDB);
+    .after(async(t) => await dropTestDB());
 
 test(`New cluster name doesn't disappear`, async(t) => {
     const overview = new PageConfigurationOverview();

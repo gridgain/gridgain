@@ -24,7 +24,7 @@ import java.util.concurrent.TimeoutException;
 import javax.net.ssl.SSLException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
-import org.apache.ignite.console.agent.rest.RestResult;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;

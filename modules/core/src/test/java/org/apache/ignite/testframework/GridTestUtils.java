@@ -111,7 +111,6 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.plugin.extensions.communication.Message;
-import org.apache.ignite.spi.discovery.DiscoveryNotification;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpiListener;
 import org.apache.ignite.ssl.SslContextFactory;
@@ -185,10 +184,16 @@ public final class GridTestUtils {
         }
 
         /** {@inheritDoc} */
-        @Override public IgniteFuture<?> onDiscovery(DiscoveryNotification notification) {
-            hook.handleDiscoveryMessage(notification.getCustomMsgData());
+        @Override public IgniteFuture<?> onDiscovery(
+            int type,
+            long topVer,
+            ClusterNode node,
+            Collection<ClusterNode> topSnapshot,
+            Map<Long, Collection<ClusterNode>> topHist, @Nullable DiscoverySpiCustomMessage data
+        ) {
+            hook.handleDiscoveryMessage(data);
 
-            return delegate.onDiscovery(notification);
+            return delegate.onDiscovery(type, topVer, node, topSnapshot, topHist, data);
         }
 
         /** {@inheritDoc} */
@@ -2432,6 +2437,9 @@ public final class GridTestUtils {
             try {
                 runx();
             }
+            catch (RuntimeException e) {
+                throw e;
+            }
             catch (Exception e) {
                 throw new IgniteException(e);
             }
@@ -2455,9 +2463,19 @@ public final class GridTestUtils {
             try {
                 runx();
             }
+            catch (RuntimeException e) {
+                throw e;
+            }
             catch (Exception e) {
                 throw new IgniteException(e);
             }
         }
+    }
+
+    /**
+     * @param runnableX Runnable with exception.
+     */
+    public static void suppressException(RunnableX runnableX) {
+        runnableX.run();
     }
 }

@@ -39,14 +39,17 @@ const insertTestUser = (user = testUser) => {
         .catch((err) => {throw err.message;});
 };
 
-const dropTestDB = (user) => {
+/**
+ * Removes users and their data
+ * @param user User email mask
+ */
+const dropTestDB = (mask = '@example.com') => {
     return request({
         method: 'DELETE',
-        uri: resolveUrl('/api/v1/test/users/@example.com')
+        uri: resolveUrl(`/api/v1/test/users/${mask}`)
     })
         .catch((err) => {throw err.message;});
 };
-
 
 /**
  * Spawns a new process using the given command.

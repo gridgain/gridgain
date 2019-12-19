@@ -17,10 +17,10 @@
 import _ from 'lodash';
 
 export const taskResult = (result) => ({
-    data: {result},
+    response: {result},
     error: null,
     sessionToken: null,
-    status: 0
+    successStatus: 0
 });
 
 /**
@@ -210,4 +210,18 @@ export const agentStat = (clusters) => (ws) => {
  */
 export const errorResponseForEventType = (eventType) => (ws) => {
     ws.errorOn(eventType, () => DFLT_FAILURE_RESPONSE);
+};
+
+export const TEST_JDBC_IMPORT_DATA = {
+    drivers: [{
+        'jdbcDriverJar': 'test-driver.jar',
+        'jdbcDriverClass': 'test.dvired.cls',
+        'jdbcDriverImplVersion': 'test.version'
+    }]
+};
+
+export const schemaImportRequest = (requestData) => (ws) => {
+    ws.on('schemaImport:drivers', (e) => {
+        return requestData.drivers;
+    });
 };
