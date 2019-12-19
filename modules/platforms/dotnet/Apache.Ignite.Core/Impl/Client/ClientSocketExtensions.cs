@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Client
 {
     using System;
-    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary.IO;
 
