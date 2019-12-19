@@ -66,6 +66,8 @@ test('Cluster edit basic/advanced redirect based on caches amount', async(t) => 
     const clusterEditLink = overviewPage.clustersTable.findCell(0, 'Name').find('a');
     const cachesAmountThreshold = 5;
 
+    await t.resizeWindow(1080, 1920);
+
     await t.click(overviewPage.createClusterConfigButton);
     await repeat(cachesAmountThreshold, async() => {
         await scrollToPageBottom();
