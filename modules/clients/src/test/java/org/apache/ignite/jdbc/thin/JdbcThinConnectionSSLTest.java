@@ -17,7 +17,6 @@
 package org.apache.ignite.jdbc.thin;
 
 import java.security.NoSuchAlgorithmException;
-import java.security.Security;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -41,9 +40,6 @@ import org.junit.Test;
  */
 @SuppressWarnings("ThrowableNotThrown")
 public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
-    /** */
-    private static String DISABLED_ALGORITHMS;
-
     /** Client key store path. */
     private static final String CLI_KEY_STORE_PATH = U.getIgniteHome() +
         "/modules/clients/src/test/keystore/client.jks";
@@ -67,22 +63,6 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
 
     /** Suppoerted ciphers. */
     private static String[] supportedCiphers;
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        // Allow disabled cipher suites.
-        DISABLED_ALGORITHMS = Security.getProperty("jdk.tls.disabledAlgorithms");
-        Security.setProperty("jdk.tls.disabledAlgorithms", "");
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        Security.setProperty("jdk.tls.disabledAlgorithms", DISABLED_ALGORITHMS);
-    }
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -257,6 +237,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
         startGrids(1);
 
         try {
+            // Default ciphers
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                 "&sslClientCertificateKeyStorePassword=123456" +
@@ -265,6 +246,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                 checkConnection(conn);
             }
 
+            // Explicit cipher (one of defaults).
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_AES_256_CBC_SHA256" +
                 "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
@@ -274,6 +256,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                 checkConnection(conn);
             }
 
+            // Explicit ciphers.
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA256" +
                 "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
@@ -294,12 +277,13 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testCustomCiphersOnServer() throws Exception {
         setSslCtxFactoryToCli = true;
-        supportedCiphers = new String[] {"TLS_RSA_WITH_AES_256_CBC_SHA256"};
+        supportedCiphers = new String[] {"TLS_RSA_WITH_AES_256_CBC_SHA256" /* Enabled by default */};
         sslCtxFactory = getTestSslContextFactory();
 
         startGrids(1);
 
         try {
+            // Default ciphers.
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                 "&sslClientCertificateKeyStorePassword=123456" +
@@ -308,6 +292,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                 checkConnection(conn);
             }
 
+            // Explicit cipher.
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_AES_256_CBC_SHA256" +
                 "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
@@ -317,6 +302,17 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                 checkConnection(conn);
             }
 
+            // Disabled by default cipher.
+            GridTestUtils.assertThrows(log, () -> {
+                return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                    "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
+                    "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                    "&sslClientCertificateKeyStorePassword=123456" +
+                    "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                    "&sslTrustCertificateKeyStorePassword=123456");
+            }, SQLException.class, "Failed to SSL connect to server");
+
+            // Explicit ciphers.
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256,TLS_RSA_WITH_AES_256_CBC_SHA256" +
                 "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
@@ -325,10 +321,42 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                 "&sslTrustCertificateKeyStorePassword=123456")) {
                 checkConnection(conn);
             }
+        }
+        finally {
+            stopAllGrids();
+        }
+    }
 
+    /**
+     * @throws Exception If failed.
+     *
+     * Note: Disabled cipher suite can be enabled via Java Security property "jdk.tls.disabledAlgorithms" or in
+     * <JRE_8_HOME>/lib/security/java.security file.
+     *
+     * Note: java.security file location may be changed for Java 9+ version
+     */
+    @Test
+    public void testDisabledCustomCipher() throws Exception {
+        setSslCtxFactoryToCli = true;
+        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256" /* Disabled by default */};
+        sslCtxFactory = getTestSslContextFactory();
+
+        startGrids(1);
+        try {
+            // Explicit supported ciphers.
+            try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
+                "&sslTrustAll=true" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456")) {
+                checkConnection(conn);
+            }
+
+            // Default ciphers.
             GridTestUtils.assertThrows(log, () -> {
                 return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
-                    "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
                     "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
                     "&sslClientCertificateKeyStorePassword=123456" +
                     "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
@@ -349,13 +377,26 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      * Note: java.security file location may be changed for Java 9+ version
      */
     @Test
-    public void testDisabledCustomCipher() throws Exception {
+    public void testUnsupportedCustomCipher() throws Exception {
         setSslCtxFactoryToCli = true;
-        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256"};
+        supportedCiphers = new String[] {"TLS_RSA_WITH_NULL_SHA256" /* Disabled by default */,
+            "TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA" /* With disabled protocol*/};
         sslCtxFactory = getTestSslContextFactory();
 
         startGrids(1);
         try {
+            // Enabled ciphers with unsupported algorithm can't be negotiated.
+            GridTestUtils.assertThrows(log, () -> {
+                return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
+                "&sslCipherSuites=TLS_ECDH_anon_WITH_3DES_EDE_CBC_SHA" +
+                "&sslTrustAll=true" +
+                "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
+                "&sslClientCertificateKeyStorePassword=123456" +
+                "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
+                "&sslTrustCertificateKeyStorePassword=123456");
+            }, SQLException.class, "Failed to SSL connect to server");
+
+            // Supported cipher.
             try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                 "&sslCipherSuites=TLS_RSA_WITH_NULL_SHA256" +
                 "&sslTrustAll=true" +
@@ -366,6 +407,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                 checkConnection(conn);
             }
 
+            // Default ciphers.
             GridTestUtils.assertThrows(log, () -> {
                 return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                     "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
@@ -373,6 +415,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                     "&sslTrustCertificateKeyStoreUrl=" + TRUST_KEY_STORE_PATH +
                     "&sslTrustCertificateKeyStorePassword=123456");
             }, SQLException.class, "Failed to SSL connect to server");
+
         }
         finally {
             stopAllGrids();
@@ -391,6 +434,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
         startGrids(1);
 
         try {
+            // Same invalid cipher.
             GridTestUtils.assertThrows(log, () -> {
                 return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                     "&sslCipherSuites=TLS_RSA_WITH_INVALID_SHA256" +
@@ -400,6 +444,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
                     "&sslTrustCertificateKeyStorePassword=123456");
             }, SQLException.class, "Failed to connect to server");
 
+            // Default ciphers.
             GridTestUtils.assertThrows(log, () -> {
                 return DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?sslMode=require" +
                     "&sslClientCertificateKeyStoreUrl=" + CLI_KEY_STORE_PATH +
