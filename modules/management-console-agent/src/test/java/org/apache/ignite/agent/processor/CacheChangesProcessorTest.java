@@ -38,6 +38,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesSqlMetaDest;
+import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
  * Cache changes processor test.
@@ -329,7 +330,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendSqlMetadataForCacheCreatedByCacheConfiguration() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -369,7 +370,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendSqlMetadataForCacheCreatedByCacheConfigurationWithAnnotations() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -402,6 +403,78 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
                 cacheMeta.getIndexes().size() == 1;
         });
     }
+
+    /**
+     * Should send correct cache info on create and destroy cache events on other nodes.
+     */
+    @Test
+    public void shouldSendCacheInfoIfReplicatedCacheCreatedOnOtherNode() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+
+        changeManagementConsoleConfig(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+
+        cluster.active(true);
+
+        IgniteEx ignite_2 = startGrid(0);
+
+        CacheConfiguration<Object, Object> cacheCfg = new CacheConfiguration<>("test-cache-1").setCacheMode(REPLICATED);
+        IgniteCache<Object, Object> cache = ignite_2.getOrCreateCache(cacheCfg);
+
+        cache.put(1, 2);
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getName()));
+        });
+
+        cache.destroy();
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getName()));
+        });
+    }
+
+    /**
+     * Should send correct cache info on create and destroy replicated cache events triggered by sql.
+     */
+    @Test
+    public void shouldSendCacheInfoOnCreatedOrDestroyedReplicatedCacheFromSql() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+
+        changeManagementConsoleConfig(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+
+        cluster.active(true);
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("CREATE TABLE mc_agent_test_table_1 (id int, value int, PRIMARY KEY (id)) WITH \"template=replicated\";"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+        });
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("DROP TABLE mc_agent_test_table_1;"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+        });
+    }
+
 
     /**
      * @return Country cache configuration.
