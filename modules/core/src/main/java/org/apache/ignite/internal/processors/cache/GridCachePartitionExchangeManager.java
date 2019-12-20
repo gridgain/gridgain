@@ -2162,7 +2162,11 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         if (warnings.canAddMessage()) {
                             warnings.add(longRunningTransactionWarning(tx, curTime));
 
+                            boolean clientMode = cctx.kernalContext().config().isClientMode() == null ? false
+                                : cctx.kernalContext().config().isClientMode();
+
                             if (cctx.tm().txOwnerDumpRequestsAllowed()
+                                && !clientMode
                                 && tx.local()
                                 && tx.state() == TransactionState.ACTIVE
                                 && ltrDumpLimiter.allowAction(tx))

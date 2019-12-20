@@ -27,9 +27,6 @@ public class FetchActiveTxOwnerTraceClosure implements IgniteCallable<String> {
     private static final long serialVersionUID = 0L;
 
     /** */
-    private static final StackTraceElement[] STACK_TRACE_ELEMENT_EMPTY = new StackTraceElement[0];
-
-    /** */
     private final long txOwnerThreadId;
 
     /** */

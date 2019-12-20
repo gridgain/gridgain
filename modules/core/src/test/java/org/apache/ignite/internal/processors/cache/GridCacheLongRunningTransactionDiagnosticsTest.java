@@ -23,6 +23,8 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.TransactionsMXBeanImpl;
 import org.apache.ignite.mxbean.TransactionsMXBean;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
@@ -49,6 +51,9 @@ public class GridCacheLongRunningTransactionDiagnosticsTest extends GridCommonAb
     /** */
     private static String longOpTimeoutCommon;
 
+    /** */
+    private final LogListener dumpLsnr = LogListener.matches("Dumping the near node thread that started transaction").build();
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -70,6 +75,12 @@ public class GridCacheLongRunningTransactionDiagnosticsTest extends GridCommonAb
 
             cfg.setCacheConfiguration(ccfg);
         }
+
+        ListeningTestLogger testLog = new ListeningTestLogger(false, log);
+
+        testLog.registerListener(dumpLsnr);
+
+        cfg.setGridLogger(testLog);
 
         return cfg;
     }
@@ -148,6 +159,8 @@ public class GridCacheLongRunningTransactionDiagnosticsTest extends GridCommonAb
      * @throws Exception if failed.
      */
     private void imitateLongTransaction(boolean shouldRcvThreadDumpReq) throws Exception {
+        dumpLsnr.reset();
+
         final int val = 0;
 
         final IgniteEx client = startGrid("client");
@@ -175,6 +188,8 @@ public class GridCacheLongRunningTransactionDiagnosticsTest extends GridCommonAb
             shouldRcvThreadDumpReq,
             FetchActiveTxOwnerTraceClosure.class.getName().equals(taskNameContainer.toString())
         );
+
+        assertEquals(shouldRcvThreadDumpReq, dumpLsnr.check());
     }
 
     /**
