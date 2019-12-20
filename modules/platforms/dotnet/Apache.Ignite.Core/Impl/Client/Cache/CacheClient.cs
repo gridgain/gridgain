@@ -586,6 +586,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             IgniteArgumentCheck.NotNull(plc, "plc");
 
+            // WithExpiryPolicy is not supported on protocols older than 1.5.0.
+            // However, we can't check that here because of partition awareness, reconnect and so on:
+            // We don't know which connection is going to be used. This connection may not even exist yet.
+            // See WriteRequest.
             return new CacheClient<TK, TV>(_ignite, _name, _keepBinary, plc);
         }
 
@@ -744,6 +748,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
 
             if (_expiryPolicy != null)
             {
+                // Check whether WithExpiryPolicy is supported by the protocol here - 
+                // ctx.ProtocolVersion refers to exact connection for this request. 
                 ClientUtils.ValidateOp(
                     ClientCacheRequestFlag.WithExpiryPolicy, ctx.ProtocolVersion, ClientSocket.Ver150);
                 
