@@ -1617,28 +1617,80 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
 
     /**
      * Checks correct serialization/deserialization of enums in builder.
-     *
-     * @throws Exception If failed.
      */
     @Test
-    public void testEnum() throws Exception {
-        BinaryObjectBuilder builder = newWrapper("TestType");
+    public void testEnum() {
+        BinaryObjectBuilder builder = newWrapper(TestClsWithEnum.class.getName());
 
         final TestEnum exp = TestEnum.A;
-        final TestEnum[] expArr = {TestEnum.A, TestEnum.B};
+        TestEnum[] expArr = {TestEnum.A, TestEnum.B};
 
         BinaryObject enumObj = builder.setField("testEnum", exp).setField("testEnumArr", expArr).build();
 
-        assertEquals(exp, ((BinaryObject)enumObj.field("testEnum")).deserialize());
-        Assert.assertArrayEquals(expArr, (Object[])deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertEquals(exp, ((BinaryObject)enumObj.field("testEnum")).deserialize());
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertEquals(exp, ((TestClsWithEnum)enumObj.deserialize()).testEnum);
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
 
         builder = newWrapper(enumObj.type().typeName());
 
         enumObj = builder.setField("testEnum", (Object)enumObj.field("testEnum"))
             .setField("testEnumArr", (Object)enumObj.field("testEnumArr")).build();
 
-        assertEquals(exp, ((BinaryObject)enumObj.field("testEnum")).deserialize());
-        Assert.assertArrayEquals(expArr, (Object[])deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertEquals(exp, ((BinaryObject)enumObj.field("testEnum")).deserialize());
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertEquals(exp, ((TestClsWithEnum)enumObj.deserialize()).testEnum);
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
+
+        builder = newWrapper(enumObj.type().typeName());
+
+        expArr = new TestEnum[0];
+
+        enumObj = builder.setField("testEnumArr", expArr).build();
+
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
+
+        enumObj = builder.setField("testEnumArr", (Object)enumObj.field("testEnumArr")).build();
+
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
+    }
+
+    /** */
+    @Test
+    public void testEnum2() {
+        BinaryObjectBuilder builder = newWrapper(TestClsWithEnum.class.getName());
+
+        Object[] expArr = new TestEnum[0];
+
+        BinaryObject enumObj = builder.setField("testEnumArr", expArr).build();
+
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
+
+        builder = newWrapper(enumObj.type().typeName());
+
+        enumObj = builder.setField("testEnumArr", (Object)enumObj.field("testEnumArr")).build();
+
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
+
+        expArr = new TestEnum[]{TestEnum.A, TestEnum.B};
+
+        builder = newWrapper(enumObj.type().typeName());
+
+        enumObj = builder.setField("testEnumArr", expArr).build();
+
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
+
+        builder = newWrapper(enumObj.type().typeName());
+
+        enumObj = builder.setField("testEnumArr", (Object)enumObj.field("testEnumArr")).build();
+
+        Assert.assertArrayEquals(expArr, deserializeEnumBinaryArray(enumObj.field("testEnumArr")));
+        Assert.assertArrayEquals(expArr, ((TestClsWithEnum)enumObj.deserialize()).testEnumArr);
     }
 
     /**
@@ -1755,6 +1807,21 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
             return "TestObjectExternalizable{" +
                 "val='" + val + '\'' +
                 '}';
+        }
+    }
+
+    /** Test class with enum and array of enums. */
+    public static class TestClsWithEnum {
+        /** */
+        private final TestEnum testEnum;
+
+        /** */
+        private final TestEnum[] testEnumArr;
+
+        /** */
+        public TestClsWithEnum(TestEnum testEnum, TestEnum[] testEnumArr) {
+            this.testEnum = testEnum;
+            this.testEnumArr = testEnumArr;
         }
     }
 
