@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.web.controller;
 
-import io.swagger.annotations.ApiOperation;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.services.ActivitiesService;
 import org.apache.ignite.console.web.model.ActivityRequest;
@@ -48,9 +47,9 @@ public class ActivitiesController {
     }
 
     /**
+     * Save user's activity.
      * @param acc Account.
      */
-    @ApiOperation(value = "Save user's activity.")
     @PostMapping(path = "/page", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> save(@AuthenticationPrincipal Account acc, @RequestBody ActivityRequest req) {
         activitiesSrv.save(acc.getId(), req.getGroup(), req.getAction());

@@ -16,8 +16,6 @@
 
 package org.apache.ignite.console.web.model;
 
-import io.swagger.annotations.ApiModelProperty;
-import javax.validation.constraints.NotNull;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.hibernate.validator.constraints.NotEmpty;
 
@@ -26,8 +24,6 @@ import org.hibernate.validator.constraints.NotEmpty;
  */
 public class SignUpRequest extends User {
     /** Password. */
-    @ApiModelProperty(value = "User password.")
-    @NotNull
     @NotEmpty
     private String pwd;
 

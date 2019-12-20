@@ -18,7 +18,6 @@ package org.apache.ignite.console.web.controller;
 
 import java.util.Collection;
 import java.util.UUID;
-import io.swagger.annotations.ApiOperation;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Notebook;
 import org.apache.ignite.console.services.NotebooksService;
@@ -53,19 +52,19 @@ public class NotebooksController {
     }
 
     /**
+     * Get user's notebooks.
      * @param acc Account.
      * @return Collection of notebooks.
      */
-    @ApiOperation(value = "Get user's notebooks.")
     @GetMapping
     public ResponseEntity<Collection<Notebook>> list(@AuthenticationPrincipal Account acc) {
         return ResponseEntity.ok(notebooksSrv.list(acc.getId()));
     }
 
     /**
+     * Save user's notebook.
      * @param acc Account.
      */
-    @ApiOperation(value = "Save user's notebook.")
     @PutMapping(consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> save(@AuthenticationPrincipal Account acc, @RequestBody Notebook notebook) {
         notebooksSrv.save(acc.getId(), notebook);
@@ -74,10 +73,10 @@ public class NotebooksController {
     }
 
     /**
+     * Delete user's notebook.
      * @param acc Account.
      * @param notebookId Notebook ID.
      */
-    @ApiOperation(value = "Delete user's notebook.")
     @DeleteMapping(path = "/{notebookId}")
     public ResponseEntity<Void> delete(
         @AuthenticationPrincipal Account acc,

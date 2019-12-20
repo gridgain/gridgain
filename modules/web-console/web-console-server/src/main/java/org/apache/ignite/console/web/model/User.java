@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.web.model;
 
-import io.swagger.annotations.ApiModelProperty;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.hibernate.validator.constraints.NotEmpty;
@@ -26,30 +25,24 @@ import org.hibernate.validator.constraints.NotEmpty;
  */
 public class User {
     /** Email. */
-    @ApiModelProperty(value = "User email", required = true)
     @NotEmpty
     private String email;
 
     /** First name. */
-    @ApiModelProperty(value = "User first name", required = true)
     @NotEmpty
     private String firstName;
 
     /** Last name. */
-    @ApiModelProperty(value = "User last name", required = true)
     @NotEmpty
     private String lastName;
 
     /** Phone. */
-    @ApiModelProperty(value = "User phone")
     private String phone;
 
     /** Company. */
-    @ApiModelProperty(value = "User company")
     private String company = "-";
 
     /** Country. */
-    @ApiModelProperty(value = "User country")
     private String country = "Rest of the World";
 
     /**
