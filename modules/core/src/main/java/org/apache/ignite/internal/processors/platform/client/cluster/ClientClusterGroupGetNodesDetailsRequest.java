@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.platform.client.cluster;
 
 import org.apache.ignite.binary.BinaryRawReader;
 import org.apache.ignite.cluster.ClusterGroup;
-import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
 import org.apache.ignite.internal.processors.platform.client.ClientRequest;
