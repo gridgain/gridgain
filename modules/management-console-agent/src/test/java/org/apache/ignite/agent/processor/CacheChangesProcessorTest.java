@@ -50,7 +50,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendInitialStates() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -67,7 +67,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldNotSendSystemCacheInfo() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -89,7 +89,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendCacheInfoOnCreatedOrDestroyedCache() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -121,7 +121,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendCacheInfoIfCacheCreatedOnOtherNode() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -155,7 +155,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendCacheInfoOnCreatedOrDestroyedCacheFromSql() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -191,7 +191,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendCacheMetadataOnAlterTableAndCreateIndex() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -249,7 +249,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendCacheMetadataOnCreateAndDropIndex() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 

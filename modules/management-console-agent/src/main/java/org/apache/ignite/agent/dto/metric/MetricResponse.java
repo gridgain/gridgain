@@ -129,6 +129,13 @@ public class MetricResponse implements Message {
     }
 
     /**
+     * @param body Body.
+     */
+    public MetricResponse(byte[] body) {
+        this.body = body.clone();
+    }
+
+    /**
      * @param schemaVer Schema version.
      * @param ts Timestamp.
      * @param clusterId Cluster ID.

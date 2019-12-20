@@ -33,7 +33,7 @@ public class ClientClusterWalChangeStateResponse extends ClientResponse {
      * Ctor.
      *
      * @param reqId Request id.
-     * @param res    Operation result.
+     * @param res   Operation result.
      */
     ClientClusterWalChangeStateResponse(long reqId, boolean res) {
         super(reqId);

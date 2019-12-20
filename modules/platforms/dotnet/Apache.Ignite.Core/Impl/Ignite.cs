@@ -981,7 +981,7 @@ namespace Apache.Ignite.Core.Impl
 
             _nodes[node.Id] = node;
         }
-        
+
         /// <summary>
         /// Returns instance of Ignite Transactions to mark a transaction with a special label.
         /// </summary>
