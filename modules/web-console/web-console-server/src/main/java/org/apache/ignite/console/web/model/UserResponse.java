@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.web.model;
 
-import javax.validation.constraints.NotNull;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.hibernate.validator.constraints.NotEmpty;
