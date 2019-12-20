@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.websocket.DeploymentException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
@@ -39,6 +40,7 @@ import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
 import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
@@ -47,7 +49,6 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
@@ -67,6 +68,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_ID_AND_TAG;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.IgniteFeatures.TRACING;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
@@ -124,8 +126,8 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** If first connection error after successful connection. */
     private AtomicBoolean disconnected = new AtomicBoolean();
 
-    /** Is all features enabled. */
-    private boolean isMgmtConsoleFeaturesEnabled;
+    /** Agent started. */
+    private final AtomicBoolean agentStarted = new AtomicBoolean();
 
     /**
      * @param ctx Kernal context.
@@ -136,14 +138,17 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        isMgmtConsoleFeaturesEnabled = ReadableDistributedMetaStorage.isSupported(ctx) &&
-            allNodesSupports(ctx, ctx.discovery().discoCache().allNodes(), CLUSTER_ID_AND_TAG);
-
-        if (isMgmtConsoleFeaturesEnabled) {
+        if (isManagementConsoleFeaturesEnabled()) {
             this.metaStorage = ctx.distributedMetastorage();
             this.evtsExporter = new EventsExporter(ctx);
-            this.spanExporter = new SpanExporter(ctx);
             this.metricExporter = new MetricsExporter(ctx);
+
+            if (isTracingEnabled())
+                this.spanExporter = new SpanExporter(ctx);
+            else
+                U.quietAndWarn(log, "Current Ignite configuration does not support tracing functionality" +
+                    " and management console agent will not collect traces" +
+                    " (consider adding ignite-opencensus module to classpath).");
 
             // Connect to backend if local node is a coordinator or await coordinator change event.
             if (isLocalNodeCoordinator(ctx.discovery())) {
@@ -170,7 +175,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
-        if (isMgmtConsoleFeaturesEnabled) {
+        if (isManagementConsoleFeaturesEnabled()) {
             ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
             quiteStop(messagesProc);
@@ -203,7 +208,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** {@inheritDoc} */
     @Override public void configuration(ManagementConfiguration cfg) {
-        if (isMgmtConsoleFeaturesEnabled) {
+        if (isManagementConsoleFeaturesEnabled()) {
             ManagementConfiguration oldCfg = configuration();
 
             if (oldCfg.isEnabled() != cfg.isEnabled())
@@ -215,7 +220,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
             disconnect();
 
-            launchAgentListener(null, null);
+            connect();
         }
     }
 
@@ -234,10 +239,27 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /**
+     * @return {@code True} if tracing is enable.
+     */
+    boolean isTracingEnabled() {
+        return IgniteFeatures.nodeSupports(ctx, ctx.grid().localNode(), TRACING);
+    }
+
+    /**
+     * @return {@code True} if all needed features for management console agent was enabled.
+     */
+    boolean isManagementConsoleFeaturesEnabled() {
+        return ReadableDistributedMetaStorage.isSupported(ctx) &&
+            allNodesSupports(ctx, ctx.discovery().discoCache().allNodes(), CLUSTER_ID_AND_TAG);
+    }
+
+    /**
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        if (isLocalNodeCoordinator(ctx.discovery())) {
+        if (isLocalNodeCoordinator(ctx.discovery()) && agentStarted.compareAndSet(false, true)) {
+            ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+
             cfg = readFromMetaStorage();
 
             connect();
@@ -279,8 +301,16 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
                     break;
                 }
-                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
-                    EOFException.class, ConnectionLostException.class)) {
+                else if (
+                    X.hasCause(
+                        e,
+                        TimeoutException.class,
+                        ConnectException.class,
+                        EOFException.class,
+                        ConnectionLostException.class,
+                        DeploymentException.class
+                    )
+                ) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
                 }
@@ -378,7 +408,8 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
-            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: " + cluster.id());
+            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: "
+                + cluster.id());
 
             clusterProc.sendInitialState();
 
@@ -414,7 +445,13 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         }
 
         /** {@inheritDoc} */
-        @Override public void handleException(StompSession ses, StompCommand cmd, StompHeaders headers, byte[] payload, Throwable e) {
+        @Override public void handleException(
+            StompSession ses,
+            StompCommand cmd,
+            StompHeaders headers,
+            byte[] payload,
+            Throwable e
+        ) {
             log.warning("Failed to process a STOMP frame", e);
         }
 
