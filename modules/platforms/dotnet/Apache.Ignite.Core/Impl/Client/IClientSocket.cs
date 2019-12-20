@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Impl.Client
     using System.Net;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Client;
-    using Apache.Ignite.Core.Impl.Binary.IO;
 
     /// <summary>
     /// Wrapper over framework socket for Ignite thin client operations.
