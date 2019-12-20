@@ -29,7 +29,7 @@
     </parent>
 
     <artifactId>ignite-management-console-agent</artifactId>
-    <version>8.7.999-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <description>Management Console Agent</description>
 
     <dependencies>
