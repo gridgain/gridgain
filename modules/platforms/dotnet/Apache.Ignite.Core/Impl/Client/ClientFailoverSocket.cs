@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Impl.Client
     /// <summary>
     /// Socket wrapper with reconnect/failover functionality: reconnects on failure.
     /// </summary>
-    internal class ClientFailoverSocket
+    internal class ClientFailoverSocket : IDisposable
     {
         /** Underlying socket. */
         private ClientSocket _socket;
