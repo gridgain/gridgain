@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-import {Selector} from 'testcafe';
+import {IgniteChartController} from './controller';
+import {assert} from 'chai';
 
-export const importDBButton = Selector('.btn-ignite').withText('Import from Database');
-
-export const _importDBDialog = Selector('h4').withText('Import domain models from database').parent('.modal-dialog');
-
-export const importDBDialog = {
-    dialog: _importDBDialog,
-    nextAction: _importDBDialog.find('button').withText('Next'),
-    saveAction: _importDBDialog.find('button').withText('Save'),
-    importImpossibleMsg: _importDBDialog.find('div').withText('Domain model could not be imported'),
-    driverSelectorField: _importDBDialog.find('#jdbcDriverJarInput'),
-    packageNameInput: _importDBDialog.find('#domainPackageNameInput')
-};
+suite('ignite-chart component', () => {
+    test('Destroy before init', async() => {
+        const instance = new IgniteChartController(
+            [],
+            () => (v) => v,
+            null
+        );
+        try {
+            await instance.initChart();
+        } catch (e) {
+            assert.notOk(e, 'It does not throw errors if component was destroyed too fast');
+        }
+    });
+});

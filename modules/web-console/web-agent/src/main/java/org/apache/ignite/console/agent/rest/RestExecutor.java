@@ -61,6 +61,7 @@ public class RestExecutor implements AutoCloseable {
      */
     public RestExecutor(SslContextFactory sslCtxFactory) {
         httpClient = new HttpClient(sslCtxFactory);
+        httpClient.setConnectBlocking(true);
     }
 
     /** {@inheritDoc} */
@@ -87,7 +88,7 @@ public class RestExecutor implements AutoCloseable {
 
         if (code == HTTP_UNAUTHORIZED) {
             return RestResult.fail(STATUS_AUTH_FAILED, "Failed to authenticate in cluster. " +
-                "Please check agent\'s login and password or node port.");
+                "Please check agent's login and password or node port.");
         }
 
         if (code == HTTP_NOT_FOUND)

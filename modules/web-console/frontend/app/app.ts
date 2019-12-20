@@ -321,6 +321,7 @@ export default angular
         }])
     .run(['User', 'AgentManager',
         /**
+         * @param User
          * @param {import('./modules/agent/AgentManager.service').default} agentMgr
          */
         (User: UserService, agentMgr) => {
@@ -332,7 +333,9 @@ export default angular
 
                 lastUser = user;
 
-                agentMgr.connect();
+                // Connect to web socket only if user successfully logged in.
+                if (user)
+                    agentMgr.connect();
             });
         }
     ])
