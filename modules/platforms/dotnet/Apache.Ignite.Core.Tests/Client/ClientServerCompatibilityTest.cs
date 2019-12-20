@@ -176,7 +176,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 Name = Guid.NewGuid().ToString(),
                 Backups = 3,
                 AtomicityMode = CacheAtomicityMode.Transactional,
-                CacheMode = CacheMode.Replicated,
+                CacheMode = CacheMode.Partitioned,
                 EagerTtl = false,
                 EnableStatistics = true,
                 GroupName = Guid.NewGuid().ToString(),
