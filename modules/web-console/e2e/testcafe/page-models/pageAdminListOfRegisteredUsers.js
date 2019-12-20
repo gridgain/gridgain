@@ -18,7 +18,7 @@ import {Selector} from 'testcafe';
 import {Table} from '../components/Table';
 
 export const TEST_USER = {
-    email: 'foo@example.com',
+    email: 'N3wUs3r@D0main.c0m',
     password: '1',
     passwordConfirm: '1',
     firstName: 'User',

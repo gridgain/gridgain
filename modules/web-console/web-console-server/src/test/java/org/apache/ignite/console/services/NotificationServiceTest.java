@@ -40,7 +40,7 @@ public class NotificationServiceTest {
     @MockBean
     private IMailService mailSrvc;
 
-    /** Notifivation service. */
+    /** Notification service. */
     @Autowired
     private NotificationService srvc;
 

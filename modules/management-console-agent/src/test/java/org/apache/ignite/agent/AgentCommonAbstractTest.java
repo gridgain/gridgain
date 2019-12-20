@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.ignite.agent.config.TestChannelInterceptor;
+import org.apache.ignite.agent.config.TestWebsocketDecoratedFactory;
 import org.apache.ignite.agent.config.WebSocketConfig;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -42,10 +43,13 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
 
+import static java.lang.Boolean.getBoolean;
+import static java.util.Arrays.stream;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -78,9 +82,17 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
     @Autowired
     protected TestChannelInterceptor interceptor;
 
+    /** Websocket decorated factory. */
+    @Autowired
+    protected TestWebsocketDecoratedFactory websocketDecoratedFactory;
+
     /** Port. */
     @LocalServerPort
     protected int port;
+
+    /** Environment. */
+    @Autowired
+    private Environment environment;
 
     /** Cluster. */
     protected IgniteClusterEx cluster;
@@ -94,6 +106,13 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
 
+        checkThreads();
+    }
+
+    /**
+     * Cheks that all management agent threads was stopped.
+     */
+    protected void checkThreads() {
         List<String> mgmtThreadNames = Thread.getAllStackTraces().keySet().stream()
             .filter(thread -> thread.getName().startsWith("mgmt-"))
             .map(Thread::getName)
@@ -105,16 +124,49 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
     /**
      * @param ignite Ignite.
      */
-    protected void changeManagementConsoleUri(IgniteEx ignite) {
+    protected void changeManagementConsoleConfig(IgniteEx ignite) {
+        changeManagementConsoleConfig(ignite, true);
+    }
+
+    /**
+     * @param ignite Ignite.
+     */
+    protected void changeManagementConsoleConfig(IgniteEx ignite, boolean isAssertNeeded) {
+        boolean isSslEnabled = stream(environment.getActiveProfiles()).anyMatch("ssl"::equalsIgnoreCase);
+        boolean isProxyEnabled = getBoolean("test.withProxy");
+
         ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
 
-        cfg.setConsoleUris(F.asList("http://localhost:" + port));
+        if (isSslEnabled) {
+            boolean isKeyStoreNeeded = getBoolean("test.withKeyStore");
+            boolean isTrustStoreNeeded = getBoolean("test.withTrustStore");
+
+            if (isTrustStoreNeeded) {
+                cfg.setConsoleTrustStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/server.p12").getPath());
+                cfg.setConsoleTrustStorePassword("123456");
+            }
+
+            if (isKeyStoreNeeded) {
+                cfg.setConsoleKeyStore(AgentCommonAbstractTest.class.getClassLoader().getResource("ssl/client.p12").getPath());
+                cfg.setConsoleKeyStorePassword("123456");
+            }
+        }
+
+        if (!isProxyEnabled)
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://localhost:" + port));
+        else if (isWindows() || isMac())
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.docker.internal:" + port));
+        else
+            cfg.setConsoleUris(F.asList((isSslEnabled ? "https" : "http") + "://host.testcontainers.internal:" + port));
+
 
         ignite.context().managementConsole().configuration(cfg);
 
-        assertWithPoll(
-            () -> interceptor.isSubscribedOn(buildActionRequestTopic(ignite.context().cluster().get().id()))
-        );
+        if (isAssertNeeded) {
+            assertWithPoll(
+                () -> interceptor.isSubscribedOn(buildActionRequestTopic(ignite.context().cluster().get().id()))
+            );
+        }
     }
 
     /**
@@ -128,6 +180,7 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName, IgniteTestResources rsrcs) {
         return new IgniteConfiguration()
             .setAuthenticationEnabled(false)
+            .setLocalHost("127.0.0.1")
             .setIgniteInstanceName(igniteInstanceName)
             .setMetricsLogFrequency(0)
             .setQueryThreadPoolSize(16)
@@ -156,5 +209,19 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
                             .setAddresses(Collections.singletonList("127.0.0.1:47500..47509"))
                     )
             );
+    }
+
+    /**
+     * @return {@code True} is jvm running on windows.
+     */
+    private static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
+    }
+
+    /**
+     * @return {@code True} is jvm running on mac OS.
+     */
+    private static boolean isMac() {
+        return System.getProperty("os.name").toLowerCase().contains("mac");
     }
 }

@@ -26,8 +26,8 @@ export const pageSignin = {
     async login(email, password) {
         return await t
             .expect(activeLoadingOverlay.exists).notOk()
-            .typeText(this.email.control, email)
-            .typeText(this.password.control, password)
+            .typeText(this.email.control, email, {paste: true})
+            .typeText(this.password.control, password, {paste: true})
             .click(this.signinButton);
     }
 };

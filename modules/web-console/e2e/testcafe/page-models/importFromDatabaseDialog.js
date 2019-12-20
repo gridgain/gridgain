@@ -17,5 +17,14 @@
 import {Selector} from 'testcafe';
 
 export const importDBButton = Selector('.btn-ignite').withText('Import from Database');
-export const importDBDialog = Selector('h4').withText('Import domain models from database').parent('.modal-dialog');
-export const importDBImpossibleMsg = importDBDialog.find('div').withText('Domain model could not be imported');
+
+export const _importDBDialog = Selector('h4').withText('Import domain models from database').parent('.modal-dialog');
+
+export const importDBDialog = {
+    dialog: _importDBDialog,
+    nextAction: _importDBDialog.find('button').withText('Next'),
+    saveAction: _importDBDialog.find('button').withText('Save'),
+    importImpossibleMsg: _importDBDialog.find('div').withText('Domain model could not be imported'),
+    driverSelectorField: _importDBDialog.find('#jdbcDriverJarInput'),
+    packageNameInput: _importDBDialog.find('#domainPackageNameInput')
+};

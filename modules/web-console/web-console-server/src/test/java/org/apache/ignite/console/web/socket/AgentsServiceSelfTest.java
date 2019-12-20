@@ -19,27 +19,20 @@ package org.apache.ignite.console.web.socket;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.ignite.console.TestGridConfiguration;
+import org.apache.ignite.console.AbstractSelfTest;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.websocket.AgentHandshakeRequest;
 import org.apache.ignite.console.websocket.AgentHandshakeResponse;
 import org.apache.ignite.console.websocket.WebSocketEvent;
 import org.apache.ignite.console.websocket.WebSocketRequest;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-import static org.apache.ignite.console.utils.TestUtils.cleanPersistenceDir;
-import static org.apache.ignite.console.utils.TestUtils.stopAllGrids;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
@@ -56,9 +49,7 @@ import static org.mockito.Mockito.when;
 /**
  *  Transition service test.
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = {TestGridConfiguration.class})
-public class AgentsServiceSelfTest {
+public class AgentsServiceSelfTest extends AbstractSelfTest {
     /** Agents service. */
     @Autowired
     private AgentsService agentsSrvc;
@@ -70,24 +61,6 @@ public class AgentsServiceSelfTest {
     /** Browsers service. */
     @MockBean
     private BrowsersService browsersSrvc;
-
-    /**
-     * @throws Exception If failed.
-     */
-    @BeforeClass
-    public static void setup() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @AfterClass
-    public static void tearDown() throws Exception {
-        stopAllGrids();
-        cleanPersistenceDir();
-    }
 
     /** */
     @Test

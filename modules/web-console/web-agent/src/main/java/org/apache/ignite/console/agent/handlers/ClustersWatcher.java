@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.console.agent.AgentConfiguration;
-import org.apache.ignite.console.agent.rest.RestResult;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.console.json.JsonObject;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.console.websocket.WebSocketResponse;
@@ -140,11 +140,11 @@ public class ClustersWatcher implements Closeable {
             try {
                 RestResult res = topology();
 
-                if (res.getStatus() != STATUS_SUCCESS)
+                if (res.getSuccessStatus() != STATUS_SUCCESS)
                     throw new IllegalStateException(res.getError());
 
                 List<GridClientNodeBean> nodes = fromJson(
-                    res.getData(),
+                    res.getResponse(),
                     new TypeReference<List<GridClientNodeBean>>() {}
                 );
 
@@ -207,7 +207,7 @@ public class ClustersWatcher implements Closeable {
 
         RestResult res = clusterHnd.restCommand(params);
 
-        switch (res.getStatus()) {
+        switch (res.getSuccessStatus()) {
             case STATUS_SUCCESS:
                 sesTok = res.getSessionToken();
 
@@ -280,8 +280,8 @@ public class ClustersWatcher implements Closeable {
 
         RestResult res = restCommand(params);
 
-        if (res.getStatus() == STATUS_SUCCESS)
-            return v23 ? Boolean.valueOf(res.getData()) : res.getData().contains("\"active\":true");
+        if (res.getSuccessStatus() == STATUS_SUCCESS)
+            return v23 ? Boolean.valueOf(res.getResponse()) : res.getResponse().contains("\"active\":true");
 
         return false;
     }

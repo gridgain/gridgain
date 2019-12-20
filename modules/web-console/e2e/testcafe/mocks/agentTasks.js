@@ -17,10 +17,10 @@
 import _ from 'lodash';
 
 export const taskResult = (result) => ({
-    data: {result},
+    response: {result},
     error: null,
     sessionToken: null,
-    status: 0
+    successStatus: 0
 });
 
 /**
@@ -210,4 +210,179 @@ export const agentStat = (clusters) => (ws) => {
  */
 export const errorResponseForEventType = (eventType) => (ws) => {
     ws.errorOn(eventType, () => DFLT_FAILURE_RESPONSE);
+};
+
+export const TEST_JDBC_IMPORT_DATA = {
+    drivers: [{
+        'jdbcDriverJar': 'test-driver.jar',
+        'jdbcDriverClass': 'test.dvired.cls',
+        'jdbcDriverImplVersion': 'test.version'
+    }],
+    schemas: {
+        catalog: 'TESTDB',
+        schemas: ['PUBLIC']
+    },
+    tables: [{
+        action: 1,
+        cacheOrTemplate: -1,
+        columns: [{
+            name: 'ID',
+            type: 4,
+            unsigned: false,
+            key: true,
+            nullable: false
+        }, {
+            name: 'NAME',
+            type: 12,
+            unsigned: false,
+            key: false,
+            nullable: true
+        }],
+        edit: false,
+        generatedCacheName: 'TestCache',
+        id: 0,
+        indexes: [],
+        label: 'PUBLIC.TEST',
+        schema: 'PUBLIC',
+        table: 'TEST'
+    }]
+};
+
+export const FULL_LIST_COLUMN_TYPES = [{
+    type: -7,
+    expectedType: 'boolean'
+}, {
+    type: -6,
+    unsigned: false,
+    expectedType: 'byte'
+}, {
+    type: -6,
+    unsigned: true,
+    expectedType: 'short'
+}, {
+    type: 5,
+    unsigned: false,
+    expectedType: 'short'
+}, {
+    type: 5,
+    unsigned: true,
+    expectedType: 'int'
+}, {
+    type: 4,
+    unsigned: false,
+    expectedType: 'int'
+}, {
+    type: 4,
+    unsigned: true,
+    expectedType: 'long'
+}, {
+    type: -5,
+    expectedType: 'long'
+}, {
+    type: 6,
+    expectedType: 'float'
+}, {
+    type: 7,
+    expectedType: 'double'
+}, {
+    type: 8,
+    expectedType: 'double'
+}, {
+    type: 2,
+    expectedType: 'BigDecimal'
+}, {
+    type: 3,
+    expectedType: 'BigDecimal'
+}, {
+    type: 1,
+    expectedType: 'String'
+}, {
+    type: 12,
+    expectedType: 'String'
+}, {
+    type: -1,
+    expectedType: 'String'
+}, {
+    type: 91,
+    expectedType: 'Date'
+}, {
+    type: 92,
+    expectedType: 'Time'
+}, {
+    type: 93,
+    expectedType: 'Timestamp'
+}, {
+    type: -2,
+    expectedType: 'byte[]'
+}, {
+    type: -3,
+    expectedType: 'byte[]'
+}, {
+    type: -4,
+    expectedType: 'byte[]'
+}, {
+    type: 0,
+    expectedType: 'Object'
+}, {
+    type: 1111,
+    expectedType: 'Object'
+}, {
+    type: 2000,
+    expectedType: 'Object'
+}, {
+    type: 2001,
+    expectedType: 'Object'
+}, {
+    type: 2002,
+    expectedType: 'Object'
+}, {
+    type: 2003,
+    expectedType: 'Object'
+}, {
+    type: 2004,
+    expectedType: 'Object'
+}, {
+    type: 2005,
+    expectedType: 'String'
+}, {
+    type: 2006,
+    expectedType: 'Object'
+}, {
+    type: 70,
+    expectedType: 'Object'
+}, {
+    type: 16,
+    expectedType: 'boolean'
+}, {
+    type: -8,
+    expectedType: 'Object'
+}, {
+    type: -15,
+    expectedType: 'String'
+}, {
+    type: -9,
+    expectedType: 'String'
+}, {
+    type: -16,
+    expectedType: 'String'
+}, {
+    type: 2011,
+    expectedType: 'String'
+}, {
+    type: 2009,
+    expectedType: 'Object'
+}];
+
+export const schemaImportRequest = (requestData) => (ws) => {
+    ws.on('schemaImport:drivers', (e) => {
+        return requestData.drivers;
+    });
+
+    ws.on('schemaImport:schemas', (e) => {
+        return requestData.schemas;
+    });
+
+    ws.on('schemaImport:metadata', (e) => {
+        return requestData.tables;
+    });
 };

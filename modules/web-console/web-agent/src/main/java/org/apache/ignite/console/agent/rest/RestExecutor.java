@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.logger.slf4j.Slf4jLogger;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Response;
@@ -60,6 +61,7 @@ public class RestExecutor implements AutoCloseable {
      */
     public RestExecutor(SslContextFactory sslCtxFactory) {
         httpClient = new HttpClient(sslCtxFactory);
+        httpClient.setConnectBlocking(true);
     }
 
     /** {@inheritDoc} */
@@ -86,7 +88,7 @@ public class RestExecutor implements AutoCloseable {
 
         if (code == HTTP_UNAUTHORIZED) {
             return RestResult.fail(STATUS_AUTH_FAILED, "Failed to authenticate in cluster. " +
-                "Please check agent\'s login and password or node port.");
+                "Please check agent's login and password or node port.");
         }
 
         if (code == HTTP_NOT_FOUND)

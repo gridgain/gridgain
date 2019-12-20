@@ -23,9 +23,6 @@ export class ClusterSecrets {
     /** @type {String} */
     password;
 
-    /** @type {String} */
-    sessionToken;
-
     constructor() {
         this.user = 'ignite';
     }
@@ -35,24 +32,13 @@ export class ClusterSecrets {
     }
 
     resetCredentials() {
-        this.resetSessionToken();
-
         this.password = null;
     }
 
-    resetSessionToken() {
-        this.sessionToken = null;
-    }
-
     /**
-     * @return {{sessionToken: String}|{'user': String, 'password': String}}
+     * @return {{user: string, password: string}}
      */
     getCredentials() {
-        const { sessionToken } = this;
-
-        if (sessionToken)
-            return { sessionToken };
-
         const { user, password } = this;
 
         return { user, password };

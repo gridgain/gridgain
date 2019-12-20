@@ -2309,7 +2309,7 @@ export default class IgniteConfigurationGenerator {
         if (available('2.0.0'))
             ccfg.enumProperty('partitionLossPolicy');
 
-        ccfg.intProperty('copyOnRead');
+        ccfg.boolProperty('copyOnRead');
 
         if (ccfg.valueOf('cacheMode') === 'PARTITIONED' && ccfg.valueOf('atomicityMode') === 'TRANSACTIONAL')
             ccfg.intProperty('isInvalidate', 'invalidate');

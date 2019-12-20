@@ -56,6 +56,7 @@ export class PageConfigurationBasic {
             backups: {id: 'backupsInput'}
         });
         this.pageHeader = Selector('.header-with-selector h1');
+        this.advancedPresentation = Selector('ul.tabs').find('li').withText('Advanced');
     }
 
     async save() {

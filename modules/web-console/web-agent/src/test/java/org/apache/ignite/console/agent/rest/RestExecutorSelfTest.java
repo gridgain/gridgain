@@ -26,10 +26,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -37,6 +37,7 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.console.demo.service.DemoCachesLoadService;
 import org.apache.ignite.console.json.JsonObject;
+import org.apache.ignite.console.rest.RestResult;
 import org.apache.ignite.console.utils.Utils;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.typedef.F;
@@ -47,7 +48,6 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.eclipse.jetty.client.HttpResponseException;
-import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.hamcrest.core.Is;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -162,7 +162,7 @@ public class RestExecutorSelfTest {
     private JsonNode toJson(RestResult res) throws IOException {
         assertNotNull(res);
 
-        String data = res.getData();
+        String data = res.getResponse();
 
         assertNotNull(data);
         assertFalse(data.isEmpty());
@@ -386,7 +386,7 @@ public class RestExecutorSelfTest {
     @Test
     public void testRequestWithManyParams() throws Throwable {
         try(Ignite ignored = Ignition.getOrStart(nodeConfiguration(""))) {
-            RestExecutor exec = new RestExecutor(new SslContextFactory.Client());
+            RestExecutor exec = new RestExecutor(null);
 
             JsonObject params = new JsonObject()
                 .add("cmd", "top")
@@ -394,7 +394,10 @@ public class RestExecutorSelfTest {
                 .add("mtr", false)
                 .add("caches", false);
 
-            for (int i = 0; i < 1000; i++) {
+            // See: https://www.eclipse.org/jetty/documentation/current/configuring-form-size.html
+            // The default maximum size Jetty permits is 200000 bytes and 1000 keys.
+            // We have 4 standart keys: [cmd, attr, mtr, caches] and 996 random keys.
+            for (int i = 0; i < 996; i++) {
                 String param = UUID.randomUUID().toString();
 
                 params.add(param, param);
@@ -432,7 +435,7 @@ public class RestExecutorSelfTest {
                 .when(request().withPath("/ignite"))
                 .respond(response().withStatusCode(200).withBody(Utils.toJson(RestResult.fail(1, err))));
 
-            RestExecutor exec = new RestExecutor(new SslContextFactory.Client());
+            RestExecutor exec = new RestExecutor(null);
 
             RestResult res = exec.sendRequest(HTTP_URI, new JsonObject());
 
@@ -454,20 +457,20 @@ public class RestExecutorSelfTest {
 
             load.init(null);
 
-            RestExecutor exec = new RestExecutor(new SslContextFactory.Client());
+            RestExecutor exec = new RestExecutor(null);
 
             ExecutorService executor = Executors.newFixedThreadPool(2);
 
-            Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(30) from \"CarCache\".Car"));
-            Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select * from \"CarCache\".Car"));
+            Future<Boolean> fut1 = executor.submit(() -> executeQuery(exec, "select *, sleep(3000) from \"CarCache\".Car LIMIT 1"));
+            Future<Boolean> fut2 = executor.submit(() -> executeQuery(exec, "select * from \"CarCache\".Car LIMIT 100"));
 
             assertFalse(fut1.isDone());
             assertFalse(fut2.isDone());
-            assertFalse(fut2.get(1L, TimeUnit.SECONDS));
+            assertTrue(fut2.get(1L, TimeUnit.SECONDS));
 
             assertFalse(fut1.isDone());
             assertTrue(fut2.isDone());
-            assertFalse(fut1.get(4L, TimeUnit.SECONDS));
+            assertTrue(fut1.get(4L, TimeUnit.SECONDS));
         }
     }
 
@@ -500,23 +503,27 @@ public class RestExecutorSelfTest {
             String qryId = taskRes.get("queryId").asText();
             String resNodeId = taskRes.get("responseNodeId").asText();
 
-            params = new JsonObject()
-                .add("cmd", GridRestCommand.EXE.key())
-                .add("name", VisorGatewayTask.class.getName())
-                .add("p1", resNodeId)
-                .add("p2", "org.apache.ignite.internal.visor.query.VisorQueryFetchFirstPageTask")
-                .add("p3", "org.apache.ignite.internal.visor.query.VisorQueryNextPageTaskArg")
-                .add("p4", qryId)
-                .add("p5", 100);
+            while (true) {
+                params = new JsonObject()
+                    .add("cmd", GridRestCommand.EXE.key())
+                    .add("name", VisorGatewayTask.class.getName())
+                    .add("p1", resNodeId)
+                    .add("p2", "org.apache.ignite.internal.visor.query.VisorQueryFetchFirstPageTask")
+                    .add("p3", "org.apache.ignite.internal.visor.query.VisorQueryNextPageTaskArg")
+                    .add("p4", qryId)
+                    .add("p5", 100);
 
-            res = exec.sendRequest(HTTP_URI, params);
+                res = exec.sendRequest(HTTP_URI, params);
 
-            json = toJson(res);
+                json = toJson(res);
 
-            taskRes = json.get("result").get("result");
+                taskRes = json.get("result").get("result");
 
-            return taskRes.get("hasMore").asBoolean();
-        } catch (Throwable e) {
+                if (!taskRes.get("hasMore").asBoolean())
+                    return true;
+            }
+        }
+        catch (Throwable e) {
             throw U.cast(e);
         }
     }
