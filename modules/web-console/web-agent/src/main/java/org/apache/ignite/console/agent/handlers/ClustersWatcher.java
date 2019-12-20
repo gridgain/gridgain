@@ -135,7 +135,17 @@ public class ClustersWatcher implements Closeable {
         }
 
         refreshTask = pool.scheduleWithFixedDelay(() -> {
-           List<TopologySnapshot> tops = new ArrayList<>(F.asList(demoClusterHnd.topologySnapshot()));
+           List<TopologySnapshot> tops = new ArrayList<>(2);
+
+           try {
+               TopologySnapshot demoTop = demoClusterHnd.topologySnapshot();
+
+               if (demoTop != null)
+                   tops.add(demoTop);
+           }
+           catch (Throwable e) {
+               log.error("Failed to collect topology for demo cluster", e);
+           }
 
             try {
                 RestResult res = topology();
@@ -281,7 +291,7 @@ public class ClustersWatcher implements Closeable {
         RestResult res = restCommand(params);
 
         if (res.getSuccessStatus() == STATUS_SUCCESS)
-            return v23 ? Boolean.valueOf(res.getResponse()) : res.getResponse().contains("\"active\":true");
+            return v23 ? Boolean.parseBoolean(res.getResponse()) : res.getResponse().contains("\"active\":true");
 
         return false;
     }

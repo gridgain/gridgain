@@ -47,11 +47,19 @@ public class DemoClusterHandler extends AbstractClusterHandler {
     /** Demo cluster name. */
     private static final String DEMO_CLUSTER_NAME = "demo-cluster";
 
+    /** Topology request. */
+    private final GridRestTopologyRequest topReq;
+
     /**
      * @param cfg Config.
      */
     DemoClusterHandler(AgentConfiguration cfg) {
         super(cfg, null);
+
+        topReq = new GridRestTopologyRequest();
+
+        topReq.command(TOPOLOGY);
+        topReq.includeAttributes(true);
     }
 
     /** {@inheritDoc} */
@@ -89,7 +97,7 @@ public class DemoClusterHandler extends AbstractClusterHandler {
         }
         else {
             top = new TopologySnapshot();
-            
+
             top.setClusterVersion(VER_STR);
         }
 
@@ -107,12 +115,7 @@ public class DemoClusterHandler extends AbstractClusterHandler {
         try {
             GridTopologyCommandHandler hnd = new GridTopologyCommandHandler(ctx);
 
-            GridRestTopologyRequest req = new GridRestTopologyRequest();
-
-            req.command(TOPOLOGY);
-            req.includeAttributes(true);
-
-            GridRestResponse res = hnd.handleAsync(req).getUninterruptibly();
+            GridRestResponse res = hnd.handleAsync(topReq).getUninterruptibly();
 
             return (Collection<GridClientNodeBean>)res.getResponse();
         }
