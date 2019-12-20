@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Impl.Client
     /// <summary>
     /// Wrapper over framework socket for Ignite thin client operations.
     /// </summary>
-    internal sealed class ClientSocket : IClientSocket
+    internal sealed class ClientSocket
     {
         /** Version 1.0.0. */
         public static readonly ClientProtocolVersion Ver100 = new ClientProtocolVersion(1, 0, 0);

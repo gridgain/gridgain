@@ -131,7 +131,6 @@
     <Compile Include="Client\ClientStatusCode.cs" />
     <Compile Include="Events\LocalEventListener.cs" />
     <Compile Include="Impl\Client\ClientFailoverSocket.cs" />
-    <Compile Include="Impl\Client\IClientSocket.cs" />
     <Compile Include="Impl\Cluster\BaselineNode.cs" />
     <Compile Include="Ssl\SslContextFactory.cs" />
     <Compile Include="Impl\Ssl\SslFactorySerializer.cs" />

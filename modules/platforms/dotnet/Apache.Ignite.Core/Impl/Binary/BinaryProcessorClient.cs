@@ -31,13 +31,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         private const byte DotNetPlatformId = 1;
 
         /** Socket. */
-        private readonly IClientSocket _socket;
+        private readonly ClientFailoverSocket _socket;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryProcessorClient"/> class.
         /// </summary>
         /// <param name="socket">The socket.</param>
-        public BinaryProcessorClient(IClientSocket socket)
+        public BinaryProcessorClient(ClientFailoverSocket socket)
         {
             Debug.Assert(socket != null);
 
