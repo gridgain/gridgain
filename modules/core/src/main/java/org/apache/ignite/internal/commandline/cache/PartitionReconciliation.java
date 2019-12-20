@@ -50,7 +50,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_ALG;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_MODE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.THROTTLING_INTERVAL_MILLIS;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOAD_FACTOR;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.VERBOSE;
 
 /**
@@ -80,7 +80,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         paramsDesc.put(FIX_MODE.toString(),
             "If present, fix all inconsistent data.");
-        paramsDesc.put(THROTTLING_INTERVAL_MILLIS.toString(),
+        paramsDesc.put(LOAD_FACTOR.toString(),
             "Interval in milliseconds between running partition reconciliation jobs.");
         paramsDesc.put(BATCH_SIZE.toString(),
             "Amount of keys to retrieve within one job.");
@@ -96,7 +96,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             PARTITION_RECONCILIATION,
             desc,
             paramsDesc,
-            optional(FIX_MODE), optional(THROTTLING_INTERVAL_MILLIS), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
+            optional(FIX_MODE), optional(LOAD_FACTOR), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
             optional(VERBOSE), optional(FIX_ALG), optional(CACHES));
     }
 
@@ -137,7 +137,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             args.fixMode,
             args.verbose,
             args.console,
-            args.throttlingIntervalMillis,
+            args.loadFactor,
             args.batchSize,
             args.recheckAttempts,
             args.repairAlg
@@ -156,11 +156,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         boolean fixMode = false;
         boolean verbose = false;
         boolean console = false;
-        int throttlingIntervalMillis = -1;
+        double loadFactor = 1;
         int batchSize = DEFAULT_BATCH_SIZE;
         int recheckAttempts = DEFAULT_RECHECK_ATTEMPTS;
         RepairAlgorithm repairAlg = RepairAlgorithm.defaultValue();
-        String outputFile = null;
 
         int partReconciliationArgsCnt = 8;
 
@@ -199,13 +198,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
                         break;
 
-                    case THROTTLING_INTERVAL_MILLIS:
+                    case LOAD_FACTOR:
                         // TODO: 20.11.19 Use proper message here. 
-                        String throttlingIntervalMillisStr = argIter.nextArg("The cache filter should be specified. The following " +
+                        String loadFactorStr = argIter.nextArg("The cache filter should be specified. The following " +
                             "values can be used: " + Arrays.toString(CacheFilterEnum.values()) + '.');
 
                         // TODO: 20.11.19 Validate value. 
-                        throttlingIntervalMillis = Integer.valueOf(throttlingIntervalMillisStr);
+                        loadFactor = Double.valueOf(loadFactorStr);
 
                         break;
 
@@ -232,8 +231,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             }
         }
 
-        args = new Arguments(cacheNames, fixMode, verbose, console, throttlingIntervalMillis, batchSize, recheckAttempts,
-            outputFile, repairAlg);
+        args = new Arguments(cacheNames, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg);
     }
 
     // TODO: 20.11.19 Idle verify has exactly same method.
@@ -263,7 +261,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             .a(args.caches() == null ? "" : String.join(", ", args.caches()))
             .a("], fix-mode=[" + args.fixMode)
             .a("], verbose=[" + args.verbose)
-            .a("], throttling-interval-millis=[" + args.throttlingIntervalMillis)
+            .a("], load-factor=[" + args.loadFactor)
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
             .a("], fix-alg=[" + args.repairAlg + "]")
@@ -327,7 +325,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         private boolean console;
 
         /** */
-        private int throttlingIntervalMillis;
+        private double loadFactor;
 
         /** */
         private int batchSize;
@@ -344,19 +342,18 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          * @param caches Caches.
          * @param fixMode Fix inconsistency if {@code True}.
          * @param verbose Print key and value to result log if {@code True}.
-         * @param throttlingIntervalMillis Throttling interval millis.
+         * @param loadFactor Percent of system loading.
          * @param batchSize Batch size.
          * @param recheckAttempts Amount of recheck attempts.
-         * @param outputFile File to write output report to.
          */
         public Arguments(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
-            int throttlingIntervalMillis,
-            int batchSize, int recheckAttempts, String outputFile, RepairAlgorithm repairAlg) {
+            double loadFactor,
+            int batchSize, int recheckAttempts, RepairAlgorithm repairAlg) {
             this.caches = caches;
             this.fixMode = fixMode;
             this.verbose = verbose;
             this.console = console;
-            this.throttlingIntervalMillis = throttlingIntervalMillis;
+            this.loadFactor = loadFactor;
             this.batchSize = batchSize;
             this.recheckAttempts = recheckAttempts;
             this.repairAlg = repairAlg;
@@ -377,10 +374,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         }
 
         /**
-         * @return Throttling interval millis.
+         * @return Percent of system loading.
          */
-        public int throttlingIntervalMillis() {
-            return throttlingIntervalMillis;
+        public double loadFactor() {
+            return loadFactor;
         }
 
         /**

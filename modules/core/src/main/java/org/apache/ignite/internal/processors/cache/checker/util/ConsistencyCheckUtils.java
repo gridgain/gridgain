@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -192,7 +194,6 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
      * @param consId Consistence Id.
      * @param startTime Operation start time.
      */
@@ -213,5 +214,22 @@ public class ConsistencyCheckUtils {
             file.createNewFile();
 
         return file;
+    }
+
+    /**
+     *
+     */
+    public static int parallelismLevel(double loadFactor, Collection<String> caches, IgniteEx ignite) {
+        assert loadFactor > 0 && loadFactor <= 1;
+        assert caches.size() > 0;
+
+        int totalBackupCnt = 0;
+
+        for (String cache : caches)
+            totalBackupCnt += (ignite.cachex(cache).configuration().getBackups() + 1);
+
+        int cpus = Math.max(4, Runtime.getRuntime().availableProcessors());
+
+        return Math.max(1, (int)((loadFactor * cpus) / ((double)totalBackupCnt / caches.size())));
     }
 }

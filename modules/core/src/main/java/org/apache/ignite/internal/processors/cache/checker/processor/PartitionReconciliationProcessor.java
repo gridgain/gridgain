@@ -68,19 +68,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /** Recheck delay seconds. */
     private static final int RECHECK_DELAY = 10;
 
-    /**
-     * Number of tasks works parallel.
-     */
-    private static final int PARALLELISM_LEVEL = 100;
-
     /** Caches. */
     private final Collection<String> caches;
 
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
     private final boolean fixMode;
-
-    /** Interval in milliseconds between running partition reconciliation jobs. */
-    private final int throttlingIntervalMillis;
 
     /** Amount of keys to retrieve within one job. */
     private final int batchSize;
@@ -112,16 +104,15 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         GridCachePartitionExchangeManager<Object, Object> exchMgr,
         Collection<String> caches,
         boolean fixMode,
-        int throttlingIntervalMillis,
+        int parallelismLevel,
         int batchSize,
         int recheckAttempts,
         RepairAlgorithm repairAlg
     ) throws IgniteCheckedException {
-        super(ignite, exchMgr, PARALLELISM_LEVEL);
+        super(ignite, exchMgr, parallelismLevel);
         log = ignite.log().getLogger(this);
         this.caches = caches;
         this.fixMode = fixMode;
-        this.throttlingIntervalMillis = throttlingIntervalMillis;
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
@@ -135,10 +126,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         try {
             //TODO skip ttl caches
             for (String cache : caches) {
-                int partitions = ignite.affinity(cache).partitions();
+                int[] partitions = ignite.affinity(cache).primaryPartitions(ignite.localNode());
 
-                for (int i = 0; i < partitions; i++)
-                    schedule(new Batch(cache, i, null));
+                for (int partId : partitions)
+                    schedule(new Batch(cache, partId, null));
             }
 
             boolean live = false;

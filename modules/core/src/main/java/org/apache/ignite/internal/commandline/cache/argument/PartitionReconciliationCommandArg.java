@@ -23,7 +23,6 @@ import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
  * {@link CacheSubcommands#PARTITION_RECONCILIATION} command arguments.
  */
 public enum PartitionReconciliationCommandArg implements CommandArg {
-
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
     FIX_MODE("--fix-mode"),
 
@@ -36,8 +35,8 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     VERBOSE("--verbose"),
 
-    /** Interval in milliseconds between running partition reconciliation jobs. */
-    THROTTLING_INTERVAL_MILLIS ("--throttling-interval-millis"),
+    /** Percent of system loading between 0 and 1. */
+    LOAD_FACTOR("--load-factor"),
 
     /** Amount of keys to retrieve within one job. */
     BATCH_SIZE ("--batch-size"),

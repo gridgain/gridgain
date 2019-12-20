@@ -45,8 +45,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     private boolean verbose;
 
-    /** Interval in milliseconds between running partition reconciliation jobs. */
-    private int throttlingIntervalMillis;
+    /** Percent of system loading from 0 to 1. */
+    private double loadFactor;
 
     /** Amount of keys to retrieve within one job. */
     private int batchSize;
@@ -72,12 +72,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
-        int throttlingIntervalMillis, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg) {
+        double loadFactor, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg) {
         this.caches = caches;
         this.verbose = verbose;
         this.console = console;
         this.fixMode = fixMode;
-        this.throttlingIntervalMillis = throttlingIntervalMillis;
+        this.loadFactor = loadFactor;
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
@@ -93,7 +93,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         out.writeBoolean(console);
 
-        out.writeInt(throttlingIntervalMillis);
+        out.writeDouble(loadFactor);
 
         out.writeInt(batchSize);
 
@@ -114,7 +114,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         console = in.readBoolean();
 
-        throttlingIntervalMillis = in.readInt();
+        loadFactor = in.readDouble();
 
         batchSize = in.readInt();
 
@@ -135,13 +135,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     public boolean fixMode() {
         return fixMode;
-    }
-
-    /**
-     * @return Interval in milliseconds between running partition reconciliation jobs.
-     */
-    public int throttlingIntervalMillis() {
-        return throttlingIntervalMillis;
     }
 
     /**
@@ -177,5 +170,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     public RepairAlgorithm repairAlg() {
         return repairAlg;
+    }
+
+    /**
+     *
+     */
+    public double loadFactor() {
+        return loadFactor;
     }
 }

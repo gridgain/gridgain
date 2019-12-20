@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -45,6 +44,7 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
+import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.parallelismLevel;
 
 @GridInternal
 public class PartitionReconciliationProcessorTask extends
@@ -54,20 +54,21 @@ public class PartitionReconciliationProcessorTask extends
      */
     private static final long serialVersionUID = 0L;
 
+    /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         VisorPartitionReconciliationTaskArg arg) throws IgniteException {
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
-        int mgrNodeIdx = ThreadLocalRandom.current().nextInt(subgrid.size());
+        LocalDateTime startTime = LocalDateTime.now();
 
-        jobs.put(new PartitionReconciliationJob(arg, LocalDateTime.now()), subgrid.get(mgrNodeIdx));
+        for (ClusterNode node : subgrid)
+            jobs.put(new PartitionReconciliationJob(arg, startTime), node);
 
         return jobs;
     }
 
+    /** {@inheritDoc} */
     @Override public ReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
-        assert results.size() == 1;
-
         Map<UUID, String> nodeIdToFolder = new HashMap<>();
         PartitionReconciliationResult res = new PartitionReconciliationResult();
 
@@ -128,7 +129,7 @@ public class PartitionReconciliationProcessorTask extends
                     ignite.context().cache().context().exchange(),
                     caches,
                     reconciliationTaskArg.fixMode(),
-                    reconciliationTaskArg.throttlingIntervalMillis(),
+                    parallelismLevel(reconciliationTaskArg.loadFactor(), caches, ignite),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
                     reconciliationTaskArg.repairAlg()
