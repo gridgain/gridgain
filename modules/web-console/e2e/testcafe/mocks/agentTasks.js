@@ -72,7 +72,7 @@ const CLUSTER_1 = {
     clients: {
         '143048f1-b5b8-47d6-9239-fed76222efe3': false
     },
-    clusterVersion: '8.8.0-SNAPSHOT',
+    clusterVersion: '8.7.999-SNAPSHOT',
     active: true,
     secured: false,
     supportedFeatures: '+/l9'
@@ -88,7 +88,7 @@ const CLUSTER_2 = {
     clients: {
         '143048f1-b5b8-47d6-9239-fed76222efe3': false
     },
-    clusterVersion: '8.8.0-SNAPSHOT',
+    clusterVersion: '8.7.999-SNAPSHOT',
     active: true,
     secured: false,
     supportedFeatures: '+/l9'

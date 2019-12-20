@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-extdata-p2p</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.999-SNAPSHOT</version>
 
     <dependencies>
         <dependency>

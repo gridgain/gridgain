@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-log4j2</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.999-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
