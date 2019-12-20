@@ -16,10 +16,9 @@
 
 package org.apache.ignite.console.web.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import com.google.common.collect.Lists;
-import io.swagger.annotations.ApiOperation;
 import javax.validation.Valid;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.services.AccountsService;
@@ -68,9 +67,9 @@ public class AccountController {
     }
 
     /**
+     * Get current user.
      * @param req Request wrapper.
      */
-    @ApiOperation(value = "Get current user.")
     @GetMapping(path = "/api/v1/user")
     public ResponseEntity<UserResponse> user(SecurityContextHolderAwareRequestWrapper req) {
         Account acc = accountsSrvc.loadUserByUsername(req.getUserPrincipal().getName());
@@ -79,9 +78,9 @@ public class AccountController {
     }
 
     /**
+     * Register user.
      * @param params SignUp params.
      */
-    @ApiOperation(value = "Register user.")
     @PostMapping(path = "/api/v1/signup")
     public ResponseEntity<Void> signup(@Valid @RequestBody SignUpRequest params) {
         accountsSrvc.register(params);
@@ -105,7 +104,7 @@ public class AccountController {
      */
     public Account saveAndAuth(UUID accId, ChangeUserRequest changes) {
         Account acc = accountsSrvc.save(accId, changes);
-        List<GrantedAuthority> authorities = Lists.newArrayList(acc.getAuthorities());
+        List<GrantedAuthority> authorities = new ArrayList<>(acc.getAuthorities());
 
         GrantedAuthority becomeUserAuthority = getAuthority(SecurityContextHolder.getContext().getAuthentication(), ROLE_PREVIOUS_ADMINISTRATOR);
         if (becomeUserAuthority != null)
@@ -123,11 +122,11 @@ public class AccountController {
     }
 
     /**
+     * Save user.
      * @param req Request wrapper.
      * @param acc Current user.
      * @param changes Changes to apply to user.
      */
-    @ApiOperation(value = "Save user.")
     @PostMapping(path = "/api/v1/profile/save", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<UserResponse> save(
         SecurityContextHolderAwareRequestWrapper req,
@@ -140,33 +139,33 @@ public class AccountController {
     }
 
     /**
+     * Send password reset token.
      * @param req Forgot password request.
      */
-    @ApiOperation(value = "Send password reset token.")
     @PostMapping(path = "/api/v1/password/forgot", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity forgotPassword(@Valid @RequestBody EmailRequest req) {
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody EmailRequest req) {
         accountsSrvc.forgotPassword(req.getEmail());
 
         return ResponseEntity.ok().build();
     }
 
     /**
+     * Reset user password.
      * @param req Reset password request.
      */
-    @ApiOperation(value = "Reset user password.")
     @PostMapping(path = "/api/v1/password/reset")
-    public ResponseEntity resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest req) {
         accountsSrvc.resetPasswordByToken(req.getEmail(), req.getToken(), req.getPassword());
 
         return ResponseEntity.ok().build();
     }
 
     /**
+     * Resend activation token.
      * @param req Forgot password request.
      */
-    @ApiOperation(value = "Resend activation token.")
     @PostMapping(path = "/api/v1/activation/resend", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity activationResend(@Valid @RequestBody EmailRequest req) {
+    public ResponseEntity<Void> activationResend(@Valid @RequestBody EmailRequest req) {
         accountsSrvc.resetActivationToken(req.getEmail());
 
         return ResponseEntity.ok().build();

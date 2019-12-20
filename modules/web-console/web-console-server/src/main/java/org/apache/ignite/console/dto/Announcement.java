@@ -17,19 +17,16 @@
 package org.apache.ignite.console.dto;
 
 import java.util.UUID;
-import io.swagger.annotations.ApiModelProperty;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Announcement to show in browser.
  */
 public class Announcement extends AbstractDto {
-    /** */
-    @ApiModelProperty(value = "Announcement text.")
+    /** Announcement text. */
     private String msg;
 
-    /** */
-    @ApiModelProperty(value = "Announcement visibility.")
+    /** Announcement visibility. */
     private boolean visible;
 
     /**
