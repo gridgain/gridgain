@@ -33,7 +33,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -61,7 +60,6 @@ import org.apache.ignite.internal.IgniteTransactionsEx;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
-import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.cluster.DetachedClusterNode;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
@@ -96,10 +94,7 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageLifecycleListener;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.LocalContinuousTask;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.IgniteCacheSnapshotManager;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
@@ -147,7 +142,6 @@ import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
@@ -165,7 +159,6 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.GridDiscoveryData;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag.JoiningNodeDiscoveryData;
-import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -186,14 +179,13 @@ import static org.apache.ignite.internal.IgniteComponentType.JTA;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 import static org.apache.ignite.internal.processors.cache.ValidationOnNodeJoinUtils.validateHashIdResolvers;
-import static org.apache.ignite.internal.util.IgniteUtils.awaitForWorkersStop;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 
 /**
  * Cache processor.
  */
 @SuppressWarnings({"unchecked", "TypeMayBeWeakened", "deprecation"})
-public class GridCacheProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
+public class GridCacheProcessor extends GridProcessorAdapter {
     /** */
     private static final String CHECK_EMPTY_TRANSACTIONS_ERROR_MSG_FORMAT =
         "Cannot start/stop cache within lock or transaction [cacheNames=%s, operation=%s]";
@@ -208,9 +200,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
     /** MBean group for cache group metrics */
     private static final String CACHE_GRP_METRICS_MBEAN_GRP = "Cache groups";
-
-    /** Prefix for metastorage keys for continuous tasks. */
-    private static final String STORE_LOCAL_CONTINUOUS_TASK_PREFIX = "local-continuous-task-";
 
     /** Shared cache context. */
     private GridCacheSharedContext<?, ?> sharedCtx;
@@ -271,21 +260,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
 
     /** Caches configured on local node but not presented in a cluster during node local join. */
     private volatile List<CacheData> onlyLocallyConfiguredCaches = Collections.emptyList();
-
-    /** Metastorage. */
-    private volatile ReadWriteMetastorage metastorage;
-
-    /** Metastorage synchronization mutex. */
-    private final Object metaStorageMux = new Object();
-
-    /** Set of workers that executing local continuous tasks. */
-    private final Set<GridWorker> asyncLocalContinuousTaskWorkers = new GridConcurrentHashSet<>();
-
-    /** Count of workers that executing local continuous tasks. */
-    private final AtomicInteger asyncLocalContinuousTasksWorkersCntr = new AtomicInteger(0);
-
-    /** Continuous tasks map. */
-    private final ConcurrentHashMap<String, LocalContinuousTask> localContinuousTasks = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -540,7 +514,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
     /** {@inheritDoc} */
     @SuppressWarnings({"unchecked"})
     @Override public void start() throws IgniteCheckedException {
-        ctx.internalSubscriptionProcessor().registerMetastorageListener(this);
         ctx.internalSubscriptionProcessor().registerMetastorageListener(recovery);
         ctx.internalSubscriptionProcessor().registerDatabaseListener(recovery);
 
@@ -636,8 +609,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
             sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
                 sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
 
-        asyncLocalContinuousTasksExecution();
-
         // Escape if cluster inactive.
         if (!active)
             return;
@@ -655,54 +626,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      */
     public void awaitStarted() throws IgniteCheckedException {
         U.await(cacheStartedLatch);
-    }
-
-    /**
-     * Starts the asynchronous operation of pending tasks execution. Is called on start.
-     */
-    private void asyncLocalContinuousTasksExecution() {
-        assert localContinuousTasks != null;
-
-        for (LocalContinuousTask task : localContinuousTasks.values())
-            asyncLocalContinuousTaskExecute(task, true);
-    }
-
-    /**
-     * Creates a worker to execute single local continuous task.
-     * @param task Task.
-     * @param dropTaskIfFailed Whether to delete task from metastorage, if it has failed.
-     */
-    private void asyncLocalContinuousTaskExecute(LocalContinuousTask task, boolean dropTaskIfFailed) {
-        String workerName = "async-local-continuous-task-executor-" + asyncLocalContinuousTasksWorkersCntr.getAndIncrement();
-
-        GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
-            @Override protected void body() {
-                try {
-                    log.info("Executing local continuous task: " + task.shortName());
-
-                    task.execute(ctx);
-
-                    log.info("Execution of local continuous task completed: " + task.shortName());
-
-                    removeLocalContinuousTask(task);
-                }
-                catch (Throwable e) {
-                    log.error("Could not execute local continuous task: " + task.shortName(), e);
-
-                    if (dropTaskIfFailed)
-                        removeLocalContinuousTask(task);
-                }
-                finally {
-                    asyncLocalContinuousTaskWorkers.remove(this);
-                }
-            }
-        };
-
-        asyncLocalContinuousTaskWorkers.add(worker);
-
-        Thread asyncTask = new IgniteThread(worker);
-
-        asyncTask.start();
     }
 
     /**
@@ -956,9 +879,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
         cacheStartedLatch.countDown();
 
         GridCachePartitionExchangeManager<Object, Object> exch = context().exchange();
-
-        // Waiting for workers, but not cancelling them, trying to complete running tasks.
-        awaitForWorkersStop(asyncLocalContinuousTaskWorkers, false, log);
 
         // Stop exchange manager first so that we call onKernalStop on all caches.
         // No new caches should be added after this point.
@@ -3204,9 +3124,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      */
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
         cachesInfo.onStateChangeFinish(msg);
-
-        if (!msg.clusterActive())
-            awaitForWorkersStop(asyncLocalContinuousTaskWorkers, true, log);
     }
 
     /**
@@ -5249,138 +5166,6 @@ public class GridCacheProcessor extends GridProcessorAdapter implements Metastor
      */
     public CacheConfigurationEnricher enricher() {
         return enricher;
-    }
-
-
-    /** {@inheritDoc} */
-    @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) {
-        synchronized (metaStorageMux) {
-            if (localContinuousTasks.isEmpty()) {
-                try {
-                    metastorage.iterate(
-                        STORE_LOCAL_CONTINUOUS_TASK_PREFIX,
-                        (key, val) -> localContinuousTasks.put(key, (LocalContinuousTask)val),
-                        true
-                    );
-                }
-                catch (IgniteCheckedException e) {
-                    throw new IgniteException("Failed to iterate continuous tasks storage.", e);
-                }
-            }
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
-        synchronized (metaStorageMux) {
-            try {
-                for (Map.Entry<String, LocalContinuousTask> entry : localContinuousTasks.entrySet()) {
-                    if (metastorage.readRaw(entry.getKey()) == null)
-                        metastorage.write(entry.getKey(), entry.getValue());
-                }
-            }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException("Failed to read key from continuous tasks storage.", e);
-            }
-        }
-
-        this.metastorage = metastorage;
-    }
-
-    /**
-     * Builds a metastorage key for continuous task object.
-     *
-     * @param obj Object.
-     * @return Metastorage key.
-     */
-    private String localContinuousTaskMetastorageKey(LocalContinuousTask obj) {
-        String k = STORE_LOCAL_CONTINUOUS_TASK_PREFIX + obj.shortName();
-
-        if (k.length() > MetastorageTree.MAX_KEY_LEN) {
-            int hashLenLimit = 5;
-
-            String hash = String.valueOf(k.hashCode());
-
-            k = k.substring(0, MetastorageTree.MAX_KEY_LEN - hashLenLimit) +
-                (hash.length() > hashLenLimit ? hash.substring(0, hashLenLimit) : hash);
-        }
-
-        return k;
-    }
-
-    /**
-     * Adds local continuous task object.
-     *
-     * @param obj Object.
-     */
-    public void addLocalContinuousTask(LocalContinuousTask obj) {
-        String objName = localContinuousTaskMetastorageKey(obj);
-
-        synchronized (metaStorageMux) {
-            localContinuousTasks.put(objName, obj);
-
-            if (metastorage != null) {
-                ctx.cache().context().database().checkpointReadLock();
-
-                try {
-                    metastorage.write(objName, obj);
-                }
-                catch (IgniteCheckedException e) {
-                    throw new IgniteException(e);
-                }
-                finally {
-                    ctx.cache().context().database().checkpointReadUnlock();
-                }
-            }
-        }
-    }
-
-    /**
-     * Removes local continuous task object.
-     *
-     * @param obj Object.
-     */
-    public void removeLocalContinuousTask(LocalContinuousTask obj) {
-        String objName = localContinuousTaskMetastorageKey(obj);
-
-        synchronized (metaStorageMux) {
-            localContinuousTasks.remove(objName);
-
-            if (metastorage != null) {
-                ctx.cache().context().database().checkpointReadLock();
-
-                try {
-                    metastorage.remove(objName);
-                }
-                catch (IgniteCheckedException e) {
-                    throw new IgniteException(e);
-                }
-                finally {
-                    ctx.cache().context().database().checkpointReadUnlock();
-                }
-            }
-        }
-    }
-
-    /**
-     * Starts local continuous task. If task is applied to persistent cache, saves it to metastorage.
-     *
-     * @param task Continuous task.
-     * @param ccfg Cache configuration.
-     */
-    public void startLocalContinuousTask(LocalContinuousTask task, CacheConfiguration ccfg) {
-        if (CU.isPersistentCache(ccfg, ctx.config().getDataStorageConfiguration()))
-            addLocalContinuousTask(task);
-
-        asyncLocalContinuousTaskExecute(task, false);
-    }
-
-    /**
-     * Returns all continuous tasks that are still not completed.
-     * @return Continuous tasks collection.
-     */
-    public Collection<LocalContinuousTask> localContinuousTasks() {
-        return Collections.unmodifiableCollection(localContinuousTasks.values());
     }
 
     /**
