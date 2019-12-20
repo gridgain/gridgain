@@ -88,7 +88,8 @@ test('Base check of model import and project preview', async(t) => {
         .typeText(importDBDialog.packageNameInput, testPackageName, {paste: true, replace: true})
         .click(importDBDialog.saveAction);
 
-    await t.click(overviewPage.clustersTable.findCell(0, 'Name'));
+    await overviewPage.clustersTable.toggleRowSelection(1);
+    await overviewPage.clustersTable.performAction('Edit');
 
     const page = new PageConfigurationBasic();
 
@@ -125,10 +126,12 @@ test('Base check of model import or different data types', async(t) => {
         .click(importDBDialog.nextAction)
         .click(importDBDialog.saveAction);
 
+    await overviewPage.clustersTable.toggleRowSelection(1);
+    await overviewPage.clustersTable.performAction('Edit');
+
     const page = new PageConfigurationBasic();
 
-    await t.click(overviewPage.clustersTable.findCell(0, 'Name'))
-        .click(page.advancedPresentation)
+    await t.click(page.advancedPresentation)
         .click(advancedSqlSchemeMenu)
         .click(cacheStore.panel.heading);
 
