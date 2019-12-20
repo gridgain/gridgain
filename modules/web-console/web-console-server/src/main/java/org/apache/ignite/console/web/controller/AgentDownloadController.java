@@ -58,6 +58,7 @@ public class AgentDownloadController {
 
     /**
      * Download agent archive.
+     *
      * @param user User.
      * @throws Exception If failed.
      */

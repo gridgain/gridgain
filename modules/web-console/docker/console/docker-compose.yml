@@ -24,11 +24,11 @@ services:
     restart: on-failure
     environment:
       # Mail settings
-#      - SPRING_MAIL_HOST=
-#      - SPRING_MAIL_PORT=
-#      - SPRING_MAIL_USERNAME=
-#      - SPRING_MAIL_PASSWORD=
-#      - SPRING_MAIL_webConsoleUrl=http://frontend
+      # - SPRING_MAIL_HOST=
+      # - SPRING_MAIL_PORT=
+      # - SPRING_MAIL_USERNAME=
+      # - SPRING_MAIL_PASSWORD=
+      # - SPRING_MAIL_webConsoleUrl=http://frontend
       # Java settings
       - JVM_OPTS=
 

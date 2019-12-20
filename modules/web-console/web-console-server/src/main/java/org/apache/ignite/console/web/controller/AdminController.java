@@ -60,6 +60,7 @@ public class AdminController {
 
     /**
      * Get a list of users.
+     * 
      * @param period Period filter.
      * @return List of accounts.
      */
@@ -70,6 +71,7 @@ public class AdminController {
 
     /**
      * Toggle admin permissions.
+     *
      * @param acc Account.
      * @param params Parameters.
      */
@@ -91,6 +93,7 @@ public class AdminController {
 
     /**
      * Register user.
+     *
      * @param params SignUp params.
      */
     @PutMapping(path = "/users")
@@ -102,6 +105,7 @@ public class AdminController {
 
     /**
      * Delete user.
+     *
      * @param accId Account ID.
      */
     @DeleteMapping(path = "/users/{accountId}")
@@ -112,7 +116,8 @@ public class AdminController {
     }
 
     /**
-     * "Update announcement for all connected users.
+     * Update announcement for all connected users.
+     *
      * @param ann Update announcement to be shown for all users.
      */
     @PutMapping(path = "/announcement", consumes = APPLICATION_JSON_VALUE)
