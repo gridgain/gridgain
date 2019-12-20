@@ -17,8 +17,12 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Client;
+    using Apache.Ignite.Core.Client.Cache;
+    using Apache.Ignite.Core.Common;
+    using Apache.Ignite.Core.Configuration;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
@@ -132,6 +136,23 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
+        /// Tests that CreateCache with all config properties customized works on all versions. 
+        /// </summary>
+        [Test]
+        public void TestCreateCacheWithFullConfigWorksOnAllVersions()
+        {
+            using (var client = StartClient())
+            {
+                var cache = client.CreateCache<int, Person>(GetFullCacheConfiguration());
+                
+                cache.Put(1, new Person(2));
+                
+                Assert.AreEqual(2, cache.Get(1).Id);
+                Assert.AreEqual("Person 2", cache[1].Name);
+            }
+        }
+
+        /// <summary>
         /// Starts the client.
         /// </summary>
         private static IIgniteClient StartClient()
@@ -143,6 +164,73 @@ namespace Apache.Ignite.Core.Tests.Client
             };
             
             return Ignition.StartClient(cfg);
+        }
+
+        /// <summary>
+        /// Gets the cache config.
+        /// </summary>
+        private static CacheClientConfiguration GetFullCacheConfiguration()
+        {
+            return new CacheClientConfiguration
+            {
+                Name = Guid.NewGuid().ToString(),
+                Backups = 3,
+                AtomicityMode = CacheAtomicityMode.Transactional,
+                CacheMode = CacheMode.Replicated,
+                EagerTtl = false,
+                EnableStatistics = true,
+                GroupName = Guid.NewGuid().ToString(),
+                KeyConfiguration = new[]
+                {
+                    new CacheKeyConfiguration
+                    {
+                        TypeName = typeof(Person).FullName,
+                        AffinityKeyFieldName = "Name"
+                    }
+                },
+                LockTimeout =TimeSpan.FromSeconds(5),
+                QueryEntities = new[]
+                {
+                    new QueryEntity(typeof(int), typeof(Person))
+                    {
+                        Aliases = new[]
+                        {
+                            new QueryAlias("Person.Name", "PName") 
+                        }
+                    }
+                },
+                QueryParallelism = 7,
+                RebalanceDelay = TimeSpan.FromSeconds(1.5),
+                RebalanceMode = CacheRebalanceMode.Sync,
+                RebalanceOrder = 25,
+                RebalanceThrottle = TimeSpan.FromSeconds(2.3),
+                RebalanceTimeout = TimeSpan.FromSeconds(42),
+                SqlSchema = Guid.NewGuid().ToString(),
+                CopyOnRead = false,
+                DataRegionName = DataStorageConfiguration.DefaultDataRegionName,
+                ExpiryPolicyFactory = new TestExpiryPolicyFactory(),
+                OnheapCacheEnabled = true,
+                PartitionLossPolicy = PartitionLossPolicy.ReadWriteAll,
+                ReadFromBackup = false,
+                RebalanceBatchSize = 100000,
+                SqlEscapeAll = true,
+                WriteSynchronizationMode = CacheWriteSynchronizationMode.FullAsync,
+                MaxConcurrentAsyncOperations = 123,
+                MaxQueryIteratorsCount = 17,
+                QueryDetailMetricsSize = 50,
+                RebalanceBatchesPrefetchCount = 4,
+                SqlIndexMaxInlineSize = 200000
+            };
+        }
+        
+        /** */
+        private class TestExpiryPolicyFactory : IFactory<IExpiryPolicy>
+        {
+            /** */
+            public IExpiryPolicy CreateInstance()
+            {
+                return new ExpiryPolicy(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3));
+            }
         }
     }
 }
