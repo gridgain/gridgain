@@ -235,6 +235,14 @@ namespace Apache.Ignite.Core.Tests.Client
                 {
                     Assert.AreEqual("foo", client.GetCacheNames().Single());
                 }
+                
+                // Port range.
+                cfg = new IgniteClientConfiguration("127.0.0.1:10798..10800");
+
+                using (var client = Ignition.StartClient(cfg))
+                {
+                    Assert.AreEqual("foo", client.GetCacheNames().Single());
+                }
             }
         }
 
