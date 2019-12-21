@@ -21,6 +21,7 @@ using System.Threading.Tasks;
 using Apache.Ignite.Core;
 using Apache.Ignite.Core.Cache.Configuration;
 using Apache.Ignite.Core.Client;
+using Apache.Ignite.Core.Configuration;
 using Apache.Ignite.Core.Discovery.Tcp;
 using Apache.Ignite.Core.Discovery.Tcp.Static;
 using Apache.Ignite.Linq;
@@ -46,6 +47,10 @@ namespace test_proj
                         Endpoints = new[] {"127.0.0.1:47500"}
                     },
                     SocketTimeout = TimeSpan.FromSeconds(0.3)
+                },
+                ClientConnectorConfiguration = new ClientConnectorConfiguration
+                {
+                    Port = 10842 
                 }
             };
 
@@ -66,7 +71,8 @@ namespace test_proj
                     .Single();
                 Debug.Assert(1 == resPerson.Age);
 
-                using (var igniteThin = Ignition.StartClient(new IgniteClientConfiguration("127.0.0.1")))
+                var clientCfg = new IgniteClientConfiguration("127.0.0.1:10842");
+                using (var igniteThin = Ignition.StartClient(clientCfg))
                 {
                     var cacheThin = igniteThin.GetCache<int, Person>(cacheCfg.Name);
                     var personThin = await cacheThin.GetAsync(1);
