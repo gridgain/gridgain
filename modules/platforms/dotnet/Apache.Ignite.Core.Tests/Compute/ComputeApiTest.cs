@@ -1014,6 +1014,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     {
         [InstanceResource]
 #pragma warning disable 649
+        // ReSharper disable once UnassignedField.Local
         private IIgnite _grid;
 
         public static ConcurrentBag<Guid> Invokes = new ConcurrentBag<Guid>();
@@ -1082,6 +1083,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     class ComputeFunc : INestedComputeFunc, IUserInterface<int>
     {
         [InstanceResource]
+        // ReSharper disable once UnassignedField.Local
         private IIgnite _grid;
 
         public static int InvokeCount;
