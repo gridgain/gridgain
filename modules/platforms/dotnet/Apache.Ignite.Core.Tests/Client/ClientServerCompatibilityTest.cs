@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client
 {
     using System;
+    using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Client;
@@ -132,6 +133,24 @@ namespace Apache.Ignite.Core.Tests.Client
 
                 ClientProtocolCompatibilityTest.AssertNotSupportedOperation(
                     () => cacheWithExpiry.Put(1, 2), _clientProtocolVersion, "WithExpiryPolicy");
+            }
+        }
+
+        /// <summary>
+        /// Tests that server-side configured expiry policy works on all client versions.
+        /// </summary>
+        [Test]
+        public void TestServerSideExpiryPolicyWorksOnAllVersions()
+        {
+            using (var client = StartClient())
+            {
+                var cache = client.GetCache<int, int>("twoSecondCache");
+                
+                cache.Put(1, 2);
+                Assert.True(cache.ContainsKey(1));
+                
+                Thread.Sleep(TimeSpan.FromSeconds(2.1));
+                Assert.False(cache.ContainsKey(1));
             }
         }
 

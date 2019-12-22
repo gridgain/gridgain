@@ -15,12 +15,17 @@
  */
 
 import org.apache.ignite.Ignition;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.expiry.CreatedExpiryPolicy;
+import javax.cache.expiry.Duration;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 public class Runner {
     public static void main(String[] args) {
@@ -31,9 +36,14 @@ public class Runner {
 
         TcpDiscoverySpi discoSpi = new TcpDiscoverySpi().setIpFinder(ipFinder).setSocketTimeout(300);
 
+        CacheConfiguration expiryCacheCfg = new CacheConfiguration("twoSecondCache")
+                .setExpiryPolicyFactory(FactoryBuilder.factoryOf(
+                        new CreatedExpiryPolicy(new Duration(TimeUnit.SECONDS, 2))));
+
         IgniteConfiguration cfg = new IgniteConfiguration()
                 .setClientConnectorConfiguration(connectorConfiguration)
-                .setDiscoverySpi(discoSpi);
+                .setDiscoverySpi(discoSpi)
+                .setCacheConfiguration(expiryCacheCfg);
 
         Ignition.start(cfg);
     }
