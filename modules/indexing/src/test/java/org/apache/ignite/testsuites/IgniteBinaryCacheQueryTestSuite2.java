@@ -60,6 +60,7 @@ import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInter
 import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptTxCacheOperationTest;
 import org.apache.ignite.internal.processors.query.SqlLocalQueryConnectionAndStatementTest;
 import org.apache.ignite.internal.processors.query.SqlPartOfComplexPkLookupTest;
+import org.apache.ignite.internal.processors.query.SqlQueriesTopologyMappingTest;
 import org.apache.ignite.internal.processors.query.SqlTwoCachesInGroupWithSameEntryTest;
 import org.apache.ignite.internal.processors.query.h2.CacheQueryEntityWithDateTimeApiFieldsTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
@@ -170,7 +171,9 @@ import org.junit.runners.Suite;
 
     DmlBatchSizeDeadlockTest.class,
 
-    SqlPartOfComplexPkLookupTest.class
+    SqlPartOfComplexPkLookupTest.class,
+
+    SqlQueriesTopologyMappingTest.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }
