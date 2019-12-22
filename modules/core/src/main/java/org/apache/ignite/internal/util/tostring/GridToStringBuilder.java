@@ -50,6 +50,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /**
@@ -112,6 +113,10 @@ public class GridToStringBuilder {
     /** */
     private static final int COLLECTION_LIMIT =
         IgniteSystemProperties.getInteger(IGNITE_TO_STRING_COLLECTION_LIMIT, 100);
+
+    /** */
+    private static final boolean throwRuntimeException =
+        IgniteSystemProperties.getBoolean(IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION, false);
 
     /** Every thread has its own string builder. */
     private static ThreadLocal<SBLimitedLength> threadLocSB = new ThreadLocal<SBLimitedLength>() {
@@ -1160,7 +1165,16 @@ public class GridToStringBuilder {
 
                 switch (fd.type()) {
                     case GridToStringFieldDescriptor.FIELD_TYPE_OBJECT:
-                        toString(buf, fd.fieldClass(), GridUnsafe.getObjectField(obj, fd.offset()));
+                        try {
+                            toString(buf, fd.fieldClass(), GridUnsafe.getObjectField(obj, fd.offset()));
+                        }
+                        catch (RuntimeException e) {
+                            if (throwRuntimeException)
+                                throw e;
+                            else {
+                                buf.a("Runtime exception was caught when building string representation: " + e.getMessage());
+                            }
+                        }
 
                         break;
                     case GridToStringFieldDescriptor.FIELD_TYPE_BYTE:

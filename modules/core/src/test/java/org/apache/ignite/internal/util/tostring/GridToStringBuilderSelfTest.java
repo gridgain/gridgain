@@ -38,12 +38,14 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_MAX_LENGTH;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION;
 import static org.apache.ignite.internal.util.tostring.GridToStringBuilder.identity;
 
 /**
@@ -657,6 +659,30 @@ public class GridToStringBuilderSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     *
+     * Test verifies that when RuntimeException is thrown from toString method of some class
+     * GridToString builder doesn't fail but finishes building toString representation.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRuntimeExceptionCaught() throws Exception {
+        WrapperForFaultyToStringClass wr = new WrapperForFaultyToStringClass(
+            new ClassWithFaultyToString[] {new ClassWithFaultyToString()});
+
+        String strRep = wr.toString();
+
+        //field before faulty field was written successfully to string representation
+        assertTrue(strRep.contains("id=12345"));
+
+        //message from RuntimeException was written to string representation
+        assertTrue(strRep.contains("toString failed"));
+
+        //field after faulty field was written successfully to string representation
+        assertTrue(strRep.contains("str=str"));
+    }
+
+    /**
      * @param exp Expected.
      * @param w Wrapper.
      */
@@ -666,6 +692,45 @@ public class GridToStringBuilderSelfTest extends GridCommonAbstractTest {
         info(wS);
 
         assertEquals(exp, wS);
+    }
+
+    /** Class containing another class with faulty toString implementation
+     * to force GridToStringBuilder to call faulty toString. */
+    private static class WrapperForFaultyToStringClass {
+        /** */
+        @SuppressWarnings("unused")
+        @GridToStringInclude
+        private int id = 12345;
+
+        /** */
+        @SuppressWarnings("unused")
+        @GridToStringInclude
+        private ClassWithFaultyToString[] arr;
+
+        /** */
+        @SuppressWarnings("unused")
+        @GridToStringInclude
+        private String str = "str";
+
+        /** */
+        WrapperForFaultyToStringClass(ClassWithFaultyToString[] arr) {
+            this.arr = arr;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(WrapperForFaultyToStringClass.class, this);
+        }
+    }
+
+    /**
+     * Class throwing a RuntimeException from a {@link ClassWithFaultyToString#toString()} method.
+     */
+    private static class ClassWithFaultyToString {
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            throw new RuntimeException("toString failed");
+        }
     }
 
     /**
