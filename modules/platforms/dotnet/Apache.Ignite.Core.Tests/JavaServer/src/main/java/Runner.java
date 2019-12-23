@@ -32,7 +32,7 @@ public class Runner {
         ClientConnectorConfiguration connectorConfiguration = new ClientConnectorConfiguration().setPort(10890);
 
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder()
-                .setAddresses(Collections.singleton("127.0.0.1:47500..47501"));
+                .setAddresses(Collections.singleton("127.0.0.1:47500"));
 
         TcpDiscoverySpi discoSpi = new TcpDiscoverySpi().setIpFinder(ipFinder).setSocketTimeout(300);
 
@@ -43,7 +43,8 @@ public class Runner {
         IgniteConfiguration cfg = new IgniteConfiguration()
                 .setClientConnectorConfiguration(connectorConfiguration)
                 .setDiscoverySpi(discoSpi)
-                .setCacheConfiguration(expiryCacheCfg);
+                .setCacheConfiguration(expiryCacheCfg)
+                .setLocalHost("127.0.0.1");
 
         Ignition.start(cfg);
     }
