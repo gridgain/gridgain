@@ -35,11 +35,12 @@ namespace Apache.Ignite.Core.Tests.Client
     /// </summary>
     [TestFixture(JavaServer.GroupIdIgnite, "2.4.0", "1.0.0")]
     [TestFixture(JavaServer.GroupIdIgnite, "2.5.0", "1.1.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.5.9", "1.1.0")]
     [TestFixture(JavaServer.GroupIdIgnite, "2.6.0", "1.1.0")]
     [TestFixture(JavaServer.GroupIdIgnite, "2.7.0", "1.2.0")]
     [TestFixture(JavaServer.GroupIdIgnite, "2.7.5", "1.2.0")]
     [TestFixture(JavaServer.GroupIdIgnite, "2.7.6", "1.2.0")]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.5", "1.2.0")]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.3", "1.2.0")]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.6", "1.2.0")]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.7", "1.2.0")]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.8", "1.4.0")]
