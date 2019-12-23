@@ -58,14 +58,14 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Starts a server node with a given version.
         /// </summary>
-        /// <param name="version">Product version.</param>
         /// <param name="groupId">Maven artifact group id.</param>
+        /// <param name="version">Product version.</param>
         /// <returns>Disposable object to stop the server.</returns>
-        public static IDisposable Start(string version, string groupId = GroupIdIgnite)
+        public static IDisposable Start(string groupId, string version)
         {
             IgniteArgumentCheck.NotNullOrEmpty(version, "version");
 
-            using (ReplaceIgniteVersionInPomFile(version, groupId, Path.Combine(JavaServerSourcePath, "pom.xml")))
+            using (ReplaceIgniteVersionInPomFile(groupId, version, Path.Combine(JavaServerSourcePath, "pom.xml")))
             {
                 var process = new System.Diagnostics.Process
                 {
@@ -108,7 +108,7 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Updates pom.xml with given Ignite version.
         /// </summary>
-        private static IDisposable ReplaceIgniteVersionInPomFile(string version, string groupId, string pomFile)
+        private static IDisposable ReplaceIgniteVersionInPomFile(string groupId, string version, string pomFile)
         {
             var pomContent = File.ReadAllText(pomFile);
             var originalPomContent = pomContent;
