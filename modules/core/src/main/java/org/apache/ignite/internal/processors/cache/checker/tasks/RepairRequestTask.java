@@ -488,28 +488,29 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
 
                 VersionedValue versionedVal = data.get(locNodeId);
 
-                if (entry.exists()) {
+                if (forceRepair) {
+                    if (val == null)
+                        entry.remove();
+                    else
+                        entry.setValue(val);
+
+                    return true;
+                }
+
+                if (versionedVal != null) {
                     if (currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
                         if (val == null)
                             entry.remove();
                         else
                             entry.setValue(val);
-                    }
-
-                    return true;
-                }
-                else {
-                    if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
-                        if (versionedVal == null || currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
-                            if (val == null)
-                                entry.remove();
-                            else
-                                entry.setValue(val);
-                        }
 
                         return true;
                     }
-                    else {
+
+                    // TODO: 23.12.19 Add optimizations here
+                }
+                else {
+                    if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
                         boolean inEntryTTLBounds =
                             (System.currentTimeMillis() - versionedVal.recheckStartTime()) <
                                 Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
@@ -520,7 +521,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                         boolean inDeferredDelQueueBounds = ((currUpdateCntr - versionedVal.updateCounter()) <
                             rmvQueueMaxSize);
 
-                        if ((inEntryTTLBounds && inDeferredDelQueueBounds) || forceRepair) {
+                        if ((inEntryTTLBounds && inDeferredDelQueueBounds)) {
                             if (val == null)
                                 entry.remove();
                             else
@@ -528,10 +529,12 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
 
                             return true;
                         }
-                        else
-                            return false;
+
+                        return false;
                     }
                 }
+
+                return false;
             }
         }
     }
