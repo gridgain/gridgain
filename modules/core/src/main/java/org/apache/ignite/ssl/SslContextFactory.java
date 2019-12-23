@@ -363,7 +363,6 @@ public class SslContextFactory implements Factory<SSLContext> {
 
         if (trustMgrs == null) {
             try {
-
                 TrustManagerFactory trustMgrFactory = TrustManagerFactory.getInstance(keyAlgorithm);
 
                 KeyStore trustStore = loadKeyStore(trustStoreType, trustStoreFilePath, trustStorePwd);
