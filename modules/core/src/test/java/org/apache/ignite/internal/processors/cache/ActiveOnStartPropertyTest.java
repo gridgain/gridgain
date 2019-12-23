@@ -32,8 +32,8 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 
 /**
- * Checks that {@link IgniteConfiguration#activeOnStart} works correctly after deprecation and introduction {@link
- * IgniteConfiguration#clusterStateOnStart}.
+ * Checks that {@link IgniteConfiguration#isActiveOnStart()} works correctly after deprecation and introduction {@link
+ * IgniteConfiguration#getClusterStateOnStart()}.
  */
 public class ActiveOnStartPropertyTest extends GridCommonAbstractTest {
     /** Active on start flag. */

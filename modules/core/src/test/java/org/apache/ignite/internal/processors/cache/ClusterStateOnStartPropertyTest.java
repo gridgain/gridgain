@@ -38,8 +38,8 @@ import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_ACTIVE_ON
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_AUTO_ACTIVATION;
 
 /**
- * Checks that {@link IgniteConfiguration#clusterStateOnStart} works correctly separately and together with
- * {@link IgniteConfiguration#activeOnStart} and {@link IgniteConfiguration#autoActivation}.
+ * Checks that {@link IgniteConfiguration#getClusterStateOnStart()} works correctly separately and together with
+ * {@link IgniteConfiguration#isActiveOnStart()} and {@link IgniteConfiguration#isAutoActivationEnabled()}.
  */
 public class ClusterStateOnStartPropertyTest extends GridCommonAbstractTest {
     /** */

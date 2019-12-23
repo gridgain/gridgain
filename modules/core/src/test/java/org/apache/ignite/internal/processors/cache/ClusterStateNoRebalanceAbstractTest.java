@@ -23,6 +23,7 @@ import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -42,7 +43,7 @@ import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 
 /**
- *
+ * Checks that join node to {@link ClusterState#INACTIVE} cluster doesn't trigger rebalance.
  */
 public abstract class ClusterStateNoRebalanceAbstractTest extends GridCommonAbstractTest {
     /** Entry count. */

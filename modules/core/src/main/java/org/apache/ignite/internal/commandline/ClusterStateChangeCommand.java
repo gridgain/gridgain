@@ -49,7 +49,7 @@ public class ClusterStateChangeCommand implements Command<ClusterState> {
         params.put(INACTIVE.toString(), "Deactivate cluster.");
         params.put(ACTIVE_READ_ONLY.toString(), "Activate cluster. Cache updates are denied.");
 
-        Command.usage(log, "Change cluster state:", SET_STATE, params, or(ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(log, "Change cluster state:", SET_STATE, params, or((Object[])ClusterState.values()), optional(CMD_AUTO_CONFIRMATION));
     }
 
     /** {@inheritDoc} */

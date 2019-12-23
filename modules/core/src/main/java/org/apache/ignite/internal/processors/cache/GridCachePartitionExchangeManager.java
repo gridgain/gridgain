@@ -193,9 +193,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /** */
     private static final IgniteProductVersion EXCHANGE_PROTOCOL_2_SINCE = IgniteProductVersion.fromString("2.1.4");
 
-    /** Stripe id for cluster activation event. */
-    private static final int CLUSTER_ACTIVATION_EVT_STRIPE_ID = Integer.MAX_VALUE;
-
     /** */
     private static final String EXCHANGE_WORKER_THREAD_NAME = "exchange-worker";
 
@@ -592,7 +589,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                     exchFut = exchangeFuture(exchId, evt, cache, exchActions, null);
 
-                    exchFut.listen(f -> exchangeFutDone(f, exchActions));
+                    exchFut.listen(f -> onClusterStateChangeFinish(f, exchActions));
                 }
             }
             else if (customMsg instanceof DynamicCacheChangeBatch) {
@@ -694,7 +691,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /** */
-    private void exchangeFutDone(IgniteInternalFuture<AffinityTopologyVersion> fut, ExchangeActions exchActions) {
+    private void onClusterStateChangeFinish(IgniteInternalFuture<AffinityTopologyVersion> fut, ExchangeActions exchActions) {
         A.notNull(exchActions, "exchActions");
 
         GridEventStorageManager evtMngr = cctx.kernalContext().event();
@@ -738,10 +735,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
             A.notEmpty(evts, "events " + exchActions);
 
-            cctx.kernalContext().getStripedExecutorService().execute(
-                CLUSTER_ACTIVATION_EVT_STRIPE_ID,
-                () -> evts.forEach(e -> cctx.kernalContext().event().record(e))
-            );
+            cctx.kernalContext().getSystemExecutorService()
+                .submit(() -> evts.forEach(e -> cctx.kernalContext().event().record(e)));
         }
     }
 

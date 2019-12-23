@@ -71,7 +71,7 @@ public class ClusterStateChangeEvent extends EventAdapter {
     /** Current cluster state. */
     private final ClusterState state;
 
-    /** Baseline nodes. */
+    /** Baseline nodes of current baseline topology. */
     private final Collection<? extends BaselineNode> baselineNodes;
 
     /**
