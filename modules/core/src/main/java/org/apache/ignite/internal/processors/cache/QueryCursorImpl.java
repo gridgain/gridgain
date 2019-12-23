@@ -41,7 +41,7 @@ import static org.apache.ignite.internal.processors.cache.QueryCursorImpl.State.
  */
 public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T> {
     /** */
-    protected static final AtomicReferenceFieldUpdater<QueryCursorImpl, State> STATE_UPDATER =
+    private static final AtomicReferenceFieldUpdater<QueryCursorImpl, State> STATE_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(QueryCursorImpl.class, State.class, "state");
 
     /** Query executor. */
@@ -112,10 +112,7 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
         return iter;
     }
 
-    /** {@inheritDoc}
-     * NB: if the method changed please change also RegisteredQueryCursor#getAll() because it re-implements this logic
-     * to track exceptions on query registry.
-     */
+    /** {@inheritDoc} */
     @Override public List<T> getAll() {
         List<T> all = new ArrayList<>();
 
@@ -126,20 +123,13 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
                 all.add(iter.next());
         }
         finally {
-            // In lazy mode EXECUTION state keeps until end of query (query executes on each Iterator.next())
-            if (lazy)
-                STATE_UPDATER.compareAndSet(this, EXECUTION, RESULT_READY);
-
             close();
         }
 
         return all;
     }
 
-     /** {@inheritDoc}
-     * NB: if the method changed please change also RegisteredQueryCursor#getAll(QueryCursorEx.Consumer<T>)
-     * because it re-implements this logic to track exceptions on query registry.
-     */
+    /** {@inheritDoc} */
     @Override public void getAll(QueryCursorEx.Consumer<T> clo) throws IgniteCheckedException {
         try {
             Iterator<T> iter = iter(); // Implicitly calls iterator() to do all checks.
@@ -148,10 +138,6 @@ public class QueryCursorImpl<T> implements QueryCursorEx<T>, FieldsQueryCursor<T
                 clo.consume(iter.next());
         }
         finally {
-            // In lazy mode EXECUTION state keeps until end of query (query executes on each Iterator.next())
-            if (lazy)
-                STATE_UPDATER.compareAndSet(this, EXECUTION, RESULT_READY);
-
             close();
         }
     }
