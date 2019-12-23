@@ -65,51 +65,53 @@ namespace Apache.Ignite.Core.Tests
         {
             IgniteArgumentCheck.NotNullOrEmpty(version, "version");
 
-            ReplaceIgniteVersionInPomFile(version, groupId, Path.Combine(JavaServerSourcePath, "pom.xml"));
-            
-            var process = new System.Diagnostics.Process
+            using (ReplaceIgniteVersionInPomFile(version, groupId, Path.Combine(JavaServerSourcePath, "pom.xml")))
             {
-                StartInfo = new ProcessStartInfo
+                var process = new System.Diagnostics.Process
                 {
-                    FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
-                    Arguments = Os.IsWindows 
-                        ? string.Format("/c \"{0} {1}\"", MavenPath, MavenCommandExec)
-                        : string.Format("-c \"{0} {1}\"", MavenPath, MavenCommandExec.Replace("\"", "\\\"")),
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WorkingDirectory = JavaServerSourcePath,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
+                    StartInfo = new ProcessStartInfo
+                    {
+                        FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
+                        Arguments = Os.IsWindows
+                            ? string.Format("/c \"{0} {1}\"", MavenPath, MavenCommandExec)
+                            : string.Format("-c \"{0} {1}\"", MavenPath, MavenCommandExec.Replace("\"", "\\\"")),
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WorkingDirectory = JavaServerSourcePath,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    }
+                };
+
+                process.Start();
+
+                var listDataReader = new ListDataReader();
+                process.AttachProcessConsoleReader(listDataReader, new IgniteProcessConsoleOutputReader());
+
+                var processWrapper = new DisposeAction(() => process.KillProcessTree());
+
+                // Wait for node to come up with a thin client connection.
+                if (WaitForStart())
+                {
+                    return processWrapper;
                 }
-            };
 
-            process.Start();
-            
-            var listDataReader = new ListDataReader();
-            process.AttachProcessConsoleReader(listDataReader, new IgniteProcessConsoleOutputReader());
-            
-            var processWrapper = new DisposeAction(() => process.KillProcessTree());
+                if (!process.HasExited)
+                {
+                    processWrapper.Dispose();
+                }
 
-            // Wait for node to come up with a thin client connection.
-            if (WaitForStart())
-            {
-                return processWrapper;
+                throw new Exception("Failed to start Java node: " + string.Join(",", listDataReader.GetOutput()));
             }
-
-            if (!process.HasExited)
-            {
-                processWrapper.Dispose();
-            }
-            
-            throw new Exception("Failed to start Java node: " + string.Join(",", listDataReader.GetOutput()));
         }
 
         /// <summary>
         /// Updates pom.xml with given Ignite version.
         /// </summary>
-        private static void ReplaceIgniteVersionInPomFile(string version, string groupId, string pomFile)
+        private static IDisposable ReplaceIgniteVersionInPomFile(string version, string groupId, string pomFile)
         {
             var pomContent = File.ReadAllText(pomFile);
+            var originalPomContent = pomContent;
             
             pomContent = Regex.Replace(pomContent,
                 @"<version>\d+\.\d+\.\d+</version>",
@@ -120,6 +122,8 @@ namespace Apache.Ignite.Core.Tests
                 string.Format("<groupId>{0}</groupId>", groupId));
             
             File.WriteAllText(pomFile, pomContent);
+            
+            return new DisposeAction(() => File.WriteAllText(pomFile, originalPomContent));
         }
 
         /// <summary>
