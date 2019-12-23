@@ -16,15 +16,7 @@
 
 package org.apache.ignite.internal.processors.failure;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Predicate;
-
 import com.google.common.collect.ImmutableSet;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureContext;
@@ -33,9 +25,9 @@ import org.apache.ignite.failure.TestFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static org.apache.ignite.failure.FailureType.SYSTEM_CRITICAL_OPERATION_TIMEOUT;
@@ -48,7 +40,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.THREAD_DUMP_MSG;
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE, value = "true")
 public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstractTest {
     /** Test logger. */
-    private static TestLogger testLog;
+    private final ListeningTestLogger testLog = new ListeningTestLogger(true, log);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -65,6 +57,22 @@ public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstract
         return cfg;
     }
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        startGrid(0);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        testLog.clearListeners();
+
+        stopAllGrids();
+    }
+
     /**
      * Tests that thread dumps will not get if {@code IGNITE_DUMP_THREADS_ON_FAILURE == false}.
      */
@@ -72,25 +80,19 @@ public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstract
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE, value = "false")
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT, value = "0")
     public void testNoThreadDumps() throws Exception {
-        IgniteEx ignite = null;
+        LogListener lsnr = LogListener.matches(THREAD_DUMP_MSG).times(0).build();
 
-        try {
-            testLog = new TestLogger(log, Collections.singleton(s -> s.contains(THREAD_DUMP_MSG)));
+        testLog.registerListener(lsnr);
 
-            ignite = (IgniteEx)startGrid();
+        IgniteEx ignite = ignite(0);
 
-            FailureContext failureCtx =
-                    new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
+        FailureContext failureCtx =
+                new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
 
-            for (int i = 0; i < 3; i++)
-                ignite.context().failure().process(failureCtx);
+        for (int i = 0; i < 3; i++)
+            ignite.context().failure().process(failureCtx);
 
-            assertTrue(testLog.filteredRecords().isEmpty());
-        }
-        finally {
-            if (ignite != null)
-                stopAllGrids();
-        }
+        assertTrue(lsnr.check());
     }
 
     /**
@@ -100,25 +102,19 @@ public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstract
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE, value = "true")
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT, value = "0")
     public void testNoThrottling() throws Exception {
-        IgniteEx ignite = null;
+        LogListener lsnr = LogListener.matches(THREAD_DUMP_MSG).times(3).build();
 
-        try {
-            testLog = new TestLogger(log, Collections.singleton(s -> s.contains(THREAD_DUMP_MSG)));
+        testLog.registerListener(lsnr);
 
-            ignite = (IgniteEx)startGrid();
+        IgniteEx ignite = ignite(0);
 
-            FailureContext failureCtx =
-                    new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
+        FailureContext failureCtx =
+                new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
 
-            for (int i = 0; i < 3; i++)
-                ignite.context().failure().process(failureCtx);
+        for (int i = 0; i < 3; i++)
+            ignite.context().failure().process(failureCtx);
 
-            assertEquals(3, testLog.filteredRecords().size());
-        }
-        finally {
-            if (ignite != null)
-                stopAllGrids();
-        }
+        assertTrue(lsnr.check());
     }
 
     /**
@@ -128,34 +124,26 @@ public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstract
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE, value = "true")
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT, value = "1000")
     public void testThrottling() throws Exception {
-        IgniteEx ignite = null;
+        LogListener dumpLsnr = LogListener.matches(THREAD_DUMP_MSG).times(2).build();
+        LogListener throttledLsnr = LogListener.matches("Thread dump is hidden").times(4).build();
 
-        try {
-            Predicate<String> dumpFilter = s -> s.contains(THREAD_DUMP_MSG);
-            Predicate<String> throttledFilter = s -> s.contains("Thread dump is hidden");
+        testLog.registerAllListeners(dumpLsnr, throttledLsnr);
 
-            testLog = new TestLogger(log, Arrays.asList(dumpFilter, throttledFilter));
+        IgniteEx ignite = ignite(0);
 
-            ignite = (IgniteEx)startGrid();
+        FailureContext failureCtx =
+                new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
 
-            FailureContext failureCtx =
-                    new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
+        for (int i = 0; i < 3; i++)
+            ignite.context().failure().process(failureCtx);
 
-            for (int i = 0; i < 3; i++)
-                ignite.context().failure().process(failureCtx);
+        U.sleep(1000);
 
-            U.sleep(1000);
+        for (int i = 0; i < 3; i++)
+            ignite.context().failure().process(failureCtx);
 
-            for (int i = 0; i < 3; i++)
-                ignite.context().failure().process(failureCtx);
-
-            assertEquals(2, (int)testLog.filteredRecords().stream().filter(dumpFilter).count());
-            assertEquals(4, (int)testLog.filteredRecords().stream().filter(throttledFilter).count());
-        }
-        finally {
-            if (ignite != null)
-                stopAllGrids();
-        }
+        assertTrue(dumpLsnr.check());
+        assertTrue(throttledLsnr.check());
     }
 
     /**
@@ -165,43 +153,35 @@ public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstract
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE, value = "true")
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT, value = "1000")
     public void testThrottlingPerFailureType() throws Exception {
-        IgniteEx ignite = null;
+        LogListener dumpLsnr = LogListener.matches(THREAD_DUMP_MSG).times(4).build();
+        LogListener throttledLsnr = LogListener.matches("Thread dump is hidden").times(8).build();
 
-        try {
-            Predicate<String> dumpFilter = s -> s.contains(THREAD_DUMP_MSG);
-            Predicate<String> throttledFilter = s -> s.contains("Thread dump is hidden");
+        testLog.registerAllListeners(dumpLsnr, throttledLsnr);
 
-            testLog = new TestLogger(log, Arrays.asList(dumpFilter, throttledFilter));
+        IgniteEx ignite = ignite(0);
 
-            ignite = (IgniteEx)startGrid();
+        FailureContext workerBlockedFailureCtx =
+                new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
 
-            FailureContext workerBlockedFailureCtx =
-                    new FailureContext(SYSTEM_WORKER_BLOCKED, new Throwable("Failure context error"));
+        FailureContext opTimeoutFailureCtx =
+                new FailureContext(SYSTEM_CRITICAL_OPERATION_TIMEOUT, new Throwable("Failure context error"));
 
-            FailureContext opTimeoutFailureCtx =
-                    new FailureContext(SYSTEM_CRITICAL_OPERATION_TIMEOUT, new Throwable("Failure context error"));
+        for (int i = 0; i < 3; i++) {
+            ignite.context().failure().process(workerBlockedFailureCtx);
 
-            for (int i = 0; i < 3; i++) {
-                ignite.context().failure().process(workerBlockedFailureCtx);
-
-                ignite.context().failure().process(opTimeoutFailureCtx);
-            }
-
-            U.sleep(1000);
-
-            for (int i = 0; i < 3; i++) {
-                ignite.context().failure().process(workerBlockedFailureCtx);
-
-                ignite.context().failure().process(opTimeoutFailureCtx);
-            }
-
-            assertEquals(4, (int)testLog.filteredRecords().stream().filter(dumpFilter).count());
-            assertEquals(8, (int)testLog.filteredRecords().stream().filter(throttledFilter).count());
+            ignite.context().failure().process(opTimeoutFailureCtx);
         }
-        finally {
-            if (ignite != null)
-                stopAllGrids();
+
+        U.sleep(1000);
+
+        for (int i = 0; i < 3; i++) {
+            ignite.context().failure().process(workerBlockedFailureCtx);
+
+            ignite.context().failure().process(opTimeoutFailureCtx);
         }
+
+        assertTrue(dumpLsnr.check());
+        assertTrue(throttledLsnr.check());
     }
 
     /**
@@ -210,76 +190,11 @@ public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstract
     @Test
     @WithSystemProperty(key = IgniteSystemProperties.IGNITE_DUMP_THREADS_ON_FAILURE, value = "true")
     public void testDefaultThrottlingTimeout() throws Exception {
-        IgniteEx ignite = null;
+        IgniteEx ignite = ignite(0);
 
-        try {
-            ignite = (IgniteEx)startGrid();
-
-            assertEquals(ignite.context().failure().dumpThreadsTrottlingTimeout, ignite.configuration().getFailureDetectionTimeout().longValue());
-        }
-        finally {
-            if (ignite != null)
-                stopAllGrids();
-        }
-    }
-
-    /**
-     * Custom logger for checking if specified message and thread dump appeared at WARN and ERROR logging level.
-     */
-    private static class TestLogger extends ListeningTestLogger {
-        /** Filtered log records. */
-        private final List<String> filteredRecs = new ArrayList<>();
-
-        /** Filters. */
-        private final Collection<Predicate<String>> filters;
-
-        /**
-         * @param echo Echo.
-         * @param filters Filters.
-         */
-        public TestLogger(@Nullable IgniteLogger echo, Collection<Predicate<String>> filters) {
-            super(false, echo);
-
-            this.filters = filters;
-        }
-
-        /**
-         * @return Filtered records.
-         */
-        public List<String> filteredRecords() {
-            return filteredRecs;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void warning(String msg, @Nullable Throwable t) {
-            super.warning(msg, t);
-
-            filter(msg);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void error(String msg, @Nullable Throwable t) {
-            super.error(msg, t);
-
-            filter(msg);
-        }
-
-        /** {@inheritDoc} */
-        @Override public void info(String msg) {
-            super.info(msg);
-
-            filter(msg);
-        }
-
-        /**
-         * Tests all log records with given filters.
-         * @param msg Message.
-         */
-        private void filter(String msg) {
-            for (Predicate<String> filter : filters) {
-                if (filter.test(msg))
-                    filteredRecs.add(msg);
-            }
-        }
+        assertEquals(
+                ignite.context().failure().dumpThreadsTrottlingTimeout,
+                ignite.configuration().getFailureDetectionTimeout().longValue()
+        );
     }
 }

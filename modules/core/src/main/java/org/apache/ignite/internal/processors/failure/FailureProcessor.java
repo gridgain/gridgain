@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.failure;
 
 import java.util.EnumMap;
 import java.util.Map;
-
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
@@ -221,7 +220,7 @@ public class FailureProcessor extends GridProcessorAdapter {
         else {
             if (log.isInfoEnabled()) {
                 log.info("Thread dump is hidden due to throttling settings. " +
-                        "Set IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT property to 0 to see all thread dumps");
+                        "Set IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT property to 0 to see all thread dumps.");
             }
         }
 

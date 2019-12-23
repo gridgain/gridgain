@@ -990,7 +990,7 @@ public final class IgniteSystemProperties {
     /**
      * Throttling time out for thread dump generation during failure handling.
      *
-     * Default is failure detection timeout.
+     * Default is failure detection timeout. {@code 0} or negative value - throttling is disabled.
      */
     public static final String IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT =
             "IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT";
