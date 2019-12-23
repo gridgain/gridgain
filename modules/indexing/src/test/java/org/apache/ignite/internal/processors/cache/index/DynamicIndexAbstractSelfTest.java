@@ -418,10 +418,7 @@ public abstract class DynamicIndexAbstractSelfTest extends AbstractSchemaSelfTes
             for (Throwable th = e; th != null; th = th.getCause()) {
                 if (th.getMessage() != null && (
                         th.getMessage().contains(CONC_DESTROY_MSG)
-                        || th.getMessage().contains("Table was modified concurrently (please retry the query): ")
-//                        || th.getMessage().contains("The query was cancelled while executing")
-                )
-                )
+                        || th.getMessage().contains("Table was modified concurrently (please retry the query): ")))
                     return;
             }
 
