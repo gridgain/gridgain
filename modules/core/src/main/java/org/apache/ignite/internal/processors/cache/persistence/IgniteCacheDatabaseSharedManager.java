@@ -85,6 +85,7 @@ import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_DATA
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_PAGE_SIZE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_ARCHIVE_MAX_SIZE;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_WAL_HISTORY_SIZE;
+import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
  *
@@ -338,6 +339,15 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             CU.isPersistenceEnabled(memCfg)
         );
 
+        addDataRegion(
+            memCfg,
+            createVolatileDataRegion(
+                memCfg.getSystemRegionInitialSize(),
+                memCfg.getSystemRegionMaxSize()
+            ),
+            false
+        );
+
         for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
             lsnr.onInitDataRegions(this);
     }
@@ -482,6 +492,25 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
         res.setMaxSize(sysCacheMaxSize);
         res.setPersistenceEnabled(persistenceEnabled);
         res.setLazyMemoryAllocation(false);
+
+        return res;
+    }
+
+    /**
+     * @param volatileCacheInitSize Initial size of PageMemory to be created for volatile cache.
+     * @param volatileCacheMaxSize Maximum size of PageMemory to be created for volatile cache.
+     * @param persistenceEnabled Persistence enabled flag.
+     *
+     * @return {@link DataRegionConfiguration configuration} of DataRegion for volatile cache.
+     */
+    private DataRegionConfiguration createVolatileDataRegion(long volatileCacheInitSize, long volatileCacheMaxSize) {
+        DataRegionConfiguration res = new DataRegionConfiguration();
+
+        res.setName(VOLATILE_DATA_REGION_NAME);
+        res.setInitialSize(volatileCacheInitSize);
+        res.setMaxSize(volatileCacheMaxSize);
+        res.setPersistenceEnabled(false);
+        res.setLazyMemoryAllocation(true);
 
         return res;
     }
