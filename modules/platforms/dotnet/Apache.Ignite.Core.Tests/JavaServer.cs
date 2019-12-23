@@ -36,6 +36,12 @@ namespace Apache.Ignite.Core.Tests
     {
         /** Client port. */
         public const int ClientPort = 10890;
+
+        /** Apache Ignite artifact group ID. */
+        public const string GroupIdIgnite = "org.apache.ignite";
+        
+        /** GridGain artifact group ID. */
+        public const string GroupIdGridGain = "org.gridgain";
         
         /** Maven command to execute the main class. */
         private const string MavenCommandExec = "compile exec:java -D\"exec.mainClass\"=\"Runner\"";
@@ -53,12 +59,13 @@ namespace Apache.Ignite.Core.Tests
         /// Starts a server node with a given version.
         /// </summary>
         /// <param name="version">Product version.</param>
+        /// <param name="groupId">Maven artifact group id.</param>
         /// <returns>Disposable object to stop the server.</returns>
-        public static IDisposable Start(string version)
+        public static IDisposable Start(string version, string groupId = GroupIdIgnite)
         {
             IgniteArgumentCheck.NotNullOrEmpty(version, "version");
 
-            ReplaceIgniteVersionInPomFile(version, Path.Combine(JavaServerSourcePath, "pom.xml"));
+            ReplaceIgniteVersionInPomFile(version, groupId, Path.Combine(JavaServerSourcePath, "pom.xml"));
             
             var process = new System.Diagnostics.Process
             {
@@ -100,12 +107,18 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Updates pom.xml with given Ignite version.
         /// </summary>
-        private static void ReplaceIgniteVersionInPomFile(string version, string pomFile)
+        private static void ReplaceIgniteVersionInPomFile(string version, string groupId, string pomFile)
         {
             var pomContent = File.ReadAllText(pomFile);
+            
             pomContent = Regex.Replace(pomContent,
                 @"<version>\d+\.\d+\.\d+</version>",
                 string.Format("<version>{0}</version>", version));
+            
+            pomContent = Regex.Replace(pomContent,
+                @"<groupId>org.*?</groupId>",
+                string.Format("<groupId>{0}</groupId>", groupId));
+            
             File.WriteAllText(pomFile, pomContent);
         }
 
