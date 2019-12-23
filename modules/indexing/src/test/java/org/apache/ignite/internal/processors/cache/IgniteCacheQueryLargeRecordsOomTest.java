@@ -140,7 +140,8 @@ public class IgniteCacheQueryLargeRecordsOomTest extends GridCommonAbstractTest 
         cfg.setCacheConfiguration(
             new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Long.class, Person.class));
         cfg.setDataStorageConfiguration(new DataStorageConfiguration().setMetricsEnabled(true)
-            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMetricsEnabled(true)));
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setMetricsEnabled(true)
+            .setMaxSize(1L * 1024 * 1024 * 1024)));
 
         TcpCommunicationSpi communicationSpi = (TcpCommunicationSpi)cfg.getCommunicationSpi();
         communicationSpi.setAckSendThreshold(1);

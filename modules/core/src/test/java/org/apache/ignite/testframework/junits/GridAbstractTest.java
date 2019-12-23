@@ -1179,7 +1179,28 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         if (cfg.getIncludeProperties() == null)
             cfg.setIncludeProperties();
 
+        DataStorageConfiguration dsCfg = cfg.getDataStorageConfiguration();
+
+        if (dsCfg != null) {
+            capDefaultMaxSize(dsCfg.getDefaultDataRegionConfiguration());
+
+            if (dsCfg.getDataRegionConfigurations() != null) {
+                for (DataRegionConfiguration region : dsCfg.getDataRegionConfigurations())
+                    capDefaultMaxSize(region);
+            }
+        }
+
         return cfg;
+    }
+
+    /** */
+    private void capDefaultMaxSize(DataRegionConfiguration dataRegionCfg) {
+        if (dataRegionCfg == null)
+            return;
+
+        // Tests are prone to over-commit memory by starting multiple nodes with default 20% dataRegionCfg.
+        if (dataRegionCfg.getMaxSize() == DataStorageConfiguration.DFLT_DATA_REGION_MAX_SIZE)
+            dataRegionCfg.setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE);
     }
 
     /**
