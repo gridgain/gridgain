@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core.Tests
                 {
                     return false;
                 }
-            }, 60000);
+            }, 180000);
         }
 
         /// <summary>
