@@ -62,7 +62,12 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should not send system cache info.
+     * GG-26556 Testcase 3:
+     *
+     * 1. Start 1 ignite node.
+     * 2. Create cache with “test-cache” name.
+     * 3. Wait 1 second until message with cache info will be send to GMC.
+     * 4. Verify that cache info list does not contain cache with “ignite-sys-cache” name.
      */
     @Test
     public void shouldNotSendSystemCacheInfo() throws Exception {
@@ -84,7 +89,15 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send correct cache info on create and destroy cache events.
+     * GG-26556 Testcase 4:
+     *
+     * 1. Start 1 ignite node.
+     * 2. Create a cache.
+     * 3. Wait for 1 second until message with cache info will be send to GMC.
+     * 4. Verify that cache info list contains the cache created.
+     * 5. Destroy the cache.
+     * 6. Wait 1 second until message with cache info will be send to GMC.
+     * 7. Verify that cache info list does not contain the cache anymore.
      */
     @Test
     public void shouldSendCacheInfoOnCreatedOrDestroyedCache() throws Exception {
@@ -116,7 +129,15 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send correct cache info on create and destroy cache events on other nodes.
+     * GG-26556 Testcase 5:
+     *
+     * 1. Start 2 ignite node.
+     * 2. Create a cache on second node.
+     * 3. Verify the message with cache info is sent to GMC in less than 1 second.
+     * 4. Verify that cache info list contains the cache created.
+     * 5. Destroy the cache.
+     * 6. Wait for 1 second until message with cache info will be sent to GMC.
+     * 7. Verify that cache info list does not contains the cache anymore.
      */
     @Test
     public void shouldSendCacheInfoIfCacheCreatedOnOtherNode() throws Exception {
@@ -150,7 +171,15 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send correct cache info on create and destroy cache events triggered by sql.
+     * GG-26556 Testcase 6:
+     *
+     * 1. Start 1 ignite nodes.
+     * 2. Execute SQL query: "CREATE TABLE mc_agent_test_table_1 (id int, value int, PRIMARY KEY (id));"
+     * 3. Wait 1 second until message with cache info will be send to GMC.
+     * 4. Verify that cache info list contains cache with “SQL_PUBLIC_MC_AGENT_TEST_TABLE_1” name.
+     * 5. Execute SQL query: "DROP TABLE mc_agent_test_table_1;"
+     * 6. Wait for 1 second until message with cache info will be sent to GMC.
+     * 7. Verify that cache info list does not contain cache with “SQL_PUBLIC_MC_AGENT_TEST_TABLE_1” name.
      */
     @Test
     public void shouldSendCacheInfoOnCreatedOrDestroyedCacheFromSql() throws Exception {
@@ -186,7 +215,17 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send correct sql metadata.
+     * GG-26556 Testcase 7:
+     *
+     * 1. Start 1 ignite node.
+     * 2. Execute SQL query: "CREATE TABLE mc_agent_test_table_2 (id int, value int, PRIMARY KEY (id));"
+     * 3. Wait for 1 second until message with cache metadata will be sent to GMC.
+     * 4. Verify that cache metadata list contains metadata for cache with “*SQL_PUBLIC_MC_AGENT_TEST_TABLE_2*” name.
+     * 5. Verify that cache metadata contains ID and VALUE fields.
+     * 6. Execute SQL query: "ALTER TABLE mc_agent_test_table_2 ADD id_2 int;"
+     * 7. Wait for 1 second until message with cache metadata will be sent to GMC.
+     * 8. Verify that cache metadata list contains metadata for cache with “*SQL_PUBLIC_MC_AGENT_TEST_TABLE_2*” name.
+     * 9. Verify that cache metadata contains ID, VALUE and ID_2 fields.
      */
     @Test
     public void shouldSendCacheMetadataOnAlterTableAndCreateIndex() throws Exception {
@@ -244,7 +283,20 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send correct sql metadata on create and drop index.
+     * GG-26556 Testcase 8:
+     *
+     * 1.  Start 1 ignite node.
+     * 2.  Execute SQL query: "CREATE TABLE mc_agent_test_table_3 (id int, value int, PRIMARY KEY (id));"
+     * 3.  Wait for 1 second until message with cache metadata will be sent to GMC.
+     * 4.  Verify that cache metadata list contains metadata for cache with “SQL_PUBLIC_MC_AGENT_TEST_TABLE_3” name.
+     * 5.  Verify that cache metadata contains empty index list.
+     * 6.  Execute SQL query: "CREATE INDEX my_index ON mc_agent_test_table_3 (value);"
+     * 7.  Wait for 1 second until message with cache metadata will be sent to GMC.
+     * 8.  Verify that cache metadata list contains metadata for cache with “SQL_PUBLIC_MC_AGENT_TEST_TABLE_3” name.
+     * 9.  Verify that cache metadata contains index list with 1 element.
+     * 10. Execute SQL query: "DROP INDEX my_index;"
+     * 11. Verify that cache metadata list contains metadata for cache with “SQL_PUBLIC_MC_AGENT_TEST_TABLE_3” name.
+     * 12. Verify that cache metadata contains empty index list.
      */
     @Test
     public void shouldSendCacheMetadataOnCreateAndDropIndex() throws Exception {
@@ -324,7 +376,15 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send sql metadata for cache which was created by cache configuration.
+     * GG-26556 Testcase 1:
+     *
+     * 1. Start 1 ignite node.
+     * 2. Create cache by: org.apache.ignite.agent.processor.CacheChangesProcessorTest#getCountryCacheConfig()
+     * 3. Wait for 1 second until message with cache info will be sent to GMC.
+     * 4. Verify that cache info list contains cache with “Country” name.
+     * 5. Wait for 1 second until message with cache sql metadata list will be sent to GMC.
+     * 6. Verify that cache sql metadata list contains metadata for “Country” cache.
+     * 7. Verify that cache sql metadata contains fields: ID, NAME, POPULATION with appropriate types (java.lang.Integer, java.lang.String, java.lang.Integer)
      */
     @Test
     public void shouldSendSqlMetadataForCacheCreatedByCacheConfiguration() throws Exception {
@@ -364,7 +424,15 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send sql metadata for cache which was created by cache configuration with query annotations.
+     * GG-26556 Testcase 2:
+     *
+     * 1. Start 1 ignite node.
+     * 2. Create cache by: org.apache.ignite.agent.processor.CacheChangesProcessorTest#getCountryWithAnnotationsCacheConfig()
+     * 3. Wait 1 second until message with cache info will be send to GMC.
+     * 4. Verify that cache info list contains cache with “CountryWithAnnotations” name.
+     * 5. Wait 1 second until message with cache sql metadata list will be send to GMC.
+     * 6. Verify that cache sql metadata list contains metadata for “CountryWithAnnotations” cache.
+     * 7. Verify that cache sql metadata contains fields: ID, NAME, POPULATION with appropriate types (java.lang.Integer, java.lang.String, java.lang.Integer)
      */
     @Test
     public void shouldSendSqlMetadataForCacheCreatedByCacheConfigurationWithAnnotations() throws Exception {
@@ -405,7 +473,15 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send correct cache info on create and destroy cache events on other nodes.
+     * GG-26556 Testcase 10:
+     *
+     * 1. Start 2 ignite nodes.
+     * 2. Create a REPLICATED cache on second node.
+     * 3. Verify the message with cache info is sent to GMC in less than 1 second.
+     * 4. Verify that cache info list contains the cache created.
+     * 5. Destroy the cache.
+     * 6. Wait for 1 second until message with cache info will be sent to GMC.
+     * 7. Verify that cache info list does not contains the cache anymore.
      */
     @Test
     public void shouldSendCacheInfoIfReplicatedCacheCreatedOnOtherNode() throws Exception {
@@ -440,7 +516,15 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Should send correct cache info on create and destroy replicated cache events triggered by sql.
+     * GG-26556 Testcase 11:
+     *
+     * 1. Start 1 ignite node.
+     * 2. Execute SQL query: "CREATE TABLE mc_agent_test_table_1 (id int, value int, PRIMARY KEY (id)) WITH "template=replicated";"
+     * 3. Wait 1 second until message with cache info will be send to GMC.
+     * 4. Verify that cache info list contains cache with “SQL_PUBLIC_MC_AGENT_TEST_TABLE_1” name.
+     * 5. Execute SQL query: "DROP TABLE mc_agent_test_table_1;"
+     * 6. Wait for 1 second until message with cache info will be sent to GMC.
+     * 7. Verify that cache info list does not contain cache with “SQL_PUBLIC_MC_AGENT_TEST_TABLE_1” name.
      */
     @Test
     public void shouldSendCacheInfoOnCreatedOrDestroyedReplicatedCacheFromSql() throws Exception {
