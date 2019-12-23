@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -69,6 +71,7 @@ import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.IgniteTree;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.lang.GridTreePrinter;
+import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -2443,6 +2446,21 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     }
 
     /**
+     * Releases the lock that is held by long tree destroy process for a short period of time and acquires it again,
+     * allowing other processes to acquire it.
+     * @param lockedPages Deque of locked pages. {@link GridTuple3} contains page id, page pointer and page address.
+     * Pages are ordered in that order as they were locked by destroy method. We unlock them in reverse order and
+     * unlock in direct order.
+     */
+    private void temporaryReleaseLock(Deque<GridTuple3<Long, Long, Long>> lockedPages) {
+        lockedPages.iterator().forEachRemaining(t -> writeUnlock(t.get1(), t.get2(), t.get3(), true));
+
+        temporaryReleaseLock();
+
+        lockedPages.descendingIterator().forEachRemaining(t -> writeLock(t.get1(), t.get2()));
+    }
+
+    /**
      * Maximum time for which tree destroy process is allowed to hold the lock, after this time exceeds,
      * {@link BPlusTree#temporaryReleaseLock()} is called and hold time is reset.
      *
@@ -2490,12 +2508,16 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
         AtomicLong lockHoldStartTime = new AtomicLong(U.currentTimeMillis());
 
+        Deque<GridTuple3<Long, Long, Long>> lockedPages = new LinkedList<>();
+
         final long lockMaxTime = maxLockHoldTime();
 
         long metaPage = acquirePage(metaPageId);
 
         try  {
             long metaPageAddr = writeLock(metaPageId, metaPage); // No checks, we must be out of use.
+
+            lockedPages.push(new GridTuple3<>(metaPageId, metaPage, metaPageAddr));
 
             try {
                 assert metaPageAddr != 0L;
@@ -2507,7 +2529,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 long rootPageId = getFirstPageId(metaPageId, metaPage, rootLvl, metaPageAddr);
 
-                pagesCnt += destroyDownPages(bag, rootPageId, 0L, rootLvl, c, lockHoldStartTime, lockMaxTime);
+                pagesCnt += destroyDownPages(bag, rootPageId, 0L, rootLvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
 
                 bag.addFreePage(recyclePage(metaPageId, metaPage, metaPageAddr, null));
 
@@ -2515,6 +2537,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
             finally {
                 writeUnlock(metaPageId, metaPage, metaPageAddr, true);
+
+                lockedPages.pop();
             }
         }
         finally {
@@ -2539,6 +2563,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      * @param c Visitor closure. Visits only leaf pages.
      * @param lockHoldStartTime When lock has been aquired last time.
      * @param lockMaxTime Maximum time to hold the lock.
+     * @param lockedPages Deque of locked pages. Is used to release write-locked pages when temporary releasing
+     * checkpoint read lock.
      * @return Count of destroyed pages.
      * @throws IgniteCheckedException If failed.
      */
@@ -2549,7 +2575,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         int lvl,
         IgniteInClosure<L> c,
         AtomicLong lockHoldStartTime,
-        long lockMaxTime
+        long lockMaxTime,
+        Deque<GridTuple3<Long, Long, Long>> lockedPages
     ) throws IgniteCheckedException {
         if (pageId == 0)
             return 0;
@@ -2561,7 +2588,10 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
         try {
             long pageAddr = writeLock(pageId, page);
 
-            assert pageAddr != 0L;
+            if (pageAddr == 0L)
+                return 0; // This page was possibly recycled, but we still need to destroy the rest of the tree.
+
+            lockedPages.push(new GridTuple3<>(pageId, page, pageAddr));
 
             try {
                 BPlusIO<L> io = io(pageAddr);
@@ -2588,7 +2618,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             lvl - 1,
                             c,
                             lockHoldStartTime,
-                            lockMaxTime
+                            lockMaxTime,
+                            lockedPages
                         );
                     }
 
@@ -2614,7 +2645,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                     long leftId = inner(io).getLeft(pageAddr, cnt); // The same as io.getRight(cnt - 1) but works for routing pages.
 
-                    pagesCnt += destroyDownPages(bag, leftId, fwdId, lvl - 1, c, lockHoldStartTime, lockMaxTime);
+                    pagesCnt += destroyDownPages(bag, leftId, fwdId, lvl - 1, c, lockHoldStartTime, lockMaxTime, lockedPages);
                 }
 
                 if (c != null && io.isLeaf())
@@ -2626,10 +2657,12 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
             }
             finally {
                 writeUnlock(pageId, page, pageAddr, true);
+
+                lockedPages.pop();
             }
 
             if (U.currentTimeMillis() - lockHoldStartTime.get() > lockMaxTime) {
-                temporaryReleaseLock();
+                temporaryReleaseLock(lockedPages);
 
                 lockHoldStartTime.set(U.currentTimeMillis());
             }

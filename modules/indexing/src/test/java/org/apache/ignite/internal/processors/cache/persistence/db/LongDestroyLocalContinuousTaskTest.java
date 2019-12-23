@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -52,6 +53,7 @@ import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
+import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesPartitionResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
@@ -653,7 +655,8 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
             int lvl,
             IgniteInClosure<H2Row> c,
             AtomicLong lockHoldStartTime,
-            long lockMaxTime
+            long lockMaxTime,
+            Deque<GridTuple3<Long, Long, Long>> lockedPages
         ) throws IgniteCheckedException {
             doSleep(TIME_FOR_EACH_INDEX_PAGE_TO_DESTROY);
 
@@ -665,7 +668,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
                     throw new RuntimeException("Aborting destroy (test).");
             }
 
-            return super.destroyDownPages(bag, pageId, fwdId, lvl, c, lockHoldStartTime, lockMaxTime);
+            return super.destroyDownPages(bag, pageId, fwdId, lvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
         }
     }
 }
