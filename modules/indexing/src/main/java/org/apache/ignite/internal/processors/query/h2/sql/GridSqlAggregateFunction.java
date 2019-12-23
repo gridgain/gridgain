@@ -102,6 +102,16 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
     }
 
     /**
+     * @param type Type.
+     * @param name Name.
+     */
+    public GridSqlAggregateFunction(GridSqlFunctionType type, String name) {
+        super(null, type, name);
+
+        this.distinct = false;
+    }
+
+    /**
      * Checks if the aggregate type is valid.
      *
      * @param type Aggregate type.

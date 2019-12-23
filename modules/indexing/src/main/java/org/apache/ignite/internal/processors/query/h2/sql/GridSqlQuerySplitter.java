@@ -51,11 +51,7 @@ import org.h2.table.Column;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.join.CollocationModel.isCollocated;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlConst.TRUE;
-import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.AVG;
-import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.CAST;
-import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.COUNT;
-import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.GROUP_CONCAT;
-import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.SUM;
+import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.*;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlJoin.LEFT_TABLE_CHILD;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlJoin.ON_CHILD;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlJoin.RIGHT_TABLE_CHILD;
@@ -1745,6 +1741,9 @@ public class GridSqlQuerySplitter {
                     .addChild(SplitterUtils.column(mapAggAlias.alias()));
 
                 break;
+
+            case UNKNOWN_FUNCTION:
+                throw new IgniteSQLException("Custom aggregation function is not supported for not collocated data.", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
 
             default:
                 throw new IgniteException("Unsupported aggregate: " + agg.type());
