@@ -51,7 +51,8 @@ namespace test_proj
                 ClientConnectorConfiguration = new ClientConnectorConfiguration
                 {
                     Port = 10842 
-                }
+                },
+                Localhost = "127.0.0.1"
             };
 
             using (var ignite = Ignition.Start(cfg))
