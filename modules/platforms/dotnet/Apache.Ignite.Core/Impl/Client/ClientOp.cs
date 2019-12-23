@@ -73,15 +73,16 @@ namespace Apache.Ignite.Core.Impl.Client
 
         // Cluster.
         [MinVersion(1, 5, 0)]
-        ClusterIsActive = 4000,
-        
+        ClusterIsActive = 5000,
         [MinVersion(1, 5, 0)]
-        ClusterChangeState = 4001,
-        
+        ClusterChangeState = 5001,
         [MinVersion(1, 5, 0)]
-        ClusterChangeWalState = 4002,
-        
+        ClusterChangeWalState = 5002,
         [MinVersion(1, 5, 0)]
-        ClusterGetWalState = 4003
+        ClusterGetWalState = 5003,
+        [MinVersion(1, 5, 0)]
+        ClusterGroupGetNodeIds = 5100,
+        [MinVersion(1, 5, 0)]
+        ClusterGroupGetNodesInfo = 5101
     }
 }
