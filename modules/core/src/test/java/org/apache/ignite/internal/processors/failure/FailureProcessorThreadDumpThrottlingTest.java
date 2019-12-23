@@ -66,11 +66,11 @@ public class FailureProcessorThreadDumpThrottlingTest extends GridCommonAbstract
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
         testLog.clearListeners();
 
         stopAllGrids();
+
+        super.afterTest();
     }
 
     /**
