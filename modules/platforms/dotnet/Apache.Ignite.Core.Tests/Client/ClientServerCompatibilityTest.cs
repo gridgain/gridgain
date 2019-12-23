@@ -138,6 +138,11 @@ namespace Apache.Ignite.Core.Tests.Client
         [Test]
         public void TestWithExpiryPolicyThrowCorrectExceptionOnVersionsOlderThan150()
         {
+            if (_clientProtocolVersion >= ClientSocket.Ver150)
+            {
+                return;
+            }
+            
             using (var client = StartClient())
             {
                 var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
