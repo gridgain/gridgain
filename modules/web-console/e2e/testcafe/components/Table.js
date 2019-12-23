@@ -16,12 +16,22 @@
 
 import {Selector, t} from 'testcafe';
 
-const findCell = Selector((table, rowIndex, columnLabel) => {
-    const _findRowElement = (table, containerSelector) => {
-        const columnIndex = [].constructor.from(
+/**
+ * Find a selector for a table cell by the specified parameters.
+ *
+ * @param {Selector} table Table selector to find a cell selector.
+ * @param {number} rowIndex Row index to get a cell selector.
+ * @param {string|number} columnId Column identificator to get a cell selector. Column label or column index.
+ *     Use negative index to find in fixed columns.
+ * @type {Selector} A table cell selector.
+ */
+const findCell = Selector((table, rowIndex, columnId) => {
+    const _findRowElement = (table, containerSelector, columnId) => {
+        const columnIndex = typeof columnId === 'string' ? [].constructor.from(
             table.querySelectorAll(`${containerSelector} .ui-grid-header-cell:not(.ui-grid-header-span)`),
             (e) => e.textContent
-        ).findIndex((t) => t.includes(columnLabel));
+        ).findIndex((t) => t.includes(columnId))
+            : columnId;
 
         if (columnIndex < 0)
             return null;
@@ -33,10 +43,14 @@ const findCell = Selector((table, rowIndex, columnLabel) => {
 
     table = table();
 
-    let row = _findRowElement(table, '.ui-grid-render-container.left');
+    let row = _findRowElement(
+        table,
+        '.ui-grid-render-container.left',
+        typeof columnId === 'string' ? columnId : -columnId
+    );
 
     if (!row)
-        row = _findRowElement(table, '.ui-grid-render-container:not(.left)');
+        row = _findRowElement(table, '.ui-grid-render-container:not(.left)', columnId);
 
     if (row && row.element)
         return row.element.querySelectorAll(`.ui-grid-cell`)[row.columnIndex];
@@ -49,8 +63,6 @@ const findFilter = Selector((table, columnLabel) => {
         const header = [].constructor.from(
             table.querySelectorAll(`${containerSelector} .ui-grid-header-cell:not(.ui-grid-header-span)`)
         ).find((t) => t.textContent.includes(columnLabel));
-
-        console.log(header);
 
         if (!header)
             return null;
@@ -101,11 +113,12 @@ export class Table {
     }
 
     /**
-     * @param {number} rowIndex
-     * @param {string} columnLabel
+     * @param {number} rowIndex Row index to get cell selector
+     * @param {string|number} columnId Column identificator to get cell selector. Column label or column index.
+     *     Use negative index to find in fixed columns.
      */
-    findCell(rowIndex, columnLabel) {
-        return Selector(findCell(this._selector, rowIndex, columnLabel));
+    findCell(rowIndex, columnId) {
+        return Selector(findCell(this._selector, rowIndex, columnId));
     }
 
     /**
