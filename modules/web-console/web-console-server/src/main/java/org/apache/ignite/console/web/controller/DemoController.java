@@ -42,6 +42,7 @@ public class DemoController {
 
     /**
      * Reset demo configuration.
+     * 
      * @param acc Account.
      */
     @PostMapping(path = "/reset")

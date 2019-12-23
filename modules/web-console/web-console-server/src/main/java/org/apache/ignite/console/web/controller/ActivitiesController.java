@@ -48,6 +48,7 @@ public class ActivitiesController {
 
     /**
      * Save user's activity.
+     *
      * @param acc Account.
      */
     @PostMapping(path = "/page", consumes = APPLICATION_JSON_VALUE)

@@ -66,6 +66,7 @@ public class TestController {
 
     /**
      * Register and authenticate under admin user.
+     *
      * @param params SignUp params.
      */
     @PutMapping(path = "/admins")
@@ -87,6 +88,7 @@ public class TestController {
 
     /**
      * Delete test users by mask.
+     * 
      * @param email Email mask.
      */
     @DeleteMapping(path = "/users/{email}")

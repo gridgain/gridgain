@@ -53,6 +53,7 @@ public class NotebooksController {
 
     /**
      * Get user's notebooks.
+     * 
      * @param acc Account.
      * @return Collection of notebooks.
      */
@@ -63,6 +64,7 @@ public class NotebooksController {
 
     /**
      * Save user's notebook.
+     *
      * @param acc Account.
      */
     @PutMapping(consumes = APPLICATION_JSON_VALUE)
@@ -74,6 +76,7 @@ public class NotebooksController {
 
     /**
      * Delete user's notebook.
+     *
      * @param acc Account.
      * @param notebookId Notebook ID.
      */
