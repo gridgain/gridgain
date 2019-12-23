@@ -2699,13 +2699,9 @@ public class IgniteConfiguration {
      *
      * @param state New cluster state on start.
      * @return {@code this} for chaining.
-     * @throws NullPointerException If {@code state} is {@code null}.
      * @see #getClusterStateOnStart() 
      */
-    public IgniteConfiguration setClusterStateOnStart(ClusterState state) throws NullPointerException {
-        if (state == null)
-            throw new NullPointerException("Cluster state on start can't be null.");
-
+    public IgniteConfiguration setClusterStateOnStart(ClusterState state) {
         this.clusterStateOnStart = state;
 
         return this;
