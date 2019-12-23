@@ -30,12 +30,25 @@
         <maven.compiler.target>1.7</maven.compiler.target>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>GridGain External Repository</id>
+            <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+        </repository>
+    </repositories>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.ignite</groupId>
             <artifactId>ignite-core</artifactId>
             <version>2.7.6</version>
         </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.gridgain</groupId>-->
+<!--            <artifactId>ignite-core</artifactId>-->
+<!--            <version>8.7.7</version>-->
+<!--        </dependency>-->
     </dependencies>
 
 </project>
