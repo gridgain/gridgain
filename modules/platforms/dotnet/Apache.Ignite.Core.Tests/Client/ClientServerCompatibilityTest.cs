@@ -33,17 +33,23 @@ namespace Apache.Ignite.Core.Tests.Client
     /// Differs from <see cref="ClientProtocolCompatibilityTest"/>:
     /// here we actually download and run old Ignite versions instead of changing the protocol version in handshake.
     /// </summary>
-    [TestFixture("2.4.0", "1.0.0")]
-    [TestFixture("2.5.0", "1.1.0")]
-    [TestFixture("2.6.0", "1.1.0")]
-    [TestFixture("2.7.0", "1.2.0")]
-    [TestFixture("2.7.5", "1.2.0")]
-    [TestFixture("2.7.6", "1.2.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.4.0", "1.0.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.5.0", "1.1.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.6.0", "1.1.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.7.0", "1.2.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.7.5", "1.2.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.7.6", "1.2.0")]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.6", "1.2.0")]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.7", "1.2.0")]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.8", "1.2.0")]
     [Category(TestUtils.CategoryIntensive)]
     public class ClientServerCompatibilityTest
     {
         /** */
-        private readonly string _igniteVersion;
+        private readonly string _groupId;
+        
+        /** */
+        private readonly string _serverVersion;
         
         /** */
         private readonly string _clientProtocolVersion;
@@ -54,9 +60,10 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Initializes a new instance of <see cref="ClientServerCompatibilityTest"/>.
         /// </summary>
-        public ClientServerCompatibilityTest(string igniteVersion, string clientProtocolVersion)
+        public ClientServerCompatibilityTest(string groupId, string serverVersion, string clientProtocolVersion)
         {
-            _igniteVersion = igniteVersion;
+            _groupId = groupId;
+            _serverVersion = serverVersion;
             _clientProtocolVersion = clientProtocolVersion;
         }
 
@@ -66,7 +73,7 @@ namespace Apache.Ignite.Core.Tests.Client
         [TestFixtureSetUp]
         public void FixtureSetUp()
         {
-            _server = JavaServer.Start(_igniteVersion);
+            _server = JavaServer.Start(_groupId, _serverVersion);
         }
 
         /// <summary>
