@@ -21,7 +21,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 
 /**
- *
+ * Tests that cluster state change works correctly with connected fat client in different situations.
  */
 public abstract class ClusterStateClientAbstractTest extends ClusterStateAbstractTest {
     /** */

@@ -29,7 +29,7 @@ import org.apache.ignite.internal.client.GridClientProtocol;
 import static org.apache.ignite.configuration.ConnectorConfiguration.DFLT_TCP_PORT;
 
 /**
- *
+ * Tests that cluster state change works correctly with connected thin client in different situations.
  */
 public abstract class ClusterStateThinClientAbstractTest extends ClusterStateAbstractTest {
     /** */

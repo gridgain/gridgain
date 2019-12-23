@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.processors.cache.ClusterStateTestUtils.
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsAnyCause;
 
 /**
- *
+ * Tests that cluster state change works correctly in different situations.
  */
 public abstract class ClusterStateServerAbstractTest extends ClusterStateAbstractTest {
     /** */
