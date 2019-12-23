@@ -377,7 +377,17 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         exchWorker = new ExchangeWorker();
 
-        latchMgr = new ExchangeLatchManager(cctx.kernalContext());
+        GridKernalContext ctx = cctx.kernalContext();
+
+        latchMgr = new ExchangeLatchManager(
+            ctx::localNodeId,
+            ctx.log(ExchangeLatchManager.class),
+            ctx.discovery(),
+            ctx.io(),
+            ctx.event(),
+            ctx.closure(),
+            !ctx.clientNode() && !ctx.isDaemon()
+        );
 
         cctx.gridEvents().addDiscoveryEventListener(discoLsnr, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED,
             EVT_DISCOVERY_CUSTOM_EVT);

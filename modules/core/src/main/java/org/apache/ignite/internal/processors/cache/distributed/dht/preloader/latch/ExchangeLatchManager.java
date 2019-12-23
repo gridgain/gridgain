@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -30,23 +31,26 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
+import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
@@ -72,7 +76,7 @@ public class ExchangeLatchManager {
     private final IgniteLogger log;
 
     /** Context. */
-    private final GridKernalContext ctx;
+    private final Supplier<UUID> localNodeId;
 
     /** Discovery manager. */
     @GridToStringExclude
@@ -101,12 +105,12 @@ public class ExchangeLatchManager {
     @GridToStringExclude
     private final ConcurrentMap<AffinityTopologyVersion, ClusterNode> joinedNodes = new ConcurrentHashMap<>();
 
-    /** This map holds version on which ack message have been received before local latch was created. */
-    private final ConcurrentSkipListMap<AffinityTopologyVersion, GridFutureAdapter<Object>> awaitedLatchVersions =
-        new ConcurrentSkipListMap<>();
+    /** This map holds version per latch id on which ack message have been received before local latch was created. */
+    private final Map<String, NavigableMap<AffinityTopologyVersion, GridFutureAdapter<Object>>> awaitedLatchVersions =
+        new ConcurrentHashMap<>();
 
-    /** Topology version of last created latch. It needs for support {@link #awaitedLatchVersions}. */
-    private volatile AffinityTopologyVersion topVerOfLastLatch = null;
+    /** Topology version of last created latch per latch id. It needs for support {@link #awaitedLatchVersions}. */
+    private volatile ConcurrentMap<String, AffinityTopologyVersion> topVerOfLastLatch = new ConcurrentHashMap<>();
 
     /** Lock. */
     private final ReentrantLock lock = new ReentrantLock();
@@ -116,38 +120,39 @@ public class ExchangeLatchManager {
      *
      * @param ctx Kernal context.
      */
-    public ExchangeLatchManager(GridKernalContext ctx) {
-        this.ctx = ctx;
-        this.log = ctx.log(getClass());
-        this.discovery = ctx.discovery();
-        this.io = ctx.io();
+    public ExchangeLatchManager(Supplier<UUID> localNodeId, IgniteLogger log, GridDiscoveryManager discovery, GridIoManager io,
+        GridEventStorageManager event, GridClosureProcessor closure, boolean isServerNode) {
+        this.localNodeId = localNodeId;
+        this.log = log;
+        this.discovery = discovery;
+        this.io = io;
 
-        if (!ctx.clientNode() && !ctx.isDaemon()) {
-            ctx.io().addMessageListener(GridTopic.TOPIC_EXCHANGE, (nodeId, msg, plc) -> {
+        if (isServerNode) {
+            io.addMessageListener(GridTopic.TOPIC_EXCHANGE, (nodeId, msg, plc) -> {
                 if (msg instanceof LatchAckMessage)
                     processAck(nodeId, (LatchAckMessage) msg);
             });
 
             // First coordinator initialization.
-            ctx.discovery().localJoinFuture().listen(f -> {
+            discovery.localJoinFuture().listen(f -> {
                 if (f.error() == null)
                     this.crd = getLatchCoordinator(AffinityTopologyVersion.NONE);
             });
 
-            ctx.event().addDiscoveryEventListener((e, cache) -> {
+            event.addDiscoveryEventListener((e, cache) -> {
                 assert e != null;
                 assert e.type() == EVT_NODE_LEFT || e.type() == EVT_NODE_FAILED : this;
 
                 // Do not process from discovery thread.
                 // TODO: Should use queue to guarantee the order of processing left nodes.
-                ctx.closure().runLocalSafe(new GridPlainRunnable() {
+                closure.runLocalSafe(new GridPlainRunnable() {
                     @Override public void run() {
                         processNodeLeft(cache.version(), e.eventNode());
                     }
                 });
             }, EVT_NODE_LEFT, EVT_NODE_FAILED);
 
-            ctx.event().addDiscoveryEventListener((e, cache) -> {
+            event.addDiscoveryEventListener((e, cache) -> {
                 assert e != null;
                 assert e.type() == EVT_NODE_JOINED;
 
@@ -245,7 +250,7 @@ public class ExchangeLatchManager {
                 ? createServerLatch(latchUid, participants)
                 : createClientLatch(latchUid, coordinator, participants);
 
-            updateLastLatchVersion(topVer);
+            updateLastLatchVersion(id, topVer);
 
             return createdLatch;
         }
@@ -257,14 +262,18 @@ public class ExchangeLatchManager {
     /**
      * Update last latch version and notify corresponded waiters if their exist.
      *
+     * @param latchId Latch id.
      * @param topVer New topology version.
      */
-    private void updateLastLatchVersion(AffinityTopologyVersion topVer) {
-        topVerOfLastLatch = topVer;
+    private void updateLastLatchVersion(String latchId, AffinityTopologyVersion topVer) {
+        topVerOfLastLatch.put(latchId, topVer);
 
-        if (!awaitedLatchVersions.isEmpty()) {
+        NavigableMap<AffinityTopologyVersion, GridFutureAdapter<Object>> awaitedLatches =
+            awaitedLatchVersions.get(latchId);
+
+        if (!F.isEmpty(awaitedLatches)) {
             Iterator<Map.Entry<AffinityTopologyVersion, GridFutureAdapter<Object>>> it =
-                awaitedLatchVersions.headMap(topVer, true).entrySet().iterator();
+                awaitedLatches.headMap(topVer, true).entrySet().iterator();
 
             while (it.hasNext()) {
                 it.next().getValue().onDone();
@@ -405,8 +414,10 @@ public class ExchangeLatchManager {
         lock.lock();
 
         try {
-            if (!isLocalLatchCreated(message.topVer())) {
-                awaitedLatchVersions.computeIfAbsent(message.topVer(), (k) -> new GridFutureAdapter<>())
+            if (!isLocalLatchCreated(message.latchId(), message.topVer())) {
+                awaitedLatchVersions
+                    .computeIfAbsent(message.latchId(), (k) -> new ConcurrentSkipListMap<>())
+                    .computeIfAbsent(message.topVer(), (k) -> new GridFutureAdapter<>())
                     .listen((f) -> processAck0(from, message));
 
                 return;
@@ -420,11 +431,14 @@ public class ExchangeLatchManager {
     }
 
     /**
+     * @param latchId Latch id.
      * @param topVer Topology version.
      * @return {@code true} if local latch have been created already.
      */
-    private boolean isLocalLatchCreated(AffinityTopologyVersion topVer) {
-        return topVerOfLastLatch != null && topVer.compareTo(topVerOfLastLatch) <= 0;
+    private boolean isLocalLatchCreated(String latchId, AffinityTopologyVersion topVer) {
+        AffinityTopologyVersion version = topVerOfLastLatch.get(latchId);
+
+        return version != null && topVer.compareTo(version) <= 0;
     }
 
     /**
@@ -700,7 +714,7 @@ public class ExchangeLatchManager {
 
         /** {@inheritDoc} */
         @Override public void countDown() {
-            countDown0(ctx.localNodeId());
+            countDown0(localNodeId.get());
         }
 
         /** {@inheritDoc} */
