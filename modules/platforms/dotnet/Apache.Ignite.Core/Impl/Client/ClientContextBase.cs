@@ -16,47 +16,63 @@
 
 namespace Apache.Ignite.Core.Impl.Client
 {
+    using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
 
     /// <summary>
-    /// Request context.
+    /// Base class for client context.
     /// </summary>
-    internal sealed class ClientRequestContext : ClientContextBase
+    internal abstract class ClientContextBase
     {
         /** */
-        private BinaryWriter _writer;
+        private readonly IBinaryStream _stream;
 
+        /** */
+        private readonly Marshaller _marshaller;
+
+        /** */
+        private readonly ClientProtocolVersion _protocolVersion;
+        
         /// <summary>
         /// Initializes a new instance of <see cref="ClientRequestContext"/> class.
         /// </summary>
         /// <param name="stream">Stream.</param>
         /// <param name="marshaller">Marshaller.</param>
         /// <param name="protocolVersion">Protocol version to be used for this request.</param>
-        public ClientRequestContext(IBinaryStream stream, Marshaller marshaller, ClientProtocolVersion protocolVersion)
-            : base(stream, marshaller, protocolVersion)
-
+        protected ClientContextBase(IBinaryStream stream, Marshaller marshaller, ClientProtocolVersion protocolVersion)
         {
-            // No-op.
+            Debug.Assert(stream != null);
+            Debug.Assert(marshaller != null);
+            
+            _stream = stream;
+            _marshaller = marshaller;
+            _protocolVersion = protocolVersion;
         }
 
         /// <summary>
-        /// Writer.
+        /// Stream.
         /// </summary>
-        public BinaryWriter Writer
+        public IBinaryStream Stream
         {
-            get { return _writer ?? (_writer = Marshaller.StartMarshal(Stream)); }
+            get { return _stream; }
         }
 
         /// <summary>
-        /// Finishes marshal session for this request (if any).
+        /// Gets the marshaller.
         /// </summary>
-        public void FinishMarshal()
+        public Marshaller Marshaller
         {
-            if (_writer != null)
-            {
-                Marshaller.FinishMarshal(_writer);
-            }
+            get { return _marshaller; }
+        }
+        
+        /// <summary>
+        /// Protocol version to be used for this request.
+        /// (Takes partition awareness, failover and reconnect into account).
+        /// </summary>
+        public ClientProtocolVersion ProtocolVersion
+        {
+            get { return _protocolVersion; }
         }
     }
 }

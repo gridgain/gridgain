@@ -16,27 +16,17 @@
 
 namespace Apache.Ignite.Core.Impl.Client
 {
-    using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
 
     /// <summary>
     /// Response context.
     /// </summary>
-    internal class ClientResponseContext
+    internal sealed class ClientResponseContext : ClientContextBase
     {
         /** */
-        private readonly IBinaryStream _stream;
-        
-        /** */
-        private readonly Marshaller _marshaller;
-
-        /** */
-        private readonly ClientProtocolVersion _protocolVersion;
-
-        /** */
         private BinaryReader _reader;
-        
+
         /// <summary>
         /// Initializes a new instance of <see cref="ClientResponseContext"/> class.
         /// </summary>
@@ -44,38 +34,17 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <param name="marshaller">Marshaller.</param>
         /// <param name="protocolVersion">Protocol version to be used for this response.</param>
         public ClientResponseContext(IBinaryStream stream, Marshaller marshaller, ClientProtocolVersion protocolVersion)
+            : base(stream, marshaller, protocolVersion)
         {
-            Debug.Assert(stream != null);
-            Debug.Assert(marshaller != null);
-            
-            _stream = stream;
-            _marshaller = marshaller;
-            _protocolVersion = protocolVersion;
-        }
-        
-        /// <summary>
-        /// Protocol version that is used to read this response.
-        /// (Takes partition awareness, failover and reconnect into account).
-        /// </summary>
-        public ClientProtocolVersion ProtocolVersion
-        {
-            get { return _protocolVersion; }
+            // No-op.
         }
 
-        /// <summary>
-        /// Stream.
-        /// </summary>
-        public IBinaryStream Stream
-        {
-            get { return _stream; }
-        }
-        
         /// <summary>
         /// Reader.
         /// </summary>
         public BinaryReader Reader
         {
-            get { return _reader ?? (_reader = _marshaller.StartUnmarshal(_stream)); }
+            get { return _reader ?? (_reader = Marshaller.StartUnmarshal(Stream)); }
         }
     }
 }
