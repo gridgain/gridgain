@@ -18,6 +18,7 @@ package org.apache.ignite.agent.processor;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -126,10 +127,10 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
     private Collection<CacheSqlMetadata> getCacheSqlMetadata() {
         GridCacheProcessor cacheProc = ctx.cache();
 
-        List<CacheSqlMetadata> cachesMetadata = new ArrayList<>();
+        Collection<CacheSqlMetadata> cachesMetadata = new HashSet<>();
 
         for (Map.Entry<String, DynamicCacheDescriptor> item : cacheProc.cacheDescriptors().entrySet()) {
-            if (item.getValue().sql()) {
+            if (!item.getValue().schema().entities().isEmpty() && !isSystemCache(item.getKey())) {
                 String cacheName = item.getKey();
 
                 Collection<GridQueryTypeDescriptor> types = ctx.query().types(cacheName);
@@ -160,6 +161,7 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
                     new CacheInfo()
                         .setName(item.getKey())
                         .setDeploymentId(cd.deploymentId())
+                        .setCreatedBySql(item.getValue().sql())
                         .setGroup(cd.groupDescriptor().groupName())
                 );
             }
