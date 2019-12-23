@@ -65,7 +65,7 @@ public final class AgentUtils {
      * @param clusterId Cluster ID.
      */
     public static String monitoringUri(String srvUri, UUID clusterId) {
-        return srvUri + "/clusters/" + clusterId + "/monitoring-dashboard";
+        return URI.create(srvUri + "/clusters/" + clusterId + "/monitoring-dashboard").normalize().toString();
     }
 
     /**
