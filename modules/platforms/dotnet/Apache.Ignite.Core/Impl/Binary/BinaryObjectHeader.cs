@@ -345,13 +345,17 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Equality operator.
+        /// </summary>
         public static bool operator ==(BinaryObjectHeader left, BinaryObjectHeader right)
         {
             return left.Equals(right);
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Inequality operator.
+        /// </summary>
         public static bool operator !=(BinaryObjectHeader left, BinaryObjectHeader right)
         {
             return !left.Equals(right);

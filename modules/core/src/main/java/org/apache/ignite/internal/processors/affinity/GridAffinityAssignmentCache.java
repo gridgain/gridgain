@@ -368,7 +368,7 @@ public class GridAffinityAssignmentCache {
             if (hasBaseline && changedBaseline) {
                 recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(topVer));
+                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(discoCache));
             }
             else if (skipCalculation)
                 assignment = prevAssignment;
@@ -376,7 +376,7 @@ public class GridAffinityAssignmentCache {
                 if (baselineAssignment == null)
                     recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(topVer));
+                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(discoCache));
             }
             else {
                 List<List<ClusterNode>> calculated = aff.assignPartitions(new GridAffinityFunctionContextImpl(
@@ -394,7 +394,7 @@ public class GridAffinityAssignmentCache {
             if (hasBaseline) {
                 recalculateBaselineAssignment(topVer, events, prevAssignment, sorted, blt);
 
-                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(topVer));
+                assignment = IdealAffinityAssignment.create(topVer, baselineAssignmentWithoutOfflineNodes(discoCache));
             }
             else {
                 List<List<ClusterNode>> calculated = aff.assignPartitions(new GridAffinityFunctionContextImpl(sorted,
@@ -459,16 +459,14 @@ public class GridAffinityAssignmentCache {
     }
 
     /**
-     * @param topVer Topology version.
+     * @param disco Discovery history.
      * @return Baseline assignment with filtered out offline nodes.
      */
-    private List<List<ClusterNode>> baselineAssignmentWithoutOfflineNodes(AffinityTopologyVersion topVer) {
+    private List<List<ClusterNode>> baselineAssignmentWithoutOfflineNodes(DiscoCache disco) {
         Map<Object, ClusterNode> alives = new HashMap<>();
 
-        for (ClusterNode node : ctx.discovery().nodes(topVer)) {
-            if (!node.isClient() && !node.isDaemon())
-                alives.put(node.consistentId(), node);
-        }
+        for (ClusterNode node : disco.serverNodes())
+            alives.put(node.consistentId(), node);
 
         List<List<ClusterNode>> assignment = baselineAssignment.assignment();
 
