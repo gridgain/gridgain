@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Configuration;
+    using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
@@ -33,17 +34,17 @@ namespace Apache.Ignite.Core.Tests.Client
     /// Differs from <see cref="ClientProtocolCompatibilityTest"/>:
     /// here we actually download and run old Ignite versions instead of changing the protocol version in handshake.
     /// </summary>
-    [TestFixture(JavaServer.GroupIdIgnite, "2.4.0", "1.0.0")]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.5.0", "1.1.0")]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.5.9", "1.1.0")]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.6.0", "1.1.0")]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.7.0", "1.2.0")]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.7.5", "1.2.0")]
-    [TestFixture(JavaServer.GroupIdIgnite, "2.7.6", "1.2.0")]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.3", "1.2.0")]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.6", "1.2.0")]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.7", "1.2.0")]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.8", "1.4.0")]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.4.0", 0)]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.5.0", 1)]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.5.9", 1)]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.6.0", 1)]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.7.0", 2)]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.7.5", 2)]
+    [TestFixture(JavaServer.GroupIdIgnite, "2.7.6", 2)]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.3", 2)]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.6", 2)]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.7", 2)]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.8", 4)]
     [Category(TestUtils.CategoryIntensive)]
     public class ClientServerCompatibilityTest
     {
@@ -54,7 +55,7 @@ namespace Apache.Ignite.Core.Tests.Client
         private readonly string _serverVersion;
         
         /** */
-        private readonly string _clientProtocolVersion;
+        private readonly ClientProtocolVersion _clientProtocolVersion;
 
         /** Server node holder. */
         private IDisposable _server;
@@ -62,11 +63,11 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Initializes a new instance of <see cref="ClientServerCompatibilityTest"/>.
         /// </summary>
-        public ClientServerCompatibilityTest(string groupId, string serverVersion, string clientProtocolVersion)
+        public ClientServerCompatibilityTest(string groupId, string serverVersion, int clientProtocolVersion)
         {
             _groupId = groupId;
             _serverVersion = serverVersion;
-            _clientProtocolVersion = clientProtocolVersion;
+            _clientProtocolVersion = new ClientProtocolVersion(1, (short) clientProtocolVersion, 0);
         }
 
         /// <summary>
@@ -110,7 +111,7 @@ namespace Apache.Ignite.Core.Tests.Client
             using (var client = StartClient())
             {
                 ClientProtocolCompatibilityTest.TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
-                    client, _clientProtocolVersion);
+                    client, _clientProtocolVersion.ToString());
             }
         }
         
@@ -122,7 +123,9 @@ namespace Apache.Ignite.Core.Tests.Client
         {
             using (var client = StartClient())
             {
-                Assert.IsFalse(client.GetConfiguration().EnablePartitionAwareness);
+                var expectedPartitionAwareness = _clientProtocolVersion >= ClientSocket.Ver140;
+                Assert.AreEqual(expectedPartitionAwareness, client.GetConfiguration().EnablePartitionAwareness);
+                
                 var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
                 cache.Put(1, 2);
                 Assert.AreEqual(2, cache.Get(1));
@@ -141,7 +144,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 var cacheWithExpiry = cache.WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(1), null, null));
 
                 ClientProtocolCompatibilityTest.AssertNotSupportedOperation(
-                    () => cacheWithExpiry.Put(1, 2), _clientProtocolVersion, "WithExpiryPolicy");
+                    () => cacheWithExpiry.Put(1, 2), _clientProtocolVersion.ToString(), "WithExpiryPolicy");
             }
         }
 
