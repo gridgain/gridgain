@@ -61,7 +61,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
     /** Set SSL context factory to ignite. */
     private static boolean setSslCtxFactoryToIgnite;
 
-    /** Suppoerted ciphers. */
+    /** Supported ciphers. */
     private static String[] supportedCiphers;
 
     /** {@inheritDoc} */
@@ -331,7 +331,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      * @throws Exception If failed.
      *
      * Note: Disabled cipher suite can be enabled via Java Security property "jdk.tls.disabledAlgorithms" or in
-     * <JRE_8_HOME>/lib/security/java.security file.
+     * &lt;JRE_8_HOME&gt;/lib/security/java.security file.
      *
      * Note: java.security file location may be changed for Java 9+ version
      */
@@ -372,7 +372,7 @@ public class JdbcThinConnectionSSLTest extends JdbcThinAbstractSelfTest {
      * @throws Exception If failed.
      *
      * Note: Disabled cipher suite can be enabled via Java Security property "jdk.tls.disabledAlgorithms" or in
-     * <JRE_8_HOME>/lib/security/java.security file.
+     * &lt;JRE_8_HOME&gt;/lib/security/java.security file.
      *
      * Note: java.security file location may be changed for Java 9+ version
      */

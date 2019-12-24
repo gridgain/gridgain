@@ -190,24 +190,4 @@ public class JdbcThinSSLUtil {
                 throw new SQLException("Unknown error.", SqlStateCode.CLIENT_CONNECTION_FAILED, e);
         }
     }
-
-    /**
-     * @param url URL or path to check and convert to URL.
-     * @return URL.
-     * @throws SQLException If URL is invalid.
-     */
-    private static String checkAndConvertUrl(String url) throws SQLException {
-        try {
-            return new URL(url).toString();
-        }
-        catch (MalformedURLException e) {
-            try {
-                return FileSystems.getDefault().getPath(url).toUri().toURL().toString();
-            }
-            catch (MalformedURLException e1) {
-                throw new SQLException("Invalid keystore URL: " + url,
-                    SqlStateCode.CLIENT_CONNECTION_FAILED, e);
-            }
-        }
-    }
 }
