@@ -37,12 +37,9 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
-import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 
 import static java.lang.Integer.parseInt;
 import static java.util.stream.Collectors.groupingBy;
@@ -57,9 +54,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
  */
 @WithSystemProperty(key = "SHOW_EVICTION_PROGRESS_FREQ", value = "10")
 public class EvictPartitionInLogTest extends GridCommonAbstractTest {
-    /** Class rule. */
-    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
-
     /** Listener log messages. */
     private static ListeningTestLogger testLog;
 
@@ -137,7 +131,7 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
      * without duplicate partitions.
      *
      * @throws Exception If failed.
-     * */
+     */
     @Test
     public void testEvictPartByMovingState() throws Exception {
         IgniteEx node = startGrid(0);
@@ -236,7 +230,7 @@ public class EvictPartitionInLogTest extends GridCommonAbstractTest {
         Pattern extractGrpId = Pattern.compile("grpId=([0-9]*)");
 
         LogListener.Builder builder = LogListener.matches(logStr -> {
-            if (logStr.contains("Partitions marked for eviction")) {
+            if (logStr.contains("Partitions have been scheduled for eviction:")) {
                 Matcher grpIdMatcher = extractGrpId.matcher(logStr);
                 Matcher partsMatcher = extractParts.matcher(logStr);
 

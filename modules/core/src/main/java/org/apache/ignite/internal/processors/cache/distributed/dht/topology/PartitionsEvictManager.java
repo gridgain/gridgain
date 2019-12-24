@@ -19,9 +19,11 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -51,18 +53,6 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
  * Multiple partition from group can be evicted at the same time.
  */
 public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
-    /**
-     * Partition evicted after changing to
-     * {@link GridDhtPartitionState#RENTING RENTING} state.
-     */
-    static final byte EVICT_REASON_EVICTION = 0;
-
-    /**
-     * Partition evicted after changing to
-     * {@link GridDhtPartitionState#MOVING MOVING} state.
-     */
-    static final byte EVICT_REASON_CLEARING = 1;
-
     /** Default eviction progress show frequency. */
     private static final int DEFAULT_SHOW_EVICTION_PROGRESS_FREQ_MS = 2 * 60 * 1000; // 2 Minutes.
 
@@ -88,7 +78,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     /**
      * Evicted partitions for printing to log. It works under {@link #mux}.
      */
-    private final Map<Integer, Set<EvictPartition>> logEvictPartByGrps = new HashMap<>();
+    private final Map<Integer, Map<Integer, EvictReason>> logEvictPartByGrps = new HashMap<>();
 
     /** Flag indicates that eviction process has stopped. */
     private volatile boolean stop;
@@ -140,10 +130,11 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     public void evictPartitionAsync(
         CacheGroupContext grp,
         GridDhtLocalPartition part,
-        byte reason
+        EvictReason reason
     ) {
         assert nonNull(grp);
         assert nonNull(part);
+        assert nonNull(reason);
 
         int grpId = grp.groupId();
 
@@ -164,7 +155,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
 
             bucket = evictionQueue.offer(new PartitionEvictionTask(part, grpEvictionCtx, reason));
 
-            logEvictPartByGrps.computeIfAbsent(grpId, i -> new HashSet<>()).add(new EvictPartition(partId, reason));
+            logEvictPartByGrps.computeIfAbsent(grpId, i -> new HashMap<>()).put(partId, reason);
         }
 
         grpEvictionCtx.totalTasks.incrementAndGet();
@@ -276,7 +267,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
                         evictPartJoiner.add("[grpId=" + grpId + ", grpName=" + grpName + ", " + partByReasonStr + ']');
                     });
 
-                    log.info("Partitions marked for eviction " + evictPartJoiner);
+                    log.info("Partitions have been scheduled for eviction: " + evictPartJoiner);
 
                     logEvictPartByGrps.clear();
                 }
@@ -323,41 +314,22 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * Getting a string representation of reason for eviction.
-     *
-     * @param reason Reason for eviction.
-     * @return String of reason for eviction.
-     * */
-    private String reason(byte reason) {
-        switch (reason) {
-            case EVICT_REASON_EVICTION:
-                return "eviction";
-
-            case EVICT_REASON_CLEARING:
-                return "clearing";
-
-            default:
-                return "reason_" + reason;
-        }
-    }
-
-    /**
      * Creating a group partitions for reasons of eviction as a string.
      *
      * @param evictParts Partitions with a reason for eviction.
      * @return String with group partitions for reasons of eviction.
      */
-    private String partByReasonStr(Set<EvictPartition> evictParts) {
+    private String partByReasonStr(Map<Integer, EvictReason> evictParts) {
         assert nonNull(evictParts);
 
-        Map<Byte, Collection<Integer>> partByReason = new HashMap<>();
+        Map<EvictReason, Collection<Integer>> partByReason = new EnumMap<>(EvictReason.class);
 
-        for (EvictPartition evictPart : evictParts)
-            partByReason.computeIfAbsent(evictPart.reason, b -> new ArrayList<>()).add(evictPart.partId);
+        for (Entry<Integer, EvictReason> entry : evictParts.entrySet())
+            partByReason.computeIfAbsent(entry.getValue(), b -> new ArrayList<>()).add(entry.getKey());
 
         StringJoiner joiner = new StringJoiner(", ");
 
-        partByReason.forEach((reason, partIds) -> joiner.add(reason(reason) + '=' + S.compact(partIds)));
+        partByReason.forEach((reason, partIds) -> joiner.add(reason.toString() + '=' + S.compact(partIds)));
 
         return joiner.toString();
     }
@@ -484,7 +456,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private final long size;
 
         /** Reason for eviction. */
-        private final byte reason;
+        private final EvictReason reason;
 
         /** Eviction context. */
         private final GroupEvictionContext grpEvictionCtx;
@@ -500,7 +472,7 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
         private PartitionEvictionTask(
             GridDhtLocalPartition part,
             GroupEvictionContext grpEvictionCtx,
-            byte reason
+            EvictReason reason
         ) {
             this.part = part;
             this.grpEvictionCtx = grpEvictionCtx;
@@ -673,41 +645,24 @@ public class PartitionsEvictManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * Evicted Partition.
+     * Reason for eviction of partition.
      */
-    static class EvictPartition {
-        /** Partition. */
-        final int partId;
-
-        /** Reason for eviction. */
-        final byte reason;
+    enum EvictReason {
+        /**
+         * Partition evicted after changing to
+         * {@link GridDhtPartitionState#RENTING RENTING} state.
+         */
+        EVICTION,
 
         /**
-         * Constructor.
-         *
-         * @param partId Partition.
-         * @param reason Reason for eviction.
+         * Partition evicted after changing to
+         * {@link GridDhtPartitionState#MOVING MOVING} state.
          */
-        EvictPartition(int partId, byte reason) {
-            this.partId = partId;
-            this.reason = reason;
-        }
+        CLEARING;
 
         /** {@inheritDoc} */
-        @Override public int hashCode() {
-            return partId;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean equals(Object o) {
-            if (this == o)
-                return true;
-
-            if (o == null || getClass() != o.getClass())
-                return false;
-
-            EvictPartition other = (EvictPartition)o;
-            return partId == other.partId;
+        @Override public String toString() {
+            return name().toLowerCase();
         }
     }
 }

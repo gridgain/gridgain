@@ -79,8 +79,8 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EVICT_REASON_CLEARING;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EVICT_REASON_EVICTION;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EvictReason.CLEARING;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictManager.EvictReason.EVICTION;
 import static org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager.CheckpointProgress.State.FINISHED;
 
 /**
@@ -712,7 +712,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                             return;
                         }
 
-                        ctx.evict().evictPartitionAsync(grp, this, EVICT_REASON_CLEARING);
+                        ctx.evict().evictPartitionAsync(grp, this, CLEARING);
                     }
                 });
 
@@ -739,7 +739,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             }
         }
 
-        ctx.evict().evictPartitionAsync(grp, this, EVICT_REASON_EVICTION);
+        ctx.evict().evictPartitionAsync(grp, this, EVICTION);
     }
 
     /**
