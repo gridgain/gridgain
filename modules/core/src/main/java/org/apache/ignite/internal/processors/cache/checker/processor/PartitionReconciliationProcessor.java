@@ -69,7 +69,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     public static final String INTERRUPTING_MSG = "Reconciliation session was interrupted. Partition reconciliation task was stopped.";
 
     /** Recheck delay seconds. */
-    private static final int RECHECK_DELAY = 10;
+    private static final int RECHECK_DELAY = 1;
 
     /** Caches. */
     private final Collection<String> caches;
