@@ -50,7 +50,6 @@ public abstract class SqlAbstractLocalSystemView extends SqlAbstractSystemView {
 
         assert tblName != null;
         assert cols != null;
-        assert indexes != null;
     }
 
     /**

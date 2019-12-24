@@ -26,9 +26,9 @@ import java.util.UUID;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.plugin.security.SecurityPermission;
-import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.internal.processors.query.h2.sys.view.SqlAbstractLocalSystemView;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.spi.systemview.view.SystemView;
 import org.apache.ignite.spi.systemview.view.SystemViewRowAttributeWalker.AttributeVisitor;
 import org.apache.ignite.spi.systemview.view.SystemViewRowAttributeWalker.AttributeWithValueVisitor;
 import org.gridgain.internal.h2.engine.Session;
@@ -54,16 +54,32 @@ import org.gridgain.internal.h2.value.ValueUuid;
  */
 public class SystemViewLocal<R> extends SqlAbstractLocalSystemView {
     /** System view for export. */
-    private final SystemView<R> sysView;
+    protected final SystemView<R> sysView;
+
+    /**
+     * @param ctx Kernal context.
+     * @param sysView View to export.
+     * @param indexes Indexed fields.
+     */
+    protected SystemViewLocal(GridKernalContext ctx, SystemView<R> sysView, String[] indexes) {
+        super(sqlName(sysView.name()), sysView.description(), ctx, indexes, columnsList(sysView));
+
+        this.sysView = sysView;
+    }
 
     /**
      * @param ctx Kernal context.
      * @param sysView View to export.
      */
     public SystemViewLocal(GridKernalContext ctx, SystemView<R> sysView) {
-        super(sqlName(sysView.name()), sysView.description(), ctx, columnsList(sysView));
+        this(ctx, sysView, null);
+    }
 
-        this.sysView = sysView;
+    /**
+     * System view iterator.
+     */
+    protected Iterator<R> viewIterator(SearchRow first, SearchRow last) {
+        return sysView.iterator();
     }
 
     /** {@inheritDoc} */
@@ -73,7 +89,7 @@ public class SystemViewLocal<R> extends SqlAbstractLocalSystemView {
         if ("SQL_QUERIES".equals(viewName) || "SQL_QUERIES_HISTORY".equals(viewName))
             ctx.security().authorize(SecurityPermission.GET_QUERY_VIEWS);
 
-        Iterator<R> rows = sysView.iterator();
+        Iterator<R> rows = viewIterator(first, last);
 
         return new Iterator<Row>() {
             @Override public boolean hasNext() {
@@ -166,7 +182,7 @@ public class SystemViewLocal<R> extends SqlAbstractLocalSystemView {
      *
      * @param sysView System view.
      * @param <R> Row type.
-     * @return SQL column array for {@code rowClass}.
+     * @return SQL column array for {@code sysView}.
      */
     private static <R> Column[] columnsList(SystemView<R> sysView) {
         Column[] cols = new Column[sysView.walker().count()];
@@ -219,6 +235,13 @@ public class SystemViewLocal<R> extends SqlAbstractLocalSystemView {
     }
 
     /** {@inheritDoc} */
+    @Override public long getRowCountApproximation() {
+        // getRowCount() method is not really fast, for some system views it's required to iterate over elements to
+        // calculate size, so it's more safe to use constant here.
+        return DEFAULT_ROW_COUNT_APPROXIMATION;
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean canGetRowCount() {
         return true;
     }
@@ -233,7 +256,7 @@ public class SystemViewLocal<R> extends SqlAbstractLocalSystemView {
      * @param name Name to convert.
      * @return SQL compatible name.
      */
-    public static String sqlName(String name) {
+    protected static String sqlName(String name) {
         return name
             .replaceAll("([A-Z])", "_$1")
             .replaceAll('\\' + MetricUtils.SEPARATOR, "_").toUpperCase();
