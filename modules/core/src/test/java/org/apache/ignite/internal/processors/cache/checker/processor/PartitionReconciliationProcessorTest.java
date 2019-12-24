@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.compute.ComputeTask;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
@@ -43,6 +44,7 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTa
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteFuture;
@@ -69,6 +71,11 @@ public class PartitionReconciliationProcessorTest {
 
     /** Partition id. */
     private static final int PARTITION_ID = 123;
+
+    /**
+     *
+     */
+    private static final long SESSION_ID = 123;
 
     /**
      *
@@ -133,7 +140,6 @@ public class PartitionReconciliationProcessorTest {
         processor.verify(never()).schedule(any(), anyInt(), any());
         processor.verify(never()).scheduleHighPriority(any());
     }
-
 
     /**
      *
@@ -262,6 +268,14 @@ public class PartitionReconciliationProcessorTest {
 
             when(igniteMock.log()).thenReturn(Mockito.mock(IgniteLogger.class));
 
+            GridKernalContext ctxMock = Mockito.mock(GridKernalContext.class);
+
+            DiagnosticProcessor diagnosticProcessorMock = Mockito.mock(DiagnosticProcessor.class);
+            when(diagnosticProcessorMock.getReconciliationSessionId()).thenReturn(SESSION_ID);
+            when(ctxMock.diagnostic()).thenReturn(diagnosticProcessorMock);
+
+            when(igniteMock.context()).thenReturn(ctxMock);
+
             return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, 0,
                 10, MAX_RECHECK_ATTEMPTS);
         }
@@ -273,7 +287,7 @@ public class PartitionReconciliationProcessorTest {
             GridCachePartitionExchangeManager<Object, Object> exchMgr,
             Collection<String> caches, boolean fixMode, int throttlingIntervalMillis, int batchSize,
             int recheckAttempts) throws IgniteCheckedException {
-            super(ignite, exchMgr, caches, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts, RepairAlgorithm.MAJORITY);
+            super(SESSION_ID, ignite, exchMgr, caches, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts, RepairAlgorithm.MAJORITY);
         }
 
         /** {@inheritDoc} */

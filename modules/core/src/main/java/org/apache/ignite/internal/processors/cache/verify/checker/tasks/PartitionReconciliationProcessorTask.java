@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -43,16 +44,23 @@ import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
+import static org.apache.ignite.Ignition.localIgnite;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.parallelismLevel;
 
+/**
+ *
+ */
 @GridInternal
-public class PartitionReconciliationProcessorTask extends
-    ComputeTaskAdapter<VisorPartitionReconciliationTaskArg, ReconciliationResult> {
+public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<VisorPartitionReconciliationTaskArg, ReconciliationResult> {
     /**
      *
      */
     private static final long serialVersionUID = 0L;
+
+    /** Ignite instance. */
+    @IgniteInstanceResource
+    private IgniteEx ignite;
 
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
@@ -60,9 +68,12 @@ public class PartitionReconciliationProcessorTask extends
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         LocalDateTime startTime = LocalDateTime.now();
+        long sesId = startTime.toEpochSecond(ZoneOffset.UTC);
+
+        ignite.compute().broadcast(() -> ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(sesId));
 
         for (ClusterNode node : subgrid)
-            jobs.put(new PartitionReconciliationJob(arg, startTime), node);
+            jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
 
         return jobs;
     }
@@ -111,11 +122,19 @@ public class PartitionReconciliationProcessorTask extends
         private final LocalDateTime startTime;
 
         /**
-         * @param arg
+         *
          */
-        public PartitionReconciliationJob(VisorPartitionReconciliationTaskArg arg, LocalDateTime startTime) {
+        private long sesId;
+
+        /**
+         * @param arg
+         * @param sesId
+         */
+        public PartitionReconciliationJob(VisorPartitionReconciliationTaskArg arg, LocalDateTime startTime,
+            long sesId) {
             this.reconciliationTaskArg = arg;
             this.startTime = startTime;
+            this.sesId = sesId;
         }
 
         /** {@inheritDoc} */
@@ -125,6 +144,7 @@ public class PartitionReconciliationProcessorTask extends
 
             try {
                 PartitionReconciliationResult reconciliationRes = new PartitionReconciliationProcessor(
+                    sesId,
                     ignite,
                     ignite.context().cache().context().exchange(),
                     caches,

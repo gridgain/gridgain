@@ -55,8 +55,10 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
     static final String RAW_FILE_FORMAT = ".raw";
     /** Full path for store dubug info. */
     private final Path diagnosticPath;
-
+    /** */
     private final PageHistoryDiagnoster pageHistoryDiagnoster;
+    /** Id of last or current reconciliation session. */
+    private volatile long reconciliationSessionId;
 
     /**
      * @param ctx Kernal context.
@@ -131,6 +133,20 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
                     "Failed to dump diagnostic info on tree corruption. PageIds=" + sb, e);
             }
         }
+    }
+
+    /**
+     * @return Id of last or current reconciliation session.
+     */
+    public long getReconciliationSessionId() {
+        return reconciliationSessionId;
+    }
+
+    /**
+     *
+     */
+    public void setReconciliationSessionId(long reconciliationSessionId) {
+        this.reconciliationSessionId = reconciliationSessionId;
     }
 
     /**
