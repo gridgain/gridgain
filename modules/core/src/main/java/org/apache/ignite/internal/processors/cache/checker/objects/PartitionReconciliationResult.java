@@ -202,6 +202,13 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     /**
+     * @return {@code True} if reconciliation result doesn't contain neither inconsistent keys, nor skipped caches, etc.
+     */
+    public boolean isEmpty() {
+        return inconsistentKeys.isEmpty() && skippedCaches.isEmpty() && skippedEntries().isEmpty();
+    }
+
+    /**
      *
      */
     public Map<UUID, String> nodesIdsToConsistenseIdsMap() {

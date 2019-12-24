@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.util;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -53,6 +54,10 @@ public class ConsistencyCheckUtils {
      * Folder with local result of reconciliation.
      */
     public static final String RECONCILIATION_DIR = "reconciliation";
+
+
+    /** Time formatter for log file name. */
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss_SSS");
 
     /**
      *
@@ -194,7 +199,6 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     * @param consId Consistence Id.
      * @param startTime Operation start time.
      */
     public static File createLocalResultFile(
@@ -208,7 +212,8 @@ public class ConsistencyCheckUtils {
         if (!dir.exists())
             dir.mkdir();
 
-        File file = new File(dir.getPath() + separatorChar + maskId + "_" + startTime.toString());
+        File file = new File(dir.getPath() + separatorChar + maskId + "_" + startTime.format(TIME_FORMATTER) +
+            ".txt");
 
         if (!file.exists())
             file.createNewFile();
