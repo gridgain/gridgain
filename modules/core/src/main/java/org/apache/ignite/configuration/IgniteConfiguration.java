@@ -2681,10 +2681,10 @@ public class IgniteConfiguration {
      * cluster state on start is {@link ClusterState#INACTIVE}, further hode joins will be handled by cluster faster and
      * manual cluster activation should be performed in order to start working the cluster and caches.
      * <br/>
-     * For <b>persistent cluster</b> If state is differ from {@link ClusterState#INACTIVE} and BaselineTopology is set
-     * (cluster was activated before, for example before cluster restart) as well then cluster moves to given cluster
-     * state when all nodes from the BaselineTopology join the cluster, i.e. manual activation isn't required in that
-     * case.
+     * For <b>persistent cluster</b> If state is different from {@link ClusterState#INACTIVE} and BaselineTopology is
+     * set (cluster was activated before, for example before cluster restart) as well then cluster moves to given
+     * cluster state when all nodes from the BaselineTopology join the cluster, i.e. manual activation isn't required
+     * in that case.
      * <p>
      * Default value is {@link #DFLT_STATE_ON_START}.
      * <p>
