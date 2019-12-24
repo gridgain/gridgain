@@ -61,6 +61,10 @@ namespace Apache.Ignite.Core.Tests.Cache
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
             AssertMetricsAreEmpty(sysMetrics);
 
+            var volatileMetrics = metrics[3];
+            Assert.AreEqual("volatileMemPlc", volatileMetrics.Name);
+            AssertMetricsAreEmpty(volatileMetrics);
+
             // Metrics by name.
             emptyMetrics = ignite.GetMemoryMetrics(MemoryPolicyNoMetrics);
             Assert.AreEqual(MemoryPolicyNoMetrics, emptyMetrics.Name);
@@ -77,6 +81,10 @@ namespace Apache.Ignite.Core.Tests.Cache
             sysMetrics = ignite.GetMemoryMetrics("sysMemPlc");
             Assert.AreEqual("sysMemPlc", sysMetrics.Name);
             AssertMetricsAreEmpty(sysMetrics);
+
+            volatileMetrics = ignite.GetMemoryMetrics("volatileMemPlc");
+            Assert.AreEqual("volatileMemPlc", volatileMetrics.Name);
+            AssertMetricsAreEmpty(volatileMetrics);
 
             // Invalid name.
             Assert.IsNull(ignite.GetMemoryMetrics("boo"));
