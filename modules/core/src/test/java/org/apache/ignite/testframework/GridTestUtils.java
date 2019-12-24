@@ -404,7 +404,7 @@ public final class GridTestUtils {
      * @param col Collection.
      * @param elem Element.
      */
-    public static  <C extends Collection<T>, T> void assertContains(@Nullable IgniteLogger log, C col, T elem) {
+    public static <C extends Collection<T>, T> void assertContains(@Nullable IgniteLogger log, C col, T elem) {
         try {
             assertTrue(col.contains(elem));
         } catch (AssertionError e) {

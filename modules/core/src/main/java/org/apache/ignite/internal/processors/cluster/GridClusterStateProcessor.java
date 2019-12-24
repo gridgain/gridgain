@@ -1887,20 +1887,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * Checks that deactivation process is happening now.
-     *
-     * @param state Current cluster state.
-     * @param newState Cluster state after finish transition.
-     * @return {@code True} if deactivation process is happening now, and {@code False} otherwise.
-     */
-    private boolean deactivate(ClusterState state, ClusterState newState) {
-        assert state != null;
-        assert newState != null;
-
-        return ClusterState.active(state) && newState == INACTIVE;
-    }
-
-    /**
      * Gets from given config {@code cfg} field with name {@code fieldName} and type boolean.
      *
      * @param cfg Config.

@@ -2678,11 +2678,13 @@ public class IgniteConfiguration {
      * Gets state of cluster on start.
      * <br/>
      * For <b>in-memory cluster</b> this state will be applied to the first started node. If
-     * cluster state on start is {@link ClusterState#INACTIVE}, there will be no cache partition map exchanges
-     * performed until the cluster is activated. This should significantly speed up large topology startup time.
+     * cluster state on start is {@link ClusterState#INACTIVE}, further hode joins will be handled by cluster faster and
+     * manual cluster activation should be performed in order to start working the cluster and caches.
      * <br/>
      * For <b>persistent cluster</b> If state is differ from {@link ClusterState#INACTIVE} and BaselineTopology is set
-     * as well then cluster moves to given cluster state when all nodes from the BaselineTopology join the cluster.
+     * (cluster was activated before, for example before cluster restart) as well then cluster moves to given cluster
+     * state when all nodes from the BaselineTopology join the cluster, i.e. manual activation isn't required in that
+     * case.
      * <p>
      * Default value is {@link #DFLT_STATE_ON_START}.
      * <p>
