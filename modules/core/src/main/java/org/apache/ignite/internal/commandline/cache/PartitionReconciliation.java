@@ -47,6 +47,7 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PARTITION_RECONCILIATION;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.CONSOLE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_ALG;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_MODE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
@@ -69,9 +70,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     @Override public void printUsage(Logger log) {
         String CACHES = "cacheName1,...,cacheNameN";
 
-        String desc = "Verify grid cache versions of keys for the specified caches/cache " +
-            "and print out the differences, if any and/or fix inconsistency if " + FIX_MODE + "argument is presented." +
-            " When no parameters are specified, " +
+        String desc = "Verify whether there are inconsistent entries for the specified caches " +
+            "and print out the differences if any. Fix inconsistency if " + FIX_MODE + "argument is presented. " +
+            "When no parameters are specified, " +
             "all user caches are verified. Cache filtering options configure the set of caches that will be " +
             "processed by " + PARTITION_RECONCILIATION + " command. If cache names are specified, in form of regular " +
             "expressions, only matching caches will be verified.";
@@ -81,7 +82,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         paramsDesc.put(FIX_MODE.toString(),
             "If present, fix all inconsistent data.");
         paramsDesc.put(LOAD_FACTOR.toString(),
-            "Interval in milliseconds between running partition reconciliation jobs.");
+            "Percent of system loading between 0 and 1.");
         paramsDesc.put(BATCH_SIZE.toString(),
             "Amount of keys to retrieve within one job.");
         paramsDesc.put(RECHECK_ATTEMPTS.toString(),
@@ -90,6 +91,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             "Print data to result with sensitive information: keys and values.");
         paramsDesc.put(FIX_ALG.toString(),
             "Specifies which repair algorithm to use for doubtful keys.");
+        paramsDesc.put(CONSOLE.toString(),
+            "Specifies whether to print result to console or file.");
 
         usageCache(
             log,
@@ -97,7 +100,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             desc,
             paramsDesc,
             optional(FIX_MODE), optional(LOAD_FACTOR), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
-            optional(VERBOSE), optional(FIX_ALG), optional(CACHES));
+            optional(VERBOSE), optional(FIX_ALG), optional(CONSOLE), optional(CACHES));
     }
 
     /** {@inheritDoc} */
@@ -295,7 +298,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
      * Print partition reconciliation output.
      * @param res Partition reconciliation result.
      * @param printer Printer.
-     * @param outputFile Output file name.
      */
     private void print(ReconciliationResult res, Consumer<String> printer) {
         PartitionReconciliationResult reconciliationRes = res.partitionReconciliationResult();

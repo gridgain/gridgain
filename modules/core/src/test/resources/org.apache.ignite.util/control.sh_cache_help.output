@@ -20,6 +20,18 @@ Arguments: --cache help --yes
     Parameters:
       --check-crc  - check the CRC-sum of pages stored on disk before verifying data consistency in partitions between primary and backup nodes.
 
+  --cache partition_reconciliation [--fix-mode] [--load-factor] [--batch-size] [--recheck-attempts] [--verbose] [--fix-alg] [--console] [cacheName1,...,cacheNameN]
+    Verify whether there are inconsistent entries for the specified caches and print out the differences if any. Fix inconsistency if --fix-modeargument is presented. When no parameters are specified, all user caches are verified. Cache filtering options configure the set of caches that will be processed by partition_reconciliation command. If cache names are specified, in form of regular expressions, only matching caches will be verified.
+
+    Parameters:
+      --fix-alg           - Specifies which repair algorithm to use for doubtful keys.
+      --fix-mode          - If present, fix all inconsistent data.
+      --load-factor       - Percent of system loading between 0 and 1.
+      --console           - Specifies whether to print result to console or file.
+      --batch-size        - Amount of keys to retrieve within one job.
+      --verbose           - Print data to result with sensitive information: keys and values.
+      --recheck-attempts  - Amount of potentially inconsistent keys recheck attempts.
+
   --cache list regexPattern [--groups|--seq] [nodeId] [--config] [--output-format multi-line]
     Show information about caches, groups or sequences that match a regular expression. When executed without parameters, this subcommand prints the list of caches.
 
