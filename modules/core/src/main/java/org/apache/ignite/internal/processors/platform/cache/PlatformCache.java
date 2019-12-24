@@ -1403,6 +1403,7 @@ public class PlatformCache extends PlatformAbstractTarget {
                 .setDistributedJoins(distrJoins)
                 .setEnforceJoinOrder(enforceJoinOrder)
                 .setLazy(lazy)
+            // t0d0 ensure non-negative
                 .setTimeout(timeout, TimeUnit.MILLISECONDS)
                 .setReplicatedOnly(replicated)
                 .setCollocated(collocated)

@@ -951,6 +951,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         res.setSchema(schemaName);
         res.setSql(sql);
 
+        // t0d0 check
         if (qry.getTimeout() > 0)
             res.setTimeout(qry.getTimeout(), TimeUnit.MILLISECONDS);
 
@@ -1590,6 +1591,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
+            // t0d0 add a comment
             .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
 
         QueryCursorImpl<List<?>> cur;
