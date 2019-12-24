@@ -26,8 +26,8 @@ public class CacheInfo {
     /** Cache name. */
     private String name;
 
-    /** Deployment id. */
-    private IgniteUuid deploymentId;
+    /** Cache ID. */
+    private int cacheId;
 
     /** Created by sql. */
     private boolean createdBySql;
@@ -53,18 +53,18 @@ public class CacheInfo {
     }
 
     /**
-     * @return Deployment id.
+     * @return Cache ID.
      */
-    public IgniteUuid getDeploymentId() {
-        return deploymentId;
+    public int getCacheId() {
+        return cacheId;
     }
 
     /**
-     * @param deploymentId Deployment id.
+     * @param cacheId Cache ID.
      * @return {@code This} for chaining method calls.
      */
-    public CacheInfo setDeploymentId(IgniteUuid deploymentId) {
-        this.deploymentId = deploymentId;
+    public CacheInfo setCacheId(int cacheId) {
+        this.cacheId = cacheId;
 
         return this;
     }
