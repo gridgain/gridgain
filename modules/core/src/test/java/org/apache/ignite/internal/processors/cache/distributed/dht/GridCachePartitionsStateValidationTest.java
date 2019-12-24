@@ -39,7 +39,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
@@ -50,10 +49,6 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.DiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
-import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -82,11 +77,11 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         cfg.setConsistentId(igniteInstanceName);
 
         cfg.setCacheConfiguration(new CacheConfiguration(CACHE_NAME)
-                .setBackups(3)
+                .setBackups(1)
                 .setAffinity(new RendezvousAffinityFunction(false, 32))
         );
 
-        cfg.setCommunicationSpi(new SingleMessageInterceptorCommunicationSpi(3));
+        cfg.setCommunicationSpi(new SingleMessageInterceptorCommunicationSpi(2));
 
         if (clientMode)
             cfg.setClientMode(true);
