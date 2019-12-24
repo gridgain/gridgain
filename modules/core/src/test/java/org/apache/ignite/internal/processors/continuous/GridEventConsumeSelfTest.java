@@ -1079,7 +1079,6 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
         try {
             IgniteInternalFuture<?> starterFut = multithreadedAsync(() -> {
-                try {
                     for (int i = 0; i < consumeCnt; i++) {
                         int idx = rnd.nextInt(GRID_CNT);
 
@@ -1102,13 +1101,11 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
                         U.sleep(10);
                     }
-                }
-                finally {
-                    stop.set(true);
-                }
 
                 return null;
             }, 6, "consume-starter");
+
+            starterFut.listen((fut) -> stop.set(true));
 
             IgniteInternalFuture<?> stopperFut = multithreadedAsync(() -> {
                 while (!stop.get() || !queue.isEmpty()) {
