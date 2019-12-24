@@ -65,6 +65,9 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * The base point of partition reconciliation processing.
  */
 public class PartitionReconciliationProcessor extends AbstractPipelineProcessor {
+    /** Interrupting message. */
+    public static final String INTERRUPTING_MSG = "Reconciliation session was interrupted. Partition reconciliation task was stopped.";
+
     /** Recheck delay seconds. */
     private static final int RECHECK_DELAY = 10;
 
@@ -100,6 +103,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      *
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationProcessor(
+        long sesId,
         IgniteEx ignite,
         GridCachePartitionExchangeManager<Object, Object> exchMgr,
         Collection<String> caches,
@@ -109,7 +113,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         int recheckAttempts,
         RepairAlgorithm repairAlg
     ) throws IgniteCheckedException {
-        super(ignite, exchMgr, parallelismLevel);
+        super(sesId, ignite, exchMgr, parallelismLevel);
         log = ignite.log().getLogger(this);
         this.caches = caches;
         this.fixMode = fixMode;
@@ -137,6 +141,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             while (!isEmpty() || (live = hasLiveHandlers())) {
                 if (topologyChanged()) {
                     log.warning("Topology was changed. Partition reconciliation task was stopped.");
+
+                    // TODO: 13.12.19 Add exception to result and probably partially available data.
+                    return new PartitionReconciliationResult();
+                }
+
+                if(isInterrupted()) {
+                    log.warning(INTERRUPTING_MSG);
 
                     // TODO: 13.12.19 Add exception to result and probably partially available data.
                     return new PartitionReconciliationResult();

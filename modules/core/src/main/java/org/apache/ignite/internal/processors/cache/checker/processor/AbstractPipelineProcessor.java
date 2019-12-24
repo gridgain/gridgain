@@ -76,11 +76,18 @@ public class AbstractPipelineProcessor {
     /**
      *
      */
+    protected final long sesId;
+
+    /**
+     *
+     */
     public AbstractPipelineProcessor(
+        long sesId,
         IgniteEx ignite,
         GridCachePartitionExchangeManager<Object, Object> exchMgr,
         int parallelismLevel
     ) throws IgniteCheckedException {
+        this.sesId = sesId;
         this.exchMgr = exchMgr;
         this.startTopVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
         this.parallelismLevel = parallelismLevel;
@@ -95,6 +102,13 @@ public class AbstractPipelineProcessor {
         AffinityTopologyVersion currVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
 
         return !startTopVer.equals(currVer);
+    }
+
+    /**
+     *
+     */
+    protected boolean isInterrupted() {
+        return ignite.context().diagnostic().getReconciliationSessionId() != sesId;
     }
 
     /**
