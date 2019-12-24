@@ -41,9 +41,10 @@ namespace Apache.Ignite.Core.Tests.Client
     [TestFixture(JavaServer.GroupIdIgnite, "2.7.0", 2)]
     [TestFixture(JavaServer.GroupIdIgnite, "2.7.5", 2)]
     [TestFixture(JavaServer.GroupIdIgnite, "2.7.6", 2)]
-    [TestFixture(JavaServer.GroupIdGridGain, "8.7.3", 2)]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.6", 2)]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.7", 2)]
     [TestFixture(JavaServer.GroupIdGridGain, "8.7.8", 4)]
+    [TestFixture(JavaServer.GroupIdGridGain, "8.7.9", 4)]
     [Category(TestUtils.CategoryIntensive)]
     public class ClientServerCompatibilityTest
     {

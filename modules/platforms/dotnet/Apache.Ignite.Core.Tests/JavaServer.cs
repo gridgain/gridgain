@@ -65,30 +65,37 @@ namespace Apache.Ignite.Core.Tests
         {
             IgniteArgumentCheck.NotNullOrEmpty(version, "version");
 
-            using (ReplaceIgniteVersionInPomFile(groupId, version, Path.Combine(JavaServerSourcePath, "pom.xml")))
+            var pomWrapper =
+                ReplaceIgniteVersionInPomFile(groupId, version, Path.Combine(JavaServerSourcePath, "pom.xml"));
+            
+            var process = new System.Diagnostics.Process
             {
-                var process = new System.Diagnostics.Process
+                StartInfo = new ProcessStartInfo
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
-                        Arguments = Os.IsWindows
-                            ? string.Format("/c \"{0} {1}\"", MavenPath, MavenCommandExec)
-                            : string.Format("-c \"{0} {1}\"", MavenPath, MavenCommandExec.Replace("\"", "\\\"")),
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        WorkingDirectory = JavaServerSourcePath,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    }
-                };
+                    FileName = Os.IsWindows ? "cmd.exe" : "/bin/bash",
+                    Arguments = Os.IsWindows
+                        ? string.Format("/c \"{0} {1}\"", MavenPath, MavenCommandExec)
+                        : string.Format("-c \"{0} {1}\"", MavenPath, MavenCommandExec.Replace("\"", "\\\"")),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = JavaServerSourcePath,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                }
+            };
 
-                process.Start();
+            process.Start();
+            
+            var processWrapper = new DisposeAction(() =>
+            {
+                process.KillProcessTree();
+                pomWrapper.Dispose();
+            });
 
+            try
+            {
                 var listDataReader = new ListDataReader();
                 process.AttachProcessConsoleReader(listDataReader, new IgniteProcessConsoleOutputReader());
-
-                var processWrapper = new DisposeAction(() => process.KillProcessTree());
 
                 // Wait for node to come up with a thin client connection.
                 if (WaitForStart())
@@ -96,12 +103,12 @@ namespace Apache.Ignite.Core.Tests
                     return processWrapper;
                 }
 
-                if (!process.HasExited)
-                {
-                    processWrapper.Dispose();
-                }
-
                 throw new Exception("Failed to start Java node: " + string.Join(",", listDataReader.GetOutput()));
+            }
+            catch (Exception)
+            {
+                processWrapper.Dispose();
+                throw;
             }
         }
 

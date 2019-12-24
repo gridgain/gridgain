@@ -34,7 +34,10 @@ public class Runner {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder()
                 .setAddresses(Collections.singleton("127.0.0.1:47500"));
 
-        TcpDiscoverySpi discoSpi = new TcpDiscoverySpi().setIpFinder(ipFinder);
+        TcpDiscoverySpi discoSpi = new TcpDiscoverySpi()
+            .setIpFinder(ipFinder)
+            .setSocketTimeout(300)
+            .setNetworkTimeout(300);
 
         CacheConfiguration expiryCacheCfg = new CacheConfiguration("twoSecondCache")
                 .setExpiryPolicyFactory(FactoryBuilder.factoryOf(
