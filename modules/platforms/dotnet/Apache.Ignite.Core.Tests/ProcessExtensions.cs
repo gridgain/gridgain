@@ -121,6 +121,7 @@ namespace Apache.Ignite.Core.Tests
             if (Os.IsWindows)
             {
                 Execute("taskkill", string.Format("/T /F /PID {0}", process.Id));
+                process.WaitForExit();
             }
             else
             {
