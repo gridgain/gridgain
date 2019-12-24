@@ -38,7 +38,10 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
     /** */
     private Class<?> keyCls;
 
-    /** WWhether ke should be type of Java object or simple (e.g. integer or long). */
+    /** How many entries should be preloaded and within which range. */
+    private int range;
+
+    /** Whether key should be type of Java object or simple (e.g. integer or long). */
     private boolean isJavaObj;
 
     /** Whether to run init step or skip it. */
@@ -48,6 +51,7 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
         super.setUp(cfg);
 
+        range = args.range();
         initStep = args.getBooleanParameter("init", false);
         isJavaObj = args.getBooleanParameter("javaObject", false);
 
@@ -57,7 +61,7 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
         }
         else {
             cacheName = "CACHE_LONG";
-            keyCls = Long.class;
+            keyCls = Integer.class;
         }
 
         printParameters();
@@ -91,12 +95,12 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
                 .setIndexedTypes(keyCls, Integer.class)
         );
 
-        println(cfg, "Populate cache: " + cacheName + ", range: " + args.range());
+        println(cfg, "Populate cache: " + cacheName + ", range: " + range);
 
         try (IgniteDataStreamer<Object, Integer> stream = ignite().dataStreamer(cacheName)) {
             stream.allowOverwrite(false);
 
-            for (long k = 0; k < args.range(); ++k)
+            for (long k = 0; k < range; ++k)
                 stream.addData(nextKey(), ThreadLocalRandom.current().nextInt());
         }
 
@@ -113,8 +117,8 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
     /** Creates next random key. */
     private Object nextKey() {
         return isJavaObj
-            ? new TestKey(ThreadLocalRandom.current().nextLong())
-            : ThreadLocalRandom.current().nextLong();
+            ? new TestKey(ThreadLocalRandom.current().nextInt(range))
+            : ThreadLocalRandom.current().nextInt(range);
     }
 
     /**
@@ -126,19 +130,21 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
         ((IgniteEx)ignite()).context().query().querySqlFields(new SqlFieldsQuery(sql).setArgs(args), false).getAll();
     }
 
-    /**
-     *
-     */
+    /** */
     private void printParameters() {
         println("Benchmark parameter:");
         println("    init: " + initStep);
+        println("    range: " + range);
         println("    is JavaObject: " + isJavaObj);
     }
 
+    /** Pojo that used as key value for object's inlining benchmark. */
     static class TestKey {
-        private final long id;
+        /** */
+        private final int id;
 
-        public TestKey(long id) {
+        /** */
+        public TestKey(int id) {
             this.id = id;
         }
     }
