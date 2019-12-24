@@ -135,21 +135,24 @@ public class PartitionReconciliationProcessorTask extends
                     reconciliationTaskArg.repairAlg()
                 ).execute();
 
-                File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
+                File file = null;
 
-                try (PrintWriter pw = new PrintWriter(file)) {
-                    if (reconciliationRes != null)
+                if (reconciliationRes != null && !reconciliationRes.isEmpty()) {
+                    file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
+
+                    try (PrintWriter pw = new PrintWriter(file)) {
                         reconciliationRes.print(pw::write, reconciliationTaskArg.verbose());
 
-                    pw.flush();
-                }
-                catch (IOException e) {
-                    log.error("Unable to write report to file " + e.getMessage());
-                    //TODO
+                        pw.flush();
+                    }
+                    catch (IOException e) {
+                        log.error("Unable to write report to file " + e.getMessage());
+                        //TODO
+                    }
                 }
 
                 return new T2<>(
-                    file.getAbsolutePath(),
+                    file == null ? null : file.getAbsolutePath(),
                     reconciliationTaskArg.console() ? reconciliationRes : new PartitionReconciliationResult()
                 );
             }

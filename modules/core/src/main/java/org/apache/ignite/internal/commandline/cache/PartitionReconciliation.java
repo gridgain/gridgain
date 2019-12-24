@@ -149,8 +149,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         ReconciliationResult res =
             executeTask(client, VisorPartitionReconciliationTask.class, taskArg, clientCfg);
 
-        if(args.console)
-            print(res, log::info);
+        print(res, log::info);
     }
 
     /** {@inheritDoc} */
@@ -287,7 +286,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             String consId = nodesIdsToConsistenceIdsMap.get(entry.getKey());
 
             out
-                .a(consId + " " + entry.getKey() + " : " + entry.getValue())
+                .a(consId + " " + entry.getKey() + " : " + (entry.getValue() == null ?
+                    "All keys on this node are consistent: report wasn't generated." : entry.getValue()))
                 .a("\n");
         }
 
@@ -306,7 +306,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         printer.accept(prepareResultFolders(res.nodeIdToFolder(), reconciliationRes.nodesIdsToConsistenseIdsMap()));
 
-        reconciliationRes.print(printer, args.verbose);
+        if (args.console)
+            reconciliationRes.print(printer, args.verbose);
     }
 
     /**
