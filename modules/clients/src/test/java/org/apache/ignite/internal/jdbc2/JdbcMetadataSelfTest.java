@@ -342,7 +342,8 @@ public class JdbcMetadataSelfTest extends GridCommonAbstractTest {
             "VIEW_COLUMNS",
             "CONTINUOUS_QUERIES",
             "STRIPED_THREADPOOL_QUEUE",
-            "DATASTREAM_THREADPOOL_QUEUE"
+            "DATASTREAM_THREADPOOL_QUEUE",
+            "CACHE_GROUP_PAGE_LISTS"
         ));
 
         if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED))
