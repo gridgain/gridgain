@@ -30,12 +30,12 @@ import org.junit.Test;
  */
 public class ClusterStateXmlPropertiesTest extends GridCommonAbstractTest {
     /**
-     * Checks that internal flags will be setted in case of xml configuration.
+     * Checks that internal flags will be setted in case of properties are presented in xml configuration.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testXmlConfiguration() throws Exception {
+    public void testXmlConfigurationWithSettedProperties() throws Exception {
         IgniteConfiguration defaultCfg = new IgniteConfiguration();
 
         assertFalse(getBooleanFieldFromConfig(defaultCfg, "activeOnStartPropSetFlag"));
@@ -43,12 +43,31 @@ public class ClusterStateXmlPropertiesTest extends GridCommonAbstractTest {
         assertTrue(defaultCfg.isActiveOnStart());
         assertTrue(defaultCfg.isAutoActivationEnabled());
 
-        IgniteConfiguration cfg = IgnitionEx.loadConfiguration(U.resolveIgniteUrl("modules/spring/src/test/config/state/cluster-state.xml")).get1();
+        IgniteConfiguration cfg = IgnitionEx.loadConfiguration(
+            U.resolveIgniteUrl("modules/spring/src/test/config/state/cluster-state.xml")
+        ).get1();
 
         assertTrue(getBooleanFieldFromConfig(cfg, "activeOnStartPropSetFlag"));
         assertTrue(getBooleanFieldFromConfig(cfg, "autoActivationPropSetFlag"));
         assertFalse(cfg.isActiveOnStart());
         assertFalse(cfg.isAutoActivationEnabled());
+    }
+
+    /**
+     * Checks that internal flags will not be setted in case of properties are not presented in xml configuration.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testXmlConfiguration() throws Exception {
+        IgniteConfiguration cfg = IgnitionEx.loadConfiguration(
+            U.resolveIgniteUrl("modules/spring/src/test/config/node.xml")
+        ).get1();
+
+        assertFalse(getBooleanFieldFromConfig(cfg, "activeOnStartPropSetFlag"));
+        assertFalse(getBooleanFieldFromConfig(cfg, "autoActivationPropSetFlag"));
+        assertTrue(cfg.isActiveOnStart());
+        assertTrue(cfg.isAutoActivationEnabled());
     }
 
     /**
