@@ -16,7 +16,7 @@
 
 package org.apache.ignite.agent.action.controller;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -41,7 +41,6 @@ import org.junit.Test;
 
 import static java.util.Collections.singleton;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 import static org.apache.ignite.agent.dto.action.Status.FAILED;
@@ -132,6 +131,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     @Test
     public void shouldGetNextPage() {
         final AtomicReference<String> cursorId = new AtomicReference<>();
+
         Request req = new Request()
             .setAction("QueryActions.executeSqlQuery")
             .setNodeIds(singleton(cluster.localNode().id()))
@@ -271,15 +271,11 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .setPageSize(1_000)
             );
 
-        template.convertAndSend(buildActionRequestTopic(cluster.id()), req);
+        executeAction(req, (res) -> {
+            TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
 
-        assertWithPoll(
-            () -> {
-                TaskResponse res = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
-
-                return res != null && res.getJobCount() == 1;
-            }
-        );
+            return taskRes != null && taskRes.getStatus() == RUNNING;
+        });
 
         Request cancelReq = new Request()
             .setAction("QueryActions.cancel")
@@ -296,6 +292,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         assertWithPoll(
             () -> {
                 JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+
                 return res != null && res.getStatus() == FAILED;
             }
         );
@@ -342,7 +339,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
     }
 
     /**
-     *
+     * Add testcase description after test case approve.
      */
     @Test
     public void shouldReturnRunningQueriesFromAllNodes() {
@@ -362,7 +359,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 .setArgument(
                     new QueryArgument()
                         .setQueryId(UUID.randomUUID().toString())
-                        .setQueryText("SELECT count(*), sleep() FROM \"TestCache\".STRING")
+                        .setQueryText("SELECT count(*), sleep() AS \"" + nid + "\" FROM \"TestCache\".STRING")
                         .setPageSize(1)
                         .setCacheName("TestCache")
                 );
@@ -386,11 +383,75 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
 
             if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 3) {
-                List<Map<String, String>> res_1 = (List<Map<String, String>>) res.get(0).getResult();
-                List<Map<String, String>> res_2 = (List<Map<String, String>>) res.get(1).getResult();
-                List<Map<String, String>> res_3 = (List<Map<String, String>>) res.get(2).getResult();
+                boolean isAllResponsesNotEmpty = res.stream()
+                    .noneMatch(r -> ((Collection<Map<String, String>>)r.getResult()).isEmpty());
 
-                return !res_1.isEmpty() && !res_2.isEmpty() && !res_3.isEmpty();
+                long queriesCnt = res.stream()
+                    .flatMap(r -> ((Collection<Map<String, String>>) r.getResult()).stream())
+                    .map(m -> m.get("query"))
+                    .distinct()
+                    .count();
+
+                return isAllResponsesNotEmpty && queriesCnt == 3;
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * Add testcase description after test case approve.
+     */
+    @Test
+    public void shouldReturnRunningQueriesFromCoordinatorNode() {
+        cluster.ignite().createCache(
+            new CacheConfiguration<>("TestCache")
+                .setIndexedTypes(Integer.class, String.class)
+                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
+        );
+
+        GridTestUtils.SqlTestFunctions.sleepMs = 5_000;
+
+        Request qryReq = new Request()
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId(UUID.randomUUID().toString())
+                    .setQueryText("SELECT count(*), sleep() FROM \"TestCache\".STRING")
+                    .setPageSize(1)
+                    .setCacheName("TestCache")
+            );
+
+        executeAction(qryReq, (res) -> {
+            TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), qryReq.getId()), TaskResponse.class);
+
+            return taskRes != null && taskRes.getStatus() == RUNNING;
+        });
+
+        Request req = new Request()
+            .setAction("QueryActions.runningQueries")
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new RunningQueriesArgument()
+                    .setDuration(1)
+            );
+
+        executeAction(req, (res) -> {
+            TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+
+            if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 3) {
+
+                boolean hasCorrectRes = res.stream()
+                    .filter(r -> r.getNodeConsistentId().equals(cluster.localNode().consistentId().toString()))
+                    .anyMatch(r -> !((Collection<Map<String, String>>)r.getResult()).isEmpty());
+
+                boolean isOtherResponsesEmpty = res.stream()
+                    .filter(r -> !r.getNodeConsistentId().equals(cluster.localNode().consistentId().toString()))
+                    .allMatch(r -> ((Collection<Map<String, String>>)r.getResult()).isEmpty());
+
+                return hasCorrectRes && isOtherResponsesEmpty;
             }
 
             return false;
