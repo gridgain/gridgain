@@ -25,6 +25,7 @@ import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.lang.IgniteFuture;
 
@@ -442,7 +443,9 @@ public interface IgniteCluster extends ClusterGroup {
      * Checks Ignite grid is active or not active.
      *
      * @return {@code True} if grid is active. {@code False} If grid is not active.
+     * @deprecated Use {@link #state()} instead.
      */
+    @Deprecated
     public boolean active();
 
     /**
@@ -450,23 +453,25 @@ public interface IgniteCluster extends ClusterGroup {
      *
      * @param active If {@code True} start activation process. If {@code False} start deactivation process.
      * @throws IgniteException If there is an already started transaction or lock in the same thread.
+     * @deprecated Use {@link #state(ClusterState)} instead.
      */
+    @Deprecated
     public void active(boolean active);
 
     /**
-     * Checks Ignite grid is in read-only mode or not.
+     * Gets current cluster state.
      *
-     * @return {@code True} if grid is in read-only mode and {@code False} otherwise.
+     * @return Current cluster state.
      */
-    public boolean readOnly();
+    public ClusterState state();
 
     /**
-     * Enable or disable Ignite grid read-only mode.
+     * Changes current cluster state to given {@code newState} cluster state.
      *
-     * @param readOnly If {@code True} enable read-only mode. If {@code False} disable read-only mode.
-     * @throws IgniteException If Ignite grid isn't active.
+     * @param newState New cluster state.
+     * @throws IgniteException If there is an already started transaction or lock in the same thread.
      */
-    public void readOnly(boolean readOnly) throws IgniteException;
+    public void state(ClusterState newState) throws IgniteException;
 
     /**
      * Gets current baseline topology. If baseline topology was not set, will return {@code null}.

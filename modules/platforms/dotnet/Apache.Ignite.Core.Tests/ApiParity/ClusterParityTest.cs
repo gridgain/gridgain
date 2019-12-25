@@ -48,7 +48,7 @@
             "currentBaselineTopology",   // GG-21247
             "id",                       // GG-21621
             "tag",                       // GG-21621
-            "readOnly"                  // GG-23363
+            "state"                     // GG-23363
         };
 
         /// <summary>

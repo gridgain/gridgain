@@ -20,7 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 
 /**
- * Implementation of READ_ONLY cache access strategy.
+ * Implementation of ACTIVE_READ_ONLY cache access strategy.
  * <p>
  * Configuration of L2 cache and per-entity cache access strategy can be set in the
  * Hibernate configuration file:
@@ -43,7 +43,7 @@ import org.apache.ignite.IgniteCheckedException;
  * <pre name="code" class="java">
  * &#064;javax.persistence.Entity
  * &#064;javax.persistence.Cacheable
- * &#064;org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.READ_ONLY)
+ * &#064;org.hibernate.annotations.Cache(usage = CacheConcurrencyStrategy.ACTIVE_READ_ONLY)
  * public class Entity { ... }
  * </pre>
  *

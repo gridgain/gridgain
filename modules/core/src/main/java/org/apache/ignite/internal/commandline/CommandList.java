@@ -36,6 +36,9 @@ public enum CommandList {
     STATE("--state", new StateCommand()),
 
     /** */
+    SET_STATE("--set-state", new ClusterStateChangeCommand()),
+
+    /** */
     BASELINE("--baseline", new BaselineCommand()),
 
     /** */
@@ -58,12 +61,6 @@ public enum CommandList {
 
     /** */
     DATA_CENTER_REPLICATION("--dr", new DrCommand()),
-
-    /** */
-    READ_ONLY_ENABLE("--read-only-on", new ClusterReadOnlyModeEnableCommand()),
-
-    /** */
-    READ_ONLY_DISABLE("--read-only-off", new ClusterReadOnlyModeDisableCommand()),
 
     /** */
     MANAGEMENT("--management", new ManagementCommands());
