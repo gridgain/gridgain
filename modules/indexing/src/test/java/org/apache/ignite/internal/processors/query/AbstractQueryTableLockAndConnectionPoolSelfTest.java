@@ -59,6 +59,9 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
     /** Test duration. */
     private static final long TEST_DUR = GridTestUtils.SF.applyLB(10_000, 3_000);
 
+    /** Run query local . */
+    private static boolean local = false;
+
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
@@ -118,6 +121,29 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         checkTablesLockQueryAndDDLMultithreaded(srv);
 
         checkTablesLockQueryAndDropColumnMultithreaded(srv);
+    }
+
+    /**
+     * Test DDL operation on table with high load local queries.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSingleNodeTablesLockQueryLocalAndDDLMultithreaded() throws Exception {
+        local = true;
+
+        try {
+            final Ignite srv = startGrid(0);
+
+            populateBaseQueryData(srv, 1);
+
+            checkTablesLockQueryAndDDLMultithreaded(srv);
+
+            checkTablesLockQueryAndDropColumnMultithreaded(srv);
+        }
+        finally {
+            local = false;
+        }
     }
 
     /**
@@ -285,6 +311,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                             "FROM \"persTask\".PersonTask as t GROUP BY t.persId) as task ON task.persId = pers.id", true)
                             .setMaxMemory(-1)
                             .setLazy(lazy())
+                            .setLocal(local)
                             .setPageSize(PAGE_SIZE_SMALL));
 
                         cursor.getAll();
