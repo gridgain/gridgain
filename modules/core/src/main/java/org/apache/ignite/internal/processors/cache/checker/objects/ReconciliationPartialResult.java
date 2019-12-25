@@ -19,16 +19,12 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  *
  */
-public class ReconciliationResult extends IgniteDataTransferObject {
+public class ReconciliationPartialResult extends IgniteDataTransferObject {
     /**
      *
      */
@@ -42,67 +38,54 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     /**
      *
      */
-    private Map<UUID, String> nodeIdToFolder;
+    private String error;
 
     /**
      *
      */
-    private List<String> errors;
-
-    /**
-     *
-     */
-    public ReconciliationResult() {
+    public ReconciliationPartialResult(String error) {
+        this.error = error;
     }
 
     /**
      *
      */
-    public ReconciliationResult(
-        PartitionReconciliationResult partReconciliationRes,
-        Map<UUID, String> nodeIdToFolder,
-        List<String> errors
-    ) {
+    public ReconciliationPartialResult(PartitionReconciliationResult partReconciliationRes, String error) {
         this.partitionReconciliationResult = partReconciliationRes;
-        this.nodeIdToFolder = nodeIdToFolder;
-        this.errors = errors;
+        this.error = error;
+    }
+
+    /**
+     *
+     */
+    public ReconciliationPartialResult(PartitionReconciliationResult partReconciliationRes) {
+        this.partitionReconciliationResult = partReconciliationRes;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(partitionReconciliationResult);
-        U.writeMap(out, nodeIdToFolder);
-        U.writeCollection(out, errors);
+        out.writeObject(error);
     }
 
     /** {@inheritDoc} */
     @Override
     protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         partitionReconciliationResult = (PartitionReconciliationResult)in.readObject();
-
-        nodeIdToFolder = U.readMap(in);
-
-        errors = U.readList(in);
+        error = (String)in.readObject();
     }
 
     /**
      *
      */
-    public PartitionReconciliationResult partitionReconciliationResult() {
+    public PartitionReconciliationResult getPartitionReconciliationResult() {
         return partitionReconciliationResult;
     }
 
     /**
      *
      */
-    public Map<UUID, String> nodeIdToFolder() {
-        return nodeIdToFolder;
-    }
-
-    /**
-     *
-     */
-    public List<String> errors() {
-        return errors;
+    public String getError() {
+        return error;
     }
 }

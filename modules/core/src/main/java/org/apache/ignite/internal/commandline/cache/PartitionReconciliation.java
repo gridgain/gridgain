@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline.cache;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -304,10 +305,32 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         printer.accept(prepareHeaderMeta());
 
+        printer.accept(prepareErrors(res.errors()));
+
         printer.accept(prepareResultFolders(res.nodeIdToFolder(), reconciliationRes.nodesIdsToConsistenseIdsMap()));
 
         if (args.console)
             reconciliationRes.print(printer, args.verbose);
+    }
+
+    /**
+     *
+     */
+    private String prepareErrors(List<String> errors) {
+        SB errorMsg = new SB();
+
+        if(!errors.isEmpty()) {
+            errorMsg.a("Next errors occurred during of execution:\n");
+
+            for (int i = 0; i < errors.size(); i++) {
+                int point = i + 1;
+
+                errorMsg.a(point+ ". ");
+                errorMsg.a(errors.get(i));
+            }
+        }
+
+        return errorMsg.toString();
     }
 
     /**

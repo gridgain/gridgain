@@ -26,18 +26,19 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationPartialResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
@@ -133,12 +134,21 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
     /**
      * @return
-     * @throws IgniteException
      */
-    public PartitionReconciliationResult execute() throws IgniteException {
+    public ReconciliationPartialResult execute() {
         try {
-            //TODO skip ttl caches
             for (String cache : caches) {
+                IgniteInternalCache<Object, Object> cachex = ignite.cachex(cache);
+
+                if (cachex == null)
+                    throw new IllegalArgumentException("The cache '" + cache + "' doesn't exist.");
+
+                if (cachex.configuration().getExpiryPolicyFactory() != null) {
+                    log.warning("The cache '" + cache + "' was skipped because CacheConfiguration#setExpiryPolicyFactory exists.");
+
+                    continue;
+                }
+
                 int[] partitions = ignite.affinity(cache).primaryPartitions(ignite.localNode());
 
                 for (int partId : partitions) {
@@ -152,17 +162,17 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
             while (!isEmpty() || (live = hasLiveHandlers())) {
                 if (topologyChanged()) {
-                    log.warning("Topology was changed. Partition reconciliation task was stopped.");
+                    String errMsg = "Topology was changed. Partition reconciliation task was stopped.";
 
-                    // TODO: 13.12.19 Add exception to result and probably partially available data.
-                    return new PartitionReconciliationResult();
+                    log.warning(errMsg);
+
+                    return new ReconciliationPartialResult(prepareResult(), errMsg);
                 }
 
-                if(isInterrupted()) {
+                if (isInterrupted()) {
                     log.warning(INTERRUPTING_MSG);
 
-                    // TODO: 13.12.19 Add exception to result and probably partially available data.
-                    return new PartitionReconciliationResult();
+                    return new ReconciliationPartialResult(prepareResult(), INTERRUPTING_MSG);
                 }
 
                 if (isEmpty() && live) {
@@ -182,22 +192,24 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 else if (workload instanceof Repair)
                     handle((Repair)workload);
                 else
-                    throw new RuntimeException("TODO Unsupported type: " + workload);
+                    log.error("Unsupported workload type: " + workload);
             }
 
-            return prepareResult();
+            return new ReconciliationPartialResult(prepareResult());
         }
         catch (InterruptedException e) {
-            log.warning("Partition reconciliation was interrupted.", e);
+            String errMsg = "Partition reconciliation was interrupted.";
 
-            // TODO: 13.12.19 Add exception to result and probably partially available data.
-            return new PartitionReconciliationResult();
+            log.warning(errMsg, e);
+
+            return new ReconciliationPartialResult(prepareResult(), errMsg);
         }
         catch (IgniteCheckedException e) {
-            log.error("Unexpected error.", e);
+            String errMsg = "Unexpected error.";
 
-            // TODO: 13.12.19 Add exception to result and probably partially available data.
-            return new PartitionReconciliationResult();
+            log.error(errMsg, e);
+
+            return new ReconciliationPartialResult(prepareResult(), errMsg + " " + e.getMessage());
         }
     }
 

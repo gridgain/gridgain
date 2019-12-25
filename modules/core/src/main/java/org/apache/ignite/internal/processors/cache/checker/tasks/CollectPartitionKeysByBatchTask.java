@@ -119,6 +119,14 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         KeyCacheObject lastKey = null;
 
         for (int i = 0; i < results.size(); i++) {
+            IgniteException exc = results.get(i).getException();
+
+            if (exc != null) {
+                log.warning("Batch was skipped.", exc);
+
+                continue;
+            }
+
             List<PartitionKeyVersion> nodeRes = results.get(i).getData();
 
             for (PartitionKeyVersion partKeyVer : nodeRes) {
