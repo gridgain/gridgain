@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.console.agent.AgentConfiguration;
 import org.apache.ignite.console.rest.RestResult;
@@ -33,6 +34,8 @@ import org.apache.ignite.internal.processors.rest.client.message.GridClientNodeB
 import org.apache.ignite.internal.processors.rest.handlers.top.GridTopologyCommandHandler;
 import org.apache.ignite.internal.processors.rest.request.GridRestTopologyRequest;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.logger.slf4j.Slf4jLogger;
+import org.slf4j.LoggerFactory;
 
 import static org.apache.ignite.internal.IgniteVersionUtils.VER_STR;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.TOPOLOGY;
@@ -41,6 +44,9 @@ import static org.apache.ignite.internal.processors.rest.GridRestCommand.TOPOLOG
  * API to transfer topology from demo cluster to Web Console.
  */
 public class DemoClusterHandler extends AbstractClusterHandler {
+    /** */
+    private static final IgniteLogger log = new Slf4jLogger(LoggerFactory.getLogger(DemoClusterHandler.class));
+
     /** Demo cluster ID. */
     static final String DEMO_CLUSTER_ID = UUID.randomUUID().toString();
 
@@ -84,28 +90,35 @@ public class DemoClusterHandler extends AbstractClusterHandler {
         if (cfg.disableDemo())
             return null;
 
-        TopologySnapshot top;
+        try {
+            TopologySnapshot top;
 
-        if (AgentClusterDemo.getDemoUrl() != null) {
-            IgniteEx ignite = (IgniteEx)F.first(Ignition.allGrids());
+            if (AgentClusterDemo.getDemoUrl() != null) {
+                IgniteEx ignite = (IgniteEx)F.first(Ignition.allGrids());
 
-            Collection<GridClientNodeBean> nodes = collectNodes(ignite.context());
+                Collection<GridClientNodeBean> nodes = collectNodes(ignite.context());
 
-            top = new TopologySnapshot(nodes);
+                top = new TopologySnapshot(nodes);
 
-            top.setActive(ignite.cluster().active());
+                top.setActive(ignite.cluster().active());
+            }
+            else {
+                top = new TopologySnapshot();
+
+                top.setClusterVersion(VER_STR);
+            }
+
+            top.setId(DEMO_CLUSTER_ID);
+            top.setName(DEMO_CLUSTER_NAME);
+            top.setDemo(true);
+
+            return top;
         }
-        else {
-            top = new TopologySnapshot();
+        catch (Throwable e) {
+            log.error("Failed to collect topology for demo cluster", e);
 
-            top.setClusterVersion(VER_STR);
+            return null;
         }
-
-        top.setId(DEMO_CLUSTER_ID);
-        top.setName(DEMO_CLUSTER_NAME);
-        top.setDemo(true);
-
-        return top;
     }
 
     /**
