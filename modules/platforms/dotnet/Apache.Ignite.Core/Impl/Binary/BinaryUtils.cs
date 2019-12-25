@@ -405,8 +405,8 @@ namespace Apache.Ignite.Core.Impl.Binary
             long high = stream.ReadLong();
             int low = stream.ReadInt();
 
-            return TimeZone.CurrentTimeZone.ToLocalTime(
-                new DateTime(JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, DateTimeKind.Utc));
+            return new DateTime(JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, DateTimeKind.Utc)
+                .ToLocalTime();
         }
 
         /// <summary>
@@ -1590,7 +1590,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             if (date.Kind != DateTimeKind.Utc)
             {
-                date = TimeZone.CurrentTimeZone.ToUniversalTime(date);
+                date = date.ToUniversalTime();
             }
 
             long diff = date.Ticks - JavaDateTicks;
