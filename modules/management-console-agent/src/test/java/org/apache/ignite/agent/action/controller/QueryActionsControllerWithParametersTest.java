@@ -95,7 +95,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
         executeAction(initReq, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED;
+            return r != null && r.getStatus() == COMPLETED;
         });
     }
 
@@ -119,7 +119,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            if (r.getStatus() == COMPLETED) {
+            if (r != null && r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
                 JSONArray rows = ctx.read("$[0].rows[*]");
@@ -169,7 +169,7 @@ public class QueryActionsControllerWithParametersTest extends AbstractActionCont
             executeAction(req, (res) -> {
                 JobResponse r = F.first(res);
 
-                if (r.getStatus() == COMPLETED) {
+                if (r != null && r.getStatus() == COMPLETED) {
                     DocumentContext ctx = parse(r.getResult());
 
                     JSONArray rows = ctx.read("$[0].rows[*]");

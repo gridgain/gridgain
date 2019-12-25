@@ -135,13 +135,14 @@ public abstract class AbstractActionControllerTest extends AgentCommonAbstractTe
         assertWithPoll(
             () -> {
                 List<JobResponse> res = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
-                return !F.isEmpty(res) && assertFn.apply(res);
+
+                return res != null && assertFn.apply(res);
             }
         );
     }
 
     /** {@inheritDoc} */
     @Override protected void assertWithPoll(Callable<Boolean> cond) {
-        with().pollInterval(500, MILLISECONDS).await().atMost(10, SECONDS).until(cond);
+        with().pollInterval(500, MILLISECONDS).await().atMost(20, SECONDS).until(cond);
     }
 }

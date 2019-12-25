@@ -47,7 +47,7 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithA
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED && UUID.fromString((String) r.getResult()) != null;
+            return r != null && r.getStatus() == COMPLETED && UUID.fromString((String) r.getResult()) != null;
         });
     }
 
@@ -65,7 +65,7 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithA
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
+            return r != null && r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
     }
 
@@ -83,7 +83,7 @@ public class SecurityActionsControllerTest extends AbstractActionControllerWithA
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
+            return r != null && r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
     }
 }

@@ -56,13 +56,13 @@ public abstract class AbstractActionControllerWithAuthenticationTest extends Abs
         executeAction(authReq, (res) -> {
             JobResponse r = F.first(res);
 
-            if (r.getStatus() == COMPLETED && r.getResult() != null) {
+            if (r != null && r.getStatus() == COMPLETED && r.getResult() != null) {
                 sesId.set((UUID.fromString((String) r.getResult())));
 
                 return true;
             }
 
-            if (r.getStatus() == FAILED) {
+            if (r != null && r.getStatus() == FAILED) {
                 sesId.set(null);
 
                 return true;

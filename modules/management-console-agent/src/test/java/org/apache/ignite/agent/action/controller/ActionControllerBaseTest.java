@@ -42,7 +42,7 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
+            return r != null && r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
         });
     }
 
@@ -59,7 +59,7 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
+            return r != null && r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
         });
     }
 }
