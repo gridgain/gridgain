@@ -17,7 +17,6 @@
 package org.apache.ignite.agent.dto.cache;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.lang.IgniteUuid;
 
 /**
  * DTO for cache info.
