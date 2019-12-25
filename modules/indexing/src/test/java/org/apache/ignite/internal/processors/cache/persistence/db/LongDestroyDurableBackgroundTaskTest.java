@@ -651,7 +651,6 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
         @Override protected long destroyDownPages(
             LongListReuseBag bag,
             long pageId,
-            long fwdId,
             int lvl,
             IgniteInClosure<H2Row> c,
             AtomicLong lockHoldStartTime,
@@ -668,7 +667,7 @@ public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest
                     throw new RuntimeException("Aborting destroy (test).");
             }
 
-            return super.destroyDownPages(bag, pageId, fwdId, lvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
+            return super.destroyDownPages(bag, pageId, lvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
         }
     }
 }

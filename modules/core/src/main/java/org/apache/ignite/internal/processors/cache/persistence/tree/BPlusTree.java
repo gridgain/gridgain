@@ -2529,7 +2529,7 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 long rootPageId = getFirstPageId(metaPageId, metaPage, rootLvl, metaPageAddr);
 
-                pagesCnt += destroyDownPages(bag, rootPageId, 0L, rootLvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
+                pagesCnt += destroyDownPages(bag, rootPageId, rootLvl, c, lockHoldStartTime, lockMaxTime, lockedPages);
 
                 bag.addFreePage(recyclePage(metaPageId, metaPage, metaPageAddr, null));
 
@@ -2558,7 +2558,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
      *
      * @param bag Reuse bag.
      * @param pageId Page id.
-     * @param fwdId Forward page id.
      * @param lvl Current level of tree.
      * @param c Visitor closure. Visits only leaf pages.
      * @param lockHoldStartTime When lock has been aquired last time.
@@ -2571,7 +2570,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
     protected long destroyDownPages(
         LongListReuseBag bag,
         long pageId,
-        long fwdId,
         int lvl,
         IgniteInClosure<L> c,
         AtomicLong lockHoldStartTime,
@@ -2606,7 +2604,8 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
 
                 if (!io.isLeaf()) {
                     // Recursively go down if we are on inner level.
-                    for (int i = 0; i < cnt; i++) {
+                    // When i == cnt it is the same as io.getRight(cnt - 1) but works for routing pages.
+                    for (int i = 0; i <= cnt; i++) {
                         long leftId = inner(io).getLeft(pageAddr, i);
 
                         inner(io).setLeft(pageAddr, i, 0);
@@ -2614,7 +2613,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                         pagesCnt += destroyDownPages(
                             bag,
                             leftId,
-                            inner(io).getRight(pageAddr, i),
                             lvl - 1,
                             c,
                             lockHoldStartTime,
@@ -2622,30 +2620,6 @@ public abstract class BPlusTree<L, T extends L> extends DataStructure implements
                             lockedPages
                         );
                     }
-
-                    if (fwdId != 0) {
-                        // For the rightmost child ask neighbor.
-                        long fwdId0 = fwdId;
-                        long fwdPage = acquirePage(fwdId0);
-
-                        try {
-                            long fwdPageAddr = readLock(fwdId0, fwdPage);
-
-                            try {
-                                fwdId = inner(io).getLeft(fwdPageAddr, 0);
-                            }
-                            finally {
-                                readUnlock(fwdId0, fwdPage, fwdPageAddr);
-                            }
-                        }
-                        finally {
-                            releasePage(fwdId0, fwdPage);
-                        }
-                    }
-
-                    long leftId = inner(io).getLeft(pageAddr, cnt); // The same as io.getRight(cnt - 1) but works for routing pages.
-
-                    pagesCnt += destroyDownPages(bag, leftId, fwdId, lvl - 1, c, lockHoldStartTime, lockMaxTime, lockedPages);
                 }
 
                 if (c != null && io.isLeaf())
