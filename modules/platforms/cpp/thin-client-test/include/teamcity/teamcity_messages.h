@@ -30,13 +30,6 @@ class TeamcityMessages
 {
     std::ostream* m_out;
 
-protected:
-    std::string escape(const std::string &s);
-
-    void openMsg(const std::string &name);
-    void writeProperty(const std::string &name, const std::string &value);
-    void closeMsg();
-
 public:
     static const bool StdErr = true;
     static const bool StdOut = false;
