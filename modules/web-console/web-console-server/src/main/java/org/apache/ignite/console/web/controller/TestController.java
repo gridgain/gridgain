@@ -16,7 +16,6 @@
 
 package org.apache.ignite.console.web.controller;
 
-import io.swagger.annotations.ApiOperation;
 import javax.validation.Valid;
 import org.apache.ignite.console.common.Test;
 import org.apache.ignite.console.dto.Account;
@@ -66,9 +65,10 @@ public class TestController {
     }
 
     /**
+     * Register and authenticate under admin user.
+     *
      * @param params SignUp params.
      */
-    @ApiOperation(value = "Register and authenticate under admin user.")
     @PutMapping(path = "/admins")
     public ResponseEntity<Void> registerAdmin(@Valid @RequestBody SignUpRequest params) {
         Account acc = adminSrv.registerUser(params);
@@ -87,9 +87,10 @@ public class TestController {
     }
 
     /**
+     * Delete test users by mask.
+     * 
      * @param email Email mask.
      */
-    @ApiOperation(value = "Delete test users by mask.")
     @DeleteMapping(path = "/users/{email}")
     public ResponseEntity<Void> delete(@PathVariable("email") String email) {
         JsonArray accounts = adminSrv.list(U.currentTimeMillis(), U.currentTimeMillis());

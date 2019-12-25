@@ -23,7 +23,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.regex.Pattern;
-import io.swagger.annotations.ApiOperation;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
@@ -58,10 +57,11 @@ public class AgentDownloadController {
     private String agentFileRegExp;
 
     /**
+     * Download agent archive.
+     *
      * @param user User.
      * @throws Exception If failed.
      */
-    @ApiOperation(value = "Download agent archive.")
     @GetMapping(path = "/api/v1/downloads/agent")
     public void load(@AuthenticationPrincipal Account user, HttpServletResponse res) throws Exception {
         File agentFolder = U.resolveIgnitePath(agentFolderName);
