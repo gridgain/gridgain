@@ -570,9 +570,8 @@ public class GridToStringBuilderSelfTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture finishFut = GridTestUtils.runAsync(() -> {
             List list = classWithList.list;
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++)
                 list.add(new SlowToStringObject());
-            }
 
             Random rnd = new Random();
 
@@ -620,9 +619,8 @@ public class GridToStringBuilderSelfTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture finishFut = GridTestUtils.runAsync(() -> {
             Map map = classWithMap.map;
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 100; i++)
                 map.put(i, new SlowToStringObject());
-            }
 
             Random rnd = new Random();
 
@@ -875,8 +873,7 @@ public class GridToStringBuilderSelfTest extends GridCommonAbstractTest {
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(ClassWithList.class, this
-            );
+            return S.toString(ClassWithList.class, this);
         }
     }
 

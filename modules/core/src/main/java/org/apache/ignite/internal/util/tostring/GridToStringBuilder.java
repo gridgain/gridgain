@@ -115,7 +115,7 @@ public class GridToStringBuilder {
         IgniteSystemProperties.getInteger(IGNITE_TO_STRING_COLLECTION_LIMIT, 100);
 
     /** */
-    private static final boolean throwRuntimeException =
+    private static final boolean THROW_RUNTIME_EXCEPTION =
         IgniteSystemProperties.getBoolean(IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION, false);
 
     /** Every thread has its own string builder. */
@@ -1169,11 +1169,11 @@ public class GridToStringBuilder {
                             toString(buf, fd.fieldClass(), GridUnsafe.getObjectField(obj, fd.offset()));
                         }
                         catch (RuntimeException e) {
-                            if (throwRuntimeException)
+                            if (THROW_RUNTIME_EXCEPTION)
                                 throw e;
-                            else {
-                                buf.a("Runtime exception was caught when building string representation: " + e.getMessage());
-                            }
+                            else
+                                buf.a("Runtime exception was caught when building string representation: " +
+                                    e.getMessage());
                         }
 
                         break;
