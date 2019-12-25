@@ -29,7 +29,7 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.Metas
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadOnlyMetastorage;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.LocalContinuousTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -38,12 +38,12 @@ import org.apache.ignite.thread.IgniteThread;
 import static org.apache.ignite.internal.util.IgniteUtils.awaitForWorkersStop;
 
 /**
- * Processor that is responsible for long-running, continuous tasks that are executed on local node
+ * Processor that is responsible for durable background tasks that are executed on local node
  * and should be continued even after node restart.
  */
-public class LocalContinuousTasksProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
-    /** Prefix for metastorage keys for continuous tasks. */
-    private static final String STORE_LOCAL_CONTINUOUS_TASK_PREFIX = "local-continuous-task-";
+public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implements MetastorageLifecycleListener {
+    /** Prefix for metastorage keys for durable background tasks. */
+    private static final String STORE_DURABLE_BACKGROUND_TASK_PREFIX = "durable-background-task-";
 
     /** Metastorage. */
     private volatile ReadWriteMetastorage metastorage;
@@ -51,64 +51,64 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
     /** Metastorage synchronization mutex. */
     private final Object metaStorageMux = new Object();
 
-    /** Set of workers that executing local continuous tasks. */
-    private final Set<GridWorker> asyncLocContinuousTaskWorkers = new GridConcurrentHashSet<>();
+    /** Set of workers that executing durable background tasks. */
+    private final Set<GridWorker> asyncDurableBackgroundTaskWorkers = new GridConcurrentHashSet<>();
 
-    /** Count of workers that executing local continuous tasks. */
-    private final AtomicInteger asyncLocContinuousTasksWorkersCntr = new AtomicInteger(0);
+    /** Count of workers that executing durable background tasks. */
+    private final AtomicInteger asyncDurableBackgroundTasksWorkersCntr = new AtomicInteger(0);
 
-    /** Continuous tasks map. */
-    private final ConcurrentHashMap<String, LocalContinuousTask> locContinuousTasks = new ConcurrentHashMap<>();
+    /** Durable background tasks map. */
+    private final ConcurrentHashMap<String, DurableBackgroundTask> durableBackgroundTasks = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
      */
-    public LocalContinuousTasksProcessor(GridKernalContext ctx) {
+    public DurableBackgroundTasksProcessor(GridKernalContext ctx) {
         super(ctx);
     }
 
     /**
      * Starts the asynchronous operation of pending tasks execution. Is called on start.
      */
-    private void asyncLocalContinuousTasksExecution() {
-        assert locContinuousTasks != null;
+    private void asyncDurableBackgroundTasksExecution() {
+        assert durableBackgroundTasks != null;
 
-        for (LocalContinuousTask task : locContinuousTasks.values())
-            asyncLocalContinuousTaskExecute(task, true);
+        for (DurableBackgroundTask task : durableBackgroundTasks.values())
+            asyncDurableBackgroundTaskExecute(task, false);
     }
 
     /**
-     * Creates a worker to execute single local continuous task.
+     * Creates a worker to execute single durable background task.
      * @param task Task.
      * @param dropTaskIfFailed Whether to delete task from metastorage, if it has failed.
      */
-    private void asyncLocalContinuousTaskExecute(LocalContinuousTask task, boolean dropTaskIfFailed) {
-        String workerName = "async-local-continuous-task-executor-" + asyncLocContinuousTasksWorkersCntr.getAndIncrement();
+    private void asyncDurableBackgroundTaskExecute(DurableBackgroundTask task, boolean dropTaskIfFailed) {
+        String workerName = "async-durable-background-task-executor-" + asyncDurableBackgroundTasksWorkersCntr.getAndIncrement();
 
         GridWorker worker = new GridWorker(ctx.igniteInstanceName(), workerName, log) {
             @Override protected void body() {
                 try {
-                    log.info("Executing local continuous task: " + task.shortName());
+                    log.info("Executing durable background task: " + task.shortName());
 
                     task.execute(ctx);
 
-                    log.info("Execution of local continuous task completed: " + task.shortName());
+                    log.info("Execution of durable background task completed: " + task.shortName());
 
-                    removeLocalContinuousTask(task);
+                    removeDurableBackgroundTask(task);
                 }
                 catch (Throwable e) {
-                    log.error("Could not execute local continuous task: " + task.shortName(), e);
+                    log.error("Could not execute durable background task: " + task.shortName(), e);
 
                     if (dropTaskIfFailed)
-                        removeLocalContinuousTask(task);
+                        removeDurableBackgroundTask(task);
                 }
                 finally {
-                    asyncLocContinuousTaskWorkers.remove(this);
+                    asyncDurableBackgroundTaskWorkers.remove(this);
                 }
             }
         };
 
-        asyncLocContinuousTaskWorkers.add(worker);
+        asyncDurableBackgroundTaskWorkers.add(worker);
 
         Thread asyncTask = new IgniteThread(worker);
 
@@ -117,13 +117,13 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        asyncLocalContinuousTasksExecution();
+        asyncDurableBackgroundTasksExecution();
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStop(boolean cancel) {
         // Waiting for workers, but not cancelling them, trying to complete running tasks.
-        awaitForWorkersStop(asyncLocContinuousTaskWorkers, false, log);
+        awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, false, log);
     }
 
     /** {@inheritDoc} */
@@ -136,22 +136,22 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
      */
     public void onStateChangeFinish(ChangeGlobalStateFinishMessage msg) {
         if (!msg.clusterActive())
-            awaitForWorkersStop(asyncLocContinuousTaskWorkers, true, log);
+            awaitForWorkersStop(asyncDurableBackgroundTaskWorkers, true, log);
     }
 
     /** {@inheritDoc} */
     @Override public void onReadyForRead(ReadOnlyMetastorage metastorage) {
         synchronized (metaStorageMux) {
-            if (locContinuousTasks.isEmpty()) {
+            if (durableBackgroundTasks.isEmpty()) {
                 try {
                     metastorage.iterate(
-                        STORE_LOCAL_CONTINUOUS_TASK_PREFIX,
-                        (key, val) -> locContinuousTasks.put(key, (LocalContinuousTask)val),
+                        STORE_DURABLE_BACKGROUND_TASK_PREFIX,
+                        (key, val) -> durableBackgroundTasks.put(key, (DurableBackgroundTask)val),
                         true
                     );
                 }
                 catch (IgniteCheckedException e) {
-                    throw new IgniteException("Failed to iterate continuous tasks storage.", e);
+                    throw new IgniteException("Failed to iterate durable background tasks storage.", e);
                 }
             }
         }
@@ -161,13 +161,13 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
     @Override public void onReadyForReadWrite(ReadWriteMetastorage metastorage) {
         synchronized (metaStorageMux) {
             try {
-                for (Map.Entry<String, LocalContinuousTask> entry : locContinuousTasks.entrySet()) {
+                for (Map.Entry<String, DurableBackgroundTask> entry : durableBackgroundTasks.entrySet()) {
                     if (metastorage.readRaw(entry.getKey()) == null)
                         metastorage.write(entry.getKey(), entry.getValue());
                 }
             }
             catch (IgniteCheckedException e) {
-                throw new IgniteException("Failed to read key from continuous tasks storage.", e);
+                throw new IgniteException("Failed to read key from durable background tasks storage.", e);
             }
         }
 
@@ -175,13 +175,13 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
     }
 
     /**
-     * Builds a metastorage key for continuous task object.
+     * Builds a metastorage key for durable background task object.
      *
      * @param obj Object.
      * @return Metastorage key.
      */
-    private String localContinuousTaskMetastorageKey(LocalContinuousTask obj) {
-        String k = STORE_LOCAL_CONTINUOUS_TASK_PREFIX + obj.shortName();
+    private String durableBackgroundTaskMetastorageKey(DurableBackgroundTask obj) {
+        String k = STORE_DURABLE_BACKGROUND_TASK_PREFIX + obj.shortName();
 
         if (k.length() > MetastorageTree.MAX_KEY_LEN) {
             int hashLenLimit = 5;
@@ -196,15 +196,15 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
     }
 
     /**
-     * Adds local continuous task object.
+     * Adds durable background task object.
      *
      * @param obj Object.
      */
-    private void addLocalContinuousTask(LocalContinuousTask obj) {
-        String objName = localContinuousTaskMetastorageKey(obj);
+    private void addDurableBackgroundTask(DurableBackgroundTask obj) {
+        String objName = durableBackgroundTaskMetastorageKey(obj);
 
         synchronized (metaStorageMux) {
-            locContinuousTasks.put(objName, obj);
+            durableBackgroundTasks.put(objName, obj);
 
             if (metastorage != null) {
                 ctx.cache().context().database().checkpointReadLock();
@@ -223,15 +223,15 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
     }
 
     /**
-     * Removes local continuous task object.
+     * Removes durable background task object.
      *
      * @param obj Object.
      */
-    private void removeLocalContinuousTask(LocalContinuousTask obj) {
-        String objName = localContinuousTaskMetastorageKey(obj);
+    private void removeDurableBackgroundTask(DurableBackgroundTask obj) {
+        String objName = durableBackgroundTaskMetastorageKey(obj);
 
         synchronized (metaStorageMux) {
-            locContinuousTasks.remove(objName);
+            durableBackgroundTasks.remove(objName);
 
             if (metastorage != null) {
                 ctx.cache().context().database().checkpointReadLock();
@@ -250,15 +250,15 @@ public class LocalContinuousTasksProcessor extends GridProcessorAdapter implemen
     }
 
     /**
-     * Starts local continuous task. If task is applied to persistent cache, saves it to metastorage.
+     * Starts durable background task. If task is applied to persistent cache, saves it to metastorage.
      *
      * @param task Continuous task.
      * @param ccfg Cache configuration.
      */
-    public void startLocalContinuousTask(LocalContinuousTask task, CacheConfiguration ccfg) {
+    public void startDurableBackgroundTask(DurableBackgroundTask task, CacheConfiguration ccfg) {
         if (CU.isPersistentCache(ccfg, ctx.config().getDataStorageConfiguration()))
-            addLocalContinuousTask(task);
+            addDurableBackgroundTask(task);
 
-        asyncLocalContinuousTaskExecute(task, false);
+        asyncDurableBackgroundTaskExecute(task, false);
     }
 }

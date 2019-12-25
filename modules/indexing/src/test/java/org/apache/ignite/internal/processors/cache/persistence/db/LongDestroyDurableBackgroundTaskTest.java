@@ -81,7 +81,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOC
 @SystemPropertiesList(
     @WithSystemProperty(key = IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT, value = "5000")
 )
-public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
+public class LongDestroyDurableBackgroundTaskTest extends GridCommonAbstractTest {
     /** Nodes count. */
     private static final int NODES_COUNT = 2;
 
@@ -101,15 +101,15 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
     private final LogListener blockedSysCriticalThreadLsnr =
         LogListener.matches("Blocked system-critical thread has been detected").build();
 
-    /** Latch that waits for execution of continuous task. */
+    /** Latch that waits for execution of durable background task. */
     private CountDownLatch pendingDelLatch;
 
-    /** Latch that waits for indexes rebuiling. */
+    /** Latch that waits for indexes rebuilding. */
     private CountDownLatch idxsRebuildLatch;
 
     /** */
     private final LogListener pendingDelFinishedLsnr =
-        new CallbackExecutorLogListener(".*?Execution of local continuous task completed.*", () -> pendingDelLatch.countDown());
+        new CallbackExecutorLogListener(".*?Execution of durable background task completed.*", () -> pendingDelLatch.countDown());
 
     /** */
     private final LogListener idxsRebuildFinishedLsnr =
@@ -118,10 +118,10 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
     /** */
     private final LogListener taskLifecycleListener =
         new MessageOrderLogListener(
-            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
-            ".*?Could not execute local continuous task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
-            ".*?Executing local continuous task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
-            ".*?Execution of local continuous task completed: DROP_SQL_INDEX-PUBLIC." + IDX_NAME
+            ".*?Executing durable background task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
+            ".*?Could not execute durable background task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
+            ".*?Executing durable background task: DROP_SQL_INDEX-PUBLIC." + IDX_NAME,
+            ".*?Execution of durable background task completed: DROP_SQL_INDEX-PUBLIC." + IDX_NAME
         );
 
     /**
@@ -259,7 +259,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
 
             ignite = startGrid(RESTARTED_NODE_NUM);
 
-            awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
+            awaitLatch(pendingDelLatch, "Test timed out: failed to await for durable background task completion.");
 
             awaitPartitionMapExchange();
 
@@ -274,7 +274,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
             checkSelectAndPlan(cacheOnAliveNode, !dropIdxWhenOneNodeStopped0);
         }
         else
-            awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
+            awaitLatch(pendingDelLatch, "Test timed out: failed to await for durable background task completion.");
 
         IgniteCache<Integer, Integer> cache = grid(RESTARTED_NODE_NUM).cache(DEFAULT_CACHE_NAME);
 
@@ -556,7 +556,7 @@ public class LongDestroyLocalContinuousTaskTest extends GridCommonAbstractTest {
 
         startGrid(RESTARTED_NODE_NUM);
 
-        awaitLatch(pendingDelLatch, "Test timed out: failed to await for continuous task completion.");
+        awaitLatch(pendingDelLatch, "Test timed out: failed to await for durable background task completion.");
 
         assertTrue(taskLifecycleListener.check());
     }

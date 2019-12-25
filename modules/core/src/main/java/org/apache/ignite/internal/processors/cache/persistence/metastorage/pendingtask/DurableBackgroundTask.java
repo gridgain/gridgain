@@ -19,11 +19,11 @@ import java.io.Serializable;
 import org.apache.ignite.internal.GridKernalContext;
 
 /**
- * Continuous task for single node. It should be used to do long operations (e.g. index deletion)
- * for case when node with persistence fails before operation is completed. After start, node reads it's
+ * Durable task that should be used to do long operations (e.g. index deletion) in background
+ * for cases when node with persistence can fail before operation is completed. After start, node reads it's
  * pending continuous tasks from metastorage and completes them.
  */
-public interface LocalContinuousTask extends Serializable {
+public interface DurableBackgroundTask extends Serializable {
     /**
      * Short name of the task is used to build metastorage key for saving this task.
      *

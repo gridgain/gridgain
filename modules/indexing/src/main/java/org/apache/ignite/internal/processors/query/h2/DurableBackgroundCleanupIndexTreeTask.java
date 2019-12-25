@@ -23,7 +23,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.LocalContinuousTask;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 /**
  * Tasks that cleans up index tree.
  */
-public class LocalContinuousCleanupIndexTreeTask implements LocalContinuousTask {
+public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundTask {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -58,7 +58,7 @@ public class LocalContinuousCleanupIndexTreeTask implements LocalContinuousTask 
     private String idxName;
 
     /** */
-    public LocalContinuousCleanupIndexTreeTask(
+    public DurableBackgroundCleanupIndexTreeTask(
         List<Long> rootPages,
         List<H2Tree> trees,
         String cacheGrpName,
@@ -168,6 +168,6 @@ public class LocalContinuousCleanupIndexTreeTask implements LocalContinuousTask 
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(LocalContinuousCleanupIndexTreeTask.class, this);
+        return S.toString(DurableBackgroundCleanupIndexTreeTask.class, this);
     }
 }
