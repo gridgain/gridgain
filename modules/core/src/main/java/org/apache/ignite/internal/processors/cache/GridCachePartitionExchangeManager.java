@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -2162,11 +2163,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         if (warnings.canAddMessage()) {
                             warnings.add(longRunningTransactionWarning(tx, curTime));
 
-                            boolean clientMode = cctx.kernalContext().config().isClientMode() == null ? false
-                                : cctx.kernalContext().config().isClientMode();
-
                             if (cctx.tm().txOwnerDumpRequestsAllowed()
-                                && !clientMode
+                                && !Optional.ofNullable(cctx.kernalContext().config().isClientMode()).orElse(false)
                                 && tx.local()
                                 && tx.state() == TransactionState.ACTIVE
                                 && ltrDumpLimiter.allowAction(tx))
