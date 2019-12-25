@@ -17,8 +17,6 @@
 package org.apache.ignite.console.web.model;
 
 import java.util.UUID;
-import io.swagger.annotations.ApiModelProperty;
-import javax.validation.constraints.NotNull;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.hibernate.validator.constraints.NotEmpty;
 
@@ -26,14 +24,11 @@ import org.hibernate.validator.constraints.NotEmpty;
  * Web model of toggle admin right request.
  */
 public class ToggleRequest {
-    /** Email. */
-    @ApiModelProperty(value = "User ID.", required = true)
-    @NotNull
+    /** ID. */
     @NotEmpty
     private UUID id;
 
     /** Admin flag. */
-    @ApiModelProperty(value = "Admin flag.", required = true)
     private boolean admin;
 
     /**

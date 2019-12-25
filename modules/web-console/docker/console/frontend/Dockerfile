@@ -17,6 +17,15 @@
 # Extend nginx image
 FROM nginx:1-alpine
 
+# Provide default arguments
+ARG DEFAULT_DOCKERIZE_VERSION=v0.6.1
+
+ENV DOCKERIZE_VERSION=$DEFAULT_DOCKERIZE_VERSION
+
+RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+
 COPY ./ignite-web-console-*/frontend /data/www
 COPY ./frontend/nginx/nginx.conf /etc/nginx/nginx.conf
 COPY ./frontend/nginx/web-console.conf /etc/nginx/web-console.conf
