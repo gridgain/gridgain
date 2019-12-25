@@ -17,7 +17,6 @@
 package org.apache.ignite.console.web.controller;
 
 import java.util.UUID;
-import io.swagger.annotations.ApiOperation;
 import javax.validation.Valid;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.dto.Announcement;
@@ -37,7 +36,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import springfox.documentation.annotations.ApiIgnore;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -61,20 +59,22 @@ public class AdminController {
     }
 
     /**
+     * Get a list of users.
+     * 
      * @param period Period filter.
      * @return List of accounts.
      */
-    @ApiOperation(value = "Get a list of users.")
     @PostMapping(path = "/list", consumes = APPLICATION_JSON_VALUE)
-    public ResponseEntity<JsonArray> loadAccounts(@ApiIgnore @RequestBody PeriodFilterRequest period) {
+    public ResponseEntity<JsonArray> loadAccounts(@RequestBody PeriodFilterRequest period) {
         return ResponseEntity.ok(adminSrv.list(period.getStartDate(), period.getEndDate()));
     }
 
     /**
+     * Toggle admin permissions.
+     *
      * @param acc Account.
      * @param params Parameters.
      */
-    @ApiOperation(value = "Toggle admin permissions.")
     @PostMapping(path = "/toggle", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> toggle(
         @AuthenticationPrincipal Account acc,
@@ -92,9 +92,10 @@ public class AdminController {
     }
 
     /**
+     * Register user.
+     *
      * @param params SignUp params.
      */
-    @ApiOperation(value = "Register user.")
     @PutMapping(path = "/users")
     public ResponseEntity<Void> registerUser(@Valid @RequestBody SignUpRequest params) {
         adminSrv.registerUser(params);
@@ -103,9 +104,10 @@ public class AdminController {
     }
 
     /**
+     * Delete user.
+     *
      * @param accId Account ID.
      */
-    @ApiOperation(value = "Delete user.")
     @DeleteMapping(path = "/users/{accountId}")
     public ResponseEntity<Void> delete(@PathVariable("accountId") UUID accId) {
         adminSrv.delete(accId);
@@ -114,9 +116,10 @@ public class AdminController {
     }
 
     /**
+     * Update announcement for all connected users.
+     *
      * @param ann Update announcement to be shown for all users.
      */
-    @ApiOperation(value = "Update announcement for all connected users.")
     @PutMapping(path = "/announcement", consumes = APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> updateAnnouncement(@RequestBody Announcement ann) {
         adminSrv.updateAnnouncement(ann);

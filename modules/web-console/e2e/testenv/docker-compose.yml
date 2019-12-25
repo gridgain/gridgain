@@ -14,28 +14,23 @@
 # limitations under the License.
 #
 
-version: '2.4'
+version: '3.7'
 services:
   backend:
     build:
       context: '../../docker/console'
       dockerfile: 'backend/Dockerfile'
-    ports:
-      - 3001:3000
     environment:
       - SPRING_PROFILES_ACTIVE=test
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/swagger-ui.html"]
-      interval: 5s # interval health check
-      timeout: 2s # timeout for check
-      retries: 10 # maximum retries
+    ports:
+      - 3001:3000
 
   frontend:
     build:
       context: '../../docker/console'
       dockerfile: 'frontend/Dockerfile'
+    depends_on:
+      - backend
+    command: dockerize -wait http://backend:3000/health -timeout 2m -wait-retry-interval 5s nginx -g "daemon off;"
     ports:
       - 9001:8008
-    depends_on:
-      backend:
-        condition: service_healthy
