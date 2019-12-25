@@ -25,7 +25,7 @@ import org.apache.ignite.internal.GridKernalContext;
  */
 public interface DurableBackgroundTask extends Serializable {
     /**
-     * Short name of the task is used to build metastorage key for saving this task.
+     * Short unique name of the task is used to build metastorage key for saving this task and for logging.
      *
      * @return Short name of this task.
      */

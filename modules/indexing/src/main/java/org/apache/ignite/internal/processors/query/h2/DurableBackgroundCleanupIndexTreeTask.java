@@ -17,6 +17,7 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -58,6 +59,9 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
     private String idxName;
 
     /** */
+    private String id;
+
+    /** */
     public DurableBackgroundCleanupIndexTreeTask(
         List<Long> rootPages,
         List<H2Tree> trees,
@@ -72,11 +76,12 @@ public class DurableBackgroundCleanupIndexTreeTask implements DurableBackgroundT
         this.cacheName = cacheName;
         this.schemaName = schemaName;
         this.idxName = idxName;
+        this.id = UUID.randomUUID().toString();
     }
 
     /** {@inheritDoc} */
     @Override public String shortName() {
-        return "DROP_SQL_INDEX-" + schemaName + "." + idxName;
+        return "DROP_SQL_INDEX-" + schemaName + "." + idxName + "-" + id;
     }
 
     /** {@inheritDoc} */
