@@ -29,6 +29,9 @@ public class CacheInfo {
     /** Deployment id. */
     private IgniteUuid deploymentId;
 
+    /** Created by sql. */
+    private boolean createdBySql;
+
     /** Cache group. */
     private String grp;
 
@@ -71,6 +74,23 @@ public class CacheInfo {
      */
     public String getGroup() {
         return grp;
+    }
+
+    /**
+     * @return {@code True} if cache was create by SQL query.
+     */
+    public boolean isCreatedBySql() {
+        return createdBySql;
+    }
+
+    /**
+     * @param createdBySql Created by sql.
+     * @return {@code This} for chaining method calls.
+     */
+    public CacheInfo setCreatedBySql(boolean createdBySql) {
+        this.createdBySql = createdBySql;
+
+        return this;
     }
 
     /**

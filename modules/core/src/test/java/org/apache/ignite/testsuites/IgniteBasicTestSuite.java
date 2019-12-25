@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.ClassPathContentLoggingTest;
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.EvictPartitionInLogTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorLoggingTest;
 import org.apache.ignite.failure.FailureHandlerTriggeredTest;
 import org.apache.ignite.failure.OomFailureHandlerTest;
@@ -71,6 +72,7 @@ import org.apache.ignite.internal.processors.cache.SetTxTimeoutOnPartitionMapExc
 import org.apache.ignite.internal.processors.cache.distributed.IgniteRejectConnectOnNodeStopTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.DropCacheContextDuringEvictionTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionsEvictionTaskFailureHandlerTest;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagePoolTest;
 import org.apache.ignite.internal.processors.cache.query.continuous.DiscoveryDataDeserializationFailureHanderTest;
 import org.apache.ignite.internal.processors.cache.transactions.AtomicOperationsInTxTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionIntegrityWithSystemWorkerDeathTest;
@@ -191,6 +193,7 @@ import org.junit.runners.Suite;
 
     PartitionsEvictionTaskFailureHandlerTest.class,
     DropCacheContextDuringEvictionTest.class,
+    EvictPartitionInLogTest.class,
 
     IgniteExceptionInNioWorkerSelfTest.class,
     IgniteLocalNodeMapBeforeStartTest.class,
@@ -213,6 +216,7 @@ import org.junit.runners.Suite;
     GridPeerDeploymentRetryModifiedTest.class,
 
     // Basic DB data structures.
+    PagePoolTest.class,
     BPlusTreeSelfTest.class,
     BPlusTreeFakeReuseSelfTest.class,
     BPlusTreeReuseSelfTest.class,
