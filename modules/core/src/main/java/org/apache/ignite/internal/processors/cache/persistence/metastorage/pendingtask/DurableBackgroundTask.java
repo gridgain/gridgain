@@ -21,7 +21,7 @@ import org.apache.ignite.internal.GridKernalContext;
 /**
  * Durable task that should be used to do long operations (e.g. index deletion) in background
  * for cases when node with persistence can fail before operation is completed. After start, node reads it's
- * pending continuous tasks from metastorage and completes them.
+ * pending background tasks from metastorage and completes them.
  */
 public interface DurableBackgroundTask extends Serializable {
     /**
