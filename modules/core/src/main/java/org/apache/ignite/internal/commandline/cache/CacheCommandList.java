@@ -39,6 +39,11 @@ public enum CacheCommandList {
     PARTITION_RECONCILIATION("partition_reconciliation", new PartitionReconciliation()),
 
     /**
+     * Does cancel of partition reconciliation command.
+     */
+    PARTITION_RECONCILIATION_CANCEL("partition_reconciliation_cancel", new PartitionReconciliationCancel()),
+
+    /**
      * Prints info regarding caches, groups or sequences.
      */
     LIST("list", new CacheViewer()),
