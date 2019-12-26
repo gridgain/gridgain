@@ -41,7 +41,7 @@ import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.INTERRUPTING_MSG;
+import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.SESSION_CHANGE_MSG;
 
 /**
  * Tests for checking partition reconciliation.
@@ -74,7 +74,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      */
     @Test
     public void testPartitionReconciliationCancel() throws Exception {
-        LogListener lsnr = LogListener.matches(s -> s.startsWith(INTERRUPTING_MSG)).times(3).build();
+        LogListener lsnr = LogListener.matches(s -> s.startsWith(SESSION_CHANGE_MSG)).times(3).build();
         log.registerListener(lsnr);
 
         startGrids(3);

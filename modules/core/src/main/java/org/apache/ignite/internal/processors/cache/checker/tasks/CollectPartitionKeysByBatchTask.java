@@ -36,6 +36,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
@@ -57,7 +58,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * Collects and returns a set of keys that have conflicts with {@link GridCacheVersion}.
  */
 @GridInternal
-public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> {
+public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>>> {
     /**
      *
      */
@@ -108,7 +109,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> reduce(
+    @Nullable @Override
+    public ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         assert partBatch != null;
 
@@ -121,15 +123,15 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         for (int i = 0; i < results.size(); i++) {
             IgniteException exc = results.get(i).getException();
 
-            if (exc != null) {
-                log.warning("Batch was skipped.", exc);
+            if (exc != null)
+                return new ExecutionResult<>(exc.getMessage());
 
-                continue;
-            }
+            ExecutionResult<List<PartitionKeyVersion>> nodeRes = results.get(i).getData();
 
-            List<PartitionKeyVersion> nodeRes = results.get(i).getData();
+            if (nodeRes.getErrorMessage() != null)
+                return new ExecutionResult<>(nodeRes.getErrorMessage());
 
-            for (PartitionKeyVersion partKeyVer : nodeRes) {
+            for (PartitionKeyVersion partKeyVer : nodeRes.getResult()) {
                 try {
                     KeyCacheObject key = unmarshalKey(partKeyVer.getKey(), ctx);
 
@@ -143,12 +145,14 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         totalRes.remove(key);
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, "Key cache object can't unashamed.", e);
+                    U.error(log, e.getMessage(), e);
+
+                    return new ExecutionResult<>(e.getMessage());
                 }
             }
         }
 
-        return new T2<>(lastKey, totalRes);
+        return new ExecutionResult<>(new T2<>(lastKey, totalRes));
     }
 
     /**
@@ -196,7 +200,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         }
 
         /** {@inheritDoc} */
-        @Override public List<PartitionKeyVersion> execute() throws IgniteException {
+        @Override public ExecutionResult<List<PartitionKeyVersion>> execute() throws IgniteException {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
@@ -208,7 +212,11 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 lowerKey = unmarshalKey(partBatch.lowerKey(), cctx);
             }
             catch (IgniteCheckedException e) {
-                throw new IgniteException("Batch [" + partBatch + "] can't processed. Broken key.", e);
+                String errMsg = "Batch [" + partBatch + "] can't processed. Broken key.";
+
+                log.error(errMsg, e);
+
+                return new ExecutionResult<>(errMsg + " " + e.getMessage());
             }
 
             GridDhtLocalPartition part = grpCtx.topology().localPartition(partBatch.partitionId());
@@ -236,10 +244,14 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                         i--;
                 }
 
-                return partEntryHashRecords;
+                return new ExecutionResult<>(partEntryHashRecords);
             }
             catch (Exception e) {
-                throw new IgniteException("Batch [" + partBatch + "] can't processed. Broken cursor.", e);
+                String errMsg = "Batch [" + partBatch + "] can't processed. Broken cursor.";
+
+                log.error(errMsg, e);
+
+                return new ExecutionResult<>(errMsg + " " + e.getMessage());
             }
             finally {
                 part.release();
