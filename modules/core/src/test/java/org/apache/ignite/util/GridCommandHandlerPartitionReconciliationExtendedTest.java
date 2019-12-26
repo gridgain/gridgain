@@ -43,6 +43,8 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.INTERRUPTING_MSG;
 
+// TODO: 26.12.19 Add to appropriate suites.
+
 /**
  * Tests for checking partition reconciliation.
  */
@@ -110,7 +112,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      *
      */
     @Test
-    @WithSystemProperty(key = "WORK_PROGRESS_PRINT_INTERVAL", value = "0")
+    @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", value = "0")
     public void testProgressLogPrinted() throws Exception {
         LogListener lsnr = LogListener.matches(s -> s.startsWith("Partition reconciliation task [sesId=")).atLeast(1).build();
         log.registerListener(lsnr);

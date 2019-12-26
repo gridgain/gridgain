@@ -463,7 +463,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private class WorkProgress {
         /** Work progress print interval. */
-        private final long WORK_PROGRESS_PRINT_INTERVAL = getLong("WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
+        private final long RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL = getLong("RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
 
         /**
          *
@@ -486,7 +486,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         public void printWorkProgress() {
             long currTimeMillis = System.currentTimeMillis();
 
-            if (currTimeMillis >= printedTime + WORK_PROGRESS_PRINT_INTERVAL) {
+            if (currTimeMillis >= printedTime + RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL) {
                 log.info(String.format(WORK_PROGRESS_MSG, sesId, workProgress.getTotal(), workProgress.getRemaining()));
 
                 printedTime = currTimeMillis;
