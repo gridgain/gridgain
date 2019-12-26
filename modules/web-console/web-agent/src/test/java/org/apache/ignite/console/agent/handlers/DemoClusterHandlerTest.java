@@ -21,6 +21,7 @@ import org.apache.ignite.console.demo.AgentClusterDemo;
 import org.apache.ignite.console.websocket.TopologySnapshot;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgnitionEx;
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
@@ -32,6 +33,14 @@ import static org.junit.Assert.assertNull;
  * Test for demo cluster handler.
  */
 public class DemoClusterHandlerTest {
+    /**
+     * Stop demo after a test.
+     */
+    @After
+    public void cleanup() {
+        AgentClusterDemo.stop();
+    }
+
     /**
      * GG-26784 Test case 1:
      * 1. Disable demo in config.
@@ -87,7 +96,5 @@ public class DemoClusterHandlerTest {
         byte[] allFeatures = IgniteFeatures.allFeatures(IgnitionEx.gridx("demo-server-0").context());
 
         assertArrayEquals(allFeatures, top.getSupportedFeatures());
-
-        AgentClusterDemo.stop();
     }
 }
