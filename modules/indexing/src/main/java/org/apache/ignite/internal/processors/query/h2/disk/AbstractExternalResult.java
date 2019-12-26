@@ -21,6 +21,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.result.ResultInterface;
 import org.h2.value.CompareMode;
+import org.h2.store.DataHandler;
 
 /**
  * Basic class for external result.
@@ -56,16 +57,20 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
      * @param initSize Initial size.
      * @param cls Class of stored data.
      * @param cmp Comparator for rows.
+     * @param useHashIdx Flag whether to use hash index.
+     * @param initSize Initial result set size.
+     * @param hnd H2 data handler.
      */
     protected AbstractExternalResult(GridKernalContext ctx,
         H2MemoryTracker memTracker,
         boolean useHashIdx,
         long initSize,
         Class<T> cls,
-        CompareMode cmp) {
+        CompareMode cmp,
+        DataHandler hnd) {
         this.log = ctx.log(AbstractExternalResult.class);
         this.data = new ExternalResultData<>(log, ctx.config().getWorkDirectory(), ctx.query().fileIOFactory(),
-            ctx.localNodeId(), useHashIdx, initSize, cls, cmp);
+            ctx.localNodeId(), useHashIdx, initSize, cls, cmp, hnd);
         this.parent = null;
         this.memTracker = memTracker;
     }

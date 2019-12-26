@@ -72,7 +72,7 @@ public class ManagedGroupByData extends GroupByData {
     /** */
     private void createExtGroupByData() {
         sortedExtRes = new GroupedExternalResult(((QueryContext)ses.getQueryContext()).context(),
-             tracker, ses.getDatabase().getCompareMode(), groupByData.size());
+             tracker, ses.getDatabase().getCompareMode(), groupByData.size(), ses.getDataHandler());
     }
 
     /** {@inheritDoc} */

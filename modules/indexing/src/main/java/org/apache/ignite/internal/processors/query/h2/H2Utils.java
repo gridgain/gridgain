@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -63,13 +64,11 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject;
-import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2RowMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessage;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2ValueMessageFactory;
 import org.apache.ignite.internal.util.GridStringBuilder;
-import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -79,6 +78,7 @@ import org.h2.expression.aggregate.AggregateData;
 import org.h2.jdbc.JdbcConnection;
 import org.h2.result.Row;
 import org.h2.result.SortOrder;
+import org.h2.store.DataHandler;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.util.JdbcUtils;
@@ -162,19 +162,6 @@ public class H2Utils {
      */
     private static boolean enableHashJoin
         = IgniteSystemProperties.getBoolean(IGNITE_ENABLE_HASH_JOIN, false);
-
-    /** Empty cursor. */
-    public static final GridCursor<H2Row> EMPTY_CURSOR = new GridCursor<H2Row>() {
-        /** {@inheritDoc} */
-        @Override public boolean next() {
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public H2Row get() {
-            return null;
-        }
-    };
 
     /**
      * @param c1 First column.
@@ -432,6 +419,14 @@ public class H2Utils {
      * @param c Connection.
      * @return Session.
      */
+    public static Session session(H2PooledConnection c) {
+        return session(c.connection());
+    }
+
+    /**
+     * @param c Connection.
+     * @return Session.
+     */
     public static Session session(Connection c) {
         return (Session)((JdbcConnection)c).getSession();
     }
@@ -442,7 +437,7 @@ public class H2Utils {
      * @param distributedJoins If distributed joins are enabled.
      * @param enforceJoinOrder Enforce join order of tables.
      */
-    public static void setupConnection(Connection conn, QueryContext qctx,
+    public static void setupConnection(H2PooledConnection conn, QueryContext qctx,
         boolean distributedJoins, boolean enforceJoinOrder) {
         assert qctx != null;
 
@@ -457,7 +452,7 @@ public class H2Utils {
      * @param lazy Lazy query execution mode.
      */
     public static void setupConnection(
-        Connection conn,
+        H2PooledConnection conn,
         H2QueryContext qctx,
         boolean distributedJoins,
         boolean enforceJoinOrder,
@@ -483,7 +478,7 @@ public class H2Utils {
      *
      * @param conn Connection to use.
      */
-    public static void resetSession(Connection conn) {
+    public static void resetSession(H2PooledConnection conn) {
         Session s = session(conn);
 
         U.closeQuiet(s.queryMemoryTracker());
@@ -526,7 +521,7 @@ public class H2Utils {
     @SuppressWarnings("unchecked")
     public static QueryCursorImpl<List<?>> zeroCursor() {
         QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(Collections.singletonList
-            (Collections.singletonList(0L)), null, false);
+            (Collections.singletonList(0L)), null, false, false);
 
         resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -637,7 +632,7 @@ public class H2Utils {
             case Value.BYTES:
                 return ValueBytes.get((byte[])obj);
             case Value.JAVA_OBJECT:
-                return ValueJavaObject.getNoCopy(obj, null, null);
+                return ValueJavaObject.getNoCopy(obj, null, getHandler(coCtx.kernalContext()));
             case Value.ARRAY:
                 Object[] arr = (Object[])obj;
 
@@ -1169,5 +1164,15 @@ public class H2Utils {
         }
 
         return memory;
+    }
+
+    /**
+     * @param ctx Kernal context/
+     * @return Data handler.
+     */
+    public static DataHandler getHandler(GridKernalContext ctx) {
+        GridQueryIndexing indexing = ctx.query().getIndexing();
+
+        return indexing instanceof IgniteH2Indexing ? ((IgniteH2Indexing)indexing).dataHandler() : null;
     }
 }

@@ -31,8 +31,11 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.h2.api.ErrorCode;
+import org.h2.message.DbException;
 import org.h2.store.Data;
 import org.h2.value.CompareMode;
+import org.h2.store.DataHandler;
 import org.h2.value.Value;
 import org.h2.value.ValueNull;
 import org.h2.value.ValueRow;
@@ -87,7 +90,7 @@ public class ExternalResultData<T> implements AutoCloseable {
     private long lastWrittenPos;
 
     /** Reusable byte buffer for reading and writing. We use this only instance just for prevention GC pressure. */
-    private final Data writeBuff = Data.create(null, DEFAULT_ROW_SIZE, false);
+    private final Data writeBuff;
 
     /** Sorted chunks addresses on the disk. */
     private final Collection<Chunk> chunks = new ArrayList<>();
@@ -98,8 +101,14 @@ public class ExternalResultData<T> implements AutoCloseable {
     /** Compare mode for reading aggregates. */
     private final CompareMode cmp;
 
+    /** H2 data handler. */
+    private final DataHandler hnd;
+
     /** Data buffer. */
     private ByteBuffer readBuff;
+
+    /** */
+    private boolean closed;
 
     /**
      * @param log Logger.
@@ -110,6 +119,7 @@ public class ExternalResultData<T> implements AutoCloseable {
      * @param initSize Initial size.
      * @param cls Class of stored data.
      * @param cmp Comparator for rows.
+     * @param hnd Data handler.
      */
     ExternalResultData(IgniteLogger log,
         String workDir,
@@ -118,7 +128,8 @@ public class ExternalResultData<T> implements AutoCloseable {
         boolean useHashIdx,
         long initSize,
         Class<T> cls,
-        CompareMode cmp) {
+        CompareMode cmp,
+        DataHandler hnd) {
         this.log = log;
         this.cls = cls;
         this.cmp = cmp;
@@ -131,10 +142,18 @@ public class ExternalResultData<T> implements AutoCloseable {
                 false
             ), fileName);
 
-            fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+            synchronized (this) {
+                checkCancelled();
+
+                fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+            }
 
             if (log.isDebugEnabled())
                 log.debug("Created spill file " + file.getName());
+
+            this.hnd = hnd;
+
+            writeBuff = Data.create(hnd, DEFAULT_ROW_SIZE, false);
 
             hashIdx = useHashIdx ? new ExternalResultHashIndex(fileIOFactory, file, this, initSize) : null;
         }
@@ -153,7 +172,15 @@ public class ExternalResultData<T> implements AutoCloseable {
             cls = parent.cls;
             file = parent.file;
             fileIOFactory = parent.fileIOFactory;
-            fileIo = fileIOFactory.create(file, READ);
+
+            synchronized (this) {
+                checkCancelled();
+
+                fileIo = fileIOFactory.create(file, READ);
+            }
+
+            writeBuff = parent.writeBuff;
+            hnd = parent.hnd;
             if (parent.hashIdx != null)
                 hashIdx = parent.hashIdx.createShallowCopy();
             else
@@ -206,6 +233,7 @@ public class ExternalResultData<T> implements AutoCloseable {
 
         // 3. Write row value.
         int len = 0;
+
         for (int i = 0; i < valLen; i++)
             len += writeBuff.getValueLen(rowVal[i]);
 
@@ -262,8 +290,10 @@ public class ExternalResultData<T> implements AutoCloseable {
      *
      * @param addr Row address.
      */
-    private void markRemoved(long addr) {
+    private synchronized void markRemoved(long addr) {
         try {
+            checkCancelled();
+
             fileIo.position(addr + TOMBSTONE_OFFSET); // Skip total length and go to the column count.
             fileIo.write(TOMBSTONE_BYTES, 0, TOMBSTONE_BYTES.length);
         }
@@ -349,7 +379,7 @@ public class ExternalResultData<T> implements AutoCloseable {
 
         readBuff.flip();
 
-        Data buff = Data.create(null, readBuff.array(), true);
+        Data buff = Data.create(hnd, readBuff.array(), true);
 
         buff.setCompareMode(cmp);
 
@@ -377,8 +407,10 @@ public class ExternalResultData<T> implements AutoCloseable {
      *
      * @param buff Buffer.
      */
-    private void readFromFile(ByteBuffer buff) {
+    private synchronized void readFromFile(ByteBuffer buff) {
         try {
+            checkCancelled();
+
             fileIo.readFully(buff);
         }
         catch (IOException e) {
@@ -394,8 +426,10 @@ public class ExternalResultData<T> implements AutoCloseable {
      * @param buff Buffer.
      * @return Bytes written.
      */
-    private int writeToFile(Data buff) {
+    private synchronized int writeToFile(Data buff) {
         try {
+            checkCancelled();
+
             ByteBuffer byteBuff = ByteBuffer.wrap(buff.getBytes());
 
             byteBuff.limit(buff.length());
@@ -416,8 +450,10 @@ public class ExternalResultData<T> implements AutoCloseable {
      *
      * @param pos Position to set.
      */
-    private void setFilePosition(long pos) {
+    private synchronized void setFilePosition(long pos) {
         try {
+            checkCancelled();
+
             fileIo.position(pos);
         }
         catch (IOException e) {
@@ -430,8 +466,10 @@ public class ExternalResultData<T> implements AutoCloseable {
     /**
      * @return Current absolute position in the file.
      */
-    private long currentFilePosition() {
+    private synchronized long currentFilePosition() {
         try {
+            checkCancelled();
+
             return fileIo.position();
         }
         catch (IOException e) {
@@ -455,12 +493,28 @@ public class ExternalResultData<T> implements AutoCloseable {
         return chunks;
     }
 
+    /**
+     * Checks if statement was closed (i.e. concurrently cancelled).
+     */
+    private void checkCancelled() {
+        if (closed)
+            throw DbException.get(ErrorCode.STATEMENT_WAS_CANCELED);
+    }
+
     /** {@inheritDoc} */
-    @Override public void close() {
-        U.closeQuiet(fileIo);
-        file.delete();
+    @Override public  void close() {
+        synchronized (this) {
+            if (closed)
+                return;
+
+            U.closeQuiet(fileIo);
+
+            closed = true;
+        }
 
         U.closeQuiet(hashIdx);
+
+        file.delete();
 
         if (log.isDebugEnabled())
             log.debug("Deleted spill file "+ file.getName());

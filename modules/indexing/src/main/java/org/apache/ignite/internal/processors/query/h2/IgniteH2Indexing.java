@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.io.File;
 import java.sql.BatchUpdateException;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -182,6 +181,7 @@ import org.h2.api.ErrorCode;
 import org.h2.api.JavaObjectSerializer;
 import org.h2.engine.Session;
 import org.h2.engine.SysProperties;
+import org.h2.store.DataHandler;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableType;
@@ -555,43 +555,38 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
-                    ThreadLocalObjectPool<H2ConnectionWrapper>.Reusable conn = connMgr.detachThreadConnection();
-
-                    Connection conn0 = null;
+                    H2PooledConnection conn = connections().connection(qryDesc.schemaName());
 
                     try {
-                        conn0 = conn.object().connection(qryDesc.schemaName());
-
-                        H2Utils.setupConnection(conn0, qctx,
+                        H2Utils.setupConnection(conn, qctx,
                             qryDesc.distributedJoins(), qryDesc.enforceJoinOrder(), qryParams.lazy());
 
                         List<Object> args = F.asList(qryParams.arguments());
 
                         PreparedStatement stmt = preparedStatementWithParams(
-                            conn0,
+                            conn,
                             qry,
                             args,
                             true
                         );
 
+                        H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry);
+
                         ResultSet rs = executeSqlQueryWithTimer(
                             stmt,
-                            conn0,
+                            conn,
                             qry,
                             args,
                             timeout,
                             cancel,
                             qryParams.dataPageScanEnabled(),
-                            new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry)
+                            qryInfo
                         );
 
-                        return new H2FieldsIterator(rs, mvccTracker, conn);
+                        return new H2FieldsIterator(rs, mvccTracker, conn, qryParams.pageSize(), log, IgniteH2Indexing.this, qryInfo);
                     }
                     catch (IgniteCheckedException | RuntimeException | Error e) {
-                        if (conn0 != null)
-                            H2Utils.resetSession(conn0);
-
-                        conn.recycle();
+                        conn.close();
 
                         try {
                             if (mvccTracker != null)
@@ -778,22 +773,20 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Prepared statement with set parameters.
      * @throws IgniteCheckedException If failed.
      */
-    public PreparedStatement preparedStatementWithParams(Connection conn, String sql, Collection<Object> params,
+    public PreparedStatement preparedStatementWithParams(H2PooledConnection conn, String sql, Collection<Object> params,
         boolean useStmtCache) throws IgniteCheckedException {
         final PreparedStatement stmt;
 
         try {
-            stmt = useStmtCache ? connMgr.prepareStatement(conn, sql) : connMgr.prepareStatementNoCache(conn, sql);
+            stmt = useStmtCache ? conn.prepareStatement(sql) : conn.prepareStatementNoCache(sql);
+
+            H2Utils.bindParameters(stmt, params);
+
+            return stmt;
         }
         catch (SQLException e) {
-            H2Utils.resetSession(conn);
-
             throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
         }
-
-        H2Utils.bindParameters(stmt, params);
-
-        return stmt;
     }
 
     /**
@@ -806,7 +799,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Result.
      * @throws IgniteCheckedException If failed.
      */
-    private ResultSet executeSqlQuery(final Connection conn, final PreparedStatement stmt,
+    private ResultSet executeSqlQuery(final H2PooledConnection conn, final PreparedStatement stmt,
         int timeoutMillis, @Nullable GridQueryCancel cancel) throws IgniteCheckedException  {
         if (cancel != null)
             cancel.set(() -> cancelStatement(stmt));
@@ -860,7 +853,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     public ResultSet executeSqlQueryWithTimer(
-        Connection conn,
+        H2PooledConnection conn,
         String sql,
         @Nullable Collection<Object> params,
         int timeoutMillis,
@@ -896,7 +889,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      */
     public ResultSet executeSqlQueryWithTimer(
         PreparedStatement stmt,
-        Connection conn,
+        H2PooledConnection conn,
         String sql,
         @Nullable Collection<Object> params,
         int timeoutMillis,
@@ -913,19 +906,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
 
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
-                qryInfo.printLogMessage(log, "Long running query is finished");
+                qryInfo.printLogMessage(log, "Long running query is finished", null);
 
             return rs;
         }
         catch (Throwable e) {
-            H2Utils.resetSession(conn);
-
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout()) {
                 qryInfo.printLogMessage(log, "Long running query is finished with error: "
-                    + e.getMessage());
+                    + e.getMessage(), null);
             }
 
-            throw  e;
+            throw e;
         }
         finally {
             CacheDataTree.setDataPageScanEnabled(false);
@@ -1206,7 +1197,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                     @Override public Iterator<List<?>> iterator() {
                         return new IgniteSingletonIterator<>(singletonList(updRes.counter()));
                     }
-                }, cancel));
+                }, cancel, true, false));
             }
         }
         catch (IgniteException e) {
@@ -1304,8 +1295,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 iter = lockSelectedRows(iter, mvccCctx, timeout, qryParams.pageSize());
 
             QueryCursorImpl<List<?>> cursor = qryId != null
-                ? new RegisteredQueryCursor<>(iter, cancel, runningQueryManager(), qryId)
-                : new QueryCursorImpl<>(iter, cancel);
+                ? new RegisteredQueryCursor<>(iter, cancel, runningQueryManager(), qryParams.lazy(), qryId)
+                : new QueryCursorImpl<>(iter, cancel, true, qryParams.lazy());
 
             cursor.fieldsMeta(select.meta());
 
@@ -1361,7 +1352,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             timeout
         );
 
-        QueryCursorImpl<List<?>> cursor = new QueryCursorImpl<>(iter, cancel);
+        QueryCursorImpl<List<?>> cursor = new QueryCursorImpl<>(iter, cancel, true, parseRes.queryParameters().lazy());
 
         cursor.fieldsMeta(select.meta());
 
@@ -1648,10 +1639,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         throw new IgniteException(e);
                     }
                 }
-            }, cancel);
+            }, cancel, true, selectParseRes.queryParameters().lazy());
         }
 
-        return plan.iteratorForTransaction(connMgr, cur);
+        return plan.iteratorForTransaction(connections(), cur);
     }
 
     /**
@@ -1803,6 +1794,18 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void closeCacheOnClient(String cacheName) {
+        GridCacheContextInfo cacheInfo = registeredCacheInfo(cacheName);
+
+        // Only for SQL caches.
+        if (cacheInfo != null) {
+            parser.clearCache();
+
+            cacheInfo.clearCacheContext();
+        }
     }
 
     /** {@inheritDoc} */
@@ -2099,9 +2102,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         longRunningQryMgr = new LongRunningQueryManager(ctx);
 
-        parser = new QueryParser(this, connMgr);
+        parser = new QueryParser(this, connections());
 
-        schemaMgr = new SchemaManager(ctx, connMgr);
+        schemaMgr = new SchemaManager(ctx, connections());
         schemaMgr.start(ctx.config().getSqlSchemas());
 
         nodeId = ctx.localNodeId();
@@ -2135,8 +2138,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (JdbcUtils.serializer != null)
             U.warn(log, "Custom H2 serialization is already configured, will override.");
 
-        JdbcUtils.serializer = h2Serializer();
+        JavaObjectSerializer h2Serializer = h2Serializer();
 
+        JdbcUtils.serializer = h2Serializer;
+
+        connMgr.setH2Serializer(h2Serializer);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStart() {
         cleanSpillDirectory();
     }
 
@@ -2151,7 +2161,26 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 DISK_SPILL_DIR,
                 false);
 
-            U.delete(spillDir);
+            File[] spillFiles = spillDir.listFiles();
+
+            if (spillFiles.length == 0)
+                return;
+
+            for (int i = 0; i < spillFiles.length; i++) {
+                try {
+                    File spillFile = spillFiles[i];
+
+                    String nodeId = spillFile.getName().split("_")[1]; // Spill name pattern: spill_nodeId_fileId.
+
+                    UUID nodeUuid = UUID.fromString(nodeId);
+
+                    if (!ctx.discovery().alive(nodeUuid))
+                        spillFile.delete();
+                }
+                catch (Exception e) {
+                    log.debug("Error on cleaning spill directory. " + X.getFullStackTrace(e));
+                }
+            }
         }
         catch (Exception e) {
             log.warning("Failed to cleanup the temporary directory for intermediate " +
@@ -2336,6 +2365,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 return U.unmarshal(marshaller, bytes, clsLdr);
             }
         };
+    }
+
+    /**
+     * @return Data handler.
+     */
+    public DataHandler dataHandler() {
+        return connMgr.dataHandler();
     }
 
     /** {@inheritDoc} */
@@ -2704,7 +2740,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 res.throwIfError();
 
                 QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(singletonList
-                    (singletonList(res.counter())), cancel, false);
+                    (singletonList(res.counter())), cancel, false, false);
 
                 resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -2726,7 +2762,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             res.throwIfError();
 
             QueryCursorImpl<List<?>> resCur = (QueryCursorImpl<List<?>>)new QueryCursorImpl(singletonList
-                (singletonList(res.counter())), cancel, false);
+                (singletonList(res.counter())), cancel, false, false);
 
             resCur.fieldsMeta(UPDATE_RESULT_META);
 
@@ -2918,7 +2954,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         throw new IgniteException(e);
                     }
                 }
-            }, cancel);
+            }, cancel, true, qryParams.lazy());
         }
 
         int pageSize = qryParams.updateBatchSize();
@@ -3010,7 +3046,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         (int)timeout
                     );
 
-                    it = plan.iteratorForTransaction(connMgr, cur);
+                    it = plan.iteratorForTransaction(connections(), cur);
                 }
 
                 //TODO: IGNITE-11176 - Need to support cancellation

@@ -117,6 +117,7 @@
     <Compile Include="Cache\PartitionPreloadTest.cs" />
     <Compile Include="Cache\PersistenceTest.cs" />
     <Compile Include="Cache\PersistentStoreTestObsolete.cs" />
+    <Compile Include="Cache\Query\CacheDmlQueriesTestSchema.cs" />
     <Compile Include="Cache\Query\CacheQueriesWithRestartServerTest.cs" />
     <Compile Include="Cache\Query\Linq\CacheLinqTest.CompiledQuery.cs" />
     <Compile Include="Cache\Query\Linq\CacheLinqTest.DateTime.cs" />
@@ -132,7 +133,7 @@
     <Compile Include="Cache\Query\Linq\CacheLinqTest.Contains.cs" />
     <Compile Include="Cache\Store\CacheStoreSessionTestCodeConfig.cs" />
     <Compile Include="Cache\Store\CacheStoreSessionTestSharedFactory.cs" />
-    <Compile Include="Client\Cache\AffinityAwarenessTest.cs" />
+    <Compile Include="Client\Cache\PartitionAwarenessTest.cs" />
     <Compile Include="Client\Cache\BinaryBuilderTest.cs" />
     <Compile Include="Client\Cache\CacheClientAsyncWrapper.cs" />
     <Compile Include="Client\Cache\CacheTest.cs" />
@@ -151,7 +152,14 @@
     <Compile Include="Client\Cache\SqlQueryTestBase.cs" />
     <Compile Include="Client\Cache\TestKey.cs" />
     <Compile Include="Client\Cache\TestKeyWithAffinity.cs" />
+    <Compile Include="Client\ClientProtocolCompatibilityTest.cs" />
+    <Compile Include="Client\ClientOpExtensionsTest.cs" />
+    <Compile Include="Client\ClientProtocolVersionTest.cs" />
+    <Compile Include="Client\ClientReconnectCompatibilityTest.cs" />
+    <Compile Include="Client\ClientServerCompatibilityTest.cs" />
     <Compile Include="Client\ClientTestBase.cs" />
+    <Compile Include="Client\Cluster\ClientClusterGroupTests.cs" />
+    <Compile Include="Client\Cluster\ClientClusterTests.cs" />
     <Compile Include="Client\EndpointTest.cs" />
     <Compile Include="Client\RawSecureSocketTest.cs" />
     <Compile Include="Client\RawSocketTest.cs" />
@@ -211,7 +219,11 @@
     <Compile Include="EventsTestLocalListeners.cs" />
     <Compile Include="FailureHandlerTest.cs" />
     <Compile Include="Impl\Compute\ComputeImplTest.cs" />
+    <Compile Include="JavaServer.cs" />
+    <Compile Include="Log\ConsoleLoggerTest.cs" />
+    <Compile Include="Log\FixedDateTimeProvider.cs" />
     <Compile Include="PathUtils.cs" />
+    <Compile Include="Process\IgniteProcessCompositeOutputReader.cs" />
     <Compile Include="Process\ListDataReader.cs" />
     <Compile Include="Log\ConcurrentMemoryTarget.cs" />
     <Compile Include="Log\DefaultLoggerTest.cs" />
@@ -494,6 +506,8 @@
     <Content Include="Config\ssl.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="JavaServer\pom.xml" />
+    <Content Include="JavaServer\src\main\java\Runner.java" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Config\Apache.Ignite.exe.config.test">

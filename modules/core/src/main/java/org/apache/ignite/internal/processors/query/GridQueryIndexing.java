@@ -371,6 +371,11 @@ public interface GridQueryIndexing {
     public void cancelQueries(Collection<Long> queries);
 
     /**
+     * Callback executed after the kernal started.
+     */
+    public void onKernalStart();
+
+    /**
      * Cancels all executing queries.
      */
     public void onKernalStop();
@@ -413,6 +418,13 @@ public interface GridQueryIndexing {
      * @return Cache context for registered cache or {@code null} in case the cache has not been registered.
      */
     @Nullable public GridCacheContextInfo registeredCacheInfo(String cacheName);
+
+    /**
+     * Clear cache info and clear parser cache on call cache.close() on client node.
+     *
+     * @param cacheName Cache name to clear.
+     */
+    public void closeCacheOnClient(String cacheName);
 
     /**
      * Initialize table's cache context created for not started cache.

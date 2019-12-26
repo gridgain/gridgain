@@ -25,6 +25,8 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.h2.api.ErrorCode;
+import org.h2.message.DbException;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
@@ -80,6 +82,9 @@ public class ExternalResultHashIndex implements AutoCloseable {
     /** Total count of the stored entries. */
     private long entriesCnt;
 
+    /** */
+    private boolean closed;
+
     /**
      * @param spillFile File with rows.
      * @param rowStore External result being indexed by this hash index.
@@ -95,7 +100,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             initSize = MIN_CAPACITY;
 
         // We need at least the half of hash map be empty to minimize collisions number.
-        long initCap = Long.highestOneBit(initSize) * 2;
+        long initCap = Long.highestOneBit(initSize) * 4;
 
         initNewIndexFile(initCap);
     }
@@ -108,7 +113,13 @@ public class ExternalResultHashIndex implements AutoCloseable {
         try {
             fileIOFactory = parent.fileIOFactory;
             idxFile = parent.idxFile;
-            fileIo = fileIOFactory.create(idxFile, READ);
+
+            synchronized (this) {
+                checkCancelled();
+
+                fileIo = fileIOFactory.create(idxFile, READ);
+            }
+
             rowStore = parent.rowStore;
             cap = parent.cap;
             entriesCnt = parent.entriesCnt;
@@ -286,7 +297,11 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
             reusableBuff.clear();
 
-            fileCh.readFully(reusableBuff);
+            synchronized (this) {
+                checkCancelled();
+
+                fileCh.readFully(reusableBuff);
+            }
 
             reusableBuff.flip();
 
@@ -324,7 +339,11 @@ public class ExternalResultHashIndex implements AutoCloseable {
             reusableBuff.putLong(addr + 1);
             reusableBuff.flip();
 
-            fileIo.writeFully(reusableBuff);
+            synchronized (this) {
+                checkCancelled();
+
+                fileIo.writeFully(reusableBuff);
+            }
         }
         catch (IOException e) {
             U.closeQuiet(this);
@@ -340,7 +359,11 @@ public class ExternalResultHashIndex implements AutoCloseable {
      */
     private void gotoSlot(long slot) {
         try {
-            fileIo.position(slot * Entry.ENTRY_BYTES);
+            synchronized (this) {
+                checkCancelled();
+
+                fileIo.position(slot * Entry.ENTRY_BYTES);
+            }
         }
         catch (Exception e) {
             U.closeQuiet(fileIo);
@@ -353,15 +376,22 @@ public class ExternalResultHashIndex implements AutoCloseable {
      * Checks if the capacity of the hashtable is enough and extends it if needed.
      */
     private void ensureCapacity() {
-        if (entriesCnt > LOAD_FACTOR * cap) {
-            FileIO oldFileIo = fileIo;
-            File oldIdxFile = idxFile;
+        if (entriesCnt <= LOAD_FACTOR * cap)
+            return;
 
-            long oldSize = cap;
+        FileIO oldFileIo = fileIo;
+        File oldIdxFile = idxFile;
 
+        long oldSize = cap;
+
+        try {
             initNewIndexFile(oldSize * 2);
 
             copyDataFromOldFile(oldFileIo, oldIdxFile, oldSize);
+        }
+        finally {
+            U.closeQuiet(oldFileIo);
+            oldIdxFile.delete();
         }
     }
 
@@ -391,10 +421,6 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
             throw new IgniteException("Failed to extend hash index.", e);
         }
-        finally {
-            U.closeQuiet(oldFile);
-            oldIdxFile.delete();
-        }
     }
 
     /**
@@ -417,20 +443,39 @@ public class ExternalResultHashIndex implements AutoCloseable {
 
             idxFile.deleteOnExit();
 
-            fileIo = fileIOFactory.create(idxFile, CREATE_NEW, READ, WRITE);
+            synchronized (this) {
+                checkCancelled();
 
-            // Write empty data to the end of the file to extend it.
-            reusableBuff.clear();
-            fileIo.write(reusableBuff, cap * Entry.ENTRY_BYTES);
+                fileIo = fileIOFactory.create(idxFile, CREATE_NEW, READ, WRITE);
+
+                // Write empty data to the end of the file to extend it.
+                reusableBuff.clear();
+                fileIo.write(reusableBuff, cap * Entry.ENTRY_BYTES);
+            }
         }
         catch (IOException e) {
             throw new IgniteException("Failed to create an index spill file for the intermediate query results.", e);
         }
     }
 
+    /**
+     * Checks if statement was closed (
+     */
+    private synchronized void checkCancelled() {
+        if (closed)
+            throw DbException.get(ErrorCode.STATEMENT_WAS_CANCELED);
+    }
+
     /** {@inheritDoc} */
     @Override public void close() throws Exception {
-        U.closeQuiet(fileIo);
+        synchronized (this) {
+            if (closed)
+                return;
+
+            U.closeQuiet(fileIo);
+
+            closed = true;
+        }
 
         idxFile.delete();
     }

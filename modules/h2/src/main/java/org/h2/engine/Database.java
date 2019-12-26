@@ -3157,6 +3157,13 @@ public class Database implements DataHandler {
         }
     }
 
+    public void setJavaObjectSerializer(JavaObjectSerializer serializer) {
+        synchronized (this) {
+            javaObjectSerializer = serializer;
+            javaObjectSerializerInitialized = true;
+        }
+    }
+
     /**
      * Get the table engine class, loading it if needed.
      *

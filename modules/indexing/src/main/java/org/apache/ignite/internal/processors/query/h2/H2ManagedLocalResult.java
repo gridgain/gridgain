@@ -118,23 +118,16 @@ public class H2ManagedLocalResult implements LocalResult {
 
         long memory = calculateMemoryDelta(distinctRowKey, oldRow, row);
 
+        boolean hasMemory = true;
+
+        if (memory < 0)
+            memTracker.released(-memory);
+        else
+            hasMemory = memTracker.reserved(memory);
+
         memReserved += memory;
 
-        if (memory < 0) {
-            memTracker.released(-memory);
-
-            return true;
-        }
-        else {
-            try {
-                return memTracker.reserved(memory);
-            }
-            catch (Throwable e) {
-                memReserved -= memory;
-
-                throw e;
-            }
-        }
+        return hasMemory;
     }
 
     /** {@inheritDoc} */
@@ -144,7 +137,7 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public void setMaxMemoryRows(int maxValue) {
-        // No-op.
+        // No-op. We do not use rowCount-based memory tracking in this class. {@link memTracker} is used instead.
     }
 
     /** {@inheritDoc} */
@@ -346,7 +339,7 @@ public class H2ManagedLocalResult implements LocalResult {
 
         external = distinct || distinctIndexes != null || sort != null ?
             new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker,
-                rowCount) : new PlainExternalResult(ctx, memTracker);
+                rowCount) : new PlainExternalResult(ctx, memTracker, session);
     }
 
     /** {@inheritDoc} */

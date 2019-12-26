@@ -21,6 +21,7 @@ import java.util.PriorityQueue;
 import java.util.Queue;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.h2.store.DataHandler;
 import org.h2.value.CompareMode;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
@@ -44,8 +45,9 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     GroupedExternalResult(GridKernalContext ctx,
         H2MemoryTracker memTracker,
         CompareMode cmp,
-        long initSize) {
-        super(ctx, memTracker, false, 0, Object.class, cmp);
+        long initSize,
+        DataHandler hnd) {
+        super(ctx, memTracker, false, 0, Object.class, cmp, hnd);
         this.chunkCmp = new Comparator<ExternalResultData.Chunk>() {
             @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
                 int c = cmp.compare((Value)o1.currentRow().getKey(), (Value)o2.currentRow().getKey());

@@ -89,7 +89,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         H2MemoryTracker memTracker,
         long initSize) {
         super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize, Value.class,
-            ses.getDatabase().getCompareMode());
+            ses.getDatabase().getCompareMode(), ses.getDataHandler());
 
         this.distinct = isDistinct(distinct, distinctIndexes);
         this.distinctIndexes = distinctIndexes;
