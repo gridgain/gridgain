@@ -36,16 +36,19 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.GridAbstractTest;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.INTERRUPTING_MSG;
 
+// TODO: 26.12.19 Add to appropriate suites.
+
 /**
- * Tests for checking partition reconciliation cancel control.sh command.
+ * Tests for checking partition reconciliation.
  */
-public class GridCommandHandlerPartitionReconciliationCancelTest extends
+public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     GridCommandHandlerClusterPerMethodAbstractTest {
     /** Test logger. */
     private final ListeningTestLogger log = new ListeningTestLogger(false, GridAbstractTest.log);
@@ -69,7 +72,7 @@ public class GridCommandHandlerPartitionReconciliationCancelTest extends
     }
 
     /**
-     *
+     * Tests for checking partition reconciliation cancel control.sh command.
      */
     @Test
     public void testPartitionReconciliationCancel() throws Exception {
@@ -101,6 +104,25 @@ public class GridCommandHandlerPartitionReconciliationCancelTest extends
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation_cancel"));
 
         assertEquals(0, reconciliationSessionId());
+
+        assertTrue(lsnr.check(10_000));
+    }
+
+    /**
+     *
+     */
+    @Test
+    @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", value = "0")
+    public void testProgressLogPrinted() throws Exception {
+        LogListener lsnr = LogListener.matches(s -> s.startsWith("Partition reconciliation task [sesId=")).atLeast(1).build();
+        log.registerListener(lsnr);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg", "MAJORITY", "--recheck-attempts", "1"));
 
         assertTrue(lsnr.check(10_000));
     }
