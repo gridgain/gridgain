@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.mapPartitionReconciliation;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
@@ -67,6 +68,9 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 public class PartitionReconciliationProcessor extends AbstractPipelineProcessor {
     /** Interrupting message. */
     public static final String INTERRUPTING_MSG = "Reconciliation session was interrupted. Partition reconciliation task was stopped.";
+
+    /** Work progress message. */
+    public static final String WORK_PROGRESS_MSG = "Partition reconciliation task [sesId=%s, total=%s, remaining=%s]";
 
     /** Recheck delay seconds. */
     private static final int RECHECK_DELAY = 10;
@@ -84,10 +88,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private final int recheckAttempts;
 
     /**
-     * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg}
-     * while repairing doubtful keys.
+     * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg} while repairing
+     * doubtful keys.
      */
-    private RepairAlgorithm repairAlg;
+    private final RepairAlgorithm repairAlg;
 
     /**
      *
@@ -98,6 +102,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      *
      */
     private final IgniteLogger log;
+
+    /**
+     *
+     */
+    private final WorkProgress workProgress = new WorkProgress();
 
     /**
      *
@@ -132,8 +141,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             for (String cache : caches) {
                 int[] partitions = ignite.affinity(cache).primaryPartitions(ignite.localNode());
 
-                for (int partId : partitions)
+                for (int partId : partitions) {
                     schedule(new Batch(cache, partId, null));
+
+                    workProgress.assignWork();
+                }
             }
 
             boolean live = false;
@@ -160,6 +172,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 }
 
                 PipelineWorkload workload = takeTask();
+
+                workProgress.printWorkProgress();
 
                 if (workload instanceof Batch)
                     handle((Batch)workload);
@@ -248,8 +262,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         scheduleHighPriority(repair(workload.cacheName(), workload.partitionId(), notResolvingConflicts,
                             actualKeys, workload.repairAttempt()));
                     }
-                    else
+                    else {
                         addToPrintResult(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys);
+
+                        workProgress.completeWork();
+                    }
                 }
             });
     }
@@ -301,8 +318,12 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 recheckAttempts,
                                 workload.attempt() + 1
                             ));
+
+                        return;
                     }
                 }
+
+                workProgress.completeWork();
             });
     }
 
@@ -352,6 +373,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
     /**
      * Add data to print result.
+     *
      * @param cacheName Cache name.
      * @param partId Partition Id.
      * @param repairedKeys Repaired keys.
@@ -433,6 +455,71 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     ClusterNode::id,
                     n -> n.consistentId().toString())),
                 inconsistentKeys);
+        }
+    }
+
+    /**
+     *
+     */
+    private class WorkProgress {
+        /** Work progress print interval. */
+        private final long RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL = getLong("RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
+
+        /**
+         *
+         */
+        private long total;
+
+        /**
+         *
+         */
+        private long remaining;
+
+        /**
+         *
+         */
+        private long printedTime;
+
+        /**
+         *
+         */
+        public void printWorkProgress() {
+            long currTimeMillis = System.currentTimeMillis();
+
+            if (currTimeMillis >= printedTime + RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL) {
+                log.info(String.format(WORK_PROGRESS_MSG, sesId, workProgress.getTotal(), workProgress.getRemaining()));
+
+                printedTime = currTimeMillis;
+            }
+        }
+
+        /**
+         *
+         */
+        public void assignWork() {
+            total++;
+            remaining++;
+        }
+
+        /**
+         *
+         */
+        public void completeWork() {
+            remaining--;
+        }
+
+        /**
+         *
+         */
+        public long getTotal() {
+            return total;
+        }
+
+        /**
+         *
+         */
+        public long getRemaining() {
+            return remaining;
         }
     }
 }
