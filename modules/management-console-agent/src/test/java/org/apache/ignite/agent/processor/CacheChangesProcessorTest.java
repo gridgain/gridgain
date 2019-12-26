@@ -34,6 +34,8 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.P1;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
@@ -57,35 +59,14 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
 
         cluster.active(true);
 
-        assertWithPoll(() -> interceptor.getPayload(buildClusterCachesInfoDest(cluster.id())) != null);
-        assertWithPoll(() -> interceptor.getPayload(buildClusterCachesSqlMetaDest(cluster.id())) != null);
-    }
-
-    /**
-     * GG-26556 Testcase 3:
-     *
-     * 1. Start 1 ignite node.
-     * 2. Create cache with “test-cache” name.
-     * 3. Wait 1 second until message with cache info will be send to GMC.
-     * 4. Verify that cache info list does not contain cache with “ignite-sys-cache” name.
-     */
-    @Test
-    public void shouldNotSendSystemCacheInfo() throws Exception {
-        IgniteEx ignite = (IgniteEx) startGrid();
-
-        changeManagementConsoleConfig(ignite);
-
-        IgniteCluster cluster = ignite.cluster();
-
-        cluster.active(true);
-
-        ignite.getOrCreateCache("test-cache");
-
         assertWithPoll(() -> {
-            List<CacheInfo> cachesInfo = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return !cachesInfo.isEmpty() && cachesInfo.stream().noneMatch(i -> "ignite-sys-cache".equals(i.getName()));
+            CacheInfo actual = F.find(cacheInfos, null, (P1<CacheInfo>)i -> CU.isSystemCache(i.getName()));
+
+            return cacheInfos.size() == 1 && actual != null && actual.isSystemCache();
         });
+        assertWithPoll(() -> interceptor.getPayload(buildClusterCachesSqlMetaDest(cluster.id())) != null);
     }
 
     /**
