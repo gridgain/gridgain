@@ -1847,6 +1847,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                                 byte[] data = link == 0 ? null : partStorage.readRow(link);
 
+                                if (partId == 8) {
+                                    System.out.println();
+                                }
+
                                 delegate0.restoreState(io.getSize(pageAddr), io.getUpdateCounter(pageAddr), cacheSizes, data);
 
                                 globalRemoveId().setIfGreater(io.getGlobalRemoveId(pageAddr));

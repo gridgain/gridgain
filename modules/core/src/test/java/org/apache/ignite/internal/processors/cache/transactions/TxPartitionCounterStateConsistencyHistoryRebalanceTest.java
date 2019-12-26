@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 
@@ -25,4 +26,18 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_
  */
 @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
 public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPartitionCounterStateConsistencyTest {
+    @Test
+    @Override public void testConsistencyAfterBaselineNodeStopAndRemoval() throws Exception {
+        super.testConsistencyAfterBaselineNodeStopAndRemoval();
+    }
+
+    @Test
+    @Override public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
+        super.testPartitionConsistencyWithBackupRestart_ChangeBLT();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected long getTestTimeout() {
+        return super.getTestTimeout() * 1000;
+    }
 }

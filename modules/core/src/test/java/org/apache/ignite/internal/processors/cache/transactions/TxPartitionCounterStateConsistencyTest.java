@@ -30,12 +30,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -48,13 +50,21 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
+import org.apache.ignite.internal.processors.cache.verify.IdleVerifyResultV2;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -66,6 +76,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.discovery.tcp.BlockTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
@@ -187,7 +198,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         }, 1, "node-restarter");
 
-        doRandomUpdates(r, client, primaryKeys, cache, stop).get();
+        doRandomUpdates(r, client, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
 
         assertPartitionsSame(idleVerify(client, DEFAULT_CACHE_NAME));
@@ -251,8 +262,124 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         }, 1, "node-restarter");
 
-        doRandomUpdates(r, prim, primaryKeys, cache, stop).get();
+        doRandomUpdates(r, prim, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get();
         fut.get();
+
+        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * Test primary-backup partitions consistency while restarting backup nodes under load with changing BLT.
+     */
+    @Test
+    public void testPartitionConsistencyWithBackupRestart_ChangeBLT2() throws Exception {
+        backups = 2;
+
+        final int srvNodes = SERVER_NODES + 1;
+
+        Ignite prim = startGrids(srvNodes);
+
+        prim.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = prim.cache(DEFAULT_CACHE_NAME);
+
+        List<Integer> primaryKeys = primaryKeys(cache, 10_000);
+
+        List<Ignite> backups = backupNodes(primaryKeys.get(0), DEFAULT_CACHE_NAME);
+
+        assertFalse(backups.contains(prim));
+
+        long stop = U.currentTimeMillis() + 60_000; // GridTestUtils.SF.applyLB(2 * 60_000, 30_000);
+
+        long seed = System.nanoTime();
+
+        log.info("Seed: " + seed);
+
+        Random r = new Random(85754311720997L);
+
+        assertTrue(prim == grid(0));
+
+        AtomicBoolean stopBool = new AtomicBoolean();
+
+        IgniteInternalFuture<?> fut = multithreadedAsync(() -> {
+            //while (U.currentTimeMillis() < stop) {
+            try {
+                doSleep(1_000);
+
+                Ignite restartNode = grid(1);
+
+                assertFalse(prim == restartNode);
+
+                String name = restartNode.name();
+
+                stopGrid(true, name);
+
+                waitForTopology(SERVER_NODES);
+
+                log.info("DBG: node1 stopped");
+
+                if (persistenceEnabled())
+                    resetBaselineTopology();
+
+                awaitPartitionMapExchange();
+
+                doSleep(5_000);
+
+                startGrid(name);
+
+                log.info("DBG: node1 started");
+
+                forceCheckpoint();
+
+                if (persistenceEnabled())
+                    resetBaselineTopology();
+
+                awaitPartitionMapExchange();
+
+                doSleep(2_000);
+
+                restartNode = grid(1);
+
+                assertFalse(prim == restartNode);
+
+                stopGrid(true, name);
+
+                waitForTopology(SERVER_NODES);
+
+                log.info("DBG: node1 stopped");
+
+                if (persistenceEnabled())
+                    resetBaselineTopology();
+
+                awaitPartitionMapExchange();
+
+                doSleep(5_000);
+
+                startGrid(name);
+
+                log.info("DBG: node1 started");
+
+                if (persistenceEnabled())
+                    resetBaselineTopology();
+
+                awaitPartitionMapExchange();
+
+                stopBool.set(true);
+            }
+            catch (IllegalStateException e) {
+                // No-op.
+            }
+            catch (Exception e) {
+                fail(X.getFullStackTrace(e));
+            }
+            //}
+        }, 1, "node-restarter");
+
+        // Wait with timeout to avoid hanging suite.
+        doRandomUpdates(r, prim, primaryKeys, cache, stopBool::get).get(stop + 30_000);
+        fut.get();
+
+        log.info("DBG: stopped");
 
         assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
     }
@@ -292,7 +419,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             while (U.currentTimeMillis() < stop) {
                 doSleep(1_000);
 
-                Ignite restartNode = grid(1 + r.nextInt(backups.size()));
+                Ignite restartNode = grid(1);
 
                 assertFalse(prim == restartNode);
 
@@ -327,10 +454,11 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         }, 1, "node-restarter");
 
         // Wait with timeout to avoid hanging suite.
-        doRandomUpdates(r, prim, primaryKeys, cache, stop).get(stop + 30_000);
+        doRandomUpdates(r, prim, primaryKeys, cache, () -> U.currentTimeMillis() >= stop).get(stop + 30_000);
         fut.get();
 
-        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
+        final IdleVerifyResultV2 res = idleVerify(prim, DEFAULT_CACHE_NAME);
+        assertPartitionsSame(res);
     }
 
     /**
@@ -782,6 +910,67 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         assertEquals(cntr.toString(), 2, cntr.reserved());
     }
 
+    @Test
+    @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
+    public void testConsistencyAfterBaselineNodeStopAndRemoval() throws Exception {
+        backups = 2;
+
+        final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
+
+        IgniteEx prim = startGrids(srvNodes);
+
+        prim.cluster().active(true);
+
+        WalStateManager stateMgr = prim.context().cache().context().walState();
+
+        stateMgr.prohibitWALDisabling(true);
+
+        for (int p = 0; p < partitions(); p++) {
+            prim.cache(DEFAULT_CACHE_NAME).put(p, p);
+            prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2);
+        }
+
+        forceCheckpoint();
+
+        stopGrid(1);
+
+        awaitPartitionMapExchange();
+
+        resetBaselineTopology();
+
+        awaitPartitionMapExchange();
+
+        final GridDhtLocalPartition part = grid(3).cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(8);
+
+        GridDhtPartitionState s0 = part.state();
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        resetBaselineTopology();
+
+        awaitPartitionMapExchange();
+
+        awaitPartitionMapExchange(true, true, null);
+
+        for (int p = 0; p < partitions(); p++)
+            prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2 + 1);
+
+        // Must be evicted.
+        final GridDhtLocalPartition part2 = grid(3).cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(8);
+
+        stopGrid(1);
+
+        awaitPartitionMapExchange();
+
+        resetBaselineTopology();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
+    }
+
     /**
      * Tests tx load concurrently with PME for switching late affinity.
      * <p>
@@ -974,18 +1163,18 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * @param near Near node.
      * @param primaryKeys Primary keys.
      * @param cache Cache.
-     * @param stop Time to stop.
+     * @param stopClo Closure providing stop condition.
      * @return Finish future.
      */
     private IgniteInternalFuture<?> doRandomUpdates(Random r, Ignite near, List<Integer> primaryKeys,
-        IgniteCache<Object, Object> cache, long stop) throws Exception {
+        IgniteCache<Object, Object> cache, BooleanSupplier stopClo) throws Exception {
         LongAdder puts = new LongAdder();
         LongAdder removes = new LongAdder();
 
-        final int max = 100;
+        final int max = 10;
 
         return multithreadedAsync(() -> {
-            while (U.currentTimeMillis() < stop) {
+            while (!stopClo.getAsBoolean()) {
                 int rangeStart = r.nextInt(primaryKeys.size() - max);
                 int range = 5 + r.nextInt(max - 5);
 
@@ -1000,7 +1189,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                         puts.increment();
 
-                        boolean rmv = r.nextFloat() < 0.4;
+                        boolean rmv = r.nextFloat() < 0.6;
                         if (rmv) {
                             key = insertedKeys.get(r.nextInt(insertedKeys.size()));
 
