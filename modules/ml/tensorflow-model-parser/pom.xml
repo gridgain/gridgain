@@ -37,7 +37,7 @@
 
 
     <artifactId>ignite-ml-tensorflow-model-parser</artifactId>
-    <version>8.7.127-SNAPSHOT</version>
+    <version>8.7.10</version>
     <url>http://ignite.apache.org</url>
 
     <build>
