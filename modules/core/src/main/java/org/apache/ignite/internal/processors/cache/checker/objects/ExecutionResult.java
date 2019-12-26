@@ -32,6 +32,7 @@ public class ExecutionResult<T> extends IgniteDataTransferObject {
      *
      */
     protected T result;
+
     /**
      *
      */
