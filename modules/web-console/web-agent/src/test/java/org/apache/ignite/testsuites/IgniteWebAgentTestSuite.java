@@ -26,6 +26,7 @@ import org.apache.ignite.websocket.SerializationTests;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
+
 /**
  * Web Agent test suite.
  */
@@ -35,8 +36,8 @@ import org.junit.runners.Suite;
     AgentLauncherTest.class,
     AgentUtilsTest.class,
     WebSocketRouterTest.class,
-    DemoClusterHandlerTest.class,
     RestExecutorSelfTest.class,
+    DemoClusterHandlerTest.class,
     SerializationTests.class
 })
 public class IgniteWebAgentTestSuite {
