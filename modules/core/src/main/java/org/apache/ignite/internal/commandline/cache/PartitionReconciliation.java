@@ -306,8 +306,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         printer.accept(prepareResultFolders(res.nodeIdToFolder(), reconciliationRes.nodesIdsToConsistenseIdsMap()));
 
-        if (args.console)
-            reconciliationRes.print(printer, args.verbose);
+        reconciliationRes.print(printer, args.verbose);
     }
 
     /**

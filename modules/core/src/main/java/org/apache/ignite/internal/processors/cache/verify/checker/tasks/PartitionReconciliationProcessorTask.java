@@ -36,6 +36,7 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResultMeta;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -62,9 +63,13 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     @IgniteInstanceResource
     private IgniteEx ignite;
 
+    private boolean consoleMode;
+
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         VisorPartitionReconciliationTaskArg arg) throws IgniteException {
+        consoleMode  = arg.console();
+
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         LocalDateTime startTime = LocalDateTime.now();
@@ -81,7 +86,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** {@inheritDoc} */
     @Override public ReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
         Map<UUID, String> nodeIdToFolder = new HashMap<>();
-        PartitionReconciliationResult res = new PartitionReconciliationResult();
+        PartitionReconciliationResult res = consoleMode ?
+            new PartitionReconciliationResult() :
+            new PartitionReconciliationResultMeta();
 
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();
@@ -173,7 +180,12 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
                 return new T2<>(
                     file == null ? null : file.getAbsolutePath(),
-                    reconciliationTaskArg.console() ? reconciliationRes : new PartitionReconciliationResult()
+                    reconciliationTaskArg.console() ?
+                        reconciliationRes :
+                        new PartitionReconciliationResultMeta(
+                            reconciliationRes.inconsistentKeysCount(),
+                            reconciliationRes.skippedEntriesCount(),
+                            reconciliationRes.skippedEntriesCount())
                 );
             }
             catch (IgniteCheckedException | IOException e) {

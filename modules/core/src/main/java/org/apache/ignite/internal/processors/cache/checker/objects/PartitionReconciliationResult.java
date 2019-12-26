@@ -105,7 +105,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
 
     public void print(Consumer<String> printer, boolean verbose) {
         if (inconsistentKeys != null && !inconsistentKeys.isEmpty()) {
-            printer.accept("\nINCONSISTENT KEYS:\n\n");
+            printer.accept("\nINCONSISTENT KEYS: " + inconsistentKeysCount() + "\n\n");
 
             printer.accept("<cacheName>\n");
             printer.accept("\t<partitionId>\n");
@@ -147,7 +147,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
         }
 
         if (skippedCaches != null && !skippedCaches.isEmpty()) {
-            printer.accept("\nSKIPPED CACHES:\n\n");
+            printer.accept("\nSKIPPED CACHES: " + skippedCachesCount() + "\n\n");
 
             for (PartitionReconciliationSkippedEntityHolder<String> skippedCache : skippedCaches) {
                 printer.accept("Following cache was skipped during partition reconciliation check cache=["
@@ -156,7 +156,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
         }
 
         if (skippedEntries != null && !skippedEntries.isEmpty()) {
-            printer.accept("\nSKIPPED ENTRIES:\n\n");
+            printer.accept("\nSKIPPED ENTRIES: " + skippedEntriesCount() + "\n\n");
 
             for (Map.Entry<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
                 cacheBoundedSkippedEntries : skippedEntries.entrySet()) {
@@ -192,6 +192,8 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
      *
      */
     public void merge(PartitionReconciliationResult outer) {
+        assert outer instanceof PartitionReconciliationResult;
+
         this.nodesIdsToConsistenseIdsMap.putAll(outer.nodesIdsToConsistenseIdsMap);
 
         this.inconsistentKeys.putAll(outer.inconsistentKeys);
@@ -235,4 +237,27 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     public Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries() {
         return skippedEntries;
     }
+
+    /**
+     * @return Inconsisitent keys count.
+     */
+    public int inconsistentKeysCount() {
+        return inconsistentKeys.size();
+    }
+
+    /**
+     * @return Skipped caches count.
+     */
+    public int skippedCachesCount() {
+        return skippedCaches.size();
+    }
+
+    /**
+     * @return Skipped entries count.
+     */
+    public int skippedEntriesCount() {
+        return skippedEntries.size();
+    }
+
+
 }
