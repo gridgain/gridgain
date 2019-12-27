@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -29,6 +28,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -49,17 +49,18 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
     }
 
     @Test
-    public void testDifferentConfigurationValues() throws Exception {
+    public void testDifferentConfigurationValues1() throws Exception {
         defaultQueryTimeout = 500;
 
-        // We expect that all nodes will use timeout configured for a first node
-        startGrid(0);
+        // Currently we expect that all nodes will use a default timeout value from local IgniteConfiguration.
+        // Test assertions should be changed when this logic is improved.
+        IgniteEx srv0 = startGrid(0);
 
         defaultQueryTimeout = 2000;
 
-        startGrid(1);
+        IgniteEx srv1 = startGrid(1);
 
-        startClientGrid(2);
+        IgniteEx cli = startClientGrid(2);
 
         awaitPartitionMapExchange();
 
@@ -67,10 +68,41 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
 
         helper.createCache(grid(0));
 
-        for (int i : Arrays.asList(0, 1, 2)) {
-            System.err.println("Grid " + i);
-            GridTestUtils.assertThrowsWithCause(() -> helper.executeQuery(grid(i)), QueryCancelledException.class);
-        }
+        GridTestUtils.assertThrowsWithCause(() -> helper.executeQuery(srv0), QueryCancelledException.class);
+
+        // assert no exception
+        helper.executeQuery(srv1);
+
+        // assert no exception
+        helper.executeQuery(cli);
+    }
+
+    @Test
+    public void testDifferentConfigurationValues2() throws Exception {
+        defaultQueryTimeout = 2000;
+
+        // Currently we expect that all nodes will use a default timeout value from local IgniteConfiguration.
+        // Test assertions should be changed when this logic is improved.
+        IgniteEx srv0 = startGrid(0);
+
+        defaultQueryTimeout = 500;
+
+        IgniteEx srv1 = startGrid(1);
+
+        IgniteEx cli = startClientGrid(2);
+
+        awaitPartitionMapExchange();
+
+        TimedQueryHelper helper = new TimedQueryHelper(1000);
+
+        helper.createCache(grid(0));
+
+        // assert no exception
+        helper.executeQuery(srv0);
+
+        GridTestUtils.assertThrowsWithCause(() -> helper.executeQuery(srv1), QueryCancelledException.class);
+
+        GridTestUtils.assertThrowsWithCause(() -> helper.executeQuery(cli), QueryCancelledException.class);
     }
 
     @Test
@@ -85,6 +117,8 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         defaultQueryTimeout = 0;
 
         startGrid(0);
+
+        // assert no exception here
     }
 
     @Test
@@ -92,6 +126,8 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         defaultQueryTimeout = 1;
 
         startGrid(0);
+
+        // assert no exception here
     }
 
     @Test
