@@ -400,7 +400,9 @@ public class GridDhtPartitionDemander {
             if (assignments.isEmpty())
                 return null;
 
-            final RebalanceFuture fut = new RebalanceFuture(grp, lastExchangeFut, assignments, log, rebalanceId, next, lastCancelledTime);
+            final RebalanceFuture fut = new RebalanceFuture(
+                    grp, lastExchangeFut, assignments, log, rebalanceId, next, oldFut, lastCancelledTime
+            );
 
             if (oldFut.isInitial())
                 fut.listen(f -> oldFut.onDone(f.result()));
@@ -847,11 +849,7 @@ public class GridDhtPartitionDemander {
 
                             rebalanceFut.onReceivedKeys(p, 1, node);
 
-                            //TODO: IGNITE-11330: Update metrics for touched cache only.
-                            for (GridCacheContext ctx : grp.caches()) {
-                                if (ctx.statisticsEnabled())
-                                    ctx.cache().metrics0().onRebalanceKeyReceived();
-                            }
+                            updateGroupMetrics();
                         }
 
                         if (!hasMore)
@@ -945,7 +943,15 @@ public class GridDhtPartitionDemander {
         AffinityTopologyVersion topVer,
         GridCacheContext cctx
     ) throws IgniteCheckedException {
+        assert !grp.mvccEnabled();
         assert ctx.database().checkpointLockIsHeldByThread();
+
+        updateGroupMetrics();
+
+        if (cctx == null)
+            return false;
+
+        cctx = cctx.isNear() ? cctx.dhtCache().context() : cctx;
 
         try {
             GridCacheEntryEx cached = null;
@@ -1105,6 +1111,19 @@ public class GridDhtPartitionDemander {
         return "grp=" + grp.cacheOrGroupName() + ", topVer=" + supplyMsg.topologyVersion() + ", supplier=" + supplier;
     }
 
+    /**
+     * Update rebalancing metrics.
+     */
+    private void updateGroupMetrics() {
+        // TODO: IGNITE-11330: Update metrics for touched cache only.
+        // Due to historical rebalancing "EstimatedRebalancingKeys" metric is currently calculated for the whole cache
+        // group (by partition counters), so "RebalancedKeys" and "RebalancingKeysRate" is calculated in the same way.
+        for (GridCacheContext cctx0 : grp.caches()) {
+            if (cctx0.statisticsEnabled())
+                cctx0.cache().metrics0().onRebalanceKeyReceived();
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(GridDhtPartitionDemander.class, this);
@@ -1259,6 +1278,7 @@ public class GridDhtPartitionDemander {
             IgniteLogger log,
             long rebalanceId,
             RebalanceFuture next,
+            RebalanceFuture previous,
             AtomicLong lastCancelledTime
         ) {
             assert assignments != null : "Asiignments must not be null.";
