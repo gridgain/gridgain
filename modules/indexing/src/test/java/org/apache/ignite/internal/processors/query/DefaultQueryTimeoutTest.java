@@ -8,6 +8,7 @@ import org.junit.Test;
 
 // t0d0 add to suite
 // t0d0 check DML
+// t0d0 use different query APIs
 public class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
     private long defaultQueryTimeout;
 
