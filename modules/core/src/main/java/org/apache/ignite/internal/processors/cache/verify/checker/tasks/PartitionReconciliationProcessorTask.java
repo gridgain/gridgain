@@ -92,6 +92,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             new PartitionReconciliationResult() :
             new PartitionReconciliationResultMeta();
 
+        List<String> errors = new ArrayList<>();
+
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();
             IgniteException exc = result.getException();
@@ -179,9 +181,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 return new T2<>(
                     path,
                     reconciliationTaskArg.console() ? reconciliationRes : new ExecutionResult<>(new PartitionReconciliationResultMeta(
-                        reconciliationRes.inconsistentKeysCount(),
-                        reconciliationRes.skippedEntriesCount(),
-                        reconciliationRes.skippedEntriesCount()), reconciliationRes.getErrorMessage())
+                        reconciliationRes.getResult().inconsistentKeysCount(),
+                        reconciliationRes.getResult().skippedEntriesCount(),
+                        reconciliationRes.getResult().skippedEntriesCount()), reconciliationRes.getErrorMessage())
                 );
             }
             catch (Exception e) {

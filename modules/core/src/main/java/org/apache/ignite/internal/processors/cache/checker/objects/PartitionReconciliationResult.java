@@ -194,7 +194,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     public void merge(PartitionReconciliationResult outer) {
         assert outer instanceof PartitionReconciliationResult;
 
-        this.nodesIdsToConsistenseIdsMap.putAll(outer.nodesIdsToConsistenseIdsMap);
+        this.nodesIdsToConsistenceIdsMap.putAll(outer.nodesIdsToConsistenceIdsMap);
 
         this.inconsistentKeys.putAll(outer.inconsistentKeys);
 
