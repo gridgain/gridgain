@@ -22,6 +22,7 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -31,9 +32,9 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.util.DelayedHolder;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 
 import static java.util.stream.Collectors.toList;
@@ -69,6 +70,9 @@ public class AbstractPipelineProcessor {
      *
      */
     protected final AffinityTopologyVersion startTopVer;
+
+    /** Error. */
+    protected final AtomicReference<String> error = new AtomicReference<>();
 
     /** Ignite instance. */
     protected final IgniteEx ignite;
@@ -107,8 +111,15 @@ public class AbstractPipelineProcessor {
     /**
      *
      */
-    protected boolean isInterrupted() {
+    protected boolean isSessionExpired() {
         return ignite.context().diagnostic().getReconciliationSessionId() != sesId;
+    }
+
+    /**
+     *
+     */
+    protected boolean isInterrupted() {
+        return error.get() != null;
     }
 
     /**
@@ -116,6 +127,19 @@ public class AbstractPipelineProcessor {
      */
     protected boolean hasLiveHandlers() {
         return parallelismLevel != liveListeners.availablePermits();
+    }
+
+    /**
+     *
+     */
+    protected void waitWorkFinish() {
+        while (hasLiveHandlers()) {
+            try {
+                Thread.sleep(300);
+            }
+            catch (InterruptedException ignore) {
+            }
+        }
     }
 
     /**
@@ -140,13 +164,22 @@ public class AbstractPipelineProcessor {
      * @param arg Argument.
      * @param lsnr Listener.
      */
-    protected <T extends CachePartitionRequest, R> void compute(Class<? extends ComputeTask<T, R>> taskCls, T arg,
-        IgniteInClosure<? super IgniteFuture<R>> lsnr) throws InterruptedException {
+    protected <T extends CachePartitionRequest, R> void compute(
+        Class<? extends ComputeTask<T, ExecutionResult<R>>> taskCls, T arg,
+        IgniteInClosure<? super R> lsnr) throws InterruptedException {
         liveListeners.acquire();
 
         ignite.compute(partOwners(arg.cacheName(), arg.partitionId())).executeAsync(taskCls, arg).listen(futRes -> {
             try {
-                lsnr.apply(futRes);
+                ExecutionResult<R> res = futRes.get();
+
+                if (res.getErrorMessage() != null) {
+                    error.compareAndSet(null, res.getErrorMessage());
+
+                    return;
+                }
+
+                lsnr.apply(res.getResult());
             }
             finally {
                 liveListeners.release();

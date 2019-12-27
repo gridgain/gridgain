@@ -25,6 +25,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import javax.cache.configuration.Factory;
+import javax.cache.expiry.EternalExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -33,13 +35,14 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
-import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
@@ -66,8 +69,11 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * The base point of partition reconciliation processing.
  */
 public class PartitionReconciliationProcessor extends AbstractPipelineProcessor {
-    /** Interrupting message. */
-    public static final String INTERRUPTING_MSG = "Reconciliation session was interrupted. Partition reconciliation task was stopped.";
+    /** Session change message. */
+    public static final String SESSION_CHANGE_MSG = "Reconciliation session was changed.";
+
+    /** Topology change message. */
+    public static final String TOPOLOGY_CHANGE_MSG = "Topology was changed. Partition reconciliation task was stopped.";
 
     /** Work progress message. */
     public static final String WORK_PROGRESS_MSG = "Partition reconciliation task [sesId=%s, total=%s, remaining=%s]";
@@ -133,12 +139,22 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
     /**
      * @return
-     * @throws IgniteException
      */
-    public PartitionReconciliationResult execute() throws IgniteException {
+    public ExecutionResult<PartitionReconciliationResult> execute() {
         try {
-            //TODO skip ttl caches
             for (String cache : caches) {
+                IgniteInternalCache<Object, Object> cachex = ignite.cachex(cache);
+
+                if (cachex == null)
+                    throw new IllegalArgumentException("The cache '" + cache + "' doesn't exist.");
+
+                Factory expiryPlcFactory = cachex.configuration().getExpiryPolicyFactory();
+                if (expiryPlcFactory != null && !(expiryPlcFactory.create() instanceof EternalExpiryPolicy)) {
+                    log.warning("The cache '" + cache + "' was skipped because CacheConfiguration#setExpiryPolicyFactory exists.");
+
+                    continue;
+                }
+
                 int[] partitions = ignite.affinity(cache).primaryPartitions(ignite.localNode());
 
                 for (int partId : partitions) {
@@ -151,19 +167,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             boolean live = false;
 
             while (!isEmpty() || (live = hasLiveHandlers())) {
-                if (topologyChanged()) {
-                    log.warning("Topology was changed. Partition reconciliation task was stopped.");
+                if (topologyChanged())
+                    throw new IgniteException(TOPOLOGY_CHANGE_MSG);
 
-                    // TODO: 13.12.19 Add exception to result and probably partially available data.
-                    return new PartitionReconciliationResult();
-                }
+                if (isSessionExpired())
+                    throw new IgniteException(SESSION_CHANGE_MSG);
 
-                if(isInterrupted()) {
-                    log.warning(INTERRUPTING_MSG);
-
-                    // TODO: 13.12.19 Add exception to result and probably partially available data.
-                    return new PartitionReconciliationResult();
-                }
+                if (isInterrupted())
+                    throw new IgniteException(error.get());
 
                 if (isEmpty() && live) {
                     Thread.sleep(1_000);
@@ -182,22 +193,26 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 else if (workload instanceof Repair)
                     handle((Repair)workload);
                 else
-                    throw new RuntimeException("TODO Unsupported type: " + workload);
+                    log.error("Unsupported workload type: " + workload);
             }
 
-            return prepareResult();
+            return new ExecutionResult<>(prepareResult());
         }
-        catch (InterruptedException e) {
-            log.warning("Partition reconciliation was interrupted.", e);
+        catch (InterruptedException | IgniteException e) {
+            String errMsg = "Partition reconciliation was interrupted.";
 
-            // TODO: 13.12.19 Add exception to result and probably partially available data.
-            return new PartitionReconciliationResult();
+            waitWorkFinish();
+
+            log.warning(errMsg, e);
+
+            return new ExecutionResult<>(prepareResult(), errMsg + " " + e.getMessage());
         }
         catch (IgniteCheckedException e) {
-            log.error("Unexpected error.", e);
+            String errMsg = "Unexpected error.";
 
-            // TODO: 13.12.19 Add exception to result and probably partially available data.
-            return new PartitionReconciliationResult();
+            log.error(errMsg, e);
+
+            return new ExecutionResult<>(prepareResult(), errMsg + " " + e.getMessage());
         }
     }
 
@@ -208,9 +223,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         compute(
             CollectPartitionKeysByBatchTask.class,
             new PartitionBatchRequest(workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
-            futRes -> {
-                T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> res = futRes.get();
-
+            res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = res.get2();
@@ -238,9 +251,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
                 workload.partitionId(), startTopVer),
-            futRes -> {
-                Map<KeyCacheObject, Map<UUID, VersionedValue>> actualKeys = futRes.get();
-
+            actualKeys -> {
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
                     = checkConflicts(workload.recheckKeys(), actualKeys,
                     ignite.cachex(workload.cacheName()).context(), startTopVer);
@@ -254,7 +265,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 workload.attempt() + 1,
                                 workload.repairAttempt()
                             ),
-                            10,
+                            RECHECK_DELAY,
                             TimeUnit.SECONDS
                         );
                     }
@@ -279,9 +290,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             RepairRequestTask.class,
             new RepairRequest(workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
                 workload.attempt()),
-            futRes -> {
-                RepairResult repairRes = futRes.get();
-
+            repairRes -> {
                 if (!repairRes.repairedKeys().isEmpty())
                     addToPrintResult(workload.cacheName(), workload.partitionId(), repairRes.repairedKeys());
                 else if (!repairRes.keysToRepair().isEmpty()) {
@@ -463,7 +472,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private class WorkProgress {
         /** Work progress print interval. */
-        private final long RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL = getLong("RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
+        private final long WORK_PROGRESS_PRINT_INTERVAL = getLong("WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
 
         /**
          *
@@ -486,7 +495,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         public void printWorkProgress() {
             long currTimeMillis = System.currentTimeMillis();
 
-            if (currTimeMillis >= printedTime + RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL) {
+            if (currTimeMillis >= printedTime + WORK_PROGRESS_PRINT_INTERVAL) {
                 log.info(String.format(WORK_PROGRESS_MSG, sesId, workProgress.getTotal(), workProgress.getRemaining()));
 
                 printedTime = currTimeMillis;

@@ -34,6 +34,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionDataRow;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
@@ -49,7 +50,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 /**
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
-public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter<RecheckRequest, Map<KeyCacheObject, Map<UUID, VersionedValue>>> {
+public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter<RecheckRequest, ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>>> {
     /**
      *
      */
@@ -98,14 +99,22 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
     }
 
     /** {@inheritDoc} */
-    @Override public Map<KeyCacheObject, Map<UUID, VersionedValue>> reduce(
+    @Override public ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = new HashMap<>();
 
         GridCacheContext<Object, Object> ctx = ignite.cachex(recheckRequest.cacheName()).context();
 
         for (ComputeJobResult result : results) {
-            List<PartitionDataRow> partKeys = result.getData();
+            if (result.getException() != null)
+                return new ExecutionResult<>(result.getException().getMessage());
+
+            ExecutionResult<List<PartitionDataRow>> excRes = result.getData();
+
+            if (excRes.getErrorMessage() != null)
+                return new ExecutionResult<>(excRes.getErrorMessage());
+
+            List<PartitionDataRow> partKeys = excRes.getResult();
 
             for (PartitionDataRow key : partKeys) {
                 try {
@@ -116,12 +125,14 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
                     );
                 }
                 catch (Exception e) {
-                    U.error(log, "Updated recheck key [" + key + "] was skipped.", e);
+                    U.error(log, e.getMessage(), e);
+
+                    return new ExecutionResult<>(e.getMessage());
                 }
             }
         }
 
-        return res;
+        return new ExecutionResult<>(res);
     }
 
     /**
@@ -152,7 +163,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
         }
 
         /** {@inheritDoc} */
-        @Override public List<PartitionDataRow> execute() throws IgniteException {
+        @Override public ExecutionResult<List<PartitionDataRow>> execute() throws IgniteException {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(recheckRequest.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
@@ -179,11 +190,15 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
                             recheckedKeys.add(new PartitionDataRow(ignite.localNode().id(), row.key(), row.version(), row.value(), updateCntr, recheckStartTime));
                     }
                     catch (IgniteCheckedException e) {
-                        U.error(log, "Recheck key [" + recheckKey + "] was skipped.", e);
+                        String errMsg = "Recheck key [" + recheckKey + "] was skipped.";
+
+                        U.error(log, errMsg, e);
+
+                        return new ExecutionResult<>(errMsg);
                     }
                 }
 
-                return recheckedKeys;
+                return new ExecutionResult<>(recheckedKeys);
             }
             finally {
                 part.release();

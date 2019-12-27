@@ -16,24 +16,31 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
@@ -42,13 +49,14 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
-import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.logger.NullLogger;
+import org.apache.ignite.testframework.GridTestNode;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
@@ -57,6 +65,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -89,7 +98,7 @@ public class PartitionReconciliationProcessorTest {
     public void testBatchDoesNotHaveElementsNothingSchedule() throws IgniteCheckedException {
         MockedProcessor processor = MockedProcessor.create(false);
 
-        T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> emptyRes = new T2<>(null, new HashMap<>());
+        ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes = new ExecutionResult<>(new T2<>(null, new HashMap<>()));
 
         processor.addTask(new Batch(DEFAULT_CACHE, PARTITION_ID, null))
             .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
@@ -110,7 +119,7 @@ public class PartitionReconciliationProcessorTest {
         KeyCacheObject nextKey = new KeyCacheObjectImpl(1, null, PARTITION_ID);
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> batchRes = new HashMap<>();
         batchRes.put(nextKey, new HashMap<>());
-        T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>> emptyRes = new T2<>(nextKey, batchRes);
+        ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes = new ExecutionResult<>(new T2<>(nextKey, batchRes));
 
         processor.addTask(new Batch(DEFAULT_CACHE, PARTITION_ID, null))
             .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
@@ -130,7 +139,7 @@ public class PartitionReconciliationProcessorTest {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> batchRes = new HashMap<>();
         batchRes.put(new KeyCacheObjectImpl(1, null, PARTITION_ID), new HashMap<>());
 
-        Map<KeyCacheObject, Map<UUID, VersionedValue>> emptyRes = new HashMap<>();
+        ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>> emptyRes = new ExecutionResult<>(new HashMap<>());
 
         processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, emptyRes)
@@ -146,11 +155,12 @@ public class PartitionReconciliationProcessorTest {
      */
     @Test
     public void testRecheckShouldFinishWithoutActionIfConflictWasSolved() throws IgniteCheckedException {
-        MockedProcessor processor = MockedProcessor.create(false);
-
-        KeyCacheObjectImpl key = new KeyCacheObjectImpl(1, null, PARTITION_ID);
         UUID nodeId1 = UUID.randomUUID();
         UUID nodeId2 = UUID.randomUUID();
+
+        MockedProcessor processor = MockedProcessor.create(false, Arrays.asList(nodeId1, nodeId2));
+
+        KeyCacheObjectImpl key = new KeyCacheObjectImpl(1, null, PARTITION_ID);
         GridCacheVersion ver = new GridCacheVersion(1, 0, 0, 0);
 
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> batchRes = new HashMap<>();
@@ -166,7 +176,7 @@ public class PartitionReconciliationProcessorTest {
         sameRes.put(key, actualKey);
 
         processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
-            .whereResult(CollectPartitionKeysByRecheckRequestTask.class, sameRes)
+            .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
             .execute();
 
         processor.verify(never()).schedule(any());
@@ -200,7 +210,7 @@ public class PartitionReconciliationProcessorTest {
         sameRes.put(key, actualKey);
 
         processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
-            .whereResult(CollectPartitionKeysByRecheckRequestTask.class, sameRes)
+            .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
             .execute();
 
         processor.verify(times(1)).schedule(any(Recheck.class), eq(10L), eq(SECONDS));
@@ -233,7 +243,7 @@ public class PartitionReconciliationProcessorTest {
 
         processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
             RepairRequestTask.MAX_REPAIR_ATTEMPTS))
-            .whereResult(CollectPartitionKeysByRecheckRequestTask.class, sameRes)
+            .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
             .execute();
 
         processor.verify(times(1)).scheduleHighPriority(any(Repair.class));
@@ -257,6 +267,18 @@ public class PartitionReconciliationProcessorTest {
          *
          */
         public static MockedProcessor create(boolean fixMode) throws IgniteCheckedException {
+            return create(fixMode, Collections.emptyList());
+        }
+
+        /**
+         *
+         */
+        public static MockedProcessor create(boolean fixMode, List<UUID> nodeIds) throws IgniteCheckedException {
+            List<ClusterNode> nodes = new ArrayList<>();
+
+            for (UUID nodeId : nodeIds)
+                nodes.add(new GridTestNode(nodeId));
+
             GridCachePartitionExchangeManager exchMgr = Mockito.mock(GridCachePartitionExchangeManager.class);
             GridDhtPartitionsExchangeFuture fut = Mockito.mock(GridDhtPartitionsExchangeFuture.class);
 
@@ -266,7 +288,7 @@ public class PartitionReconciliationProcessorTest {
 
             IgniteEx igniteMock = Mockito.mock(IgniteEx.class);
 
-            when(igniteMock.log()).thenReturn(Mockito.mock(IgniteLogger.class));
+            when(igniteMock.log()).thenReturn(new NullLogger());
 
             GridKernalContext ctxMock = Mockito.mock(GridKernalContext.class);
 
@@ -275,6 +297,21 @@ public class PartitionReconciliationProcessorTest {
             when(ctxMock.diagnostic()).thenReturn(diagnosticProcessorMock);
 
             when(igniteMock.context()).thenReturn(ctxMock);
+
+            IgniteInternalCache cacheMock = Mockito.mock(IgniteInternalCache.class);
+            when(igniteMock.cachex(anyString())).thenReturn(cacheMock);
+
+            GridCacheContext cacheCtxMock = Mockito.mock(GridCacheContext.class);
+            when(cacheMock.context()).thenReturn(cacheCtxMock);
+
+            GridDhtPartitionTopology topMock = Mockito.mock(GridDhtPartitionTopology.class);
+            when(cacheCtxMock.topology()).thenReturn(topMock);
+
+            when(topMock.owners(anyInt(), any())).thenReturn(nodes);
+
+            IgniteClusterEx clusterMock = Mockito.mock(IgniteClusterEx.class);
+            when(clusterMock.nodes()).thenReturn(nodes);
+            when(igniteMock.cluster()).thenReturn(clusterMock);
 
             return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, 0,
                 10, MAX_RECHECK_ATTEMPTS);
@@ -292,14 +329,15 @@ public class PartitionReconciliationProcessorTest {
 
         /** {@inheritDoc} */
         @Override
-        protected <T extends CachePartitionRequest, R> void compute(Class<? extends ComputeTask<T, R>> taskCls, T arg,
-            IgniteInClosure<? super IgniteFuture<R>> lsnr) throws InterruptedException {
-            R res = (R)computeResults.get(taskCls);
+        protected <T extends CachePartitionRequest, R> void compute(
+            Class<? extends ComputeTask<T, ExecutionResult<R>>> taskCls, T arg,
+            IgniteInClosure<? super R> lsnr) throws InterruptedException {
+            ExecutionResult<R> res = (ExecutionResult<R>)computeResults.get(taskCls);
 
             if (res == null)
                 throw new IllegalStateException("Please add result for: " + taskCls.getSimpleName());
 
-            lsnr.apply(new IgniteFinishedFutureImpl<>(res));
+            lsnr.apply(res.getResult());
         }
 
         /** {@inheritDoc} */

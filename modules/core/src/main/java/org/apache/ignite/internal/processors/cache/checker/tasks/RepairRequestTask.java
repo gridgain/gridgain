@@ -16,15 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
@@ -60,8 +61,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 /**
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
-public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairResult> {
-
+public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, ExecutionResult<RepairResult>> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -173,18 +173,26 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
     }
 
     /** {@inheritDoc} */
-    @Override public RepairResult reduce(
+    @Override public ExecutionResult<RepairResult> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         RepairResult aggregatedRepairRes = new RepairResult();
 
         for (ComputeJobResult result : results) {
-            RepairResult repairRes = result.getData();
+            if(result.getException() != null)
+                return new ExecutionResult<>(result.getException().getMessage());
+
+            ExecutionResult<RepairResult> excRes = result.getData();
+
+            if(excRes.getErrorMessage() != null)
+                return new ExecutionResult<>(excRes.getErrorMessage());
+
+            RepairResult repairRes = excRes.getResult();
 
             aggregatedRepairRes.keysToRepair().putAll(repairRes.keysToRepair());
             aggregatedRepairRes.repairedKeys().putAll(repairRes.repairedKeys());
         }
 
-        return aggregatedRepairRes;
+        return new ExecutionResult<>(aggregatedRepairRes);
     }
 
     /**
@@ -244,7 +252,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
         }
 
         /** {@inheritDoc} */
-        @SuppressWarnings("unchecked") @Override public RepairResult execute() throws IgniteException {
+        @SuppressWarnings("unchecked") @Override public ExecutionResult<RepairResult> execute() throws IgniteException {
             Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
 
             Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
@@ -355,7 +363,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, RepairR
                 }
             }
 
-            return new RepairResult(keysToRepairWithNextAttempt, repairedKeys);
+            return new ExecutionResult<>(new RepairResult(keysToRepairWithNextAttempt, repairedKeys));
         }
 
         /**

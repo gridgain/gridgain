@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -140,8 +141,8 @@ public class CollectPartitionInfoAbstractTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDocl} */
-        @Override public List<T> getData() {
-            return data;
+        @Override public ExecutionResult<List<T>> getData() {
+            return new ExecutionResult<>(data);
         }
 
         /** {@inheritDoc} */

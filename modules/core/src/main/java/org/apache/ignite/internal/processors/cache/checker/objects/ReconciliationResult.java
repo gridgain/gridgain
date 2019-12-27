@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
@@ -46,6 +47,11 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     /**
      *
      */
+    private List<String> errors;
+
+    /**
+     *
+     */
     public ReconciliationResult() {
     }
 
@@ -54,16 +60,19 @@ public class ReconciliationResult extends IgniteDataTransferObject {
      */
     public ReconciliationResult(
         PartitionReconciliationResult partReconciliationRes,
-        Map<UUID, String> nodeIdToFolder
+        Map<UUID, String> nodeIdToFolder,
+        List<String> errors
     ) {
         this.partitionReconciliationResult = partReconciliationRes;
         this.nodeIdToFolder = nodeIdToFolder;
+        this.errors = errors;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(partitionReconciliationResult);
         U.writeMap(out, nodeIdToFolder);
+        U.writeCollection(out, errors);
     }
 
     /** {@inheritDoc} */
@@ -72,6 +81,8 @@ public class ReconciliationResult extends IgniteDataTransferObject {
         partitionReconciliationResult = (PartitionReconciliationResult)in.readObject();
 
         nodeIdToFolder = U.readMap(in);
+
+        errors = U.readList(in);
     }
 
     /**
@@ -86,5 +97,12 @@ public class ReconciliationResult extends IgniteDataTransferObject {
      */
     public Map<UUID, String> nodeIdToFolder() {
         return nodeIdToFolder;
+    }
+
+    /**
+     *
+     */
+    public List<String> errors() {
+        return errors;
     }
 }

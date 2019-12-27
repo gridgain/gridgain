@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResultMeta;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
@@ -90,15 +92,28 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             new PartitionReconciliationResult() :
             new PartitionReconciliationResultMeta();
 
+        List<String> errors = new ArrayList<>();
+
         for (ComputeJobResult result : results) {
             UUID nodeId = result.getNode().id();
-            T2<String, PartitionReconciliationResult> data = result.getData();
+            IgniteException exc = result.getException();
+
+            if (exc != null) {
+                errors.add(nodeId + " - " + exc.getMessage());
+
+                continue;
+            }
+
+            T2<String, ExecutionResult<PartitionReconciliationResult>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
-            res.merge(data.get2());
+            res.merge(data.get2().getResult());
+
+            if (data.get2().getErrorMessage() != null)
+                errors.add(nodeId + " - " + data.get2().getErrorMessage());
         }
 
-        return new ReconciliationResult(res, nodeIdToFolder);
+        return new ReconciliationResult(res, nodeIdToFolder, errors);
     }
 
     /**
@@ -134,8 +149,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         private long sesId;
 
         /**
-         * @param arg
-         * @param sesId
+         *
          */
         public PartitionReconciliationJob(VisorPartitionReconciliationTaskArg arg, LocalDateTime startTime,
             long sesId) {
@@ -145,12 +159,12 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, PartitionReconciliationResult> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<PartitionReconciliationResult>> execute() throws IgniteException {
             Collection<String> caches = reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty() ?
                 ignite.context().cache().publicCacheNames() : reconciliationTaskArg.caches();
 
             try {
-                PartitionReconciliationResult reconciliationRes = new PartitionReconciliationProcessor(
+                ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
                     ignite.context().cache().context().exchange(),
@@ -162,36 +176,51 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     reconciliationTaskArg.repairAlg()
                 ).execute();
 
-                File file = null;
+                String path = localPrint(reconciliationRes.getResult());
 
-                if (reconciliationRes != null && !reconciliationRes.isEmpty()) {
-                    file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
+                return new T2<>(
+                    path,
+                    reconciliationTaskArg.console() ? reconciliationRes : new ExecutionResult<>(new PartitionReconciliationResultMeta(
+                        reconciliationRes.getResult().inconsistentKeysCount(),
+                        reconciliationRes.getResult().skippedEntriesCount(),
+                        reconciliationRes.getResult().skippedEntriesCount()), reconciliationRes.getErrorMessage())
+                );
+            }
+            catch (Exception e) {
+                String msg = "Reconciliation job failed on node [id=" + ignite.localNode().id() + "]. ";
+                log.error(msg, e);
+
+                throw new IgniteException(msg + e.getMessage());
+            }
+        }
+
+        /**
+         *
+         */
+        private String localPrint(PartitionReconciliationResult reconciliationRes) {
+            if (reconciliationRes != null && !reconciliationRes.isEmpty()) {
+                try {
+                    File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
 
                     try (PrintWriter pw = new PrintWriter(file)) {
                         reconciliationRes.print(pw::write, reconciliationTaskArg.verbose());
 
                         pw.flush();
+
+                        return file.getAbsolutePath();
                     }
                     catch (IOException e) {
                         log.error("Unable to write report to file " + e.getMessage());
-                        //TODO
                     }
                 }
+                catch (IgniteCheckedException | IOException e) {
+                    log.error("Unable to create file " + e.getMessage());
+                }
 
-                return new T2<>(
-                    file == null ? null : file.getAbsolutePath(),
-                    reconciliationTaskArg.console() ?
-                        reconciliationRes :
-                        new PartitionReconciliationResultMeta(
-                            reconciliationRes.inconsistentKeysCount(),
-                            reconciliationRes.skippedEntriesCount(),
-                            reconciliationRes.skippedEntriesCount())
-                );
+                reconciliationRes.print(log::info, reconciliationTaskArg.verbose());
             }
-            catch (IgniteCheckedException | IOException e) {
-                e.printStackTrace();
-                return null; //TODO
-            }
+
+            return null;
         }
     }
 }
