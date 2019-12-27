@@ -2,6 +2,7 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -22,11 +23,11 @@ public class TimedQueryHelper {
     private final long executionTime;
     private final String cacheName;
 
-    public TimedQueryHelper(long t, String name) {
-        assert t >= ROW_COUNT;
+    public TimedQueryHelper(long executionTime, String cacheName) {
+        assert executionTime >= ROW_COUNT;
 
-        executionTime = t;
-        cacheName = name;
+        this.executionTime = executionTime;
+        this.cacheName = cacheName;
     }
 
     public void createCache(Ignite ign) {
@@ -44,6 +45,15 @@ public class TimedQueryHelper {
         long rowTimeout = executionTime / ROW_COUNT;
 
         SqlFieldsQuery qry = new SqlFieldsQuery("select longProcess(_val, " + rowTimeout + ") from Integer");
+
+        return ign.cache(cacheName).query(qry).getAll();
+    }
+
+    public List<List<?>> executeQuery(Ignite ign, long timeout) {
+        long rowTimeout = executionTime / ROW_COUNT;
+
+        SqlFieldsQuery qry = new SqlFieldsQuery("select longProcess(_val, " + rowTimeout + ") from Integer")
+            .setTimeout((int)timeout, TimeUnit.MILLISECONDS);
 
         return ign.cache(cacheName).query(qry).getAll();
     }
