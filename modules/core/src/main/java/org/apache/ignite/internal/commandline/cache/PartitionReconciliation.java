@@ -40,7 +40,6 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
-import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
 
 import static java.lang.String.format;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
@@ -59,11 +58,6 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
  * Partition reconciliation command.
  */
 public class PartitionReconciliation implements Command<PartitionReconciliation.Arguments> {
-    /** */
-    public static final int DEFAULT_BATCH_SIZE = 1000;
-    /** */
-    public static final int DEFAULT_RECHECK_ATTEMPTS = 2;
-
     /** Command parsed arguments. */
     private Arguments args;
 
@@ -81,19 +75,29 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         Map<String, String> paramsDesc = new HashMap<>();
 
         paramsDesc.put(FIX_MODE.toString(),
-            "If present, fix all inconsistent data.");
+            "If present, fix all inconsistent data. Default value is " + FIX_MODE.defaultValue() + '.');
+
         paramsDesc.put(LOAD_FACTOR.toString(),
-            "Percent of system loading between 0 and 1.");
+            "Percent of system loading between 0 (exclusive) and 1 (inclusive). Default value is " +
+                LOAD_FACTOR.defaultValue() + '.');
+
         paramsDesc.put(BATCH_SIZE.toString(),
-            "Amount of keys to retrieve within one job.");
+            "Amount of keys to retrieve within one job. Default value is " + BATCH_SIZE.defaultValue() + '.');
+
         paramsDesc.put(RECHECK_ATTEMPTS.toString(),
-            "Amount of potentially inconsistent keys recheck attempts.");
+            "Amount of potentially inconsistent keys recheck attempts. Value between 1 and 5 should be used." +
+                " Default value is " + RECHECK_ATTEMPTS.defaultValue() + '.');
+
         paramsDesc.put(VERBOSE.toString(),
-            "Print data to result with sensitive information: keys and values.");
+            "Print data to result with sensitive information: keys and values." +
+                " Default value is " + VERBOSE.defaultValue() + '.');
+
         paramsDesc.put(FIX_ALG.toString(),
-            "Specifies which repair algorithm to use for doubtful keys.");
+            "Specifies which repair algorithm to use for doubtful keys. The following values can be used: "
+                + Arrays.toString(RepairAlgorithm.values()) +  " Default value is " + FIX_ALG.defaultValue() + '.');
+
         paramsDesc.put(CONSOLE.toString(),
-            "Specifies whether to print result to console or file.");
+            "Specifies whether to print result to console or file. Default value is " + CONSOLE.defaultValue() + '.');
 
         usageCache(
             log,
@@ -156,13 +160,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
-        boolean fixMode = false;
-        boolean verbose = false;
-        boolean console = false;
-        double loadFactor = 1;
-        int batchSize = DEFAULT_BATCH_SIZE;
-        int recheckAttempts = DEFAULT_RECHECK_ATTEMPTS;
-        RepairAlgorithm repairAlg = RepairAlgorithm.defaultValue();
+        boolean fixMode = (boolean) FIX_MODE.defaultValue();
+        boolean verbose = (boolean) VERBOSE.defaultValue();
+        boolean console = (boolean) CONSOLE.defaultValue();
+        double loadFactor = (double) LOAD_FACTOR.defaultValue();
+        int batchSize = (int) BATCH_SIZE.defaultValue();
+        int recheckAttempts = (int) RECHECK_ATTEMPTS.defaultValue();
+        RepairAlgorithm repairAlg = (RepairAlgorithm) FIX_ALG.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
@@ -178,6 +182,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 validateRegexps(cacheNames);
             }
             else {
+                String strVal;
+
                 switch (arg) {
                     case FIX_MODE:
                         fixMode = true;
@@ -185,9 +191,18 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         break;
 
                     case FIX_ALG:
-                        // TODO: 20.11.19 Use proper message here.
-                        // TODO: 20.11.19 Validate value.
-                        repairAlg = RepairAlgorithm.valueOf(argIter.nextArg(""));
+                        strVal = argIter.nextArg(
+                            "The repair algorithm should be specified. The following " +
+                                "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
+
+                        try {
+                            repairAlg = RepairAlgorithm.valueOf(strVal);
+                        }
+                        catch (IllegalArgumentException e) {
+                            throw new IllegalArgumentException(
+                                "Invalid repair algorithm: " + strVal + ". The following " +
+                                "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
+                        }
 
                         break;
 
@@ -202,32 +217,56 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         break;
 
                     case LOAD_FACTOR:
-                        // TODO: 20.11.19 Use proper message here. 
-                        String loadFactorStr = argIter.nextArg("The cache filter should be specified. The following " +
-                            "values can be used: " + Arrays.toString(CacheFilterEnum.values()) + '.');
+                        strVal = argIter.nextArg("The load factor should be specified.");
 
-                        // TODO: 20.11.19 Validate value. 
-                        loadFactor = Double.valueOf(loadFactorStr);
+                        try {
+                            loadFactor = Double.valueOf(strVal);
+                        }
+                        catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Invalid load factor: " + strVal +
+                                ". Double value between 0 (exclusive) and 1 (inclusive) should be used.");
+                        }
+
+                        if (loadFactor <= 0 || loadFactor > 1) {
+                            throw new IllegalArgumentException("Invalid load factor: " + strVal +
+                                ". Double value between 0 (exclusive) and 1 (inclusive) should be used.");
+                        }
 
                         break;
 
                     case BATCH_SIZE:
-                        // TODO: 20.11.19 Use proper message here. 
-                        String batchSizeStr = argIter.nextArg("The cache filter should be specified. The following " +
-                            "values can be used: " + Arrays.toString(CacheFilterEnum.values()) + '.');
+                        strVal = argIter.nextArg("The batch size should be specified.");
 
-                        // TODO: 20.11.19 Validate value. 
-                        batchSize = Integer.valueOf(batchSizeStr);
+                        try {
+                            batchSize = Integer.valueOf(strVal);
+                        }
+                        catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Invalid batch size: " + strVal +
+                                ". Int value greater than zero should be used.");
+                        }
+
+                        if (batchSize <= 0) {
+                            throw new IllegalArgumentException("Invalid batch size: " + strVal +
+                                ". Int value greater than zero should be used.");
+                        }
 
                         break;
 
                     case RECHECK_ATTEMPTS:
-                        // TODO: 20.11.19 Use proper message here.
-                        String recheckAttemptsStr = argIter.nextArg("The cache filter should be specified. The following " +
-                            "values can be used: " + Arrays.toString(CacheFilterEnum.values()) + '.');
+                        strVal = argIter.nextArg("The recheck attempts should be specified.");
 
-                        // TODO: 20.11.19 Validate value.
-                        recheckAttempts = Integer.valueOf(recheckAttemptsStr);
+                        try {
+                            recheckAttempts = Integer.valueOf(strVal);
+                        }
+                        catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Invalid recheck attempts: " + strVal +
+                                ". Int value between 1 and 5 should be used.");
+                        }
+
+                        if (recheckAttempts < 1 || recheckAttempts > 5) {
+                            throw new IllegalArgumentException("Invalid recheck attempts: " + strVal +
+                                ". Int value between 1 and 5 should be used.");
+                        }
 
                         break;
                 }
@@ -236,8 +275,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         args = new Arguments(cacheNames, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg);
     }
-
-    // TODO: 20.11.19 Idle verify has exactly same method.
 
     /**
      * @param str To validate that given name is valid regexp.
@@ -309,8 +346,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         printer.accept(prepareResultFolders(res.nodeIdToFolder(), reconciliationRes.nodesIdsToConsistenseIdsMap()));
 
-        if (args.console)
-            reconciliationRes.print(printer, args.verbose);
+        reconciliationRes.print(printer, args.verbose);
     }
 
     /**
