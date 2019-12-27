@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
-import org.apache.ignite.internal.visor.verify.CacheFilterEnum;
 
 import static java.lang.String.format;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
@@ -177,6 +176,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 validateRegexps(cacheNames);
             }
             else {
+                String strVal;
+
                 switch (arg) {
                     case FIX_MODE:
                         fixMode = true;
@@ -184,9 +185,18 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         break;
 
                     case FIX_ALG:
-                        // TODO: 20.11.19 Use proper message here.
-                        // TODO: 20.11.19 Validate value.
-                        repairAlg = RepairAlgorithm.valueOf(argIter.nextArg(""));
+                        strVal = argIter.nextArg(
+                            "The repair algorithm should be specified. The following " +
+                                "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
+
+                        try {
+                            repairAlg = RepairAlgorithm.valueOf(strVal);
+                        }
+                        catch (IllegalArgumentException e) {
+                            throw new IllegalArgumentException(
+                                "Invalid repair algorithm: " + strVal + ". The following " +
+                                "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
+                        }
 
                         break;
 
@@ -201,32 +211,56 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         break;
 
                     case LOAD_FACTOR:
-                        // TODO: 20.11.19 Use proper message here. 
-                        String loadFactorStr = argIter.nextArg("The cache filter should be specified. The following " +
-                            "values can be used: " + Arrays.toString(CacheFilterEnum.values()) + '.');
+                        strVal = argIter.nextArg("The load factor should be specified.");
 
-                        // TODO: 20.11.19 Validate value. 
-                        loadFactor = Double.valueOf(loadFactorStr);
+                        try {
+                            loadFactor = Double.valueOf(strVal);
+                        }
+                        catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Invalid load factor: " + strVal +
+                                ". Double value between 0 (exclusive) and 1 (inclusive) should be used.");
+                        }
+
+                        if (loadFactor <= 0 || loadFactor > 1) {
+                            throw new IllegalArgumentException("Invalid load factor: " + strVal +
+                                ". Double value between 0 (exclusive) and 1 (inclusive) should be used.");
+                        }
 
                         break;
 
                     case BATCH_SIZE:
-                        // TODO: 20.11.19 Use proper message here. 
-                        String batchSizeStr = argIter.nextArg("The cache filter should be specified. The following " +
-                            "values can be used: " + Arrays.toString(CacheFilterEnum.values()) + '.');
+                        strVal = argIter.nextArg("The batch size should be specified.");
 
-                        // TODO: 20.11.19 Validate value. 
-                        batchSize = Integer.valueOf(batchSizeStr);
+                        try {
+                            batchSize = Integer.valueOf(strVal);
+                        }
+                        catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Invalid batch size: " + strVal +
+                                ". Int value greater than zero should be used.");
+                        }
+
+                        if (batchSize <= 0) {
+                            throw new IllegalArgumentException("Invalid batch size: " + strVal +
+                                ". Int value greater than zero should be used.");
+                        }
 
                         break;
 
                     case RECHECK_ATTEMPTS:
-                        // TODO: 20.11.19 Use proper message here.
-                        String recheckAttemptsStr = argIter.nextArg("The cache filter should be specified. The following " +
-                            "values can be used: " + Arrays.toString(CacheFilterEnum.values()) + '.');
+                        strVal = argIter.nextArg("The recheck attempts should be specified.");
 
-                        // TODO: 20.11.19 Validate value.
-                        recheckAttempts = Integer.valueOf(recheckAttemptsStr);
+                        try {
+                            recheckAttempts = Integer.valueOf(strVal);
+                        }
+                        catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Invalid recheck attempts: " + strVal +
+                                ". Int value between 1 and 5 should be used.");
+                        }
+
+                        if (recheckAttempts < 1 || recheckAttempts > 5) {
+                            throw new IllegalArgumentException("Invalid recheck attempts: " + strVal +
+                                ". Int value between 1 and 5 should be used.");
+                        }
 
                         break;
                 }
@@ -235,8 +269,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         args = new Arguments(cacheNames, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg);
     }
-
-    // TODO: 20.11.19 Idle verify has exactly same method.
 
     /**
      * @param str To validate that given name is valid regexp.
