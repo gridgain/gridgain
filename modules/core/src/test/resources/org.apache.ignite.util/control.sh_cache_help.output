@@ -24,13 +24,16 @@ Arguments: --cache help --yes
     Verify whether there are inconsistent entries for the specified caches and print out the differences if any. Fix inconsistency if --fix-modeargument is presented. When no parameters are specified, all user caches are verified. Cache filtering options configure the set of caches that will be processed by partition_reconciliation command. If cache names are specified, in form of regular expressions, only matching caches will be verified.
 
     Parameters:
-      --fix-alg           - Specifies which repair algorithm to use for doubtful keys.
-      --fix-mode          - If present, fix all inconsistent data.
-      --load-factor       - Percent of system loading between 0 and 1.
-      --console           - Specifies whether to print result to console or file.
-      --batch-size        - Amount of keys to retrieve within one job.
-      --verbose           - Print data to result with sensitive information: keys and values.
-      --recheck-attempts  - Amount of potentially inconsistent keys recheck attempts.
+      --fix-alg           - Specifies which repair algorithm to use for doubtful keys. The following values can be used: [MAX_GRID_CACHE_VERSION, PRIMARY, MAJORITY, PRINT_ONLY] Default value is MAJORITY.
+      --fix-mode          - If present, fix all inconsistent data. Default value is false.
+      --load-factor       - Percent of system loading between 0 (exclusive) and 1 (inclusive). Default value is 1.0.
+      --console           - Specifies whether to print result to console or file. Default value is false.
+      --batch-size        - Amount of keys to retrieve within one job. Default value is 1000.
+      --verbose           - Print data to result with sensitive information: keys and values. Default value is false.
+      --recheck-attempts  - Amount of potentially inconsistent keys recheck attempts. Value between 1 and 5 should be used. Default value is 2.
+
+  --cache partition_reconciliation_cancel
+    Does cancel of partition reconciliation command.
 
   --cache list regexPattern [--groups|--seq] [nodeId] [--config] [--output-format multi-line]
     Show information about caches, groups or sequences that match a regular expression. When executed without parameters, this subcommand prints the list of caches.

@@ -18,46 +18,58 @@ package org.apache.ignite.internal.commandline.cache.argument;
 
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 
 /**
  * {@link CacheSubcommands#PARTITION_RECONCILIATION} command arguments.
  */
 public enum PartitionReconciliationCommandArg implements CommandArg {
     /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
-    FIX_MODE("--fix-mode"),
+    FIX_MODE("--fix-mode", Boolean.FALSE),
 
     /**
-     * Specifies which fix algorithm to use while repairing doubtful keys:
-     * options {@code PartitionReconciliationRepairMeta.RepairAlg}.
+     * Specifies which fix algorithm to use while repairing doubtful keys: options {@code
+     * PartitionReconciliationRepairMeta.RepairAlg}.
      */
-    FIX_ALG("--fix-alg"),
+    FIX_ALG("--fix-alg", RepairAlgorithm.defaultValue()),
 
     /** If {@code true} - print data to result with sensitive information: keys and values. */
-    VERBOSE("--verbose"),
+    VERBOSE("--verbose", Boolean.FALSE),
 
     /** Percent of system loading between 0 and 1. */
-    LOAD_FACTOR("--load-factor"),
+    LOAD_FACTOR("--load-factor", 1d),
 
     /** Amount of keys to retrieve within one job. */
-    BATCH_SIZE ("--batch-size"),
+    BATCH_SIZE("--batch-size", 1000),
 
     /** Amount of potentially inconsistent keys recheck attempts. */
-    RECHECK_ATTEMPTS ("--recheck-attempts"),
+    RECHECK_ATTEMPTS("--recheck-attempts", 2),
 
     /** Print result to console. */
-    CONSOLE("--console");
+    CONSOLE("--console", Boolean.FALSE);
 
     /** Option name. */
     private final String name;
 
+    /** Default value. */
+    private Object dfltVal;
+
     /** */
-    PartitionReconciliationCommandArg(String name) {
+    PartitionReconciliationCommandArg(String name, Object dfltVal) {
         this.name = name;
+        this.dfltVal = dfltVal;
     }
 
     /** {@inheritDoc} */
     @Override public String argName() {
         return name;
+    }
+
+    /**
+     * @return Default value.
+     */
+    public Object defaultValue() {
+        return dfltVal;
     }
 
     /** {@inheritDoc} */

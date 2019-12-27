@@ -57,11 +57,6 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
  * Partition reconciliation command.
  */
 public class PartitionReconciliation implements Command<PartitionReconciliation.Arguments> {
-    /** */
-    public static final int DEFAULT_BATCH_SIZE = 1000;
-    /** */
-    public static final int DEFAULT_RECHECK_ATTEMPTS = 2;
-
     /** Command parsed arguments. */
     private Arguments args;
 
@@ -79,19 +74,29 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         Map<String, String> paramsDesc = new HashMap<>();
 
         paramsDesc.put(FIX_MODE.toString(),
-            "If present, fix all inconsistent data.");
+            "If present, fix all inconsistent data. Default value is " + FIX_MODE.defaultValue() + '.');
+
         paramsDesc.put(LOAD_FACTOR.toString(),
-            "Percent of system loading between 0 and 1.");
+            "Percent of system loading between 0 (exclusive) and 1 (inclusive). Default value is " +
+                LOAD_FACTOR.defaultValue() + '.');
+
         paramsDesc.put(BATCH_SIZE.toString(),
-            "Amount of keys to retrieve within one job.");
+            "Amount of keys to retrieve within one job. Default value is " + BATCH_SIZE.defaultValue() + '.');
+
         paramsDesc.put(RECHECK_ATTEMPTS.toString(),
-            "Amount of potentially inconsistent keys recheck attempts.");
+            "Amount of potentially inconsistent keys recheck attempts. Value between 1 and 5 should be used." +
+                " Default value is " + RECHECK_ATTEMPTS.defaultValue() + '.');
+
         paramsDesc.put(VERBOSE.toString(),
-            "Print data to result with sensitive information: keys and values.");
+            "Print data to result with sensitive information: keys and values." +
+                " Default value is " + VERBOSE.defaultValue() + '.');
+
         paramsDesc.put(FIX_ALG.toString(),
-            "Specifies which repair algorithm to use for doubtful keys.");
+            "Specifies which repair algorithm to use for doubtful keys. The following values can be used: "
+                + Arrays.toString(RepairAlgorithm.values()) +  " Default value is " + FIX_ALG.defaultValue() + '.');
+
         paramsDesc.put(CONSOLE.toString(),
-            "Specifies whether to print result to console or file.");
+            "Specifies whether to print result to console or file. Default value is " + CONSOLE.defaultValue() + '.');
 
         usageCache(
             log,
@@ -154,13 +159,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
-        boolean fixMode = false;
-        boolean verbose = false;
-        boolean console = false;
-        double loadFactor = 1;
-        int batchSize = DEFAULT_BATCH_SIZE;
-        int recheckAttempts = DEFAULT_RECHECK_ATTEMPTS;
-        RepairAlgorithm repairAlg = RepairAlgorithm.defaultValue();
+        boolean fixMode = (boolean) FIX_MODE.defaultValue();
+        boolean verbose = (boolean) VERBOSE.defaultValue();
+        boolean console = (boolean) CONSOLE.defaultValue();
+        double loadFactor = (double) LOAD_FACTOR.defaultValue();
+        int batchSize = (int) BATCH_SIZE.defaultValue();
+        int recheckAttempts = (int) RECHECK_ATTEMPTS.defaultValue();
+        RepairAlgorithm repairAlg = (RepairAlgorithm) FIX_ALG.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
