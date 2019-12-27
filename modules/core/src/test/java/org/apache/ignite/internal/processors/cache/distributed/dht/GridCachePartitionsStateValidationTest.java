@@ -350,6 +350,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         try {
             IgniteEx ignite = startGrid(0);
             startGrid(1);
+            startGrid(2);
             ignite.cluster().active(true);
             awaitPartitionMapExchange();
 
@@ -364,7 +365,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
             }
 
             // Trigger exchange.
-            startGrid(2);
+            startGrid(3);
 
             awaitPartitionMapExchange();
 
@@ -390,6 +391,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         try{
             IgniteEx ignite = startGrid(0);
             startGrid(1);
+            startGrid(2);
             ignite.cluster().active(true);
             awaitPartitionMapExchange();
 
@@ -397,14 +399,14 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
             for (int i = 0; i < 1000; i++)
                 ignite.cache(CACHE_NAME).put(i, i);
 
-            // Modify update counter for some partition.
+            // Modify update size for some partition.
             for (GridDhtLocalPartition partition : ignite.cachex(CACHE_NAME).context().topology().localPartitions()) {
                 partition.dataStore().clear(ignite.cachex(CACHE_NAME).context().cacheId());
                 break;
             }
 
             // Trigger exchange.
-            startGrid(2);
+            startGrid(3);
 
             awaitPartitionMapExchange();
 
@@ -432,6 +434,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         try{
             IgniteEx ignite = startGrid(0);
             startGrid(1);
+            startGrid(2);
             ignite.cluster().active(true);
             awaitPartitionMapExchange();
 
@@ -439,7 +442,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
             for (int i = 0; i < 1000; i++)
                 ignite.cache(CACHE_NAME).put(i, i);
 
-            // Modify update counter for some partition.
+            // Modify update counter and size for some partition.
             for (GridDhtLocalPartition partition : ignite.cachex(CACHE_NAME).context().topology().localPartitions()) {
                 partition.updateCounter(100500L);
                 partition.dataStore().clear(ignite.cachex(CACHE_NAME).context().cacheId());
@@ -447,7 +450,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
             }
 
             // Trigger exchange.
-            startGrid(2);
+            startGrid(3);
 
             awaitPartitionMapExchange();
 
