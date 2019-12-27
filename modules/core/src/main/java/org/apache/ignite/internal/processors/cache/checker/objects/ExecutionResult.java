@@ -25,7 +25,9 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
  *
  */
 public class ExecutionResult<T> extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /**
@@ -38,18 +40,30 @@ public class ExecutionResult<T> extends IgniteDataTransferObject {
      */
     protected String errorMessage;
 
-    /** */
+    /**
+     *
+     */
     public ExecutionResult(T result, String errorMessage) {
         this.result = result;
         this.errorMessage = errorMessage;
     }
 
-    /** */
+    /**
+     *
+     */
+    public ExecutionResult() {
+    }
+
+    /**
+     *
+     */
     public ExecutionResult(T result) {
         this.result = result;
     }
 
-    /** */
+    /**
+     *
+     */
     public ExecutionResult(String errorMessage) {
         this.errorMessage = errorMessage;
     }
@@ -78,7 +92,7 @@ public class ExecutionResult<T> extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override
     protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        result = (T) in.readObject();
-        errorMessage = (String) in.readObject();
+        result = (T)in.readObject();
+        errorMessage = (String)in.readObject();
     }
 }

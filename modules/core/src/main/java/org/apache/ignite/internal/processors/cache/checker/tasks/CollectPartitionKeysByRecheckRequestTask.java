@@ -109,7 +109,12 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
             if (result.getException() != null)
                 return new ExecutionResult<>(result.getException().getMessage());
 
-            List<PartitionDataRow> partKeys = result.getData();
+            ExecutionResult<List<PartitionDataRow>> excRes = result.getData();
+
+            if (excRes.getErrorMessage() != null)
+                return new ExecutionResult<>(excRes.getErrorMessage());
+
+            List<PartitionDataRow> partKeys = excRes.getResult();
 
             for (PartitionDataRow key : partKeys) {
                 try {

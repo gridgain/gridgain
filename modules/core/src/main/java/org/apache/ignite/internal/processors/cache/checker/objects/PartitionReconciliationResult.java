@@ -45,8 +45,8 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /** A sequence of characters that is used to hide sensitive data in case of non-verbose mode. */
     public static final String HIDDEN_DATA = "*****";
 
-    /** Map of node ids to node consitent ids. */
-    private Map<UUID, String> nodesIdsToConsistenseIdsMap = new HashMap<>();
+    /** Map of node ids to node consistent ids. */
+    private Map<UUID, String> nodesIdsToConsistenceIdsMap = new HashMap<>();
 
     private Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
@@ -62,19 +62,19 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationResult(
-        Map<UUID, String> nodesIdsToConsistenseIdsMap,
+        Map<UUID, String> nodesIdsToConsistenceIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys) {
-        this.nodesIdsToConsistenseIdsMap = nodesIdsToConsistenseIdsMap;
+        this.nodesIdsToConsistenceIdsMap = nodesIdsToConsistenceIdsMap;
         this.inconsistentKeys = inconsistentKeys;
     }
 
     public PartitionReconciliationResult(
-        Map<UUID, String> nodesIdsToConsistenseIdsMap,
+        Map<UUID, String> nodesIdsToConsistenceIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches,
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
             skippedEntries) {
-        this.nodesIdsToConsistenseIdsMap = nodesIdsToConsistenseIdsMap;
+        this.nodesIdsToConsistenceIdsMap = nodesIdsToConsistenceIdsMap;
         this.inconsistentKeys = inconsistentKeys;
         this.skippedCaches = skippedCaches;
         this.skippedEntries = skippedEntries;
@@ -82,7 +82,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        U.writeMap(out, nodesIdsToConsistenseIdsMap);
+        U.writeMap(out, nodesIdsToConsistenceIdsMap);
 
         U.writeMap(out, inconsistentKeys);
 
@@ -94,7 +94,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in)
         throws IOException, ClassNotFoundException {
-        nodesIdsToConsistenseIdsMap = U.readMap(in);
+        nodesIdsToConsistenceIdsMap = U.readMap(in);
 
         inconsistentKeys = U.readMap(in);
 
@@ -133,7 +133,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
 
                         for (Map.Entry<UUID, PartitionReconciliationValueMeta> valMap :
                             inconsistentDataRow.valueMeta().entrySet()) {
-                            printer.accept("\t\t\t" + nodesIdsToConsistenseIdsMap.get(valMap.getKey()) + " " +
+                            printer.accept("\t\t\t" + nodesIdsToConsistenceIdsMap.get(valMap.getKey()) + " " +
                                 U.id8(valMap.getKey()) + ": " + valMap.getValue().stringView(verbose) + "\n");
                         }
 
@@ -192,7 +192,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
      *
      */
     public void merge(PartitionReconciliationResult outer) {
-        this.nodesIdsToConsistenseIdsMap.putAll(outer.nodesIdsToConsistenseIdsMap);
+        this.nodesIdsToConsistenceIdsMap.putAll(outer.nodesIdsToConsistenceIdsMap);
 
         this.inconsistentKeys.putAll(outer.inconsistentKeys);
 
@@ -212,7 +212,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
      *
      */
     public Map<UUID, String> nodesIdsToConsistenseIdsMap() {
-        return nodesIdsToConsistenseIdsMap;
+        return nodesIdsToConsistenceIdsMap;
     }
 
     /**

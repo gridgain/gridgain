@@ -84,7 +84,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
-        );
+        ).getResult();
 
         assertEquals(2, res.size());
         assertTrue(res.keySet().containsAll(recheckKeys));
@@ -107,7 +107,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
-        );
+        ).getResult();
 
         assertTrue(res.isEmpty());
     }
@@ -134,7 +134,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
-        );
+        ).getResult();
 
         assertTrue(res.isEmpty());
     }

@@ -74,7 +74,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      */
     @Test
     public void testPartitionReconciliationCancel() throws Exception {
-        LogListener lsnr = LogListener.matches(s -> s.startsWith(SESSION_CHANGE_MSG)).times(3).build();
+        LogListener lsnr = LogListener.matches(s -> s.contains(SESSION_CHANGE_MSG)).times(3).build();
         log.registerListener(lsnr);
 
         startGrids(3);

@@ -36,8 +36,8 @@ import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationPartialResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -87,22 +87,22 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         List<String> errors = new ArrayList<>();
 
         for (ComputeJobResult result : results) {
+            UUID nodeId = result.getNode().id();
             IgniteException exc = result.getException();
 
             if (exc != null) {
-                errors.add(exc.getMessage());
+                errors.add(nodeId + " - " + exc.getMessage());
 
                 continue;
             }
 
-            UUID nodeId = result.getNode().id();
-            T2<String, ReconciliationPartialResult> data = result.getData();
+            T2<String, ExecutionResult<PartitionReconciliationResult>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
-            res.merge(data.get2().getPartitionReconciliationResult());
+            res.merge(data.get2().getResult());
 
-            if (data.get2().getError() != null)
-                errors.add(data.get2().getError());
+            if (data.get2().getErrorMessage() != null)
+                errors.add(nodeId + " - " + data.get2().getErrorMessage());
         }
 
         return new ReconciliationResult(res, nodeIdToFolder, errors);
@@ -151,12 +151,12 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ReconciliationPartialResult> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<PartitionReconciliationResult>> execute() throws IgniteException {
             Collection<String> caches = reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty() ?
                 ignite.context().cache().publicCacheNames() : reconciliationTaskArg.caches();
 
             try {
-                ReconciliationPartialResult reconciliationRes = new PartitionReconciliationProcessor(
+                ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
                     ignite.context().cache().context().exchange(),
@@ -168,11 +168,11 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     reconciliationTaskArg.repairAlg()
                 ).execute();
 
-                String path = localPrint(reconciliationRes.getPartitionReconciliationResult());
+                String path = localPrint(reconciliationRes.getResult());
 
                 return new T2<>(
                     path,
-                    reconciliationTaskArg.console() ? reconciliationRes : new ReconciliationPartialResult(reconciliationRes.getError())
+                    reconciliationTaskArg.console() ? reconciliationRes : new ExecutionResult<>(new PartitionReconciliationResult(), reconciliationRes.getErrorMessage())
                 );
             }
             catch (Exception e) {
