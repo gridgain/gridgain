@@ -499,8 +499,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             ctx.cache().onStateChangeFinish(msg);
 
-            ctx.durableBackgroundTasksProcessor().onStateChangeFinish(msg);
-
             TransitionOnJoinWaitFuture joinFut = this.joinFut;
 
             if (joinFut != null)

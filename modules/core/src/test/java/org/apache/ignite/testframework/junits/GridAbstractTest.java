@@ -258,7 +258,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     private volatile Method currTestMtd;
 
     /**
-     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overridden for test purposes,
+     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overrided for test purposes,
      * then it must be restored using value of this field.
      */
     private transient PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
@@ -354,7 +354,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTestsStopped() throws Exception {
-        //restoring page handler wrapper and destroy closure
+        //restoring page handler wrapper
         BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
 
         clearStaticLogClasses.forEach(this::clearStaticClassLog);
