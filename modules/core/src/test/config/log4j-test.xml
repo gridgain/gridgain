@@ -86,7 +86,7 @@
     <!--
         Uncomment to enable Exchange, Rebalance and Partitions workflow debugging.
     -->
-
+    <!--
          <category name="org.apache.ignite.internal.processors.cache.distributed.dht.preloader">
              <level value="DEBUG"/>
          </category>
@@ -94,7 +94,7 @@
         <category name="org.apache.ignite.internal.processors.cache.distributed.dht.topology">
             <level value="DEBUG"/>
         </category>
-
+    -->
 
     <!--
         Uncomment to enable debugging of partition counters.

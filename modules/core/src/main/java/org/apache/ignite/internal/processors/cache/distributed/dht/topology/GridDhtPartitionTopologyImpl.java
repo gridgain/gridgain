@@ -2858,6 +2858,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             res.trim();
 
+            if (ctx.localNode().order() == 4)
+                System.out.println();
+
             return res;
         }
         finally {

@@ -489,4 +489,6 @@ public class PartitionTxUpdateCounterImpl implements PartitionUpdateCounter {
         return "Counter [lwm=" + get() + ", holes=" + queue +
             ", maxApplied=" + highestAppliedCounter() + ", hwm=" + reserveCntr.get() + ']';
     }
+
+    public Exception stack;
 }

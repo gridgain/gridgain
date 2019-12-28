@@ -62,6 +62,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCacheTtlManager;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.PartitionTxUpdateCounterImpl;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteHistoricalIterator;
@@ -187,6 +188,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             ((GridCacheDatabaseSharedManager) ctx.database()).cancelOrWaitPartitionDestroy(grp.groupId(), p);
 
         boolean exists = ctx.pageStore() != null && ctx.pageStore().exists(grp.groupId(), p);
+
+        if (p == 8)
+            System.out.println();
 
         return new GridCacheDataStore(p, exists);
     }
@@ -1847,8 +1851,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                                 byte[] data = link == 0 ? null : partStorage.readRow(link);
 
-                                if (partId == 8) {
-                                    System.out.println();
+                                if (partId == 8 && ctx != null && ctx.localNode() != null && ctx.localNode().order()==4) {
+                                    PartitionTxUpdateCounterImpl cntr = (PartitionTxUpdateCounterImpl) delegate0.partUpdateCounter();
+                                    cntr.stack = new Exception();
                                 }
 
                                 delegate0.restoreState(io.getSize(pageAddr), io.getUpdateCounter(pageAddr), cacheSizes, data);

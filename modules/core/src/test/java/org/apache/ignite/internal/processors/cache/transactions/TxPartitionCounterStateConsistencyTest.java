@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.TreeMap;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -940,6 +941,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         awaitPartitionMapExchange();
 
+        forceCheckpoint(grid(3)); // Will force exist mode after part store recreaction.
+
         final GridDhtLocalPartition part = grid(3).cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(8);
 
         GridDhtPartitionState s0 = part.state();
@@ -949,8 +952,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         awaitPartitionMapExchange();
 
         resetBaselineTopology();
-
-        awaitPartitionMapExchange();
 
         awaitPartitionMapExchange(true, true, null);
 

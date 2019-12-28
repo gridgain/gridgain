@@ -3325,18 +3325,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                             removeMergedFutures(resVer, exchFut);
 
-                            final AffinityTopologyVersion ver = exchFut.topologyVersion();
-
-                            final List<List<ClusterNode>> ass0 = cctx.affinity().affinity(CU.cacheId("default")).assignments(ver);
-
-                            int part = 8;
-                            final List<ClusterNode> a8 = ass0.get(part);
-                            printNode("DBG: assign: part=" + part + ", ver=" + ver, a8);
-
-                            final GridDhtPartitionTopology top = cctx.cache().cacheGroup(CU.cacheId("default")).topology();
-                            final List<ClusterNode> owners8 = top.nodes(part, ver);
-                            printNode("DBG: nodes: part=" + part + ", ver=" + ver, owners8);
-
                             if (log.isTraceEnabled())
                                 log.trace("After waiting for exchange future [exchFut=" + exchFut + ", worker=" +
                                     this + ']');
@@ -3543,6 +3531,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         /** Started flag. */
         private AtomicBoolean started = new AtomicBoolean();
+
+        private Exception ctx = new Exception();
 
         /**
          *

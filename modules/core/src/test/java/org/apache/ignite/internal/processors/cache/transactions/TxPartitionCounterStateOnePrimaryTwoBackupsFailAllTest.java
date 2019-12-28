@@ -296,6 +296,7 @@ public class TxPartitionCounterStateOnePrimaryTwoBackupsFailAllTest extends TxPa
                                 }
 
                                 if (backup == backup1) {
+                                    // TODO fix race with recovery.
                                     // Stop all backups first or recovery will commit a transaction on backups.
                                     stopGrid(skipCheckpoint, txTop.get2().get(0).name());
                                     stopGrid(skipCheckpoint, txTop.get2().get(1).name());
