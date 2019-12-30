@@ -187,8 +187,6 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
         ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
 
-        Thread.sleep(15_000); // Allow compressor to compress WAL segments.
-
         String nodeFolderName = ig.context().pdsFolderResolver().resolveFolders().folderName();
 
         File dbDir = U.resolveWorkDirectory(U.defaultWorkDirectory(), "db", false);
@@ -197,7 +195,9 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         File nodeArchiveDir = new File(archiveDir, nodeFolderName);
         File walSegment = new File(nodeArchiveDir, FileDescriptor.fileName(0) + ZIP_SUFFIX);
 
-        assertTrue(walSegment.exists());
+        // Allow compressor to compress WAL segments.
+        assertTrue(GridTestUtils.waitForCondition(walSegment::exists, 15_000));
+
         assertTrue(walSegment.length() < WAL_SEGMENT_SIZE / 2); // Should be compressed at least in half.
 
         stopAllGrids();
@@ -383,6 +383,7 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         File archiveDir = new File(walDir, "archive");
         File nodeArchiveDir = new File(archiveDir, nodeFolderName);
         File walSegment = new File(nodeArchiveDir, FileDescriptor.fileName(emptyIdx));
+        File zippedWalSegment = new File(nodeArchiveDir, FileDescriptor.fileName(emptyIdx + 1) + ZIP_SUFFIX);
 
         long start = U.currentTimeMillis();
         do {
@@ -405,7 +406,8 @@ public class WalCompactionTest extends GridCommonAbstractTest {
         ig = startGrid(0);
         ig.cluster().active(true);
 
-        Thread.sleep(15_000); // Allow compressor to compress WAL segments.
+        // Allow compressor to compress WAL segments.
+        assertTrue(GridTestUtils.waitForCondition(zippedWalSegment::exists, 15_000));
 
         File[] compressedSegments = nodeArchiveDir.listFiles(new FilenameFilter() {
             @Override public boolean accept(File dir, String name) {
@@ -477,8 +479,8 @@ public class WalCompactionTest extends GridCommonAbstractTest {
             cache.put(i, val);
 
             //It trigger checkout in the middle of put that it shifts 'keepUncompressedIdx'
-            // to allow the compressor to delete that.
-            if (i == 3 * ENTRIES / 4)
+            // to allow the compressor to delete unzipped segments.
+            if (i % 100 == 0)
                 ig.context().cache().context().database().wakeupForCheckpoint("Forced checkpoint").get();
         }
 
