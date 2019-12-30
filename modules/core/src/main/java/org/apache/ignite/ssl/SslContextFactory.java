@@ -63,7 +63,7 @@ public class SslContextFactory implements Factory<SSLContext> {
     public static final String DFLT_SSL_PROTOCOL = "TLS";
 
     /** Default key manager algorithm. */
-    public static final String DFLT_KEY_ALGORITHM = "SunX509";
+    public static final String DFLT_KEY_ALGORITHM = System.getProperty("ssl.key.algorithm", "SunX509");
 
     /** SSL protocol. */
     private String proto = DFLT_SSL_PROTOCOL;
