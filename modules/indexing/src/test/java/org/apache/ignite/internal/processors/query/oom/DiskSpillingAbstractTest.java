@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -58,7 +59,7 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     protected static final long SMALL_MEM_LIMIT = 4096;
 
     /** */
-    private static final long HUGE_MEM_LIMIT = Long.MAX_VALUE;
+    protected static final long HUGE_MEM_LIMIT = Long.MAX_VALUE;
 
     /** */
     protected boolean checkSortOrder;
@@ -106,15 +107,18 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         CacheConfiguration<?,?> personCache = defaultCacheConfiguration();
         personCache.setQueryParallelism(queryParallelism());
         personCache.setName("person");
+        personCache.setCacheMode(CacheMode.PARTITIONED);
+        personCache.setBackups(1);
         grid(0).addCacheConfiguration(personCache);
 
         CacheConfiguration<?,?> orgCache = defaultCacheConfiguration();
         orgCache.setQueryParallelism(queryParallelism());
         orgCache.setName("organization");
+        orgCache.setCacheMode(CacheMode.PARTITIONED);
+        orgCache.setBackups(1);
         grid(0).addCacheConfiguration(orgCache);
 
         startGrid(getConfiguration("client").setClientMode(true));
-
 
         populateData();
     }
@@ -348,7 +352,7 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     }
 
     /** */
-    private List<List<?>> runSql(String sql, boolean lazy, long memLimit) {
+    protected List<List<?>> runSql(String sql, boolean lazy, long memLimit) {
         Ignite node = fromClient() ? grid("client") : grid(0);
         return node.cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQueryEx(sql, null)
             .setMaxMemory(memLimit)
@@ -415,4 +419,6 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
         return Arrays.asList(workDir.toFile().list());
     }
+
+
 }

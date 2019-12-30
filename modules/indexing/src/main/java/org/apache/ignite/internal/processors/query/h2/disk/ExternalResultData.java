@@ -157,7 +157,9 @@ public class ExternalResultData<T> implements AutoCloseable {
 
             hashIdx = useHashIdx ? new ExternalResultHashIndex(fileIOFactory, file, this, initSize) : null;
         }
-        catch (IgniteCheckedException | IOException e) {
+        catch (IgniteCheckedException | IgniteException | IOException e) {
+            U.closeQuiet(this);
+
             throw new IgniteException(e);
         }
     }

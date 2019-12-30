@@ -454,6 +454,8 @@ public class ExternalResultHashIndex implements AutoCloseable {
             }
         }
         catch (IOException e) {
+            U.closeQuiet(this);
+
             throw new IgniteException("Failed to create an index spill file for the intermediate query results.", e);
         }
     }

@@ -500,10 +500,10 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     public void simpleAggregate() {
         checkGroupsSpilled = true;
 
-        listAggs = Arrays.asList(1);
+        listAggs = Arrays.asList(1, 2, 3);
 
         assertInMemoryAndOnDiskSameResults(false,
-            "SELECT count(*), LISTAGG(name) FROM person"
+            "SELECT count(*), LISTAGG(name), LISTAGG(name), LISTAGG(name) FROM person"
         );
     }
 }
