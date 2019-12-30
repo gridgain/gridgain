@@ -274,7 +274,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         histSupplier = ctx.discovery().node(nodeId);
                 }
 
-                if (histSupplier != null && !exchFut.isClearingPartition(grp, p)) {
+                // Empty partitions should never be historically rebalanced.
+                if (histSupplier != null && !exchFut.isClearingPartition(grp, p) && !part.isEmpty()) {
                     assert grp.persistenceEnabled();
                     assert remoteOwners(p, topVer).contains(histSupplier) : remoteOwners(p, topVer);
 

@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.cache.transactions;
 
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
@@ -78,10 +77,5 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPa
         awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
-    }
-
-    /** {@inheritDoc} */
-    @Override protected long getTestTimeout() {
-        return super.getTestTimeout() * 1000;
     }
 }
