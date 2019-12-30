@@ -16,28 +16,25 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.concurrent.Callable;
-import org.apache.ignite.internal.jdbc.thin.JdbcThinStatement;
+import java.util.concurrent.TimeUnit;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.internal.client.thin.ClientServerError;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
 
-public class DefaultQueryTimeoutThinJdbcTest extends DefaultQueryTimeoutTest {
+public class DefaultQueryTimeoutThinJavaTest extends DefaultQueryTimeoutTest {
     @Override protected void executeQuery(String sql) throws Exception {
-        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
-            conn.createStatement().executeQuery(sql);
+        try (IgniteClient cli = G.startClient(new ClientConfiguration().setAddresses("127.0.0.1"))) {
+            cli.query(new SqlFieldsQuery(sql)).getAll();
         }
     }
 
     @Override protected void executeQuery(String sql, long timeout) throws Exception {
-        // t0d0 JDBC url string timeout parameter
-        try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
-            JdbcThinStatement stmt = (JdbcThinStatement)conn.createStatement();
-
-            stmt.timeout((int)timeout);
-
-            stmt.executeQuery(sql);
+        try (IgniteClient cli = G.startClient(new ClientConfiguration().setAddresses("127.0.0.1"))) {
+            cli.query(new SqlFieldsQuery(sql).setTimeout((int)timeout, TimeUnit.MILLISECONDS)).getAll();
         }
     }
 
@@ -46,7 +43,7 @@ public class DefaultQueryTimeoutThinJdbcTest extends DefaultQueryTimeoutTest {
             c.call();
         }
         catch (Exception e) {
-            assertTrue(X.hasCause(e, "The query was cancelled while executing", SQLException.class));
+            assertTrue(X.hasCause(e, "The query was cancelled while executing", ClientServerError.class));
         }
     }
 }
