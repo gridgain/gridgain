@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.WalStateManager;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
@@ -26,14 +28,60 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_
  */
 @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
 public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPartitionCounterStateConsistencyTest {
+    /**
+     */
     @Test
-    @Override public void testConsistencyAfterBaselineNodeStopAndRemoval() throws Exception {
-        super.testConsistencyAfterBaselineNodeStopAndRemoval();
-    }
+    public void testConsistencyAfterBaselineNodeStopAndRemoval() throws Exception {
+        backups = 2;
 
-    @Test
-    @Override public void testPartitionConsistencyWithBackupRestart_ChangeBLT() throws Exception {
-        super.testPartitionConsistencyWithBackupRestart_ChangeBLT();
+        final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
+
+        IgniteEx prim = startGrids(srvNodes);
+
+        prim.cluster().active(true);
+
+        WalStateManager stateMgr = prim.context().cache().context().walState();
+
+        stateMgr.prohibitWALDisabling(true);
+
+        for (int p = 0; p < partitions(); p++) {
+            prim.cache(DEFAULT_CACHE_NAME).put(p, p);
+            prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2);
+        }
+
+        forceCheckpoint();
+
+        stopGrid(1);
+
+        awaitPartitionMapExchange();
+
+        resetBaselineTopology();
+
+        awaitPartitionMapExchange();
+
+        forceCheckpoint(grid(3)); // Will force exist mode after part store re-creation.
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        resetBaselineTopology();
+
+        awaitPartitionMapExchange(true, true, null);
+
+        // Create counter difference with evicted partition so it's applicable for historical rebalancing.
+        for (int p = 0; p < partitions(); p++)
+            prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2 + 1);
+
+        stopGrid(1);
+
+        awaitPartitionMapExchange();
+
+        resetBaselineTopology();
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
     }
 
     /** {@inheritDoc} */

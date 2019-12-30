@@ -99,11 +99,11 @@
     <!--
         Uncomment to enable debugging of partition counters.
     -->
-
+    <!--
         <category name="org.apache.ignite.internal.processors.cache.PartitionTxUpdateCounterDebugWrapper">
             <level value="DEBUG"/>
         </category>
-
+    -->
 
     <!--
         Uncomment to enable transactions debugging.

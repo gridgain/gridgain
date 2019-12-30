@@ -911,67 +911,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         assertEquals(cntr.toString(), 2, cntr.reserved());
     }
 
-    @Test
-    @WithSystemProperty(key = "IGNITE_DISABLE_WAL_DURING_REBALANCING", value = "false")
-    public void testConsistencyAfterBaselineNodeStopAndRemoval() throws Exception {
-        backups = 2;
-
-        final int srvNodes = SERVER_NODES + 1; // Add one non-owner node to test to increase entropy.
-
-        IgniteEx prim = startGrids(srvNodes);
-
-        prim.cluster().active(true);
-
-        WalStateManager stateMgr = prim.context().cache().context().walState();
-
-        stateMgr.prohibitWALDisabling(true);
-
-        for (int p = 0; p < partitions(); p++) {
-            prim.cache(DEFAULT_CACHE_NAME).put(p, p);
-            prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2);
-        }
-
-        forceCheckpoint();
-
-        stopGrid(1);
-
-        awaitPartitionMapExchange();
-
-        resetBaselineTopology();
-
-        awaitPartitionMapExchange();
-
-        forceCheckpoint(grid(3)); // Will force exist mode after part store recreaction.
-
-        final GridDhtLocalPartition part = grid(3).cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(8);
-
-        GridDhtPartitionState s0 = part.state();
-
-        startGrid(1);
-
-        awaitPartitionMapExchange();
-
-        resetBaselineTopology();
-
-        awaitPartitionMapExchange(true, true, null);
-
-        for (int p = 0; p < partitions(); p++)
-            prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2 + 1);
-
-        // Must be evicted.
-        final GridDhtLocalPartition part2 = grid(3).cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(8);
-
-        stopGrid(1);
-
-        awaitPartitionMapExchange();
-
-        resetBaselineTopology();
-
-        awaitPartitionMapExchange();
-
-        assertPartitionsSame(idleVerify(prim, DEFAULT_CACHE_NAME));
-    }
-
     /**
      * Tests tx load concurrently with PME for switching late affinity.
      * <p>
