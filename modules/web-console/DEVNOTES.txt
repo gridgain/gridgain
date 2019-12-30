@@ -115,8 +115,13 @@ This appendix provides a list of common Spring Boot properties and references to
 # Sign up configuration.
 account.signup.enabled=true # Enable self registration
 account.activation.enabled=false # Enable account activation
-account.activation.timeout=1800000 # Activation timeout(milliseconds)
+account.activation.timeout=1800000 # Activation timeout (milliseconds)
 account.activation.sendTimeout=180000 # Activation send email throttle (milliseconds)
+
+# Sign in configuration.
+account.authentication.maxAttempts=Infinity # Specifies the maximum number of failed attempts allowed before preventing login.
+account.authentication.interval=100 # Specifies the interval in milliseconds between login attempts, which increases exponentially based on the number of failed attempts (milliseconds).
+account.authentication.maxInterval=300000 # Specifies the maximum amount of time an account can be locked (milliseconds).
 
 # Embedded server configuration.
 server.address=0.0.0.0 # Network address to which the Web Console should bind.

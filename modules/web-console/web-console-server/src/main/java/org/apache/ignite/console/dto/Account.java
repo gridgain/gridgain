@@ -77,8 +77,11 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** Latest activation token was sent at. */
     private LocalDateTime activationSentAt;
 
-    /** Last activity. */
-    private String sessionToken;
+    /** Failed attempt count. */
+    private long attemptsCnt;
+
+    /** Last failed attempt. */
+    private long lastFailedLogin;
 
     /**
      * Default constructor for serialization.
@@ -262,7 +265,35 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     }
 
     /**
-     * Activate account.
+     * @param attemptsCnt New failed attempt count.
+     */
+    public void setAttemptsCount(long attemptsCnt) {
+        this.attemptsCnt = attemptsCnt;
+    }
+
+    /**
+     * @return Failed attempt count.
+     */
+    public long getAttemptsCount() {
+        return this.attemptsCnt;
+    }
+
+    /**
+     * @return Last failed attempt.
+     */
+    public long getLastFailedLogin() {
+        return lastFailedLogin;
+    }
+
+    /**
+     * @param lastFailedLogin New last failed attempt.
+     */
+    public void setLastFailedLogin(long lastFailedLogin) {
+        this.lastFailedLogin = lastFailedLogin;
+    }
+
+    /**
+     * Increment account.
      */
     public void activate() {
         enabled = true;
@@ -330,6 +361,7 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
 
     /**
      * Update account fields.
+     *
      * @param changes Changes.
      */
     public void update(ChangeUserRequest changes) {

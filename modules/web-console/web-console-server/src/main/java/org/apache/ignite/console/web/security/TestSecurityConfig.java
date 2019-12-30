@@ -37,7 +37,8 @@ public class TestSecurityConfig extends SecurityConfig {
      * @param encoder Service for encoding user passwords.
      * @param accountsSrv User details service.
      */
-    public TestSecurityConfig(ActivationConfiguration activationCfg,
+    public TestSecurityConfig(
+        ActivationConfiguration activationCfg,
         PasswordEncoder encoder,
         AccountsService accountsSrv
     ) {

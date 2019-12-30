@@ -16,9 +16,13 @@
 
 package org.apache.ignite.console;
 
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -34,11 +38,15 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
 @SpringBootTest(webEnvironment = RANDOM_PORT, classes = {TestGridConfiguration.class})
 @DirtiesContext
 public class AbstractSelfTest {
+    /** Ignite. */
+    @Autowired
+    private Ignite ignite;
+
     /**
      * @throws Exception If failed.
      */
     @BeforeClass
-    public static void setup() throws Exception {
+    public static void tearUp() throws Exception {
         stopAllGrids();
         cleanPersistenceDir();
     }
@@ -50,5 +58,11 @@ public class AbstractSelfTest {
     public static void tearDown() throws Exception {
         stopAllGrids();
         cleanPersistenceDir();
+    }
+
+    /** */
+    @Before
+    public void init() {
+        ignite.cacheNames().stream().map(ignite::cache).forEach(IgniteCache::clear);
     }
 }

@@ -20,15 +20,19 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.console.config.AccountAuthenticationConfiguration;
 import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -103,7 +107,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /** */
     private final AccountsService accountsSrv;
-    
+
     /** */
     private final PasswordEncoder encoder;
 
@@ -196,6 +200,20 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         @Autowired TransactionManager txMgr
     ) {
         return new IgniteSessionRepository(sesExpirationTimeout, ignite, txMgr);
+    }
+
+    /**
+     * @param publisher Publisher.
+     * @param authenticationCfg Account authentication configuration.
+     * @param accountsRepo Accounts repository.
+     */
+    @Bean("authenticationEventPublisher")
+    public DefaultAuthenticationEventPublisher authenticationEventPublisher(
+        @Autowired ApplicationEventPublisher publisher,
+        @Autowired AccountAuthenticationConfiguration authenticationCfg,
+        @Autowired AccountsRepository accountsRepo
+    ) {
+        return new AuthenticationEventPublisher(publisher, authenticationCfg, accountsRepo);
     }
 
     /**
