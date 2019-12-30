@@ -499,11 +499,7 @@ public class JdbcThinStatement implements Statement {
         if (timeout < 0)
             throw new SQLException("Invalid timeout value.");
 
-        this.timeout = timeout * 1000;
-
-        reqTimeout = this.timeout;
-
-        explicitTimeout = true;
+        timeout(timeout);
     }
 
     /** {@inheritDoc} */
@@ -909,6 +905,23 @@ public class JdbcThinStatement implements Statement {
         ensureNotClosed();
 
         return closeOnCompletion;
+    }
+
+    /**
+     * Sets timeout in milliseconds.
+     *
+     * For test purposes.
+     *
+     * @param timeout Timeout.
+     */
+    public final void timeout(int timeout) {
+        assert timeout >= 0;
+
+        this.timeout = timeout;
+
+        reqTimeout = this.timeout;
+
+        explicitTimeout = true;
     }
 
     /**

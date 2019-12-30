@@ -16,15 +16,14 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 
@@ -48,7 +47,9 @@ public class TimedQueryHelper {
 
     public void createCache(Ignite ign) {
         IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(cacheName)
-            .setIndexedTypes(Integer.class, Integer.class)
+            .setSqlSchema("PUBLIC")
+            .setQueryEntities(Collections.singleton(
+                new QueryEntity(Integer.class, Integer.class).setTableName(cacheName)))
             .setSqlFunctionClasses(TimedQueryHelper.class));
 
         Map<Integer, Integer> entries = IntStream.range(0, ROW_COUNT).boxed()
@@ -57,21 +58,10 @@ public class TimedQueryHelper {
         cache.putAll(entries);
     }
 
-    public List<List<?>> executeQuery(Ignite ign) {
+    public String buildTimedQuery() {
         long rowTimeout = executionTime / ROW_COUNT;
 
-        SqlFieldsQuery qry = new SqlFieldsQuery("select longProcess(_val, " + rowTimeout + ") from Integer");
-
-        return ign.cache(cacheName).query(qry).getAll();
-    }
-
-    public List<List<?>> executeQuery(Ignite ign, long timeout) {
-        long rowTimeout = executionTime / ROW_COUNT;
-
-        SqlFieldsQuery qry = new SqlFieldsQuery("select longProcess(_val, " + rowTimeout + ") from Integer")
-            .setTimeout((int)timeout, TimeUnit.MILLISECONDS);
-
-        return ign.cache(cacheName).query(qry).getAll();
+        return "select longProcess(_val, " + rowTimeout + ") from " + cacheName;
     }
 
     @QuerySqlFunction

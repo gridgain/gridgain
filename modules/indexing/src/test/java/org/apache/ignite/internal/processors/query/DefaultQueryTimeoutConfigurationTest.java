@@ -16,7 +16,11 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
@@ -58,13 +62,15 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
 
         helper.createCache(grid(0));
 
-        GridTestUtils.assertThrowsWithCause(() -> helper.executeQuery(srv0), QueryCancelledException.class);
+        String sql = helper.buildTimedQuery();
+
+        GridTestUtils.assertThrowsWithCause(() -> executeQuery(srv0, sql), QueryCancelledException.class);
 
         // assert no exception
-        helper.executeQuery(srv1);
+        executeQuery(srv1, sql);
 
         // assert no exception
-        helper.executeQuery(cli);
+        executeQuery(cli, sql);
     }
 
     @Test
@@ -87,12 +93,14 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
 
         helper.createCache(grid(0));
 
+        String sql = helper.buildTimedQuery();
+
         // assert no exception
-        helper.executeQuery(srv0);
+        executeQuery(srv0, sql);
 
-        GridTestUtils.assertThrowsWithCause(() -> helper.executeQuery(srv1), QueryCancelledException.class);
+        GridTestUtils.assertThrowsWithCause(() -> executeQuery(srv1, sql), QueryCancelledException.class);
 
-        GridTestUtils.assertThrowsWithCause(() -> helper.executeQuery(cli), QueryCancelledException.class);
+        GridTestUtils.assertThrowsWithCause(() -> executeQuery(cli, sql), QueryCancelledException.class);
     }
 
     @Test
@@ -127,5 +135,17 @@ public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommon
         assert defaultQueryTimeout > Integer.MAX_VALUE;
 
         GridTestUtils.assertThrowsWithCause(() -> startGrid(0), IllegalArgumentException.class);
+    }
+
+    private List<List<?>> executeQuery(Ignite ign, String sql) {
+        SqlFieldsQuery qry = new SqlFieldsQuery(sql);
+
+        return ((IgniteEx)ign).context().query().querySqlFields(qry, false).getAll();
+    }
+
+    private List<List<?>> executeQuery(Ignite ign, String sql, long timeout) {
+        SqlFieldsQuery qry = new SqlFieldsQuery(sql).setTimeout((int)timeout, TimeUnit.MILLISECONDS);
+
+        return ((IgniteEx)ign).context().query().querySqlFields(qry, false).getAll();
     }
 }

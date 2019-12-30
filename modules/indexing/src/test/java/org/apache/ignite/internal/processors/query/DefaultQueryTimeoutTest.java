@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.util.concurrent.Callable;
-import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
@@ -28,8 +27,14 @@ import org.junit.Test;
 // t0d0 add to suite
 // t0d0 check DML
 // t0d0 use different query APIs
-public class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
+public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
     private long defaultQueryTimeout;
+
+    protected abstract void executeQuery(String sql) throws Exception;
+
+    protected abstract void executeQuery(String sql, long timeout) throws Exception;
+
+    protected abstract void assertQueryCancelled(Callable<?> c);
 
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
@@ -107,10 +112,19 @@ public class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
 
         helper.createCache(ign);
 
-        IgniteInternalFuture<?> fut1 = GridTestUtils.runAsync(() -> helper.executeQuery(ign, 500));
-        IgniteInternalFuture<?> fut2 = GridTestUtils.runAsync(() -> helper.executeQuery(ign, 1500));
+        IgniteInternalFuture<?> fut1 = GridTestUtils.runAsync(() -> {
+            executeQuery(helper.buildTimedQuery(), 500);
 
-        GridTestUtils.assertThrowsWithCause((Callable<?>)fut1::get, QueryCancelledException.class);
+            return null;
+        });
+
+        IgniteInternalFuture<?> fut2 = GridTestUtils.runAsync(() -> {
+            executeQuery(helper.buildTimedQuery(), 1500);
+
+            return null;
+        });
+
+        assertQueryCancelled((Callable<?>)fut1::get);
 
         fut2.get(); // assert no exception here
     }
@@ -136,16 +150,18 @@ public class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
 
         helper.createCache(grid(0));
 
-        Runnable r = () -> {
+        Callable<Void> c = () -> {
             if (explicitTimeout != null)
-                helper.executeQuery(grid(0), explicitTimeout);
+                executeQuery(helper.buildTimedQuery(), explicitTimeout);
             else
-                helper.executeQuery(grid(0));
+                executeQuery(helper.buildTimedQuery());
+
+            return null;
         };
 
         if (expectCancelled)
-            GridTestUtils.assertThrowsWithCause(r, QueryCancelledException.class);
+            assertQueryCancelled(c);
         else
-            r.run(); // assert no exception here
+            c.call(); // assert no exception here
     }
 }
