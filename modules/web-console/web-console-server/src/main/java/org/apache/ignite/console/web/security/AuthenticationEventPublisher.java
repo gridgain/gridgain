@@ -29,7 +29,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.SpringSecurityMessageSource;
 
 /**
- * Account lock out strategy to prevent brute-force password.
+ * Account lockout strategy to prevent brute-force password.
  */
 public class AuthenticationEventPublisher extends DefaultAuthenticationEventPublisher {
     /** Messages accessor. */

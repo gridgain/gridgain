@@ -77,10 +77,10 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** Latest activation token was sent at. */
     private LocalDateTime activationSentAt;
 
-    /** Failed attempt count. */
+    /** Failed attempts count. */
     private long attemptsCnt;
 
-    /** Last failed attempt. */
+    /** Time of last failed attempt. */
     private long lastFailedLogin;
 
     /**
@@ -272,21 +272,21 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     }
 
     /**
-     * @return Failed attempt count.
+     * @return Failed attempts count.
      */
     public long getAttemptsCount() {
-        return this.attemptsCnt;
+        return attemptsCnt;
     }
 
     /**
-     * @return Last failed attempt.
+     * @return Time of last failed attempt.
      */
     public long getLastFailedLogin() {
         return lastFailedLogin;
     }
 
     /**
-     * @param lastFailedLogin New last failed attempt.
+     * @param lastFailedLogin Time of last failed attempt.
      */
     public void setLastFailedLogin(long lastFailedLogin) {
         this.lastFailedLogin = lastFailedLogin;
