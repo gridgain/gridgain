@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-version: '3.7'
+version: '2.2'
 services:
   backend:
     build:
@@ -22,6 +22,7 @@ services:
       dockerfile: 'backend/Dockerfile'
     environment:
       - SPRING_PROFILES_ACTIVE=test
+    cpu_count: 4
 
   frontend:
     build:
