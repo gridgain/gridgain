@@ -53,6 +53,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageLoc
 import org.apache.ignite.internal.util.GridArrays;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.thread.IgniteThread;
@@ -367,13 +368,13 @@ public abstract class PagesList extends DataStructure {
                 GridLongList pages = pagesCache.flush();
 
                 if (pages != null) {
+                    if (log.isDebugEnabled()) {
+                        log.debug("Move pages from heap to PageMemory [list=" + name + ", bucket=" + bucket +
+                            ", pages=" +  pages + ']');
+                    }
+
                     for (int i = 0; i < pages.size(); i++) {
                         long pageId = pages.get(i);
-
-                        if (log.isDebugEnabled()) {
-                            log.debug("Move page from heap to PageMemory [list=" + name + ", bucket=" + bucket +
-                                ", pageId=" + pageId + ']');
-                        }
 
                         Boolean res = write(pageId, putBucket, bucket, null, statHolder);
 
@@ -1906,7 +1907,7 @@ public abstract class PagesList extends DataStructure {
          * Default constructor.
          */
         public PagesCache() {
-            assert U.isPow2(STRIPES_COUNT) : STRIPES_COUNT;
+            A.ensure(U.isPow2(STRIPES_COUNT), "Stripes size must be a power of 2.");
 
             for (int i = 0; i < STRIPES_COUNT; i++)
                 stripeLocks[i] = new Object();

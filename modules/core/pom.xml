@@ -224,11 +224,6 @@
             <version>${commons.lang3.version}</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>io.atlassian.util.concurrent</groupId>
-            <artifactId>atlassian-util-concurrent</artifactId>
-            <version>RELEASE</version>
-        </dependency>
     </dependencies>
 
     <build>
