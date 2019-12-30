@@ -1,7 +1,10 @@
 package org.apache.ignite.internal.processors.query;
 
+import java.util.concurrent.Callable;
 import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -78,20 +81,41 @@ public class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
         checkQuery(2000, 1000, 2000, true);
     }
 
-    private void checkQueryNoExplicitTimeout(long execTime, long defaultTimeout, boolean expectCancelled) throws Exception {
+    @Test
+    public void testConcurrent() throws Exception {
+        defaultQueryTimeout = 1000;
+
+        IgniteEx ign = startGrid(0);
+
+        TimedQueryHelper helper = new TimedQueryHelper(1000, DEFAULT_CACHE_NAME);
+
+        helper.createCache(ign);
+
+        IgniteInternalFuture<?> fut1 = GridTestUtils.runAsync(() -> helper.executeQuery(ign, 500));
+        IgniteInternalFuture<?> fut2 = GridTestUtils.runAsync(() -> helper.executeQuery(ign, 1500));
+
+        GridTestUtils.assertThrowsWithCause((Callable<?>)fut1::get, QueryCancelledException.class);
+
+        fut2.get(); // assert no exception here
+    }
+
+    private void checkQueryNoExplicitTimeout(long execTime, long defaultTimeout, boolean expectCancelled)
+        throws Exception {
         checkQuery0(execTime, null, defaultTimeout, expectCancelled);
     }
 
-    private void checkQuery(long execTime, long explicitTimeout, long defaultTimeout, boolean expectCancelled) throws Exception {
+    private void checkQuery(long execTime, long explicitTimeout, long defaultTimeout, boolean expectCancelled)
+        throws Exception {
         checkQuery0(execTime, explicitTimeout, defaultTimeout, expectCancelled);
     }
 
-    private void checkQuery0(long execTime, Long explicitTimeout, long defaultTimeout, boolean expectCancelled) throws Exception {
+    private void checkQuery0(long execTime, Long explicitTimeout, long defaultTimeout, boolean expectCancelled)
+        throws Exception {
         defaultQueryTimeout = defaultTimeout;
 
         // t0d0 multiple nodes
         startGrid(0);
-        
+
         TimedQueryHelper helper = new TimedQueryHelper(execTime, DEFAULT_CACHE_NAME);
 
         helper.createCache(grid(0));
