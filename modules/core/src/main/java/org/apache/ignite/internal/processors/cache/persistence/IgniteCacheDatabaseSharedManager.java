@@ -318,6 +318,8 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     protected void initDataRegions0(DataStorageConfiguration memCfg) throws IgniteCheckedException {
         DataRegionConfiguration[] dataRegionCfgs = memCfg.getDataRegionConfigurations();
 
+        boolean persistenceEnabled = CU.isPersistenceEnabled(memCfg);
+
         if (dataRegionCfgs != null) {
             for (DataRegionConfiguration dataRegionCfg : dataRegionCfgs)
                 addDataRegion(memCfg, dataRegionCfg, dataRegionCfg.isPersistenceEnabled());
@@ -334,19 +336,21 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             createSystemDataRegion(
                 memCfg.getSystemRegionInitialSize(),
                 memCfg.getSystemRegionMaxSize(),
-                CU.isPersistenceEnabled(memCfg)
+                persistenceEnabled
             ),
-            CU.isPersistenceEnabled(memCfg)
+            persistenceEnabled
         );
 
-        addDataRegion(
-            memCfg,
-            createVolatileDataRegion(
-                memCfg.getSystemRegionInitialSize(),
-                memCfg.getSystemRegionMaxSize()
-            ),
-            false
-        );
+        if (persistenceEnabled) {
+            addDataRegion(
+                memCfg,
+                createVolatileDataRegion(
+                    memCfg.getSystemRegionInitialSize(),
+                    memCfg.getSystemRegionMaxSize()
+                ),
+                false
+            );
+        }
 
         for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
             lsnr.onInitDataRegions(this);
@@ -499,7 +503,6 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
     /**
      * @param volatileCacheInitSize Initial size of PageMemory to be created for volatile cache.
      * @param volatileCacheMaxSize Maximum size of PageMemory to be created for volatile cache.
-     * @param persistenceEnabled Persistence enabled flag.
      *
      * @return {@link DataRegionConfiguration configuration} of DataRegion for volatile cache.
      */

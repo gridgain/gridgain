@@ -24,7 +24,6 @@ import org.apache.ignite.configuration.MemoryPolicyConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
-import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -77,9 +76,9 @@ public class MemoryPolicyInitializationTest extends GridCommonAbstractTest {
 
         Collection<DataRegion> allMemPlcs = ignite.context().cache().context().database().dataRegions();
 
-        assertEquals(4, allMemPlcs.size());
+        assertEquals(3, allMemPlcs.size());
 
-        verifyBuiltInMemoryPolicies(allMemPlcs);
+        verifyDefaultAndSystemMemoryPolicies(allMemPlcs);
     }
 
     /**
@@ -94,9 +93,9 @@ public class MemoryPolicyInitializationTest extends GridCommonAbstractTest {
 
         Collection<DataRegion> allMemPlcs = ignite.context().cache().context().database().dataRegions();
 
-        assertEquals(5, allMemPlcs.size());
+        assertEquals(4, allMemPlcs.size());
 
-        verifyBuiltInMemoryPolicies(allMemPlcs);
+        verifyDefaultAndSystemMemoryPolicies(allMemPlcs);
 
         assertTrue("Custom non-default memory policy is not presented",
                 isMemoryPolicyPresented(allMemPlcs, CUSTOM_NON_DEFAULT_MEM_PLC_NAME));
@@ -116,9 +115,9 @@ public class MemoryPolicyInitializationTest extends GridCommonAbstractTest {
 
         Collection<DataRegion> allMemPlcs = dbMgr.dataRegions();
 
-        assertEquals(4, allMemPlcs.size());
+        assertEquals(3, allMemPlcs.size());
 
-        verifyBuiltInMemoryPolicies(allMemPlcs);
+        verifyDefaultAndSystemMemoryPolicies(allMemPlcs);
 
         DataRegion dfltMemPlc = U.field(dbMgr, "dfltDataRegion");
 
@@ -141,9 +140,9 @@ public class MemoryPolicyInitializationTest extends GridCommonAbstractTest {
 
         Collection<DataRegion> allMemPlcs = dbMgr.dataRegions();
 
-        assertEquals(5, allMemPlcs.size());
+        assertEquals(4, allMemPlcs.size());
 
-        verifyBuiltInMemoryPolicies(allMemPlcs);
+        verifyDefaultAndSystemMemoryPolicies(allMemPlcs);
 
         DataRegion dfltMemPlc = U.field(dbMgr, "dfltDataRegion");
 
@@ -285,15 +284,12 @@ public class MemoryPolicyInitializationTest extends GridCommonAbstractTest {
     /**
      * @param allMemPlcs Collection of all memory policies.
      */
-    private void verifyBuiltInMemoryPolicies(Collection<DataRegion> allMemPlcs) {
+    private void verifyDefaultAndSystemMemoryPolicies(Collection<DataRegion> allMemPlcs) {
         assertTrue("Default memory policy is not presented",
                 isMemoryPolicyPresented(allMemPlcs, DFLT_MEM_PLC_DEFAULT_NAME));
 
         assertTrue("System memory policy is not presented",
                 isMemoryPolicyPresented(allMemPlcs, IgniteCacheDatabaseSharedManager.SYSTEM_DATA_REGION_NAME));
-
-        assertTrue("Volatile memory policy is not presented",
-            isMemoryPolicyPresented(allMemPlcs, DataStructuresProcessor.VOLATILE_DATA_REGION_NAME));
     }
 
     /**

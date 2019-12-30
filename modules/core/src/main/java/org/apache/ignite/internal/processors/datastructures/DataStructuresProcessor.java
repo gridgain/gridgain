@@ -75,6 +75,7 @@ import org.apache.ignite.internal.util.typedef.CX1;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.GPR;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -517,7 +518,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         final String grpName;
 
         if (type.isVolatile()) {
-            dataRegionName = VOLATILE_DATA_REGION_NAME;
+            if (CU.isPersistenceEnabled(ctx.config()))
+                dataRegionName = VOLATILE_DATA_REGION_NAME;
+
             grpName = DEFAULT_VOLATILE_DS_GROUP_NAME;
         } else if (cfg.getGroupName() != null)
             grpName = cfg.getGroupName();
@@ -893,6 +896,8 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
      * @param cfg Atomic configuration.
      * @param name Cache name.
      * @param grpName Group name.
+     * @param dataRegionName Name of data region for this cache.
+     *
      * @return Cache configuration.
      */
     private CacheConfiguration cacheConfiguration(AtomicConfiguration cfg, String name, String grpName,
