@@ -40,10 +40,6 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPa
 
         prim.cluster().active(true);
 
-        WalStateManager stateMgr = prim.context().cache().context().walState();
-
-        stateMgr.prohibitWALDisabling(true);
-
         for (int p = 0; p < partitions(); p++) {
             prim.cache(DEFAULT_CACHE_NAME).put(p, p);
             prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2);
@@ -59,7 +55,7 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPa
 
         awaitPartitionMapExchange();
 
-        forceCheckpoint(grid(3)); // Will force exist mode after part store re-creation.
+        forceCheckpoint(grid(3)); // Will force GridCacheDataStore.exists=true mode after part store re-creation.
 
         startGrid(1);
 
