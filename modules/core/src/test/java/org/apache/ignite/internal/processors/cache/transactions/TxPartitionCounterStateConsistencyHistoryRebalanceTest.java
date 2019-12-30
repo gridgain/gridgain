@@ -47,21 +47,21 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPa
 
         forceCheckpoint();
 
-        stopGrid(1);
+        stopGrid(1); // topVer=5,0
 
         awaitPartitionMapExchange();
 
-        resetBaselineTopology();
+        resetBaselineTopology(); // topVer=5,1
 
         awaitPartitionMapExchange();
 
-        forceCheckpoint(grid(3)); // Will force GridCacheDataStore.exists=true mode after part store re-creation.
+        forceCheckpoint(); // Will force GridCacheDataStore.exists=true mode after part store re-creation.
 
-        startGrid(1);
+        startGrid(1); // topVer=6,0
 
         awaitPartitionMapExchange();
 
-        resetBaselineTopology();
+        resetBaselineTopology(); // topVer=6,1
 
         awaitPartitionMapExchange(true, true, null);
 
@@ -69,11 +69,11 @@ public class TxPartitionCounterStateConsistencyHistoryRebalanceTest extends TxPa
         for (int p = 0; p < partitions(); p++)
             prim.cache(DEFAULT_CACHE_NAME).put(p + partitions(), p * 2 + 1);
 
-        stopGrid(1);
+        stopGrid(1); // topVer=7,0
 
         awaitPartitionMapExchange();
 
-        resetBaselineTopology();
+        resetBaselineTopology(); // topVer=7,1
 
         awaitPartitionMapExchange();
 

@@ -1919,7 +1919,7 @@ public class IgniteTxHandler {
 
                 if (locPart != null && locPart.reserve()) {
                     try {
-                        // do not process renting partitions.
+                        // Skip renting partitions.
                         if (locPart.state() == RENTING) {
                             tx.addInvalidPartition(ctx.cacheId(), part);
 

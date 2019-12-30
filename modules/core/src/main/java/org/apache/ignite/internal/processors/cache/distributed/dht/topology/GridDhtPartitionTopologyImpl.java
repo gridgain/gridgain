@@ -783,9 +783,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                                     // If an owner node left during exchange, then new exchange should be started with detecting lost partitions.
                                     if (!F.isEmpty(owners)) {
-//                                        if (log.isDebugEnabled())
-//                                            log.debug("Will not own partition (there are owners to rebalance from) " +
-//                                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", owners = " + owners + ']');
+                                        if (log.isDebugEnabled())
+                                            log.debug("Will not own partition (there are owners to rebalance from) " +
+                                                "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", owners = " + owners + ']');
                                     }
 
                                     // It's important to clear non empty moving partitions before full rebalancing.
@@ -2857,9 +2857,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             }
 
             res.trim();
-
-            if (ctx.localNode().order() == 4)
-                System.out.println();
 
             return res;
         }

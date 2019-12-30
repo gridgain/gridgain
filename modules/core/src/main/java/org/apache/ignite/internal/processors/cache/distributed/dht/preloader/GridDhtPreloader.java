@@ -274,9 +274,6 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         histSupplier = ctx.discovery().node(nodeId);
                 }
 
-                if (p == 8)
-                    System.out.println();
-
                 if (histSupplier != null && !exchFut.isClearingPartition(grp, p)) {
                     assert grp.persistenceEnabled();
                     assert remoteOwners(p, topVer).contains(histSupplier) : remoteOwners(p, topVer);
@@ -334,8 +331,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             }
         }
 
-//        if (!assignments.isEmpty())
-//            ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
+        if (!assignments.isEmpty())
+            ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
 
         return assignments;
     }
