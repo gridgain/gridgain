@@ -226,6 +226,7 @@
                         </goals>
                         <phase>compile</phase>
                         <configuration>
+                            <failOnError>false</failOnError>
                             <target>
                                 <mkdir dir="${basedir}/target/file_tmp/classes/org/apache/ignite/spi/deployment/uri/tasks/" />
                                 <copy file="${basedir}/target/classes/org/apache/ignite/spi/deployment/uri/tasks/GridUriDeploymentTestTask11.class" todir="${basedir}/target/file_tmp/classes/org/apache/ignite/spi/deployment/uri/tasks/" />
@@ -252,6 +253,7 @@
                         </goals>
                         <phase>compile</phase>
                         <configuration>
+                            <failOnError>false</failOnError>
                             <target>
                                 <taskdef name="gar" classname="org.apache.ignite.util.antgar.IgniteDeploymentGarAntTask" />
 
