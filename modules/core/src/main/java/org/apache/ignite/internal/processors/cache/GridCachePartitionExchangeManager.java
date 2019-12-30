@@ -3518,14 +3518,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         }
     }
 
-
-
-    private void printNode(String title, List<ClusterNode> nodes) {
-        log.info(title + ", nodes=" + F.transform(nodes, node -> {
-            return node.consistentId().toString();
-        }));
-    }
-
     /**
      * Partition resend timeout object.
      */
@@ -3541,8 +3533,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         /** Started flag. */
         private AtomicBoolean started = new AtomicBoolean();
-
-        private Exception ctx = new Exception();
 
         /**
          *

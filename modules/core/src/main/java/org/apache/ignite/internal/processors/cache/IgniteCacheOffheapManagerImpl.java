@@ -1434,12 +1434,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else if (grp.hasAtomicCaches() || !grp.persistenceEnabled())
                 pCntr = new PartitionAtomicUpdateCounterImpl();
             else {
-                pCntr = partId == 8 && grp.cacheOrGroupName().equals("default") &&
-                    (
-                        grp.cacheObjectContext().kernalContext().igniteInstanceName().equals("transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest0") ||
-                            grp.cacheObjectContext().kernalContext().igniteInstanceName().equals("transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest3")
-
-                    ) ?
+                pCntr = ctx.logger(PartitionTxUpdateCounterDebugWrapper.class).isDebugEnabled() ?
                     new PartitionTxUpdateCounterDebugWrapper(grp, partId) : new PartitionTxUpdateCounterImpl(grp);
             }
         }
