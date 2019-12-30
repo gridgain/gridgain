@@ -3284,9 +3284,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             for (int part : parts)
                 partsToReload.put(nodeId, top.groupId(), part);
         }
-
-        if (!partHistSuppliers.isEmpty())
-            System.out.println();
     }
 
     /**
