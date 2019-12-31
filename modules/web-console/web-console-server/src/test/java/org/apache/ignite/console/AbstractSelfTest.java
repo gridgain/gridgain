@@ -46,7 +46,7 @@ public class AbstractSelfTest {
      * @throws Exception If failed.
      */
     @BeforeClass
-    public static void tearUp() throws Exception {
+    public static void beforeTests() throws Exception {
         stopAllGrids();
         cleanPersistenceDir();
     }
@@ -55,14 +55,14 @@ public class AbstractSelfTest {
      * @throws Exception If failed.
      */
     @AfterClass
-    public static void tearDown() throws Exception {
+    public static void afterTests() throws Exception {
         stopAllGrids();
         cleanPersistenceDir();
     }
 
     /** */
     @Before
-    public void init() {
+    public void clean() {
         ignite.cacheNames().stream().map(ignite::cache).forEach(IgniteCache::clear);
     }
 }
