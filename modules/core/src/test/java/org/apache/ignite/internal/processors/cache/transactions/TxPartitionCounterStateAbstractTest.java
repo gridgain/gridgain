@@ -144,6 +144,13 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
         return cfg;
     }
 
+    /**
+     * @return Partitions count.
+     */
+    protected int partitions() {
+        return PARTS_CNT;
+    }
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -169,7 +176,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
         ccfg.setBackups(backups);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setOnheapCacheEnabled(false);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, partitions()));
 
         return ccfg;
     }

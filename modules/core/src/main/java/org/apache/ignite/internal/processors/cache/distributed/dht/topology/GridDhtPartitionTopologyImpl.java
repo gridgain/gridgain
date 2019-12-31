@@ -2847,8 +2847,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (part == null)
                     continue;
 
-                long updCntr = part.updateCounter();
                 long initCntr = part.initialUpdateCounter();
+                long updCntr = part.updateCounter();
 
                 if (skipZeros && initCntr == 0L && updCntr == 0L)
                     continue;
