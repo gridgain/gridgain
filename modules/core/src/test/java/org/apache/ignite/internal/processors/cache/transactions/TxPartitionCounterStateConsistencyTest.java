@@ -975,7 +975,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * @param near Near node.
      * @param primaryKeys Primary keys.
      * @param cache Cache.
-     * @param stopClo Closure providing stop condition.
+     * @param stopClo A closure providing stop condition.
      * @return Finish future.
      */
     private IgniteInternalFuture<?> doRandomUpdates(Random r, Ignite near, List<Integer> primaryKeys,
@@ -983,7 +983,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         LongAdder puts = new LongAdder();
         LongAdder removes = new LongAdder();
 
-        final int max = 10;
+        final int max = 100;
 
         return multithreadedAsync(() -> {
             while (!stopClo.getAsBoolean()) {
@@ -1001,7 +1001,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                         puts.increment();
 
-                        boolean rmv = r.nextFloat() < 0.5;
+                        boolean rmv = r.nextFloat() < 0.4;
                         if (rmv) {
                             key = insertedKeys.get(r.nextInt(insertedKeys.size()));
 
