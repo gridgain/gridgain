@@ -18,6 +18,7 @@ package org.apache.ignite.console.web.security;
 
 import java.util.UUID;
 import org.apache.ignite.console.AbstractSelfTest;
+import org.apache.ignite.console.config.AccountAuthenticationConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -29,6 +30,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Tests for authentication.
@@ -44,11 +47,15 @@ public class AuthenticationTest extends AbstractSelfTest {
 
     /** Password encoder. */
     @Autowired
-    protected PasswordEncoder encoder;
+    private PasswordEncoder encoder;
 
     /** Accounts repository. */
     @Autowired
-    protected AccountsRepository accountsRepo;
+    private AccountsRepository accountsRepo;
+
+    /** Account authentication configuration. */
+    @Autowired
+    private AccountAuthenticationConfiguration cfg;
 
     /** Should supply message when limiting attempts and authenticating too soon. */
     @Test
@@ -67,7 +74,7 @@ public class AuthenticationTest extends AbstractSelfTest {
 
     /** Should lock authenticate after too many login attempts. */
     @Test
-    public void shouldLockAuthenticateWithAttemptTooSoon() {
+    public void shouldLockAuthenticateWithAttemptTooSoon() throws InterruptedException {
         createUser(USER_EMAIL, 2, U.currentTimeMillis());
 
         GridTestUtils.assertThrows(null, () -> {
@@ -78,6 +85,13 @@ public class AuthenticationTest extends AbstractSelfTest {
 
             return null;
         }, LockedException.class, "Account is currently locked. Try again later");
+
+        Thread.sleep((long)Math.pow(cfg.getInterval(), Math.log(4)));
+
+        assertNotNull(authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+            USER_EMAIL,
+            "password"
+        )));
     }
 
     /**
