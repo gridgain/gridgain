@@ -22,7 +22,7 @@ services:
       dockerfile: 'backend/Dockerfile'
     environment:
       - SPRING_PROFILES_ACTIVE=test
-    cpu_count: 4
+    cpus: 4
 
   frontend:
     build:
