@@ -78,7 +78,7 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     private LocalDateTime activationSentAt;
 
     /** Failed attempts count. */
-    private long attemptsCnt;
+    private int attemptsCnt;
 
     /** Time of last failed attempt. */
     private long lastFailedLogin;
@@ -267,14 +267,14 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /**
      * @param attemptsCnt New failed attempt count.
      */
-    public void setAttemptsCount(long attemptsCnt) {
+    public void setAttemptsCount(int attemptsCnt) {
         this.attemptsCnt = attemptsCnt;
     }
 
     /**
      * @return Failed attempts count.
      */
-    public long getAttemptsCount() {
+    public int getAttemptsCount() {
         return attemptsCnt;
     }
 

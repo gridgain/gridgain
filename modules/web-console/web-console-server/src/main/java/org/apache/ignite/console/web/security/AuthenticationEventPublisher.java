@@ -62,7 +62,7 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
         if (authentication.getPrincipal() instanceof Account) {
             Account acc = (Account)authentication.getPrincipal();
 
-            long attemptsCnt = acc.getAttemptsCount();
+            int attemptsCnt = acc.getAttemptsCount();
 
             if (attemptsCnt >= cfg.getMaxAttempts())
                 throw new LockedException(messages.getMessage(

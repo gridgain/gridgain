@@ -35,7 +35,7 @@ public class AccountAuthenticationConfiguration {
     private static final long DFLT_MAX_INTERVAL = MINUTES.toMillis(5);
 
     /** Specifies the maximum number of failed attempts allowed before preventing login. */
-    private long maxAttempts = Long.MAX_VALUE;
+    private int maxAttempts = Integer.MAX_VALUE;
 
     /**
      * Specifies the interval in milliseconds between login attempts, which increases exponentially based on the number
@@ -49,14 +49,14 @@ public class AccountAuthenticationConfiguration {
     /**
      * @return Specifies the maximum number of failed attempts allowed before preventing login.
      */
-    public long getMaxAttempts() {
+    public int getMaxAttempts() {
         return maxAttempts;
     }
 
     /**
      * @param maxAttempts New specifies the maximum number of failed attempts allowed before preventing login.
      */
-    public void setMaxAttempts(long maxAttempts) {
+    public void setMaxAttempts(int maxAttempts) {
         this.maxAttempts = maxAttempts;
     }
 

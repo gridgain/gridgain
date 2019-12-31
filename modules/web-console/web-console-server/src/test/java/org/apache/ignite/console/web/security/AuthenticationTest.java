@@ -99,7 +99,7 @@ public class AuthenticationTest extends AbstractSelfTest {
      * @param attemptsCnt Failed attempt count.
      * @param lastFailedLogin Last failed attempt.
      */
-    private void createUser(String email, long attemptsCnt, long lastFailedLogin) {
+    private void createUser(String email, int attemptsCnt, long lastFailedLogin) {
         Account acc = new Account();
 
         acc.setId(UUID.randomUUID());
