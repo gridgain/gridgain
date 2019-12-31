@@ -21,20 +21,17 @@ import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.SpringSecurityMessageSource;
+
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 
 /**
  * Account lockout strategy to prevent brute-force password.
  */
 public class AuthenticationEventPublisher extends DefaultAuthenticationEventPublisher {
-    /** Messages accessor. */
-    private final MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
-
     /** Account authentication configuration. */
     private AccountAuthenticationConfiguration cfg;
 
@@ -65,10 +62,7 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
             int attemptsCnt = acc.getAttemptsCount();
 
             if (attemptsCnt >= cfg.getMaxAttempts())
-                throw new LockedException(messages.getMessage(
-                    "AuthenticationEventPublisher.tooManyAttempts",
-                    "Account locked due to too many failed login attempts"
-                ));
+                throw new LockedException(message("err.account-too-many-attempts"));
 
             if (attemptsCnt > 0) {
                 acc = repo.getById(acc.getId());
@@ -82,10 +76,7 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
 
                     repo.save(acc);
 
-                    throw new LockedException(messages.getMessage(
-                        "AuthenticationEventPublisher.attemptTooSoon",
-                        "Account is currently locked. Try again later"
-                    ));
+                    throw new LockedException(message("err.account-attempt-too-soon"));
                 }
 
                 acc.setAttemptsCount(0);

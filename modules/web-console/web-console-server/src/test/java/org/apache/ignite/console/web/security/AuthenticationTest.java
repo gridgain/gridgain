@@ -31,6 +31,7 @@ import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.junit.Assert.assertNotNull;
 
 /**
@@ -69,7 +70,7 @@ public class AuthenticationTest extends AbstractSelfTest {
             ));
 
             return null;
-        }, LockedException.class, "Account locked due to too many failed login attempts");
+        }, LockedException.class, message("err.account-too-many-attempts"));
     }
 
     /** Should lock authenticate after too many login attempts. */
@@ -84,7 +85,7 @@ public class AuthenticationTest extends AbstractSelfTest {
             ));
 
             return null;
-        }, LockedException.class, "Account is currently locked. Try again later");
+        }, LockedException.class, message("err.account-attempt-too-soon"));
 
         Thread.sleep((long)Math.pow(cfg.getInterval(), Math.log(4)));
 
