@@ -65,10 +65,10 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.ignite.console.agent.AgentUtils.configureProxy;
 import static org.apache.ignite.console.agent.AgentUtils.entriesToMap;
 import static org.apache.ignite.console.agent.AgentUtils.entry;
-import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.sslContextFactory;
 import static org.apache.ignite.console.agent.handlers.DemoClusterHandler.DEMO_CLUSTER_ID;
 import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.utils.Utils.secured;
 import static org.apache.ignite.console.websocket.AgentHandshakeRequest.CURRENT_VER;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENTS_PATH;
 import static org.apache.ignite.console.websocket.WebSocketEvents.AGENT_HANDSHAKE;
@@ -315,7 +315,7 @@ public class WebSocketRouter implements AutoCloseable {
             log.info("Successfully completes handshake with server");
         }
         else {
-            log.error(res.getError() + " Please reload agent or check settings");
+            log.error(res.getError() + ". Please reload agent or check settings");
 
             closeLatch.countDown();
         }
@@ -325,7 +325,7 @@ public class WebSocketRouter implements AutoCloseable {
      * @param tok Token to revoke.
      */
     private void processRevokeToken(String tok) {
-        log.warning("Security token has been revoked: " + tok);
+        log.warning("Security token has been revoked: " + secured(tok));
 
         validTokens.remove(tok);
 

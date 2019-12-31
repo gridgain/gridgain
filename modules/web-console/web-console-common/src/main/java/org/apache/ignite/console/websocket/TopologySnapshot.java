@@ -57,49 +57,31 @@ public class TopologySnapshot {
     /** Optional GridGain Ultimate plugin attribute. */
     private static final String ULTIMATE_CLUSTER = "plugins.gg.ultimate";
 
-    /**
-     * Cluster ID.
-     */
+    /** Cluster ID. */
     private String id;
 
-    /**
-     * Cluster name.
-     */
+    /** Cluster name. */
     private String name;
 
-    /**
-     * Cluster active flag.
-     */
+    /** Cluster active flag. */
     private boolean active;
 
-    /**
-     * Configured security flag.
-     */
+    /** Configured security flag. */
     private boolean secured;
 
-    /**
-     * Cluster demo flag.
-     */
+    /** Cluster demo flag. */
     private boolean demo;
 
-    /**
-     * GridGain plugin flag.
-     */
+    /** GridGain plugin flag. */
     private boolean gridgain;
 
-    /**
-     * GridGain ultimate plugin flag.
-     */
+    /** GridGain ultimate plugin flag. */
     private boolean ultimate;
 
-    /**
-     * Cluster version.
-     */
+    /** Cluster version. */
     private String clusterVer;
 
-    /**
-     * Cluster nodes.
-     */
+    /** Cluster nodes. */
     private Map<UUID, NodeBean> nodes;
 
     /** Feature set that is supported by nodes. */

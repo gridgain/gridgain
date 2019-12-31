@@ -28,9 +28,9 @@ import com.beust.jcommander.Parameter;
 import org.apache.ignite.internal.util.typedef.F;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.apache.ignite.console.agent.AgentUtils.secured;
 import static org.apache.ignite.console.agent.AgentUtils.split;
 import static org.apache.ignite.console.agent.AgentUtils.trim;
+import static org.apache.ignite.console.utils.Utils.secured;
 
 /**
  * Agent configuration.

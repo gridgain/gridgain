@@ -19,6 +19,7 @@ package org.apache.ignite.console.utils;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.AbstractMap;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collector;
@@ -208,5 +209,27 @@ public class Utils {
      */
     public static <T> Set<T> concat(Set<T> evts1, Set<T> evts2) {
         return Stream.concat(evts1.stream(), evts2.stream()).collect(toSet());
+    }
+
+    /**
+     * @param s String with sensitive data.
+     * @return Secured string (sensitive part replaced with asterisks).
+     */
+    public static String secured(String s) {
+        if (F.isEmpty(s))
+            return "";
+
+        int len = s.length();
+        int toShow = len > 4 ? 4 : 1;
+
+        return new String(new char[len - toShow]).replace('\0', '*') + s.substring(len - toShow, len);
+    }
+
+    /**
+     * @param c Collection with sensitive data.
+     * @return Secured string.
+     */
+    public static String secured(Collection<String> c) {
+        return c.stream().map(Utils::secured).collect(Collectors.joining(", "));
     }
 }

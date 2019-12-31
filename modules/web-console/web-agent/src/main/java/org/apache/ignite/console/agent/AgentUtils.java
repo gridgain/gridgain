@@ -194,28 +194,6 @@ public class AgentUtils {
     }
 
     /**
-     * @param s String with sensitive data.
-     * @return Secured string (sensitive part replaced with asterisks).
-     */
-    public static String secured(String s) {
-        if (F.isEmpty(s))
-            return "";
-
-        int len = s.length();
-        int toShow = len > 4 ? 4 : 1;
-
-        return new String(new char[len - toShow]).replace('\0', '*') + s.substring(len - toShow, len);
-    }
-
-    /**
-     * @param c Collection with sensitive data.
-     * @return Secured string.
-     */
-    public static String secured(Collection<String> c) {
-        return c.stream().map(AgentUtils::secured).collect(Collectors.joining(", "));
-    }
-
-    /**
      * @param httpClient Http client.
      * @param proxies Proxies.
      */

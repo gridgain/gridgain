@@ -18,13 +18,25 @@ package org.apache.ignite.console.utils;
 
 import org.junit.Test;
 
+import static org.apache.ignite.console.utils.Utils.secured;
+import static org.junit.Assert.assertEquals;
+
 /**
  * Test for Web Console utils.
  */
 public class UtilsTest {
-    /** */
+    /**
+     * GG-26394 Test case 5: Should correctly generate secured string.
+     */
     @Test
-    public void testDummy() {
-        System.out.println("Dummy test");
+    public void shouldGenerateSecureString() {
+        assertEquals("", secured((String)null));
+        assertEquals("", secured(""));
+        assertEquals("1", secured("1"));
+        assertEquals("*2", secured("12"));
+        assertEquals("**3", secured("123"));
+        assertEquals("***4", secured("1234"));
+        assertEquals("*2345", secured("12345"));
+        assertEquals("**3456", secured("123456"));
     }
 }

@@ -23,6 +23,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.console.utils.Utils.fromJson;
+import static org.apache.ignite.console.utils.Utils.secured;
 import static org.apache.ignite.console.utils.Utils.toJson;
 
 /**
@@ -34,7 +35,9 @@ public class SerializationTests {
      */
     @Test
     public void handshakeError() throws IOException {
-        AgentHandshakeResponse exp = new AgentHandshakeResponse(new IllegalAccessException("Failed to authenticate with token(s): [bff05108-404d-4f84-b743-6cd90b0ae205]. Please reload agent or check settings."));
+        AgentHandshakeResponse exp = new AgentHandshakeResponse(
+            new IllegalAccessException("Failed to authenticate with token(s): [" +
+                secured("bff05108-404d-4f84-b743-6cd90b0ae205") + "]. Please reload agent or check settings"));
 
         String payload = toJson(exp);
 
