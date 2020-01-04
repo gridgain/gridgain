@@ -110,6 +110,8 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.STATE_PROC;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 
@@ -1072,6 +1074,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (forceChangeBaselineTop && isBaselineAutoAdjustEnabled != isAutoAdjust)
             throw new BaselineAdjustForbiddenException(isBaselineAutoAdjustEnabled);
 
+        if (state == ACTIVE_READ_ONLY &&
+            !allNodesSupports(ctx, ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE)) {
+                return new GridFinishedFuture<>(
+                    new IgniteException("Not all nodes in cluster supports cluster state " + ACTIVE_READ_ONLY)
+                );
+        }
+
         if (ctx.isDaemon() || ctx.clientNode())
             return sendComputeChangeGlobalState(state, blt, forceChangeBaselineTop);
 
@@ -1190,7 +1199,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (node.isClient() || node.isDaemon())
             return null;
 
-        if (globalState.state() == ACTIVE_READ_ONLY && !IgniteFeatures.nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE)) {
+        if (globalState.state() == ACTIVE_READ_ONLY && !nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE)) {
             String msg = "Node not supporting cluster read-only mode is not allowed to join the cluster with enabled" +
                 " read-only mode";
 
@@ -1240,6 +1249,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 "to join cluster in the process of first activation: " + node.consistentId();
 
             return new IgniteNodeValidationResult(node.id(), msg);
+        }
+
+        if (globalState.state() == ACTIVE_READ_ONLY && !nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE)) {
+            String msg = "Node not supporting " + ACTIVE_READ_ONLY + " mode. Join to the cluster in state " +
+                ACTIVE_READ_ONLY + " is not allowed.";
+
+            return new IgniteNodeValidationResult(node.id(), msg, msg);
         }
 
         BaselineTopology clusterBlt;
