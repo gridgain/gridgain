@@ -295,11 +295,6 @@
             <id>GridGain External Repository</id>
             <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
         </repository>
-        <!-- TODO GG-26340 REMOVE once 8.7.10 will be released. -->
-        <repository>
-            <id>GridGain Staging Repository</id>
-            <url>https://gridgainsystems.com/nexus/content/repositories/gridgain_staging-3393</url>
-        </repository>
     </repositories>
 
     <build>
