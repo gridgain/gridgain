@@ -356,7 +356,9 @@ public class CommandHandlerParsingTest {
             checkCommonParametersCorrectlyParsed(cmd, args, false);
 
             switch (cmd) {
-                case DEACTIVATE: {
+                case DEACTIVATE:
+                case READ_ONLY_DISABLE:
+                case READ_ONLY_ENABLE: {
                     args = parseArgs(asList(cmd.text(), "--yes"));
 
                     checkCommonParametersCorrectlyParsed(cmd, args, true);

@@ -171,14 +171,10 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
         try (Connection conn = createStreamedConnection(true)) {
             populateData(conn, 0, 1);
 
-            final int nodesCnt = 2;
-
-            for (int i=0; i < nodesCnt; i++)
-                grid(i).context().cache().context().readOnlyMode(true);
+            grid(0).cluster().readOnly(true);
 
             try {
-                for (int i=0; i < nodesCnt; i++)
-                    assertTrue(grid(i).context().cache().context().readOnlyMode());
+                assertTrue(grid(0).cluster().readOnly());
 
                 try (Connection ordinalCon = createOrdinaryConnection()) {
                     assertEquals(1, countPersons(ordinalCon));
@@ -198,8 +194,7 @@ public class JdbcStreamingSelfTest extends JdbcThinAbstractSelfTest {
                 }
             }
             finally {
-                for (int i=0; i < nodesCnt; i++)
-                    grid(i).context().cache().context().readOnlyMode(false);
+                grid(0).cluster().readOnly(false);
             }
         }
     }
