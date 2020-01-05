@@ -28,6 +28,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 
 /**
@@ -44,6 +45,10 @@ import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 public class DiscoveryDataClusterState implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** Flag indicating if the cluster in in active state. */
+    @Deprecated
+    private final boolean active;
 
     /** Current cluster state. */
     private final ClusterState state;
@@ -167,6 +172,8 @@ public class DiscoveryDataClusterState implements Serializable {
 
         this.prevState = prevState;
         this.state = state;
+        // Backward compatibility.
+        this.active = ClusterState.active(state);
         this.lastStateChangeTime = U.currentTimeMillis();
         this.activationTime = activationTime;
         this.baselineTopology = baselineTopology;
@@ -180,10 +187,12 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return Cluster state before transition if cluster in transition and current cluster state otherwise.
      */
     public ClusterState lastState() {
-        if (transition())
-            return prevClusterState;
+        if (transition()) {
+            // Backward compatibility.
+            return prevClusterState != null ? prevClusterState : (!active ? INACTIVE : ACTIVE);
+        }
         else
-            return state;
+            return state();
     }
 
     /**
@@ -246,7 +255,8 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return Current cluster state (or new state in case when transition is in progress).
      */
     public ClusterState state() {
-        return state;
+        // Backward compatibility.
+        return state != null ? state : (active ? ACTIVE : INACTIVE);
     }
 
     /**
@@ -324,8 +334,12 @@ public class DiscoveryDataClusterState implements Serializable {
      * @return Cluster state that finished transition.
      */
     public DiscoveryDataClusterState finish(boolean success) {
-        if(success)
-            return createState(state, baselineTopology, activationTime);
+        if(success) {
+            // Backward compatibility.
+            ClusterState newState = state != null ? state : (active ? ACTIVE : INACTIVE);
+
+            return createState(newState, baselineTopology, activationTime);
+        }
         else
             return prevState != null ? prevState : createState(INACTIVE, null, 0);
     }
