@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.BaselineNode;
@@ -1342,9 +1341,19 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 ", daemon=" + ctx.isDaemon() + "]"
         );
 
-        IgniteCompute comp = ((ClusterGroupAdapter)ctx.cluster().get().forServers()).compute();
+        ClusterGroupAdapter servers = (ClusterGroupAdapter)ctx.cluster().get().forServers();
 
-        IgniteFuture<Void> fut = comp.runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
+        ClusterGroupAdapter serversWithFeature = (ClusterGroupAdapter)servers.forPredicate(this::nodeSupportsReadOnlyMode);
+
+        IgniteFuture<Void> fut;
+
+        if (F.isEmpty(serversWithFeature.nodes())) {
+            assert state != ACTIVE_READ_ONLY : "No one server node doesn't supports this feature.";
+
+            fut = servers.compute().runAsync(new ClientChangeGlobalStateComputeRequest(ClusterState.active(state), blt, forceBlt));
+        }
+        else
+            fut = serversWithFeature.compute().runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
 
         return ((IgniteFutureImpl<Void>)fut).internalFuture();
     }
@@ -1370,7 +1379,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             return new IgniteFinishedFutureImpl<>(INACTIVE);
 
         ClusterGroupAdapter serverNodesWithFeature =
-            (ClusterGroupAdapter)serverNodesAdapter.forPredicate(n -> nodeSupports(ctx, n, CLUSTER_READ_ONLY_MODE));
+            (ClusterGroupAdapter)serverNodesAdapter.forPredicate(this::nodeSupportsReadOnlyMode);
 
         if (!F.isEmpty(serverNodesWithFeature.nodes()))
             return serverNodesWithFeature.compute().callAsync(new GetClusterStateComputeRequest());
@@ -1417,6 +1426,17 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             fut.onDone(e);
         }
+    }
+
+
+    /**
+     * Check given {@code node} supports {@link IgniteFeatures#CLUSTER_READ_ONLY_MODE} or not.
+     *
+     * @param node Checked node.
+     * @return {@code true} if node supports, and {@code false} otherwise.
+     */
+    private boolean nodeSupportsReadOnlyMode(ClusterNode node) {
+        return nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE);
     }
 
     /**
@@ -2144,6 +2164,56 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             try {
                 ig.context().state().changeGlobalState(
                     state,
+                    baselineTopology != null ? baselineTopology.currentBaseline() : null,
+                    forceChangeBaselineTopology
+                ).get();
+            }
+            catch (IgniteCheckedException ex) {
+                throw new IgniteException(ex);
+            }
+        }
+    }
+
+    /**
+     * @deprecated Use {@link ClientSetGlobalStateComputeRequest} instead.
+     */
+    @Deprecated
+    @GridInternal
+    private static class ClientChangeGlobalStateComputeRequest implements IgniteRunnable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** */
+        private final boolean activate;
+
+        /** */
+        private final BaselineTopology baselineTopology;
+        /** */
+        private final boolean forceChangeBaselineTopology;
+        /** Ignite. */
+        @IgniteInstanceResource
+        private IgniteEx ig;
+
+        /**
+         * @param activate New cluster state.
+         * @param blt New baseline topology.
+         * @param forceBlt Force change cluster state.
+         */
+        private ClientChangeGlobalStateComputeRequest(
+            boolean activate,
+            BaselineTopology blt,
+            boolean forceBlt
+        ) {
+            this.activate = activate;
+            this.baselineTopology = blt;
+            this.forceChangeBaselineTopology = forceBlt;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void run() {
+            try {
+                ig.context().state().changeGlobalState(
+                    activate,
                     baselineTopology != null ? baselineTopology.currentBaseline() : null,
                     forceChangeBaselineTopology
                 ).get();
