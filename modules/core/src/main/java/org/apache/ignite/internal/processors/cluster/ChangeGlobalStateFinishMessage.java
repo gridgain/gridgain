@@ -26,6 +26,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+
 /**
  *
  */
@@ -38,6 +41,10 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
 
     /** State change request ID. */
     private final UUID reqId;
+
+    /** New cluster state. */
+    @Deprecated
+    private final boolean clusterActive;
 
     /** New cluster state. */
     private final ClusterState state;
@@ -59,6 +66,7 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
 
         this.reqId = reqId;
         this.state = state;
+        this.clusterActive = ClusterState.active(state);
         this.transitionRes = transitionRes;
     }
 
@@ -75,21 +83,31 @@ public class ChangeGlobalStateFinishMessage implements DiscoveryCustomMessage {
      */
     @Deprecated
     public boolean clusterActive() {
-        return ClusterState.active(state);
+        return clusterActive;
     }
 
     /**
      * @return Transition success status.
      */
     public boolean success() {
-        return transitionRes == null ? ClusterState.active(state) : transitionRes;
+        if (transitionRes == null) {
+            if (state != null)
+                return ClusterState.active(state);
+            else {
+                // Backward compatibility.
+                return clusterActive;
+            }
+        }
+        return
+            transitionRes;
     }
 
     /**
      * @return New cluster state.
      */
     public ClusterState state() {
-        return state;
+        // Backward compatibility.
+        return state != null ? state : (clusterActive ? ACTIVE : INACTIVE);
     }
 
     /** {@inheritDoc} */

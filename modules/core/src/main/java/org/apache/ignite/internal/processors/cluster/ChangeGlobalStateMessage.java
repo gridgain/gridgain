@@ -31,6 +31,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cluster.ClusterState.ACTIVE;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+
 /**
  * Message represent request for change cluster global state.
  */
@@ -46,6 +49,10 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
 
     /** Initiator node ID. */
     private UUID initiatingNodeId;
+
+    /** If true activate else deactivate. */
+    @Deprecated
+    private boolean activate;
 
     /** Cluster state */
     private ClusterState state;
@@ -95,6 +102,7 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
         this.initiatingNodeId = initiatingNodeId;
         this.storedCfgs = storedCfgs;
         this.state = state;
+        this.activate = ClusterState.active(state);
         this.baselineTopology = baselineTopology;
         this.forceChangeBaselineTopology = forceChangeBaselineTopology;
         this.timestamp = timestamp;
@@ -179,14 +187,15 @@ public class ChangeGlobalStateMessage implements DiscoveryCustomMessage {
      */
     @Deprecated
     public boolean activate() {
-        return ClusterState.active(state);
+        return activate;
     }
 
     /**
      * @return New cluster state.
      */
     public ClusterState state() {
-        return state;
+        // Backward compatibility.
+        return state != null ? state : (activate ? ACTIVE : INACTIVE);
     }
 
     /**

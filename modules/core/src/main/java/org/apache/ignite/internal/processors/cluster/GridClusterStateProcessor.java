@@ -101,8 +101,8 @@ import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
-import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
+import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.lesserOf;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_STATE_ON_START;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -1364,12 +1364,21 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 ", daemon " + ctx.isDaemon() + "]");
         }
 
-        ClusterGroupAdapter clusterGrpAdapter = (ClusterGroupAdapter)ctx.cluster().get().forServers();
+        ClusterGroupAdapter serverNodesAdapter = (ClusterGroupAdapter)ctx.cluster().get().forServers();
 
-        if (F.isEmpty(clusterGrpAdapter.nodes()))
+        if (F.isEmpty(serverNodesAdapter.nodes()))
             return new IgniteFinishedFutureImpl<>(INACTIVE);
 
-        return clusterGrpAdapter.compute().callAsync(new GetClusterStateComputeRequest());
+        ClusterGroupAdapter serverNodesWithFeature =
+            (ClusterGroupAdapter)serverNodesAdapter.forPredicate(n -> nodeSupports(ctx, n, CLUSTER_READ_ONLY_MODE));
+
+        if (!F.isEmpty(serverNodesWithFeature.nodes()))
+            return serverNodesWithFeature.compute().callAsync(new GetClusterStateComputeRequest());
+        else {
+            // Backward compatibility.
+            return serverNodesAdapter.compute().callAsync(new CheckGlobalStateComputeRequest())
+                .chain(f -> f.get() ? ACTIVE : INACTIVE);
+        }
     }
 
     /** {@inheritDoc} */
@@ -2160,6 +2169,25 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         /** {@inheritDoc} */
         @Override public ClusterState call() throws Exception {
             return ig.cluster().state();
+        }
+    }
+
+    /**
+     * @deprecated Use {@link GetClusterStateComputeRequest} instead.
+     */
+    @Deprecated
+    @GridInternal
+    private static class CheckGlobalStateComputeRequest implements IgniteCallable<Boolean> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        /** Ignite. */
+        @IgniteInstanceResource
+        private Ignite ig;
+
+        /** {@inheritDoc} */
+        @Override public Boolean call() throws Exception {
+            return ig.active();
         }
     }
 
