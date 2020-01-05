@@ -16,8 +16,6 @@
 
 package org.apache.ignite.internal;
 
-import javax.cache.CacheException;
-import javax.management.JMException;
 import java.io.Externalizable;
 import java.io.File;
 import java.io.IOException;
@@ -54,6 +52,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.cache.CacheException;
+import javax.management.JMException;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsAdapter;
 import org.apache.ignite.DataStorageMetrics;
@@ -147,6 +147,7 @@ import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -222,6 +223,7 @@ import org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoveryNode;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CONFIG_URL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DAEMON;
@@ -241,6 +243,7 @@ import static org.apache.ignite.internal.GridKernalState.STARTING;
 import static org.apache.ignite.internal.GridKernalState.STOPPED;
 import static org.apache.ignite.internal.GridKernalState.STOPPING;
 import static org.apache.ignite.internal.IgniteComponentType.COMPRESSION;
+import static org.apache.ignite.internal.IgniteComponentType.MANAGEMENT_CONSOLE;
 import static org.apache.ignite.internal.IgniteComponentType.SCHEDULE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_DATE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
@@ -873,6 +876,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance excutor service.
      * @param customExecSvcs Custom named executors.
      * @param errHnd Error handler to use for notification about startup problems.
      * @param workerRegistry Worker registry.
@@ -895,6 +899,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable final Map<String, ? extends ExecutorService> customExecSvcs,
         GridAbsClosure errHnd,
         WorkersRegistry workerRegistry,
@@ -1017,6 +1022,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 callbackExecSvc,
                 qryExecSvc,
                 schemaExecSvc,
+                rebalanceExecSvc,
                 customExecSvcs,
                 plugins,
                 MarshallerUtils.classNameFilter(this.getClass().getClassLoader()),
@@ -1113,6 +1119,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             try {
                 startProcessor(new TracingProcessor(ctx));
                 startProcessor(COMPRESSION.createOptional(ctx));
+                startProcessor(new GridMarshallerMappingProcessor(ctx));
                 startProcessor(new PdsConsistentIdProcessor(ctx));
                 startProcessor(new MvccProcessorImpl(ctx));
                 startProcessor(createComponent(DiscoveryNodeValidationProcessor.class, ctx));
@@ -1140,9 +1147,10 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(new GridContinuousProcessor(ctx));
                 startProcessor(new DataStructuresProcessor(ctx));
                 startProcessor(createComponent(PlatformProcessor.class, ctx));
-                startProcessor(new GridMarshallerMappingProcessor(ctx));
                 startProcessor(new DistributedMetaStorageImpl(ctx));
                 startProcessor(new DistributedConfigurationProcessor(ctx));
+                startProcessor(MANAGEMENT_CONSOLE.createOptional(ctx));
+                startProcessor(new DurableBackgroundTasksProcessor(ctx));
 
                 // Start transactional data replication processor.
                 startProcessor(createComponent(TransactionalDrProcessor.class, ctx));
@@ -1289,12 +1297,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             ctx.metric().registerThreadPools(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc,
                 p2pExecSvc, mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc,
-                callbackExecSvc, qryExecSvc, schemaExecSvc, customExecSvcs);
+                callbackExecSvc, qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs);
 
             // Register MBeans.
             mBeansMgr.registerAllMBeans(utilityCachePool, execSvc, svcExecSvc, sysExecSvc, stripedExecSvc, p2pExecSvc,
                 mgmtExecSvc, dataStreamExecSvc, restExecSvc, affExecSvc, idxExecSvc, callbackExecSvc,
-                qryExecSvc, schemaExecSvc, customExecSvcs, ctx.workersRegistry());
+                qryExecSvc, schemaExecSvc, rebalanceExecSvc, customExecSvcs, ctx.workersRegistry());
 
             // Lifecycle bean notifications.
             notifyLifecycleBeans(AFTER_NODE_START);
@@ -1339,6 +1347,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 /** Last completed task count. */
                 private long lastCompletedCntSys;
 
+                /** Last completed task count. */
+                private long lastCompletedCntQry;
+
                 @Override public void run() {
                     if (execSvc instanceof ThreadPoolExecutor) {
                         ThreadPoolExecutor exec = (ThreadPoolExecutor)execSvc;
@@ -1350,6 +1361,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                         ThreadPoolExecutor exec = (ThreadPoolExecutor)sysExecSvc;
 
                         lastCompletedCntSys = checkPoolStarvation(exec, lastCompletedCntSys, "system");
+                    }
+
+                    if (qryExecSvc instanceof ThreadPoolExecutor) {
+                        ThreadPoolExecutor exec = (ThreadPoolExecutor)qryExecSvc;
+
+                        lastCompletedCntQry = checkPoolStarvation(exec, lastCompletedCntQry, "query");
                     }
 
                     if (stripedExecSvc != null)
@@ -1395,21 +1412,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }, metricsLogFreq, metricsLogFreq);
         }
 
-        final long longOpDumpTimeout = IgniteSystemProperties.getLong(
-                IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT,
-                DFLT_LONG_OPERATIONS_DUMP_TIMEOUT
-        );
-
-        if (longOpDumpTimeout > 0) {
-            longOpDumpTask = ctx.timeout().schedule(new Runnable() {
-                @Override public void run() {
-                    GridKernalContext ctx = IgniteKernal.this.ctx;
-
-                    if (ctx != null)
-                        ctx.cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout);
-                }
-            }, longOpDumpTimeout, longOpDumpTimeout);
-        }
+        scheduleLongOperationsDumpTask(ctx.cache().context().tm().longOperationsDumpTimeout());
 
         ctx.performance().add("Disable assertions (remove '-ea' from JVM options)", !U.assertionsEnabled());
 
@@ -1427,6 +1430,36 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 EventType.EVT_NODE_JOINED, localNode());
 
         startTimer.finishGlobalStage("Await exchange");
+    }
+
+    /**
+     * Scheduling tasks for dumping long operations. Closes current task
+     * (if any) and if the {@code longOpDumpTimeout > 0} schedules a new task
+     * with a new timeout, delay and start period equal to
+     * {@code longOpDumpTimeout}, otherwise task is deleted.
+     *
+     * @param longOpDumpTimeout Long operations dump timeout.
+     */
+    public void scheduleLongOperationsDumpTask(long longOpDumpTimeout) {
+        if (isStopping())
+            return;
+
+        synchronized (this) {
+            GridTimeoutProcessor.CancelableTask task = longOpDumpTask;
+
+            if (nonNull(task))
+                task.close();
+
+            if (longOpDumpTimeout > 0) {
+                longOpDumpTask = ctx.timeout().schedule(
+                    () -> ctx.cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
+                    longOpDumpTimeout,
+                    longOpDumpTimeout
+                );
+            }
+            else
+                longOpDumpTask = null;
+        }
     }
 
     /**
@@ -2638,7 +2671,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     private void ackSystemProperties() {
         assert log != null;
 
-        if (log.isDebugEnabled() && S.INCLUDE_SENSITIVE)
+        if (log.isDebugEnabled() && S.includeSensitive())
             for (Map.Entry<Object, Object> entry : snapshot().entrySet())
                 log.debug("System property [" + entry.getKey() + '=' + entry.getValue() + ']');
     }
@@ -2736,10 +2769,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 U.warn(log, "Setting the rebalance pool size has no effect on the client mode");
         }
         else {
-            if (cfg.getSystemThreadPoolSize() <= cfg.getRebalanceThreadPoolSize())
-                throw new IgniteCheckedException("Rebalance thread pool size exceed or equals System thread pool size. " +
-                    "Change IgniteConfiguration.rebalanceThreadPoolSize property before next start.");
-
             if (cfg.getRebalanceThreadPoolSize() < 1)
                 throw new IgniteCheckedException("Rebalance thread pool size minimal allowed value is 1. " +
                     "Change IgniteConfiguration.rebalanceThreadPoolSize property before next start.");
@@ -2859,7 +2888,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         assert log != null;
 
         // Ack IGNITE_HOME and VM arguments.
-        if (log.isInfoEnabled() && S.INCLUDE_SENSITIVE) {
+        if (log.isInfoEnabled() && S.includeSensitive()) {
             log.info("IGNITE_HOME=" + cfg.getIgniteHome());
             log.info("VM arguments: " + rtBean.getInputArguments());
         }
@@ -3719,7 +3748,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         guard();
 
         try {
-            ctx.cache().resetCacheState(cacheNames).get();
+            ctx.cache().resetCacheState(cacheNames.isEmpty() ? ctx.cache().cacheNames() : cacheNames).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);

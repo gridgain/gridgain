@@ -57,7 +57,7 @@ public enum IgniteFeatures {
 
     /** Command which allow to detect and cleanup garbage which could left after destroying caches in shared groups */
     FIND_AND_DELETE_GARBAGE_COMMAND(8),
-    
+
     /** Support of cluster read-only mode. */
     CLUSTER_READ_ONLY_MODE(9),
 
@@ -82,10 +82,37 @@ public enum IgniteFeatures {
     /** LRT system and user time dump settings.  */
     LRT_SYSTEM_USER_TIME_DUMP_SETTINGS(18),
 
+    /** A mode when data nodes throttle update rate regarding to DR sender load. */
+    DR_DATA_NODE_SMART_THROTTLING(19),
+
+    /** Support of DR events from  Web Console. */
+    WC_DR_EVENTS(20),
+
     /**
-     * A mode when data nodes throttle update rate regarding to DR sender load
+     * Rolling upgrade based on distributed metastorage.
      */
-    DR_DATA_NODE_SMART_THROTTLING(19);
+    DISTRIBUTED_ROLLING_UPGRADE_MODE(21),
+
+    /** Support of chain parameter in snapshot delete task for Web Console. */
+    WC_SNAPSHOT_CHAIN_MODE(22),
+
+    /** Support of baseline auto adjustment. */
+    BASELINE_AUTO_ADJUSTMENT(23),
+
+    /** Scheduling disabled. */
+    WC_SCHEDULING_NOT_AVAILABLE(24),
+
+    /** Support of DR-specific visor tasks used by control utility. */
+    DR_CONTROL_UTILITY(25),
+
+    /** */
+    TRACING(26),
+
+    /***/
+    MANAGEMENT_CONSOLE(28),
+
+    /** Long operations dump timeout. */
+    LONG_OPERATIONS_DUMP_TIMEOUT(30);
 
     /**
      * Unique feature identifier.
@@ -189,6 +216,14 @@ public enum IgniteFeatures {
 
             // Add only when indexing is enabled.
             if (INDEXING == value && !ctx.query().moduleEnabled())
+                continue;
+
+            // Add only when tracing is enabled.
+            if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
+                continue;
+
+            // Add only when management console is enabled.
+            if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 
             final int featureId = value.getFeatureId();

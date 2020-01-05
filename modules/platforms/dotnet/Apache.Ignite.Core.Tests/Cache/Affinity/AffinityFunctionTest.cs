@@ -299,6 +299,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Affinity
         private class SimpleAffinityFunction : IAffinityFunction
         {
             #pragma warning disable 649  // field is never assigned
+            // ReSharper disable once UnassignedReadonlyField
             [InstanceResource] private readonly IIgnite _ignite;
 
             public int Partitions

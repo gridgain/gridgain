@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -34,6 +35,9 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.h2.ConnectionManager;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -53,7 +57,10 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
     private static final int PAGE_SIZE_SMALL = 12;
 
     /** Test duration. */
-    private static final long TEST_DUR = 10_000L;
+    private static final long TEST_DUR = GridTestUtils.SF.applyLB(10_000, 3_000);
+
+    /** Run query local . */
+    private static boolean local = false;
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -114,6 +121,29 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         checkTablesLockQueryAndDDLMultithreaded(srv);
 
         checkTablesLockQueryAndDropColumnMultithreaded(srv);
+    }
+
+    /**
+     * Test DDL operation on table with high load local queries.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSingleNodeTablesLockQueryLocalAndDDLMultithreaded() throws Exception {
+        local = true;
+
+        try {
+            final Ignite srv = startGrid(0);
+
+            populateBaseQueryData(srv, 1);
+
+            checkTablesLockQueryAndDDLMultithreaded(srv);
+
+            checkTablesLockQueryAndDropColumnMultithreaded(srv);
+        }
+        finally {
+            local = false;
+        }
     }
 
     /**
@@ -281,6 +311,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                             "FROM \"persTask\".PersonTask as t GROUP BY t.persId) as task ON task.persId = pers.id", true)
                             .setMaxMemory(-1)
                             .setLazy(lazy())
+                            .setLocal(local)
                             .setPageSize(PAGE_SIZE_SMALL));
 
                         cursor.getAll();
@@ -311,6 +342,8 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         // Test is OK in case DDL operations is passed on hi load queries pressure.
         end.set(true);
         fut.get();
+
+        checkConnectionLeaks(Ignition.allGrids().size());
     }
 
     /**
@@ -364,6 +397,8 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         // Test is OK in case DDL operations is passed on hi load queries pressure.
         end.set(true);
         fut.get();
+
+        checkConnectionLeaks(Ignition.allGrids().size());
     }
 
     /**
@@ -395,7 +430,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
      * @throws Exception If failed.
      */
     public void checkSingleNode(int parallelism) throws Exception {
-        Ignite srv = startGrid();
+        Ignite srv = startGrid(0);
 
         populateBaseQueryData(srv, parallelism);
 
@@ -409,15 +444,15 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
      * @throws Exception If failed.
      */
     public void checkMultipleNodes(int parallelism) throws Exception {
-        Ignite srv1 = startGrid(1);
-        Ignite srv2 = startGrid(2);
+        Ignite srv1 = startGrid(0);
+        Ignite srv2 = startGrid(1);
 
         Ignite cli;
 
         try {
             Ignition.setClientMode(true);
 
-            cli = startGrid(3);
+            cli = startGrid(2);
         }
         finally {
             Ignition.setClientMode(false);
@@ -437,7 +472,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
         for (int i = 0; i < 30; i++)
             iter.next();
 
-        stopGrid(3);
+        stopGrid(2);
 
         // Test server node leave with active worker.
         FieldsQueryCursor<List<?>> cursor2 = execute(srv1, baseQuery().setPageSize(PAGE_SIZE_SMALL));
@@ -448,7 +483,7 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
             for (int i = 0; i < 30; i++)
                 iter2.next();
 
-            stopGrid(2);
+            stopGrid(1);
         }
         finally {
             cursor2.close();
@@ -531,7 +566,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                 iter.next();
         }
 
-
         // Test execution of multiple queries at a time.
         List<Iterator<List<?>>> iters = new ArrayList<>();
 
@@ -556,6 +590,8 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                     iterIter.remove();
             }
         }
+
+        checkConnectionLeaks(Ignition.allGrids().size());
 
         checkHoldQuery(node);
 
@@ -773,6 +809,42 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
      */
     private static String nameForId(long id) {
         return "name-" + id;
+    }
+
+    /**
+     * @param nodeCnt Count of nodes.
+     * @throws Exception On error.
+     */
+    private void checkConnectionLeaks(int nodeCnt) throws Exception {
+        boolean notLeak = GridTestUtils.waitForCondition(() -> {
+            for (int i = 0; i < nodeCnt; i++) {
+                if (!usedConnections(i).isEmpty())
+                    return false;
+            }
+
+            return true;
+        }, 5000);
+
+        if (!notLeak) {
+            for (int i = 0; i < nodeCnt; i++) {
+                Set<H2PooledConnection> usedConns = usedConnections(i);
+
+                if (!usedConnections(i).isEmpty())
+                    log.error("Not closed connections: " + usedConns);
+            }
+
+            fail("H2 JDBC connections leak detected. See the log above.");
+        }
+    }
+
+    /**
+     * @param i Node index.
+     * @return Set of used connections.
+     */
+    private Set<H2PooledConnection> usedConnections(int i) {
+        ConnectionManager connMgr = ((IgniteH2Indexing)grid(i).context().query().getIndexing()).connections();
+
+        return  GridTestUtils.getFieldValue(connMgr, "usedConns");
     }
 
     /**

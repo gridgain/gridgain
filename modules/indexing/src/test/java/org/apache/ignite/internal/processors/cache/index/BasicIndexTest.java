@@ -17,7 +17,11 @@
 package org.apache.ignite.internal.processors.cache.index;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.nio.file.Path;
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,9 +29,10 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.QueryEntity;
@@ -39,6 +44,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Quoted;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
@@ -46,14 +52,20 @@ import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.ByteArrayed;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Dated;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.SqlStrConvertedValHolder;
+import static org.apache.ignite.internal.processors.cache.AbstractDataTypesCoverageTest.Timed;
 import static org.apache.ignite.internal.processors.query.h2.database.H2Tree.IGNITE_THROTTLE_INLINE_SIZE_CALCULATION;
+import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanIndex.SCAN_INDEX_NAME_SUFFIX;
 
 /**
  * A set of basic tests for caches with indexes.
@@ -64,6 +76,9 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
     /** {@code True} If index need to be created throught static config. */
     private static boolean createIdx = true;
+
+    /** {@code True} If composite index required. */
+    private static boolean createCompositeIdx;
 
     /** {@code True} If cache nedd to be created throught static config. */
     private static boolean createStaticCache = true;
@@ -152,9 +167,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         return igniteCfg;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
@@ -163,15 +176,15 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cleanPersistenceDir();
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
 
         cleanPersistenceDir();
 
         srvLog = clientLog = null;
+
+        createCompositeIdx = false;
 
         super.afterTest();
     }
@@ -186,7 +199,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** */
     @Test
     public void testNoIndexesNoPersistence() throws Exception {
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -204,6 +217,17 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /** */
+    private int[] inlineSizeVariations() {
+        int[] baseVariations = {0, 10, 20, 50, 100};
+
+        // Determine if scaling is needed, we are not accurate here
+        if (GridTestUtils.SF.apply(baseVariations.length) < baseVariations.length)
+            return new int[] {0, 20, 100};
+
+        return baseVariations;
+    }
+
+    /** */
     @Test
     public void testAllIndexesNoPersistence() throws Exception {
         indexes = Arrays.asList(
@@ -215,7 +239,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             new QueryIndex("valPojo")
         );
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -235,7 +259,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     /** */
     @Test
     public void testDynamicIndexesNoPersistence() throws Exception {
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -491,10 +515,21 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             String s0 = sqlIns;
 
             for (int f = 0; f < reqFlds.length; ++f)
-                s0 += i + ((f < reqFlds.length - 1) ? ", " : ")");
+                s0 += (i + f) + ((f < reqFlds.length - 1) ? ", " : ")");
 
             qryProc.querySqlFields(new SqlFieldsQuery(s0), true).getAll();
         }
+    }
+
+    /**
+     * Checks index usage instead of full scan.
+     * @param res Result set.
+     * @return {@code True} if index usage found.
+     */
+    private boolean checkIdxUsage(List<List<?>> res, String idx) {
+        String plan = res.get(0).get(0).toString();
+
+        return idx != null ? plan.contains(idx) : !plan.contains(SCAN_INDEX_NAME_SUFFIX);
     }
 
     /**
@@ -608,7 +643,11 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Tests different fields sequence in indexes.
+     * Test composite indices with PK field in first place.
+     *
+     * There is no sense to create such indices:
+     * 1. PK index will be enough for equality condition on PK field.
+     * 2. None of these indices will be used for non-equality condition on PK field.
      */
     @Test
     public void testCreateIdxWithDifferentIdxFldsSeq() throws Exception {
@@ -643,6 +682,296 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         assertTrue(checkIdxAlreadyExistLog(
             qryProcCl, "idx6", TEST_TBL_NAME, "c1", "c2"));
+    }
+
+    /**
+     * Tests IN with EQUALS index usage .
+     */
+    @Test
+    public void testInWithEqualsIdxUsage() throws Exception {
+        inlineSize = 10;
+
+        isPersistenceEnabled = false;
+
+        IgniteEx ignite = startGrid(0);
+
+        GridQueryProcessor qryProc = ignite.context().query();
+
+        checkInWithEqualsIdxUsageForDifferentTypes(qryProc);
+
+        // Same checks for composite index.
+        createCompositeIdx = true;
+        checkInWithEqualsIdxUsageForDifferentTypes(qryProc);
+    }
+
+    private void checkInWithEqualsIdxUsageForDifferentTypes(final GridQueryProcessor qryProc) {
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.INT,
+            "val * 3",
+            1, 2, -3, null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.BIGINT,
+            null,
+            0L, Long.MAX_VALUE, Long.MIN_VALUE, null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.VARCHAR,
+            "_val",
+            new Quoted(""),
+            new Quoted("whatever"),
+            new Quoted("CamelCase"),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DATE,
+            "_key",
+            new Dated(Date.valueOf("2001-09-11")),
+            new Dated(Date.valueOf("1806-08-12")),
+            new Dated(Date.valueOf("2051-11-21")),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.TIME,
+            "fld, val",
+            new Timed(Time.valueOf("00:00:01")),
+            new Timed(Time.valueOf("12:00:00")),
+            new Timed(Time.valueOf("23:59:59")),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.TIMESTAMP,
+            "val, fld",
+            new Dated(Timestamp.valueOf("2019-01-01 00:00:00")),
+            new Dated(Timestamp.valueOf("2051-12-31 23:59:59")),
+            new Dated(Timestamp.valueOf("1806-08-12 12:00:00")),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DOUBLE,
+            "*, _key",
+            -1.0d, 1e-7d, new Quoted(Double.NEGATIVE_INFINITY), null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.UUID,
+            "val",
+            new Quoted("d9bc480e-1107-11ea-8d71-362b9e155667"),
+            new Quoted(UUID.fromString("d9bc4354-1107-11ea-8d71-362b9e155667")),
+            new Quoted(UUID.randomUUID()),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.DECIMAL,
+            "ROUND(val + 0.05, 1)",
+            "10.2",
+            new BigDecimal("10.01"),
+            new BigDecimal(123.123),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.BINARY,
+            "BIT_LENGTH(val)",
+            new ByteArrayed(new byte[] {}),
+            new ByteArrayed(new byte[] {0, 1}),
+            new ByteArrayed(new byte[] {1, 2, 3}),
+            null);
+
+        checkInWithEqualsIdxUsageForType(qryProc, SqlDataType.OTHER,
+            null,
+            new UserObject(new Pojo(1)),
+            new UserObject(new Pojo(2)),
+            new UserObject(new Pojo(-3)),
+            null);
+    }
+
+    /**
+     * Check IDX usage for different cases.
+     *
+     * @param qryProc Query processor.
+     * @param dataType SQL data type.
+     * @param proj Projection.
+     * @param values Values to put.
+     */
+    private void checkInWithEqualsIdxUsageForType(
+        final GridQueryProcessor qryProc,
+        SqlDataType dataType,
+        @Nullable String proj,
+        @NotNull Object... values) {
+        assert values.length  >= 4;
+
+        if (proj == null)
+            proj = "*";
+
+        qryProc.querySqlFields(new SqlFieldsQuery(
+            "CREATE TABLE " + TEST_TBL_NAME +
+                "(id LONG PRIMARY KEY," +
+                " fld " + dataType + ", " +
+                " val " + dataType + ")"), true);
+
+        final String idxName = "IDX_VAL";
+
+        qryProc.querySqlFields(new SqlFieldsQuery(
+            "CREATE INDEX \"" + idxName + "\" ON " + TEST_TBL_NAME +
+                (createCompositeIdx ? "(val, fld)" : "(val)")), true);
+
+        for (int i = 0; i < values.length; i++) {
+            Object valToPut = toObjVal(values[i]);
+
+            // INSERT
+            qryProc.querySqlFields(new SqlFieldsQuery("INSERT INTO " + TEST_TBL_NAME +
+                "(id, fld, val) VALUES (?1, ?2, ?3)").setArgs(i, valToPut, valToPut), true);
+        }
+
+        try {
+            final int rnd = ThreadLocalRandom.current().nextInt(values.length);
+            final Object val1 = values[(rnd) % values.length];
+            final Object val2 = values[(rnd + 1) % values.length];
+            final Object val3 = values[(rnd + 2) % values.length];
+            final Object val4 = values[(rnd + 3) % values.length];
+
+            final String qry = "select " + proj + " from " + TEST_TBL_NAME + " ";
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?1 or fld = ?2)";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (select fld from " +
+                    TEST_TBL_NAME + " where fld in(?1, ?2)) and (fld = ?1 or fld = ?2)";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?3 or fld = ?3)";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and fld = ?3";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (" + toStringVal(val1) + ", "
+                    + toStringVal(val2) + ") and " + "fld = " + toStringVal(val3);
+
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("explain " + sql),true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
+            }
+
+            {//Check OR -> IN optimization is applied.
+                final String sql = qry + "where (val = ?1 OR val = ?2) and fld = " +
+                    toStringVal(val3);
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and " +
+                    "(fld = ?3 or fld = ?4) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3),
+                        toObjVal(val4)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3),
+                        toObjVal(val4)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?3 or fld = ?1) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2), toObjVal(val3)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (?1, ?2) and (fld = ?1 or fld = ?2) ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(new SqlFieldsQuery("explain " + sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql)
+                    .setArgs(toObjVal(val1), toObjVal(val2)), true).getAll();
+            }
+
+            {
+                final String sql = qry + "where val in (" + toStringVal(val2) + ", " +
+                    toStringVal(val1) + ") and (fld = " + toStringVal(val1) +
+                    " or fld = " + toStringVal(val2) + ") ORDER BY fld";
+
+                List<List<?>> res = qryProc.querySqlFields(
+                    new SqlFieldsQuery("explain " + sql), true).getAll();
+
+                assertTrue(checkIdxUsage(res, idxName));
+
+                qryProc.querySqlFields(new SqlFieldsQuery(sql), true).getAll();
+            }
+        }
+        finally {
+            qryProc.querySqlFields(new SqlFieldsQuery("DROP TABLE " + TEST_TBL_NAME + ";"), true);
+        }
+    }
+
+    /**
+     * Convert to string value for SQL injection if needed.
+     * @param val Value.
+     * @return Value to inject to SQL query.
+     */
+    private <T> String toStringVal(T val) {
+        return val instanceof SqlStrConvertedValHolder ?
+            ((SqlStrConvertedValHolder)val).sqlStrVal() :
+            String.valueOf(val);
+    }
+
+    /**
+     * Convert to object value if needed.
+     * @param val Value.
+     * @return Value for usage as prepared statement param.
+     */
+    private <T> Object toObjVal(T val) {
+        return val instanceof SqlStrConvertedValHolder ?
+            ((SqlStrConvertedValHolder)val).originalVal() :
+            val;
     }
 
     /**
@@ -702,7 +1031,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     public void testNoIndexesWithPersistence() throws Exception {
         isPersistenceEnabled = true;
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -741,7 +1070,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         isPersistenceEnabled = true;
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -846,7 +1175,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     public void testDynamicIndexesWithPersistence() throws Exception {
         isPersistenceEnabled = true;
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -885,7 +1214,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     public void testDynamicIndexesDropWithPersistence() throws Exception {
         isPersistenceEnabled = true;
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -930,7 +1259,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     public void testNoIndexesWithPersistenceIndexRebuild() throws Exception {
         isPersistenceEnabled = true;
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -979,7 +1308,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
 
         isPersistenceEnabled = true;
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -1019,7 +1348,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
     public void testDynamicIndexesWithPersistenceIndexRebuild() throws Exception {
         isPersistenceEnabled = true;
 
-        int[] inlineSizes = {0, 10, 20, 50, 100};
+        int[] inlineSizes = inlineSizeVariations();
 
         for (int i : inlineSizes) {
             log().info("Checking inlineSize=" + i);
@@ -1273,17 +1602,17 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         cache.indexReadyFuture().get();
     }
 
-    /** */
+    /** Key object factory method. */
     private static Key key(long i) {
         return new Key(String.format("foo%03d", i), i, new Pojo(i));
     }
 
-    /** */
+    /** Value object factory method.*/
     private static Val val(long i) {
         return new Val(String.format("bar%03d", i), i, new Pojo(i));
     }
 
-    /** */
+    /** Key object. */
     private static class Key {
         /** */
         private String keyStr;
@@ -1301,9 +1630,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             keyPojo = pojo;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1318,22 +1645,18 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 Objects.equals(keyPojo, key.keyPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(keyStr, keyLong, keyPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Key.class, this);
         }
     }
 
-    /** */
+    /** Value object. */
     private static class Val {
         /** */
         private String valStr;
@@ -1351,9 +1674,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             valPojo = pojo;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1368,22 +1689,18 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
                 Objects.equals(valPojo, val.valPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(valStr, valLong, valPojo);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Val.class, this);
         }
     }
 
-    /** */
+    /** User object. */
     private static class Pojo {
         /** */
         private long pojoLong;
@@ -1393,9 +1710,7 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             this.pojoLong = pojoLong;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public boolean equals(Object o) {
             if (this == o)
                 return true;
@@ -1408,18 +1723,85 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
             return pojoLong == pojo.pojoLong;
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public int hashCode() {
             return Objects.hash(pojoLong);
         }
 
-        /**
-         * {@inheritDoc}
-         */
+        /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(Pojo.class, this);
+        }
+    }
+
+
+    /** User object converter. */
+    static class UserObject implements SqlStrConvertedValHolder{
+        /** User object. */
+        private Object obj;
+
+        /** Constructor. */
+        public UserObject(Object obj) {
+            this.obj = obj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public Object originalVal() {
+            return obj;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String sqlStrVal() {
+            return null; // UserObject has no string representation.
+        }
+    }
+
+    /**
+     * Supported sql data types with corresponding java mappings.
+     * https://apacheignite-sql.readme.io/docs/data-types
+     */
+    private enum SqlDataType {
+        /** */
+        INT(Integer.class),
+
+        /** */
+        BIGINT(Long.class),
+
+        /** */
+        DECIMAL(BigDecimal.class),
+
+        /** */
+        DOUBLE(Double.class),
+
+        /** */
+        TIME(java.sql.Time.class),
+
+        /** */
+        DATE(java.sql.Date.class),
+
+        /** */
+        TIMESTAMP(java.sql.Timestamp.class),
+
+        /** */
+        VARCHAR(String.class),
+
+        /** */
+        OTHER(Pojo.class),
+
+        /** */
+        UUID(UUID.class),
+
+        /** */
+        BINARY(byte[].class);
+
+        /**
+         * Corresponding java type https://docs.oracle.com/javase/1.5.0/docs/guide/jdbc/getstart/mapping.html
+         */
+        private Object javaType;
+
+        /** */
+        SqlDataType(Object javaType) {
+            this.javaType = javaType;
         }
     }
 }

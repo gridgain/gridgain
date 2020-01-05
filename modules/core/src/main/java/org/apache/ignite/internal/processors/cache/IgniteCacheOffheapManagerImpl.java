@@ -135,10 +135,10 @@ import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.isVisib
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccVersionIsValid;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.state;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.unexpectedStateException;
-import static org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager.EMPTY_CURSOR;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageIO.MVCC_INFO_SIZE;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.NOOP;
 import static org.apache.ignite.internal.util.IgniteTree.OperationType.PUT;
+import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
 
 /**
  *
@@ -1430,12 +1430,12 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             this.rowStore = rowStore;
             this.dataTree = dataTree;
             if (grp.mvccEnabled())
-                pCntr = new PartitionMvccTxUpdateCounterImpl();
+                pCntr = new PartitionMvccTxUpdateCounterImpl(grp);
             else if (grp.hasAtomicCaches() || !grp.persistenceEnabled())
                 pCntr = new PartitionAtomicUpdateCounterImpl();
             else {
                 pCntr = ctx.logger(PartitionTxUpdateCounterDebugWrapper.class).isDebugEnabled() ?
-                    new PartitionTxUpdateCounterDebugWrapper(grp, partId) : new PartitionTxUpdateCounterImpl();
+                    new PartitionTxUpdateCounterDebugWrapper(grp, partId) : new PartitionTxUpdateCounterImpl(grp);
             }
         }
 
@@ -2867,7 +2867,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                             ex.addSuppressed(e);
                     }
                 }
-            });
+            }, false);
 
             if (exception.get() != null)
                 throw new IgniteCheckedException("Failed to destroy store", exception.get());

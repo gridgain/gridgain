@@ -232,7 +232,12 @@ import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
+import org.apache.ignite.internal.util.typedef.T1;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.T4;
+import org.apache.ignite.internal.util.typedef.T5;
+import org.apache.ignite.internal.util.typedef.T6;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -356,6 +361,9 @@ public abstract class IgniteUtils {
 
     /** Default working directory name. */
     private static final String DEFAULT_WORK_DIR = "work";
+
+    /** Thread dump message. */
+    public static final String THREAD_DUMP_MSG = "Thread dump at ";
 
     /** Correct Mbean cache name pattern. */
     private static Pattern MBEAN_CACHE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_0-9]+$");
@@ -1411,25 +1419,37 @@ public abstract class IgniteUtils {
     }
 
     /**
-     * Performs thread dump and prints all available info to the given log.
+     * Performs thread dump and prints all available info to the given log with WARN logging level.
      *
      * @param log Logger.
      */
     public static void dumpThreads(@Nullable IgniteLogger log) {
+        dumpThreads(log, false);
+    }
+
+    /**
+     * Performs thread dump and prints all available info to the given log
+     * with WARN or ERROR logging level depending on {@code isErrorLevel} parameter.
+     *
+     * @param log Logger.
+     * @param isErrorLevel {@code true} if thread dump must be printed with ERROR logging level,
+     *      {@code false} if thread dump must be printed with WARN logging level.
+     */
+    public static void dumpThreads(@Nullable IgniteLogger log, boolean isErrorLevel) {
         ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
 
         final Set<Long> deadlockedThreadsIds = getDeadlockedThreadIds(mxBean);
 
         if (deadlockedThreadsIds.isEmpty())
-            warn(log, "No deadlocked threads detected.");
+            logMessage(log, "No deadlocked threads detected.", isErrorLevel);
         else
-            warn(log, "Deadlocked threads detected (see thread dump below) " +
-                "[deadlockedThreadsCnt=" + deadlockedThreadsIds.size() + ']');
+            logMessage(log, "Deadlocked threads detected (see thread dump below) " +
+                "[deadlockedThreadsCnt=" + deadlockedThreadsIds.size() + ']', isErrorLevel);
 
         ThreadInfo[] threadInfos =
             mxBean.dumpAllThreads(mxBean.isObjectMonitorUsageSupported(), mxBean.isSynchronizerUsageSupported());
 
-        GridStringBuilder sb = new GridStringBuilder("Thread dump at ")
+        GridStringBuilder sb = new GridStringBuilder(THREAD_DUMP_MSG)
             .a(new SimpleDateFormat("yyyy/MM/dd HH:mm:ss z").format(new Date(U.currentTimeMillis()))).a(NL);
 
         for (ThreadInfo info : threadInfos) {
@@ -1446,7 +1466,20 @@ public abstract class IgniteUtils {
 
         sb.a(NL);
 
-        warn(log, sb.toString());
+        logMessage(log, sb.toString(), isErrorLevel);
+    }
+
+    /**
+     * @param log Logger.
+     * @param msg Message.
+     * @param isErrorLevel {@code true} if message must be printed with ERROR logging level,
+     *      {@code false} if message must be printed with WARN logging level.
+     */
+    private static void logMessage(@Nullable IgniteLogger log, String msg, boolean isErrorLevel) {
+        if (isErrorLevel)
+            error(log, msg);
+        else
+            warn(log, msg);
     }
 
     /**
@@ -2431,6 +2464,33 @@ public abstract class IgniteUtils {
         Collections.sort(macs);
 
         return macs;
+    }
+
+    /**
+     * Sort addresses: IPv4 & real addresses first.
+     *
+     * @param addrs Addresses to sort.
+     * @return Sorted list.
+     */
+    public static Collection<String> sortAddresses(Collection<String> addrs) {
+        if (F.isEmpty(addrs))
+            return Collections.emptyList();
+
+        int sz = addrs.size();
+
+        List<SortableAddress> sorted = new ArrayList<>(sz);
+
+        for (String addr : addrs)
+            sorted.add(new SortableAddress(addr));
+
+        Collections.sort(sorted);
+
+        Collection<String> res = new ArrayList<>(sz);
+
+        for (SortableAddress sa : sorted)
+            res.add(sa.address());
+
+        return res;
     }
 
     /**
@@ -3653,6 +3713,16 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Converts size in bytes to human-readable size in megabytes.
+     *
+     * @param sizeInBytes Size of any object (file, memory region etc) in bytes.
+     * @return Size converted to megabytes.
+     */
+    public static int sizeInMegabytes(long sizeInBytes) {
+        return (int)(sizeInBytes / MB);
+    }
+
+    /**
      * Deletes file or directory with all sub-directories and files.
      *
      * @param path File or directory to delete.
@@ -4447,6 +4517,20 @@ public abstract class IgniteUtils {
 
         if (log.isQuiet())
             quiet(false, shortMsg);
+    }
+
+    /**
+     * Logs warning message in both verbose and quiet modes.
+     *
+     * @param log Logger to use.
+     * @param msg Message to log.
+     * @param e Optional exception.
+     */
+    public static void quietAndWarn(IgniteLogger log, Object msg, @Nullable Throwable e) {
+        warn(log, msg, e);
+
+        if (log.isQuiet())
+            quiet(false, msg);
     }
 
     /**
@@ -7402,6 +7486,102 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Create one-element tuple.
+     *
+     * @param v0 First element.
+     * @param <V0> Type of first element.
+     * @return Tuple.
+     */
+    public static <V0> T1<V0> tuple(V0 v0) {
+        return new T1<>(v0);
+    }
+
+    /**
+     * Create two-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @return Tuple.
+     */
+    public static <V0, V1> T2<V0, V1> tuple(V0 v0, V1 v1) {
+        return new T2<>(v0, v1);
+    }
+
+    /**
+     * Create three-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2> T3<V0, V1, V2> tuple(V0 v0, V1 v1, V2 v2) {
+        return new T3<>(v0, v1, v2);
+    }
+
+    /**
+     * Create four-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3> T4<V0, V1, V2, V3> tuple(V0 v0, V1 v1, V2 v2, V3 v3) {
+        return new T4<>(v0, v1, v2, v3);
+    }
+
+    /**
+     * Create five-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param v4 Fifth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @param <V4> Type of fifth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3, V4> T5<V0, V1, V2, V3, V4> tuple(V0 v0, V1 v1, V2 v2, V3 v3, V4 v4) {
+        return new T5<>(v0, v1, v2, v3, v4);
+    }
+
+    /**
+     * Create six-elements tuple.
+     *
+     * @param v0 First element.
+     * @param v1 Second element.
+     * @param v2 Third element.
+     * @param v3 Fourth element.
+     * @param v4 Fifth element.
+     * @param v5 Sixth element.
+     * @param <V0> Type of first element.
+     * @param <V1> Type of second element.
+     * @param <V2> Type of third element.
+     * @param <V3> Type of fourth element.
+     * @param <V4> Type of fifth element.
+     * @param <V5> Type of sixth element.
+     * @return Tuple.
+     */
+    public static <V0, V1, V2, V3, V4, V5> T6<V0, V1, V2, V3, V4, V5> tuple(V0 v0, V1 v1, V2 v2, V3 v3, V4 v4, V5 v5) {
+        return new T6<>(v0, v1, v2, v3, v4, v5);
+    }
+
+    /**
      * Utility method creating {@link JMException} with given cause.
      *
      * @param e Cause exception.
@@ -7413,6 +7593,19 @@ public abstract class IgniteUtils {
         x.initCause(e);
 
         return x;
+    }
+
+    /**
+     * Ignore {@link RuntimeException}.
+     *
+     * @param runnable Runnable.
+     */
+    public static void ignoreRuntimeException(Runnable runnable) {
+        try {
+            runnable.run();
+        }
+        catch (RuntimeException ignore) {
+        }
     }
 
     /**
@@ -8666,6 +8859,21 @@ public abstract class IgniteUtils {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Round up the argument to the next highest power of 2;
+     *
+     * @param v Value to round up.
+     * @return Next closest power of 2.
+     */
+    public static int nextPowerOf2(int v) {
+        A.ensure(v >= 0, "v must not be negative");
+
+        if (v == 0)
+            return 1;
+
+        return 1 << (32 - Integer.numberOfLeadingZeros(v - 1));
     }
 
     /**
@@ -11524,6 +11732,103 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Special wrapper over address that can be sorted in following order:
+     *     IPv4, private IPv4, IPv4 local host, IPv6.
+     *     Lower addresses first.
+     */
+    private static class SortableAddress implements Comparable<SortableAddress> {
+        /**
+         *
+         */
+        private int type;
+
+        /**
+         *
+         */
+        private BigDecimal bits;
+
+        /**
+         *
+         */
+        private String addr;
+
+        /**
+         * Constructor.
+         *
+         * @param addr Address as string.
+         */
+        private SortableAddress(String addr) {
+            this.addr = addr;
+
+            if (addr.indexOf(':') > 0)
+                type = 4; // IPv6
+            else {
+                try {
+                    InetAddress inetAddr = InetAddress.getByName(addr);
+
+                    if (inetAddr.isLoopbackAddress())
+                        type = 3;  // localhost
+                    else if (inetAddr.isSiteLocalAddress())
+                        type = 2;  // private IPv4
+                    else
+                        type = 1; // other IPv4
+                }
+                catch (UnknownHostException ignored) {
+                    type = 5;
+                }
+            }
+
+            bits = BigDecimal.valueOf(0L);
+
+            try {
+                String[] octets = addr.contains(".") ? addr.split(".") : addr.split(":");
+
+                int len = octets.length;
+
+                for (int i = 0; i < len; i++) {
+                    long oct = F.isEmpty(octets[i]) ? 0 : Long.valueOf(octets[i]);
+                    long pow = Double.valueOf(Math.pow(256, octets.length - 1 - i)).longValue();
+
+                    bits = bits.add(BigDecimal.valueOf(oct * pow));
+                }
+            }
+            catch (Exception ignore) {
+                // No-op.
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public int compareTo(@NotNull SortableAddress o) {
+            return (type == o.type ? bits.compareTo(o.bits) : Integer.compare(type, o.type));
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (o == null || getClass() != o.getClass())
+                return false;
+
+            SortableAddress other = (SortableAddress)o;
+
+            return addr != null ? addr.equals(other.addr) : other.addr == null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public int hashCode() {
+            return addr != null ? addr.hashCode() : 0;
+        }
+
+        /**
+         * @return Address.
+         */
+        public String address() {
+            return addr;
+        }
+    }
+
+    /**
      *  Safely write buffer fully to blocking socket channel.
      *  Will throw assert if non blocking channel passed.
      *
@@ -11680,5 +11985,35 @@ public abstract class IgniteUtils {
 
             return sb.toString();
         }
+    }
+
+    /**
+     * Stops workers from given collection and waits for their completion.
+     *
+     * @param workers Workers collection.
+     * @param cancel Wheter should cancel workers.
+     * @param log Logger.
+     */
+    public static void awaitForWorkersStop(Collection<GridWorker> workers, boolean cancel, IgniteLogger log) {
+        for (GridWorker worker : workers) {
+            try {
+                if (cancel)
+                    worker.cancel();
+
+                worker.join();
+            }
+            catch (Exception e) {
+                log.warning(String.format("Failed to cancel grid runnable [%s]: %s", worker.toString(), e.getMessage()));
+            }
+        }
+    }
+
+    /**
+     * Unquote the given string.
+     * @param s String.
+     * @return Unquoted string.
+     */
+    public static String unquote(String s) {
+        return s == null ? null : s.replaceAll("^\"|\"$", "");
     }
 }

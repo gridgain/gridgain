@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -40,10 +39,9 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.PartitionAtomicUpdateCounterImpl;
-import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.PartitionTxUpdateCounterImpl;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -106,7 +104,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
         for (int i = 0; i < 100; i++) {
             Collections.shuffle(tmp);
 
-            PartitionUpdateCounter pc0 = new PartitionTxUpdateCounterImpl();
+            PartitionUpdateCounter pc0 = new PartitionTxUpdateCounterImpl(null);
 
             for (int[] pair : tmp)
                 pc0.update(pair[0], pair[1]);
@@ -129,7 +127,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      */
     @Test
     public void testStaleUpdate() {
-        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl();
+        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl(null);
 
         assertTrue(pc.update(0, 1));
         assertFalse(pc.update(0, 1));
@@ -148,7 +146,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMixedModeMultithreaded() throws Exception {
-        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl();
+        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl(null);
 
         AtomicBoolean stop = new AtomicBoolean();
 
@@ -198,7 +196,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      */
     @Test
     public void testMaxGaps() {
-        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl();
+        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl(null);
 
         int i;
         for (i = 1; i <= PartitionTxUpdateCounterImpl.MAX_MISSED_UPDATES; i++)
@@ -220,7 +218,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      */
     @Test
     public void testFoldIntermediateUpdates() {
-        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl();
+        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl(null);
 
         pc.update(0, 59);
 
@@ -246,7 +244,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      */
     @Test
     public void testOutOfOrderUpdatesIterator() {
-        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl();
+        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl(null);
 
         pc.update(67, 3);
 
@@ -279,7 +277,7 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      */
     @Test
     public void testOverlap() {
-        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl();
+        PartitionUpdateCounter pc = new PartitionTxUpdateCounterImpl(null);
 
         assertTrue(pc.update(13, 3));
 
@@ -333,7 +331,6 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void testWithPersistentNodeTx() throws Exception {
         testWithPersistentNode(CacheAtomicityMode.TRANSACTIONAL);
     }
@@ -342,7 +339,6 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
      *
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void testWithPersistentNodeAtomic() throws Exception {
         testWithPersistentNode(CacheAtomicityMode.ATOMIC);
     }
@@ -355,8 +351,9 @@ public class PartitionUpdateCounterTest extends GridCommonAbstractTest {
 
         try {
             IgniteEx grid0 = startGrid(0);
-            grid0.cluster().active(true);
+
             grid0.cluster().baselineAutoAdjustEnabled(false);
+            grid0.cluster().active(true);
 
             grid0.cache(DEFAULT_CACHE_NAME).put(0, 0);
 

@@ -16,6 +16,31 @@
 
 package org.apache.ignite.util;
 
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
@@ -64,47 +89,25 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.apache.ignite.transactions.TransactionTimeoutException;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
-import java.io.File;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.io.Serializable;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.LongAdder;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 import static java.io.File.separatorChar;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
+import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
+import static org.apache.ignite.internal.commandline.CommandList.DEACTIVATE;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -251,6 +254,80 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--deactivate"));
 
         assertFalse(ignite.cluster().active());
+    }
+
+    /**
+     * Test the deactivation command on the active and no cluster with checking
+     * the cluster name(which is set through the system property) in
+     * confirmation.
+     *
+     * @throws Exception If failed.
+     * */
+    @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = "TEST_CLUSTER_NAME")
+    public void testDeactivateWithCheckClusterNameInConfirmationBySystemProperty() throws Exception {
+        IgniteEx igniteEx = startGrid(0);
+        assertFalse(igniteEx.cluster().active());
+
+        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(igniteEx, "TEST_CLUSTER_NAME");
+    }
+
+    /**
+     * Test the deactivation command on the active and no cluster with checking
+     * the cluster name(default) in confirmation.
+     *
+     * @throws Exception If failed.
+     * */
+    @Test
+    public void testDeactivateWithCheckClusterNameInConfirmationByDefault() throws Exception {
+        IgniteEx igniteEx = startGrid(0);
+        assertFalse(igniteEx.cluster().active());
+
+        deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(
+            igniteEx,
+            igniteEx.context().cache().utilityCache().context().dynamicDeploymentId().toString()
+        );
+    }
+
+    /**
+     * Deactivating the cluster(active and not) with checking the cluster name
+     * in the confirmation.
+     *
+     * @param igniteEx Node.
+     * @param clusterName Cluster name to check in the confirmation message.
+     * */
+    private void deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(
+        IgniteEx igniteEx,
+        String clusterName
+    ) {
+        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
+
+        igniteEx.cluster().active(true);
+        assertTrue(igniteEx.cluster().active());
+
+        deactivateWithCheckClusterNameInConfirmation(igniteEx, clusterName);
+    }
+
+    /**
+     * Deactivating the cluster with checking the cluster name in the
+     * confirmation.
+     *
+     * @param igniteEx Node.
+     * @param clusterName Cluster name to check in the confirmation message.
+     * */
+    private void deactivateWithCheckClusterNameInConfirmation(IgniteEx igniteEx, String clusterName) {
+        autoConfirmation = false;
+        injectTestSystemOut();
+        injectTestSystemIn(CONFIRM_MSG);
+
+        assertEquals(EXIT_CODE_OK, execute(DEACTIVATE.text()));
+        assertFalse(igniteEx.cluster().active());
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "Warning: the command will deactivate a cluster \"" + clusterName + "\"."
+        );
     }
 
     /**
@@ -428,6 +505,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineAdd() throws Exception {
         Ignite ignite = startGrids(1);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
+
         assertFalse(ignite.cluster().active());
 
         ignite.cluster().active(true);
@@ -451,6 +530,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @Test
     public void testBaselineRemove() throws Exception {
         Ignite ignite = startGrids(1);
+
+        ignite.cluster().baselineAutoAdjustEnabled(false);
+
         Ignite other = startGrid("nodeToStop");
 
         assertFalse(ignite.cluster().active());
@@ -509,6 +591,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testBaselineSet() throws Exception {
         Ignite ignite = startGrids(1);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
+
         assertFalse(ignite.cluster().active());
 
         ignite.cluster().active(true);
@@ -519,7 +603,36 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(2, ignite.cluster().currentBaselineTopology().size());
 
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR, execute("--baseline", "set", "invalidConsistentId"));
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR, execute("--baseline", "set", "invalidConsistentId"));
+    }
+
+    /**
+     * Test baseline set nodes with baseline offline node works via control.sh
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBaselineSetWithOfflineNode() throws Exception {
+        Ignite ignite0 = startGrid(0);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
+
+        //It is important to set consistent id to null for force autogeneration.
+        Ignite ignite1 = startGrid(optimize(getConfiguration(getTestIgniteInstanceName(1)).setConsistentId(null)));
+
+        assertFalse(ignite0.cluster().active());
+
+        ignite0.cluster().active(true);
+
+        Ignite other = startGrid(2);
+
+        String consistentIds = consistentIds(ignite0, ignite1, other);
+
+        ignite1.close();
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "set", consistentIds));
+
+        assertEquals(3, ignite0.cluster().currentBaselineTopology().size());
     }
 
     /**
@@ -530,6 +643,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @Test
     public void testBaselineVersion() throws Exception {
         Ignite ignite = startGrids(1);
+
+        ignite.cluster().baselineAutoAdjustEnabled(false);
 
         assertFalse(ignite.cluster().active());
 
@@ -1309,6 +1424,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     public void testCacheIdleVerifyMovingParts() throws Exception {
         IgniteEx ignite = startGrids(2);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
+
         ignite.cluster().active(true);
 
         int parts = 32;
@@ -1748,7 +1865,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         ignite(0).createCache(defaultCacheConfiguration().setNodeFilter(
             (IgnitePredicate<ClusterNode>)node -> node.attribute("some-attr") != null));
 
-        assertEquals(EXIT_CODE_UNEXPECTED_ERROR,
+        assertEquals(EXIT_CODE_ILLEGAL_STATE_ERROR,
             execute("--baseline", "set", "non-existing-node-id ," + consistentIds(ignite)));
     }
 
