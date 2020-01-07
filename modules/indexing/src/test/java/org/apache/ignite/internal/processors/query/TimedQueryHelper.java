@@ -64,6 +64,12 @@ public class TimedQueryHelper {
         return "select longProcess(_val, " + rowTimeout + ") from " + cacheName;
     }
 
+    public String buildTimedUpdateQuery() {
+        long rowTimeout = executionTime / ROW_COUNT;
+
+        return "update " + cacheName + " set _val = longProcess(_val, " + rowTimeout + ")";
+    }
+
     @QuerySqlFunction
     public static int longProcess(int i, long millis) {
         try {

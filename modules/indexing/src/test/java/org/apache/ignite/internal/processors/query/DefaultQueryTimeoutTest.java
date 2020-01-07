@@ -30,6 +30,16 @@ import org.junit.Test;
 public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
     private long defaultQueryTimeout;
 
+    private final boolean updateQuery;
+
+    protected DefaultQueryTimeoutTest() {
+        this(false);
+    }
+
+    protected DefaultQueryTimeoutTest(boolean updateQuery) {
+        this.updateQuery = updateQuery;
+    }
+
     protected abstract void executeQuery(String sql) throws Exception;
 
     protected abstract void executeQuery(String sql, long timeout) throws Exception;
@@ -112,14 +122,16 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
 
         helper.createCache(ign);
 
+        String qryText = updateQuery ? helper.buildTimedUpdateQuery() : helper.buildTimedQuery();
+
         IgniteInternalFuture<?> fut1 = GridTestUtils.runAsync(() -> {
-            executeQuery(helper.buildTimedQuery(), 500);
+            executeQuery(qryText, 500);
 
             return null;
         });
 
         IgniteInternalFuture<?> fut2 = GridTestUtils.runAsync(() -> {
-            executeQuery(helper.buildTimedQuery(), 1500);
+            executeQuery(qryText, 1500);
 
             return null;
         });
@@ -151,10 +163,12 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
         helper.createCache(grid(0));
 
         Callable<Void> c = () -> {
+            String qryText = updateQuery ? helper.buildTimedUpdateQuery() : helper.buildTimedQuery();
+
             if (explicitTimeout != null)
-                executeQuery(helper.buildTimedQuery(), explicitTimeout);
+                executeQuery(qryText, explicitTimeout);
             else
-                executeQuery(helper.buildTimedQuery());
+                executeQuery(qryText);
 
             return null;
         };
