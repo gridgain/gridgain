@@ -16,15 +16,30 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+@RunWith(Parameterized.class)
 public class DefaultQueryTimeoutThickJavaTest extends DefaultQueryTimeoutTest {
+    @Parameterized.Parameters(name = "Lazy={0}")
+    public static List<Object[]> params() {
+        return Arrays.asList(new Object[][] {
+            {false},
+            {true}
+        });
+    }
+
+    @Parameterized.Parameter
+    public boolean lazy;
+
     @Override protected void executeQuery(String sql) {
-        SqlFieldsQuery qry = new SqlFieldsQuery(sql);
+        SqlFieldsQuery qry = new SqlFieldsQuery(sql).setLazy(lazy);
 
         grid(0).context().query().querySqlFields(qry, false).getAll();
     }
@@ -36,6 +51,7 @@ public class DefaultQueryTimeoutThickJavaTest extends DefaultQueryTimeoutTest {
     }
 
     @Override protected void assertQueryCancelled(Callable<?> c) {
-        GridTestUtils.assertThrowsWithCause(c, QueryCancelledException.class);
+        // t0d0 check thrown exception in lazy mode
+        GridTestUtils.assertThrows(log, c, Exception.class, "cancel");
     }
 }
