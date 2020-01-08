@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.query;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.testframework.GridTestUtils;
 
 public class DefaultQueryTimeoutThickJavaTest extends DefaultQueryTimeoutTest {
@@ -34,16 +35,26 @@ public class DefaultQueryTimeoutThickJavaTest extends DefaultQueryTimeoutTest {
         this.lazy = lazy;
     }
 
-    @Override protected void executeQuery(String sql) {
-        SqlFieldsQuery qry = new SqlFieldsQuery(sql).setLazy(lazy);
+    @Override protected void prepareQueryExecution() throws Exception {
+        super.prepareQueryExecution();
 
-        grid(0).context().query().querySqlFields(qry, false).getAll();
+        startClientGrid(10);
     }
 
-    @Override protected void executeQuery(String sql, long timeout) {
-        SqlFieldsQuery qry = new SqlFieldsQuery(sql).setTimeout((int)timeout, TimeUnit.MILLISECONDS);
+    @Override protected void executeQuery(String sql) throws Exception {
+        executeQuery0(new SqlFieldsQuery(sql).setLazy(lazy));
+    }
 
-        grid(0).context().query().querySqlFields(qry, false).getAll();
+    @Override protected void executeQuery(String sql, long timeout) throws Exception {
+        executeQuery0(new SqlFieldsQuery(sql)
+            .setLazy(lazy)
+            .setTimeout((int)timeout, TimeUnit.MILLISECONDS));
+    }
+
+    private void executeQuery0(SqlFieldsQuery qry) throws Exception {
+        IgniteEx cli = grid(10);
+
+        cli.context().query().querySqlFields(qry, false).getAll();
     }
 
     @Override protected void assertQueryCancelled(Callable<?> c) {

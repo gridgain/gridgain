@@ -40,6 +40,9 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
         this.updateQuery = updateQuery;
     }
 
+    protected void prepareQueryExecution() throws Exception {
+    }
+
     protected abstract void executeQuery(String sql) throws Exception;
 
     protected abstract void executeQuery(String sql, long timeout) throws Exception;
@@ -118,6 +121,8 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
 
         IgniteEx ign = startGrid(0);
 
+        prepareQueryExecution();
+
         TimedQueryHelper helper = new TimedQueryHelper(1000, DEFAULT_CACHE_NAME);
 
         helper.createCache(ign);
@@ -157,6 +162,8 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
 
         // t0d0 multiple nodes
         startGrid(0);
+
+        prepareQueryExecution();
 
         TimedQueryHelper helper = new TimedQueryHelper(execTime, DEFAULT_CACHE_NAME);
 
