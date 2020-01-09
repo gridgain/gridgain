@@ -946,7 +946,8 @@ public class Select extends Query {
             top.visit(new TableFilter.TableFilterVisitor() {
                 @Override
                 public void accept(TableFilter f) {
-                    if (f != top && f.getTable().getTableType() == TableType.VIEW) {
+                    if (f != top && f.getTable().getTableType() == TableType.VIEW
+                        && (f.getIndex() instanceof ViewIndex)) {
                         ViewIndex idx = (ViewIndex) f.getIndex();
                         if (idx != null && idx.getQuery() != null) {
                             idx.getQuery().setNeverLazy(true);
@@ -1859,6 +1860,8 @@ public class Select extends Query {
                 resetJoinBatchAfterQuery();
 
                 clearHashJoinIndexAfterQuery();
+
+                cleanupResources();
             }
         }
 
@@ -2005,5 +2008,14 @@ public class Select extends Query {
                     ((HashJoinIndex)f.getIndex()).clearHashTable(session);
             }
         });
+    }
+
+    /**
+     * Cleanups cached rows.
+     */
+    private void cleanupResources() {
+        for (TableFilter f : filters) {
+            f.cleanup();
+        }
     }
 }

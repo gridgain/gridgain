@@ -84,7 +84,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
         // map phase failure affects only general fail metric, not OOM metric.
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLazy(false)).getAll(),
             CacheException.class,
             mapFailMsg),
             "failed");
@@ -132,7 +132,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
         // map phase failure affects only general fail metric, not OOM metric.
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB")).getAll(),
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLazy(false)).getAll(),
             CacheException.class,
             mapFailMsg),
             "failed");
@@ -216,7 +216,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
 
         assertMetricsIncrementedOnlyOnReducer(() -> GridTestUtils.assertThrows(
             log,
-            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLocal(true)).getAll(),
+            () -> cache.query(new SqlFieldsQuery("SELECT * FROM TAB").setLocal(true).setLazy(false)).getAll(),
             CacheException.class,
             null),
             "failed", "failedByOOM");
