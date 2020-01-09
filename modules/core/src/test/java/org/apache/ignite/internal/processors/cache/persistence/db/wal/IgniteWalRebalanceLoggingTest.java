@@ -111,8 +111,8 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "1");
 
         LogListener expMsgsLsnr = LogListener.
-            matches("Following partitions were reserved for potential history rebalance [groupId=1813188848 " +
-                "parts=[0-7], groupId=1813188847 parts=[0-7]]").times(4).
+            matches("Following partitions were reserved for potential history rebalance [grpId=1813188848," +
+                " grpName=cache_group2, parts=[0-7], grpId=1813188847, grpName=cache_group1, parts=[0-7]]").times(4).
             andMatches("fullPartitions=[], histPartitions=[0-7]").times(2).build();
 
         LogListener unexpectedMessagesLsnr =
@@ -155,10 +155,12 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "500000");
         LogListener expMsgsLsnr = LogListener.
             matches("Following partitions were reserved for potential history rebalance []").times(4).
-            andMatches("Unable to perform historical rebalance cause history supplier is not available [parts=[0-7]," +
-                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").times(2).
-            andMatches("Unable to perform historical rebalance cause partition is supposed to be cleared [part=[0-7]," +
-                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").times(2).
+            andMatches("Unable to perform historical rebalance cause history supplier is not available [" +
+                "grpId=1813188848, grpName=cache_group2, parts=[0-7]," +
+                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").
+            andMatches("Unable to perform historical rebalance cause history supplier is not available [" +
+                "grpId=1813188847, grpName=cache_group1, parts=[0-7]," +
+                " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").
             andMatches("fullPartitions=[0-7], histPartitions=[]").times(2).build();
 
         checkFollowingPartitionsWereReservedForPotentialHistoryRebalanceMsg(expMsgsLsnr);

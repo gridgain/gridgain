@@ -17,11 +17,13 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
@@ -40,6 +42,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
+import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -222,9 +225,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
 
-        List<Integer> skippedPartitionsLackHistSupplier = new ArrayList<>();
+        GridIntList skippedPartitionsLackHistSupplier = new GridIntList();
 
-        List<Integer> skippedPartitionsCleared = new ArrayList<>();
+        GridIntList skippedPartitionsCleared = new GridIntList();
 
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingServerExchange()) {
@@ -305,7 +308,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     if (histSupplier == null)
                         skippedPartitionsLackHistSupplier.add(p);
 
-                    if (partToBeCleared)
+                    if (partToBeCleared && histSupplier != null)
                         skippedPartitionsCleared.add(p);
 
                     // If for some reason (for example if supplier fails and new supplier is elected) partition is
@@ -347,14 +350,23 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             }
         }
 
-        if (! skippedPartitionsLackHistSupplier.isEmpty())
-            log.info("Unable to perform historical rebalance cause " +
-                "history supplier is not available [parts=" + S.compact(skippedPartitionsLackHistSupplier) +
-                ", topVer=" + topVer + ']');
+        if (log.isInfoEnabled()) {
+            if (!skippedPartitionsLackHistSupplier.isEmpty()) {
+                log.info("Unable to perform historical rebalance cause " +
+                    "history supplier is not available [grpId=" + grp.groupId() + ", grpName=" + grp.name() +
+                    ", parts=" + S.compact(
+                        Arrays.stream(skippedPartitionsLackHistSupplier.array()).boxed().collect(Collectors.toList())) +
+                    ", topVer=" + topVer + ']');
+            }
 
-        if (! skippedPartitionsCleared.isEmpty())
-            log.info("Unable to perform historical rebalance cause partition " +
-                "is supposed to be cleared [part=" + S.compact(skippedPartitionsCleared) + ", topVer=" + topVer + ']');
+            if (!skippedPartitionsCleared.isEmpty()) {
+                log.info("Unable to perform historical rebalance because clearing is required for partitions" +
+                    "[grpId=" + grp.groupId() + ", grpName=" + grp.name() +
+                    ", parts=" + S.compact(
+                        Arrays.stream(skippedPartitionsCleared.array()).boxed().collect(Collectors.toList())) +
+                    ", topVer=" + topVer + ']');
+            }
+        }
 
         if (!assignments.isEmpty())
             ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
