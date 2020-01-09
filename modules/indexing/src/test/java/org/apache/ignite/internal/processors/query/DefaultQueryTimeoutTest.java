@@ -24,9 +24,6 @@ import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonT
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
-// t0d0 add to suite
-// t0d0 check DML
-// t0d0 use different query APIs
 public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest {
     private long defaultQueryTimeout;
 
@@ -160,7 +157,6 @@ public abstract class DefaultQueryTimeoutTest extends AbstractIndexingCommonTest
         throws Exception {
         defaultQueryTimeout = defaultTimeout;
 
-        // t0d0 multiple nodes
         startGrid(0);
 
         prepareQueryExecution();

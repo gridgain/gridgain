@@ -27,7 +27,6 @@ import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonT
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
-// t0d0 add to suite
 public class DefaultQueryTimeoutConfigurationTest extends AbstractIndexingCommonTest {
     private long defaultQueryTimeout;
 
