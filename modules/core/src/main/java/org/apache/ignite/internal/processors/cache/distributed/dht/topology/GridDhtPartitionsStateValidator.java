@@ -100,7 +100,6 @@ public class GridDhtPartitionsStateValidator {
         if (!cctx.cache().cacheGroup(top.groupId()).mvccEnabled()) { // TODO: Remove "if" clause in IGNITE-9451.
             // Validate cache sizes.
             Map<Integer, Map<UUID, Long>> resultSize = validatePartitionsSizes(top, messages, ignoringNodes);
-            resultSize = validatePartitionsSizes(top, messages, ignoringNodes);
 
             if (!resultSize.isEmpty()) {
                 if (error.length() > 0)
