@@ -45,7 +45,8 @@ abstract class AbstractActionControllerTest extends AgentCommonAbstractTest {
     @Before
     public void startup() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
-        changeManagementConsoleUri(ignite);
+
+        changeManagementConsoleConfig(ignite);
 
         cluster = ignite.cluster();
 

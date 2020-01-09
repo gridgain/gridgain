@@ -227,7 +227,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         List<Integer> skippedPartitionsCleared = new ArrayList<>();
 
         for (int p = 0; p < partitions; p++) {
-            if (ctx.exchange().hasPendingExchange()) {
+            if (ctx.exchange().hasPendingServerExchange()) {
                 if (log.isDebugEnabled())
                     log.debug("Skipping assignments creation, exchange worker has pending assignments: " +
                         exchId);

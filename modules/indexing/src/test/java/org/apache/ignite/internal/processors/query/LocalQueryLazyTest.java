@@ -82,7 +82,7 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
         for (int i = 0; i < QRY_CNT; ++i) {
             iters[i] = sql("SELECT * FROM test").iterator();
 
-            ResultInterface res = GridTestUtils.getFieldValueHierarchy(iters[i], "iter", "iter", "res");
+            ResultInterface res = GridTestUtils.getFieldValueHierarchy(iters[i], "iter", "delegateIt", "iter", "res");
 
             assertTrue("Unexpected result type " + res.getClass(), res instanceof LazyResult);
         }
@@ -115,6 +115,27 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Test must not hang on CREATE INDEX. Table lock must be not locked by opened lazy iterator of local query
+     * (was locked before fix).
+     * @throws Exception On error.
+     */
+    @Test
+    public void testTableUnlockOnNotFinishedQuery() throws Exception {
+        IgniteEx g0 = grid();
+        IgniteEx g1 = startGrid(0);
+
+        awaitPartitionMapExchange(true, true, null);
+
+        try (FieldsQueryCursor cur = sql(g0,"SELECT * FROM test")) {
+            Iterator<List<?>> it = cur.iterator();
+
+            it.next();
+
+            sqlDistrubuted(g1, "CREATE INDEX IDX_VAL ON TEST(VAL)");
+        }
+    }
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
@@ -132,6 +153,19 @@ public class LocalQueryLazyTest extends AbstractIndexingCommonTest {
     private FieldsQueryCursor<List<?>> sql(IgniteEx ign, String sql, Object ... args) {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLocal(true)
+            .setLazy(true)
+            .setSchema("TEST")
+            .setArgs(args), false);
+    }
+
+    /**
+     * @param ign Node.
+     * @param sql SQL query.
+     * @param args Query parameters.
+     * @return Results cursor.
+     */
+    private FieldsQueryCursor<List<?>> sqlDistrubuted(IgniteEx ign, String sql, Object ... args) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLazy(true)
             .setSchema("TEST")
             .setArgs(args), false);
