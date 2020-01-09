@@ -69,6 +69,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -2496,15 +2497,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         if (!rentingFutures.isEmpty()) {
             final AtomicInteger rentingPartitions = new AtomicInteger(rentingFutures.size());
 
-            for (IgniteInternalFuture<?> rentingFuture : rentingFutures) {
-                rentingFuture.listen(f -> {
+            IgniteInClosure c = new IgniteInClosure() {
+                @Override public void apply(Object o) {
                     int remaining = rentingPartitions.decrementAndGet();
 
                     if (remaining == 0) {
                         lock.writeLock().lock();
 
                         try {
-                            this.updateSeq.incrementAndGet();
+                            GridDhtPartitionTopologyImpl.this.updateSeq.incrementAndGet();
 
                             if (log.isDebugEnabled())
                                 log.debug("Partitions have been scheduled to resend [reason=" +
@@ -2516,8 +2517,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             lock.writeLock().unlock();
                         }
                     }
-                });
-            }
+                }
+            };
+
+            for (IgniteInternalFuture<?> rentingFuture : rentingFutures)
+                rentingFuture.listen(c);
         }
 
         return hasEvictedPartitions;
