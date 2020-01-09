@@ -31,7 +31,6 @@ public class DefaultQueryTimeoutThinJdbcTest extends DefaultQueryTimeoutTest {
     }
 
     @Override protected void executeQuery(String sql, long timeout) throws Exception {
-        // t0d0 JDBC url string timeout parameter
         try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1")) {
             JdbcThinStatement stmt = (JdbcThinStatement)conn.createStatement();
 

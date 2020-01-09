@@ -499,7 +499,7 @@ public class JdbcThinStatement implements Statement {
         if (timeout < 0)
             throw new SQLException("Invalid timeout value.");
 
-        timeout(timeout);
+        timeout(timeout * 1000);
     }
 
     /** {@inheritDoc} */
