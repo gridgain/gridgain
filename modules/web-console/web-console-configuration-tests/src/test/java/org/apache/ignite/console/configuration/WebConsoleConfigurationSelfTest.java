@@ -754,8 +754,11 @@ public class WebConsoleConfigurationSelfTest {
         cacheCfgProps.add("sqlIndexMaxInlineSize");
         cacheCfgProps.add("sqlOnheapCacheEnabled");
         cacheCfgProps.add("sqlOnheapCacheMaxSize");
-        cacheCfgProps.add("diskPageCompression");
-        cacheCfgProps.add("diskPageCompressionLevel");
+
+        // Page compression feature was disabled in GG-24666.
+        // cacheCfgProps.add("diskPageCompression");
+        // cacheCfgProps.add("diskPageCompressionLevel");
+
         cacheCfgProps.add("interceptor");
         cacheCfgProps.add("storeByValue");
         cacheCfgProps.add("eagerTtl");
