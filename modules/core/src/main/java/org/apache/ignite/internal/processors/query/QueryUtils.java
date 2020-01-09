@@ -45,6 +45,7 @@ import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
@@ -1606,6 +1607,11 @@ public class QueryUtils {
      */
     public static boolean removeField(QueryEntity entity, String alias) {
         return entity.getFields().remove(fieldNameByAlias(entity, alias)) != null;
+    }
+
+    public static void copyQueryTimeout(SqlFieldsQuery qry, int timeout, TimeUnit timeUnit) {
+        if (timeout >= 0)
+            qry.setTimeout(timeout, timeUnit);
     }
 
     /**

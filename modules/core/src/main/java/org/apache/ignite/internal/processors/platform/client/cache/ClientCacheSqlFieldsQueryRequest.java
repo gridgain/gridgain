@@ -82,8 +82,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheRequest {
                 .setCollocated(collocated)
                 .setLazy(lazy);
 
-        if (timeout >= 0)
-            qry.setTimeout(timeout, TimeUnit.MILLISECONDS);
+        QueryUtils.copyQueryTimeout(qry, timeout, TimeUnit.MILLISECONDS);
 
         this.qry = qry;
     }
