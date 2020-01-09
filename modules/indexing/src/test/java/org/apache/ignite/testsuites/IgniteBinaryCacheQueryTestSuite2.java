@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.cache.local.IgniteCacheLocalQueryDe
 import org.apache.ignite.internal.processors.cache.query.ScanQueryOffheapExpiryPolicySelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteChangingBaselineCacheQueryNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteStableBaselineCacheQueryNodeRestartsSelfTest;
+import org.apache.ignite.internal.processors.query.DefaultQueryTimeoutTestSuite;
 import org.apache.ignite.internal.processors.query.DmlBatchSizeDeadlockTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsCompareQueryTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlDistributedJoinSelfTest;
@@ -182,7 +183,9 @@ import org.junit.runners.Suite;
 
     SqlDataTypesCoverageTests.class,
 
-    IgniteCacheLocalQueryDefaultTimeoutSelfTest.class
+    IgniteCacheLocalQueryDefaultTimeoutSelfTest.class,
+
+    DefaultQueryTimeoutTestSuite.class
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }
