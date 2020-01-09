@@ -65,7 +65,6 @@ import org.apache.ignite.internal.util.StripedCompositeReadWriteLock;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -2449,42 +2448,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (stateChanged && log.isDebugEnabled()) {
                     log.debug("Partition has been scheduled for eviction (all affinity nodes are owners) " +
                         "[grp=" + grp.cacheOrGroupName() + ", p=" + part.id() + ", prevState=" + state0 + ", state=" + part.state() + "]");
-                }
-            }
-            else {
-                int ownerCnt = nodeIds.size();
-                int affCnt = affNodes.size();
-
-                if (ownerCnt > affCnt) { //TODO !!! we could loss all owners in such case. Should be fixed by GG-13223
-                    // Sort by node orders in ascending order.
-                    Collections.sort(nodes, CU.nodeComparator(true));
-
-                    int diff = nodes.size() - affCnt;
-
-                    for (int i = 0; i < diff; i++) {
-                        ClusterNode n = nodes.get(i);
-
-                        if (locId.equals(n.id())) {
-                            GridDhtPartitionState state0 = part.state();
-
-                            IgniteInternalFuture<?> rentFut = part.rent(false);
-
-                            rentingFutures.add(rentFut);
-
-                            updateSeq = updateLocal(part.id(), part.state(), updateSeq, aff.topologyVersion());
-
-                            boolean stateChanged = state0 != part.state();
-
-                            hasEvictedPartitions |= stateChanged;
-
-                            if (stateChanged && log.isDebugEnabled()) {
-                                log.debug("Partition has been scheduled for eviction (this node is oldest non-affinity node) " +
-                                    "[grp=" + grp.cacheOrGroupName() + ", p=" + part.id() + ", prevState=" + state0 + ", state=" + part.state() + "]");
-                            }
-
-                            break;
-                        }
-                    }
                 }
             }
         }
