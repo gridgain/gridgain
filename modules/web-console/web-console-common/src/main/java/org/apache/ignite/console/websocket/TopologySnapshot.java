@@ -289,11 +289,12 @@ public class TopologySnapshot {
             .map(n -> attribute(n.getAttributes(), ATTR_IGNITE_FEATURES))
             .filter(Objects::nonNull)
             .map(f -> {
-                // Real nodes will be stared inside Web Agent JVM in case of demo mode.
-                // Attribute with features will contain byte array.
+                // Demo  nodes will be stared inside Web Agent JVM.
+                // ATTR_IGNITE_FEATURES will be a byte array.
                 if (f instanceof byte[])
                     return BitSet.valueOf((byte[]) f);
 
+                // Otherwise it will be a Base64 encoded string.
                 return BitSet.valueOf(Base64.getDecoder().decode(f.toString()));
             })
             .collect(BitSet::new, (acc, f) -> {
