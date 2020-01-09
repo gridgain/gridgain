@@ -103,4 +103,15 @@ suite('Java transformer tests', () => {
 
         IgniteJavaTransformer.collectConfigurationImports(configuration);
     }).timeout(0);
+
+    test('Should generate properties initialisation code', () => {
+        const src = cloneDeep(testData.TEST_CONFIGURATION.src);
+
+        const targetVer = {ignite: '2.7.0'};
+
+        const sb = IgniteJavaTransformer.cluster(src, targetVer, 'config', 'ServerConfigurationFactory', []);
+
+        assert.include(sb.lines, 'import java.util.Properties;');
+        assert.include(sb.lines, '    private static final Properties props = new Properties();');
+    });
 });
