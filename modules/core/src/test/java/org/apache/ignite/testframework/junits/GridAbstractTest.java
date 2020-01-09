@@ -1153,7 +1153,16 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Additional JVM args for remote instances.
      */
     protected List<String> additionalRemoteJvmArgs() {
-        return Collections.emptyList();
+        List<String> jvmArgs = ManagementFactory.getRuntimeMXBean().getInputArguments();
+
+        List<String> result = new ArrayList<>();
+
+        for (String arg : jvmArgs) {
+            if (arg.startsWith("-DIGNITE_") || arg.startsWith("-DGG_"))
+                result.add(arg);
+        }
+
+        return result;
     }
 
     /**
