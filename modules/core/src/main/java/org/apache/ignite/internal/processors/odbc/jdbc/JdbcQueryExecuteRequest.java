@@ -61,11 +61,9 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
     /** Flag, that signals, that query expects partition response in response. */
     private boolean partResReq;
 
-    // t0d0 consider numeric value
-    private boolean timeout;
+    private boolean explicitTimeout;
 
-    /**
-     */
+    /** */
     JdbcQueryExecuteRequest() {
         super(QRY_EXEC);
 
@@ -82,7 +80,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
      * @param args Arguments list.
      */
     public JdbcQueryExecuteRequest(JdbcStatementType stmtType, String schemaName, int pageSize, int maxRows,
-        boolean autoCommit, boolean timeout, String sqlQry, Object[] args) {
+        boolean autoCommit, boolean explicitTimeout, String sqlQry, Object[] args) {
         super(QRY_EXEC);
 
         this.schemaName = F.isEmpty(schemaName) ? null : schemaName;
@@ -92,7 +90,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         this.args = args;
         this.stmtType = stmtType;
         this.autoCommit = autoCommit;
-        this.timeout = timeout;
+        this.explicitTimeout = explicitTimeout;
     }
 
     /**
@@ -170,7 +168,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             writer.writeBoolean(partResReq);
 
         if (ver.compareTo(VER_2_8_2) >= 0)
-            writer.writeBoolean(timeout);
+            writer.writeBoolean(explicitTimeout);
     }
 
     /** {@inheritDoc} */
@@ -207,7 +205,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             partResReq = reader.readBoolean();
 
         if (ver.compareTo(VER_2_8_2) >= 0)
-            timeout = reader.readBoolean();
+            explicitTimeout = reader.readBoolean();
     }
 
     /**
@@ -224,8 +222,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         this.partResReq = partResReq;
     }
 
-    public boolean isTimeout() {
-        return timeout;
+    public boolean explicitTimeout() {
+        return explicitTimeout;
     }
 
     /** {@inheritDoc} */
