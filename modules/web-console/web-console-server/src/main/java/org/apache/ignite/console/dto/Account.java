@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.console.notification.IRecipient;
-import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
@@ -77,10 +76,10 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** Latest activation token was sent at. */
     private LocalDateTime activationSentAt;
 
-    /** Failed attempts count. */
-    private int attemptsCnt;
+    /** Failed login attempts. */
+    private int failedLoginAttempts;
 
-    /** Time of last failed attempt. */
+    /** Time of last failed login attempt. */
     private long lastFailedLogin;
 
     /**
@@ -265,28 +264,28 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     }
 
     /**
-     * @param attemptsCnt New failed attempt count.
+     * @param attemptsCnt Failed login attempts.
      */
-    public void setAttemptsCount(int attemptsCnt) {
-        this.attemptsCnt = attemptsCnt;
+    public void setFailedLoginAttempts(int attemptsCnt) {
+        this.failedLoginAttempts = attemptsCnt;
     }
 
     /**
-     * @return Failed attempts count.
+     * @return Failed login attempts.
      */
-    public int getAttemptsCount() {
-        return attemptsCnt;
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
     }
 
     /**
-     * @return Time of last failed attempt.
+     * @return Time of last failed login attempt.
      */
     public long getLastFailedLogin() {
         return lastFailedLogin;
     }
 
     /**
-     * @param lastFailedLogin Time of last failed attempt.
+     * @param lastFailedLogin Time of last failed login attempt.
      */
     public void setLastFailedLogin(long lastFailedLogin) {
         this.lastFailedLogin = lastFailedLogin;
@@ -299,6 +298,14 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
         enabled = true;
         activationTok = null;
         activationSentAt = null;
+    }
+
+    /**
+     * Reset failed login attempts.
+     */
+    public void resetFailedLoginAttempts() {
+        failedLoginAttempts = 0;
+        lastFailedLogin = 0;
     }
 
     /**
@@ -357,21 +364,6 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** {@inheritDoc} */
     @Override public void eraseCredentials() {
         hashedPwd = null;
-    }
-
-    /**
-     * Update account fields.
-     *
-     * @param changes Changes.
-     */
-    public void update(ChangeUserRequest changes) {
-        email = changes.getEmail();
-        firstName = changes.getFirstName();
-        lastName = changes.getLastName();
-        phone = changes.getPhone();
-        country = changes.getCountry();
-        company = changes.getCompany();
-        tok = changes.getToken();
     }
 
     /** {@inheritDoc} */

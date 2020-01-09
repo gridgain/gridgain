@@ -59,7 +59,7 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
         if (authentication.getPrincipal() instanceof Account) {
             Account acc = (Account)authentication.getPrincipal();
 
-            int attemptsCnt = acc.getAttemptsCount();
+            int attemptsCnt = acc.getFailedLoginAttempts();
 
             if (attemptsCnt >= cfg.getMaxAttempts())
                 throw new LockedException(message("err.account-too-many-attempts"));
@@ -71,7 +71,7 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
                 long calculatedInterval = Math.min(attemptsInterval, cfg.getMaxInterval());
 
                 if (U.currentTimeMillis() - acc.getLastFailedLogin() < calculatedInterval) {
-                    acc.setAttemptsCount(attemptsCnt + 1);
+                    acc.setFailedLoginAttempts(attemptsCnt + 1);
                     acc.setLastFailedLogin(U.currentTimeMillis());
 
                     repo.save(acc);
@@ -79,7 +79,7 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
                     throw new LockedException(message("err.account-attempt-too-soon"));
                 }
 
-                acc.setAttemptsCount(0);
+                acc.setFailedLoginAttempts(0);
 
                 repo.save(acc);
             }
@@ -93,7 +93,7 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
         if (authentication.getPrincipal() instanceof String) {
             Account acc = repo.getByEmail((String)authentication.getPrincipal());
 
-            acc.setAttemptsCount(acc.getAttemptsCount() + 1);
+            acc.setFailedLoginAttempts(acc.getFailedLoginAttempts() + 1);
             acc.setLastFailedLogin(U.currentTimeMillis());
 
             repo.save(acc);

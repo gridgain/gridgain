@@ -107,7 +107,7 @@ public class AuthenticationTest extends AbstractSelfTest {
         acc.setToken(UUID.randomUUID().toString());
         acc.setEmail(email);
         acc.setPassword(encoder.encode("password"));
-        acc.setAttemptsCount(attemptsCnt);
+        acc.setFailedLoginAttempts(attemptsCnt);
         acc.setLastFailedLogin(lastFailedLogin);
 
         accountsRepo.save(acc);

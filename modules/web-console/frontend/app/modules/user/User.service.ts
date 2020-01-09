@@ -31,7 +31,9 @@ export type User = {
     lastActivity: string,
     lastLogin: string,
     registered: string,
-    token: string
+    token: string,
+    failedLoginAttempts: number,
+    lastFailedLogin: number
 } | null
 
 UserFactory.$inject = ['$q', '$injector', 'Demo', '$state', '$http', 'IgniteMessages'];

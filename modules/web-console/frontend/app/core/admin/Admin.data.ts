@@ -111,4 +111,18 @@ export default class IgniteAdminData {
             .then(({ data }) => data)
             .catch(({data}) => {throw data;});
     }
+
+    resetFailedAttempts(user: User) {
+        return this.$http
+            .patch(`/api/v1/admin/users/${user.id}`, {resetFailedSignInAttempts: true})
+            .then(() => {
+                user.failedLoginAttempts = 0;
+                user.lastFailedLogin = 0;
+
+                this.Messages.showInfo(`Login attempts were reset for the user: "${user.userName}"`);
+            })
+            .catch(({data}) => {
+                this.Messages.showError('Failed to reset login attempts for user: ', data);
+            });
+    }
 }

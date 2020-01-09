@@ -168,7 +168,7 @@ public class AdminControllerTest extends AbstractSelfTest {
 
         Account acc = adminSrvc.registerUser(req);
 
-        accountSrvc.toggle(acc.getId(), adminFlag);
+        adminSrvc.toggle(acc.getId(), adminFlag);
     }
 
     /**

@@ -341,9 +341,11 @@
                 "grantAdmin": "Grant admin",
                 "addUser": "Add user",
                 "removeUser": "Remove user",
-                "activityDetail": "Activity detail"
+                "activityDetail": "Activity detail",
+                "resetFailedLoginAttempts": "Reset failed login attempts"
             },
             "removeUserConfirmationMessage": "Are you sure you want to remove user: \"{{userName}}\"?",
+            "resetFailedAttemptsConfirmationMessage": "Are you sure you want to reset failed login attempts for user: \"{{userName}}\"?",
             "categoryDisplayNames": {
                 "user": "User",
                 "email": "Email",
@@ -352,6 +354,8 @@
                 "country": "Country",
                 "lastLogin": "Last login",
                 "lastActivity": "Last activity",
+                "failedLoginAttempts": "Failed login attempts",
+                "lastFailedLogin": "Last failed login",
                 "configurations": "Configurations",
                 "totalActivities": "Total activities",
                 "configurationActivities": "Configuration's activities",
@@ -383,6 +387,12 @@
                 },
                 "lastactivity": {
                     "title": "Last activity"
+                },
+                "failedLoginAttempts": {
+                    "title": "Failed login attempts"
+                },
+                "lastFailedLogin": {
+                    "title": "Last failed login attempt"
                 },
                 "cfg_clusters": {
                     "title": "Clusters count",

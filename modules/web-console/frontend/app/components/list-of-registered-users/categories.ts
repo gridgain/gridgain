@@ -14,17 +14,23 @@
  * limitations under the License.
  */
 
-export const categoriesFn = ($translate: ng.translate.ITranslateService) => [
-    {name: 'Actions', visible: false, enableHiding: false},
-    {name: 'User', visible: true, enableHiding: false},
-    {name: 'Email', visible: true, enableHiding: true},
-    {name: 'Activated', visible: false, enableHiding: true},
-    {name: 'Company', visible: true, enableHiding: true},
-    {name: 'Country', visible: true, enableHiding: true},
-    {name: 'Last login', visible: true, enableHiding: true},
-    {name: 'Last activity', visible: true, enableHiding: true},
-    {name: 'Configurations', visible: true, enableHiding: true},
-    {name: 'Total activities', visible: false, enableHiding: true},
-    {name: 'Configuration\'s activities', visible: false, enableHiding: true},
-    {name: 'Queries\' activities', visible: false, enableHiding: true}
-];
+export const categoriesFn = ($translate: ng.translate.ITranslateService) => {
+    const translate = (category) => $translate.instant('admin.listOfRegisteredUsers.categoryDisplayNames.' + category);
+
+    return [
+        {name: translate('Actions'), visible: false, enableHiding: false},
+        {name: translate('user'), visible: true, enableHiding: false},
+        {name: translate('email'), visible: true, enableHiding: true},
+        {name: translate('activated'), visible: false, enableHiding: true},
+        {name: translate('company'), visible: true, enableHiding: true},
+        {name: translate('country'), visible: true, enableHiding: true},
+        {name: translate('lastLogin'), visible: true, enableHiding: true},
+        {name: translate('lastActivity'), visible: true, enableHiding: true},
+        {name: translate('failedLoginAttempts'), visible: true, enableHiding: true},
+        {name: translate('lastFailedLogin'), visible: false, enableHiding: true},
+        {name: translate('configurations'), visible: true, enableHiding: true},
+        {name: translate('totalActivities'), visible: false, enableHiding: true},
+        {name: translate('configurationActivities'), visible: false, enableHiding: true},
+        {name: translate('queriesActivities'), visible: false, enableHiding: true}
+    ];
+};
