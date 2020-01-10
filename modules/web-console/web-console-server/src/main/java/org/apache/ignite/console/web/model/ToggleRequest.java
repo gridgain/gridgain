@@ -17,7 +17,6 @@
 package org.apache.ignite.console.web.model;
 
 import java.util.UUID;
-import javax.validation.constraints.NotNull;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.hibernate.validator.constraints.NotEmpty;
 

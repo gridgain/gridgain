@@ -315,5 +315,7 @@ public class AgentClusterDemo {
         initLatch = new CountDownLatch(1);
 
         initGuard.compareAndSet(true, false);
+
+        System.clearProperty(IGNITE_JETTY_PORT);
     }
 }

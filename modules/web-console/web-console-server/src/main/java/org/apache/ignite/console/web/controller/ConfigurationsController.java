@@ -54,6 +54,7 @@ public class ConfigurationsController {
 
     /**
      * Get full cluster object.
+     *
      * @param acc Account.
      * @param clusterId Cluster ID.
      */
@@ -68,6 +69,7 @@ public class ConfigurationsController {
 
     /**
      * Clusters short list.
+     *
      * @param acc Account.
      * @return Clusters short list.
      */
@@ -81,6 +83,7 @@ public class ConfigurationsController {
 
     /**
      * Get cluster configuration.
+     *
      * @param acc Account.
      * @param clusterId Cluster ID.
      * @return Cluster as JSON.
@@ -128,6 +131,7 @@ public class ConfigurationsController {
 
     /**
      * Get cache configuration.
+     *
      * @param acc Account.
      * @param cacheId Cache ID.
      */
@@ -142,6 +146,7 @@ public class ConfigurationsController {
 
     /**
      * Get model configuration.
+     * 
      * @param acc Account.
      * @param mdlId Model ID.
      */

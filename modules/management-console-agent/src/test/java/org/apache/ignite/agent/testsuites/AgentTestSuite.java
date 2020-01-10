@@ -38,6 +38,7 @@ import org.apache.ignite.agent.processor.ManagementConsoleSpanMessagesProcessorT
 import org.apache.ignite.agent.processor.export.EventsExporterTest;
 import org.apache.ignite.agent.processor.export.SpanExporterTest;
 import org.apache.ignite.agent.processor.metrics.MetricsProcessorTest;
+import org.apache.ignite.agent.utils.AgentUtilsTest;
 import org.apache.ignite.agent.ws.RetryableSenderTest;
 import org.apache.ignite.agent.ws.WebSocketManagerTest;
 import org.apache.ignite.agent.ws.WebSocketManagerTest.WebSocketManagerSSLTest;
@@ -72,6 +73,7 @@ import org.junit.runners.Suite;
     EventsExporterTest.class,
     SpanExporterTest.class,
     MetricsProcessorTest.class,
+    AgentUtilsTest.class,
     RetryableSenderTest.class,
     WebSocketManagerTest.class,
     WebSocketManagerSSLTest.class,

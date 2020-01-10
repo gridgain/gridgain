@@ -68,6 +68,7 @@ public class AccountController {
 
     /**
      * Get current user.
+     *
      * @param req Request wrapper.
      */
     @GetMapping(path = "/api/v1/user")
@@ -79,6 +80,7 @@ public class AccountController {
 
     /**
      * Register user.
+     *
      * @param params SignUp params.
      */
     @PostMapping(path = "/api/v1/signup")
@@ -123,6 +125,7 @@ public class AccountController {
 
     /**
      * Save user.
+     *
      * @param req Request wrapper.
      * @param acc Current user.
      * @param changes Changes to apply to user.
@@ -140,6 +143,7 @@ public class AccountController {
 
     /**
      * Send password reset token.
+     *
      * @param req Forgot password request.
      */
     @PostMapping(path = "/api/v1/password/forgot", consumes = APPLICATION_JSON_VALUE)
@@ -151,6 +155,7 @@ public class AccountController {
 
     /**
      * Reset user password.
+     *
      * @param req Reset password request.
      */
     @PostMapping(path = "/api/v1/password/reset")
@@ -162,6 +167,7 @@ public class AccountController {
 
     /**
      * Resend activation token.
+     *
      * @param req Forgot password request.
      */
     @PostMapping(path = "/api/v1/activation/resend", consumes = APPLICATION_JSON_VALUE)
