@@ -33,9 +33,9 @@ Creating NuGet package:
         <version>$version$</version>
         <authors>GridGain</authors>
         <owners>GridGain</owners>
-        <licenseUrl>https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license</licenseUrl>
+        <license type="file">LICENSE</license>
         <projectUrl>https://gridgain.com/</projectUrl>
-        <iconUrl>https://www.gridgain.com/sites/default/files/GG-logo64-01.png</iconUrl>
+        <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>
 LINQ Provider for GridGain Ignite
@@ -60,5 +60,11 @@ More info: https://docs.gridgain.com/
 
         <!-- LINQPad samples -->
         <file src="NuGet\LINQPad\*.*" target="linqpad-samples" />
+
+        <!-- Icon -->
+        <file src="..\logo_gg_64x64.png" target="images\" />
+
+        <!-- License -->
+        <file src="..\..\..\..\LICENSE" target="" />
     </files>
 </package>

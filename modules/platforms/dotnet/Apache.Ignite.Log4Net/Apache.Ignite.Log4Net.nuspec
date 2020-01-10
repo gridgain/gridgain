@@ -33,9 +33,9 @@ Creating NuGet package:
         <version>$version$</version>
         <authors>GridGain</authors>
         <owners>GridGain</owners>
-        <licenseUrl>https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license</licenseUrl>
+        <license type="file">LICENSE</license>
         <projectUrl>https://gridgain.com/</projectUrl>
-        <iconUrl>https://www.gridgain.com/sites/default/files/GG-logo64-01.png</iconUrl>
+        <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>log4net Logger for GridGain Ignite</description>
         <copyright>Copyright 2019</copyright>
@@ -48,5 +48,11 @@ Creating NuGet package:
     <files>
 	    <file src="bin\$configuration$\Apache.Ignite.Log4Net.dll" target="lib\net40" />
 		<file src="bin\$configuration$\Apache.Ignite.Log4Net.xml" target="lib\net40" />
+
+        <!-- Icon -->
+        <file src="..\logo_gg_64x64.png" target="images\" />
+
+        <!-- License -->
+        <file src="..\..\..\..\LICENSE" target="" />
     </files>
 </package>
