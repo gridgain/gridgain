@@ -20,7 +20,6 @@ import java.lang.reflect.Field;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,7 +65,6 @@ import org.h2.command.dml.Query;
 import org.h2.command.dml.Select;
 import org.h2.command.dml.SelectOrderBy;
 import org.h2.command.dml.SelectUnion;
-import org.h2.command.dml.Set;
 import org.h2.command.dml.Update;
 import org.h2.engine.Constants;
 import org.h2.engine.FunctionAlias;
@@ -864,39 +862,7 @@ public class GridSqlQueryParser {
 
         res.columns(cols);
 
-//        Column[] srcKeys = ;
-
         GridH2Table intoTbl = DmlAstUtils.gridTableForElement(tbl).dataTable();
-
-        GridH2RowDescriptor rowDesc = intoTbl.rowDescriptor();
-
-//        GridSqlColumn[] keys = new GridSqlColumn[srcKeys.length];
-
-//        java.util.Set<Integer> pkColIds = rowDesc.getPrimaryKeyColumnIds();
-
-//        boolean oneKeyColumn = F.isEmpty(pkColIds);
-//
-//        for (int i = 0; i < srcKeys.length; i++) {
-//            String colName = srcKeys[i].getName();
-//
-//            int colId = intoTbl.getColumn(colName).getColumnId();
-//
-//            // Single column key: hidden '_KEY' or affinity key column.
-//            if (oneKeyColumn && !rowDesc.isKeyColumn(colId) && !F.eq(colName, rowDesc.type().affinityKey()))
-//                throw new IgniteSQLException("Invalid column name in KEYS clause of MERGE - it may include only " +
-//                    "key and/or affinity columns: " + colName, IgniteQueryErrorCode.PARSING);
-//
-//            pkColIds.remove(colId);
-//
-//            keys[i] = new GridSqlColumn(srcKeys[i], tbl, null, null, colName);
-//        }
-//
-//        // Check that create PK may be created with merge keys.
-//        if (!oneKeyColumn && !F.isEmpty(pkColIds))
-//            throw new IgniteSQLException("Invalid column name in KEYS clause of MERGE - it may include only " +
-//                "key and/or affinity columns: " + Arrays.toString(srcKeys), IgniteQueryErrorCode.PARSING);
-//
-//        res.keys(keys);
 
         List<Expression[]> srcRows = COMMAND_WITH_VALUES_VALS_EXPRESSIONS.get(merge);
         if (!srcRows.isEmpty()) {
@@ -918,7 +884,7 @@ public class GridSqlQueryParser {
             res.rows(rows);
         }
         else {
-            res.rows(Collections.<GridSqlElement[]>emptyList());
+            res.rows(Collections.emptyList());
             res.query(parseQuery(MERGE_QUERY.get(merge)));
         }
 

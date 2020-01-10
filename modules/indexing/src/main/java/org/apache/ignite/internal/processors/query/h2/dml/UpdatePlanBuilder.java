@@ -271,7 +271,6 @@ public final class UpdatePlanBuilder {
             );
         }
 
-
         List<List<DmlArgument>> rows = null;
 
         if (elRows != null) {

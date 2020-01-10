@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.database.H2PkHashClientIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2PkHashIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
@@ -79,7 +78,7 @@ public class H2TableDescriptor {
     private GridLuceneIndex luceneIdx;
 
     /** */
-    private GridH2IndexBase pkHashIdx;
+    private H2PkHashIndex pkHashIdx;
 
     /** Flag of table has been created from SQL*/
     private boolean isSql;
@@ -439,11 +438,8 @@ public class H2TableDescriptor {
 
             return pkHashIdx;
         }
-        else {
-//            pkHashIdx = new H2PkHashClientIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols);
 
-            return pkHashIdx;
-        }
+        return null;
     }
 
     /**

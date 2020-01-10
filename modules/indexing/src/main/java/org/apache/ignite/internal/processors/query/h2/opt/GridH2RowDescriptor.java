@@ -17,11 +17,9 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
@@ -419,21 +417,5 @@ public class GridH2RowDescriptor {
         }
 
         return colId;
-    }
-
-    /**
-     * @return Primary key column IDs.
-     */
-    public Set<Integer> getPrimaryKeyColumnIds() {
-        Set<Integer> res = new HashSet<>();
-
-        for (int i = 0; i < fields.length; i++) {
-            GridQueryProperty p = type.property(fields[i]);
-
-            if (p.key())
-                res.add(i + QueryUtils.DEFAULT_COLUMNS_COUNT);
-        }
-
-        return res;
     }
 }

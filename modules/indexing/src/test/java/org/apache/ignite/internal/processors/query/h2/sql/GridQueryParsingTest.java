@@ -409,12 +409,6 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
         checkQuery("merge into SCH3.Person(_key, old, name) key(_key) values(?, 5, 'John')");
         checkQuery("merge into SCH3.Person(_key, id, old, name) key(_key, id) values(?, ?, 5, 'John')");
 
-        assertParseThrows("merge into Person(old, name) key(name) values(5, 'John')", IgniteSQLException.class,
-            "Invalid column name in KEYS clause of MERGE - it may include only key and/or affinity columns: NAME");
-        assertParseThrows("merge into SCH3.Person(id, stuff, old, name) key(stuff) values(1, 'x', 5, 'John')",
-            IgniteSQLException.class, "Invalid column name in KEYS clause of MERGE - it may include only key and/or " +
-                "affinity columns: [STUFF]");
-
         /* Subqueries. */
         checkQuery("merge into Person(old, name) select old, parentName from Person");
         checkQuery("merge into Person(old, name) select old, parentName from Person where old > 5");

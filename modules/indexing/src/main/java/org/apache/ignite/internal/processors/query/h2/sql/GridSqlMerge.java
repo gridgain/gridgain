@@ -26,9 +26,6 @@ public class GridSqlMerge extends GridSqlStatement {
     /** */
     private GridSqlColumn[] cols;
 
-//    /** */
-//    private GridSqlColumn[] keys;
-
     /** */
     private List<GridSqlElement[]> rows;
 
@@ -50,18 +47,6 @@ public class GridSqlMerge extends GridSqlStatement {
                 .append(cols[i].getSQL());
         }
         buff.append("\n)\n");
-
-//        if (keys != null) {
-//            buff.append("KEY(\n");
-//
-//            for (int i = 0; i < keys.length; i++) {
-//                if (i > 0)
-//                    buff.append(",\n");
-//
-//                buff.append(keys[i].getSQL());
-//            }
-//            buff.append(")\n");
-//        }
 
         if (!rows.isEmpty()) {
             buff.append("VALUES\n");
@@ -139,15 +124,4 @@ public class GridSqlMerge extends GridSqlStatement {
         this.cols = cols;
         return this;
     }
-
-//    /** */
-//    public GridSqlColumn[] keys() {
-//        return keys;
-//    }
-//
-//    /** */
-//    public GridSqlMerge keys(GridSqlColumn[] keys) {
-//        this.keys = keys;
-//        return this;
-//    }
 }
