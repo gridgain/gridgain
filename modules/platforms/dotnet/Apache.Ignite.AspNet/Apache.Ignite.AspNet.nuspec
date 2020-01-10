@@ -33,7 +33,7 @@ Creating NuGet package:
         <version>$version$</version>
         <authors>GridGain</authors>
         <owners>GridGain</owners>
-        <license type="file">LICENSE</license>
+        <license type="file">LICENSE.txt</license>
         <projectUrl>https://gridgain.com/</projectUrl>
         <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -60,6 +60,6 @@ More info: https://docs.gridgain.com/
         <file src="..\logo_gg_64x64.png" target="images\" />
         
         <!-- License -->
-        <file src="..\..\..\..\LICENSE" target="" />
+        <file src="..\..\..\..\LICENSE" target="LICENSE.txt" />
     </files>
 </package>
