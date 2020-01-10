@@ -64,6 +64,8 @@ public class GridLog4jCorrectFileNameTest extends GridCommonAbstractTest {
     /** */
     @After
     public void tearDown() {
+        stopAllGrids();
+
         if (appender != null) {
             Logger.getRootLogger().removeAppender(Log4jRollingFileAppender.class.getSimpleName());
 
