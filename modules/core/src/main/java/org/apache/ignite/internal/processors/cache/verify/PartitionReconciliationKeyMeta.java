@@ -62,4 +62,11 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
     public String stringView(boolean verbose) {
         return verbose ? strView + " hex=[" + U.byteArray2HexString(binaryView) + ']' : HIDDEN_DATA;
     }
+
+    /**
+     * @return Binary view.
+     */
+    public byte[] binaryView() {
+        return binaryView;
+    }
 }

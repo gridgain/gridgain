@@ -178,4 +178,129 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     public double loadFactor() {
         return loadFactor;
     }
+
+    /**
+     * Builder class for test purposes.
+     */
+    public static class Builder {
+        /** Caches. */
+        private Set<String> caches;
+
+        /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
+        private boolean fixMode;
+
+        /** Print result to console. */
+        private boolean console;
+
+        /** If {@code true} - print data to result with sensitive information: keys and values. */
+        private boolean verbose;
+
+        /** Percent of system loading from 0 to 1. */
+        private double loadFactor;
+
+        /** Amount of keys to retrieve within one job. */
+        private int batchSize;
+
+        /** Amount of potentially inconsistent keys recheck attempts. */
+        private int recheckAttempts;
+
+        /**
+         * Specifies which fix algorithm to use: options {@code PartitionReconciliationRepairMeta.RepairAlg} while
+         * repairing doubtful keys.
+         */
+        private RepairAlgorithm repairAlg;
+
+        /**
+         * Default constructor.
+         */
+        public Builder() {
+            caches = null;
+            fixMode = false;
+            console = true;
+            verbose = true;
+            loadFactor = 1.0;
+            batchSize = 100;
+            recheckAttempts = 2;
+        }
+
+        /**
+         * Build metod.
+         */
+        public VisorPartitionReconciliationTaskArg build() {
+            return new VisorPartitionReconciliationTaskArg(
+                caches, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg);
+        }
+
+        /**
+         * @param caches New caches.
+         */
+        public Builder caches(Set<String> caches) {
+            this.caches = caches;
+
+            return this;
+        }
+
+        /**
+         * @param fixMode New if  - Partition Reconciliation&Fix: update from Primary partition.
+         */
+        public Builder fixMode(boolean fixMode) {
+            this.fixMode = fixMode;
+
+            return this;
+        }
+
+        /**
+         * @param console New print result to console.
+         */
+        public Builder console(boolean console) {
+            this.console = console;
+
+            return this;
+        }
+
+        /**
+         * @param verbose New if  - print data to result with sensitive information: keys and values.
+         */
+        public Builder verbose(boolean verbose) {
+            this.verbose = verbose;
+
+            return this;
+        }
+
+        /**
+         * @param loadFactor New percent of system loading from 0 to 1.
+         */
+        public Builder loadFactor(double loadFactor) {
+            this.loadFactor = loadFactor;
+
+            return this;
+        }
+
+        /**
+         * @param batchSize New amount of keys to retrieve within one job.
+         */
+        public Builder batchSize(int batchSize) {
+            this.batchSize = batchSize;
+
+            return this;
+        }
+
+        /**
+         * @param recheckAttempts New amount of potentially inconsistent keys recheck attempts.
+         */
+        public Builder recheckAttempts(int recheckAttempts) {
+            this.recheckAttempts = recheckAttempts;
+
+            return this;
+        }
+
+        /**
+         * @param repairAlg New specifies which fix algorithm to use: options  while repairing doubtful keys.
+         */
+        public Builder repairAlg(RepairAlgorithm repairAlg) {
+            this.repairAlg = repairAlg;
+
+            return this;
+        }
+    }
 }

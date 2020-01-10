@@ -83,7 +83,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         "batchSize: %s, recheckAttempts: %s, parallelismLevel: %s, caches: %s].";
 
     /** Recheck delay seconds. */
-    private static final int RECHECK_DELAY = 10;
+    private static final int RECHECK_DELAY = 1;
 
     /** Caches. */
     private final Collection<String> caches;
