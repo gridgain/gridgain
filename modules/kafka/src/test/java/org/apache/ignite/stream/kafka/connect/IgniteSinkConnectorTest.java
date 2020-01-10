@@ -26,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
@@ -128,7 +129,8 @@ public class IgniteSinkConnectorTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        IgniteConfiguration cfg = loadConfiguration("modules/kafka/src/test/resources/example-ignite.xml");
+        IgniteConfiguration cfg = Ignition.loadSpringBean(
+            "modules/kafka/src/test/resources/example-ignite.xml", "ignite.cfg");
 
         cfg.setClientMode(false);
 

@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -112,7 +113,8 @@ public class GridCacheDhtPreloadMultiThreadedSelfTest extends GridCommonAbstract
             multithreadedAsync(
                 new Callable<Object>() {
                     @Nullable @Override public Object call() throws Exception {
-                        IgniteConfiguration cfg = loadConfiguration("modules/core/src/test/config/spring-multicache.xml");
+                        IgniteConfiguration cfg = Ignition.loadSpringBean(
+                            "modules/core/src/test/config/spring-multicache.xml", "grid.cfg");
 
                         cfg.setGridLogger(getTestResources().getLogger());
 
@@ -143,7 +145,14 @@ public class GridCacheDhtPreloadMultiThreadedSelfTest extends GridCommonAbstract
                     @Nullable @Override public Object call() throws Exception {
                         String igniteInstanceName = "grid-" + Thread.currentThread().getName();
 
-                        startGrid(igniteInstanceName, "modules/core/src/test/config/example-cache.xml");
+                        IgniteConfiguration cfg = Ignition.loadSpringBean(
+                            "modules/core/src/test/config/example-cache.xml", "grid.cfg");
+
+                        cfg.setFailureHandler(getFailureHandler(igniteInstanceName));
+
+                        cfg.setGridLogger(getTestResources().getLogger());
+
+                        startGrid(igniteInstanceName, cfg);
 
                         // Immediately stop the grid.
                         stopGrid(igniteInstanceName);
@@ -162,7 +171,8 @@ public class GridCacheDhtPreloadMultiThreadedSelfTest extends GridCommonAbstract
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = loadConfiguration("modules/core/src/test/config/spring-multicache.xml");
+        IgniteConfiguration cfg = Ignition.loadSpringBean(
+            "modules/core/src/test/config/spring-multicache.xml", "grid.cfg");
 
         cfg.setGridLogger(getTestResources().getLogger());
 

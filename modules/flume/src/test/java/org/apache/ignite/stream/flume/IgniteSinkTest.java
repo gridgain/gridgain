@@ -27,6 +27,7 @@ import org.apache.flume.conf.Configurables;
 import org.apache.flume.event.EventBuilder;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
@@ -51,7 +52,8 @@ public class IgniteSinkTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSink() throws Exception {
-        IgniteConfiguration cfg = loadConfiguration("modules/flume/src/test/resources/example-ignite.xml");
+        IgniteConfiguration cfg = Ignition.loadSpringBean(
+            "modules/flume/src/test/resources/example-ignite.xml", "ignite.cfg");
 
         cfg.setClientMode(false);
 

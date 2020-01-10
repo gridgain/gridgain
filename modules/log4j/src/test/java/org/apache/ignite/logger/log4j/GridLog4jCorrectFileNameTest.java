@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.common.GridCommonTest;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -41,7 +42,7 @@ import static org.junit.Assert.assertTrue;
  * Tests that several grids log to files with correct names.
  */
 @GridCommonTest(group = "Logger")
-public class GridLog4jCorrectFileNameTest {
+public class GridLog4jCorrectFileNameTest extends GridCommonAbstractTest {
     /** Appender */
     private Log4jRollingFileAppender appender;
 
@@ -110,22 +111,11 @@ public class GridLog4jCorrectFileNameTest {
      * @param igniteInstanceName Ignite instance name.
      * @return Grid configuration.
      */
-    private static IgniteConfiguration getConfiguration(String igniteInstanceName) {
-        IgniteConfiguration cfg = new IgniteConfiguration();
+    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setIgniteInstanceName(igniteInstanceName);
         cfg.setGridLogger(new Log4JLogger());
         cfg.setConnectorConfiguration(null);
-
-        TcpDiscoverySpi disco = new TcpDiscoverySpi();
-
-        TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder(false);
-
-        ipFinder.setAddresses(Collections.singleton("127.0.0.1:47500..47502"));
-
-        disco.setIpFinder(ipFinder);
-
-        cfg.setDiscoverySpi(disco);
 
         return cfg;
     }

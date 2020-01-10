@@ -138,9 +138,6 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.FileSystemXmlApplicationContext;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ALLOW_ATOMIC_OPS_IN_TX;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
@@ -1430,26 +1427,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
-     * Starts grid using provided Ignite instance name and spring config location.
-     * <p>
-     * Note that grids started this way should be stopped with {@code G.stop(..)} methods.
-     *
-     * @param igniteInstanceName Ignite instance name.
-     * @param springCfgPath Path to config file.
-     * @return Grid Started grid.
-     * @throws Exception If failed.
-     */
-    protected Ignite startGrid(String igniteInstanceName, String springCfgPath) throws Exception {
-        IgniteConfiguration cfg = loadConfiguration(springCfgPath);
-
-        cfg.setFailureHandler(getFailureHandler(igniteInstanceName));
-
-        cfg.setGridLogger(getTestResources().getLogger());
-
-        return startGrid(igniteInstanceName, cfg);
-    }
-
-    /**
      * Starts grid using provided Ignite instance name and config.
      * <p>
      * Note that grids started this way should be stopped with {@code G.stop(..)} methods.
@@ -1466,57 +1443,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             return G.start(cfg);
         else
             return startRemoteGrid(igniteInstanceName, cfg, null);
-    }
-
-    /**
-     * Loads configuration from the given Spring XML file.
-     *
-     * @param springCfgPath Path to file.
-     * @return Grid configuration.
-     * @throws IgniteCheckedException If load failed.
-     */
-    @SuppressWarnings("deprecation")
-    protected IgniteConfiguration loadConfiguration(String springCfgPath) throws IgniteCheckedException {
-        URL cfgLocation = U.resolveIgniteUrl(springCfgPath);
-
-        if (cfgLocation == null)
-            cfgLocation = U.resolveIgniteUrl(springCfgPath, false);
-
-        assert cfgLocation != null;
-
-        ApplicationContext springCtx;
-
-        try {
-            springCtx = new FileSystemXmlApplicationContext(cfgLocation.toString());
-        }
-        catch (BeansException e) {
-            throw new IgniteCheckedException("Failed to instantiate Spring XML application context.", e);
-        }
-
-        Map cfgMap;
-
-        try {
-            // Note: Spring is not generics-friendly.
-            cfgMap = springCtx.getBeansOfType(IgniteConfiguration.class);
-        }
-        catch (BeansException e) {
-            throw new IgniteCheckedException("Failed to instantiate bean [type=" + IgniteConfiguration.class + ", err=" +
-                e.getMessage() + ']', e);
-        }
-
-        if (cfgMap == null)
-            throw new IgniteCheckedException("Failed to find a single grid factory configuration in: " + springCfgPath);
-
-        if (cfgMap.isEmpty())
-            throw new IgniteCheckedException("Can't find grid factory configuration in: " + springCfgPath);
-        else if (cfgMap.size() > 1)
-            throw new IgniteCheckedException("More than one configuration provided for cache load test: " + cfgMap.values());
-
-        IgniteConfiguration cfg = (IgniteConfiguration)cfgMap.values().iterator().next();
-
-        cfg.setNodeId(UUID.randomUUID());
-
-        return cfg;
     }
 
     /**
