@@ -440,7 +440,7 @@ public class H2TableDescriptor {
             return pkHashIdx;
         }
         else {
-            pkHashIdx = new H2PkHashClientIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols);
+//            pkHashIdx = new H2PkHashClientIndex(cacheInfo.cacheContext(), tbl, PK_HASH_IDX_NAME, cols);
 
             return pkHashIdx;
         }

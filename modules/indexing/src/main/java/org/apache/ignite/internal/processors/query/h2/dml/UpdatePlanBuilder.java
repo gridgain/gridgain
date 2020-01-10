@@ -147,8 +147,13 @@ public final class UpdatePlanBuilder {
 
         List<GridSqlElement[]> elRows = null;
 
+        UpdateMode mode;
+
         if (stmt instanceof GridSqlInsert) {
+            mode = UpdateMode.INSERT;
+
             GridSqlInsert ins = (GridSqlInsert) stmt;
+
             target = ins.into();
 
             tbl = DmlAstUtils.gridTableForElement(target);
@@ -170,6 +175,8 @@ public final class UpdatePlanBuilder {
             rowsNum = isTwoStepSubqry ? 0 : ins.rows().size();
         }
         else if (stmt instanceof GridSqlMerge) {
+            mode = UpdateMode.MERGE;
+
             GridSqlMerge merge = (GridSqlMerge) stmt;
 
             target = merge.into();
@@ -264,7 +271,6 @@ public final class UpdatePlanBuilder {
             );
         }
 
-        UpdateMode mode = stmt instanceof GridSqlMerge ? UpdateMode.MERGE : UpdateMode.INSERT;
 
         List<List<DmlArgument>> rows = null;
 

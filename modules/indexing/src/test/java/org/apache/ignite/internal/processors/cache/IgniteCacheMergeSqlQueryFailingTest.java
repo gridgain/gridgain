@@ -47,9 +47,17 @@ public class IgniteCacheMergeSqlQueryFailingTest extends IgniteCacheAbstractInse
             "MERGE INTO USERPUBSTATICDATA(BOOK, DESK, TRADERS, REGION, LOB, EXCLUDE, TRANSIT, MAPBOOKTOTHISBOOK) " +
                 "VALUES('CADOIS', 'FRT TOR', 'Robin Das/Dave Carlson', 'Toronto', 'FRT', null, null, 'CADOIS');").setSchema("PUBLIC"));
 
+        srvCache.query(new SqlFieldsQuery(
+            "MERGE INTO USERPUBSTATICDATA(BOOK, DESK, TRADERS, REGION, LOB, EXCLUDE, TRANSIT, MAPBOOKTOTHISBOOK) " +
+                "VALUES('CADOIS', 'FRT TOR 1', 'Robin Das/Dave Carlson 1', 'Toronto', 'FRT', null, null, 'CADOIS');").setSchema("PUBLIC"));
+
         clientCache.query(new SqlFieldsQuery(
             "MERGE INTO USERPUBSTATICDATA(BOOK, DESK, TRADERS, REGION, LOB, EXCLUDE, TRANSIT, MAPBOOKTOTHISBOOK) " +
                 "VALUES('CADOIS', 'FRT TOR', 'Robin Das/Dave Carlson 2', 'Toronto', 'FRT', null, null, 'CADOIS');").setSchema("PUBLIC"));
+
+        clientCache.query(new SqlFieldsQuery(
+            "MERGE INTO USERPUBSTATICDATA(BOOK, TRADERS, REGION, LOB, EXCLUDE, TRANSIT, MAPBOOKTOTHISBOOK) " +
+                "VALUES('CADOIS', 'Robin Das/Dave Carlson 2', 'Toronto', 'FRT', null, null, 'CADOIS');").setSchema("PUBLIC"));
 
         List<List<?>> res = clientCache.query(
             new SqlFieldsQuery("SELECT TRADERS FROM USERPUBSTATICDATA WHERE BOOK='CADOIS'").setSchema("PUBLIC")).getAll();
