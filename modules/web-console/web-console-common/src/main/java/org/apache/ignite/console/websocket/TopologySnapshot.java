@@ -48,6 +48,9 @@ import static org.apache.ignite.internal.visor.util.VisorTaskUtils.splitAddresse
  * Topology snapshot POJO.
  */
 public class TopologySnapshot {
+    /** */
+    private static final byte[] NO_FEATURES = new byte[0];
+
     /** Optional Ignite cluster ID. */
     private static final String IGNITE_CLUSTER_ID = "IGNITE_CLUSTER_ID";
 
@@ -280,12 +283,20 @@ public class TopologySnapshot {
      */
     private byte[] supportedFeatures(Collection<GridClientNodeBean> nodes) {
         if (F.isEmpty(nodes))
-            return new byte[0];
+            return NO_FEATURES;
 
         return nodes.stream()
             .map(n -> attribute(n.getAttributes(), ATTR_IGNITE_FEATURES))
             .filter(Objects::nonNull)
-            .map(f -> BitSet.valueOf(Base64.getDecoder().decode(f.toString())))
+            .map(f -> {
+                // Demo nodes will be stared inside Web Agent JVM.
+                // ATTR_IGNITE_FEATURES will be a byte array.
+                if (f instanceof byte[])
+                    return BitSet.valueOf((byte[]) f);
+
+                // Otherwise it will be a Base64 encoded string.
+                return BitSet.valueOf(Base64.getDecoder().decode(f.toString()));
+            })
             .collect(BitSet::new, (acc, f) -> {
                 if (acc.isEmpty())
                     acc.or(f);
