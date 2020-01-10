@@ -28,8 +28,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteCompute;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
+import org.apache.ignite.compute.ComputeTaskFuture;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
@@ -57,18 +59,22 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.testframework.GridTestNode;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -250,13 +256,43 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
+     * Check that passing -load_factor parameter actually affects maximum number of simultaneously executing tasks.
+     */
+    @Test
+    public void testLoadFactorChangeMaxCountOfExecutedTasks() throws Exception {
+        testParallelismLevel(1);
+
+        testParallelismLevel(10);
+
+        testParallelismLevel(50);
+    }
+
+    /**
+     *
+     */
+    private void testParallelismLevel(int parallelismLevel) throws IgniteCheckedException {
+        MockedProcessor processor = MockedProcessor.create(true, parallelismLevel);
+
+        for (int i = 0; i < 100; i++)
+            processor.addTask(new Batch(DEFAULT_CACHE, PARTITION_ID, null));
+
+        Thread tp = new Thread(processor::execute);
+
+        tp.start();
+
+        assertTrue(GridTestUtils.waitForCondition(() -> tp.getState() == Thread.State.WAITING, 10_000));
+
+        verify(processor.ignite, times(parallelismLevel)).compute(any());
+    }
+
+    /**
      *
      */
     private static class MockedProcessor extends PartitionReconciliationProcessor {
         /**
          *
          */
-        private final AbstractPipelineProcessor mock = Mockito.mock(AbstractPipelineProcessor.class);
+        private final AbstractPipelineProcessor mock = mock(AbstractPipelineProcessor.class);
 
         /**
          *
@@ -273,47 +309,66 @@ public class PartitionReconciliationProcessorTest {
         /**
          *
          */
+        public static MockedProcessor create(boolean fixMode, int parallelismLevel) throws IgniteCheckedException {
+            return create(fixMode, Collections.emptyList(), parallelismLevel);
+        }
+
+        /**
+         *
+         */
         public static MockedProcessor create(boolean fixMode, List<UUID> nodeIds) throws IgniteCheckedException {
+            return create(fixMode, nodeIds, 0);
+        }
+
+        /**
+         *
+         */
+        public static MockedProcessor create(boolean fixMode, List<UUID> nodeIds,
+            int parallelismLevel) throws IgniteCheckedException {
             List<ClusterNode> nodes = new ArrayList<>();
 
             for (UUID nodeId : nodeIds)
                 nodes.add(new GridTestNode(nodeId));
 
-            GridCachePartitionExchangeManager exchMgr = Mockito.mock(GridCachePartitionExchangeManager.class);
-            GridDhtPartitionsExchangeFuture fut = Mockito.mock(GridDhtPartitionsExchangeFuture.class);
+            GridCachePartitionExchangeManager exchMgr = mock(GridCachePartitionExchangeManager.class);
+            GridDhtPartitionsExchangeFuture fut = mock(GridDhtPartitionsExchangeFuture.class);
 
             when(fut.get()).thenReturn(new AffinityTopologyVersion());
             when(exchMgr.lastTopologyFuture()).thenReturn(fut);
             when(exchMgr.lastAffinityChangedTopologyVersion(any())).thenReturn(new AffinityTopologyVersion());
 
-            IgniteEx igniteMock = Mockito.mock(IgniteEx.class);
+            IgniteEx igniteMock = mock(IgniteEx.class);
 
             when(igniteMock.log()).thenReturn(new NullLogger());
 
-            GridKernalContext ctxMock = Mockito.mock(GridKernalContext.class);
+            GridKernalContext ctxMock = mock(GridKernalContext.class);
 
-            DiagnosticProcessor diagnosticProcessorMock = Mockito.mock(DiagnosticProcessor.class);
+            DiagnosticProcessor diagnosticProcessorMock = mock(DiagnosticProcessor.class);
             when(diagnosticProcessorMock.getReconciliationSessionId()).thenReturn(SESSION_ID);
             when(ctxMock.diagnostic()).thenReturn(diagnosticProcessorMock);
 
             when(igniteMock.context()).thenReturn(ctxMock);
 
-            IgniteInternalCache cacheMock = Mockito.mock(IgniteInternalCache.class);
+            IgniteInternalCache cacheMock = mock(IgniteInternalCache.class);
             when(igniteMock.cachex(anyString())).thenReturn(cacheMock);
 
-            GridCacheContext cacheCtxMock = Mockito.mock(GridCacheContext.class);
+            GridCacheContext cacheCtxMock = mock(GridCacheContext.class);
             when(cacheMock.context()).thenReturn(cacheCtxMock);
 
-            GridDhtPartitionTopology topMock = Mockito.mock(GridDhtPartitionTopology.class);
+            GridDhtPartitionTopology topMock = mock(GridDhtPartitionTopology.class);
             when(cacheCtxMock.topology()).thenReturn(topMock);
 
             when(topMock.owners(anyInt(), any())).thenReturn(nodes);
 
-            IgniteClusterEx clusterMock = Mockito.mock(IgniteClusterEx.class);
+            IgniteClusterEx clusterMock = mock(IgniteClusterEx.class);
             when(clusterMock.nodes()).thenReturn(nodes);
             when(igniteMock.cluster()).thenReturn(clusterMock);
 
-            return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, 0,
+            IgniteCompute igniteComputeMock = mock(IgniteCompute.class);
+            when(igniteComputeMock.executeAsync(any(Class.class), any())).thenReturn(mock(ComputeTaskFuture.class));
+            when(igniteMock.compute(any())).thenReturn(igniteComputeMock);
+
+            return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, parallelismLevel,
                 10, MAX_RECHECK_ATTEMPTS);
         }
 
@@ -322,9 +377,9 @@ public class PartitionReconciliationProcessorTest {
          */
         public MockedProcessor(IgniteEx ignite,
             GridCachePartitionExchangeManager<Object, Object> exchMgr,
-            Collection<String> caches, boolean fixMode, int throttlingIntervalMillis, int batchSize,
+            Collection<String> caches, boolean fixMode, int parallelismLevel, int batchSize,
             int recheckAttempts) throws IgniteCheckedException {
-            super(SESSION_ID, ignite, exchMgr, caches, fixMode, throttlingIntervalMillis, batchSize, recheckAttempts, RepairAlgorithm.MAJORITY);
+            super(SESSION_ID, ignite, exchMgr, caches, fixMode, parallelismLevel, batchSize, recheckAttempts, RepairAlgorithm.MAJORITY);
         }
 
         /** {@inheritDoc} */
@@ -332,12 +387,17 @@ public class PartitionReconciliationProcessorTest {
         protected <T extends CachePartitionRequest, R> void compute(
             Class<? extends ComputeTask<T, ExecutionResult<R>>> taskCls, T arg,
             IgniteInClosure<? super R> lsnr) throws InterruptedException {
-            ExecutionResult<R> res = (ExecutionResult<R>)computeResults.get(taskCls);
 
-            if (res == null)
-                throw new IllegalStateException("Please add result for: " + taskCls.getSimpleName());
+            if (this.parallelismLevel == 0) {
+                ExecutionResult<R> res = (ExecutionResult<R>)computeResults.get(taskCls);
 
-            lsnr.apply(res.getResult());
+                if (res == null)
+                    throw new IllegalStateException("Please add result for: " + taskCls.getSimpleName());
+
+                lsnr.apply(res.getResult());
+            }
+            else
+                super.compute(taskCls, arg, lsnr);
         }
 
         /** {@inheritDoc} */

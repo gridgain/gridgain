@@ -22,10 +22,11 @@ import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -70,7 +71,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         VisorPartitionReconciliationTaskArg arg) throws IgniteException {
-        consoleMode  = arg.console();
+        consoleMode = arg.console();
 
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
@@ -160,8 +161,25 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         /** {@inheritDoc} */
         @Override public T2<String, ExecutionResult<PartitionReconciliationResult>> execute() throws IgniteException {
-            Collection<String> caches = reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty() ?
-                ignite.context().cache().publicCacheNames() : reconciliationTaskArg.caches();
+            Set<String> caches = new HashSet<>();
+
+            if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
+                caches.addAll(ignite.context().cache().publicCacheNames());
+            else {
+                for (String cacheRegexp : reconciliationTaskArg.caches()) {
+                    List<String> acceptedCaches = new ArrayList<>();
+
+                    for (String cacheName : ignite.context().cache().publicCacheNames()) {
+                        if (cacheName.matches(cacheRegexp))
+                            acceptedCaches.add(cacheName);
+                    }
+
+                    if (acceptedCaches.isEmpty())
+                        return new T2<>(null, new ExecutionResult<>(new PartitionReconciliationResultMeta(),"The cache '" + cacheRegexp + "' doesn't exist."));
+
+                    caches.addAll(acceptedCaches);
+                }
+            }
 
             try {
                 ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(

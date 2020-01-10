@@ -64,7 +64,7 @@ public class AbstractPipelineProcessor {
     /**
      *
      */
-    private final int parallelismLevel;
+    protected final int parallelismLevel;
 
     /**
      *

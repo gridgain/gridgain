@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.io.File.separatorChar;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
 
 /**
  *
@@ -55,6 +56,10 @@ public class ConsistencyCheckUtils {
      */
     public static final String RECONCILIATION_DIR = "reconciliation";
 
+    /**
+     *
+     */
+    public static final String  AVAILABLE_PROCESSORS_RECONCILIATION = "AVAILABLE_PROCESSORS_RECONCILIATION";
 
     /** Time formatter for log file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss_SSS");
@@ -233,7 +238,7 @@ public class ConsistencyCheckUtils {
         for (String cache : caches)
             totalBackupCnt += (ignite.cachex(cache).configuration().getBackups() + 1);
 
-        int cpus = Math.max(4, Runtime.getRuntime().availableProcessors());
+        int cpus = Math.max(4, getInteger(AVAILABLE_PROCESSORS_RECONCILIATION, Runtime.getRuntime().availableProcessors()));
 
         return Math.max(1, (int)((loadFactor * cpus) / ((double)totalBackupCnt / caches.size())));
     }

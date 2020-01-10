@@ -16,13 +16,24 @@
 
 package org.apache.ignite.util;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.logging.Formatter;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -42,6 +53,7 @@ import org.junit.Test;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.SESSION_CHANGE_MSG;
+import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.AVAILABLE_PROCESSORS_RECONCILIATION;
 
 // TODO: 26.12.19 Add to appropriate suites.
 
@@ -69,6 +81,8 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         super.afterTestsStopped();
 
         stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /**
@@ -99,7 +113,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
             "MAJORITY", "--recheck-attempts", "100000")));
 
-        assertTrue(GridTestUtils.waitForCondition(() ->  reconciliationSessionId() != 0, 10_000));
+        assertTrue(GridTestUtils.waitForCondition(() -> reconciliationSessionId() != 0, 10_000));
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation_cancel"));
 
@@ -125,6 +139,164 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg", "MAJORITY", "--recheck-attempts", "1"));
 
         assertTrue(lsnr.check(10_000));
+    }
+
+    /**
+     * Check that passing -load_factor parameter actually affects maximum number of simultaneously executing tasks.
+     */
+    @Test
+    public void testLoadFactorAffectValuesInProcessor() throws Exception {
+        String regexp = "Partition reconciliation started.*parallelismLevel: %s.*";
+        LogListener lsnrOneLevel = LogListener.matches(s -> s.matches(String.format(regexp, 1))).atLeast(1).build();
+        log.registerListener(lsnrOneLevel);
+
+        LogListener lsnrTwoLevel = LogListener.matches(s -> s.matches(String.format(regexp, 2))).atLeast(1).build();
+        log.registerListener(lsnrTwoLevel);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        ignite.getOrCreateCache(new CacheConfiguration<>("100_backups").setBackups(100));
+
+        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "4");
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--load-factor", "0.0001"));
+        assertTrue(lsnrOneLevel.check(10_000));
+
+        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "120");
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--load-factor", "1"));
+        assertTrue(lsnrTwoLevel.check(10_000));
+
+        System.clearProperty(AVAILABLE_PROCESSORS_RECONCILIATION);
+    }
+
+    /**
+     * Check that utility works only with specified subset of caches in case parameter is set
+     */
+    @Test
+    public void testWorkWithSubsetOfCaches() throws Exception {
+        Set<String> usedCaches = new HashSet<>();
+        LogListener lsnr = fillCacheNames(usedCaches);
+        log.registerListener(lsnr);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        for (int i = 1; i <= 3; i++)
+            ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "default, default3"));
+
+        assertTrue(lsnr.check(10_000));
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("default", "default3")));
+        assertEquals(usedCaches.size(), 2);
+    }
+
+    /**
+     * Check that utility works only with specified subset of caches in case parameter is set, using regexp.
+     */
+    @Test
+    public void testWorkWithSubsetOfCachesByRegexp() throws Exception {
+        Set<String> usedCaches = new HashSet<>();
+        LogListener lsnr = fillCacheNames(usedCaches);
+        log.registerListener(lsnr);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        for (int i = 1; i <= 3; i++)
+            ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "default.*"));
+
+        assertTrue(lsnr.check(10_000));
+
+        assertTrue(usedCaches.containsAll(Arrays.asList("default", "default1", "default2", "default3")));
+        assertEquals(usedCaches.size(), 4);
+    }
+
+    /**
+     * Tests that utility will started with all available user caches.
+     */
+    @Test
+    public void testWorkWithAllSetOfCachesIfParameterAbsent() throws Exception {
+        Set<String> usedCaches = new HashSet<>();
+        LogListener lsnr = fillCacheNames(usedCaches);
+        log.registerListener(lsnr);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        List<String> setOfCaches = new ArrayList<>();
+        setOfCaches.add(DEFAULT_CACHE_NAME);
+
+        for (int i = 1; i <= 3; i++)
+            setOfCaches.add(ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i).getName());
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation"));
+
+        assertTrue(lsnr.check(10_000));
+
+        assertTrue(usedCaches.containsAll(setOfCaches));
+        assertEquals(usedCaches.size(), setOfCaches.size());
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testWrongCacheNameTerminatesOperation() throws Exception {
+        String wrongCacheName = "wrong_cache_name";
+        LogListener errorMsg = LogListener.matches(s -> s.contains("The cache '" + wrongCacheName + "' doesn't exist.")).atLeast(1).build();
+        log.registerListener(errorMsg);
+
+        startGrids(3);
+
+        IgniteEx ignite = grid(0);
+        ignite.cluster().active(true);
+
+        Logger logger = CommandHandler.initLogger(null);
+
+        logger.addHandler(new StreamHandler(System.out, new Formatter() {
+            /** {@inheritDoc} */
+            @Override public String format(LogRecord record) {
+                log.info(record.getMessage());
+
+                return record.getMessage() + "\n";
+            }
+        }));
+
+        assertEquals(EXIT_CODE_OK, execute(new CommandHandler(logger), "--cache", "partition_reconciliation", wrongCacheName));
+
+        assertTrue(errorMsg.check(10_000));
+    }
+
+    /**
+     *
+     */
+    private LogListener fillCacheNames(Set<String> usedCaches) {
+        Pattern r = Pattern.compile("Partition reconciliation started.*caches: \\[(.*)\\]\\].*");
+
+        LogListener lsnr = LogListener.matches(s -> {
+            Matcher m = r.matcher(s);
+
+            boolean found = m.find();
+
+            if (found && m.group(1) != null && !m.group(1).isEmpty())
+                usedCaches.addAll(Arrays.asList(m.group(1).split(", ")));
+
+            return found;
+        }).atLeast(1).build();
+
+        return lsnr;
     }
 
     /**

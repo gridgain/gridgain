@@ -362,7 +362,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 int point = i + 1;
 
                 errorMsg.a(point+ ". ");
-                errorMsg.a(errors.get(i));
+                errorMsg.a(errors.get(i) + "\n");
             }
         }
 

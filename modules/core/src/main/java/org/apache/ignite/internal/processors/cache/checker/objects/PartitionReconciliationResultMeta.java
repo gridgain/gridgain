@@ -26,6 +26,8 @@ import java.util.function.Consumer;
  * skipped caches etc, instead of full information. Used in case of non-console mode for console-scoped report.
  */
 public class PartitionReconciliationResultMeta extends PartitionReconciliationResult {
+    /** */
+    private static final long serialVersionUID = 0L;
 
     /** Inconsistent keys count. */
     private int inconsistentKeysCnt;

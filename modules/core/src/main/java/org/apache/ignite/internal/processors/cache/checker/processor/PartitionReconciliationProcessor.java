@@ -78,6 +78,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /** Work progress message. */
     public static final String WORK_PROGRESS_MSG = "Partition reconciliation task [sesId=%s, total=%s, remaining=%s]";
 
+    /** Start execution message. */
+    public static final String START_EXECUTION_MSG = "Partition reconciliation started [fixMode: %s, repairAlg: %s, " +
+        "batchSize: %s, recheckAttempts: %s, parallelismLevel: %s, caches: %s].";
+
     /** Recheck delay seconds. */
     private static final int RECHECK_DELAY = 10;
 
@@ -141,12 +145,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @return
      */
     public ExecutionResult<PartitionReconciliationResult> execute() {
+        log.info(String.format(START_EXECUTION_MSG, fixMode, repairAlg.name(), batchSize, recheckAttempts, parallelismLevel, caches));
+
         try {
             for (String cache : caches) {
                 IgniteInternalCache<Object, Object> cachex = ignite.cachex(cache);
-
-                if (cachex == null)
-                    throw new IllegalArgumentException("The cache '" + cache + "' doesn't exist.");
 
                 Factory expiryPlcFactory = cachex.configuration().getExpiryPolicyFactory();
                 if (expiryPlcFactory != null && !(expiryPlcFactory.create() instanceof EternalExpiryPolicy)) {
