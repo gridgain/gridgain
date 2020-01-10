@@ -115,7 +115,7 @@ suite('Java transformer tests', () => {
     });
 
     // GG-26953: Test case 2.
-    test.only('Should not generate properties initialization code', () => {
+    test('Should not generate properties initialization code', () => {
         const src = cloneDeep(testData.TEST_CONFIGURATION_SIMPLE);
 
         const sb = IgniteJavaTransformer.cluster(src, testData.VER_2_7_0, 'config', 'ServerConfigurationFactory', []);
