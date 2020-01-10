@@ -64,6 +64,6 @@ Creating NuGet package:
         <file src="..\logo_gg_64x64.png" target="images\" />
 
         <!-- License -->
-        <file src="..\..\..\..\LICENSE" target="" />
+        <file src="..\..\..\..\LICENSE" target="LICENSE" />
     </files>
 </package>
