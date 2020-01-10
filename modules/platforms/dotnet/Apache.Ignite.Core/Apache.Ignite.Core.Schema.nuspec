@@ -42,6 +42,7 @@ More info on GridGain Ignite.NET: https://docs.gridgain.com/
         </description>
         <copyright>Copyright 2019</copyright>
         <tags>GridGain Ignite XSD Intellisense</tags>
+        <repository type="git" url="https://github.com/gridgain/gridgain.git" />
     </metadata>
     <files>
         <!-- Other files should go to Content folder to be automatically included in project. -->
