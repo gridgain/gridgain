@@ -67,12 +67,12 @@ suite('Java transformer tests', () => {
     });
 
     test('Should generate valid list of imports', () => {
-        const configuration = cloneDeep(testData.TEST_CONFIGURATION);
+        const cfg = cloneDeep(testData.TEST_CONFIGURATION);
 
-        _addCacheConfiguration(configuration, testData.TEST_CACHE);
+        _addCacheConfiguration(cfg, testData.TEST_CACHE);
 
         const imports = IgniteJavaTransformer._prepareImports(
-            IgniteJavaTransformer.collectConfigurationImports(configuration)
+            IgniteJavaTransformer.collectConfigurationImports(cfg)
         );
 
         assert.equal(testData.EXPECTED_IMPORTS.length, imports.length);
@@ -83,10 +83,10 @@ suite('Java transformer tests', () => {
     });
 
     test('Should generate valid list of static imports', () => {
-        const configuration = cloneDeep(testData.TEST_CONFIGURATION);
+        const cfg = cloneDeep(testData.TEST_CONFIGURATION);
 
         const imports = IgniteJavaTransformer._prepareImports(
-            IgniteJavaTransformer.collectStaticImports(configuration)
+            IgniteJavaTransformer.collectStaticImports(cfg)
         );
 
         assert.equal(testData.EXPECTED_STATIC_IMPORTS.length, imports.length);
@@ -97,21 +97,30 @@ suite('Java transformer tests', () => {
     });
 
     test('Should generate list of imports for big configuration without exceptions', () => {
-        const configuration = cloneDeep(testData.TEST_CONFIGURATION);
+        const cfg = cloneDeep(testData.TEST_CONFIGURATION);
 
-        _addCacheConfiguration(configuration, testData.TEST_CACHE, 4000);
+        _addCacheConfiguration(cfg, testData.TEST_CACHE, 4000);
 
-        IgniteJavaTransformer.collectConfigurationImports(configuration);
+        IgniteJavaTransformer.collectConfigurationImports(cfg);
     }).timeout(0);
 
-    test('Should generate properties initialisation code', () => {
+    // GG-26953: Test case 1.
+    test('Should generate properties initialization code', () => {
         const src = cloneDeep(testData.TEST_CONFIGURATION.src);
 
-        const targetVer = {ignite: '2.7.0'};
-
-        const sb = IgniteJavaTransformer.cluster(src, targetVer, 'config', 'ServerConfigurationFactory', []);
+        const sb = IgniteJavaTransformer.cluster(src, testData.VER_2_7_0, 'config', 'ServerConfigurationFactory', []);
 
         assert.include(sb.lines, 'import java.util.Properties;');
         assert.include(sb.lines, '    private static final Properties props = new Properties();');
+    });
+
+    // GG-26953: Test case 2.
+    test.only('Should not generate properties initialization code', () => {
+        const src = cloneDeep(testData.TEST_CONFIGURATION_SIMPLE);
+
+        const sb = IgniteJavaTransformer.cluster(src, testData.VER_2_7_0, 'config', 'ServerConfigurationFactory', []);
+
+        assert.notInclude(sb.lines, 'import java.util.Properties;');
+        assert.notInclude(sb.lines, '    private static final Properties props = new Properties();');
     });
 });
