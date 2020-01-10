@@ -43,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Recheck;
@@ -66,6 +67,7 @@ import org.mockito.verification.VerificationMode;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
@@ -268,6 +270,50 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
+     * Check if jobs that are trying to fix inconsistency have higher priority (will be executed faster) then jobs that
+     * are checking caches. This test schedules {@link Recheck} task with default priority and {@link Repair} with high.
+     * High priority task should process first.
+     */
+    @Test
+    public void testThatRepairHaveHigherPriorityThenChecking() throws IgniteCheckedException {
+        List<String> evtHist = new ArrayList<>();
+        MockedProcessor processor = MockedProcessor.create(true);
+        processor.useRealScheduler = true;
+        processor.registerListener(evtHist::add);
+
+        KeyCacheObjectImpl key = new KeyCacheObjectImpl(1, null, PARTITION_ID);
+        UUID nodeId1 = UUID.randomUUID();
+        UUID nodeId2 = UUID.randomUUID();
+        GridCacheVersion ver = new GridCacheVersion(1, 0, 0, 0);
+        GridCacheVersion ver2 = new GridCacheVersion(2, 0, 0, 0);
+
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> batchRes = new HashMap<>();
+        Map<UUID, GridCacheVersion> oldKeys = new HashMap<>();
+        oldKeys.put(nodeId1, ver);
+        oldKeys.put(nodeId2, ver2);
+        batchRes.put(key, oldKeys);
+
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> sameRes = new HashMap<>();
+        Map<UUID, VersionedValue> actualKey = new HashMap<>();
+        actualKey.put(nodeId1, new VersionedValue(null, ver, 1, 1));
+        actualKey.put(nodeId2, new VersionedValue(null, ver2, 1, 1));
+        sameRes.put(key, actualKey);
+
+        processor
+            .addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
+                RepairRequestTask.MAX_REPAIR_ATTEMPTS))
+            .addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
+                RepairRequestTask.MAX_REPAIR_ATTEMPTS))
+            .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
+            .whereResult(RepairRequestTask.class, new ExecutionResult<>(new RepairResult()))
+            .execute();
+
+        assertEquals(CollectPartitionKeysByRecheckRequestTask.class.getName(), evtHist.get(0));
+        assertEquals(RepairRequestTask.class.getName(), evtHist.get(1));
+        assertEquals(CollectPartitionKeysByRecheckRequestTask.class.getName(), evtHist.get(2));
+    }
+
+    /**
      *
      */
     private void testParallelismLevel(int parallelismLevel) throws IgniteCheckedException {
@@ -298,6 +344,11 @@ public class PartitionReconciliationProcessorTest {
          *
          */
         private final ConcurrentMap<Class, Object> computeResults = new ConcurrentHashMap<>();
+
+        /**
+         *
+         */
+        public volatile boolean useRealScheduler = false;
 
         /**
          *
@@ -394,6 +445,8 @@ public class PartitionReconciliationProcessorTest {
                 if (res == null)
                     throw new IllegalStateException("Please add result for: " + taskCls.getSimpleName());
 
+                eventListener.accept(taskCls.getName());
+
                 lsnr.apply(res.getResult());
             }
             else
@@ -403,6 +456,9 @@ public class PartitionReconciliationProcessorTest {
         /** {@inheritDoc} */
         @Override protected void scheduleHighPriority(PipelineWorkload task) {
             mock.scheduleHighPriority(task);
+
+            if (useRealScheduler)
+                super.scheduleHighPriority(task);
         }
 
         /** {@inheritDoc} */
@@ -413,6 +469,9 @@ public class PartitionReconciliationProcessorTest {
         /** {@inheritDoc} */
         @Override protected void schedule(PipelineWorkload task, long duration, TimeUnit timeUnit) {
             mock.schedule(task, duration, timeUnit);
+
+            if (useRealScheduler)
+                super.schedule(task, duration, timeUnit);
         }
 
         /**

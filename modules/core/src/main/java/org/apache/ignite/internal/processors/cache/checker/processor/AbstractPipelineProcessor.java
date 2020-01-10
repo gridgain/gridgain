@@ -23,6 +23,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -85,6 +86,12 @@ public class AbstractPipelineProcessor {
     /**
      *
      */
+    protected volatile Consumer<String> eventListener = event -> {
+    };
+
+    /**
+     *
+     */
     public AbstractPipelineProcessor(
         long sesId,
         IgniteEx ignite,
@@ -98,6 +105,14 @@ public class AbstractPipelineProcessor {
         this.liveListeners = new Semaphore(parallelismLevel);
         this.ignite = ignite;
     }
+
+    /**
+     *
+     */
+    public void registerListener(Consumer<String> evtLsnr) {
+        this.eventListener = evtLsnr;
+    }
+
 
     /**
      *
@@ -168,6 +183,8 @@ public class AbstractPipelineProcessor {
         Class<? extends ComputeTask<T, ExecutionResult<R>>> taskCls, T arg,
         IgniteInClosure<? super R> lsnr) throws InterruptedException {
         liveListeners.acquire();
+
+        eventListener.accept(taskCls.getName());
 
         ignite.compute(partOwners(arg.cacheName(), arg.partitionId())).executeAsync(taskCls, arg).listen(futRes -> {
             try {
