@@ -171,7 +171,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testRemovedEntryOnPrimaryWithDefaultRepairAlg() throws Exception {
         populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode",
+            "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -224,7 +225,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         populateCacheWithInconsistentEntry(true);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAJORITY"));
+            "MAJORITY", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -276,7 +277,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         populateCacheWithInconsistentEntry(true);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRIMARY"));
+            "PRIMARY", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -330,7 +331,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         populateCacheWithInconsistentEntry(true);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAX_GRID_CACHE_VERSION"));
+            "MAX_GRID_CACHE_VERSION", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -382,7 +383,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         List<ClusterNode> nodes = populateCacheWithInconsistentEntry(true);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRINT_ONLY"));
+            "PRINT_ONLY", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -441,7 +442,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testMissedUpdateWithDefaultRepairAlg() throws Exception {
         populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode",
+            "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -496,7 +498,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         populateCacheWithInconsistentEntry(false);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAJORITY"));
+            "MAJORITY", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -551,7 +553,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         populateCacheWithInconsistentEntry(false);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRIMARY"));
+            "PRIMARY", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -604,7 +606,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         populateCacheWithInconsistentEntry(false);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAX_GRID_CACHE_VERSION"));
+            "MAX_GRID_CACHE_VERSION", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 
@@ -659,7 +661,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         populateCacheWithInconsistentEntry(false);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRINT_ONLY"));
+            "PRINT_ONLY", "--recheck-delay", "0"));
 
         // TODO: 12.12.19 Validate output.
 

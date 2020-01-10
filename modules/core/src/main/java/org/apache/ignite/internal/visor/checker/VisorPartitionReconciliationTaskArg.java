@@ -60,6 +60,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     private RepairAlgorithm repairAlg;
 
+    /** Recheck delay seconds. */
+    private int recheckDelay;
+
     /**
      * Default constructor.
      */
@@ -72,7 +75,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
-        double loadFactor, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg) {
+        double loadFactor, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg, int recheckDelay) {
         this.caches = caches;
         this.verbose = verbose;
         this.console = console;
@@ -81,6 +84,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
+        this.recheckDelay = recheckDelay;
     }
 
     /** {@inheritDoc} */
@@ -100,6 +104,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeInt(recheckAttempts);
 
         U.writeEnum(out, repairAlg);
+
+        out.writeInt(recheckDelay);
     }
 
     /** {@inheritDoc} */
@@ -121,6 +127,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         recheckAttempts = in.readInt();
 
         repairAlg = RepairAlgorithm.fromOrdinal(in.readByte());
+
+        recheckDelay = in.readInt();
     }
 
     /**
@@ -180,6 +188,13 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /**
+     * @return Recheck delay seconds.
+     */
+    public int recheckDelay() {
+        return recheckDelay;
+    }
+
+    /**
      * Builder class for test purposes.
      */
     public static class Builder {
@@ -210,6 +225,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         private RepairAlgorithm repairAlg;
 
+        /** Recheck delay seconds. */
+        private int recheckDelay;
+
         /**
          * Default constructor.
          */
@@ -221,6 +239,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             loadFactor = 1.0;
             batchSize = 100;
             recheckAttempts = 2;
+            recheckDelay = 0;
         }
 
         /**
@@ -228,7 +247,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         public VisorPartitionReconciliationTaskArg build() {
             return new VisorPartitionReconciliationTaskArg(
-                caches, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg);
+                caches, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg, recheckDelay);
         }
 
         /**
@@ -299,6 +318,15 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         public Builder repairAlg(RepairAlgorithm repairAlg) {
             this.repairAlg = repairAlg;
+
+            return this;
+        }
+
+        /**
+         * @param recheckDelay Recheck delay seconds.
+         */
+        public Builder recheckDelay(int recheckDelay) {
+            this.recheckDelay = recheckDelay;
 
             return this;
         }

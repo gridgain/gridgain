@@ -52,6 +52,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_MODE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOAD_FACTOR;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.VERBOSE;
 
 /**
@@ -98,6 +99,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         paramsDesc.put(CONSOLE.toString(),
             "Specifies whether to print result to console or file. Default value is " + CONSOLE.defaultValue() + '.');
+
+        // RECHECK_DELAY arg intentionally skipped.
 
         usageCache(
             log,
@@ -148,7 +151,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             args.loadFactor,
             args.batchSize,
             args.recheckAttempts,
-            args.repairAlg
+            args.repairAlg,
+            args.recheckDelay
         );
 
         ReconciliationResult res =
@@ -167,6 +171,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         int batchSize = (int) BATCH_SIZE.defaultValue();
         int recheckAttempts = (int) RECHECK_ATTEMPTS.defaultValue();
         RepairAlgorithm repairAlg = (RepairAlgorithm) FIX_ALG.defaultValue();
+        int recheckDelay = (int) RECHECK_DELAY.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
@@ -269,11 +274,30 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         }
 
                         break;
+
+                    case RECHECK_DELAY:
+                        strVal = argIter.nextArg("The recheck delay should be specified.");
+
+                        try {
+                            recheckDelay = Integer.valueOf(strVal);
+                        }
+                        catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Invalid recheck delay: " + strVal +
+                                ". Int value between 0 and 100 should be used.");
+                        }
+
+                        if (recheckDelay < 0 || recheckDelay > 100) {
+                            throw new IllegalArgumentException("Invalid recheck delay: " + strVal +
+                                ". Int value between 0 and 100 should be used.");
+                        }
+
+                        break;
                 }
             }
         }
 
-        args = new Arguments(cacheNames, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg);
+        args = new Arguments(cacheNames, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg,
+            recheckDelay);
     }
 
     /**
@@ -305,6 +329,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
             .a("], fix-alg=[" + args.repairAlg + "]")
+            .a("], recheck-delay=[" + args.recheckDelay + "]")
             .a("\n");
 
         return options.toString();
@@ -398,6 +423,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         /** */
         private RepairAlgorithm repairAlg;
 
+        /** */
+        private int recheckDelay;
+
         /**
          * Constructor.
          *
@@ -410,7 +438,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          */
         public Arguments(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
             double loadFactor,
-            int batchSize, int recheckAttempts, RepairAlgorithm repairAlg) {
+            int batchSize, int recheckAttempts, RepairAlgorithm repairAlg, int recheckDelay) {
             this.caches = caches;
             this.fixMode = fixMode;
             this.verbose = verbose;
@@ -419,6 +447,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             this.batchSize = batchSize;
             this.recheckAttempts = recheckAttempts;
             this.repairAlg = repairAlg;
+            this.recheckDelay = recheckDelay;
         }
 
         /**
@@ -475,6 +504,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          */
         public RepairAlgorithm repairAlg() {
             return repairAlg;
+        }
+
+        /**
+         * @return Recheck delay.
+         */
+        public int recheckDelay() {
+            return recheckDelay;
         }
     }
 }

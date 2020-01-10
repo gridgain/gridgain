@@ -616,6 +616,20 @@ public class CommandHandlerParsingTest {
         parseArgs(Arrays.asList("--cache", "partition_reconciliation", "--recheck-attempts", "1"));
 
         parseArgs(Arrays.asList("--cache", "partition_reconciliation", "--recheck-attempts", "5"));
+
+        // --recheck-delay
+        assertParseArgsThrows("The recheck delay should be specified.",
+            "--cache", "partition_reconciliation", "--recheck-delay");
+
+        assertParseArgsThrows("Invalid recheck delay: abc. Int value between 0 and 100 should be used.",
+            "--cache", "partition_reconciliation", "--recheck-delay", "abc");
+
+        assertParseArgsThrows("Invalid recheck delay: 101. Int value between 0 and 100 should be used.",
+            "--cache", "partition_reconciliation", "--recheck-delay", "101");
+
+        parseArgs(Arrays.asList("--cache", "partition_reconciliation", "--recheck-delay", "0"));
+
+        parseArgs(Arrays.asList("--cache", "partition_reconciliation", "--recheck-delay", "50"));
     }
 
     /**

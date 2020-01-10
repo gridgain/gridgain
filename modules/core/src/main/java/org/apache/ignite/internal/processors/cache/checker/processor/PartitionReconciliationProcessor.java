@@ -83,7 +83,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         "batchSize: %s, recheckAttempts: %s, parallelismLevel: %s, caches: %s].";
 
     /** Recheck delay seconds. */
-    private static final int RECHECK_DELAY = 10;
+    private final int recheckDelay;
 
     /** Caches. */
     private final Collection<String> caches;
@@ -130,10 +130,12 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         int parallelismLevel,
         int batchSize,
         int recheckAttempts,
-        RepairAlgorithm repairAlg
+        RepairAlgorithm repairAlg,
+        int recheckDelay
     ) throws IgniteCheckedException {
         super(sesId, ignite, exchMgr, parallelismLevel);
         log = ignite.log().getLogger(this);
+        this.recheckDelay = recheckDelay;
         this.caches = caches;
         this.fixMode = fixMode;
         this.batchSize = batchSize;
@@ -239,7 +241,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 if (!recheckKeys.isEmpty())
                     schedule(
                         new Recheck(recheckKeys, workload.cacheName(), workload.partitionId(), 0, 0),
-                        RECHECK_DELAY,
+                        recheckDelay,
                         TimeUnit.SECONDS
                     );
             }
@@ -268,7 +270,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 workload.attempt() + 1,
                                 workload.repairAttempt()
                             ),
-                            RECHECK_DELAY,
+                            recheckDelay,
                             TimeUnit.SECONDS
                         );
                     }

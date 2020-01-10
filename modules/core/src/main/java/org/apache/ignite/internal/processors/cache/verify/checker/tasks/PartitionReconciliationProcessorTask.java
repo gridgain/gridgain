@@ -191,7 +191,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     parallelismLevel(reconciliationTaskArg.loadFactor(), caches, ignite),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
-                    reconciliationTaskArg.repairAlg()
+                    reconciliationTaskArg.repairAlg(),
+                    reconciliationTaskArg.recheckDelay()
                 ).execute();
 
                 String path = localPrint(reconciliationRes.getResult());

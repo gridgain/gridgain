@@ -46,7 +46,10 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     RECHECK_ATTEMPTS("--recheck-attempts", 2),
 
     /** Print result to console. */
-    CONSOLE("--console", Boolean.FALSE);
+    CONSOLE("--console", Boolean.FALSE),
+
+    /** Recheck delay seconds. */
+    RECHECK_DELAY("--recheck-delay", 10);
 
     /** Option name. */
     private final String name;

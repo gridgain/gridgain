@@ -420,7 +420,7 @@ public class PartitionReconciliationProcessorTest {
             when(igniteMock.compute(any())).thenReturn(igniteComputeMock);
 
             return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, parallelismLevel,
-                10, MAX_RECHECK_ATTEMPTS);
+                10, MAX_RECHECK_ATTEMPTS, 0);
         }
 
         /**
@@ -429,8 +429,9 @@ public class PartitionReconciliationProcessorTest {
         public MockedProcessor(IgniteEx ignite,
             GridCachePartitionExchangeManager<Object, Object> exchMgr,
             Collection<String> caches, boolean fixMode, int parallelismLevel, int batchSize,
-            int recheckAttempts) throws IgniteCheckedException {
-            super(SESSION_ID, ignite, exchMgr, caches, fixMode, parallelismLevel, batchSize, recheckAttempts, RepairAlgorithm.MAJORITY);
+            int recheckAttempts, int recheckDelay) throws IgniteCheckedException {
+            super(SESSION_ID, ignite, exchMgr, caches, fixMode, parallelismLevel, batchSize, recheckAttempts,
+                RepairAlgorithm.MAJORITY, recheckDelay);
         }
 
         /** {@inheritDoc} */
