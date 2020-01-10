@@ -102,6 +102,11 @@
         </dependency>
 
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-web</artifactId>
         </dependency>
@@ -119,11 +124,6 @@
             <version>2.8</version>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
         <!-- Third-party dependencies -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -134,7 +134,7 @@
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongodb-driver-sync</artifactId>
-            <version>3.10.1</version>
+            <version>3.12.0</version>
         </dependency>
 
         <!-- GridGain dependencies -->
