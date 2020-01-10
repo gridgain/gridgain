@@ -1852,13 +1852,6 @@ public class BinaryObjectBuilderAdditionalSelfTest extends GridCommonAbstractTes
         private final TestEnum[] testEnumArr;
 
         /** */
-        public TestClsWithEnum(TestEnum testEnum, TestEnum[] testEnumArr) {
-            this.testEnumA = testEnum;
-            this.testEnumB = testEnum;
-            this.testEnumArr = testEnumArr;
-        }
-
-        /** */
         public TestClsWithEnum(TestEnum testEnumA, TestEnum testEnumB, TestEnum[] testEnumArr) {
             this.testEnumA = testEnumA;
             this.testEnumB = testEnumB;
