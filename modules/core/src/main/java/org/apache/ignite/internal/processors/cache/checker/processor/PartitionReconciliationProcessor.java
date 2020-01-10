@@ -145,7 +145,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @return
      */
     public ExecutionResult<PartitionReconciliationResult> execute() {
-        log.info(String.format(START_EXECUTION_MSG, fixMode, repairAlg.name(), batchSize, recheckAttempts, parallelismLevel, caches));
+        log.info(String.format(START_EXECUTION_MSG, fixMode, repairAlg, batchSize, recheckAttempts, parallelismLevel, caches));
 
         try {
             for (String cache : caches) {
