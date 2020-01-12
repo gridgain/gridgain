@@ -1259,6 +1259,7 @@ public class GridDhtPartitionDemander {
         /** Next future in chain. */
         private final RebalanceFuture next;
 
+        /** Assignments. */
         private final GridDhtPreloaderAssignments assignments;
 
         /**
