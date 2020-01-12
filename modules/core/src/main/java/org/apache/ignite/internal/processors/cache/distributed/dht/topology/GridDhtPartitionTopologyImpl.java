@@ -41,6 +41,7 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -68,6 +69,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -2406,6 +2408,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * @param aff Affinity assignments.
      * @return {@code True} if there are local partitions need to be evicted.
      */
+    @SuppressWarnings("unchecked")
     private boolean checkEvictions(long updateSeq, AffinityAssignment aff) {
         if (!ctx.kernalContext().state().evictionsAllowed())
             return false;
@@ -2437,7 +2440,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 IgniteInternalFuture<?> rentFut = part.rent(false);
 
-                rentingFutures.add(rentFut);
+                if (rentFut != null)
+                    rentingFutures.add(rentFut);
 
                 updateSeq = updateLocal(part.id(), part.state(), updateSeq, aff.topologyVersion());
 
@@ -2468,7 +2472,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             IgniteInternalFuture<?> rentFut = part.rent(false);
 
-                            rentingFutures.add(rentFut);
+                            if (rentFut != null)
+                                rentingFutures.add(rentFut);
 
                             updateSeq = updateLocal(part.id(), part.state(), updateSeq, aff.topologyVersion());
 
@@ -2492,15 +2497,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         if (!rentingFutures.isEmpty()) {
             final AtomicInteger rentingPartitions = new AtomicInteger(rentingFutures.size());
 
-            for (IgniteInternalFuture<?> rentingFuture : rentingFutures) {
-                rentingFuture.listen(f -> {
+            IgniteInClosure c = new IgniteInClosure() {
+                @Override public void apply(Object o) {
                     int remaining = rentingPartitions.decrementAndGet();
 
                     if (remaining == 0) {
                         lock.writeLock().lock();
 
                         try {
-                            this.updateSeq.incrementAndGet();
+                            GridDhtPartitionTopologyImpl.this.updateSeq.incrementAndGet();
 
                             if (log.isDebugEnabled())
                                 log.debug("Partitions have been scheduled to resend [reason=" +
@@ -2512,8 +2517,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             lock.writeLock().unlock();
                         }
                     }
-                });
-            }
+                }
+            };
+
+            for (IgniteInternalFuture<?> rentingFuture : rentingFutures)
+                rentingFuture.listen(c);
         }
 
         return hasEvictedPartitions;
@@ -2748,6 +2756,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         ctx.database().checkpointReadLock();
 
         try {
+            WALPointer ptr = null;
+
             lock.readLock().lock();
 
             try {
@@ -2778,7 +2788,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                         gapStart - 1, gapStop - gapStart + 1);
 
                                     try {
-                                        ctx.wal().log(rec);
+                                        ptr = ctx.wal().log(rec);
                                     }
                                     catch (IgniteCheckedException e) {
                                         throw new IgniteException(e);
@@ -2793,7 +2803,16 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
             }
             finally {
-                lock.readLock().unlock();
+                try {
+                    if (ptr != null)
+                        ctx.wal().flush(ptr, false);
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException(e);
+                }
+                finally {
+                    lock.readLock().unlock();
+                }
             }
         }
         finally {

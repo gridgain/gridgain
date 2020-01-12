@@ -109,7 +109,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         final String scanQry = "SELECT * FROM TAB WHERE ID <> 5";
 
         for (int i = 0; i < runCnt; i++)
-            cache.query(new SqlFieldsQuery(scanQry)).getAll();
+            cache.query(new SqlFieldsQuery(scanQry).setLazy(false)).getAll();
 
         long otherCntAfterDistQry = longMetricValue(otherNodeIdx, "requests");
         long connCntAfterDistQry = longMetricValue(connNodeIdx, "requests");
@@ -120,7 +120,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         // And then run local query and check that only connect node metric has changed.
 
         for (int i = 0; i < runCnt; i++)
-            cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll();
+            cache.query(new SqlFieldsQuery(scanQry).setLocal(true).setLazy(false)).getAll();
 
         long otherCntAfterLocQry = longMetricValue(otherNodeIdx, "requests");
         long connCntAfterLocQry = longMetricValue(connNodeIdx, "requests");
@@ -147,7 +147,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
 
         IgniteInternalFuture distQryIsDone =
-            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
+            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLazy(false)).getAll());
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
@@ -180,7 +180,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
 
         IgniteInternalFuture locQryIsDone =
-            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true)).getAll());
+            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry).setLocal(true).setLazy(false)).getAll());
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 

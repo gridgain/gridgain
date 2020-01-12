@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -422,6 +423,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** Pointer to a memory recovery record that should be included into the next checkpoint record. */
     private volatile WALPointer memoryRecoveryRecordPtr;
+
+    /** Lock for releasing history for preloading. */
+    private ReentrantLock releaseHistForPreloadingLock = new ReentrantLock();
 
     /**
      * @param ctx Kernal context.
@@ -1867,18 +1871,25 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public void releaseHistoryForPreloading() {
-        for (Map.Entry<T2<Integer, Integer>, T2<Long, WALPointer>> e : reservedForPreloading.entrySet()) {
-            try {
-                cctx.wal().release(e.getValue().get2());
-            }
-            catch (IgniteCheckedException ex) {
-                U.error(log, "Could not release WAL reservation", ex);
+        releaseHistForPreloadingLock.lock();
 
-                throw new IgniteException(ex);
+        try {
+            for (Map.Entry<T2<Integer, Integer>, T2<Long, WALPointer>> e : reservedForPreloading.entrySet()) {
+                try {
+                    cctx.wal().release(e.getValue().get2());
+                }
+                catch (IgniteCheckedException ex) {
+                    U.error(log, "Could not release WAL reservation", ex);
+
+                    throw new IgniteException(ex);
+                }
             }
+
+            reservedForPreloading.clear();
         }
-
-        reservedForPreloading.clear();
+        finally {
+            releaseHistForPreloadingLock.unlock();
+        }
     }
 
     /**
@@ -2757,8 +2768,16 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                         CacheGroupContext ctx = cctx.cache().cacheGroup(rbRec.groupId());
 
                         if (ctx != null && !ctx.isLocal()) {
-                            ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
-                                rbRec.range());
+                            try {
+                                // Ensure the partition store exists.
+                                ctx.topology().forceCreatePartition(rbRec.partitionId());
+
+                                ctx.offheap().onPartitionInitialCounterUpdated(rbRec.partitionId(), rbRec.start(),
+                                    rbRec.range());
+                            }
+                            catch (IgniteCheckedException e) {
+                                throw new IgniteException(e);
+                            }
                         }
                     }
                     finally {
@@ -4115,6 +4134,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
                         req.onDone(null);
 
+                        grp.metrics().decrementInitializedLocalPartitions();
+
                         if (log.isDebugEnabled())
                             log.debug("Partition file has destroyed [grpId=" + grpId + ", partId=" + partId + "]");
                     }
@@ -4968,30 +4989,15 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                 List<FullPageId> pagesToRetry = writePages(writePageIds);
 
                 if (pagesToRetry.isEmpty())
-                    doneFut.onDone((Void)null);
+                    doneFut.onDone();
                 else {
                     LT.warn(log, pagesToRetry.size() + " checkpoint pages were not written yet due to unsuccessful " +
                         "page write lock acquisition and will be retried");
 
-                    if (retryWriteExecutor == null) {
-                        while (!pagesToRetry.isEmpty())
-                            pagesToRetry = writePages(pagesToRetry);
+                    while (!pagesToRetry.isEmpty())
+                        pagesToRetry = writePages(pagesToRetry);
 
-                        doneFut.onDone((Void)null);
-                    }
-                    else {
-                        // Submit current retry pages to the end of the queue to avoid starvation.
-                        WriteCheckpointPages retryWritesTask = new WriteCheckpointPages(
-                            tracker,
-                            pagesToRetry,
-                            updStores,
-                            doneFut,
-                            totalPagesToWrite,
-                            beforePageWrite,
-                            retryWriteExecutor);
-
-                        retryWriteExecutor.submit(retryWritesTask);
-                    }
+                    doneFut.onDone();
                 }
             }
             catch (Throwable e) {
@@ -5012,15 +5018,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
             ByteBuffer tmpWriteBuf = threadBuf.get();
 
+            boolean throttlingEnabled = resolveThrottlingPolicy() != PageMemoryImpl.ThrottlingPolicy.DISABLED;
+
             for (FullPageId fullId : writePageIds) {
                 if (checkpointer.shutdownNow)
                     break;
 
-                tmpWriteBuf.rewind();
-
                 beforePageWrite.run();
-
-                snapshotMgr.beforePageWrite(fullId);
 
                 int grpId = fullId.groupId();
 
@@ -5042,7 +5046,26 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
                     pageMem = (PageMemoryEx)region.pageMemory();
                 }
 
+                snapshotMgr.beforePageWrite(fullId);
+
+                tmpWriteBuf.rewind();
+
                 pageMem.checkpointWritePage(fullId, tmpWriteBuf, pageStoreWriter, tracker);
+
+                if (throttlingEnabled) {
+                    while (pageMem.shouldThrottle()) {
+                        FullPageId cpPageId = pageMem.pullPageFromCpBuffer();
+
+                        if (cpPageId.equals(FullPageId.NULL_PAGE))
+                            break;
+
+                        snapshotMgr.beforePageWrite(cpPageId);
+
+                        tmpWriteBuf.rewind();
+
+                        pageMem.checkpointWritePage(cpPageId, tmpWriteBuf, pageStoreWriter, tracker);
+                    }
+                }
             }
 
             return pagesToRetry;

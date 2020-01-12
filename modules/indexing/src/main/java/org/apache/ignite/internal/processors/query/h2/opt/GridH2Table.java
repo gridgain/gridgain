@@ -30,13 +30,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteInterruptedException;
-import org.apache.ignite.cache.query.QueryRetryException;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.query.QueryRetryException;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -521,7 +520,7 @@ public class GridH2Table extends TableBase {
         SessionLock sesLock = sessions.get(ses);
 
         assert sesLock != null && !sesLock.isExclusive()
-            : "Invalid table lock [name=" + getName() + ", lock=" + sesLock.ver + ']';
+            : "Invalid table lock [name=" + getName() + ", lock=" + sesLock == null ? "null" : sesLock.ver + ']';
 
         if (!sesLock.locked) {
             lock(false);
@@ -539,7 +538,7 @@ public class GridH2Table extends TableBase {
         SessionLock sesLock = sessions.get(ses);
 
         assert sesLock != null && !sesLock.isExclusive()
-            : "Invalid table unlock [name=" + getName() + ", lock=" + sesLock.ver + ']';
+            : "Invalid table unlock [name=" + getName() + ", lock=" + sesLock == null ? "null" : sesLock.ver + ']';
 
         if (sesLock.locked) {
             sesLock.locked = false;
@@ -1099,7 +1098,7 @@ public class GridH2Table extends TableBase {
                         cctx0.shared().database().checkpointReadLock();
 
                         try {
-                            ((GridH2IndexBase)idx0).destroy(rmIndex);
+                            ((GridH2IndexBase)idx0).asyncDestroy(rmIndex);
                         }
                         finally {
                             cctx0.shared().database().checkpointReadUnlock();
@@ -1111,6 +1110,7 @@ public class GridH2Table extends TableBase {
 
                 i++;
             }
+
             this.idxs = idxs;
         }
         finally {

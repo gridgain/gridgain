@@ -238,7 +238,7 @@ namespace Apache.Ignite.Core.Impl
             return _prj.ForNodes(GetLocalNode());
         }
 
-        /** <inheritdoc /> */
+        /** <inheritdoc cref="IIgnite" /> */
         public ICompute GetCompute()
         {
             return _prj.ForServers().GetCompute();
@@ -602,7 +602,7 @@ namespace Apache.Ignite.Core.Impl
             return this;
         }
 
-        /** <inheritdoc /> */
+        /** <inheritdoc cref="IIgnite" /> */
         public IBinary GetBinary()
         {
             return _binary;
@@ -624,19 +624,19 @@ namespace Apache.Ignite.Core.Impl
             return new TransactionsImpl(this, DoOutOpObject((int) Op.GetTransactions), GetLocalNode().Id);
         }
 
-        /** <inheritdoc /> */
+        /** <inheritdoc cref="IIgnite" /> */
         public IMessaging GetMessaging()
         {
             return _prj.GetMessaging();
         }
 
-        /** <inheritdoc /> */
+        /** <inheritdoc cref="IIgnite" /> */
         public IEvents GetEvents()
         {
             return _prj.GetEvents();
         }
 
-        /** <inheritdoc /> */
+        /** <inheritdoc cref="IIgnite" /> */
         public IServices GetServices()
         {
             return _prj.ForServers().GetServices();
@@ -783,13 +783,13 @@ namespace Apache.Ignite.Core.Impl
         }
 #pragma warning restore 618
 
-        /** <inheritdoc /> */
+        /** <inheritdoc cref="IIgnite" /> */
         public void SetActive(bool isActive)
         {
             _prj.SetActive(isActive);
         }
 
-        /** <inheritdoc /> */
+        /** <inheritdoc cref="IIgnite" /> */
         public bool IsActive()
         {
             return _prj.IsActive();
@@ -993,7 +993,7 @@ namespace Apache.Ignite.Core.Impl
 
             _nodes[node.Id] = node;
         }
-        
+
         /// <summary>
         /// Returns instance of Ignite Transactions to mark a transaction with a special label.
         /// </summary>

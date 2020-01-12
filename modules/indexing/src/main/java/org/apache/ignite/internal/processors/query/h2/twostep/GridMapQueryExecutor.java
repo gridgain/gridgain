@@ -71,7 +71,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.h2.api.ErrorCode;
 import org.h2.jdbc.JdbcResultSet;
-import org.h2.jdbc.JdbcSQLException;
 import org.h2.value.Value;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -497,7 +496,7 @@ public class GridMapQueryExecutor {
             if (e instanceof QueryCancelledException)
                 sendError(node, reqId, e);
             else {
-                JdbcSQLException sqlEx = X.cause(e, JdbcSQLException.class);
+                SQLException sqlEx = X.cause(e, SQLException.class);
 
                 if (sqlEx != null && sqlEx.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                     sendQueryCancel(node, reqId);
@@ -796,7 +795,7 @@ public class GridMapQueryExecutor {
                 if (retryEx != null)
                     sendError(node, reqId, retryEx);
                 else {
-                    JdbcSQLException sqlEx = X.cause(e, JdbcSQLException.class);
+                    SQLException sqlEx = X.cause(e, SQLException.class);
 
                     if (sqlEx != null && sqlEx.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                         sendQueryCancel(node, reqId);
