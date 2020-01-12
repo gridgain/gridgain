@@ -294,11 +294,27 @@ public class GridDhtPartitionDemander {
         if (log.isDebugEnabled())
             log.debug("Adding partition assignments: " + assignments);
 
+        if (assignments.isEmpty()) { // Nothing to rebalance.
+            if (log.isDebugEnabled())
+                log.debug("Rebalancing skipped due to empty assignments.");
+
+            ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
+
+            return null;
+        }
+
+        if (assignments.cancelled()) { // Pending exchange.
+            if (log.isDebugEnabled())
+                log.debug("Rebalancing skipped due to cancelled assignments.");
+
+            return null;
+        }
+
         assert force == (forcedRebFut != null);
 
         long delay = grp.config().getRebalanceDelay();
 
-        if ((delay == 0 || force) && assignments != null && !assignments.isEmpty()) {
+        if ((delay == 0 || force) && assignments != null) {
             final RebalanceFuture oldFut = rebalanceFut;
 
             final RebalanceFuture fut = new RebalanceFuture(grp, assignments, log, rebalanceId, next) {
@@ -316,13 +332,13 @@ public class GridDhtPartitionDemander {
                 });
 
             if (!oldFut.isInitial()) {
-                if (!oldFut.compatibleWith(fut))
-                    oldFut.cancel();
-                else {
+                if (!oldFut.isDone() && oldFut.compatibleWith(fut)) {
                     compatibleWaitFut.add(rebalanceFut);
 
-                    return null; // Exclude a group from a chain because compatible rebalance in progress.
+                    return null;
                 }
+                else
+                    oldFut.cancel();
 
                 rebalanceFut = fut;
             }
@@ -360,30 +376,6 @@ public class GridDhtPartitionDemander {
             }
 
             fut.sendRebalanceStartedEvent();
-
-            if (assignments.cancelled()) { // Pending exchange.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to cancelled assignments.");
-
-                fut.onDone(false);
-
-                fut.sendRebalanceFinishedEvent();
-
-                return null;
-            }
-
-            if (assignments.isEmpty()) { // Nothing to rebalance.
-                if (log.isDebugEnabled())
-                    log.debug("Rebalancing skipped due to empty assignments.");
-
-                fut.onDone(true);
-
-                ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
-
-                fut.sendRebalanceFinishedEvent();
-
-                return null;
-            }
 
             return fut;
         }
@@ -1547,7 +1539,7 @@ public class GridDhtPartitionDemander {
                 sendRebalanceFinishedEvent();
 
                 if (log.isInfoEnabled())
-                    log.info("Completed rebalance future: " + this);
+                    log.info("Completed rebalance future: cancelled=" + cancelled + ", fut=" + this);
 
                 if (log.isDebugEnabled())
                     log.debug("Partitions have been scheduled to resend [reason=" +
@@ -1611,43 +1603,43 @@ public class GridDhtPartitionDemander {
          * @param fut Future.
          */
         public boolean compatibleWith(RebalanceFuture fut) {
-//            Set<Integer> p0 = new HashSet<>();
-//            Set<Integer> p1 = new HashSet<>();
-//
-//            // Not compatible is supplier has left.
-//            for (ClusterNode node : fut.assignments.keySet()) {
-//                if (!grp.cacheObjectContext().kernalContext().discovery().alive(node))
-//                    return false;
-//            }
-//
-//            for (GridDhtPartitionDemandMessage message : assignments.values()) {
-//                p0.addAll(message.partitions().fullSet());
-//                p0.addAll(message.partitions().historicalSet());
-//            }
-//
-//            for (GridDhtPartitionDemandMessage message : fut.assignments.values()) {
-//                p1.addAll(message.partitions().fullSet());
-//                p1.addAll(message.partitions().historicalSet());
-//            }
-//
-//            // Not compatible if not a subset.
-//            if (!p1.containsAll(p0))
-//                return false;
-//
-//            p0 = Stream.concat(grp.affinity().cachedAffinity(topVer).primaryPartitions(ctx.localNodeId()).stream(),
-//                    grp.affinity().cachedAffinity(topVer).backupPartitions(ctx.localNodeId()).stream())
-//                    .collect(Collectors.toSet());
-//
-//            p1 = Stream.concat(grp.affinity().cachedAffinity(fut.topVer).primaryPartitions(ctx.localNodeId()).stream(),
-//                    grp.affinity().cachedAffinity(fut.topVer).backupPartitions(ctx.localNodeId()).stream())
-//                    .collect(Collectors.toSet());
-//
-//            // Not compatible if locally owned partitions are not the same.
-//            if (!p0.equals(p1))
-//                return false;
+            Set<Integer> p0 = new HashSet<>();
+            Set<Integer> p1 = new HashSet<>();
+
+            // Not compatible is supplier has left.
+            for (ClusterNode node : fut.assignments.keySet()) {
+                if (!grp.cacheObjectContext().kernalContext().discovery().alive(node))
+                    return false;
+            }
+
+            for (GridDhtPartitionDemandMessage message : assignments.values()) {
+                p0.addAll(message.partitions().fullSet());
+                p0.addAll(message.partitions().historicalSet());
+            }
+
+            for (GridDhtPartitionDemandMessage message : fut.assignments.values()) {
+                p1.addAll(message.partitions().fullSet());
+                p1.addAll(message.partitions().historicalSet());
+            }
+
+            // Not compatible if not a subset.
+            if (!p1.containsAll(p0))
+                return false;
+
+            p0 = Stream.concat(grp.affinity().cachedAffinity(topVer).primaryPartitions(ctx.localNodeId()).stream(),
+                    grp.affinity().cachedAffinity(topVer).backupPartitions(ctx.localNodeId()).stream())
+                    .collect(Collectors.toSet());
+
+            p1 = Stream.concat(grp.affinity().cachedAffinity(fut.topVer).primaryPartitions(ctx.localNodeId()).stream(),
+                    grp.affinity().cachedAffinity(fut.topVer).backupPartitions(ctx.localNodeId()).stream())
+                    .collect(Collectors.toSet());
+
+            // Not compatible if locally owned partitions are not the same.
+            if (!p0.equals(p1))
+                return false;
 
             // Compatible.
-            return false;
+            return true;
         }
     }
 

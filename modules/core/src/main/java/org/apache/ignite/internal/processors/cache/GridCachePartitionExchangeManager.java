@@ -3470,12 +3470,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         else if (r != null) {
                             Collections.reverse(rebList);
 
-                            U.log(log, "Rebalancing scheduled [order=" + rebList +
-                                ", top=" + resVer + ", force=" + (exchFut == null) +
-                                ", evt=" + exchId.discoveryEventName() +
-                                ", node=" + exchId.nodeId() + ']');
-
-                            rebTopVer = resVer; // Will prevent previous chain execution on next group.
+                            rebTopVer = resVer;
 
                             RebalanceFuture finalR = r;
 
@@ -3485,11 +3480,14 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             // ignite-sys-cache -> cacheGroupR1 -> cacheGroupP2 -> cacheGroupR3
                             compatibleWaitFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
                                 @Override public void apply(IgniteInternalFuture<Boolean> f) {
+                                    U.log(log, "Rebalancing scheduled [order=" + rebList +
+                                            ", top=" + finalR.topologyVersion() +
+                                            ", evt=" + exchId.discoveryEventName() +
+                                            ", node=" + exchId.nodeId() + ']');
+
                                     finalR.init();
                                 }
                             });
-
-                            finalR.init();
                         }
                         else
                             U.log(log, "Skipping rebalancing (nothing scheduled) " +
