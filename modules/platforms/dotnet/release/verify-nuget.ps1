@@ -51,6 +51,10 @@ if ($packages.Length -eq 0) {
 echo "Verifying $($packages.Length) packages from '$dir'..."  
 
 
+# Clear package cache
+dotnet nuget locals all --clear
+
+
 # Create test dir
 $testDir = Join-Path $PSScriptRoot "test-proj"
 New-Item -Path $testDir -ItemType "directory" -Force
