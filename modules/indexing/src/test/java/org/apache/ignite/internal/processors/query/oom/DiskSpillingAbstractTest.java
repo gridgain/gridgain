@@ -48,9 +48,9 @@ import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DI
  */
 @WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "true")
 @WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "2048")
-public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
+public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** */
-    private static final int PERS_CNT = 1002;
+    protected static final int PERS_CNT = 1002;
 
     /** */
     private static final int DEPS_CNT = 100;
@@ -95,6 +95,20 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
+        initGrid();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        destroyGrid();
+    }
+
+    /**
+     * Creates grid and populates it with data.
+     *
+     * @throws Exception If failed.
+     */
+    void initGrid() throws Exception {
         super.beforeTestsStarted();
 
         cleanPersistenceDir();
@@ -123,8 +137,12 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         populateData();
     }
 
-    /** */
-    @Override protected void afterTestsStopped() throws Exception {
+    /**
+     * Destroys grid.
+     *
+     * @throws Exception If failed.
+     */
+    void destroyGrid() throws Exception {
         super.afterTestsStopped();
 
         stopAllGrids();
@@ -419,6 +437,4 @@ public class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
         return Arrays.asList(workDir.toFile().list());
     }
-
-
 }

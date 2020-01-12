@@ -57,12 +57,12 @@ public class DiskSpillingWithBaselineTest extends DiskSpillingAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {super.beforeTest();
-        super.beforeTestsStarted(); // Sic! Reset test environment before each test.
+        initGrid();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        super.afterTestsStopped(); // Sic! Cleanup test environment after each test.
+        destroyGrid();
     }
 
     /**

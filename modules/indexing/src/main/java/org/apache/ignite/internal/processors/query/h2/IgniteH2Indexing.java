@@ -90,6 +90,7 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.RegisteredQueryCursor;
+import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxAdapter;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
@@ -2903,13 +2904,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 return result;
         }
 
-        SqlFieldsQuery selectFieldsQry = new SqlFieldsQuery(plan.selectQuery(), qryDesc.collocated())
+        SqlFieldsQuery selectFieldsQry = new SqlFieldsQueryEx(plan.selectQuery() == null ? "" : plan.selectQuery(), true)
+            .setCollocated(qryDesc.collocated())
             .setArgs(qryParams.arguments())
             .setDistributedJoins(qryDesc.distributedJoins())
             .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
             .setLocal(qryDesc.local())
             .setPageSize(qryParams.pageSize())
-            .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS);
+            .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
+            .setMaxMemory(qryParams.maxMemory());
 
         Iterable<List<?>> cur;
 
