@@ -84,6 +84,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Cac
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ForceRebalanceExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandLegacyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
@@ -3418,7 +3420,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             orderMap.get(order).add(grpId);
                         }
 
-                        Runnable r = null;
+                        RebalanceFuture r = null;
 
                         List<String> rebList = new LinkedList<>();
 
@@ -3429,6 +3431,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         if (task instanceof ForceRebalanceExchangeTask)
                             forcedRebFut = ((ForceRebalanceExchangeTask)task).forcedRebalanceFuture();
 
+                        GridCompoundFuture<Boolean, Boolean> compatibleWaitFut = new GridCompoundFuture<>();
+
                         for (Integer order : orderMap.descendingKeySet()) {
                             for (Integer grpId : orderMap.get(order)) {
                                 CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
@@ -3438,11 +3442,12 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 if (assigns != null)
                                     assignsCancelled |= assigns.cancelled();
 
-                                Runnable cur = grp.preloader().addAssignments(assigns,
+                                RebalanceFuture cur = grp.preloader().addAssignments(assigns,
                                     forcePreload,
                                     cnt,
                                     r,
-                                    forcedRebFut);
+                                    forcedRebFut,
+                                    compatibleWaitFut);
 
                                 if (cur != null) {
                                     rebList.add(grp.cacheOrGroupName());
@@ -3451,6 +3456,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 }
                             }
                         }
+
+                        compatibleWaitFut.markInitialized();
 
                         if (forcedRebFut != null)
                             forcedRebFut.markInitialized();
@@ -3468,12 +3475,21 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                 ", evt=" + exchId.discoveryEventName() +
                                 ", node=" + exchId.nodeId() + ']');
 
-                            rebTopVer = resVer;
+                            rebTopVer = resVer; // Will prevent previous chain execution on next group.
 
+                            RebalanceFuture finalR = r;
+
+                            // Wait until compatible rebalances are finished.
                             // Start rebalancing cache groups chain. Each group will be rebalanced
                             // sequentially one by one e.g.:
                             // ignite-sys-cache -> cacheGroupR1 -> cacheGroupP2 -> cacheGroupR3
-                            r.run();
+                            compatibleWaitFut.listen(new IgniteInClosure<IgniteInternalFuture<Boolean>>() {
+                                @Override public void apply(IgniteInternalFuture<Boolean> f) {
+                                    finalR.init();
+                                }
+                            });
+
+                            finalR.init();
                         }
                         else
                             U.log(log, "Skipping rebalancing (nothing scheduled) " +

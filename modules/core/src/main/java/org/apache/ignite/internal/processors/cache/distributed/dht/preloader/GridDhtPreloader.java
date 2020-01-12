@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePreloaderAdapter;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -403,14 +404,14 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public Runnable addAssignments(
-        GridDhtPreloaderAssignments assignments,
-        boolean forceRebalance,
-        long rebalanceId,
-        Runnable next,
-        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut
-    ) {
-        return demander.addAssignments(assignments, forceRebalance, rebalanceId, next, forcedRebFut);
+    @Override public RebalanceFuture addAssignments(
+            GridDhtPreloaderAssignments assignments,
+            boolean forceRebalance,
+            long rebalanceId,
+            RebalanceFuture next,
+            @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut,
+            GridCompoundFuture<Boolean, Boolean> compatibleWaitFut) {
+        return demander.addAssignments(assignments, forceRebalance, rebalanceId, next, forcedRebFut, compatibleWaitFut);
     }
 
     /**

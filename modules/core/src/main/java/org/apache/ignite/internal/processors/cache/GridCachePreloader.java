@@ -27,6 +27,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ForceRebalanceExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -87,13 +88,14 @@ public interface GridCachePreloader {
      * @param rebalanceId Rebalance id created by exchange thread.
      * @param next Runnable responsible for cache rebalancing chain.
      * @param forcedRebFut External future for forced rebalance.
-     * @return Rebalancing runnable.
+     * @param compatibleWaitFut
+     * @return Rebalancing future or null if should move to next group.
      */
-    public Runnable addAssignments(GridDhtPreloaderAssignments assignments,
-        boolean forcePreload,
-        long rebalanceId,
-        Runnable next,
-        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut);
+    public RebalanceFuture addAssignments(GridDhtPreloaderAssignments assignments,
+                                          boolean forcePreload,
+                                          long rebalanceId,
+                                          RebalanceFuture next,
+                                          @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut, GridCompoundFuture<Boolean, Boolean> compatibleWaitFut);
 
     /**
      * @param p Preload predicate.
