@@ -17,7 +17,6 @@
 package org.apache.ignite.console.web.security;
 
 import org.apache.ignite.console.common.Test;
-import org.apache.ignite.console.config.ActivationConfiguration;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -33,15 +32,14 @@ public class TestSecurityConfig extends SecurityConfig {
     private static final String TEST_PATH = "/api/v1/test/**";
 
     /**
-     * @param activationCfg Account activation configuration.
      * @param encoder Service for encoding user passwords.
      * @param accountsSrv User details service.
      */
-    public TestSecurityConfig(ActivationConfiguration activationCfg,
+    public TestSecurityConfig(
         PasswordEncoder encoder,
         AccountsService accountsSrv
     ) {
-        super(activationCfg, encoder, accountsSrv);
+        super(encoder, accountsSrv);
     }
 
     /** {@inheritDoc} */

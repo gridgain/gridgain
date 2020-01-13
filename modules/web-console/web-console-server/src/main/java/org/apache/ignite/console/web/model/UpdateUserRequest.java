@@ -16,51 +16,54 @@
 
 package org.apache.ignite.console.web.model;
 
-import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.hibernate.validator.constraints.NotEmpty;
 
 /**
- * Web model of toggle admin right request.
+ * Web model of update user request.
  */
-public class ToggleRequest {
-    /** Account ID. */
-    @NotEmpty
-    private UUID id;
-
+public class UpdateUserRequest {
     /** Admin flag. */
-    private boolean admin;
+    private Boolean admin;
 
-    /**
-     * @return Account ID.
-     */
-    public UUID getId() {
-        return id;
-    }
-
-    /**
-     * @param id Account ID.
-     */
-    public void setId(UUID id) {
-        this.id = id;
-    }
+    /** Reset failed login attempts flag. */
+    private boolean resetFailedLoginAttempts;
 
     /**
      * @return Admin flag.
      */
-    public boolean isAdmin() {
+    public Boolean isAdmin() {
         return admin;
     }
 
     /**
      * @param admin Admin flag.
+     * @return {@code This} for method chaining.
      */
-    public void setAdmin(boolean admin) {
+    public UpdateUserRequest setAdmin(Boolean admin) {
         this.admin = admin;
+
+        return this;
+    }
+
+    /**
+     * @param resetFailedSignInAttempts Reset failed login attempts flag.
+     * @return {@code This} for method chaining.
+     */
+    public UpdateUserRequest setResetFailedLoginAttempts(boolean resetFailedSignInAttempts) {
+        this.resetFailedLoginAttempts = resetFailedSignInAttempts;
+
+        return this;
+    }
+
+    /**
+     * @return Reset failed login attempts flag.
+     */
+    public boolean isResetFailedLoginAttempts() {
+        return resetFailedLoginAttempts;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(ToggleRequest.class, this);
+        return S.toString(UpdateUserRequest.class, this);
     }
 }

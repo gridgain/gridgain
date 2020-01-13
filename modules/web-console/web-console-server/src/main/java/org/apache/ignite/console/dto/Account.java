@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.console.notification.IRecipient;
-import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.springframework.security.core.CredentialsContainer;
 import org.springframework.security.core.GrantedAuthority;
@@ -77,8 +76,11 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** Latest activation token was sent at. */
     private LocalDateTime activationSentAt;
 
-    /** Last activity. */
-    private String sessionToken;
+    /** Failed login attempts. */
+    private int failedLoginAttempts;
+
+    /** Time of last failed login attempt. */
+    private long lastFailedLogin;
 
     /**
      * Default constructor for serialization.
@@ -262,12 +264,48 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     }
 
     /**
-     * Activate account.
+     * @param attemptsCnt Failed login attempts.
+     */
+    public void setFailedLoginAttempts(int attemptsCnt) {
+        this.failedLoginAttempts = attemptsCnt;
+    }
+
+    /**
+     * @return Failed login attempts.
+     */
+    public int getFailedLoginAttempts() {
+        return failedLoginAttempts;
+    }
+
+    /**
+     * @return Time of last failed login attempt.
+     */
+    public long getLastFailedLogin() {
+        return lastFailedLogin;
+    }
+
+    /**
+     * @param lastFailedLogin Time of last failed login attempt.
+     */
+    public void setLastFailedLogin(long lastFailedLogin) {
+        this.lastFailedLogin = lastFailedLogin;
+    }
+
+    /**
+     * Increment account.
      */
     public void activate() {
         enabled = true;
         activationTok = null;
         activationSentAt = null;
+    }
+
+    /**
+     * Reset failed login attempts.
+     */
+    public void resetFailedLoginAttempts() {
+        failedLoginAttempts = 0;
+        lastFailedLogin = 0;
     }
 
     /**
@@ -326,20 +364,6 @@ public class Account extends AbstractDto implements UserDetails, CredentialsCont
     /** {@inheritDoc} */
     @Override public void eraseCredentials() {
         hashedPwd = null;
-    }
-
-    /**
-     * Update account fields.
-     * @param changes Changes.
-     */
-    public void update(ChangeUserRequest changes) {
-        email = changes.getEmail();
-        firstName = changes.getFirstName();
-        lastName = changes.getLastName();
-        phone = changes.getPhone();
-        country = changes.getCountry();
-        company = changes.getCompany();
-        tok = changes.getToken();
     }
 
     /** {@inheritDoc} */

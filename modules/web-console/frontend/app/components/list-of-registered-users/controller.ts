@@ -88,33 +88,31 @@ export default class IgniteListOfRegisteredUsersCtrl {
         this.actionOptions = [
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.becomeThisUser'),
-                click: () => this.becomeUser(),
-                available: true
+                click: () => this.becomeUser()
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.removeAdmin'),
-                click: () => this.toggleAdmin(),
-                available: true
+                click: () => this.toggleAdmin()
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.grantAdmin'),
-                click: () => this.toggleAdmin(),
-                available: false
+                click: () => this.toggleAdmin()
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.addUser'),
-                sref: '.createUser',
-                available: true
+                sref: '.createUser'
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.removeUser'),
-                click: () => this.removeUser(),
-                available: true
+                click: () => this.removeUser()
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.activityDetail'),
-                click: () => this.showActivities(),
-                available: true
+                click: () => this.showActivities()
+            },
+            {
+                action: this.$translate.instant('admin.listOfRegisteredUsers.actions.resetFailedLoginAttempts'),
+                click: () => this.resetFailedLoginAttempts()
             }
         ];
 
@@ -227,6 +225,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             this.actionOptions[2].available = other && !user.admin; // Grant admin.
             this.actionOptions[4].available = other; // Remove user.
             this.actionOptions[5].available = true; // Activity detail.
+            this.actionOptions[6].available = user.failedLoginAttempts > 0; // Reset failed login attempts.
         }
         else {
             this.actionOptions[0].available = false; // Become this user.
@@ -234,6 +233,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             this.actionOptions[2].available = false; // Grant admin.
             this.actionOptions[4].available = false; // Remove user.
             this.actionOptions[5].available = false; // Activity detail.
+            this.actionOptions[6].available = false; // Reset failed attempts.
         }
     }
 
@@ -259,16 +259,16 @@ export default class IgniteListOfRegisteredUsersCtrl {
 
         const user = this.gridApi.selection.legacyGetSelectedRows()[0];
 
-        if (user.adminChanging)
+        if (user.changing)
             return;
 
-        user.adminChanging = true;
+        user.changing = true;
 
         this.AdminData.toggleAdmin(user)
             .finally(() => {
                 this._updateSelected();
 
-                user.adminChanging = false;
+                user.changing = false;
             });
     }
 
@@ -295,6 +295,25 @@ export default class IgniteListOfRegisteredUsersCtrl {
         const user = this.gridApi.selection.legacyGetSelectedRows()[0];
 
         return new this.ActivitiesUserDialog({ user });
+    }
+
+    resetFailedLoginAttempts() {
+        if (!this.gridApi)
+            return;
+
+        const user = this.gridApi.selection.legacyGetSelectedRows()[0];
+
+        if (user.changing)
+            return;
+
+        user.changing = true;
+        this.Confirm.confirm(this.$translate.instant('admin.listOfRegisteredUsers.resetFailedAttemptsConfirmationMessage', {userName: user.userName}))
+            .then(() => this.AdminData.resetFailedAttempts(user))
+            .finally(() => {
+                this._updateSelected();
+
+                user.changing = false;
+            });
     }
 
     groupByUser() {

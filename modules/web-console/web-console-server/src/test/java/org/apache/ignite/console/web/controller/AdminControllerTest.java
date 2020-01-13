@@ -23,6 +23,7 @@ import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.services.AdminService;
 import org.apache.ignite.console.web.model.SignInRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
+import org.apache.ignite.console.web.model.UpdateUserRequest;
 import org.apache.ignite.console.web.model.UserResponse;
 import org.apache.ignite.internal.util.typedef.F;
 import org.junit.After;
@@ -43,6 +44,9 @@ import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.springframework.http.HttpHeaders.CONTENT_TYPE;
+import static org.springframework.http.HttpHeaders.COOKIE;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 import static org.springframework.session.FindByIndexNameSessionRepository.PRINCIPAL_NAME_INDEX_NAME;
 
 /**
@@ -128,6 +132,43 @@ public class AdminControllerTest extends AbstractSelfTest {
         assertTrue(sessions(USER_EMAIL).isEmpty());
     }
 
+    /** */
+    @Test
+    public void shouldResetFailedLoginAttempts() {
+        registerUser(USER_EMAIL, false);
+
+        SignInRequest loginReq1 = new SignInRequest();
+
+        loginReq1.setEmail(USER_EMAIL);
+        loginReq1.setPassword("wrong_password");
+
+        request("/api/v1/signin", HttpMethod.POST, toJson(loginReq1), Void.class);
+        request("/api/v1/signin", HttpMethod.POST, toJson(loginReq1), Void.class);
+
+        Account actual = accountSrvc.loadUserByUsername(USER_EMAIL);
+
+        assertEquals(2, actual.getFailedLoginAttempts());
+
+        registerUser(ADMIN_EMAIL, true);
+
+        SignInRequest loginReq2 = new SignInRequest();
+
+        loginReq2.setEmail(ADMIN_EMAIL);
+        loginReq2.setPassword("password");
+
+        request("/api/v1/signin", HttpMethod.POST, toJson(loginReq2), Void.class);
+
+        UpdateUserRequest updReq = new UpdateUserRequest();
+
+        updReq.setResetFailedLoginAttempts(true);
+
+        request("/api/v1/admin/users/" + actual.getId(), HttpMethod.PATCH, toJson(updReq), Void.class);
+
+        actual = accountSrvc.loadUserByUsername(USER_EMAIL);
+
+        assertEquals(0, actual.getFailedLoginAttempts());
+    }
+
     /**
      * @param url the URL
      * @param mtd the HTTP method (GET, POST, etc)
@@ -137,8 +178,9 @@ public class AdminControllerTest extends AbstractSelfTest {
     private <T> T request(String url, HttpMethod mtd, String body, Class<T> resType) {
         HttpHeaders headers = new HttpHeaders();
         
-        headers.set("Cookie", latestCookies);
-        
+        headers.set(COOKIE, latestCookies);
+        headers.set(CONTENT_TYPE, APPLICATION_JSON_VALUE);
+
         HttpEntity<String> reqEntity = new HttpEntity<>(body, headers);
 
         ResponseEntity<T> res = restTemplate.exchange(url, mtd, reqEntity, resType);
@@ -168,7 +210,7 @@ public class AdminControllerTest extends AbstractSelfTest {
 
         Account acc = adminSrvc.registerUser(req);
 
-        accountSrvc.toggle(acc.getId(), adminFlag);
+        adminSrvc.toggle(acc.getId(), adminFlag);
     }
 
     /**

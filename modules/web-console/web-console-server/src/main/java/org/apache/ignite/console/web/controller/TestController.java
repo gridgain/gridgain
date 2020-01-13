@@ -20,7 +20,6 @@ import javax.validation.Valid;
 import org.apache.ignite.console.common.Test;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.json.JsonArray;
-import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.services.AdminService;
 import org.apache.ignite.console.utils.Utils;
 import org.apache.ignite.console.web.model.SignUpRequest;
@@ -47,20 +46,15 @@ public class TestController {
     /** Authentication manager. */
     private AuthenticationManager authMgr;
 
-    /** Accounts service. */
-    protected AccountsService accountsSrvc;
-
     /** Administration service. */
     protected AdminService adminSrv;
 
     /**
      * @param authMgr Authentication manager.
-     * @param accountsSrvc Accounts service.
      * @param adminSrvc Administration service.
      */
-    public TestController(AuthenticationManager authMgr, AccountsService accountsSrvc, AdminService adminSrvc) {
+    public TestController(AuthenticationManager authMgr, AdminService adminSrvc) {
         this.authMgr = authMgr;
-        this.accountsSrvc = accountsSrvc;
         this.adminSrv = adminSrvc;
     }
 
@@ -73,7 +67,7 @@ public class TestController {
     public ResponseEntity<Void> registerAdmin(@Valid @RequestBody SignUpRequest params) {
         Account acc = adminSrv.registerUser(params);
 
-        accountsSrvc.toggle(acc.getId(), true);
+        adminSrv.toggle(acc.getId(), true);
 
         Authentication authentication = authMgr.authenticate(
             new UsernamePasswordAuthenticationToken(

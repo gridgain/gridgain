@@ -30,6 +30,7 @@ import org.apache.ignite.console.services.NotificationServiceTest;
 import org.apache.ignite.console.services.SessionsServiceTest;
 import org.apache.ignite.console.web.controller.AdminControllerTest;
 import org.apache.ignite.console.web.controller.AgentDownloadControllerSelfTest;
+import org.apache.ignite.console.web.security.AuthenticationTest;
 import org.apache.ignite.console.web.security.PasswordEncoderTest;
 import org.apache.ignite.console.web.socket.AgentsServiceSelfTest;
 import org.apache.ignite.console.web.socket.BrowsersServiceSelfTest;
@@ -57,6 +58,7 @@ import org.junit.runners.Suite;
     SessionsServiceTest.class,
     AdminControllerTest.class,
     AgentDownloadControllerSelfTest.class,
+    AuthenticationTest.class,
     PasswordEncoderTest.class,
     AgentsServiceSelfTest.class,
     BrowsersServiceSelfTest.class,

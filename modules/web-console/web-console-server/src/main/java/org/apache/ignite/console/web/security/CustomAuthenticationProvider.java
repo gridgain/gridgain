@@ -18,6 +18,7 @@ package org.apache.ignite.console.web.security;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
+import org.apache.ignite.console.config.AccountConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.services.AccountsService;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -39,10 +40,10 @@ public class CustomAuthenticationProvider extends DaoAuthenticationProvider {
     private long activationTimeout;
 
     /**
-     * @param activationTimeout Activation timeout.
+     * @param accCfg Account configuration.
      */
-    CustomAuthenticationProvider(long activationTimeout) {
-        this.activationTimeout = activationTimeout;
+    CustomAuthenticationProvider(AccountConfiguration accCfg) {
+        this.activationTimeout = accCfg.getActivation().getTimeout();
     }
 
     /**

@@ -18,7 +18,7 @@ package org.apache.ignite.console.services;
 
 import java.util.UUID;
 import org.apache.ignite.console.MockConfiguration;
-import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.config.AccountConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
@@ -241,8 +241,9 @@ public class AccountsServiceTest {
         when(accountsRepo.getById(any(UUID.class)))
             .thenAnswer(invocation -> {
                 Account acc = new Account();
-                acc.setEmail("fake@mail");
                 acc.setId(invocation.getArgumentAt(0, UUID.class));
+                acc.setEmail("fake@mail");
+                acc.setPassword("password");
                 acc.setToken("token");
 
                 return acc;
@@ -309,26 +310,24 @@ public class AccountsServiceTest {
     /**
      * @param disableSignUp Disable sign up.
      * @param enableActivation Enable activation.
-     * @param sendTimeout Send timeout.
+     * @param sndTimeout Send timeout.
      */
-    private AccountsService mockAccountsService(boolean disableSignUp, boolean enableActivation, long sendTimeout) {
-        ActivationConfiguration activationCfg = new ActivationConfiguration(new NoopMailService()).setSendTimeout(sendTimeout);
-        try {
-            activationCfg.afterPropertiesSet();
-        }
-        catch (Exception e) {
-            // No-op
-        }
-        activationCfg.setEnabled(enableActivation);
+    private AccountsService mockAccountsService(boolean disableSignUp, boolean enableActivation, long sndTimeout) {
+        AccountConfiguration accCfg = new AccountConfiguration(new NoopMailService());
+
+        accCfg.setActivation(new AccountConfiguration.Activation()
+            .setSendTimeout(sndTimeout)
+            .setEnabled(enableActivation)
+        );
 
         return new AccountsService(
-                new SignUpConfiguration().setEnabled(disableSignUp),
-                activationCfg,
-                NoOpPasswordEncoder.getInstance(),
-                agentsSrvc,
-                accountsRepo,
-                txMgr,
-                evtPublisher
+            new SignUpConfiguration().setEnabled(disableSignUp),
+            accCfg,
+            NoOpPasswordEncoder.getInstance(),
+            agentsSrvc,
+            accountsRepo,
+            txMgr,
+            evtPublisher
         );
     }
 

@@ -16,6 +16,8 @@
 
 package org.apache.ignite.console.web.security;
 
+import org.apache.ignite.console.config.AccountConfiguration;
+import org.apache.ignite.console.dto.Account;
 import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AccountExpiredException;
 import org.springframework.security.authentication.CredentialsExpiredException;
@@ -34,11 +36,15 @@ public class AccountStatusChecker implements UserDetailsChecker {
     /** Activation enabled. */
     private boolean enabled;
 
+    /** Authentication configuration. */
+    private AccountConfiguration.Authentication cfg;
+
     /**
-     * @param enabled Activation enabled.
+     * @param cfg Account configuration.
      */
-    public AccountStatusChecker(boolean enabled) {
-        this.enabled = enabled;
+    public AccountStatusChecker(AccountConfiguration cfg) {
+        this.enabled = cfg.getActivation().isEnabled();
+        this.cfg = cfg.getAuthentication();
     }
 
     /** {@inheritDoc} */
@@ -61,6 +67,27 @@ public class AccountStatusChecker implements UserDetailsChecker {
         if (!user.isCredentialsNonExpired()) {
             throw new CredentialsExpiredException(messages.getMessage(
                 "AccountStatusUserDetailsChecker.credentialsExpired", "User credentials have expired"));
+        }
+
+        if (user instanceof Account) {
+            Account acc = (Account)user;
+
+            int attemptsCnt = acc.getFailedLoginAttempts();
+
+            if (attemptsCnt >= cfg.getMaxAttempts()) {
+                throw new LockedException(messages.getMessage(
+                    "AccountStatusChecker.tooManyAttempts", "Account locked due to too many failed login attempts"
+                ));
+            }
+
+            long attemptsInterval = (long)Math.pow(cfg.getInterval(), Math.log(attemptsCnt));
+            long calculatedInterval = Math.min(attemptsInterval, cfg.getMaxInterval());
+
+            if (System.currentTimeMillis() - acc.getLastFailedLogin() < calculatedInterval) {
+                throw new LockedException(messages.getMessage(
+                    "AccountStatusChecker.attemptTooSoon", "Account is currently locked. Try again later"
+                ));
+            }
         }
     }
 }

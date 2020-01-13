@@ -51,6 +51,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 import static org.apache.ignite.console.utils.Utils.fromJson;
 import static org.apache.ignite.console.utils.Utils.toJson;
 import static org.apache.ignite.console.websocket.WebSocketEvents.ADMIN_ANNOUNCEMENT;
@@ -197,12 +198,12 @@ public class BrowsersService extends AbstractSocketHandler {
                         params = buildRestExeParams(clusterId, params);
 
                     if (F.isEmpty(clusterId))
-                        throw new IllegalStateException(messages.getMessage("err.missing-cluster-id-param"));
+                        throw new IllegalStateException(message("err.missing-parameter", "clusterId"));
 
                     TopologySnapshot top = clustersRepo.get(clusterId);
 
                     if (top == null)
-                        throw new IllegalStateException(messages.getMessageWithArgs("err.cluster-not-found-by-id", clusterId));
+                        throw new IllegalStateException(message("err.cluster-not-found-by-id", clusterId));
 
                     if (top.isSecured()) {
                         SessionAttribute sesAttr = new SessionAttribute(ses, SESSION_TOKEN_ATTR_PREFIX + clusterId);
@@ -238,7 +239,7 @@ public class BrowsersService extends AbstractSocketHandler {
                     break;
                     
                 default:
-                    throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-evt", evt));
+                    throw new IllegalStateException(message("err.unknown-evt", evt));
             }
 
             locRequests.put(evt.getRequestId(), ses);
@@ -298,7 +299,7 @@ public class BrowsersService extends AbstractSocketHandler {
                 return ((Account)tp).getId();
         }
 
-        throw new IllegalStateException(messages.getMessageWithArgs("err.account-cant-be-found-in-ws-session", ses));
+        throw new IllegalStateException(message("err.account-cant-be-found-in-ws-session", ses));
     }
 
     /**
@@ -394,14 +395,14 @@ public class BrowsersService extends AbstractSocketHandler {
         String taskId = params.getString("taskId");
 
         if (F.isEmpty(taskId))
-            throw new IllegalStateException(messages.getMessageWithArgs("err.not-specified-task-id", params));
+            throw new IllegalStateException(message("err.not-specified-task-id", params));
 
         String nids = params.getString("nids");
 
         VisorTaskDescriptor desc = visorTasks.get(taskId);
 
         if (desc == null)
-            throw new IllegalStateException(messages.getMessageWithArgs("err.unknown-task", taskId, params));
+            throw new IllegalStateException(message("err.unknown-task", taskId, params));
 
         JsonObject exeParams = new JsonObject()
             .add("cmd", "exe")

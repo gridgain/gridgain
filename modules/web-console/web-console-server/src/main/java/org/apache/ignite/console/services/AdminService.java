@@ -30,6 +30,7 @@ import org.apache.ignite.console.repositories.ConfigurationsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ConfigurationKey;
 import org.apache.ignite.console.web.model.SignUpRequest;
+import org.apache.ignite.console.web.model.UpdateUserRequest;
 import org.apache.ignite.console.web.socket.TransitionService;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -130,8 +131,8 @@ public class AdminService {
                 account.getUsername()
             );
 
-            long lastLogin = ses.values().stream().map(ExpiringSession::getCreationTime).max(Long::compareTo).orElse(-1L);
-            long lastActivity = ses.values().stream().map(ExpiringSession::getLastAccessedTime).max(Long::compareTo).orElse(-1L);
+            long lastLogin = ses.values().stream().map(ExpiringSession::getCreationTime).max(Long::compareTo).orElse(0L);
+            long lastActivity = ses.values().stream().map(ExpiringSession::getLastAccessedTime).max(Long::compareTo).orElse(0L);
 
             JsonArray clusters = cfgsRepo.loadClusters(new ConfigurationKey(account.getId(), false));
 
@@ -155,6 +156,8 @@ public class AdminService {
                 .add("country", account.getCountry())
                 .add("lastLogin", lastLogin)
                 .add("lastActivity", lastActivity)
+                .add("failedLoginAttempts", account.getFailedLoginAttempts())
+                .add("lastFailedLogin", account.getLastFailedLogin())
                 .add("activated", account.isEnabled())
                 .add("counters", new JsonObject()
                     .add("clusters", clusters.size())
@@ -189,7 +192,28 @@ public class AdminService {
      * @param admin Admin flag.
      */
     public void toggle(UUID accId, boolean admin) {
-        accountsSrv.toggle(accId, admin);
+        accountsSrv.save(accId, acc -> {
+            acc.setAdmin(admin);
+            
+            return acc;
+        });
+    }
+
+    /**
+     * @param accId Account ID.
+     */
+    public void updateUser(UUID accId, UpdateUserRequest params) {
+        accountsSrv.save(accId, acc -> {
+            if (params.isAdmin() != null)
+                acc.setAdmin(params.isAdmin());
+
+            if (params.isResetFailedLoginAttempts()) {
+                acc.setFailedLoginAttempts(0);
+                acc.setLastFailedLogin(0);
+            }
+            
+            return acc;
+        });
     }
 
     /**

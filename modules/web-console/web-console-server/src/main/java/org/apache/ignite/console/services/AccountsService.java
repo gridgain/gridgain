@@ -19,21 +19,20 @@ package org.apache.ignite.console.services;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
-import org.apache.ignite.console.config.ActivationConfiguration;
+import java.util.function.Function;
+import org.apache.ignite.console.config.AccountConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
 import org.apache.ignite.console.event.EventPublisher;
-import org.apache.ignite.console.messages.WebConsoleMessageSource;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
+import org.apache.ignite.console.web.security.AccountStatusChecker;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.AgentsService;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
-import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -47,6 +46,7 @@ import static org.apache.ignite.console.event.AccountEventType.ACCOUNT_UPDATE;
 import static org.apache.ignite.console.event.AccountEventType.PASSWORD_CHANGED;
 import static org.apache.ignite.console.event.AccountEventType.PASSWORD_RESET;
 import static org.apache.ignite.console.event.AccountEventType.RESET_ACTIVATION_TOKEN;
+import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 
 /**
  * Service to handle accounts.
@@ -71,9 +71,6 @@ public class AccountsService implements UserDetailsService {
     /** User details getChecker. */
     protected UserDetailsChecker userDetailsChecker;
 
-    /** Messages acessor. */
-    protected final MessageSourceAccessor messages = WebConsoleMessageSource.getAccessor();
-
     /** Flag if sign up disabled and new accounts can be created only by administrator. */
     private boolean disableSignup;
 
@@ -85,7 +82,7 @@ public class AccountsService implements UserDetailsService {
 
     /**
      * @param signUpCfg Sign up configuration.
-     * @param activationCfg Account activation configuration.
+     * @param accCfg Account configuration.
      * @param encoder Service interface for encoding passwords.
      * @param agentsSrvc Agent manager.
      * @param accountsRepo Accounts repository.
@@ -94,7 +91,7 @@ public class AccountsService implements UserDetailsService {
      */
     public AccountsService(
         SignUpConfiguration signUpCfg,
-        ActivationConfiguration activationCfg,
+        AccountConfiguration accCfg,
         PasswordEncoder encoder,
         AgentsService agentsSrvc,
         AccountsRepository accountsRepo,
@@ -102,9 +99,9 @@ public class AccountsService implements UserDetailsService {
         EventPublisher evtPublisher
     ) {
         disableSignup = !signUpCfg.isEnabled();
-        userDetailsChecker = activationCfg.getChecker();
-        activationEnabled = activationCfg.isEnabled();
-        activationSndTimeout = activationCfg.getSendTimeout();
+        userDetailsChecker = new AccountStatusChecker(accCfg);
+        activationEnabled = accCfg.getActivation().isEnabled();
+        activationSndTimeout = accCfg.getActivation().getSendTimeout();
 
         this.encoder = encoder;
         this.agentsSrvc = agentsSrvc;
@@ -151,7 +148,7 @@ public class AccountsService implements UserDetailsService {
             Account acc0 = create(params);
 
             if (disableSignup && !acc0.isAdmin())
-                throw new AuthenticationServiceException(messages.getMessage("err.sign-up-not-allowed"));
+                throw new AuthenticationServiceException(message("err.sign-up-not-allowed"));
 
             return acc0;
         });
@@ -159,7 +156,7 @@ public class AccountsService implements UserDetailsService {
         if (activationEnabled) {
             evtPublisher.publish(new Event<>(RESET_ACTIVATION_TOKEN, acc));
 
-            throw new MissingConfirmRegistrationException(messages.getMessage("err.confirm-email"), acc.getEmail());
+            throw new MissingConfirmRegistrationException(message("err.confirm-email"), acc.getEmail());
         }
 
         evtPublisher.publish(new Event<>(ACCOUNT_CREATE, acc));
@@ -184,24 +181,6 @@ public class AccountsService implements UserDetailsService {
     }
 
     /**
-     * Update admin flag..
-     *
-     * @param accId Account ID.
-     * @param adminFlag New value for admin flag.
-     */
-    public void toggle(UUID accId, boolean adminFlag) {
-        txMgr.doInTransaction(() -> {
-            Account account = accountsRepo.getById(accId);
-
-            if (account.isAdmin() != adminFlag) {
-                account.setAdmin(adminFlag);
-
-                accountsRepo.save(account);
-            }
-        });
-    }
-
-    /**
      * Reset activation token for account
      *
      * @param accId Account ID.
@@ -223,13 +202,13 @@ public class AccountsService implements UserDetailsService {
      */
     public void resetActivationToken(String email) {
         if (!activationEnabled)
-            throw new IllegalAccessError(messages.getMessage("err.activation-not-enabled"));
+            throw new IllegalAccessError(message("err.activation-not-enabled"));
 
         Account acc = txMgr.doInTransaction(() -> {
             Account acc0 = accountsRepo.getByEmail(email);
 
             if (MILLIS.between(acc0.getActivationSentAt(), LocalDateTime.now()) >= activationSndTimeout)
-                throw new IllegalAccessError(messages.getMessage("err.too-many-activation-attempts"));
+                throw new IllegalAccessError(message("err.too-many-activation-attempts"));
 
             acc0.resetActivationToken();
 
@@ -245,18 +224,41 @@ public class AccountsService implements UserDetailsService {
      * Save user.
      *
      * @param accId User ID.
-     * @param changes Changes to apply to user.
+     * @param params Changes to apply to user.
      */
-    public Account save(UUID accId, ChangeUserRequest changes) {
+    public Account save(UUID accId, ChangeUserRequest params) {
+        return save(accId, (acc) -> {
+            acc.setEmail(params.getEmail());
+            acc.setFirstName(params.getFirstName());
+            acc.setLastName(params.getLastName());
+            acc.setPhone(params.getPhone());
+            acc.setCountry(params.getCountry());
+            acc.setCompany(params.getCompany());
+            acc.setToken(params.getToken());
+
+            return acc;
+        });
+    }
+
+    /**
+     * Save user.
+     *
+     * @param accId User ID.
+     * @param fn Changes to apply to user.
+     */
+    protected Account save(UUID accId, Function<Account, Account> fn) {
         T2<Account, String> res = txMgr.doInTransaction(() -> {
             Account acc = accountsRepo.getById(accId);
 
-            acc.update(changes);
+            if (acc == null)
+                throw new IllegalStateException(message("err.account-not-found-by-id", accId));
 
-            String pwd = changes.getPassword();
+            String oldPwd = acc.getPassword();
 
-            if (!F.isEmpty(pwd))
-                acc.setPassword(encoder.encode(pwd));
+            acc = fn.apply(acc);
+
+            if (!oldPwd.equals(acc.getPassword()))
+                acc.setPassword(encoder.encode(acc.getPassword()));
 
             Account oldAcc = accountsRepo.save(acc);
 
@@ -303,7 +305,7 @@ public class AccountsService implements UserDetailsService {
             Account acc = accountsRepo.getByEmail(email);
 
             if (!resetPwdTok.equals(acc.getResetPasswordToken()))
-                throw new IllegalStateException(messages.getMessage("err.account-not-found-by-token"));
+                throw new IllegalStateException(message("err.account-not-found-by-token"));
 
             userDetailsChecker.check(acc);
 

@@ -356,10 +356,10 @@ public class AgentsService extends AbstractSocketHandler {
      */
     private void validateAgentHandshake(AgentHandshakeRequest req) {
         if (F.isEmpty(req.getTokens()))
-            throw new IllegalArgumentException(messages.getMessage("err.tokens-no-specified-in-agent-handshake-req"));
+            throw new IllegalArgumentException(message("err.tokens-no-specified-in-agent-handshake-req"));
 
         if (!SUPPORTED_VERS.contains(req.getVersion()))
-            throw new IllegalArgumentException(messages.getMessageWithArgs("err.agent-unsupport-version", req.getVersion()));
+            throw new IllegalArgumentException(message("err.agent-unsupport-version", req.getVersion()));
     }
 
     /**
@@ -371,7 +371,7 @@ public class AgentsService extends AbstractSocketHandler {
         Collection<Account> accounts = accRepo.getAllByTokens(tokens);
 
         if (accounts.isEmpty())
-            throw new IllegalArgumentException(messages.getMessageWithArgs("err.failed-auth-with-tokens", tokens));
+            throw new IllegalArgumentException(message("err.failed-auth-with-tokens", tokens));
 
         return accounts;
     }
