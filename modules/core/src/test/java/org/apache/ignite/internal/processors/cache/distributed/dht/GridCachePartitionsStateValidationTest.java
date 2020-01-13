@@ -16,11 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -332,14 +328,24 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
     }
 
     /**
-     *  Test that partitions state validation works correctly and show partition size always (GG-24471):
-     *  1. Only partition counters are inconsistent.
+     *  Three tests that partitions state validation works correctly and show partition size always (GG-24471):
      *
-     * @throws Exception If failed.
+     *Start three-nodes grid: first node (coordinator) with LogListener and two nodes without,
+     *arguments: cns - partition counters are inconsistent(boolean)
+     *           size - partition size are inconsistent(boolean)
      */
+    private void startGridWithFirsLoggerNode(Boolean cnt, Boolean size) throws Exception {
+        testLogger = new ListeningTestLogger();
 
-    /** Start three-nodes grid: first node (coordinator) with LogListener and two nodes without*/
-    private IgniteEx startGridWithFirsLoggerNode() throws Exception {
+        Collection<LogListener> lsnrs = new ArrayList<>();
+
+        if (cnt)
+            lsnrs.add(LogListener.matches("Partitions update counters are inconsistent for ").build());
+        if (size)
+            lsnrs.add(LogListener.matches("Partitions cache sizes are inconsistent for ").build());
+
+        lsnrs.forEach(testLogger::registerListener);
+
         IgniteEx ignite = startGrid(0);
             startGrid(1);
             startGrid(2);
@@ -350,116 +356,56 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         for (int i = 0; i < 1000; i++)
             ignite.cache(CACHE_NAME).put(i, i);
 
-        return ignite;
-    }
-
-    @Test
-    /**
-     *  Test that partitions state validation works correctly and show partition size always (GG-24471):
-     *  1. Only partition counters are inconsistent.
-     */
-    public void testValidationIfPartitionCountersAreInconsistentWithSize() throws Exception {
-        testLogger = new ListeningTestLogger();
-
-        LogListener lsnr = LogListener.matches("Partitions update counters are inconsistent for ").build();
-
-        testLogger.registerListener(lsnr);
-
-        try {
-            IgniteEx ignite = startGridWithFirsLoggerNode();
-
-            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).updateCounter(100500L);
-
+        if (cnt){
             // Modify update counter for some partition.
-
-            // Trigger exchange.
-            startGrid(3);
-
-            awaitPartitionMapExchange();
-
-            // Nothing should happen (just log error message) and we're still able to put data to corrupted cache.
-            ignite.cache(CACHE_NAME).put(0, 0);
-
-            assertTrue("Counters inconsistent message not found", lsnr.check());
+            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).updateCounter(100500L);
         }
-        finally {
-            afterTest();
+
+        if (size){
+            // Modify update size for some partition.
+            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).dataStore().clear(ignite.cachex(CACHE_NAME).context().cacheId());
         }
+
+        // Trigger exchange.
+        startGrid(3);
+
+        awaitPartitionMapExchange();
+
+        // Nothing should happen (just log error message) and we're still able to put data to corrupted cache.
+        ignite.cache(CACHE_NAME).put(0, 0);
+
+        lsnrs.forEach(l->assertTrue(l.check()));
+
+        afterTest();
     }
 
     /**
-     * Test that partitions state validation works correctly and show partition size always (GG-24471):
+     *  1. Only partition counters are inconsistent.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testValidationIfPartitionCountersAreInconsistentWithSize() throws Exception {
+        startGridWithFirsLoggerNode(true, false);
+    }
+
+    /**
      *  2. Only partition size are inconsistent.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testValidationIfPartitionSizesAreInconsistentWithSize() throws Exception {
-
-        testLogger = new ListeningTestLogger();
-
-        LogListener lsnrSize = LogListener.matches("Partitions cache sizes are inconsistent").build();
-        testLogger.registerListener(lsnrSize);
-
-        try{
-            IgniteEx ignite = startGridWithFirsLoggerNode();
-
-            // Modify update size for some partition.
-
-            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).dataStore().clear(ignite.cachex(CACHE_NAME).context().cacheId());
-
-            // Trigger exchange.
-            startGrid(3);
-
-            awaitPartitionMapExchange();
-
-            // Nothing should happen (just log error message) and we're still able to put data to corrupted cache.
-            ignite.cache(CACHE_NAME).put(0, 0);
-
-            assertTrue("Size inconsistent message not found",lsnrSize.check());
-        }
-        finally {
-            afterTest();
-        }
+        startGridWithFirsLoggerNode(false, true);
     }
 
     /**
-     * Test that partitions state validation works correctly and show partition size always (GG-24471):
      *  3. Partition counters and size are inconsistent.
      *
      * @throws Exception If failed.
      */
     @Test
     public void testValidationIfPartitionSizesAndPartitionCountersAreInconsistentWithSize() throws Exception {
-
-        testLogger = new ListeningTestLogger();
-
-        LogListener lsnr = LogListener.matches("Partitions \\* are inconsistent for " ).build();
-        //LogListener lsnrCnt = LogListener.matches("Partitions update counters are inconsistent for ").build();
-        testLogger.registerListener(lsnr);
-        //testLogger.registerListener(lsnrCnt);
-
-        try{
-            IgniteEx ignite = startGridWithFirsLoggerNode();
-
-            // Modify update counter and size for some partition.
-
-            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).updateCounter(10500L);
-            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).dataStore().clear(ignite.cachex(CACHE_NAME).context().cacheId());
-
-            // Trigger exchange.
-            startGrid(3);
-
-            awaitPartitionMapExchange();
-
-            // Nothing should happen (just log error message) and we're still able to put data to corrupted cache.
-            ignite.cache(CACHE_NAME).put(0, 0);
-
-            assertTrue("Size inconsistent message not found",lsnr.check());
-//           assertTrue("Counters inconsistent message not found", lsnrCnt.check());
-        }
-        finally {
-            afterTest();
-        }
+        startGridWithFirsLoggerNode(true, true);
     }
 }
