@@ -32,6 +32,11 @@ public class PlatformCacheManager implements GridCacheManager {
     /** */
     private GridCacheContext cctx;
 
+    /**
+     * Constructor.
+     *
+     * @param gate Platform gateway..
+     */
     public PlatformCacheManager(PlatformCallbackGateway gate) {
         assert gate != null;
 
