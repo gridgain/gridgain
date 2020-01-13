@@ -307,7 +307,6 @@ export default class IgniteListOfRegisteredUsersCtrl {
             return;
 
         user.changing = true;
-
         this.Confirm.confirm(this.$translate.instant('admin.listOfRegisteredUsers.resetFailedAttemptsConfirmationMessage', {userName: user.userName}))
             .then(() => this.AdminData.resetFailedAttempts(user))
             .finally(() => {
