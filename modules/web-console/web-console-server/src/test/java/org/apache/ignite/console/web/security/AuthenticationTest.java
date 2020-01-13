@@ -64,8 +64,8 @@ public class AuthenticationTest extends AbstractSelfTest {
     private AccountsRepository accountsRepo;
 
     /**
-     * Perform login attempt with wrong pwd
-     * Verify the error and error message about wrong pwd.
+     * Perform login attempt with wrong credentials
+     * Verify the error and error message about wrong credentials.
      * Verify that no. of failed attempts  is equal to 1 and lastFailedLogin is updated
      */
     @Test
@@ -84,7 +84,7 @@ public class AuthenticationTest extends AbstractSelfTest {
     }
 
     /**
-     * Perform login attempt with wrong pwd
+     * Perform login attempt with wrong credentials
      * Immediately try to login with valid credentials
      * Verify the login was successful, no. of failed attempts  and lastFailedLogin are equal to 0
      */
@@ -108,7 +108,7 @@ public class AuthenticationTest extends AbstractSelfTest {
     }
 
     /**
-     * Perform login attempt with wrong pwd
+     * Perform login attempt with wrong credentials
      * Immediately try to login with valid credentials
      * Verify the login was successful, no. of failed attempts  and lastFailedLogin are equal to 0
      */
@@ -137,8 +137,8 @@ public class AuthenticationTest extends AbstractSelfTest {
     }
 
     /**
-     * Perform login attempt with wrong pwd
-     * Immediately try to login with wrong pwd
+     * Perform login attempt with wrong credentials
+     * Immediately try to login with wrong credentials
      * Immediately try to login with valid credentials
      * Verify the error and error message about timeout, no. of failed attempts is 3  and lastFailedLogin is updated
      * Verify the User is revoked
@@ -181,9 +181,10 @@ public class AuthenticationTest extends AbstractSelfTest {
     }
 
     /**
-     * Perform login attempt with wrong pwd
-     * Immediately try to login with wrong pwd
-     * Verify the error and error message about wrong pwd. Verify that no. of failed attempts  is equal to 2 and lastFailedLogin is updated
+     * Perform login attempt with wrong credentials
+     * Immediately try to login with wrong credentials
+     * Verify the error and error message about wrong credentials.
+     * Verify that no. of failed attempts  is equal to 2 and lastFailedLogin is updated
      * Wait for a cooldown period
      * Try to login with valid credentials
      * Verify the login was successful, no. of failed attempts  and lastFailedLogin are equal to 0
@@ -229,12 +230,16 @@ public class AuthenticationTest extends AbstractSelfTest {
     }
 
     /**
-     * Perform login attempt with wrong pwd
-     * Immediately try to login with wrong pwd
+     * Perform login attempt with wrong credentials
      * Immediately try to login with wrong credentials
-     * Verify the error and error message about too many attempts, no. of failed attempts is 4 and lastFailedLogin is updated
-     * Wait for a cooldown period
-     * Verify the error and error message about too many attempts, no. of failed attempts is 5 and lastFailedLogin is updated
+     * Immediately try to login with wrong credentials
+     * Verify the User is revoked
+     * Verify the error and error message about timeout, no. of failed attempts is 3  and lastFailedLogin is updated
+     * Immediately try to login with valid credentials
+     * Verify the error, no. of failed attempts and lastFailedLogin
+     * Wait for cooldown timeout
+     * Try to login with valid credentials
+     * Verify the error, no. of failed attempts and lastFailedLogin
      */
     @Test
     public void shouldLockWithTooManyAttempts() throws InterruptedException {
@@ -267,6 +272,11 @@ public class AuthenticationTest extends AbstractSelfTest {
             return null;
         }, LockedException.class, "Account is currently locked. Try again later");
 
+        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(3, acc.getFailedLoginAttempts());
+        assertNotEquals(0L, acc.getLastFailedLogin());
+
         GridTestUtils.assertThrows(null, () -> {
             authMgr.authenticate(new UsernamePasswordAuthenticationToken(
                 USER_EMAIL,
@@ -276,7 +286,7 @@ public class AuthenticationTest extends AbstractSelfTest {
             return null;
         }, LockedException.class, "Account locked due to too many failed login attempts");
 
-        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+        acc = accountsRepo.getByEmail(USER_EMAIL);
 
         assertEquals(4, acc.getFailedLoginAttempts());
         assertNotEquals(0L, acc.getLastFailedLogin());
