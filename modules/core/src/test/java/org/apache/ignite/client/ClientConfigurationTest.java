@@ -41,6 +41,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -67,7 +68,7 @@ public class ClientConfigurationTest {
             .setSslTrustCertificateKeyStorePath("trust.jks")
             .setSslTrustCertificateKeyStoreType("JKS")
             .setSslTrustCertificateKeyStorePassword("123456")
-            .setSslKeyAlgorithm("SunX509");
+            .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM);
 
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
 

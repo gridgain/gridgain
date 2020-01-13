@@ -120,6 +120,7 @@ import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -1931,7 +1932,7 @@ public final class GridTestUtils {
 
         char[] storePass = keyStorePassword().toCharArray();
 
-        KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance("SunX509");
+        KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(DFLT_KEY_ALGORITHM);
 
         KeyStore keyStore = KeyStore.getInstance("JKS");
 
