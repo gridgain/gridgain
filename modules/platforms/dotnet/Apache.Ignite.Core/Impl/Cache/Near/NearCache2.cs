@@ -30,9 +30,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     {
         // TODO: Init capacity from settings
         // TODO: Eviction
-        private ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
+        private volatile ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
+            new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
 
-        private ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
+        private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
@@ -129,7 +130,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             var key = marshaller.Unmarshal<TK>(stream);
             
-            Console.WriteLine("Evict: " + key);
+            Console.WriteLine("Evict: " + key); // TODO: Remove
             NearCacheEntry<TV> unused;
             _map.TryRemove(key, out unused);
         }
@@ -150,10 +151,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
         }
 
-        public void Remove(TK key)
+        public void Remove<TKey, TVal>(TKey key)
         {
-            NearCacheEntry<TV> unused;
-            _map.TryRemove(key, out unused);
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                NearCacheEntry<TVal> unused;
+                map.TryRemove(key, out unused);
+            }
+
+            if (_fallbackMap != null)
+            {
+                NearCacheEntry<object> unused;
+                _fallbackMap.TryRemove(key, out unused);
+            }
         }
 
         /// <summary>
@@ -161,8 +173,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         private void EnsureFallbackMap()
         {
-            _map = null;
             _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, NearCacheEntry<object>>();
+            _map = null;
         }
     }
 }
