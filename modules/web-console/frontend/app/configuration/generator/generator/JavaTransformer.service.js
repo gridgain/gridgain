@@ -972,6 +972,10 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
             }
         };
 
+        const argsOrProps = (val) => {
+            return val ? [...(val.arguments || []), ...(val.properties || [])] : [];
+        };
+
         crawl(cfg, gatherImports, {
             getChildren: (node, context) => {
                 if (!node)
@@ -990,7 +994,10 @@ export default class IgniteJavaTransformer extends AbstractTransformer {
                     return node.entries;
                 }
 
-                return [...(node.arguments || []), ...(node.properties || [])];
+                if (node.clsName === 'DATA_SOURCE')
+                    return argsOrProps(node.value);
+
+                return argsOrProps(node);
             }
         });
 

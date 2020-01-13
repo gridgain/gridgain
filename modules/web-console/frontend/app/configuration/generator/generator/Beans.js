@@ -72,7 +72,6 @@ export class Bean extends EmptyBean {
         super(clsName);
 
         this.id = id;
-
         this.src = src;
         this.dflts = dflts;
     }
