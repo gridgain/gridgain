@@ -330,11 +330,11 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
     /**
      *  Three tests that partitions state validation works correctly and show partition size always (GG-24471):
      *
-     *Start three-nodes grid: first node (coordinator) with LogListener and two nodes without,
-     *arguments: cns - partition counters are inconsistent(boolean)
+     * Start three-nodes grid: first node (coordinator) with LogListener and two nodes without,
+     * arguments: cns - partition counters are inconsistent(boolean)
      *           size - partition size are inconsistent(boolean)
      */
-    private void startGridWithFirsLoggerNode(Boolean cnt, Boolean size) throws Exception {
+    private void startGridWithFirsLoggerNode(boolean cnt, boolean size) throws Exception {
         testLogger = new ListeningTestLogger();
 
         Collection<LogListener> lsnrs = new ArrayList<>();
@@ -376,7 +376,6 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
 
         lsnrs.forEach(l->assertTrue(l.check()));
 
-        afterTest();
     }
 
     /**
