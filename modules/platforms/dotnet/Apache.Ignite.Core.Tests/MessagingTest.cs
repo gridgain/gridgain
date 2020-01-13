@@ -687,6 +687,7 @@ namespace Apache.Ignite.Core.Tests
         #pragma warning disable 649
         /** Grid. */
         [InstanceResource]
+        // ReSharper disable once UnassignedField.Local
         private IIgnite _grid;
         #pragma warning restore 649
 

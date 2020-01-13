@@ -53,6 +53,13 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
         addExtraArguments = true;
     }
 
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+    }
+
     /**
      * Tests that enabling rolling upgrade is possible without auto confirmation flag.
      *
@@ -158,6 +165,5 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
         assertEquals(
             "The cause of the failure should be " + eCls.getName() + " [cause=" + res.getCause() + ']',
             res.getCause().getClassName(), eCls.getName());
-
     }
 }

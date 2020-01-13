@@ -22,11 +22,10 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.thread.IgniteThread;
-
-import static java.lang.String.format;
 
 /**
  * Synchronization wrapper for long operations that should be executed asynchronously
@@ -110,16 +109,6 @@ public class LongOperationAsyncExecutor {
      * Cancels async tasks.
      */
     public void awaitAsyncTaskCompletion(boolean cancel) {
-        for (GridWorker worker : workers) {
-            try {
-                if (cancel)
-                    worker.cancel();
-
-                worker.join();
-            }
-            catch (Exception e) {
-                log.warning(format("Failed to cancel grid runnable [%s]: %s", worker.toString(), e.getMessage()));
-            }
-        }
+        U.awaitForWorkersStop(workers, cancel, log);
     }
 }

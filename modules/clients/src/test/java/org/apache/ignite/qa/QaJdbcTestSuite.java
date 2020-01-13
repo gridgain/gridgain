@@ -16,6 +16,7 @@
 
 package org.apache.ignite.qa;
 
+import org.apache.ignite.qa.query.WarningOnBigQueryLazyResultsTest;
 import org.apache.ignite.qa.query.WarningOnBigQueryResultsTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -26,6 +27,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     WarningOnBigQueryResultsTest.class,
+    WarningOnBigQueryLazyResultsTest.class,
 })
 public class QaJdbcTestSuite {
 }

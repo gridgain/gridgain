@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
         /** Metrics. */
         private volatile ClusterMetricsImpl _metrics;
-        
+
         /** Ignite reference. */
         private WeakReference _igniteRef;
 
