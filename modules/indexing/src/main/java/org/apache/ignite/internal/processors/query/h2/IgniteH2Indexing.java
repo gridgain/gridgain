@@ -3086,4 +3086,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     public LongRunningQueryManager longRunningQueries() {
         return longRunningQryMgr;
     }
+
+    /**
+     * @return Logger.
+     */
+    public IgniteLogger logger() {
+        return log;
+    }
 }

@@ -904,7 +904,7 @@ public final class UpdatePlanBuilder {
             // Get a new prepared statement for derived select query.
             try (PreparedStatement stmt = conn.prepareStatement(selectQry)) {
                 Prepared prep = GridSqlQueryParser.prepared(stmt);
-                GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false).parse(prep);
+                GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false, null).parse(prep);
 
                 GridCacheTwoStepQuery qry = GridSqlQuerySplitter.split(
                     conn,

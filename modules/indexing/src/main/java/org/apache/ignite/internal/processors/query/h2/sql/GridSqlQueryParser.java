@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.QueryIndex;
@@ -38,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.h2.dml.DmlAstUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.util.typedef.F;
 import org.h2.command.Command;
@@ -527,6 +527,9 @@ public class GridSqlQueryParser {
     /** */
     private final Map<String, Integer> optimizedTableFilterOrder;
 
+    /** */
+    private final IgniteLogger log;
+
     /**
      * We have a counter instead of a simple flag, because
      * a flag can be reset earlier than needed in case of
@@ -540,9 +543,11 @@ public class GridSqlQueryParser {
     /**
      * @param useOptimizedSubqry If we have to find correct order for table filters in FROM clause.
      *                           Relies on uniqueness of table filter aliases.
+     * @param log Logger.
      */
-    public GridSqlQueryParser(boolean useOptimizedSubqry) {
-        optimizedTableFilterOrder = useOptimizedSubqry ? new HashMap<String, Integer>() : null;
+    public GridSqlQueryParser(boolean useOptimizedSubqry, IgniteLogger log) {
+        optimizedTableFilterOrder = useOptimizedSubqry ? new HashMap<>() : null;
+        this.log = log;
     }
 
     /**
@@ -861,7 +866,10 @@ public class GridSqlQueryParser {
 
         res.columns(cols);
 
-        GridH2Table intoTbl = DmlAstUtils.gridTableForElement(tbl).dataTable();
+        if (!F.isEmpty(MERGE_KEYS.get(merge))) {
+            log.warning("The search row by explicit KEY isn't supported. The primary key is always used to search row " +
+                "[sql=" + merge.getSQL() + ']');
+        }
 
         List<Expression[]> srcRows = COMMAND_WITH_VALUES_VALS_EXPRESSIONS.get(merge);
         if (!srcRows.isEmpty()) {
@@ -1915,8 +1923,8 @@ public class GridSqlQueryParser {
      * @param useOptimizedSubqry Whether to user optimized subquery.
      * @return Parsed query.
      */
-    public static GridSqlQuery parseQuery(Prepared prepared, boolean useOptimizedSubqry) {
-        return (GridSqlQuery)new GridSqlQueryParser(useOptimizedSubqry).parse(prepared);
+    public static GridSqlQuery parseQuery(Prepared prepared, boolean useOptimizedSubqry, IgniteLogger log) {
+        return (GridSqlQuery)new GridSqlQueryParser(useOptimizedSubqry, log).parse(prepared);
     }
 
     /**
