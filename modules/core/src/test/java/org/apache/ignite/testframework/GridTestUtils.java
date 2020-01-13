@@ -129,7 +129,7 @@ import static org.junit.Assert.assertTrue;
  */
 public final class GridTestUtils {
     /** Default busy wait sleep interval in milliseconds.  */
-    public static final long DFLT_BUSYWAIT_SLEEP_INTERVAL = 200;
+    public static final long DFLT_BUSYWAIT_SLEEP_INTERVAL = 20;
 
     /** */
     public static final long DFLT_TEST_TIMEOUT = 5 * 60 * 1000;

@@ -796,6 +796,30 @@ public interface EventType {
     public static final int EVT_CLUSTER_TAG_UPDATED = 143;
 
     /**
+     * Built-in event type: Cluster activation state change initiated.
+     * <p>
+     * Fired when cluster activation process started.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ClusterActivationStartedEvent
+     */
+    public static final int EVT_CLUSTER_ACTIVATION_STARTED = 144;
+
+    /**
+     * Built-in event type: Cluster activation state change initiated.
+     * <p>
+     * Fired when cluster deactivation process started.
+     * <p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see ClusterActivationStartedEvent
+     */
+    public static final int EVT_CLUSTER_DEACTIVATION_STARTED = 145;
+
+    /**
      * All checkpoint events. This array can be directly passed into
      * {@link IgniteEvents#localListen(IgnitePredicate, int...)} method to
      * subscribe to all checkpoint events.

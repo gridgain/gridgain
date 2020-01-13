@@ -16,15 +16,13 @@
 
 package org.apache.ignite.events;
 
-import java.util.Collection;
 import org.apache.ignite.IgniteEvents;
-import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.lang.IgnitePredicate;
 
 /**
- * Cluster activation event.
+ * Cluster activation/deactivation started event.
  * <p>
  * Grid events are used for notification about what happens within the grid. Note that by
  * design Ignite keeps all events generated on the local node locally and it provides
@@ -54,38 +52,21 @@ import org.apache.ignite.lang.IgnitePredicate;
  * by using {@link IgniteConfiguration#getIncludeEventTypes()} method in Ignite configuration. Note that certain
  * events are required for Ignite's internal operations and such events will still be generated but not stored by
  * event storage SPI if they are disabled in Ignite configuration.
- * @see EventType#EVT_CLUSTER_ACTIVATED
- * @see EventType#EVT_CLUSTER_DEACTIVATED
+ * @see EventType#EVT_CLUSTER_ACTIVATION_STARTED
+ * @see EventType#EVT_CLUSTER_DEACTIVATION_STARTED
  */
-public class ClusterActivationEvent extends EventAdapter {
+public class ClusterActivationStartedEvent extends EventAdapter {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Baseline nodes. */
-    private final Collection<BaselineNode> baselineNodes;
-
     /**
-     * Creates activation event with given parameters.
+     * Creates activation/deactivation started event with given parameters.
      *
      * @param node Node.
      * @param msg Optional event message.
      * @param type Event type.
-     * @param baselineNodes Baseline nodes.
      */
-    public ClusterActivationEvent(ClusterNode node, String msg, int type, Collection<BaselineNode> baselineNodes) {
+    public ClusterActivationStartedEvent(ClusterNode node, String msg, int type) {
         super(node, msg, type);
-
-        assert baselineNodes != null;
-
-        this.baselineNodes = baselineNodes;
-    }
-
-    /**
-     * Gets baseline nodes.
-     *
-     * @return Baseline nodes.
-     */
-    public Collection<BaselineNode> baselineNodes() {
-        return baselineNodes;
     }
 }

@@ -40,8 +40,10 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.events.ClusterActivationStartedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -108,6 +110,9 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extract
  *
  */
 public class GridClusterStateProcessor extends GridProcessorAdapter implements IGridClusterStateProcessor, MetastorageLifecycleListener {
+    /** Stripe id for cluster activation event. */
+    public static final int CLUSTER_ACTIVATION_EVT_STRIPE_ID = Integer.MAX_VALUE;
+
     /** */
     private static final String METASTORE_CURR_BLT_KEY = "metastoreBltKey";
 
@@ -655,6 +660,27 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 exchangeActions.stateChangeRequest(req);
 
                 msg.exchangeActions(exchangeActions);
+
+                if (msg.activate() != state.active()) {
+                    int evtType = msg.activate()
+                        ? EventType.EVT_CLUSTER_ACTIVATION_STARTED
+                        : EventType.EVT_CLUSTER_DEACTIVATION_STARTED;
+
+                    String evtMsg = msg.activate()
+                        ? "Cluster activation started."
+                        : "Cluster deactivation started.";
+
+                    if (ctx.event().isRecordable(evtType)) {
+                        ctx.getStripedExecutorService().execute(
+                            CLUSTER_ACTIVATION_EVT_STRIPE_ID,
+                            () -> ctx.event().record(new ClusterActivationStartedEvent(
+                                ctx.discovery().localNode(),
+                                evtMsg,
+                                evtType
+                            ))
+                        );
+                    }
+                }
 
                 return true;
             }
