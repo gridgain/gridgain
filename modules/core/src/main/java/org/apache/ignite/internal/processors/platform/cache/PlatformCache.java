@@ -459,6 +459,7 @@ public class PlatformCache extends PlatformAbstractTarget {
                     Object key = reader.readObjectDetached();
 
                     // TODO: Error handling
+                    // TODO: Why is skipNearCacheUpdate needed for GET operation? Needs an explanation
                     platformCtx.skipNearCacheUpdate(cache.context().cacheId(), key);
 
                     return writeResult(mem, cache.get(key));
