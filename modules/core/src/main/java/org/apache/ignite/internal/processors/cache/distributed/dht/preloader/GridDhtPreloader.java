@@ -261,6 +261,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     part = top.localPartition(p, topVer, true);
 
                     assert part != null : "Partition was not created [grp=" + grp.name() + ", topVer=" + topVer + ", p=" + p + ']';
+
+                    part.resetUpdateCounter();
                 }
 
                 assert part.state() == MOVING : "Partition has invalid state for rebalance " + aff.topologyVersion() + " " + part;
@@ -275,7 +277,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 }
 
                 // Empty partitions should never be historically rebalanced.
-                if (histSupplier != null && !exchFut.isClearingPartition(grp, p) && !part.isEmpty()) {
+                if (histSupplier != null && !exchFut.isClearingPartition(grp, p)) {
                     assert grp.persistenceEnabled();
                     assert remoteOwners(p, topVer).contains(histSupplier) : remoteOwners(p, topVer);
 

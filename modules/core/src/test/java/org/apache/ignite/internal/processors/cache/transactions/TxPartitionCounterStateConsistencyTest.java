@@ -978,7 +978,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * @param stopClo A closure providing stop condition.
      * @return Finish future.
      */
-    private IgniteInternalFuture<?> doRandomUpdates(Random r, Ignite near, List<Integer> primaryKeys,
+    protected IgniteInternalFuture<?> doRandomUpdates(Random r, Ignite near, List<Integer> primaryKeys,
         IgniteCache<Object, Object> cache, BooleanSupplier stopClo) throws Exception {
         LongAdder puts = new LongAdder();
         LongAdder removes = new LongAdder();
