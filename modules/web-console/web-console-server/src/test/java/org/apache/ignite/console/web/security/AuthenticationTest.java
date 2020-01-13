@@ -35,6 +35,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for authentication.
@@ -286,10 +287,10 @@ public class AuthenticationTest extends AbstractSelfTest {
             return null;
         }, LockedException.class, "Account locked due to too many failed login attempts");
 
-        acc = accountsRepo.getByEmail(USER_EMAIL);
+        Account acc1 = accountsRepo.getByEmail(USER_EMAIL);
 
-        assertEquals(4, acc.getFailedLoginAttempts());
-        assertNotEquals(0L, acc.getLastFailedLogin());
+        assertEquals(4, acc1.getFailedLoginAttempts());
+        assertTrue(acc1.getLastFailedLogin() >= acc.getLastFailedLogin());
 
         Thread.sleep((long)Math.pow(accCfg.getAuthentication().getInterval(), Math.log(acc.getFailedLoginAttempts())));
 
@@ -302,10 +303,10 @@ public class AuthenticationTest extends AbstractSelfTest {
             return null;
         }, LockedException.class, "Account locked due to too many failed login attempts");
 
-        acc = accountsRepo.getByEmail(USER_EMAIL);
+        Account acc2 = accountsRepo.getByEmail(USER_EMAIL);
 
-        assertEquals(5, acc.getFailedLoginAttempts());
-        assertNotEquals(0L, acc.getLastFailedLogin());
+        assertEquals(5, acc2.getFailedLoginAttempts());
+        assertTrue(acc2.getLastFailedLogin() > acc1.getLastFailedLogin());
     }
 
     /**
