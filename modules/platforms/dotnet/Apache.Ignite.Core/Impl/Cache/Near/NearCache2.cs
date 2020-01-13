@@ -27,7 +27,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
     /// </summary>
-    internal class NearCache2<TK, TV>
+    internal sealed class NearCache2<TK, TV>
     {
         // TODO: Init capacity from settings
         // TODO: Eviction
