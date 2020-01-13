@@ -76,14 +76,20 @@ export default angular
     /**
      * Set width for dropdown as for element.
      */
-    .decorator('$tooltip', ['$delegate', ($delegate) => {
-        return function(el, config) {
-            const $tooltip = $delegate(el, config);
+    .decorator('$tooltip', ['$delegate', ($delegate: mgcrea.ngStrap.tooltip.ITooltipService) => {
+        return function(el: JQLite, config: mgcrea.ngStrap.tooltip.ITooltipOptions) {
+            type HackedTooltip = mgcrea.ngStrap.tooltip.ITooltip & {
+                $referenceElement: JQLite | null,
+                destroy: () => void,
+                $applyPlacement: () => void,
+                $element: JQLite
+            }
+            const $tooltip = $delegate(el, config) as HackedTooltip;
 
             $tooltip.$referenceElement = el;
             $tooltip.destroy = _.flow($tooltip.destroy, () => $tooltip.$referenceElement = null);
             $tooltip.$applyPlacement = _.flow($tooltip.$applyPlacement, () => {
-                if (!$tooltip.$element)
+                if (!$tooltip.$referenceElement || !$tooltip.$element)
                     return;
 
                 const refWidth = $tooltip.$referenceElement[0].getBoundingClientRect().width;

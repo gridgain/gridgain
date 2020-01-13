@@ -18,18 +18,28 @@ import {Selector} from 'testcafe';
 import {PanelCollapsible} from '../components/PanelCollapsible';
 import {Table} from '../components/Table';
 import {ace, enterAceText} from '../components/ace';
+import {FormField} from '../components/FormField';
+
+export const addSqlQueryButton = Selector('button').withText('Add query');
+export const addScanQueryButton = Selector('button').withText('Add scan');
 
 export class Paragraph extends PanelCollapsible {
     constructor(title) {
         super(title);
 
-        this.topRightExecuteButton = this.body.find('query-actions-button').find('button').withExactText('Execute');
-        this.bottomExecuteButton = this.body.find('.sql-controls').find('button').withExactText('Execute');
+        this.topRightExecuteButton = this.actions.find('query-actions-button').find('button').withExactText('Execute');
+        this.bottomExecuteButton = this._selector.find('.sql-controls').find('button').withExactText('Execute');
+        this.topRightScanButton = this.actions.find('query-actions-button').find('button').withExactText('Scan');
         this.resultsTable = new Table(this.body.find('.table'));
         this.queryField = ace(this.body);
         this.showQueryButton = this.body.find('a').withExactText('Show query');
         this.clearResultButton = this.body.find('i.fa.fa-eraser');
         this.showStacktraceButton = this.body.find('a').withExactText('Show more');
+        this.cancelQueryButton = this._selector.find('button').withExactText('Cancel');
+        this.moreQueryActionsButton = this.actions.find('query-actions-button .fa-caret-down').parent('button');
+        this.renameQueryButton = this.actions.find('a').withText('Rename');
+        this.sqlControls = this._selector.find('.sql-controls');
+        this.queryFlags = this.sqlControls.child().nth(2);
     }
     async enterQuery(text, options = {replace: false}) {
         return await enterAceText(this.queryField.with({timeout: 0}), text, options);
@@ -65,3 +75,13 @@ export const showStacktraceDialog = {
     downloadLink: showStacktraceDialogSelector.find('span').withText('Full stacktrace is not available'),
     okButton: showStacktraceDialogSelector.find('button').withExactText('OK')
 };
+
+const renameQueryDialogSelector = Selector('.modal-header').withText('Rename Query').parent('.modal');
+
+export const renameQueryDialog = {
+    dialog: renameQueryDialogSelector,
+    input: new FormField({label: 'New query name'}),
+    confirmButton: renameQueryDialogSelector.find('button').withText('Confirm')
+};
+
+export const paragraphPanels = Selector('queries-notebook panel-collapsible');

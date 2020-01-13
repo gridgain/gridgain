@@ -17,12 +17,15 @@
 import _ from 'lodash';
 import {WebSocketHook} from '../../mocks/WebSocketHook';
 import {
-    cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery,
+    cacheNamesCollectorTask, agentStat, simeplFakeSQLQuery, foreverExecutingQuery,
     FAKE_CLUSTERS, SIMPLE_QUERY_RESPONSE, FAKE_CACHES, INACTIVE_CLUSTER
 } from '../../mocks/agentTasks';
 import {resolveUrl, dropTestDB, insertTestUser} from '../../environment/envtools';
 import {createRegularUser} from '../../roles';
-import {Paragraph, showQueryDialog, confirmClearQueryDialog} from '../../page-models/pageQueryNotebook';
+import {
+    Paragraph, showQueryDialog, confirmClearQueryDialog, renameQueryDialog, paragraphPanels,
+    addScanQueryButton
+} from '../../page-models/pageQueryNotebook';
 import {PageQueriesNotebooksList} from '../../page-models/PageQueries';
 
 const user = createRegularUser();
@@ -91,4 +94,69 @@ test('Sending a request', async(t) => {
         .click(paragraph.clearResultButton)
         .click(confirmClearQueryDialog.confirmButton)
         .expect(paragraph.resultsTable._selector.exists).notOk();
+});
+
+// Regression test for https://ggsystems.atlassian.net/browse/GG-23314
+test('Very long query name', async(t) => {
+    await t.addRequestHooks(
+        t.ctx.ws = new WebSocketHook()
+            .use(
+                agentStat(FAKE_CLUSTERS),
+                cacheNamesCollectorTask(FAKE_CACHES),
+            )
+    );
+
+    await t
+        .useRole(user)
+        .navigateTo(resolveUrl('/queries/notebooks'));
+
+    const veryLongName = 'Foo '.repeat(30);
+    const notebookName = 'Test';
+    await notebooks.createNotebook(notebookName);
+    await t.click(notebooks.getNotebookByName(notebookName));
+    const query = new Paragraph('Query');
+    const oldWidth = await query.body.clientWidth;
+    await t.click(query.moreQueryActionsButton);
+    await t.click(query.renameQueryButton);
+    await t.typeText(renameQueryDialog.input.control, veryLongName, {replace: true});
+    await t.click(renameQueryDialog.confirmButton);
+    await t.expect(paragraphPanels.nth(0).clientWidth).eql(oldWidth, 'Panel width should not depend on query name length');
+});
+
+test('Cancel query button', async(t) => {
+    await t
+        .addRequestHooks(
+            t.ctx.ws = new WebSocketHook()
+                .use(
+                    agentStat(FAKE_CLUSTERS),
+                    cacheNamesCollectorTask(FAKE_CACHES),
+                    foreverExecutingQuery(_.first(_.keys(FAKE_CLUSTERS.clusters[0].nodes)))
+                )
+        )
+        .resizeWindow(1130, 800)
+        .useRole(user)
+        .navigateTo(resolveUrl('/queries/notebooks'));
+    await notebooks.createNotebook('Foo');
+    await t.click(notebooks.getNotebookByName('Foo'));
+
+    // SQL query
+    await paragraph.enterQuery(query, {replace: true});
+    const oldFlagsPosition = await paragraph.queryFlags.boundingClientRect;
+    await t
+        .click(paragraph.bottomExecuteButton)
+        .expect(paragraph.cancelQueryButton.visible).ok('Cancel button is visible while query is running')
+        // Regression test for https://ggsystems.atlassian.net/browse/GG-23314
+        .expect(paragraph.queryFlags.boundingClientRect).eql(oldFlagsPosition, 'Cancel button should not change query panel height')
+        .click(paragraph.cancelQueryButton)
+        .expect(paragraph.cancelQueryButton.exists).notOk('SQL query cancel button is hidden after query is cancelled')
+        .click(paragraph.title);
+
+    // Scan query
+    const scan = new Paragraph('Scan1');
+    await t
+        .click(addScanQueryButton)
+        .click(scan.topRightScanButton)
+        .expect(scan.cancelQueryButton.visible).ok('Scan query cancel button is visible while query is running')
+        .click(scan.cancelQueryButton)
+        .expect(scan.cancelQueryButton.exists).notOk('Scan query cancel button is hidden after query is cancelled');
 });
