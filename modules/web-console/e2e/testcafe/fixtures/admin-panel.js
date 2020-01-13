@@ -19,13 +19,13 @@ import { AngularJSSelector } from 'testcafe-angular-selectors';
 import { dropTestDB, insertTestUser, resolveUrl } from '../environment/envtools';
 import { createRegularUser } from '../roles';
 import * as pageListOfUsers from '../page-models/pageAdminListOfRegisteredUsers';
-import {PageConfigurationBasic} from "../page-models/PageConfigurationBasic";
+import {PageConfigurationBasic} from '../page-models/PageConfigurationBasic';
 import {pageAdvancedConfiguration} from '../components/pageAdvancedConfiguration';
 import * as pageAdvancedModel from '../page-models/pageConfigurationAdvancedModels';
 import {pageProfile} from '../page-models/pageProfile';
-import {successNotification} from "../components/notifications";
+import {successNotification} from '../components/notifications';
 import {advancedNavButton} from '../components/pageConfiguration';
-import {scrollToPageBottom} from "../helpers";
+import {scrollToPageBottom} from '../helpers';
 
 const regularUser = createRegularUser();
 
@@ -155,11 +155,11 @@ test.meta({
         .expect(start <= lastActive && now >= lastActive).ok();
 
     // Check count of user clusters.
-    await t.expect(pageListOfUsers.usersTable.findCell(0, 5).textContent).eql('1')
+    await t.expect(pageListOfUsers.usersTable.findCell(0, 6).textContent).eql('1')
         // Check count of user SQL models.
-        .expect(pageListOfUsers.usersTable.findCell(0, 6).textContent).eql('3')
+        .expect(pageListOfUsers.usersTable.findCell(0, 7).textContent).eql('3')
         // Check count of user caches.
-        .expect(pageListOfUsers.usersTable.findCell(0, 7).textContent).eql('2');
+        .expect(pageListOfUsers.usersTable.findCell(0, 8).textContent).eql('2');
 
     await t.navigateTo(resolveUrl('/settings/profile'));
 
@@ -174,7 +174,7 @@ test.meta({
     await t.navigateTo(resolveUrl('/settings/admin'));
 
     await t.typeText(emailFilterSelector, newEmail, {paste: true})
-        .expect(emailCellSelector.textContent).contains(t.ctx.email)
+        .expect(emailCellSelector.textContent).contains(t.ctx.email);
 })
 .before(async(t) => {
     const d = new Date();
@@ -198,7 +198,7 @@ test.meta({
     await dropTestDB(t.ctx.email);
     await insertTestUser(user);
     await t.useRole(t.ctx.user)
-        .navigateTo(resolveUrl('/configuration/new/basic'))
+        .navigateTo(resolveUrl('/configuration/new/basic'));
 })
 .after(async(t) => {
     await dropTestDB(t.ctx.email);
