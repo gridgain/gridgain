@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.ClassPathContentLoggingTest;
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.EvictPartitionInLogTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorLoggingTest;
 import org.apache.ignite.failure.FailureHandlerTriggeredTest;
 import org.apache.ignite.failure.OomFailureHandlerTest;
@@ -89,6 +90,7 @@ import org.apache.ignite.internal.processors.database.CacheFreeListSelfTest;
 import org.apache.ignite.internal.processors.database.DataRegionMetricsSelfTest;
 import org.apache.ignite.internal.processors.database.IndexStorageSelfTest;
 import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTest;
+import org.apache.ignite.internal.processors.failure.FailureProcessorThreadDumpThrottlingTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryCacheTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorkerTest;
@@ -192,6 +194,7 @@ import org.junit.runners.Suite;
 
     PartitionsEvictionTaskFailureHandlerTest.class,
     DropCacheContextDuringEvictionTest.class,
+    EvictPartitionInLogTest.class,
 
     IgniteExceptionInNioWorkerSelfTest.class,
     IgniteLocalNodeMapBeforeStartTest.class,
@@ -247,6 +250,7 @@ import org.junit.runners.Suite;
     OomFailureHandlerTest.class,
     TransactionIntegrityWithSystemWorkerDeathTest.class,
     FailureProcessorLoggingTest.class,
+    FailureProcessorThreadDumpThrottlingTest.class,
 
     AtomicOperationsInTxTest.class,
 

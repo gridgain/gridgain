@@ -34,9 +34,9 @@ Creating NuGet package:
         <version>$version$</version>
         <authors>GridGain</authors>
         <owners>GridGain</owners>
-        <licenseUrl>https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license</licenseUrl>
+        <license type="file">LICENSE</license>
         <projectUrl>https://gridgain.com/</projectUrl>
-        <iconUrl>https://www.gridgain.com/sites/default/files/GG-logo64-01.png</iconUrl>
+        <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>
 GridGain Ignite is a memory-centric distributed database, caching, and processing platform for transactional, analytical, and streaming workloads, delivering in-memory speeds at petabyte scale.
@@ -46,6 +46,15 @@ More info: https://docs.gridgain.com/
         </description>
         <copyright>Copyright 2019</copyright>
         <tags>GridGain Ignite In-Memory Distributed Computing SQL NoSQL Grid Map Reduce Cache linqpad-samples</tags>
+        <repository type="git" url="https://github.com/gridgain/gridgain.git" />
+
+        <dependencies>
+            <!-- Empty section is required to denote supported framework. -->
+            <group targetFramework=".NETFramework4.0" />
+            <group targetFramework=".NETStandard2.0">
+                <dependency id="System.Configuration.ConfigurationManager" version="[4.6.0, 5.0.0)" />
+            </group>
+        </dependencies>
     </metadata>
     <files>
         <!-- Binaries -->
@@ -67,5 +76,11 @@ More info: https://docs.gridgain.com/
     
         <!-- LINQPad samples -->
         <file src="NuGet\LINQPad\*.*" target="linqpad-samples" />
+
+        <!-- Icon -->
+        <file src="..\logo_gg_64x64.png" target="images\" />
+
+        <!-- License -->
+        <file src="..\..\..\..\LICENSE" target="LICENSE" />
     </files>
 </package>
