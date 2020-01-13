@@ -866,7 +866,7 @@ public class GridSqlQueryParser {
 
         res.columns(cols);
 
-        if (!F.isEmpty(MERGE_KEYS.get(merge))) {
+        if (log != null && !F.isEmpty(MERGE_KEYS.get(merge))) {
             log.warning("The search row by explicit KEY isn't supported. The primary key is always used to search row " +
                 "[sql=" + merge.getSQL() + ']');
         }
@@ -881,7 +881,7 @@ public class GridSqlQueryParser {
                     row[i] = parseExpression(srcRow[i], false);
 
                     if (row[i] == null) {
-                        throw new IgniteSQLException("DEFAULT values are unsupported for MERGE.",
+                        throw new IgniteSQLException("Explicit DEFAULT values are unsupported for MERGE.",
                             IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
                     }
                 }
@@ -939,7 +939,7 @@ public class GridSqlQueryParser {
                     row[i] = parseExpression(srcRow[i], false);
 
                     if (row[i] == null) {
-                        throw new IgniteSQLException("DEFAULT values are unsupported for MERGE.",
+                        throw new IgniteSQLException("Explicit DEFAULT values are unsupported for INSERT.",
                             IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
                     }
                 }
