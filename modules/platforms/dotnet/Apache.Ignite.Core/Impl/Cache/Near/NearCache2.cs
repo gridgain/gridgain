@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
+    using System.IO;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
@@ -128,11 +129,31 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
 
-            var key = marshaller.Unmarshal<TK>(stream);
+            var map = _map;
+            if (map != null)
+            {
+                var pos = stream.Position;
+
+                try
+                {
+                    var key = marshaller.Unmarshal<TK>(stream);
+                    NearCacheEntry<TV> unused;
+                    _map.TryRemove(key, out unused);
+                }
+                catch (InvalidCastException)
+                {
+                    // Using exception for control flow: optimize only for the good case.
+                    // _fallbackMap use case is not recommended, we expect it to be rare.
+                    stream.Seek(pos, SeekOrigin.Begin);
+                }
+            }
             
-            Console.WriteLine("Evict: " + key); // TODO: Remove
-            NearCacheEntry<TV> unused;
-            _map.TryRemove(key, out unused);
+            if (_fallbackMap != null)
+            {
+                var key = marshaller.Unmarshal<object>(stream);
+                NearCacheEntry<object> unused;
+                _fallbackMap.TryRemove(key, out unused);
+            }
         }
 
         public void Clear()
