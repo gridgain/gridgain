@@ -16,72 +16,55 @@
 
 package org.apache.ignite.console.web.security;
 
-import org.apache.ignite.console.config.AccountAuthenticationConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
+import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.DefaultAuthenticationEventPublisher;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-
-import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
 
 /**
  * Account lockout strategy to prevent brute-force password.
  */
 public class AuthenticationEventPublisher extends DefaultAuthenticationEventPublisher {
-    /** Account authentication configuration. */
-    private AccountAuthenticationConfiguration cfg;
-
     /** Accounts repository. */
-    private AccountsRepository repo;
+    private final AccountsRepository repo;
+
+    /** Transaction manager. */
+    private final TransactionManager txMgr;
 
     /**
      * @param publisher Account authentication configuration.
-     * @param cfg Account authentication configuration.
      * @param repo Account repository.
+     * @param txMgr Transaction manager.
      */
     public AuthenticationEventPublisher(
         ApplicationEventPublisher publisher,
-        AccountAuthenticationConfiguration cfg,
-        AccountsRepository repo
+        AccountsRepository repo,
+        TransactionManager txMgr
     ) {
         super(publisher);
 
-        this.cfg = cfg;
         this.repo = repo;
+        this.txMgr = txMgr;
     }
 
     /** {@inheritDoc} */
     @Override public void publishAuthenticationSuccess(Authentication authentication) {
         if (authentication.getPrincipal() instanceof Account) {
-            Account acc = (Account)authentication.getPrincipal();
+            Account acc0 = (Account)authentication.getPrincipal();
 
-            int attemptsCnt = acc.getFailedLoginAttempts();
+            if (acc0.getFailedLoginAttempts() > 0) {
+                txMgr.doInTransaction(() -> {
+                    Account acc = repo.getById(acc0.getId());
 
-            if (attemptsCnt >= cfg.getMaxAttempts())
-                throw new LockedException(message("err.account-too-many-attempts"));
-
-            if (attemptsCnt > 0) {
-                acc = repo.getById(acc.getId());
-
-                long attemptsInterval = (long)Math.pow(cfg.getInterval(), Math.log(attemptsCnt + 1));
-                long calculatedInterval = Math.min(attemptsInterval, cfg.getMaxInterval());
-
-                if (U.currentTimeMillis() - acc.getLastFailedLogin() < calculatedInterval) {
-                    acc.setFailedLoginAttempts(attemptsCnt + 1);
-                    acc.setLastFailedLogin(U.currentTimeMillis());
+                    acc.setFailedLoginAttempts(0);
+                    acc.setLastFailedLogin(0);
 
                     repo.save(acc);
-
-                    throw new LockedException(message("err.account-attempt-too-soon"));
-                }
-
-                acc.setFailedLoginAttempts(0);
-
-                repo.save(acc);
+                });
             }
         }
 
@@ -91,12 +74,14 @@ public class AuthenticationEventPublisher extends DefaultAuthenticationEventPubl
     /** {@inheritDoc} */
     @Override public void publishAuthenticationFailure(AuthenticationException e, Authentication authentication) {
         if (authentication.getPrincipal() instanceof String) {
-            Account acc = repo.getByEmail((String)authentication.getPrincipal());
+            txMgr.doInTransaction(() -> {
+                Account acc = repo.getByEmail((String)authentication.getPrincipal());
 
-            acc.setFailedLoginAttempts(acc.getFailedLoginAttempts() + 1);
-            acc.setLastFailedLogin(U.currentTimeMillis());
+                acc.setFailedLoginAttempts(Math.min(acc.getFailedLoginAttempts() + 1, Integer.MAX_VALUE));
+                acc.setLastFailedLogin(U.currentTimeMillis());
 
-            repo.save(acc);
+                repo.save(acc);
+            });
         }
 
         super.publishAuthenticationFailure(e, authentication);

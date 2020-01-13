@@ -20,8 +20,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.console.config.AccountAuthenticationConfiguration;
-import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.config.AccountConfiguration;
 import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.services.AccountsService;
 import org.apache.ignite.console.tx.TransactionManager;
@@ -40,7 +39,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.userdetails.UserDetailsChecker;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
@@ -111,30 +109,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     /** */
     private final PasswordEncoder encoder;
 
-    /** */
-    private UserDetailsChecker userDetailsChecker;
-
-    /** Is account email should be confirmed. */
-    private boolean activationEnabled;
-
-    /** Timeout between emails with new activation token. */
-    private long activationTimeout;
-
     /**
-     * @param activationCfg Account activation configuration.
      * @param encoder Service for encoding user passwords.
      * @param accountsSrv User details service.
      */
     @Autowired
     public SecurityConfig(
-        ActivationConfiguration activationCfg,
         PasswordEncoder encoder,
         AccountsService accountsSrv
     ) {
-        userDetailsChecker = activationCfg.getChecker();
-        activationEnabled = activationCfg.isEnabled();
-        activationTimeout = activationCfg.getTimeout();
-
         this.encoder = encoder;
         this.accountsSrv = accountsSrv;
     }
@@ -161,13 +144,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
      * Configure global implementation of {@link #authenticationManager()}
+     * @param auth Account activation configuration.
+     * @param accCfg Account configuration.
      */
     @Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth) {
-        DaoAuthenticationProvider authProvider = activationEnabled ?
-            new CustomAuthenticationProvider(activationTimeout) : new DaoAuthenticationProvider();
+    public void configureGlobal(
+        AuthenticationManagerBuilder auth,
+        AccountConfiguration accCfg
+    ) {
 
-        authProvider.setPreAuthenticationChecks(userDetailsChecker);
+        DaoAuthenticationProvider authProvider = accCfg.getActivation().isEnabled() ?
+            new CustomAuthenticationProvider(accCfg) : new DaoAuthenticationProvider();
+
+        AccountStatusChecker preAuthenticationChecks = new AccountStatusChecker(accCfg);
+
+        authProvider.setPreAuthenticationChecks(preAuthenticationChecks);
         authProvider.setUserDetailsService(accountsSrv);
         authProvider.setPasswordEncoder(encoder);
 
@@ -204,16 +195,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     /**
      * @param publisher Publisher.
-     * @param authenticationCfg Account authentication configuration.
      * @param accountsRepo Accounts repository.
      */
     @Bean("authenticationEventPublisher")
-    public DefaultAuthenticationEventPublisher authenticationEventPublisher(
-        @Autowired ApplicationEventPublisher publisher,
-        @Autowired AccountAuthenticationConfiguration authenticationCfg,
-        @Autowired AccountsRepository accountsRepo
+    public AuthenticationEventPublisher authenticationEventPublisher(
+        ApplicationEventPublisher publisher,
+        AccountsRepository accountsRepo,
+        TransactionManager txMgr
     ) {
-        return new AuthenticationEventPublisher(publisher, authenticationCfg, accountsRepo);
+        return new AuthenticationEventPublisher(publisher, accountsRepo, txMgr);
     }
 
     /**

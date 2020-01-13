@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
-import org.apache.ignite.console.config.ActivationConfiguration;
+import org.apache.ignite.console.config.AccountConfiguration;
 import org.apache.ignite.console.config.SignUpConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.event.Event;
@@ -29,6 +29,7 @@ import org.apache.ignite.console.repositories.AccountsRepository;
 import org.apache.ignite.console.tx.TransactionManager;
 import org.apache.ignite.console.web.model.ChangeUserRequest;
 import org.apache.ignite.console.web.model.SignUpRequest;
+import org.apache.ignite.console.web.security.AccountStatusChecker;
 import org.apache.ignite.console.web.security.MissingConfirmRegistrationException;
 import org.apache.ignite.console.web.socket.AgentsService;
 import org.apache.ignite.internal.util.typedef.T2;
@@ -81,7 +82,7 @@ public class AccountsService implements UserDetailsService {
 
     /**
      * @param signUpCfg Sign up configuration.
-     * @param activationCfg Account activation configuration.
+     * @param accCfg Account configuration.
      * @param encoder Service interface for encoding passwords.
      * @param agentsSrvc Agent manager.
      * @param accountsRepo Accounts repository.
@@ -90,7 +91,7 @@ public class AccountsService implements UserDetailsService {
      */
     public AccountsService(
         SignUpConfiguration signUpCfg,
-        ActivationConfiguration activationCfg,
+        AccountConfiguration accCfg,
         PasswordEncoder encoder,
         AgentsService agentsSrvc,
         AccountsRepository accountsRepo,
@@ -98,9 +99,9 @@ public class AccountsService implements UserDetailsService {
         EventPublisher evtPublisher
     ) {
         disableSignup = !signUpCfg.isEnabled();
-        userDetailsChecker = activationCfg.getChecker();
-        activationEnabled = activationCfg.isEnabled();
-        activationSndTimeout = activationCfg.getSendTimeout();
+        userDetailsChecker = new AccountStatusChecker(accCfg);
+        activationEnabled = accCfg.getActivation().isEnabled();
+        activationSndTimeout = accCfg.getActivation().getSendTimeout();
 
         this.encoder = encoder;
         this.agentsSrvc = agentsSrvc;

@@ -18,27 +18,32 @@ package org.apache.ignite.console.web.security;
 
 import java.util.UUID;
 import org.apache.ignite.console.AbstractSelfTest;
-import org.apache.ignite.console.config.AccountAuthenticationConfiguration;
+import org.apache.ignite.console.config.AccountConfiguration;
 import org.apache.ignite.console.dto.Account;
 import org.apache.ignite.console.repositories.AccountsRepository;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.support.MessageSourceAccessor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.SpringSecurityMessageSource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import static org.apache.ignite.console.messages.WebConsoleMessageSource.message;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 /**
  * Tests for authentication.
  */
-@SpringBootTest(properties = {"account.authentication.maxAttempts=20"})
+@SpringBootTest(properties = {"account.authentication.maxAttempts=3"})
 public class AuthenticationTest extends AbstractSelfTest {
+    /** Messages accessor. */
+    private static final MessageSourceAccessor messages = SpringSecurityMessageSource.getAccessor();
+
     /** User email. */
     private static final String USER_EMAIL = "user@test.com";
 
@@ -50,65 +55,259 @@ public class AuthenticationTest extends AbstractSelfTest {
     @Autowired
     private PasswordEncoder encoder;
 
+    /** Account configuration. */
+    @Autowired
+    private AccountConfiguration accCfg;
+
     /** Accounts repository. */
     @Autowired
     private AccountsRepository accountsRepo;
 
-    /** Account authentication configuration. */
-    @Autowired
-    private AccountAuthenticationConfiguration cfg;
-
-    /** Should supply message when limiting attempts and authenticating too soon. */
+    /**
+     * Perform login attempt with wrong pwd
+     * Verify the error and error message about wrong pwd.
+     * Verify that no. of failed attempts  is equal to 1 and lastFailedLogin is updated
+     */
     @Test
-    public void shouldLockAuthenticateWithTooManyAttempts() {
-        createUser(USER_EMAIL, 20, U.currentTimeMillis());
+    public void shouldSuccessOnAuthenticate() {
+        createTestUser();
 
-        GridTestUtils.assertThrows(null, () -> {
-            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
-                USER_EMAIL,
-                "password"
-            ));
-
-            return null;
-        }, LockedException.class, message("err.account-too-many-attempts"));
-    }
-
-    /** Should lock authenticate after too many login attempts. */
-    @Test
-    public void shouldLockAuthenticateWithAttemptTooSoon() throws InterruptedException {
-        createUser(USER_EMAIL, 2, U.currentTimeMillis());
-
-        GridTestUtils.assertThrows(null, () -> {
-            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
-                USER_EMAIL,
-                "password"
-            ));
-
-            return null;
-        }, LockedException.class, message("err.account-attempt-too-soon"));
-
-        Thread.sleep((long)Math.pow(cfg.getInterval(), Math.log(4)));
-
-        assertNotNull(authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+        authMgr.authenticate(new UsernamePasswordAuthenticationToken(
             USER_EMAIL,
             "password"
-        )));
+        ));
+
+        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(0, acc.getFailedLoginAttempts());
+        assertEquals(0L, acc.getLastFailedLogin());
     }
 
     /**
-     * @param email Email.
-     * @param attemptsCnt Failed attempt count.
-     * @param lastFailedLogin Last failed attempt.
+     * Perform login attempt with wrong pwd
+     * Immediately try to login with valid credentials
+     * Verify the login was successful, no. of failed attempts  and lastFailedLogin are equal to 0
      */
-    private void createUser(String email, int attemptsCnt, long lastFailedLogin) {
+    @Test
+    public void shouldFailOnAuthenticate() {
+        createTestUser();
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(1, acc.getFailedLoginAttempts());
+        assertNotEquals(0L, acc.getLastFailedLogin());
+    }
+
+    /**
+     * Perform login attempt with wrong pwd
+     * Immediately try to login with valid credentials
+     * Verify the login was successful, no. of failed attempts  and lastFailedLogin are equal to 0
+     */
+    @Test
+    public void shouldSuccessAfterFailAuthenticate() {
+        createTestUser();
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+            USER_EMAIL,
+            "password"
+        ));
+
+        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(0, acc.getFailedLoginAttempts());
+        assertEquals(0L, acc.getLastFailedLogin());
+    }
+
+    /**
+     * Perform login attempt with wrong pwd
+     * Immediately try to login with wrong pwd
+     * Immediately try to login with valid credentials
+     * Verify the error and error message about timeout, no. of failed attempts is 3  and lastFailedLogin is updated
+     * Verify the User is revoked
+     */
+    @Test
+    public void shouldLockWithAttemptTooSoon() {
+        createTestUser();
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "password"
+            ));
+
+            return null;
+        }, LockedException.class, "Account is currently locked. Try again later");
+
+        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(3, acc.getFailedLoginAttempts());
+        assertNotEquals(0L, acc.getLastFailedLogin());
+    }
+
+    /**
+     * Perform login attempt with wrong pwd
+     * Immediately try to login with wrong pwd
+     * Verify the error and error message about wrong pwd. Verify that no. of failed attempts  is equal to 2 and lastFailedLogin is updated
+     * Wait for a cooldown period
+     * Try to login with valid credentials
+     * Verify the login was successful, no. of failed attempts  and lastFailedLogin are equal to 0
+     */
+    @Test
+    public void shouldSuccessfullyAuthenticateAfterCooldown() throws InterruptedException {
+        createTestUser();
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(2, acc.getFailedLoginAttempts());
+        assertNotEquals(0L, acc.getLastFailedLogin());
+
+        Thread.sleep((long)Math.pow(accCfg.getAuthentication().getInterval(), Math.log(acc.getFailedLoginAttempts())));
+
+        authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+            USER_EMAIL,
+            "password"
+        ));
+
+        acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(0, acc.getFailedLoginAttempts());
+        assertEquals(0L, acc.getLastFailedLogin());
+    }
+
+    /**
+     * Perform login attempt with wrong pwd
+     * Immediately try to login with wrong pwd
+     * Immediately try to login with wrong credentials
+     * Verify the error and error message about too many attempts, no. of failed attempts is 4 and lastFailedLogin is updated
+     * Wait for a cooldown period
+     * Verify the error and error message about too many attempts, no. of failed attempts is 5 and lastFailedLogin is updated
+     */
+    @Test
+    public void shouldLockWithTooManyAttempts() throws InterruptedException {
+        createTestUser();
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "wrong_password"
+            ));
+
+            return null;
+        }, BadCredentialsException.class, messages.getMessage("AbstractUserDetailsAuthenticationProvider.badCredentials"));
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "password"
+            ));
+
+            return null;
+        }, LockedException.class, "Account is currently locked. Try again later");
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "password"
+            ));
+
+            return null;
+        }, LockedException.class, "Account locked due to too many failed login attempts");
+
+        Account acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(4, acc.getFailedLoginAttempts());
+        assertNotEquals(0L, acc.getLastFailedLogin());
+
+        Thread.sleep((long)Math.pow(accCfg.getAuthentication().getInterval(), Math.log(acc.getFailedLoginAttempts())));
+
+        GridTestUtils.assertThrows(null, () -> {
+            authMgr.authenticate(new UsernamePasswordAuthenticationToken(
+                USER_EMAIL,
+                "password"
+            ));
+
+            return null;
+        }, LockedException.class, "Account locked due to too many failed login attempts");
+
+        acc = accountsRepo.getByEmail(USER_EMAIL);
+
+        assertEquals(5, acc.getFailedLoginAttempts());
+        assertNotEquals(0L, acc.getLastFailedLogin());
+    }
+
+    /**
+     * Create test user.
+     */
+    private void createTestUser() {
         Account acc = new Account();
 
         acc.setId(UUID.randomUUID());
         acc.setToken(UUID.randomUUID().toString());
-        acc.setEmail(email);
+        acc.setEmail(USER_EMAIL);
         acc.setPassword(encoder.encode("password"));
-        acc.setFailedLoginAttempts(attemptsCnt);
-        acc.setLastFailedLogin(lastFailedLogin);
 
         accountsRepo.save(acc);
     }
