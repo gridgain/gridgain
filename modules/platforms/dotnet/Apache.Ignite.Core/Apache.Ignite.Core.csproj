@@ -87,6 +87,7 @@
     <Compile Include="Impl\Cache\Near\INearCache.cs" />
     <Compile Include="Impl\Cache\Near\INearCacheEntry.cs" />
     <Compile Include="Impl\Cache\Near\NearCache.cs" />
+    <Compile Include="Impl\Cache\Near\NearCache2.cs" />
     <Compile Include="Impl\Cache\Near\NearCacheEntry.cs" />
     <Compile Include="Impl\Cache\Near\NearCacheEntryGenericWrapper.cs" />
     <Compile Include="Impl\Cache\Near\NearCacheGenericWrapper.cs" />

@@ -26,29 +26,43 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
     /// </summary>
-    internal class NearCache<TK, TV> : INearCache, INearCache<TK, TV>
+    internal class NearCache2<TK, TV>
     {
         // TODO: Init capacity from settings
         // TODO: Eviction
-        // TODO: Is it ok to use .NET-based comparison here, because it differs from Java-based comparison for keys?
-        private readonly ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
-            new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
+        private ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
 
-        public bool TryGetValue(TK key, out TV val)
+        private ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
+
+        public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
-            NearCacheEntry<TV> entry;
-
-            if (_map.TryGetValue(key, out entry) && entry.HasValue)
+            if (_fallbackMap != null)
             {
-                val = entry.Value;
-                return true;
+                NearCacheEntry<object> fallbackEntry;
+                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && fallbackEntry.HasValue)
+                {
+                    val = (TVal) fallbackEntry.Value;
+                    return true;
+                }
+            }
+            
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                NearCacheEntry<TVal> entry;
+                if (map.TryGetValue(key, out entry) && entry.HasValue)
+                {
+                    val = entry.Value;
+                    return true;
+                }
             }
 
-            val = default(TV);
+            val = default(TVal);
             return false;
         }
 
-        public void Put(TK key, TV val)
+        public void Put<TKey, TVal>(TKey key, TVal val)
         {
             // TODO: Eviction according to limits.
             // Eviction callbacks from Java work for 2 out of 3 cases:
@@ -57,12 +71,36 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // - Server node (primary keys) - because there is no need to store primary keys in near cache
             // We can just ignore the third case and never evict primary keys - after all, we are on a server node,
             // and it is fine to keep primary keys in memory.
-            _map[key] = new NearCacheEntry<TV>(true, val);
+
+            if (_fallbackMap != null)
+            {
+                _fallbackMap[key] = new NearCacheEntry<object>(true, val);
+                return;
+            }
+            
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                map[key] = new NearCacheEntry<TVal>(true, val);
+                return;
+            }
+
+            // Generic downgrade: switch to fallback map.
+            EnsureFallbackMap();
+            _fallbackMap[key] = new NearCacheEntry<object>(true, val);
         }
 
-        public INearCacheEntry<TV> GetOrCreateEntry(TK key)
+        public INearCacheEntry<TVal> GetOrCreateEntry<TKey, TVal>(TKey key)
         {
-            return _map.GetOrAdd(key, _ => new NearCacheEntry<TV>());
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            
+            
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                return map.GetOrAdd(key, _ => new NearCacheEntry<TVal>());
+            }
         }
 
         public void Update(IBinaryStream stream, Marshaller marshaller)
@@ -110,6 +148,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             NearCacheEntry<TV> unused;
             _map.TryRemove(key, out unused);
+        }
+        
+        private void EnsureFallbackMap()
+        {
+            _map = null;
+            _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, NearCacheEntry<object>>();
         }
     }
 }
