@@ -988,6 +988,14 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DUMP_THREADS_ON_FAILURE = "IGNITE_DUMP_THREADS_ON_FAILURE";
 
     /**
+     * Throttling time out for thread dump generation during failure handling.
+     *
+     * Default is failure detection timeout. {@code 0} or negative value - throttling is disabled.
+     */
+    public static final String IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT =
+            "IGNITE_DUMP_THREADS_ON_FAILURE_THROTTLING_TIMEOUT";
+
+    /**
      * Throttling timeout in millis which avoid excessive PendingTree access on unwind if there is nothing to clean yet.
      *
      * Default is 500 ms.
@@ -1336,6 +1344,14 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_DISABLE_SMART_DR_THROTTLING =
         "IGNITE_DISABLE_SMART_DR_THROTTLING";
+
+    /*
+     * Disable onheap caching of pages lists (free lists and reuse lists).
+     * If persistence is enabled changes to page lists are not stored to page memory immediately, they are cached in
+     * onheap buffer and flushes to page memory on a checkpoint. This property allows to disable such onheap caching.
+     * Default value is <code>false</code>.
+     */
+    public static final String IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING = "IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING";
 
     /**
      * Enforces singleton.
