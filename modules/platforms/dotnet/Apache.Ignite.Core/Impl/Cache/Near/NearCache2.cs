@@ -36,16 +36,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
-            if (_fallbackMap != null)
-            {
-                NearCacheEntry<object> fallbackEntry;
-                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && fallbackEntry.HasValue)
-                {
-                    val = (TVal) fallbackEntry.Value;
-                    return true;
-                }
-            }
-            
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
@@ -54,6 +44,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 if (map.TryGetValue(key, out entry) && entry.HasValue)
                 {
                     val = entry.Value;
+                    return true;
+                }
+            }
+            
+            if (_fallbackMap != null)
+            {
+                NearCacheEntry<object> fallbackEntry;
+                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && fallbackEntry.HasValue)
+                {
+                    val = (TVal) fallbackEntry.Value;
                     return true;
                 }
             }
@@ -72,12 +72,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // We can just ignore the third case and never evict primary keys - after all, we are on a server node,
             // and it is fine to keep primary keys in memory.
 
-            if (_fallbackMap != null)
-            {
-                _fallbackMap[key] = new NearCacheEntry<object>(true, val);
-                return;
-            }
-            
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
@@ -86,7 +80,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return;
             }
 
-            // Generic downgrade: switch to fallback map.
             EnsureFallbackMap();
             _fallbackMap[key] = new NearCacheEntry<object>(true, val);
         }
@@ -94,13 +87,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public INearCacheEntry<TVal> GetOrCreateEntry<TKey, TVal>(TKey key)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
-            
-            
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
                 return map.GetOrAdd(key, _ => new NearCacheEntry<TVal>());
             }
+            
+            EnsureFallbackMap();
+            var entry = _fallbackMap.GetOrAdd(key, _ => new NearCacheEntry<object>());
+            return new NearCacheEntryGenericWrapper<TVal>(entry);
         }
 
         public void Update(IBinaryStream stream, Marshaller marshaller)
@@ -141,7 +136,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public void Clear()
         {
-            _map.Clear();
+            if (_fallbackMap != null)
+            {
+                _fallbackMap.Clear();
+            }
+            else
+            {
+                var map = _map;
+                if (map != null)
+                {
+                    map.Clear();
+                }
+            }
         }
 
         public void Remove(TK key)
@@ -149,7 +155,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             NearCacheEntry<TV> unused;
             _map.TryRemove(key, out unused);
         }
-        
+
+        /// <summary>
+        /// Switches this instance to fallback mode (generic downgrade).
+        /// </summary>
         private void EnsureFallbackMap()
         {
             _map = null;
