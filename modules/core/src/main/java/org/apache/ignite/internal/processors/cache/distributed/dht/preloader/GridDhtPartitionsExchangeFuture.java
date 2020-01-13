@@ -195,6 +195,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /** */
     private volatile ClusterNode crd;
 
+    /** */
+    private UUID lastSingleMsgReceiverUUID;
+
     /** ExchangeFuture id. */
     private final GridDhtPartitionExchangeId exchId;
 
@@ -1955,6 +1958,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         while (true) {
             try {
                 cctx.io().send(node, msg, SYSTEM_POOL);
+
+                if (cctx.kernalContext().clientNode())
+                    lastSingleMsgReceiverUUID = node.id();
             }
             catch (ClusterTopologyCheckedException ignored) {
                 if (log.isDebugEnabled()) {
@@ -4620,7 +4626,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                 }
                             }
 
-                            if (node.equals(crd)) {
+                            if (cctx.kernalContext().clientNode() && node.id().equals(lastSingleMsgReceiverUUID))
+                                crdChanged = true;
+                            else if (node.equals(crd)) {
                                 crdChanged = true;
 
                                 crd = !srvNodes.isEmpty() ? srvNodes.get(0) : null;
