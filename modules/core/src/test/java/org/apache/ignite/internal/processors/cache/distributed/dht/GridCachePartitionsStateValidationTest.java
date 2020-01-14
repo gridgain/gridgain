@@ -16,7 +16,13 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
-import java.util.*;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.UUID;
+import java.util.HashMap;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -375,7 +381,6 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         ignite.cache(CACHE_NAME).put(0, 0);
 
         lsnrs.forEach(l->assertTrue(l.check()));
-
     }
 
     /**
