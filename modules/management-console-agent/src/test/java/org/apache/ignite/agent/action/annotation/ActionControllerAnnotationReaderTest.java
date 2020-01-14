@@ -26,7 +26,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Action controller annotation processor.
  */
-public class ActionControllerAnnotationProcessorTest {
+public class ActionControllerAnnotationReaderTest {
     /**
      * Should find the tests action controllers.
      */

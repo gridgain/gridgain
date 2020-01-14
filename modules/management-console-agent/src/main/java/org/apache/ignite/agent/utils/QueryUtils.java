@@ -151,7 +151,7 @@ public class QueryUtils {
         SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 
         qry.setPageSize(arg.getPageSize());
-        qry.setLocal(arg.getTargetNodeId() != null);
+        qry.setLocal(arg.isLocal());
         qry.setDistributedJoins(arg.isDistributedJoins());
         qry.setCollocated(arg.isCollocated());
         qry.setEnforceJoinOrder(arg.isEnforceJoinOrder());

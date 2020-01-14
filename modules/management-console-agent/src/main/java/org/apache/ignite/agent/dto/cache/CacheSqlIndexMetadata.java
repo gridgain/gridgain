@@ -87,7 +87,7 @@ public class CacheSqlIndexMetadata {
     }
 
     /**
-     * @return @{code True} if it's unique index.
+     * @return {@code true} if it's unique index.
      */
     public boolean isUnique() {
         return unique;
