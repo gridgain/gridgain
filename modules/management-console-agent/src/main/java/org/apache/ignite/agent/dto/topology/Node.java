@@ -194,7 +194,7 @@ public class Node {
     }
 
     /**
-     * @return @{code True} if node is in baseline.
+     * @return {@code true} if node is in baseline.
      */
     public boolean isBaselineNode() {
         return baselineNode;
@@ -211,7 +211,7 @@ public class Node {
     }
 
     /**
-     * @return @{code True} if node is online.
+     * @return {@code true} if node is online.
      */
     public boolean isOnline() {
         return online;

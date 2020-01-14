@@ -18,9 +18,11 @@ package org.apache.ignite.agent.dto.action;
 
 import java.io.IOException;
 import java.lang.reflect.Parameter;
+import java.util.Set;
 import java.util.UUID;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
@@ -52,6 +54,8 @@ public class RequestDeserializer extends StdDeserializer<Request> {
 
         UUID sesId = p.getCodec().treeToValue(node.get("sessionId"), UUID.class);
 
+        Set<UUID> nodeIds = p.getCodec().treeAsTokens(node.get("nodeIds")).readValueAs(new TypeReference<Set<UUID>>(){});
+
         String act = node.get("action").asText();
 
         ActionMethod actMtd = actions().get(act);
@@ -60,7 +64,7 @@ public class RequestDeserializer extends StdDeserializer<Request> {
             if (actMtd == null)
                 throw new IllegalArgumentException("Failed to find method for action: " + act);
 
-            req = new Request().setId(id).setAction(act).setSessionId(sesId);
+            req = new Request().setId(id).setNodeIds(nodeIds).setAction(act).setSessionId(sesId);
 
             Parameter[] parameters = actMtd.method().getParameters();
 
@@ -73,7 +77,7 @@ public class RequestDeserializer extends StdDeserializer<Request> {
             }
         }
         catch (Exception e) {
-            req = new InvalidRequest().setCause(e).setId(id).setAction(act);
+            req = new InvalidRequest().setCause(new IllegalArgumentException(e)).setId(id).setAction(act);
         }
 
         return req;
