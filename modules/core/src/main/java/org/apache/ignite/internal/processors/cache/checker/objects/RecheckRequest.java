@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
 import java.util.Collection;
+import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 
@@ -44,8 +45,9 @@ public class RecheckRequest extends CachePartitionRequest {
      * @param partId Partition id.
      * @param startTopVer
      */
-    public RecheckRequest(Collection<KeyCacheObject> recheckKeys, String cacheName, int partId,
+    public RecheckRequest(UUID sesId, Collection<KeyCacheObject> recheckKeys, String cacheName, int partId,
         AffinityTopologyVersion startTopVer) {
+        super(sesId);
         this.recheckKeys = recheckKeys;
         this.cacheName = cacheName;
         this.partId = partId;

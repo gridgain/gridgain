@@ -133,7 +133,8 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
                         for (Map.Entry<UUID, PartitionReconciliationValueMeta> valMap :
                             inconsistentDataRow.valueMeta().entrySet()) {
                             printer.accept("\t\t\t" + nodesIdsToConsistenceIdsMap.get(valMap.getKey()) + " " +
-                                U.id8(valMap.getKey()) + ": " + valMap.getValue().stringView(verbose) + "\n");
+                                U.id8(valMap.getKey()) +
+                                (valMap.getValue() != null ? ": " + valMap.getValue().stringView(verbose) : "") + "\n");
                         }
 
                         if (inconsistentDataRow.repairMeta() != null) {

@@ -85,7 +85,7 @@ public class ConsistencyCheckUtils {
                 if (!checkConsistency(keyEntry.getValue(), newVer))
                     keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
                 else if (keyEntry.getValue().size() != cctx.topology().owners(
-                    keyEntry.getKey().partition(), startTopVer).size())
+                    cctx.affinity().partition(keyEntry.getKey()), startTopVer).size())
                     keysWithConflicts.put(keyEntry.getKey(), keyEntry.getValue());
             }
         }
@@ -171,6 +171,8 @@ public class ConsistencyCheckUtils {
 
             Map<UUID, PartitionReconciliationValueMeta> valMap = new HashMap<>();
 
+            Object keyVal = key.value(ctx, false);
+
             for (Map.Entry<UUID, GridCacheVersion> versionEntry : entry.getValue().entrySet()) {
                 UUID nodeId = versionEntry.getKey();
 
@@ -178,26 +180,24 @@ public class ConsistencyCheckUtils {
                     .flatMap(keyVersions -> Optional.ofNullable(keyVersions.get(nodeId)))
                     .map(VersionedValue::value);
 
-                Object keyVal = key.value(ctx, false);
-
                 valMap.put(
                     nodeId,
                     cacheObjOpt.isPresent() ?
                         new PartitionReconciliationValueMeta(
                             cacheObjOpt.get().valueBytes(ctx),
-                            cacheObjOpt.get().value(ctx, false),
+                            Optional.ofNullable(cacheObjOpt.get().value(ctx, false)).map(Object::toString).orElse(null),
                             versionEntry.getValue())
                         :
                         null);
-
-                brokenKeys.add(
-                    new PartitionReconciliationDataRowMeta(
-                        new PartitionReconciliationKeyMeta(
-                            key.valueBytes(ctx),
-                            keyVal != null ? keyVal.toString() : null),
-                        valMap
-                    ));
             }
+
+            brokenKeys.add(
+                new PartitionReconciliationDataRowMeta(
+                    new PartitionReconciliationKeyMeta(
+                        key.valueBytes(ctx),
+                        keyVal != null ? keyVal.toString() : null),
+                    valMap
+                ));
         }
 
         return brokenKeys;

@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.checker.processor;
-
-import java.util.UUID;
+package org.apache.ignite.testframework;
 
 /**
  *
  */
-public interface PipelineWorkload {
+public interface ThrowUp<E extends Throwable> {
     /**
-     * @return Unique id of workload.
+     *
      */
-    UUID getSessionId();
+    void run() throws E;
 }

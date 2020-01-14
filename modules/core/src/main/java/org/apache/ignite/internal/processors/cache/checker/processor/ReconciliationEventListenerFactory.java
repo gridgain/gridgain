@@ -16,14 +16,25 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
-import java.util.UUID;
-
 /**
- *
+ * Event listener factory for test approach.
  */
-public interface PipelineWorkload {
+public class ReconciliationEventListenerFactory {
+    /** Default instance. */
+    private static volatile ReconciliationEventListener defaultInstance = (stage, workload) -> {
+    };
+
     /**
-     * @return Unique id of workload.
+     *
      */
-    UUID getSessionId();
+    public static ReconciliationEventListener create() {
+        return defaultInstance;
+    }
+
+    /**
+     *
+     */
+    public static void setDefaultInstance(ReconciliationEventListener defaultInstance) {
+        ReconciliationEventListenerFactory.defaultInstance = defaultInstance;
+    }
 }

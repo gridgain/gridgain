@@ -23,7 +23,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterGroup;
@@ -39,6 +38,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHING;
+import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.PLANNED;
+import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.STARTING;
 
 /**
  *
@@ -86,8 +88,7 @@ public class AbstractPipelineProcessor {
     /**
      *
      */
-    protected volatile Consumer<String> eventListener = event -> {
-    };
+    protected volatile ReconciliationEventListener eventListener = ReconciliationEventListenerFactory.create();
 
     /**
      *
@@ -109,10 +110,9 @@ public class AbstractPipelineProcessor {
     /**
      *
      */
-    public void registerListener(Consumer<String> evtLsnr) {
+    public void registerListener(ReconciliationEventListener evtLsnr) {
         this.eventListener = evtLsnr;
     }
-
 
     /**
      *
@@ -184,8 +184,6 @@ public class AbstractPipelineProcessor {
         IgniteInClosure<? super R> lsnr) throws InterruptedException {
         liveListeners.acquire();
 
-        eventListener.accept(taskCls.getName());
-
         ignite.compute(partOwners(arg.cacheName(), arg.partitionId())).executeAsync(taskCls, arg).listen(futRes -> {
             try {
                 ExecutionResult<R> res = futRes.get();
@@ -196,7 +194,11 @@ public class AbstractPipelineProcessor {
                     return;
                 }
 
+                eventListener.registerEvent(STARTING, arg);
+
                 lsnr.apply(res.getResult());
+
+                eventListener.registerEvent(FINISHING, arg);
             }
             finally {
                 liveListeners.release();
@@ -218,6 +220,8 @@ public class AbstractPipelineProcessor {
      */
     protected void scheduleHighPriority(PipelineWorkload task) {
         try {
+            eventListener.registerEvent(PLANNED, task);
+
             highPriorityQueue.put(new DelayedHolder<>(-1, task));
         }
         catch (InterruptedException e) { // This queue unbounded as result the exception isn't reachable.
@@ -235,6 +239,8 @@ public class AbstractPipelineProcessor {
     protected void schedule(PipelineWorkload task, long duration, TimeUnit timeUnit) {
         try {
             long finishTime = U.currentTimeMillis() + timeUnit.toMillis(duration);
+
+            eventListener.registerEvent(PLANNED, task);
 
             queue.put(new DelayedHolder<>(finishTime, task));
         }

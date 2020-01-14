@@ -35,6 +35,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
+import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
@@ -49,6 +50,7 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
 import static org.apache.ignite.Ignition.localIgnite;
+import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.parallelismLevel;
 
@@ -65,6 +67,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** Ignite instance. */
     @IgniteInstanceResource
     private IgniteEx ignite;
+
+    @LoggerResource
+    private IgniteLogger log;
 
     private boolean consoleMode;
 
@@ -115,6 +120,18 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         return new ReconciliationResult(res, nodeIdToFolder, errors);
+    }
+
+    /** {@inheritDoc} */
+    @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) {
+        IgniteException e = res.getException();
+
+        if (e != null) {
+            log.warning("PartitionReconciliationProcessorTask failed on node " +
+                "[consistentId=" + res.getNode().consistentId() + ", e=" + e.getMessage() + "]", res.getException());
+        }
+
+        return ComputeJobResultPolicy.WAIT;
     }
 
     /**
@@ -175,7 +192,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new T2<>(null, new ExecutionResult<>(new PartitionReconciliationResultMeta(),"The cache '" + cacheRegexp + "' doesn't exist."));
+                        return new T2<>(null, new ExecutionResult<>(new PartitionReconciliationResultMeta(), "The cache '" + cacheRegexp + "' doesn't exist."));
 
                     caches.addAll(acceptedCaches);
                 }
@@ -209,7 +226,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 String msg = "Reconciliation job failed on node [id=" + ignite.localNode().id() + "]. ";
                 log.error(msg, e);
 
-                throw new IgniteException(msg + e.getMessage());
+                throw new IgniteException(msg + String.format(ERROR_REASON, e.getMessage(), e.getClass()), e);
             }
         }
 

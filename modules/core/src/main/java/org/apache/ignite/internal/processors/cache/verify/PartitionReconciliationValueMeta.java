@@ -26,8 +26,13 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult.HIDDEN_DATA;
 
+/**
+ *
+ */
 public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     @GridToStringInclude
@@ -66,8 +71,9 @@ public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
     }
 
     public String stringView(boolean verbose) {
-        return verbose ? strView + " hex=[" + U.byteArray2HexString(binaryView) + "] ver=[topVer=" +
-            ver.topologyVersion() + ", order=" + ver.order() + ", nodeOrder=" + ver.nodeOrder() + ']' :
+        return verbose ?
+            strView + " hex=[" + U.byteArray2HexString(binaryView) + "]" + (ver != null ? " ver=[topVer=" +
+            ver.topologyVersion() + ", order=" + ver.order() + ", nodeOrder=" + ver.nodeOrder() + ']' : "" ):
             HIDDEN_DATA + (ver != null ? " ver=[topVer=" + ver.topologyVersion() + ", order=" + ver.order() +
                 ", nodeOrder=" + ver.nodeOrder() : "") + ']';
     }

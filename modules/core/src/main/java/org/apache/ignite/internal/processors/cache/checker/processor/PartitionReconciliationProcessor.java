@@ -82,6 +82,9 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     public static final String START_EXECUTION_MSG = "Partition reconciliation started [fixMode: %s, repairAlg: %s, " +
         "batchSize: %s, recheckAttempts: %s, parallelismLevel: %s, caches: %s].";
 
+    /** Error reason. */
+    public static final String ERROR_REASON = "Reason [msg=%s, exception=%s]";
+
     /** Recheck delay seconds. */
     private final int recheckDelay;
 
@@ -163,7 +166,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 int[] partitions = ignite.affinity(cache).primaryPartitions(ignite.localNode());
 
                 for (int partId : partitions) {
-                    schedule(new Batch(cache, partId, null));
+                    schedule(new Batch(UUID.randomUUID(), cache, partId, null));
 
                     workProgress.assignWork();
                 }
@@ -210,14 +213,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
             log.warning(errMsg, e);
 
-            return new ExecutionResult<>(prepareResult(), errMsg + " " + e.getMessage());
+            return new ExecutionResult<>(prepareResult(), errMsg + " " + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
-        catch (IgniteCheckedException e) {
+        catch (Exception e) {
             String errMsg = "Unexpected error.";
 
             log.error(errMsg, e);
 
-            return new ExecutionResult<>(prepareResult(), errMsg + " " + e.getMessage());
+            return new ExecutionResult<>(prepareResult(), errMsg + " " + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
     }
 
@@ -227,7 +230,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
+            new PartitionBatchRequest(workload.getSessionId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
             res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 
@@ -236,11 +239,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 if (nextBatchKey != null)
-                    schedule(new Batch(workload.cacheName(), workload.partitionId(), nextBatchKey));
+                    schedule(new Batch(workload.getSessionId(), workload.cacheName(), workload.partitionId(), nextBatchKey));
 
                 if (!recheckKeys.isEmpty())
                     schedule(
-                        new Recheck(recheckKeys, workload.cacheName(), workload.partitionId(), 0, 0),
+                        new Recheck(workload.getSessionId(), recheckKeys, workload.cacheName(), workload.partitionId(), 0, 0),
                         recheckDelay,
                         TimeUnit.SECONDS
                     );
@@ -254,7 +257,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Recheck workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
+            new RecheckRequest(workload.getSessionId(), new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
                 workload.partitionId(), startTopVer),
             actualKeys -> {
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
@@ -264,6 +267,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 if (!notResolvingConflicts.isEmpty()) {
                     if (workload.attempt() < recheckAttempts) {
                         schedule(new Recheck(
+                                workload.getSessionId(),
                                 notResolvingConflicts,
                                 workload.cacheName(),
                                 workload.partitionId(),
@@ -275,7 +279,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         );
                     }
                     else if (fixMode) {
-                        scheduleHighPriority(repair(workload.cacheName(), workload.partitionId(), notResolvingConflicts,
+                        scheduleHighPriority(repair(workload.getSessionId(), workload.cacheName(), workload.partitionId(), notResolvingConflicts,
                             actualKeys, workload.repairAttempt()));
                     }
                     else {
@@ -293,7 +297,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Repair workload) throws InterruptedException {
         compute(
             RepairRequestTask.class,
-            new RepairRequest(workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
+            new RepairRequest(workload.getSessionId(), workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
                 workload.attempt()),
             repairRes -> {
                 if (!repairRes.repairedKeys().isEmpty())
@@ -326,6 +330,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     if (workload.attempt() < RepairRequestTask.MAX_REPAIR_ATTEMPTS) {
                         schedule(
                             new Recheck(
+                                workload.getSessionId(),
                                 recheckKeys,
                                 workload.cacheName(),
                                 workload.partitionId(),
@@ -345,6 +350,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      *
      */
     private Repair repair(
+        UUID sessionId,
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts,
@@ -359,7 +365,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 res.put(key, versionedByNodes);
         }
 
-        return new Repair(cacheName, partId, res, repairAttempts);
+        return new Repair(sessionId, cacheName, partId, res, repairAttempts);
     }
 
     /**
@@ -415,7 +421,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                             cacheObjOpt.isPresent() ?
                                 new PartitionReconciliationValueMeta(
                                     cacheObjOpt.get().valueBytes(ctx),
-                                    cacheObjOpt.get().value(ctx, false),
+                                    Optional.ofNullable(cacheObjOpt.get().value(ctx, false)).map(Object::toString).orElse(null),
                                     uuidBasedEntry.getValue().version())
                                 :
                                 null);
@@ -442,7 +448,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 cacheObjRepairValOpt.isPresent() ?
                                     new PartitionReconciliationValueMeta(
                                         cacheObjRepairValOpt.get().valueBytes(ctx),
-                                        cacheObjRepairValOpt.get().value(ctx, false),
+                                        Optional.ofNullable(cacheObjRepairValOpt.get().value(ctx, false)).map(Object::toString).orElse(null),
                                         null)
                                     :
                                     null,

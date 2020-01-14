@@ -16,14 +16,21 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
-import java.util.UUID;
-
 /**
  *
  */
-public interface PipelineWorkload {
+public interface ReconciliationEventListener {
     /**
-     * @return Unique id of workload.
+     *
      */
-    UUID getSessionId();
+    enum WorkLoadStage {
+        PLANNED,
+        STARTING,
+        FINISHING
+    }
+
+    /**
+     *
+     */
+    void registerEvent(WorkLoadStage stage, PipelineWorkload workload);
 }

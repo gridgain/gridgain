@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor.workload;
 
+import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
@@ -36,7 +37,13 @@ public class Batch implements PipelineWorkload {
     /**
      *
      */
-    public Batch(String cacheName, int partId, KeyCacheObject lowerKey) {
+    private final UUID sessionId;
+
+    /**
+     *
+     */
+    public Batch(UUID sessionId, String cacheName, int partId, KeyCacheObject lowerKey) {
+        this.sessionId = sessionId;
         this.cacheName = cacheName;
         this.partitionId = partId;
         this.lowerKey = lowerKey;
@@ -61,5 +68,9 @@ public class Batch implements PipelineWorkload {
      */
     public KeyCacheObject lowerKey() {
         return lowerKey;
+    }
+
+    @Override public UUID getSessionId() {
+        return sessionId;
     }
 }

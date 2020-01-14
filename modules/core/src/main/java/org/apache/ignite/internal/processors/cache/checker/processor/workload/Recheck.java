@@ -44,8 +44,14 @@ public class Recheck implements PipelineWorkload {
     /**
      *
      */
-    public Recheck(Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
+    private final UUID sessionId;
+
+    /**
+     *
+     */
+    public Recheck(UUID sessionId, Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
         int partitionId, int attempt, int repairAttempt) {
+        this.sessionId = sessionId;
         this.recheckKeys = recheckKeys;
         this.cacheName = cacheName;
         this.partitionId = partitionId;
@@ -86,5 +92,10 @@ public class Recheck implements PipelineWorkload {
      */
     public int repairAttempt() {
         return repairAttempt;
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID getSessionId() {
+        return sessionId;
     }
 }

@@ -43,6 +43,8 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.CachePartitionRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
+import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
@@ -108,7 +110,7 @@ public class PartitionReconciliationProcessorTest {
 
         ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes = new ExecutionResult<>(new T2<>(null, new HashMap<>()));
 
-        processor.addTask(new Batch(DEFAULT_CACHE, PARTITION_ID, null))
+        processor.addTask(new Batch(UUID.randomUUID(), DEFAULT_CACHE, PARTITION_ID, null))
             .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
             .execute();
 
@@ -129,7 +131,7 @@ public class PartitionReconciliationProcessorTest {
         batchRes.put(nextKey, new HashMap<>());
         ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes = new ExecutionResult<>(new T2<>(nextKey, batchRes));
 
-        processor.addTask(new Batch(DEFAULT_CACHE, PARTITION_ID, null))
+        processor.addTask(new Batch(UUID.randomUUID(), DEFAULT_CACHE, PARTITION_ID, null))
             .whereResult(CollectPartitionKeysByBatchTask.class, emptyRes)
             .execute();
 
@@ -149,7 +151,7 @@ public class PartitionReconciliationProcessorTest {
 
         ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>> emptyRes = new ExecutionResult<>(new HashMap<>());
 
-        processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
+        processor.addTask(new Recheck(UUID.randomUUID(), batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, emptyRes)
             .execute();
 
@@ -183,7 +185,7 @@ public class PartitionReconciliationProcessorTest {
         actualKey.put(nodeId2, new VersionedValue(null, ver, 1, 1));
         sameRes.put(key, actualKey);
 
-        processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
+        processor.addTask(new Recheck(UUID.randomUUID(), batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
             .execute();
 
@@ -217,7 +219,7 @@ public class PartitionReconciliationProcessorTest {
         actualKey.put(nodeId2, new VersionedValue(null, ver2, 1, 1));
         sameRes.put(key, actualKey);
 
-        processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
+        processor.addTask(new Recheck(UUID.randomUUID(), batchRes, DEFAULT_CACHE, PARTITION_ID, 0, 0))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
             .execute();
 
@@ -249,7 +251,7 @@ public class PartitionReconciliationProcessorTest {
         actualKey.put(nodeId2, new VersionedValue(null, ver2, 1, 1));
         sameRes.put(key, actualKey);
 
-        processor.addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
+        processor.addTask(new Recheck(UUID.randomUUID(), batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
             RepairRequestTask.MAX_REPAIR_ATTEMPTS))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
             .execute();
@@ -279,7 +281,10 @@ public class PartitionReconciliationProcessorTest {
         List<String> evtHist = new ArrayList<>();
         MockedProcessor processor = MockedProcessor.create(true);
         processor.useRealScheduler = true;
-        processor.registerListener(evtHist::add);
+        processor.registerListener((stage, workload) -> {
+            if(stage.equals(ReconciliationEventListener.WorkLoadStage.STARTING))
+                evtHist.add(workload.getClass().getName());
+        });
 
         KeyCacheObjectImpl key = new KeyCacheObjectImpl(1, null, PARTITION_ID);
         UUID nodeId1 = UUID.randomUUID();
@@ -300,17 +305,17 @@ public class PartitionReconciliationProcessorTest {
         sameRes.put(key, actualKey);
 
         processor
-            .addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
+            .addTask(new Recheck(UUID.randomUUID(), batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
                 RepairRequestTask.MAX_REPAIR_ATTEMPTS))
-            .addTask(new Recheck(batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
+            .addTask(new Recheck(UUID.randomUUID(), batchRes, DEFAULT_CACHE, PARTITION_ID, MAX_RECHECK_ATTEMPTS,
                 RepairRequestTask.MAX_REPAIR_ATTEMPTS))
             .whereResult(CollectPartitionKeysByRecheckRequestTask.class, new ExecutionResult<>(sameRes))
             .whereResult(RepairRequestTask.class, new ExecutionResult<>(new RepairResult()))
             .execute();
 
-        assertEquals(CollectPartitionKeysByRecheckRequestTask.class.getName(), evtHist.get(0));
-        assertEquals(RepairRequestTask.class.getName(), evtHist.get(1));
-        assertEquals(CollectPartitionKeysByRecheckRequestTask.class.getName(), evtHist.get(2));
+        assertEquals(RecheckRequest.class.getName(), evtHist.get(0));
+        assertEquals(RepairRequest.class.getName(), evtHist.get(1));
+        assertEquals(RecheckRequest.class.getName(), evtHist.get(2));
     }
 
     /**
@@ -320,7 +325,7 @@ public class PartitionReconciliationProcessorTest {
         MockedProcessor processor = MockedProcessor.create(true, parallelismLevel);
 
         for (int i = 0; i < 100; i++)
-            processor.addTask(new Batch(DEFAULT_CACHE, PARTITION_ID, null));
+            processor.addTask(new Batch(UUID.randomUUID(), DEFAULT_CACHE, PARTITION_ID, null));
 
         Thread tp = new Thread(processor::execute);
 
@@ -446,9 +451,11 @@ public class PartitionReconciliationProcessorTest {
                 if (res == null)
                     throw new IllegalStateException("Please add result for: " + taskCls.getSimpleName());
 
-                eventListener.accept(taskCls.getName());
+                eventListener.registerEvent(ReconciliationEventListener.WorkLoadStage.STARTING, arg);
 
                 lsnr.apply(res.getResult());
+
+                eventListener.registerEvent(ReconciliationEventListener.WorkLoadStage.FINISHING, arg);
             }
             else
                 super.compute(taskCls, arg, lsnr);
