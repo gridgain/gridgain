@@ -33,9 +33,9 @@ Creating NuGet package:
         <version>$version$</version>
         <authors>GridGain</authors>
         <owners>GridGain</owners>
-        <licenseUrl>https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license</licenseUrl>
+        <license type="file">LICENSE</license>
         <projectUrl>https://gridgain.com/</projectUrl>
-        <iconUrl>https://www.gridgain.com/sites/default/files/GG-logo64-01.png</iconUrl>
+        <icon>images\logo_gg_64x64.png</icon>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
         <description>
 LINQ Provider for GridGain Ignite
@@ -49,16 +49,34 @@ More info: https://docs.gridgain.com/
         </description>
         <copyright>Copyright 2019</copyright>
         <tags>GridGain Ignite In-Memory Distributed Computing SQL NoSQL LINQ Grid Map Reduce Cache linqpad-samples</tags>
+        <repository type="git" url="https://github.com/gridgain/gridgain.git" />
+        
         <dependencies>
-            <dependency id="GridGain.Ignite" version="[$version$]" />
-            <dependency id="Remotion.Linq" version="[2.0.1]" />
-        </dependencies>    
+            <group targetFramework=".NETFramework4.0">
+                <dependency id="GridGain.Ignite" version="[$version$]" />
+                <dependency id="Remotion.Linq" version="[2.0.1]" />
+            </group>
+
+            <group targetFramework=".NETStandard2.0">
+                <dependency id="GridGain.Ignite" version="[$version$]" />
+                <dependency id="Remotion.Linq" version="[2.1.2]" />
+            </group>
+        </dependencies>
     </metadata>
     <files>
 	    <file src="bin\$configuration$\Apache.Ignite.Linq.dll" target="lib\net40" />
 		<file src="bin\$configuration$\Apache.Ignite.Linq.xml" target="lib\net40" />
 
+        <file src="bin\$configuration$\Apache.Ignite.Linq.dll" target="lib\netstandard2.0" />
+        <file src="bin\$configuration$\Apache.Ignite.Linq.xml" target="lib\netstandard2.0" />
+
         <!-- LINQPad samples -->
         <file src="NuGet\LINQPad\*.*" target="linqpad-samples" />
+
+        <!-- Icon -->
+        <file src="..\logo_gg_64x64.png" target="images\" />
+
+        <!-- License -->
+        <file src="..\..\..\..\LICENSE" target="LICENSE" />
     </files>
 </package>
