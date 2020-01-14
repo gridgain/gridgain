@@ -16,16 +16,10 @@
 
 package org.apache.ignite.internal.metric;
 
-import java.lang.management.ManagementFactory;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.stream.StreamSupport;
-import javax.management.MBeanServer;
-import javax.management.MBeanServerInvocationHandler;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -33,11 +27,8 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -53,6 +44,7 @@ import static org.apache.ignite.internal.metric.IoStatisticsHolderQuery.LOGICAL_
 import static org.apache.ignite.internal.metric.IoStatisticsHolderQuery.PHYSICAL_READS;
 import static org.apache.ignite.internal.metric.IoStatisticsType.CACHE_GROUP;
 import static org.apache.ignite.internal.metric.IoStatisticsType.HASH_INDEX;
+import static org.apache.ignite.internal.metric.MetricsConfigurationTest.metricsBean;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 
 /**
@@ -198,6 +190,11 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
 
         resetAllIoMetrics(ignite);
 
+        pkCache2 = ignite.context().metric()
+                .registry(metricName(HASH_INDEX.metricGroupName(), CACHE_2_NAME, HASH_PK_IDX_NAME));
+        cache2 = ignite.context().metric()
+                .registry(metricName(CACHE_GROUP.metricGroupName(), CACHE_2_NAME));
+
         assertEquals(0, pkCache2.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
         assertEquals(0, pkCache2.<LongMetric>findMetric(PHYSICAL_READS_LEAF).value());
         assertEquals(0, pkCache2.<LongMetric>findMetric(LOGICAL_READS_INNER).value());
@@ -279,20 +276,6 @@ public class IoStatisticsMetricsLocalMXBeanImplSelfTest extends GridCommonAbstra
      * @param grpName Group name to reset metrics.
      */
     public static void resetMetric(IgniteEx ignite, String grpName) {
-        try {
-            ObjectName mbeanName = U.makeMBeanName(ignite.name(), "Kernal",
-                IgniteKernal.class.getSimpleName());
-
-            MBeanServer mbeanSrv = ManagementFactory.getPlatformMBeanServer();
-
-            if (!mbeanSrv.isRegistered(mbeanName))
-                fail("MBean is not registered: " + mbeanName.getCanonicalName());
-
-            IgniteMXBean bean = MBeanServerInvocationHandler.newProxyInstance(mbeanSrv, mbeanName, IgniteMXBean.class, false);
-
-            bean.resetMetrics(grpName);
-        } catch (MalformedObjectNameException e) {
-            throw new IgniteException(e);
-        }
+        metricsBean(ignite).resetMetrics(grpName);
     }
 }

@@ -186,6 +186,11 @@ public class IoStatisticsMetricsLocalMxBeanCacheGroupsTest extends GridCommonAbs
                 ignite.cluster().active(false);
                 ignite.cluster().active(true);
 
+                pk = ignite.context().metric()
+                        .registry(metricName(HASH_INDEX.metricGroupName(), CACHE_GROUP_NAME, HASH_PK_IDX_NAME));
+                grp = ignite.context().metric()
+                        .registry(metricName(CACHE_GROUP.metricGroupName(), CACHE_GROUP_NAME));
+
                 resetAllIoMetrics(ignite);
 
                 assertEquals(0, pk.<LongMetric>findMetric(LOGICAL_READS_LEAF).value());
