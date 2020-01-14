@@ -26,21 +26,15 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.junit.Test;
 
-import static java.lang.Thread.currentThread;
-import static org.apache.ignite.internal.processors.query.h2.LongRunningQueryManager.LONG_QUERY_EXEC_MSG;
-
 /**
- * Tests for schemas.
+ * Tests for SQL MERGE.
  */
 public class SqlMergeTest extends AbstractIndexingCommonTest {
     /** Node. */
-    protected static IgniteEx srv;
+    private static IgniteEx srv;
 
     /** Node. */
-    protected static IgniteEx cli;
-
-    /** Node. */
-    protected  IgniteEx node;
+    protected IgniteEx node;
 
 
     /** {@inheritDoc} */
@@ -48,10 +42,6 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
         super.beforeTestsStarted();
 
         srv = startGrid(0);
-
-        startGrid(1);
-
-        cli = startClientGrid(2);
     }
 
     /** {@inheritDoc} */
@@ -62,6 +52,7 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
         super.afterTest();
     }
 
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
@@ -72,7 +63,7 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
      *
      */
     @Test
-    public void test0() {
+    public void test() throws Exception {
         sql("CREATE TABLE test1 (id INT, id2 INT, name VARCHAR, PRIMARY KEY (id, id2))");
 
         checkMergeQuery("MERGE INTO test1 (id, id2, name) VALUES (1, 2, 'Kyle')", 1L);
@@ -99,7 +90,7 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
      *
      */
     @Test
-    public void testCheckKeysWarning() {
+    public void testCheckKeysWarning() throws Exception {
         LogListener logLsnr = LogListener
             .matches("The search row by explicit KEY isn't supported. The primary key is always used to search row")
             .build();
@@ -163,7 +154,7 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
     /**
      * @param sql MERGE query.
      */
-    private void checkMergeQuery(String sql, long expectedUpdateCounts) {
+    private void checkMergeQuery(String sql, long expectedUpdateCounts) throws Exception {
         List<List<?>> resMrg = sql(sql);
 
         assertEquals(1, resMrg.size());
@@ -175,7 +166,7 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
      * @param sql SELECT query to check merge result.
      * @param expectedRow Expected results of the SELECT.
      */
-    private void checkSqlResults(String sql, List<?> expectedRow) {
+    private void checkSqlResults(String sql, List<?> expectedRow) throws Exception {
         List<List<?>> res = sql(sql);
         assertEquals(1, res.size());
         assertEquals(expectedRow, res.get(0));
@@ -185,7 +176,7 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
      * @param sql SQL query.
      * @return Results.
      */
-    protected List<List<?>> sql(String sql) {
+    protected List<List<?>> sql(String sql) throws Exception {
         GridQueryProcessor qryProc = node.context().query();
 
         SqlFieldsQuery qry = new SqlFieldsQuery(sql).setSchema("PUBLIC");
