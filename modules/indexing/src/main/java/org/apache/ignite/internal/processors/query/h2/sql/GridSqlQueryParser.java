@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -546,7 +547,10 @@ public class GridSqlQueryParser {
      * @param log Logger.
      */
     public GridSqlQueryParser(boolean useOptimizedSubqry, IgniteLogger log) {
+        assert Objects.nonNull(log);
+
         optimizedTableFilterOrder = useOptimizedSubqry ? new HashMap<>() : null;
+
         this.log = log;
     }
 
@@ -866,7 +870,7 @@ public class GridSqlQueryParser {
 
         res.columns(cols);
 
-        if (log != null && !F.isEmpty(MERGE_KEYS.get(merge))) {
+        if (!F.isEmpty(MERGE_KEYS.get(merge))) {
             log.warning("The search row by explicit KEY isn't supported. The primary key is always used to search row " +
                 "[sql=" + merge.getSQL() + ']');
         }
