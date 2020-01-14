@@ -618,7 +618,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    @Override public void setQueryMaxMemory(@Nullable Integer timeout) throws SQLException {
+    @Override public void setQueryTimeout(@Nullable Integer timeout) throws SQLException {
         qryTimeout.setValue(timeout);
     }
 
