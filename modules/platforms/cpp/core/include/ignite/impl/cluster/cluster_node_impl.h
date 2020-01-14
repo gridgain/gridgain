@@ -19,12 +19,13 @@
 
 #ifdef GRIDGAIN_ENABLE_CLUSTER_API
 
+#include <ignite/common/utils.h>
 #include <ignite/common/concurrent.h>
-#include <ignite/jni/java.h>
-#include <ignite/guid.h>
-#include "ignite/ignite_product_version.h"
 
-#include <ignite/impl/interop/interop_target.h>
+#include <ignite/guid.h>
+#include <ignite/ignite_product_version.h>
+#include <ignite/impl/interop/interop_memory.h>
+#include <ignite/impl/binary/binary_reader_impl.h>
 
 namespace ignite
 {
