@@ -26,7 +26,7 @@ import java.util.List;
 import org.apache.ignite.internal.processors.query.SqlMergeTest;
 
 /**
- * Tests for log print for long running query.
+ * Tests SQL MERGE command via JDBC thin driver.
  */
 public class JdbcThinSqlMergeTest extends SqlMergeTest {
     /** JDBC thin URL. */
