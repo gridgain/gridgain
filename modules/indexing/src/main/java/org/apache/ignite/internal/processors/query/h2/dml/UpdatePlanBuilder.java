@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -103,12 +104,13 @@ public final class UpdatePlanBuilder {
         QueryDescriptor planKey,
         GridSqlStatement stmt,
         boolean mvccEnabled,
-        IgniteH2Indexing idx
+        IgniteH2Indexing idx,
+        IgniteLogger log
     ) throws IgniteCheckedException {
         if (stmt instanceof GridSqlMerge || stmt instanceof GridSqlInsert)
-            return planForInsert(planKey, stmt, idx, mvccEnabled);
+            return planForInsert(planKey, stmt, idx, mvccEnabled, log);
         else if (stmt instanceof GridSqlUpdate || stmt instanceof GridSqlDelete)
-            return planForUpdate(planKey, stmt, idx, mvccEnabled);
+            return planForUpdate(planKey, stmt, idx, mvccEnabled, log);
         else
             throw new IgniteSQLException("Unsupported operation: " + stmt.getSQL(),
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
@@ -129,7 +131,8 @@ public final class UpdatePlanBuilder {
         QueryDescriptor planKey,
         GridSqlStatement stmt,
         IgniteH2Indexing idx,
-        boolean mvccEnabled
+        boolean mvccEnabled,
+        IgniteLogger log
     ) throws IgniteCheckedException {
         GridSqlQuery sel = null;
 
@@ -267,7 +270,8 @@ public final class UpdatePlanBuilder {
                 mvccEnabled,
                 planKey,
                 selectSql,
-                tbl.dataTable().cacheName()
+                tbl.dataTable().cacheName(),
+                log
             );
         }
 
@@ -348,7 +352,8 @@ public final class UpdatePlanBuilder {
         QueryDescriptor planKey,
         GridSqlStatement stmt,
         IgniteH2Indexing idx,
-        boolean mvccEnabled
+        boolean mvccEnabled,
+        IgniteLogger log
     ) throws IgniteCheckedException {
         GridSqlElement target;
 
@@ -446,7 +451,8 @@ public final class UpdatePlanBuilder {
                         mvccEnabled,
                         planKey,
                         selectSql,
-                        tbl.dataTable().cacheName()
+                        tbl.dataTable().cacheName(),
+                        log
                     );
                 }
 
@@ -480,7 +486,8 @@ public final class UpdatePlanBuilder {
                         mvccEnabled,
                         planKey,
                         selectSql,
-                        tbl.dataTable().cacheName()
+                        tbl.dataTable().cacheName(),
+                        log
                     );
                 }
 
@@ -889,7 +896,8 @@ public final class UpdatePlanBuilder {
         boolean mvccEnabled,
         QueryDescriptor planKey,
         String selectQry,
-        String cacheName
+        String cacheName,
+        IgniteLogger log
     )
         throws IgniteCheckedException {
         if ((!mvccEnabled && !planKey.skipReducerOnUpdate()) || planKey.batched())
@@ -904,7 +912,7 @@ public final class UpdatePlanBuilder {
             // Get a new prepared statement for derived select query.
             try (PreparedStatement stmt = conn.prepareStatement(selectQry)) {
                 Prepared prep = GridSqlQueryParser.prepared(stmt);
-                GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false, idx.logger()).parse(prep);
+                GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false, log).parse(prep);
 
                 GridCacheTwoStepQuery qry = GridSqlQuerySplitter.split(
                     conn,

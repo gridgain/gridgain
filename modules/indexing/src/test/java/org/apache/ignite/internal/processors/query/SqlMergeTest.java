@@ -21,6 +21,7 @@ import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -192,7 +193,7 @@ public class SqlMergeTest extends AbstractIndexingCommonTest {
     private ListeningTestLogger testLog() {
         ListeningTestLogger testLog = new ListeningTestLogger(false, log);
 
-        GridTestUtils.setFieldValue(node.context().query().getIndexing(), "log", testLog);
+        GridTestUtils.setFieldValue(((IgniteH2Indexing)node.context().query().getIndexing()).parser(), "log", testLog);
 
         return testLog;
     }
