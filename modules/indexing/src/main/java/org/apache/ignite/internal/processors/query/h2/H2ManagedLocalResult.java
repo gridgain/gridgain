@@ -334,12 +334,15 @@ public class H2ManagedLocalResult implements LocalResult {
         return ValueRow.get(values);
     }
 
-    private void createExternalResult() {
+    private void createExternalResult(boolean forcePlainResult) {
         assert ctx != null;
 
-        external = distinct || distinctIndexes != null || sort != null ?
-            new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker,
-                rowCount) : new PlainExternalResult(ctx, memTracker, session);
+        if (forcePlainResult)
+            external = new PlainExternalResult(ctx, memTracker, session);
+        else
+            external = distinct || distinctIndexes != null || sort != null ?
+                new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker,
+                    rowCount) : new PlainExternalResult(ctx, memTracker, session);
     }
 
     /** {@inheritDoc} */
@@ -354,7 +357,7 @@ public class H2ManagedLocalResult implements LocalResult {
                 }
                 rowCount = distinctRows.size();
                 if (!hasAvailableMemory(array, previous, values)) {
-                    addRowsToDisk();
+                    addRowsToDisk(false);
 
                     distinctRows = null;
                 }
@@ -366,7 +369,7 @@ public class H2ManagedLocalResult implements LocalResult {
             if (external == null) {
                 rows.add(values);
                 if (!hasAvailableMemory(null, null, values)) {
-                    addRowsToDisk();
+                    addRowsToDisk(false);
                 }
             }
             else
@@ -376,17 +379,12 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /**
      * Adds rows to disk.
+     * @param forcePlainResult Whether to force creation of not sorted result.
      */
-    private void addRowsToDisk() {
+    private void addRowsToDisk(boolean forcePlainResult) {
         if (external == null) {
-            createExternalResult();
+            createExternalResult(forcePlainResult);
         }
-
-        // We need to release memory before adding to external result to prevent immediate rows spilling.
-        if (memTracker != null)
-            memTracker.released(memReserved);
-
-        memReserved = 0;
 
         if (distinctRows == null) {
             rowCount = external.addRows(rows);
@@ -396,6 +394,8 @@ public class H2ManagedLocalResult implements LocalResult {
             rowCount = external.addRows(distinctRows.values());
             distinctRows.clear();
         }
+
+        memReserved = 0;
     }
 
     /** {@inheritDoc} */
@@ -406,7 +406,7 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void done() {
         if (external != null) {
-            addRowsToDisk();
+            addRowsToDisk(false);
         }
         else {
             if (isAnyDistinct()) {
@@ -494,7 +494,7 @@ public class H2ManagedLocalResult implements LocalResult {
             row = temp.next();
             rows.add(row);
             if (!hasAvailableMemory(null,null, row))
-                addRowsToDisk();
+                addRowsToDisk(true);
         }
         if (withTiesSortOrder != null && row != null) {
             Value[] expected = row;
@@ -502,11 +502,11 @@ public class H2ManagedLocalResult implements LocalResult {
                 rows.add(row);
                 rowCount++;
                 if (!hasAvailableMemory(null,null, row))
-                    addRowsToDisk();
+                    addRowsToDisk(true);
             }
         }
         if (external != null) {
-            addRowsToDisk();
+            addRowsToDisk(true);
         }
         temp.close();
     }

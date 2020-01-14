@@ -144,7 +144,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             if (distinct && containsRowWithOrderCheck(row))
                 continue;
 
-            addRowToBuffer(row);
+            addRowToBuffer(row, false); // Memory is already reserved in LocalResult.
 
             size++;
         }
@@ -160,7 +160,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (distinct && containsRowWithOrderCheck(row))
                 return size;
 
-        addRowToBuffer(row);
+        addRowToBuffer(row, true);
 
         if (needToSpill())
             spillRowsBufferToDisk();
@@ -254,8 +254,9 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
     /**
      * Adds row to in-memory row buffer.
      * @param row Row.
+     * @param reserveMemory Flag whether to reserve memory.
      */
-    private void addRowToBuffer(Value[] row) {
+    private void addRowToBuffer(Value[] row, boolean reserveMemory) {
         if (distinct) {
             assert unsortedRowsBuf == null;
 
@@ -266,9 +267,11 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             Value[] old = sortedRowsBuf.put(key, row);
 
-            long delta = H2Utils.calculateMemoryDelta(key, old, row);
+            if (reserveMemory) {
+                long delta = H2Utils.calculateMemoryDelta(key, old, row);
 
-            memTracker.reserved(delta);
+                memTracker.reserved(delta);
+            }
         }
         else {
             assert sortedRowsBuf == null;
@@ -278,9 +281,11 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             unsortedRowsBuf.add(row);
 
-            long delta = H2Utils.calculateMemoryDelta(null, null, row);
+            if (reserveMemory) {
+                long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-            memTracker.reserved(delta);
+                memTracker.reserved(delta);
+            }
         }
     }
 

@@ -366,7 +366,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             }
         }
         catch (Exception e) {
-            U.closeQuiet(fileIo);
+            U.closeQuiet(this);
 
             throw new IgniteException("Failed to reset the index spill file, slot=" + slot, e);
         }
@@ -416,7 +416,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             }
         }
         catch (IOException e) {
-            U.closeQuiet(fileIo);
+            U.closeQuiet(this);
             U.closeQuiet(oldFile);
 
             throw new IgniteException("Failed to extend hash index.", e);

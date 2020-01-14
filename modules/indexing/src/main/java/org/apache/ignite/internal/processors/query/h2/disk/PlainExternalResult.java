@@ -68,7 +68,7 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
 
     /** {@inheritDoc} */
     @Override public int addRow(Value[] row) {
-        addRowToBuffer(row);
+        addRowToBuffer(row, true);
 
         if (needToSpill())
             spillRows();
@@ -82,7 +82,7 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
             return size;
 
         for (Value[] row : rows)
-            addRowToBuffer(row);
+            addRowToBuffer(row, false); // Memory is already reserved in LocalResult.
 
         if (needToSpill())
             spillRows();
@@ -94,16 +94,19 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
      * Adds row to in-memory buffer.
      *
      * @param row Row.
+     * @param reserveMemory Flag whether to reserve the memory.
      */
-    private void addRowToBuffer(Value[] row) {
+    private void addRowToBuffer(Value[] row, boolean reserveMemory) {
         if (rowBuff == null)
             rowBuff = new ArrayList<>();
 
         rowBuff.add(new IgniteBiTuple<>(null, row));
 
-        long delta = H2Utils.calculateMemoryDelta(null, null, row);
+        if (reserveMemory) {
+            long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-        memTracker.reserved(delta);
+            memTracker.reserved(delta);
+        }
 
         size++;
     }
