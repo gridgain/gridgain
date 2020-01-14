@@ -105,22 +105,49 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
 
+            var pos = stream.Position;
             var reader = marshaller.StartUnmarshal(stream);
-            
-            // TODO: This throws when new type parameters come into play
-            var key = reader.Deserialize<TK>();
 
-            if (reader.ReadBoolean())
+            var map = _map;
+            if (map != null)
             {
-                // TODO: This throws when new type parameters come into play
-                // Catch exception?
-                var val = reader.Deserialize<TV>();
-                _map[key] = new NearCacheEntry<TV>(true, val);
+                try
+                {
+                    var key = reader.Deserialize<TK>();
+
+                    if (reader.ReadBoolean())
+                    {
+                        var val = reader.Deserialize<TV>();
+                        _map[key] = new NearCacheEntry<TV>(true, val);
+                    }
+                    else
+                    {
+                        NearCacheEntry<TV> unused;
+                        _map.TryRemove(key, out unused);
+                    }
+                }
+                catch (InvalidCastException)
+                {
+                    // Ignore.
+                    // _fallbackMap use case is not recommended, we expect this to be rare.
+                }
             }
-            else
+
+            if (_fallbackMap != null)
             {
-                NearCacheEntry<TV> unused;
-                _map.TryRemove(key, out unused);
+                stream.Seek(pos, SeekOrigin.Begin);
+                var key = reader.Deserialize<object>();
+
+                if (reader.ReadBoolean())
+                {
+                    var val = reader.Deserialize<object>();
+                    _fallbackMap[key] = new NearCacheEntry<object>(true, val);
+                }
+                else
+                {
+                    NearCacheEntry<object> unused;
+                    _fallbackMap.TryRemove(key, out unused);
+                }
             }
         }
 
@@ -128,12 +155,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
+            
+            var pos = stream.Position;
 
             var map = _map;
             if (map != null)
             {
-                var pos = stream.Position;
-
                 try
                 {
                     var key = marshaller.Unmarshal<TK>(stream);
@@ -142,15 +169,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 }
                 catch (InvalidCastException)
                 {
-                    // Using exception for control flow: optimize only for the good case.
-                    // _fallbackMap use case is not recommended, we expect it to be rare.
-                    stream.Seek(pos, SeekOrigin.Begin);
+                    // Ignore.
+                    // _fallbackMap use case is not recommended, we expect this to be rare.
                 }
             }
             
             if (_fallbackMap != null)
             {
+                stream.Seek(pos, SeekOrigin.Begin);
                 var key = marshaller.Unmarshal<object>(stream);
+                
                 NearCacheEntry<object> unused;
                 _fallbackMap.TryRemove(key, out unused);
             }
