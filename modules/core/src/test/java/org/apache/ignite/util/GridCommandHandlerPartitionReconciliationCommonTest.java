@@ -16,28 +16,22 @@
 
 package org.apache.ignite.util;
 
-import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
-import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.commandline.CommandHandler;
+import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
-import static java.io.File.separatorChar;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
-import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.RECONCILIATION_DIR;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 
@@ -45,52 +39,18 @@ import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
  * Common partition reconciliation tests.
  */
 public class GridCommandHandlerPartitionReconciliationCommonTest
-    extends GridCommandHandlerClusterPerMethodAbstractTest {
-
+    extends GridCommandHandlerPartitionReconciliationAbstractTest {
     /** */
     public static final int INVALID_KEY = 100;
 
     /** */
     public static final String VALUE_PREFIX = "abc_";
 
-    /** */
-    protected static File dfltDiagnosticDir;
-
-    /** */
-    protected IgniteEx ignite;
-
-    /** @inheritDoc */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        cleanPersistenceDir();
-
-        initDiagnosticDir();
-
-        cleanDiagnosticDir();
-
-        ignite = startGrids(4);
-
-        ignite.cluster().active(true);
-    }
-
-    /** @inheritDoc */
-    @Override protected void afterTestsStopped() throws Exception {
-        stopAllGrids();
-
-        super.afterTestsStopped();
-    }
-
     /** @inheritDoc */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
         prepareCache();
-    }
-
-    /** @inheritDoc */
-    @Override protected void afterTest() throws Exception {
-        // No-op.
     }
 
     /**
@@ -220,24 +180,97 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
     }
 
     /**
-     * @throws IgniteCheckedException If failed.
+     * Checks that -verbose parameter raises a warining requiring consent from user to print sensitive data to output.
+     * <b>Preconditions:</b>
+     * <ul>
+     *     <li>Grid with 4 nodes is started, cache with 3 backups with some data is up and running</li>
+     * </ul>
+     * <b>Test steps:</b>
+     * <ol>
+     *     <li>Start bin/control.sh --cache partition_reconciliation --console --verbose</li>
+     * </ol>
+     * <b>Expected result:</b>
+     * <ul>
+     *     <li>Check that console scoped report contains a warning that sensitive information will be printed.</li>
+     * </ul>
      */
-    protected void initDiagnosticDir() throws IgniteCheckedException {
-        dfltDiagnosticDir = new File(U.defaultWorkDirectory() + separatorChar + RECONCILIATION_DIR);
+    @Test
+    public void testConsoleOutputContainsWarningAboutSensetiveInformation() {
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--console", "--verbose"));
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "WARNING: Please be aware that sensitive data will be printed to the console and output file(s).");
     }
 
     /**
-     * Clean diagnostic directories.
+     * Checks that sensitive information is hidden when -verbose parameter is not specified.
+     * <b>Preconditions:</b>
+     * <ul>
+     *     <li>Grid with 4 nodes is started, cache with 3 backups with some data is up and running</li>
+     * </ul>
+     * <b>Test steps:</b>
+     * <ol>
+     *     <li>Start bin/control.sh --cache partition_reconciliation --console</li>
+     * </ol>
+     * <b>Expected result:</b>
+     * <ul>
+     *     <li>Check that console scoped report does not contain sensitive information.</li>
+     * </ul>
+     *
+     * @throws Exception if failed.
      */
-    protected void cleanDiagnosticDir() {
-        U.delete(dfltDiagnosticDir);
+    @Test
+    public void testConsoleOutputHidesSensetiveInformation() throws Exception {
+        ignite(0).cache(DEFAULT_CACHE_NAME).put(INVALID_KEY, VALUE_PREFIX + INVALID_KEY);
+
+        List<ClusterNode> nodes = ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().affinity().
+            nodesByKey(
+                INVALID_KEY,
+                ignite(0).cachex(DEFAULT_CACHE_NAME).context().topology().readyTopologyVersion());
+
+        corruptDataEntry(((IgniteEx)grid(nodes.get(1))).cachex(
+            DEFAULT_CACHE_NAME).context(),
+            INVALID_KEY,
+            false,
+            false,
+            new GridCacheVersion(0, 0, 2),
+            null);
+
+        injectTestSystemOut();
+
+        CommandHandler hnd = new CommandHandler();
+
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--console"));
+
+        assertContains(log, testOut.toString(), "INCONSISTENT KEYS: 1");
+
+        // Check console output.
+        assertContains(log, testOut.toString(), PartitionReconciliationResult.HIDDEN_DATA + " ver=[topVer=");
+
+        ClusterNode primaryNode = ignite(0).affinity(DEFAULT_CACHE_NAME).mapKeyToNode(INVALID_KEY);
+
+        assertNotNull("Cannot find primary node for the key [key=" + INVALID_KEY + ']', primaryNode);
+
+        ReconciliationResult res = hnd.getLastOperationResult();
+
+        String pathToReport = res.nodeIdToFolder().get(primaryNode.id());
+
+        assertNotNull("Cannot find partition reconciliation report", pathToReport);
+
+        String inconsistencyReport = new String(Files.readAllBytes(Paths.get(pathToReport)));
+
+        // Check inconsistency report.
+        assertContains(log, inconsistencyReport, PartitionReconciliationResult.HIDDEN_DATA + " ver=[topVer=");
     }
 
-    // TODO: 26.12.19 Refactoring needed, another PRTest class has similar method.
     /**
      * Create cache and populate it with some data.
      */
-    @SuppressWarnings("unchecked") protected void prepareCache() {
+    @Override protected void prepareCache() {
         ignite(0).destroyCache(DEFAULT_CACHE_NAME);
 
         ignite(0).createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
@@ -245,71 +278,9 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
             .setCacheMode(CacheMode.PARTITIONED)
             .setBackups(3));
 
-        try (IgniteDataStreamer streamer = ignite(0).dataStreamer(DEFAULT_CACHE_NAME)) {
+        try (IgniteDataStreamer<Integer, String> streamer = ignite(0).dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < INVALID_KEY; i++)
                 streamer.addData(i, VALUE_PREFIX + i);
-        }
-    }
-
-    // TODO: 26.12.19 Refactoring needed, another PRTest class has similar method.
-    /**
-     * Corrupts data entry.
-     *
-     * @param ctx Context.
-     * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
-     * @param ver GridCacheVersion to use.
-     * @param brokenValPostfix Postfix to add to value if breakData flag is set to true.
-     */
-    protected void corruptDataEntry(
-        GridCacheContext<Object, Object> ctx,
-        Object key,
-        boolean breakCntr,
-        boolean breakData,
-        GridCacheVersion ver,
-        String brokenValPostfix
-    ) {
-        int partId = ctx.affinity().partition(key);
-
-        try {
-            long updateCntr = ctx.topology().localPartition(partId).updateCounter();
-
-            Object valToPut = ctx.cache().keepBinary().get(key);
-
-            if (breakCntr)
-                updateCntr++;
-
-            if (breakData)
-                valToPut = valToPut.toString() + brokenValPostfix;
-
-            // Create data entry
-            DataEntry dataEntry = new DataEntry(
-                ctx.cacheId(),
-                new KeyCacheObjectImpl(key, null, partId),
-                new CacheObjectImpl(valToPut, null),
-                GridCacheOperation.UPDATE,
-                new GridCacheVersion(),
-                ver,
-                0L,
-                partId,
-                updateCntr
-            );
-
-            GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ctx.shared().database();
-
-            db.checkpointReadLock();
-
-            try {
-                U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry,
-                    false);
-            }
-            finally {
-                db.checkpointReadUnlock();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            e.printStackTrace();
         }
     }
 }

@@ -28,7 +28,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
  */
 public class GridCommandHandlerPartitionReconciliationReplicatedTest extends
     GridCommandHandlerPartitionReconciliationAbstractTest {
-
     /** {@inheritDoc} */
     @Override  protected void prepareCache() {
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)

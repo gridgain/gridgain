@@ -26,13 +26,11 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.Ignition.localIgnite;
 
 /**
- * Visor partition reconciliation task.
+ * Partition reconciliation cancel task.
  */
 @GridInternal
 public class VisorPartitionReconciliationCancelTask extends VisorOneNodeTask<Void, Void> {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /**
@@ -41,20 +39,15 @@ public class VisorPartitionReconciliationCancelTask extends VisorOneNodeTask<Voi
     private static final long STOP_SESSION_ID = 0;
 
     /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
     @Override protected VisorJob<Void, Void> job(Void arg) {
         return new VisorPartitionReconciliationCancelJob(arg, debug);
     }
 
     /**
-     * Partition reconciliation job.
-     *
-     * @param <ResultT> Result type.
+     * Job that cancels the ongoing partition reconciliation task.
      */
     public class VisorPartitionReconciliationCancelJob extends VisorJob<Void, Void> {
-        /**
-         *
-         */
+        /** */
         private static final long serialVersionUID = 0L;
 
         /**
@@ -70,7 +63,8 @@ public class VisorPartitionReconciliationCancelTask extends VisorOneNodeTask<Voi
         /** {@inheritDoc} */
         @Override protected Void run(@Nullable Void arg) throws IgniteException {
             ignite.compute()
-                .broadcastAsync(() -> ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(STOP_SESSION_ID))
+                .broadcastAsync(
+                    () -> ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(STOP_SESSION_ID))
                 .get();
 
             return null;

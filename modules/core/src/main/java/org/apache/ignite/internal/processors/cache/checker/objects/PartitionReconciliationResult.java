@@ -37,9 +37,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  *
  */
 public class PartitionReconciliationResult extends IgniteDataTransferObject {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** A sequence of characters that is used to hide sensitive data in case of non-verbose mode. */
@@ -61,7 +59,8 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     public PartitionReconciliationResult() {
     }
 
-    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationResult(
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    public PartitionReconciliationResult(
         Map<UUID, String> nodesIdsToConsistenceIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys) {
         this.nodesIdsToConsistenceIdsMap = nodesIdsToConsistenceIdsMap;
@@ -258,6 +257,4 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     public int skippedEntriesCount() {
         return skippedEntries.size();
     }
-
-
 }

@@ -32,6 +32,7 @@ import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
+import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
@@ -124,10 +125,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            partitionReconciliationCheck(client, clientCfg, log);
+            return partitionReconciliationCheck(client, clientCfg, log);
         }
+        catch (Throwable e) {
+            log.severe("Failed to execute partition reconciliation command " + CommandLogger.errorMessage(e));
 
-        return null;
+            throw e;
+        }
     }
 
     /**
@@ -136,9 +140,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
      * @param client Client node to run initial task.
      * @param clientCfg Client configuration.
      * @param log Logger.
+     * @return Result of operation.
      * @throws GridClientException If failed.
      */
-    private void partitionReconciliationCheck(
+    private ReconciliationResult partitionReconciliationCheck(
         GridClient client,
         GridClientConfiguration clientCfg,
         Logger log
@@ -159,6 +164,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             executeTask(client, VisorPartitionReconciliationTask.class, taskArg, clientCfg);
 
         print(res, log::info);
+
+        return res;
     }
 
     /** {@inheritDoc} */
@@ -225,7 +232,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         strVal = argIter.nextArg("The load factor should be specified.");
 
                         try {
-                            loadFactor = Double.valueOf(strVal);
+                            loadFactor = Double.parseDouble(strVal);
                         }
                         catch (NumberFormatException e) {
                             throw new IllegalArgumentException("Invalid load factor: " + strVal +
@@ -243,7 +250,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         strVal = argIter.nextArg("The batch size should be specified.");
 
                         try {
-                            batchSize = Integer.valueOf(strVal);
+                            batchSize = Integer.parseInt(strVal);
                         }
                         catch (NumberFormatException e) {
                             throw new IllegalArgumentException("Invalid batch size: " + strVal +
@@ -261,7 +268,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         strVal = argIter.nextArg("The recheck attempts should be specified.");
 
                         try {
-                            recheckAttempts = Integer.valueOf(strVal);
+                            recheckAttempts = Integer.parseInt(strVal);
                         }
                         catch (NumberFormatException e) {
                             throw new IllegalArgumentException("Invalid recheck attempts: " + strVal +
@@ -330,12 +337,20 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             .a("], recheck-attempts=[" + args.recheckAttempts)
             .a("], fix-alg=[" + args.repairAlg + "]")
             .a("], recheck-delay=[" + args.recheckDelay + "]")
-            .a("\n");
+            .a(System.lineSeparator());
+
+        if (args.verbose) {
+            options
+                .a("WARNING: Please be aware that sensitive data will be printed to the console and output file(s).")
+                .a(System.lineSeparator());
+        }
 
         return options.toString();
     }
 
     /**
+     * @param nodeIdsToFolders Mapping node id to the directory to be used for inconsistency report.
+     * @param nodesIdsToConsistenceIdsMap Mapping node id to consistent id.
      * @return String with folder of results and their locations.
      */
     private String prepareResultFolders(
@@ -375,20 +390,21 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     }
 
     /**
+     * Returns string representation of the given list of errors.
      *
+     * @param errors List of errors.
+     * @return String representation of the given list of errors.
      */
     private String prepareErrors(List<String> errors) {
         SB errorMsg = new SB();
 
         if(!errors.isEmpty()) {
-            errorMsg.a("Next errors occurred during of execution:\n");
+            errorMsg
+                .a("The following errors occurred during the execution of partition reconciliation:")
+                .a(System.lineSeparator());
 
-            for (int i = 0; i < errors.size(); i++) {
-                int point = i + 1;
-
-                errorMsg.a(point+ ". ");
-                errorMsg.a(errors.get(i) + "\n");
-            }
+            for (int i = 0; i < errors.size(); i++)
+                errorMsg.a(i + 1).a(". ").a(errors.get(i)).a(System.lineSeparator());
         }
 
         return errorMsg.toString();
@@ -399,31 +415,31 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     protected static class Arguments {
-        /** */
-        private Set<String> caches;
+        /** List of caches to be checked. */
+        private final Set<String> caches;
 
-        /** */
-        private boolean fixMode;
+        /** Flag indicates that an inconsistency should be fixed in accordance with RepairAlgorithm parameter. */
+        private final boolean fixMode;
 
-        /** */
-        private boolean verbose;
+        /** Flag indicates that the result should include sensitive information such as key and value. */
+        private final boolean verbose;
 
-        /** */
-        private boolean console;
+        /** Flag indicates that the result is printed to the console. */
+        private final boolean console;
 
-        /** */
-        private double loadFactor;
+        /** Percent of system loading between 0 and 1. */
+        private final double loadFactor;
 
-        /** */
-        private int batchSize;
+        /** Amount of keys to checked at one time. */
+        private final int batchSize;
 
-        /** */
-        private int recheckAttempts;
+        /** Amount of potentially inconsistent keys recheck attempts. */
+        private final int recheckAttempts;
 
-        /** */
-        private RepairAlgorithm repairAlg;
+        /** Partition reconciliation repair algorithm to be used. */
+        private final RepairAlgorithm repairAlg;
 
-        /** */
+        /** Recheck delay in seconds. */
         private int recheckDelay;
 
         /**

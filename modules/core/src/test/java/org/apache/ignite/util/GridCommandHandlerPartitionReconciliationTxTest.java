@@ -30,7 +30,6 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
  */
 public class GridCommandHandlerPartitionReconciliationTxTest extends
     GridCommandHandlerPartitionReconciliationAbstractTest {
-
     /** {@inheritDoc} */
     @Override protected void prepareCache() {
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)

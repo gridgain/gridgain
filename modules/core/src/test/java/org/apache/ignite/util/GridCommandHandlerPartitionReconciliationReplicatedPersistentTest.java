@@ -27,7 +27,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
  */
 public class GridCommandHandlerPartitionReconciliationReplicatedPersistentTest extends
     GridCommandHandlerPartitionReconciliationReplicatedTest{
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
