@@ -20,6 +20,7 @@ import * as admin from '../../page-models/pageAdminListOfRegisteredUsers';
 import {pageProfile as profile} from '../../page-models/pageProfile';
 import * as notifications from '../../components/permanentNotifications';
 import {userMenu} from '../../components/userMenu';
+import { Selector } from 'testcafe';
 
 const regularUser = createRegularUser();
 
@@ -60,4 +61,60 @@ test('Become user', async(t) => {
         .hover(userMenu.button)
         // See https://ggsystems.atlassian.net/browse/GG-24068
         .expect(userMenu.menuItem.withText('Admin panel').count).eql(1);
+});
+
+test("Action availability", async(t) => {
+    const _checkListOfActions = async(actions, excluded) => {
+        const actionSelector = Selector('.dropdown-menu a');
+
+        for (let i = 0; i < actions.length; i++) {
+            const actionLbl = actions[i];
+
+            if (excluded)
+                await t.expect(actionSelector.withText(actionLbl).exists).notOk();
+            else
+                await t.expect(actionSelector.withText(actionLbl).exists).ok();
+        }
+
+        return false;
+    };
+
+    const actions = {
+        alwaysAvailable: ["Add user"],
+        curUserSelectedOnly: ["Activity details"],
+        otherUserActions: ["Become this user", "Revoke admin", "Remove user"]
+    };
+
+    await t.navigateTo(resolveUrl('/settings/admin'))
+        .hover(admin.usersTable.actionsButton);
+
+    await _checkListOfActions(actions.alwaysAvailable);
+    await _checkListOfActions(actions.curUserSelectedOnly, true);
+    await _checkListOfActions(actions.otherUserActions, true);
+
+    await admin.usersTable.performAction("Add user");
+
+    const createUserDialog = Selector('.modal-dialog');
+
+    await t.expect(createUserDialog.find('.modal-header').withText('Create User').exists).ok()
+        .click(createUserDialog.find('button').withText("Cancel"))
+        .hover(admin.usersTable.actionsButton);
+
+    await _checkListOfActions(actions.alwaysAvailable);
+    await _checkListOfActions(actions.curUserSelectedOnly, true);
+    await _checkListOfActions(actions.otherUserActions, true);
+
+    await t.click(admin.userNameCell.withText('John Doe'))
+        .hover(admin.usersTable.actionsButton);
+
+    await _checkListOfActions(actions.alwaysAvailable);
+    await _checkListOfActions(actions.curUserSelectedOnly);
+    await _checkListOfActions(actions.otherUserActions, true);
+
+    await t.click(admin.userNameCell.withText('User Name'))
+        .hover(admin.usersTable.actionsButton);
+
+    await _checkListOfActions(actions.alwaysAvailable);
+    await _checkListOfActions(actions.curUserSelectedOnly);
+    await _checkListOfActions(actions.otherUserActions);
 });

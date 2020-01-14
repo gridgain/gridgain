@@ -100,7 +100,9 @@ export default class IgniteListOfRegisteredUsersCtrl {
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.addUser'),
-                sref: '.createUser'
+                sref: '.createUser',
+                // "Add user" action does not depend from user selection.
+                available: true
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.removeUser'),
@@ -224,7 +226,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             this.actionOptions[1].available = other && user.admin; // Revoke admin.
             this.actionOptions[2].available = other && !user.admin; // Grant admin.
             this.actionOptions[4].available = other; // Remove user.
-            this.actionOptions[5].available = true; // Activity detail.
+            this.actionOptions[5].available = true; // Activity details.
             this.actionOptions[6].available = user.failedLoginAttempts > 0; // Reset failed login attempts.
         }
         else {
@@ -232,7 +234,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             this.actionOptions[1].available = false; // Revoke admin.
             this.actionOptions[2].available = false; // Grant admin.
             this.actionOptions[4].available = false; // Remove user.
-            this.actionOptions[5].available = false; // Activity detail.
+            this.actionOptions[5].available = false; // Activity details.
             this.actionOptions[6].available = false; // Reset failed attempts.
         }
     }
