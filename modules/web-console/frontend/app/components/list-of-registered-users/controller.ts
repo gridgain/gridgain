@@ -101,8 +101,7 @@ export default class IgniteListOfRegisteredUsersCtrl {
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.addUser'),
                 sref: '.createUser',
-                // "Add user" action does not depend from user selection.
-                available: true
+                available: true // "Add user" action is always available.
             },
             {
                 action: this.$translate.instant('admin.listOfRegisteredUsers.actions.removeUser'),

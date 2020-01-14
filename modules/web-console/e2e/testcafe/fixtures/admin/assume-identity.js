@@ -80,9 +80,9 @@ test("Action availability", async(t) => {
     };
 
     const actions = {
-        alwaysAvailable: ["Add user"],
-        curUserSelectedOnly: ["Activity details"],
-        otherUserActions: ["Become this user", "Revoke admin", "Remove user"]
+        alwaysAvailable: ['Add user'],
+        curUserSelectedOnly: ['Activity details'],
+        otherUserActions: ['Become this user', 'Revoke admin', 'Remove user']
     };
 
     await t.navigateTo(resolveUrl('/settings/admin'))
@@ -92,12 +92,12 @@ test("Action availability", async(t) => {
     await _checkListOfActions(actions.curUserSelectedOnly, true);
     await _checkListOfActions(actions.otherUserActions, true);
 
-    await admin.usersTable.performAction("Add user");
+    await admin.usersTable.performAction('Add user');
 
     const createUserDialog = Selector('.modal-dialog');
 
     await t.expect(createUserDialog.find('.modal-header').withText('Create User').exists).ok()
-        .click(createUserDialog.find('button').withText("Cancel"))
+        .click(createUserDialog.find('button').withText('Cancel'))
         .hover(admin.usersTable.actionsButton);
 
     await _checkListOfActions(actions.alwaysAvailable);
