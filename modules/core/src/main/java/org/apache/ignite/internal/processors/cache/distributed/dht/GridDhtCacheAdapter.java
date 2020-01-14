@@ -1014,7 +1014,8 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
                                             entry.unswap();
 
-                                            GridCacheVersion newVer = ctx.versions().next();
+                                            GridCacheVersion newVer = ctx.versions().next(
+                                                ctx.topology().readyTopologyVersion());
 
                                             EntryGetResult verVal = entry.versionedValue(
                                                 cacheVal,

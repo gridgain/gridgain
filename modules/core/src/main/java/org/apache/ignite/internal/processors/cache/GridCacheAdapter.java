@@ -1068,7 +1068,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             if (cnt == 0)
                 cnt = 1; // Still perform cleanup since there could be entries in swap.
 
-            GridCacheVersion obsoleteVer = ctx.versions().next();
+            GridCacheVersion obsoleteVer = ctx.versions().next(ctx.topology().readyTopologyVersion());
 
             List<GridCacheClearAllRunnable<K, V>> res = new ArrayList<>(cnt);
 
@@ -1276,7 +1276,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7952
         MvccUtils.verifyMvccOperationSupport(ctx, "Clear");
 
-        GridCacheVersion obsoleteVer = ctx.versions().next();
+        GridCacheVersion obsoleteVer = ctx.versions().next(ctx.topology().readyTopologyVersion());
 
         for (KeyCacheObject key : keys) {
             GridCacheEntryEx e = peekEx(key);
@@ -3186,7 +3186,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         try {
             // Version for all loaded entries.
-            final GridCacheVersion ver0 = ctx.versions().nextForLoad();
+            final GridCacheVersion ver0 = ctx.versions().nextForLoad(ctx.topology().readyTopologyVersion());
 
             ctx.store().loadCache(new IgniteBiInClosure<KeyCacheObject, Object>() {
                 @Override public void apply(KeyCacheObject key, Object val) throws IgniteException {
@@ -3363,7 +3363,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         Collection<KeyCacheObject> keys0 = ctx.cacheKeysView(keys);
 
         // Version for all loaded entries.
-        final GridCacheVersion ver0 = ctx.versions().nextForLoad();
+        final GridCacheVersion ver0 = ctx.versions().nextForLoad(ctx.topology().readyTopologyVersion());
 
         ctx.store().loadAll(null, keys0, new CI2<KeyCacheObject, Object>() {
             @Override public void apply(KeyCacheObject key, Object val) {
@@ -4108,7 +4108,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (keyCheck)
             validateCacheKey(key);
 
-        GridCacheVersion obsoleteVer = ctx.versions().next();
+        GridCacheVersion obsoleteVer = ctx.versions().next(ctx.topology().readyTopologyVersion());
 
         ctx.shared().database().checkpointReadLock();
 
@@ -4143,7 +4143,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7956
         MvccUtils.verifyMvccOperationSupport(ctx, "Evict");
 
-        return evictx(key, ctx.versions().next(), CU.empty0());
+        return evictx(key, ctx.versions().next(ctx.topology().readyTopologyVersion()), CU.empty0());
     }
 
     /** {@inheritDoc} */
@@ -4159,7 +4159,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7956
         MvccUtils.verifyMvccOperationSupport(ctx, "Evict");
 
-        GridCacheVersion obsoleteVer = ctx.versions().next();
+        GridCacheVersion obsoleteVer = ctx.versions().next(ctx.topology().readyTopologyVersion());
 
         try {
             ctx.evicts().batchEvict(keys, obsoleteVer);
