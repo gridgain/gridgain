@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.AreEqual(cache.GetSize(), res.Count);
         }
 
-        public class Foo
+        private class Foo
         {
             public int Id { get; set; }
             public DateTime? StartDate { get; set; }
