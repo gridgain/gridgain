@@ -266,8 +266,8 @@ public class CacheGroupContext {
                 HASH_INDEX,
                 cacheOrGroupName(),
                 HASH_PK_IDX_NAME,
-                mmgr,
-                statHolderData
+                statHolderData,
+                mmgr
             );
 
             ctx.kernalContext().ioStats().onCacheGroupRegistered(
@@ -1326,5 +1326,16 @@ public class CacheGroupContext {
      */
     public CacheGroupMetricsImpl metrics() {
         return metrics;
+    }
+
+    /**
+     * Removes statistics metrics registries.
+     */
+    public void removeIOStatistic() {
+        if (statHolderData != IoStatisticsHolderNoOp.INSTANCE)
+            ctx.kernalContext().metric().remove(statHolderData.metricRegistryName());
+
+        if (statHolderIdx != IoStatisticsHolderNoOp.INSTANCE)
+            ctx.kernalContext().metric().remove(statHolderIdx.metricRegistryName());
     }
 }

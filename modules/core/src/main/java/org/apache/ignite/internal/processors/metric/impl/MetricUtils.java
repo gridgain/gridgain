@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.metric.impl;
 
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.util.typedef.T2;
 
 import static org.apache.ignite.internal.processors.cache.CacheMetricsImpl.CACHE_METRICS;
 
@@ -71,6 +72,19 @@ public class MetricUtils {
             return names[0];
 
         return String.join(SEPARATOR, names);
+    }
+
+    /**
+     * Splits full metric name to registry name and metric name.
+     *
+     * @param name Full metric name.
+     * @return Array consist of registry name and metric name.
+     */
+    public static T2<String, String> fromFullName(String name) {
+        return new T2<>(
+            name.substring(0, name.lastIndexOf(SEPARATOR)),
+            name.substring(name.lastIndexOf(SEPARATOR) + 1)
+        );
     }
 
     /**

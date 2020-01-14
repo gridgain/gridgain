@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
@@ -47,6 +48,7 @@ import org.apache.ignite.spi.metric.Metric;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.metric.impl.HitRateMetric.DFLT_SIZE;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.util.lang.GridFunc.nonThrowableSupplier;
 
@@ -68,28 +70,44 @@ public class MetricRegistry implements Iterable<Metric> {
     /** Registered metrics. */
     private final Map<String, Metric> metrics;
 
+    /** HitRate config provider. */
+    private final Function<String, Long> hitRateCfgProvider;
+
+    /** Histogram config provider. */
+    private final Function<String, long[]> histogramCfgProvider;
+
     /**
+     * @param type Metric registry type.
      * @param grpName Group name.
+     * @param hitRateCfgProvider HitRate config provider.
+     * @param histogramCfgProvider Histogram config provider.
      * @param log Logger.
      */
-    public MetricRegistry(String type, String grpName, IgniteLogger log) {
+    public MetricRegistry(String type, String grpName, Function<String, Long> hitRateCfgProvider,
+            Function<String, long[]> histogramCfgProvider, IgniteLogger log) {
         this.type = type;
         this.grpName = grpName;
         this.log = log;
-
-        metrics = new ConcurrentHashMap<>();
+        this.hitRateCfgProvider = hitRateCfgProvider;
+        this.histogramCfgProvider = histogramCfgProvider;
+        this.metrics = new ConcurrentHashMap<>();
     }
 
     /**
-     * @param type Type.
+     * @param type Metric registry type.
      * @param grpName Group name.
+     * @param hitRateCfgProvider HitRate config provider.
+     * @param histogramCfgProvider Histogram config provider.
      * @param log Logger.
      * @param metrics Metrics snapshot.
      */
-    public MetricRegistry(String type, String grpName, IgniteLogger log, Map<String, Metric> metrics) {
+    public MetricRegistry(String type, String grpName, Function<String, Long> hitRateCfgProvider,
+            Function<String, long[]> histogramCfgProvider, IgniteLogger log, Map<String, Metric> metrics) {
         this.type = type;
         this.grpName = grpName;
         this.log = log;
+        this.hitRateCfgProvider = hitRateCfgProvider;
+        this.histogramCfgProvider = histogramCfgProvider;
         this.metrics = Collections.unmodifiableMap(metrics);
     }
 
@@ -99,6 +117,7 @@ public class MetricRegistry implements Iterable<Metric> {
     public String type() {
         return type;
     }
+
 
     /**
      * @param name Name of the metric.
@@ -288,7 +307,16 @@ public class MetricRegistry implements Iterable<Metric> {
      * @see HitRateMetric
      */
     public HitRateMetric hitRateMetric(String name, @Nullable String desc, long rateTimeInterval, int size) {
-        return addMetric(name, new HitRateMetric(metricName(grpName, name), desc, rateTimeInterval, size));
+        String fullName = metricName(grpName, name);
+
+        HitRateMetric metric = addMetric(name, new HitRateMetric(fullName, desc, rateTimeInterval, size));
+
+        Long cfgRateTimeInterval = hitRateCfgProvider.apply(fullName);
+
+        if (cfgRateTimeInterval != null)
+            metric.reset(cfgRateTimeInterval, DFLT_SIZE);
+
+        return metric;
     }
 
     /**
@@ -312,7 +340,16 @@ public class MetricRegistry implements Iterable<Metric> {
      * @return {@link HistogramMetric}
      */
     public HistogramMetric histogram(String name, long[] bounds, @Nullable String desc) {
-        return addMetric(name, new HistogramMetric(metricName(grpName, name), desc, bounds));
+        String fullName = metricName(grpName, name);
+
+        HistogramMetric metric = addMetric(name, new HistogramMetric(fullName, desc, bounds));
+
+        long[] cfgBounds = histogramCfgProvider.apply(fullName);
+
+        if (cfgBounds != null)
+            metric.reset(cfgBounds);
+
+        return metric;
     }
 
     /**
