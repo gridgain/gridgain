@@ -16,6 +16,10 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.BufferedOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -41,10 +45,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLServerSocketFactory;
-import javax.net.ssl.SSLSocketFactory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
@@ -359,7 +359,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     private Marshaller marsh;
 
     /** Statistics. */
-    protected final TcpDiscoveryStatistics stats = new TcpDiscoveryStatistics();
+    protected final TcpDiscoveryStatistics stats;
 
     /** Local port which node uses. */
     protected int locPort = DFLT_PORT;
@@ -436,6 +436,18 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
     /** For test purposes. */
     private boolean skipAddrsRandomization = false;
+
+    /** */
+    public TcpDiscoverySpi() {
+        this(new TcpDiscoveryStatistics());
+    }
+
+    /**
+     * @param stats Instance of {@link TcpDiscoveryStatistics} to collect statistic.
+     */
+    protected TcpDiscoverySpi(TcpDiscoveryStatistics stats) {
+        this.stats = stats;
+    }
 
     /**
      * Gets current SPI state.

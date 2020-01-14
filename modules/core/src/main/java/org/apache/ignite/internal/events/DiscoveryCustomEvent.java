@@ -67,7 +67,8 @@ public class DiscoveryCustomEvent extends DiscoveryEvent {
      * @param customMsg New customMessage.
      */
     public void customMessage(DiscoveryCustomMessage customMsg) {
-        this.customMsg = customMsg;
+//        if(customMsg != null)
+            this.customMsg = customMsg;
     }
 
     /**

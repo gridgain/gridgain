@@ -39,6 +39,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -1098,7 +1099,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 FutureTask<Void> fut = msgWorker.addTask(new FutureTask<Void>() {
                     @Override protected Void body() {
                         pendingCustomMsgs.clear();
-                        msgWorker.pendingMsgs.reset(null, null, null);
+                        msgWorker.pendingMsgs.clear();
                         msgWorker.next = null;
                         failedNodes.clear();
                         leavingNodes.clear();
@@ -1830,14 +1831,8 @@ class ServerImpl extends TcpDiscoveryImpl {
     /**
      * @param msg Message to prepare.
      * @param destNodeId Destination node ID.
-     * @param msgs Messages to include.
      */
-    private void prepareNodeAddedMessage(
-        TcpDiscoveryAbstractMessage msg,
-        UUID destNodeId,
-        @Nullable Collection<PendingMessage> msgs,
-        @Nullable IgniteUuid discardCustomMsgId
-        ) {
+    private void prepareNodeAddedMessage(TcpDiscoveryAbstractMessage msg, UUID destNodeId) {
         assert destNodeId != null;
 
         if (msg instanceof TcpDiscoveryNodeAddedMessage) {
@@ -1861,22 +1856,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                 }
 
                 nodeAddedMsg.topology(topToSnd);
-
-                Collection<TcpDiscoveryAbstractMessage> msgs0 = null;
-
-                if (msgs != null) {
-                    msgs0 = new ArrayList<>(msgs.size());
-
-                    for (PendingMessage pendingMsg : msgs) {
-                        if (pendingMsg.msg != null)
-                            msgs0.add(pendingMsg.msg);
-                    }
-                }
-
-                // No need to send discardMsgId because we already filtered out
-                // cleaned up messages.
-                // TODO IGNITE-11271
-                nodeAddedMsg.messages(msgs0, null, discardCustomMsgId);
 
                 Map<Long, Collection<ClusterNode>> hist;
 
@@ -2493,6 +2472,16 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     /**
+     * @param msg Message for checking.
+     * @param nodeId Expected node id.
+     * @return {@code true} If given message is {@link TcpDiscoveryNodeAddedMessage} for given node id.
+     */
+    private static boolean isAddMessageForNode(TcpDiscoveryAbstractMessage msg, UUID nodeId) {
+        return msg instanceof TcpDiscoveryNodeAddedMessage &&
+            ((TcpDiscoveryNodeAddedMessage)msg).node().id().equals(nodeId);
+    }
+
+    /**
      * Discovery messages history used for client reconnect.
      */
     private class EnsuredMessageHistory {
@@ -2699,7 +2688,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     TcpDiscoveryNodeAddedMessage msg0 = new TcpDiscoveryNodeAddedMessage(addedMsg);
 
-                    prepareNodeAddedMessage(msg0, destNodeId, null, null);
+                    prepareNodeAddedMessage(msg0, destNodeId);
 
                     msg0.topology(addedMsg.clientTopology());
 
@@ -2746,140 +2735,109 @@ class ServerImpl extends TcpDiscoveryImpl {
      * Pending messages container.
      */
     private static class PendingMessages implements Iterable<TcpDiscoveryAbstractMessage> {
-        /** */
-        private static final int MAX = 1024;
-
-        /** Pending messages. */
-        private final Queue<PendingMessage> msgs = new ArrayDeque<>(MAX * 2);
-
-        /** Processed custom message IDs. */
-        private Set<IgniteUuid> procCustomMsgs = new GridBoundedLinkedHashSet<>(MAX * 2);
-
-        /** Discarded message ID. */
-        private IgniteUuid discardId;
-
-        /** Discarded custom message ID. */
-        private IgniteUuid customDiscardId;
+        /**
+         * Pending messages. It contains only locally handled messages. So this structure also using for checking
+         * duplication of messages. Order is important because we must guarantee the FIFO approach.
+         */
+        private final LinkedHashMap<IgniteUuid, PendingMessage> msgs = new LinkedHashMap<>();
 
         /**
-         * Adds pending message and shrinks queue if it exceeds limit
-         * (messages that were not discarded yet are never removed).
+         * Unverified messages - messages which haven't been on coordinator yet and transfer to it through this node
+         * without local handling of this message.
+         */
+        Map<IgniteUuid, PendingMessage> unverifiedMessages = new LinkedHashMap<>();
+
+        /**
+         * Id of the last message which passed the whole ring. Messages from this id(inclusive) and older still keep in
+         * pending messages but wouldn't be sent to the next node in case of the resending of pending messages.
+         */
+        IgniteUuid lastDiscardId;
+
+        /**
+         * Id of the last message which can be removed from the pending list to avoid a memory leak. This id is id of a
+         * message whose discard message have passed the whole ring. This guarantees that message with this id won't
+         * possible to turn up in the cluster so we don't need to keep this message anymore for checking to
+         * duplication.
+         */
+        IgniteUuid lastRemovedId;
+
+        /**
+         * Adds pending or unverified message.
          *
          * @param msg Message to add.
          */
         void add(TcpDiscoveryAbstractMessage msg) {
-            msgs.add(new PendingMessage(msg));
+            if (!msg.verified()) {
+                unverifiedMessages.put(msg.id(), new PendingMessage(msg));
 
-            while (msgs.size() > MAX) {
-                PendingMessage queueHead = msgs.peek();
-
-                assert queueHead != null;
-
-                if (queueHead.customMsg && customDiscardId != null) {
-                    if (queueHead.id.equals(customDiscardId))
-                        customDiscardId = null;
-                }
-                else if (!queueHead.customMsg && discardId != null) {
-                    if (queueHead.id.equals(discardId))
-                        discardId = null;
-                }
-                else
-                    break;
-
-                msgs.poll();
-            }
-        }
-
-        /**
-         * Resets pending messages.
-         *
-         * @param msgs Message.
-         * @param discardId Discarded message ID.
-         * @param customDiscardId Discarded custom event message ID.
-         */
-        void reset(
-            @Nullable Collection<TcpDiscoveryAbstractMessage> msgs,
-            @Nullable IgniteUuid discardId,
-            @Nullable IgniteUuid customDiscardId
-        ) {
-            this.msgs.clear();
-
-            if (msgs != null) {
-                for (TcpDiscoveryAbstractMessage msg : msgs)
-                    this.msgs.add(new PendingMessage(msg));
+                return;
             }
 
-            this.discardId = discardId;
-            this.customDiscardId = customDiscardId;
+            unverifiedMessages.remove(msg.id());
+
+            msgs.put(msg.id(), new PendingMessage(msg));
         }
 
         /**
          * Discards message with provided ID and all before it.
          *
-         * @param id Discarded message ID.
-         * @param custom {@code True} if discard for {@link TcpDiscoveryCustomEventMessage}.
+         * @param discardId Id until which messages shouldn't be send to next node.
+         * @param removeId Id until which messages can be removed.
          */
-        void discard(IgniteUuid id, boolean custom) {
-            if (!hasPendingMessage(custom, id))
-                return;
+        void discard(IgniteUuid discardId, IgniteUuid removeId) {
+            cleanup(removeId);
 
-            if (custom)
-                customDiscardId = id;
-            else
-                discardId = id;
-
-            cleanup();
+            if (msgs.containsKey(discardId))
+                lastDiscardId = discardId;
         }
 
         /**
-         * @param custom {@code true} if need to check for a custom message with the given ID.
-         * @param id Message ID.
-         * @return {@code true} if pending messages contain such a message.
+         * Set the new  message id until which pending messages can be removed.
+         *
+         * @param id Id until which pending messages can be removed.
          */
-        private boolean hasPendingMessage(boolean custom, IgniteUuid id) {
-            for (PendingMessage msg : msgs) {
-                if (msg.customMsg == custom && msg.id.equals(id))
-                    return true;
-            }
+        void markToRemove(IgniteUuid id) {
+            lastRemovedId = id;
+        }
 
-            return false;
+        /**
+         * @param id Message id for checking.
+         * @return {@code true} If message with given id have been already processed.
+         */
+        boolean processed(IgniteUuid id) {
+            return msgs.containsKey(id);
         }
 
         /**
          *
          */
-        void cleanup() {
-            Iterator<PendingMessage> msgIt = msgs.iterator();
+        void cleanup(IgniteUuid id) {
+            if (!msgs.containsKey(id))
+                return;
 
-            boolean skipMsg = discardId != null;
-            boolean skipCustomMsg = customDiscardId != null;
+            lastRemovedId = id;
+
+            Iterator<PendingMessage> msgIt = msgs.values().iterator();
 
             while (msgIt.hasNext()) {
                 PendingMessage msg = msgIt.next();
 
-                if (msg.customMsg) {
-                    if (skipCustomMsg) {
-                        assert customDiscardId != null;
+                msgIt.remove();
 
-                        if (F.eq(customDiscardId, msg.id)) {
-                            msg.msg = null;
-
-                            return;
-                        }
-                    }
-                }
-                else {
-                    if (skipMsg) {
-                        assert discardId != null;
-
-                        if (F.eq(discardId, msg.id)) {
-                            msg.msg = null;
-
-                            return;
-                        }
-                    }
-                }
+                if (F.eq(id, msg.id))
+                    return;
             }
+        }
+
+        /**
+         * Clear all data.
+         */
+        void clear() {
+            msgs.clear();
+            unverifiedMessages.clear();
+
+            lastDiscardId = null;
+            lastRemovedId = null;
         }
 
         /**
@@ -2888,26 +2846,44 @@ class ServerImpl extends TcpDiscoveryImpl {
          * @return Non-discarded messages iterator.
          */
         @Override public Iterator<TcpDiscoveryAbstractMessage> iterator() {
-            return new SkipIterator();
+            return new SkipIterator(lastDiscardId, true);
+        }
+
+        /**
+         * Gets iterator for non-discarded verified messages.
+         *
+         * @return Non-discarded verified messages iterator.
+         */
+        public Iterator<TcpDiscoveryAbstractMessage> verifiedIterator() {
+            return new SkipIterator(lastDiscardId, false);
         }
 
         /**
          *
          */
         private class SkipIterator implements Iterator<TcpDiscoveryAbstractMessage> {
-            /** Skip non-custom messages flag. */
-            private boolean skipMsg = discardId != null;
-
-            /** Skip custom messages flag. */
-            private boolean skipCustomMsg = customDiscardId != null;
-
             /** Internal iterator. */
-            private Iterator<PendingMessage> msgIt = msgs.iterator();
+            private Iterator<PendingMessage> msgIt = msgs.values().iterator();
+
+            /** */
+            private Iterator<PendingMessage> unverifiedMsgIt;
 
             /** Next message. */
             private TcpDiscoveryAbstractMessage next;
 
-            {
+            /**
+             * @param lastDiscardId Message id until which messages was marked as discarded.
+             * @param includeUnverified {@code true} if it require to iterate over unverified messages after verified.
+             */
+            public SkipIterator(IgniteUuid lastDiscardId, boolean includeUnverified) {
+                if (includeUnverified)
+                    unverifiedMsgIt = unverifiedMessages.values().iterator();
+
+                //Skip messages which have already discarded.
+                if (msgs.containsKey(lastDiscardId))
+                    while (msgIt.hasNext() && !msgIt.next().id.equals(lastDiscardId)) {
+                    }
+
                 advance();
             }
 
@@ -2939,37 +2915,10 @@ class ServerImpl extends TcpDiscoveryImpl {
             private void advance() {
                 next = null;
 
-                while (msgIt.hasNext()) {
-                    PendingMessage msg0 = msgIt.next();
-
-                    if (msg0.customMsg) {
-                        if (skipCustomMsg) {
-                            assert customDiscardId != null;
-
-                            if (F.eq(customDiscardId, msg0.id))
-                                skipCustomMsg = false;
-
-                            continue;
-                        }
-                    }
-                    else {
-                        if (skipMsg) {
-                            assert discardId != null;
-
-                            if (F.eq(discardId, msg0.id))
-                                skipMsg = false;
-
-                            continue;
-                        }
-                    }
-
-                    if (msg0.msg == null)
-                        continue;
-
-                    next = msg0.msg;
-
-                    break;
-                }
+                if (msgIt.hasNext())
+                    next = msgIt.next().msg;
+                else if (unverifiedMsgIt != null && unverifiedMsgIt.hasNext())
+                    next = unverifiedMsgIt.next().msg;
             }
         }
     }
@@ -3250,11 +3199,8 @@ class ServerImpl extends TcpDiscoveryImpl {
             notifiedDiscovery.set(false);
 
             // TODO: https://ggsystems.atlassian.net/browse/GG-22502
-            if (msg instanceof TraceableMessage) {
-                TraceableMessage tMsg = (TraceableMessage) msg;
-
-                tracing.messages().afterReceive(tMsg);
-            }
+            if (msg instanceof TraceableMessage)
+                tracing.messages().afterReceive((TraceableMessage) msg);
 
             spi.startMessageProcess(msg);
 
@@ -3289,17 +3235,17 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (!locNode.id().equals(msg.senderNodeId()) && ensured)
                 lastRingMsgTimeNanos = System.nanoTime();
 
-            if (locNode.internalOrder() == 0) {
-                boolean proc = false;
+            if (locNode.internalOrder() == 0 && !isAddMessageForNode(msg, locNode.id())) {
+                // Local node hasn't received its own NodeAddedMessage so it just keeps all preceding messages to pending.
+                // These messages wouldn't be handled locally
+                // because they started its way before this node officially join to cluster
+                // so they will be just sent to the next node as soon as this node received its own NodeAddedMessage.
+                registerPendingMessage(msg);
 
-                if (msg instanceof TcpDiscoveryNodeAddedMessage)
-                    proc = ((TcpDiscoveryNodeAddedMessage)msg).node().equals(locNode);
-
-                if (!proc) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Ignore message, local node order is not initialized [msg=" + msg +
-                            ", locNode=" + locNode + ']');
-                    }
+                if (log.isDebugEnabled()) {
+                    log.debug("Adding message to pending without processing, " +
+                        "local node order is not initialized [msg=" + msg + ", locNode=" + locNode + ']');
+                }
 
                     if (msg instanceof TraceableMessage)
                         ((TraceableMessage) msg).spanContainer().span()
@@ -3307,8 +3253,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                             .setStatus(SpanStatus.ABORTED)
                             .end();
 
-                    return;
-                }
+                return;
             }
 
             spi.stats.onMessageProcessingStarted(msg);
@@ -3469,7 +3414,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 msg0 = U.unmarshal(spi.marshaller(), msgBytes,
                                     U.resolveClassLoader(spi.ignite().configuration()));
 
-                                prepareNodeAddedMessage(msg0, clientMsgWorker.clientNodeId, null, null);
+                                prepareNodeAddedMessage(msg0, clientMsgWorker.clientNodeId);
 
                                 msgBytes0 = null;
                             }
@@ -3690,13 +3635,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                     // ID is as expected. Check node order.
                                     if (nextOrder != next.internalOrder()) {
                                         // Is next currently being added?
-                                        boolean nextNew = (msg instanceof TcpDiscoveryNodeAddedMessage &&
-                                            ((TcpDiscoveryNodeAddedMessage)msg).node().id().equals(nextId));
-
-                                        if (!nextNew)
-                                            nextNew = hasPendingAddMessage(nextId);
-
-                                        if (!nextNew) {
+                                        if (!isAddMessageForNode(msg, nextId) && !hasPendingAddMessage(nextId)) {
                                             if (log.isDebugEnabled())
                                                 log.debug("Failed to restore ring because next node order received " +
                                                     "is not as expected [expected=" + next.internalOrder() +
@@ -3796,8 +3735,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 for (TcpDiscoveryAbstractMessage pendingMsg : pendingMsgs) {
                                     long tsNanos = System.nanoTime();
 
-                                    prepareNodeAddedMessage(pendingMsg, next.id(), pendingMsgs.msgs,
-                                        pendingMsgs.customDiscardId);
+                                    prepareNodeAddedMessage(pendingMsg, next.id());
 
                                     addFailedNodes(pendingMsg, failedNodes);
 
@@ -3834,9 +3772,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 }
                             }
 
-                            if (!(msg instanceof TcpDiscoveryConnectionCheckMessage))
-                                prepareNodeAddedMessage(msg, next.id(), pendingMsgs.msgs,
-                                    pendingMsgs.customDiscardId);
+                            prepareNodeAddedMessage(msg, next.id());
 
                             try {
                                 SecurityUtils.serializeVersion(1);
@@ -4051,8 +3987,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             UUID locNodeId = getLocalNodeId();
 
             for (TcpDiscoveryAbstractMessage pendingMsg : pendingMsgs) {
-                prepareNodeAddedMessage(pendingMsg, locNodeId, pendingMsgs.msgs,
-                    pendingMsgs.customDiscardId);
+                prepareNodeAddedMessage(pendingMsg, locNodeId);
 
                 pendingMsg.senderNodeId(locNodeId);
 
@@ -4146,23 +4081,18 @@ class ServerImpl extends TcpDiscoveryImpl {
         }
 
         /**
-         * Checks whether pending messages queue contains unprocessed {@link TcpDiscoveryNodeAddedMessage} for
-         * the node with {@code nodeId}.
+         * Checks whether pending messages queue contains unprocessed {@link TcpDiscoveryNodeAddedMessage} for the node
+         * with {@code nodeId}.
          *
          * @param nodeId Node ID.
          * @return {@code true} if contains, {@code false} otherwise.
          */
         private boolean hasPendingAddMessage(UUID nodeId) {
-            if (pendingMsgs.msgs.isEmpty())
-                return false;
+            Iterator<TcpDiscoveryAbstractMessage> verifiedMsgs = pendingMsgs.verifiedIterator();
 
-            for (PendingMessage pendingMsg : pendingMsgs.msgs) {
-                if (pendingMsg.msg instanceof TcpDiscoveryNodeAddedMessage) {
-                    TcpDiscoveryNodeAddedMessage addMsg = (TcpDiscoveryNodeAddedMessage)pendingMsg.msg;
-
-                    if (addMsg.node().id().equals(nodeId) && addMsg.id().compareTo(pendingMsgs.discardId) > 0)
-                        return true;
-                }
+            while (verifiedMsgs.hasNext()) {
+                if (isAddMessageForNode(verifiedMsgs.next(), nodeId))
+                    return true;
             }
 
             return false;
@@ -5008,7 +4938,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (node.internalOrder() < locNode.internalOrder()) {
                 if (!locNode.id().equals(node.id())) {
                     U.warn(log, "Discarding node added message since local node's order is greater " +
-                            "[node=" + node + ", ring=" + ring + ", msg=" + msg + ']');
+                        "[node=" + node + ", ring=" + ring + ", msg=" + msg + ']');
 
                     return;
                 }
@@ -5046,7 +4976,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     tracing.messages().finishProcessing(addFinishMsg);
 
-                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
+                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), pendingMsgs.lastRemovedId));
 
                     return;
                 }
@@ -5308,9 +5238,6 @@ class ServerImpl extends TcpDiscoveryImpl {
                             topHist.clear();
                             topHist.putAll(msg.topologyHistory());
 
-                            pendingMsgs.reset(msg.messages(), msg.discardedMessageId(),
-                                msg.discardedCustomMessageId());
-
                             // Clear data to minimize message size.
                             msg.messages(null, null, null);
                             msg.topology(null);
@@ -5402,7 +5329,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (msg.verified()) {
                     spi.stats.onRingMessageReceived(msg);
 
-                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
+                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(),  pendingMsgs.lastRemovedId));
 
                     return;
                 }
@@ -5644,7 +5571,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         .setStatus(SpanStatus.ABORTED)
                         .end();
 
-                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
+                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(),  pendingMsgs.lastRemovedId));
 
                     return;
                 }
@@ -5857,7 +5784,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (msg.verified()) {
                     spi.stats.onRingMessageReceived(msg);
 
-                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
+                    addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(),  pendingMsgs.lastRemovedId));
 
                     return;
                 }
@@ -6253,13 +6180,16 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (!getLocalNodeId().equals(msg.verifierNodeId()))
                     // Message is not verified or verified by former coordinator.
                     msg.verify(getLocalNodeId());
-                else
-                    // Discard the message.
+                else {
+                    //Because of discard message passed the whole ring this and preceding messages can be removed.
+                    pendingMsgs.markToRemove(msg.msgId());
+
                     return;
+                }
             }
 
             if (msg.verified())
-                pendingMsgs.discard(msgId, msg.customMessageDiscard());
+                pendingMsgs.discard(msgId, msg.msgRemovedId());
 
             if (ring.hasRemoteNodes())
                 sendMessageAcrossRing(msg);
@@ -6349,7 +6279,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                     msg.topologyVersion(ring.topologyVersion());
 
-                    if (pendingMsgs.procCustomMsgs.add(msg.id())) {
+                    if (!pendingMsgs.processed(msg.id())) {
                         notifyDiscoveryListener(msg, waitForNotification);
 
                         if (sendMessageToRemotes(msg))
@@ -6364,7 +6294,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     msg.message(null, msg.messageBytes());
                 }
                 else {
-                    addMessage(new TcpDiscoveryDiscardMessage(getLocalNodeId(), msg.id(), true));
+                    addMessage(new TcpDiscoveryDiscardMessage(getLocalNodeId(), msg.id(), pendingMsgs.lastRemovedId));
 
                     spi.stats.onRingMessageReceived(msg);
 
@@ -6410,7 +6340,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     return;
                 }
 
-                if (msg.verified() && state0 == CONNECTED && pendingMsgs.procCustomMsgs.add(msg.id())) {
+                if (msg.verified() && state0 == CONNECTED && !pendingMsgs.processed(msg.id())) {
                     assert msg.topologyVersion() == ring.topologyVersion() :
                         "msg: " + msg + ", topVer=" + ring.topologyVersion();
 
@@ -7576,7 +7506,7 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
             else {
                 if (isLocalNodeCoordinator())
-                    msgWorker.addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), false));
+                    msgWorker.addMessage(new TcpDiscoveryDiscardMessage(locNodeId, msg.id(), null));
 
                 if (isLocNodeRouter) {
                     ClientMessageWorker wrk = clientMsgWorkers.get(nodeId);
