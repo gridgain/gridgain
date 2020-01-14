@@ -503,7 +503,7 @@ public interface ConnectionProperties {
      *
      * @param qryTimeout Query timeout in seconds.
      */
-    public void setQueryMaxMemory(@Nullable Integer qryTimeout) throws SQLException;
+    public void setQueryTimeout(@Nullable Integer qryTimeout) throws SQLException;
 
     /**
      * Note: zero value means there is no limits.

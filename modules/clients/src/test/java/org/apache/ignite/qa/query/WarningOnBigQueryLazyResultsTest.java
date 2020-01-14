@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-#pragma warning disable 1587   // invalid XML comment
+package org.apache.ignite.qa.query;
 
-/// <summary>
-/// Distributed data structures.
-/// </summary>
-namespace Apache.Ignite.Core.DataStructures
-{
-    // No-op.
+/**
+ * Tests for log print for long running query.
+ */
+public class WarningOnBigQueryLazyResultsTest extends WarningOnBigQueryResultsTest {
+    /** {@inheritDoc} */
+    @Override protected boolean lazy() {
+        return true;
+    }
 }
