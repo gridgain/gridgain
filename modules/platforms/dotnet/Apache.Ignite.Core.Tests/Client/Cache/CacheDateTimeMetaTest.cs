@@ -30,7 +30,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestDateTimeMeta()
         {
-            var data = Enumerable.Range(1, 5)
+            const int entryCount = 5;
+            
+            var data = Enumerable.Range(1, entryCount)
                 .Select(x => new Foo
                 {
                     Id = x,
@@ -41,8 +43,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var cache = Client.GetOrCreateCache<int, Foo>("foo");
             cache.PutAll(data.Select(x => new KeyValuePair<int, Foo>(x.Id, x)));
 
+            ClearLoggers();
+            
             var res = cache.Query(new ScanQuery<int, Foo>()).GetAll();
-            Assert.AreEqual(cache.GetSize(), res.Count);
+            Assert.AreEqual(entryCount, res.Count);
+
+            var requests = GetAllServerRequestNames().ToArray();
+            Assert.AreEqual(new[] {"ClientCacheScanQuery"}, requests);
         }
 
         private class Foo

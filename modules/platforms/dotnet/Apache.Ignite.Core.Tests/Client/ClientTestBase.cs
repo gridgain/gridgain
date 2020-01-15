@@ -105,6 +105,8 @@ namespace Apache.Ignite.Core.Tests.Client
 
             Assert.AreEqual(0, cache.GetSize(CachePeekMode.All));
             Assert.AreEqual(0, GetClientCache<int>().GetSize(CachePeekMode.All));
+            
+            ClearLoggers();
         }
 
         /// <summary>
