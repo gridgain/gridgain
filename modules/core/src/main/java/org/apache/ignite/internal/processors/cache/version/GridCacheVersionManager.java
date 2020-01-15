@@ -275,6 +275,15 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      *
      * @return Next version for cache store operations.
      */
+    public GridCacheVersion nextForLoad() {
+        return next(cctx.kernalContext().discovery().topologyVersion(), true, true, dataCenterId);
+    }
+
+    /**
+     * Gets next version for cache store load and reload operations.
+     *
+     * @return Next version for cache store operations.
+     */
     public GridCacheVersion nextForLoad(AffinityTopologyVersion topVer) {
         return next(topVer.topologyVersion(), true, true, dataCenterId);
     }
