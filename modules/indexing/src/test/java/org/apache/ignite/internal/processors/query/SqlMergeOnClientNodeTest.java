@@ -14,22 +14,28 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.qa;
+package org.apache.ignite.internal.processors.query;
 
-import org.apache.ignite.qa.query.JdbcThinSqlMergeTest;
-import org.apache.ignite.qa.query.WarningOnBigQueryLazyResultsTest;
-import org.apache.ignite.qa.query.WarningOnBigQueryResultsTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.ignite.internal.IgniteEx;
 
 /**
- * JDBC driver test suite.
+ * Tests for SQL MERGE on client node.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    JdbcThinSqlMergeTest.class,
-    WarningOnBigQueryResultsTest.class,
-    WarningOnBigQueryLazyResultsTest.class,
-})
-public class QaJdbcTestSuite {
+public class SqlMergeOnClientNodeTest extends SqlMergeTest {
+    /** Node. */
+    protected static IgniteEx cli;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        cli = startClientGrid(2);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        node = cli;
+    }
 }
