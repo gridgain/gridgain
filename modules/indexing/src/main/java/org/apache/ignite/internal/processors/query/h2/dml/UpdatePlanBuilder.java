@@ -923,7 +923,8 @@ public final class UpdatePlanBuilder {
                     planKey.enforceJoinOrder(),
                     false,
                     idx,
-                    prep.getParameters().size()
+                    prep.getParameters().size(),
+                    log
                 );
 
                 boolean distributed =

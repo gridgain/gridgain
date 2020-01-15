@@ -486,7 +486,8 @@ public class QueryParser {
                             newQry.isEnforceJoinOrder(),
                             locSplit,
                             idx,
-                            paramsCnt
+                            paramsCnt,
+                            log
                         );
                     }
                 }
@@ -505,7 +506,8 @@ public class QueryParser {
                         newQry.isEnforceJoinOrder(),
                         locSplit,
                         idx,
-                        paramsCnt
+                        paramsCnt,
+                        log
                     );
                 }
 
