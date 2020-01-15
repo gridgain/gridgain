@@ -238,7 +238,7 @@ namespace Apache.Ignite.Core.Tests.Client
             // org.apache.ignite.internal.processors.platform.client.cache.ClientCacheGetRequest
             var messageRegex = new Regex(
                 @"Client request received \[reqId=\d+, addr=/127.0.0.1:\d+, " +
-                @"req=org.apache.ignite.internal.processors.platform.client." +
+                @"req=org\.apache\.ignite\.internal\.processors\.platform\.client\..*?" +
                 prefix +
                 @"(\w+)Request@");
 

@@ -258,7 +258,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             _cache.Get(1);
             _cache.Get(1);
 
-            var requests = GetAllServerRequestNames();
+            var requests = GetAllServerRequestNames(RequestNamePrefixCache);
 
             var expectedRequests = new[]
             {
