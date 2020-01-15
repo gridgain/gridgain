@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Client
     using System.Collections.Generic;
     using System.Linq;
     using System.Net;
+    using System.Text.RegularExpressions;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Client;
@@ -68,7 +69,7 @@ namespace Apache.Ignite.Core.Tests.Client
             for (var i = 1; i < _gridCount; i++)
             {
                 cfg = GetIgniteConfiguration();
-                cfg.AutoGenerateIgniteInstanceName = true;
+                cfg.IgniteInstanceName = i.ToString();
 
                 Ignition.Start(cfg);
             }
@@ -201,7 +202,7 @@ namespace Apache.Ignite.Core.Tests.Client
         /// <summary>
         /// Gets the logs.
         /// </summary>
-        protected List<ListLogger.Entry> GetLogs(IIgniteClient client)
+        protected static List<ListLogger.Entry> GetLogs(IIgniteClient client)
         {
             var igniteClient = (IgniteClient) client;
             var logger = igniteClient.GetConfiguration().Logger;
@@ -209,6 +210,25 @@ namespace Apache.Ignite.Core.Tests.Client
             return listLogger.Entries;
         }
         
+        /// <summary>
+        /// Gets client request names for a given server node.
+        /// </summary>
+        protected static IEnumerable<string> GetServerRequestNames(int serverIndex = 0, string prefix = null)
+        {
+            var grid = Ignition.GetIgnite((serverIndex + 1).ToString());
+            var logger = (ListLogger) grid.Logger;
+         
+            // TODO: Get all requests, not only cache
+            var messageRegex = new Regex(
+                @"Client request received \[reqId=\d+, addr=/127.0.0.1:\d+, " +
+                @"req=org.apache.ignite.internal.processors.platform.client.cache.ClientCache(\w+)Request@");
+
+            return logger.Entries
+                .Select(m => messageRegex.Match(m.Message))
+                .Where(m => m.Success)
+                .Select(m => m.Groups[1].Value);
+        }
+
         /// <summary>
         /// Asserts the client configs are equal.
         /// </summary>

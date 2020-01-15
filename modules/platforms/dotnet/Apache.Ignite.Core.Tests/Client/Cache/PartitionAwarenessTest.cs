@@ -456,7 +456,6 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 .Select(m => m.Groups[1].Value);
         }
 
-
         private void ClearLoggers()
         {
             foreach (var logger in _loggers)
