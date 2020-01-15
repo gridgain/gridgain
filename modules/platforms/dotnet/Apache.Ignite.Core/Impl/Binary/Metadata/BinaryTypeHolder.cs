@@ -67,12 +67,20 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         }
 
         /// <summary>
-        /// Get saved flag.
+        /// Gets saved flag.
         /// </summary>
-        /// <returns>True if type metadata was saved at least once.</returns>
-        public bool Saved()
+        /// <value>True if type metadata was saved at least once.</value>
+        public bool IsSaved
         {
-            return _saved;
+            get { return _saved; }
+        }
+
+        /// <summary>
+        /// Gets the cached binary type metadata.
+        /// </summary>
+        public BinaryType BinaryType
+        {
+            get { return _meta; }
         }
 
         /// <summary>
