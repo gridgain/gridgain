@@ -38,6 +38,12 @@ namespace Apache.Ignite.Core.Tests.Client
         /** Cache name. */
         protected const string CacheName = "cache";
 
+        /** */
+        protected const string RequestNamePrefixCache = "cache.ClientCache";
+
+        /** */
+        protected const string RequestNamePrefixBinary = "binary.ClientBinary";
+
         /** Grid count. */
         private readonly int _gridCount = 1;
 
@@ -156,7 +162,10 @@ namespace Apache.Ignite.Core.Tests.Client
         /// </summary>
         protected virtual IgniteConfiguration GetIgniteConfiguration()
         {
-            return TestUtils.GetTestConfiguration();
+            return new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                Logger = new ListLogger()
+            };
         }
 
         /// <summary>
@@ -218,15 +227,45 @@ namespace Apache.Ignite.Core.Tests.Client
             var grid = Ignition.GetIgnite((serverIndex + 1).ToString());
             var logger = (ListLogger) grid.Logger;
          
-            // TODO: Get all requests, not only cache
+            return GetServerRequestNames(logger, prefix);
+        }
+
+        protected static IEnumerable<string> GetServerRequestNames(ListLogger logger, string prefix = null)
+        {
+            // Full request class name examples:
+            // org.apache.ignite.internal.processors.platform.client.binary.ClientBinaryTypeGetRequest
+            // org.apache.ignite.internal.processors.platform.client.cache.ClientCacheGetRequest
             var messageRegex = new Regex(
                 @"Client request received \[reqId=\d+, addr=/127.0.0.1:\d+, " +
-                @"req=org.apache.ignite.internal.processors.platform.client.cache.ClientCache(\w+)Request@");
+                @"req=org.apache.ignite.internal.processors.platform.client." +
+                prefix +
+                @"(\w+)Request@");
 
             return logger.Entries
                 .Select(m => messageRegex.Match(m.Message))
                 .Where(m => m.Success)
                 .Select(m => m.Groups[1].Value);
+        }
+
+        protected static IEnumerable<string> GetAllServerRequestNames(string prefix = null)
+        {
+            return GetLoggers().SelectMany(l => GetServerRequestNames(l, prefix));
+        }
+
+        private static IEnumerable<ListLogger> GetLoggers()
+        {
+            return Ignition.GetAll()
+                .OrderBy(i => i.Name)
+                .Select(i => i.Logger)
+                .Cast<ListLogger>();
+        }
+
+        protected static void ClearLoggers()
+        {
+            foreach (var logger in GetLoggers())
+            {
+                logger.Clear();
+            }
         }
 
         /// <summary>
