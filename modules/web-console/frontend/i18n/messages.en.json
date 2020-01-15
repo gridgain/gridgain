@@ -341,7 +341,7 @@
                 "grantAdmin": "Grant admin",
                 "addUser": "Add user",
                 "removeUser": "Remove user",
-                "activityDetail": "Activity detail",
+                "activityDetail": "Activity details",
                 "resetFailedLoginAttempts": "Reset failed login attempts"
             },
             "removeUserConfirmationMessage": "Are you sure you want to remove user: \"{{userName}}\"?",
