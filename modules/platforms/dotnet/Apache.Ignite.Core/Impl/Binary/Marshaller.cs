@@ -290,6 +290,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                     }
                     else
                     {
+                        // TODO: This is recursive. Create holder from meta directly here.
                         GetBinaryTypeHolder(GetDescriptor(true, typeId)).Merge(meta);
                     }
                     
