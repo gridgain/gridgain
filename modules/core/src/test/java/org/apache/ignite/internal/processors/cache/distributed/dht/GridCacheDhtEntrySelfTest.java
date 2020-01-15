@@ -269,7 +269,7 @@ public class GridCacheDhtEntrySelfTest extends GridCommonAbstractTest {
         assert e0.readers().contains(other.id());
         assert e1 == null || e1.readers().isEmpty();
 
-        assert !e0.evictInternal(dht0.context().versions().next(dht0.context().topology()), null,
+        assert !e0.evictInternal(dht0.context().versions().next(dht0.context()), null,
             false);
 
         assertEquals(1, near0.localSize(CachePeekMode.ALL));
@@ -278,7 +278,7 @@ public class GridCacheDhtEntrySelfTest extends GridCommonAbstractTest {
         assertEquals(1, near1.localSize(CachePeekMode.ALL));
         assertEquals(0, dht1.localSize(null));
 
-        assert !e0.evictInternal(dht0.context().versions().next(dht0.context().topology()), null,
+        assert !e0.evictInternal(dht0.context().versions().next(dht0.context()), null,
             false);
 
         assertEquals(1, near0.localSize(CachePeekMode.ALL));

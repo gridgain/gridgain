@@ -385,7 +385,7 @@ public abstract class GridNearCacheAdapter<K, V> extends GridDistributedCacheAda
         assert configuration().getNearConfiguration() != null;
 
         if (ctx.affinityNode()) {
-            GridCacheVersion obsoleteVer = ctx.versions().next(ctx.topology());
+            GridCacheVersion obsoleteVer = ctx.versions().next(ctx);
 
             List<GridCacheClearAllRunnable<K, V>> dhtJobs = dht().splitClearLocally(srv, near, readers);
 

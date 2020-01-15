@@ -1085,8 +1085,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             if (entryProcessor != null)
                 transform = true;
 
-            GridCacheVersion drVer = dataCenterId != null ?
-                cctx.versions().next(cacheCtx.topology(), dataCenterId) : null;
+            GridCacheVersion drVer = dataCenterId != null ? cctx.versions().next(cacheCtx, dataCenterId) : null;
 
             boolean loadMissed = enlistWriteEntry(cacheCtx,
                 entryTopVer,
@@ -1261,7 +1260,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                     drExpireTime = -1L;
                 }
                 else if (dataCenterId != null) {
-                    drVer = cctx.versions().next(cacheCtx.topology(), dataCenterId);
+                    drVer = cctx.versions().next(cacheCtx, dataCenterId);
                     drTtl = -1L;
                     drExpireTime = -1L;
                 }

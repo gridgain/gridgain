@@ -587,7 +587,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
 
                                     // Entry was not in memory or in swap, so we remove it from cache.
                                     if (v == null) {
-                                        GridCacheVersion obsoleteVer = context().versions().next(ctx.topology());
+                                        GridCacheVersion obsoleteVer = context().versions().next(ctx);
 
                                         if (isNew && entry.markObsoleteIfEmpty(obsoleteVer))
                                             removeEntry(entry);

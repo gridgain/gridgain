@@ -168,7 +168,7 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
 
         futId = IgniteUuid.randomUuid();
 
-        ver = cctx.versions().next(cctx.topology());
+        ver = cctx.versions().next(cctx);
 
         if (log == null)
             log = U.logger(cctx.kernalContext(), logRef, GridDhtGetSingleFuture.class);

@@ -113,7 +113,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
 
         this.tx = tx;
 
-        ver = tx == null ? cctx.versions().next(cctx.topology()) : tx.xidVersion();
+        ver = tx == null ? cctx.versions().next(cctx) : tx.xidVersion();
 
         initLogger(GridNearGetFuture.class);
     }
@@ -633,7 +633,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
         if (!empty) {
             boolean atomic = cctx.atomic();
 
-            GridCacheVersion ver = atomic ? null : F.isEmpty(infos) ? null : cctx.versions().next(cctx.topology());
+            GridCacheVersion ver = atomic ? null : F.isEmpty(infos) ? null : cctx.versions().next(cctx);
 
             for (GridCacheEntryInfo info : infos) {
                 try {

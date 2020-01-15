@@ -216,7 +216,7 @@ public class GridNearTransactionalCache<K, V> extends GridNearCacheAdapter<K, V>
     public void clearLocks(UUID nodeId, GridDhtUnlockRequest req) {
         assert nodeId != null;
 
-        GridCacheVersion obsoleteVer = ctx.versions().next(ctx.topology());
+        GridCacheVersion obsoleteVer = ctx.versions().next(ctx);
 
         List<KeyCacheObject> keys = req.nearKeys();
 

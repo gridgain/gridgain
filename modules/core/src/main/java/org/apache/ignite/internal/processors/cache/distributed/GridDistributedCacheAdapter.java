@@ -524,7 +524,7 @@ public abstract class GridDistributedCacheAdapter<K, V> extends GridCacheAdapter
                 }
 
                 if (near != null) {
-                    GridCacheVersion obsoleteVer = ctx.versions().next(ctx.topology());
+                    GridCacheVersion obsoleteVer = ctx.versions().next(ctx);
 
                     for (GridCacheEntryEx e : near.allEntries()) {
                         if (!e.valid(topVer) && e.markObsolete(obsoleteVer))

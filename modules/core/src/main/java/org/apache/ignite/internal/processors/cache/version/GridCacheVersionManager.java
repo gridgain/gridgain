@@ -24,6 +24,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -217,14 +218,13 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @param top topology.
      * @return Next version based on current topology.
      */
-    public GridCacheVersion next(GridDhtPartitionTopology top) {
-        if (top.initialized())
-            return next(top.readyTopologyVersion());
-        else
+    public GridCacheVersion next(GridCacheContext cctx) {
+        if (cctx == null || cctx.isLocal() || !cctx.topology().initialized())
             return next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId);
+        else
+            return next(cctx.topology().readyTopologyVersion());
     }
 
     /**
@@ -235,15 +235,14 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     }
 
     /**
-     * @param top topology.
      * @param dataCenterId Data center id.
      * @return Next version based on current topology with given data center id.
      */
-    public GridCacheVersion next(GridDhtPartitionTopology top, byte dataCenterId) {
-        if (top.initialized())
-            return next(top.readyTopologyVersion().topologyVersion(), true, false, dataCenterId);
-        else
+    public GridCacheVersion next(GridCacheContext cctx, byte dataCenterId) {
+        if (cctx == null || cctx.isLocal() || !cctx.topology().initialized())
             return next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId);
+        else
+            return next(cctx.topology().readyTopologyVersion());
     }
 
     /**
@@ -256,18 +255,6 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      */
     public GridCacheVersion next(AffinityTopologyVersion topVer) {
         return next(topVer.topologyVersion(), true, false, dataCenterId);
-    }
-
-    /**
-     * Gets next version for cache store load and reload operations.
-     *
-     * @return Next version for cache store operations.
-     */
-    public GridCacheVersion nextForLoad(GridDhtPartitionTopology top) {
-        if (top.initialized())
-            return next(top.readyTopologyVersion().topologyVersion(), true, true, dataCenterId);
-        else
-            return next(cctx.kernalContext().discovery().topologyVersion(), true, true, dataCenterId);
     }
 
     /**
