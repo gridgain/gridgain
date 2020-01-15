@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.junit.rules.Timeout;
 
 import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -63,10 +64,10 @@ public class ClientConfigurationTest {
             )
             .setSslMode(SslMode.REQUIRED)
             .setSslClientCertificateKeyStorePath("client.jks")
-            .setSslClientCertificateKeyStoreType("JKS")
+            .setSslClientCertificateKeyStoreType(DFLT_STORE_TYPE)
             .setSslClientCertificateKeyStorePassword("123456")
             .setSslTrustCertificateKeyStorePath("trust.jks")
-            .setSslTrustCertificateKeyStoreType("JKS")
+            .setSslTrustCertificateKeyStoreType(DFLT_STORE_TYPE)
             .setSslTrustCertificateKeyStorePassword("123456")
             .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM);
 
