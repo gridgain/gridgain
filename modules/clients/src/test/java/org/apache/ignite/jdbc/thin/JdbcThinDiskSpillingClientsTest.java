@@ -96,6 +96,18 @@ public class JdbcThinDiskSpillingClientsTest extends DiskSpillingAbstractTest {
     }
 
     /**
+     *
+     */
+    @Test
+    public void testSelectIntersect() {
+        getQueryRunner().checkQuery("(" +
+            "(SELECT * FROM person WHERE depId < 20 ORDER BY depId) " +
+            "INTERSECT SELECT * FROM person WHERE depId > 10 ) " +
+            "UNION ALL SELECT DISTINCT * FROM person WHERE age <100 " +
+            "ORDER BY id LIMIT 10000 OFFSET 20");
+    }
+
+    /**
      * Inits query runner.
      */
     private ClientQueryRunner getQueryRunner() {
