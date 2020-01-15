@@ -1233,7 +1233,8 @@ public class WalRecoveryTxLogicalRecordsTest extends GridCommonAbstractTest {
 
         CacheObject val0 = co.toCacheObject(cacheCtx.cacheObjectContext(), val, true);
 
-        return new DataEntry(cacheId, key0, val0, op, cctx.versions().next(), cctx.versions().next(), 0, partId, cntr);
+        return new DataEntry(cacheId, key0, val0, op, cctx.versions().next(cacheCtx.topology()),
+            cctx.versions().next(cacheCtx.topology()), 0, partId, cntr);
     }
 
     /**
