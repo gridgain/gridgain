@@ -250,19 +250,40 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         private static IEnumerable<string> GetBinaryTypeFields(BinaryReader reader, IBinaryTypeDescriptor desc)
         {
-            // TODO: This is expensive and we call this very often.
-            // * We can't cache inside the Marshaller, because binary meta is a subject to change at any moment.
-            // * We can cache and verify the set of field IDs though, right?
-            //    var cachedBinaryType = marsh.GetCachedBinaryType(); VerifyAllFieldIdsArePresent();
-            var binaryType = reader.Marshaller.GetBinaryType(desc.TypeId);
-
-            if (binaryType == BinaryType.Empty)
+            var schema = reader.Schema;
+            if (schema == null || schema.Length == 0)
             {
-                // Object without fields.
                 return Enumerable.Empty<string>();
             }
 
-            return binaryType.Fields;
+            // Try using cached metadata: if all fields from current schema are present there, we are good.
+            // Any extra fields that may have been added to the binary type are not present in the current object.
+            var binaryTypeHolder = reader.Marshaller.GetCachedBinaryTypeHolder(desc.TypeId);
+            if (binaryTypeHolder != null && HasAllFields(binaryTypeHolder, schema))
+            {
+                return binaryTypeHolder.BinaryType.Fields ?? Enumerable.Empty<string>();
+            }
+
+            // Cached metadata is not present or out of date: request latest (expensive operation).
+            return reader.Marshaller.GetBinaryType(desc.TypeId).Fields ?? Enumerable.Empty<string>();
+        }
+
+        /// <summary>
+        /// Checks whether all field ids from provided schema are present in the given binary type.
+        /// </summary>
+        private static bool HasAllFields(BinaryTypeHolder binaryTypeHolder, int[] schema)
+        {
+            var fieldIds = binaryTypeHolder.GetFieldIds();
+            
+            foreach (var fieldId in schema)
+            {
+                if (!fieldIds.Contains(fieldId))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

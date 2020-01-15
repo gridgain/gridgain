@@ -307,10 +307,11 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         /// <param name="typeId">Type ID.</param>
         /// <returns>Metadata or null.</returns>
-        public BinaryType GetCachedBinaryType(int typeId)
+        public BinaryTypeHolder GetCachedBinaryTypeHolder(int typeId)
         {
             BinaryTypeHolder holder;
-            return _metas.TryGetValue(typeId, out holder) ? holder.BinaryType : null;
+            _metas.TryGetValue(typeId, out holder);
+            return holder;
         }
 
         /// <summary>

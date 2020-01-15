@@ -87,7 +87,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         /// Currently cached field IDs.
         /// </summary>
         /// <returns>Cached field IDs.</returns>
-        public ICollection<int> GetFieldIds()
+        public HashSet<int> GetFieldIds()
         {
             var ids0 = _ids;
 
@@ -141,22 +141,16 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
                 // 2. Add new fields.
                 foreach (var fieldMeta in fieldsMap)
                 {
-                    int fieldId = BinaryUtils.FieldId(meta.TypeId, fieldMeta.Key, null, null);
+                    var fieldId = fieldMeta.Value.FieldId;
 
-                    if (!newIds.Contains(fieldId))
-                    {
-                        newIds.Add(fieldId);
-                    }
-
-                    if (!newFields.ContainsKey(fieldMeta.Key))
-                    {
-                        newFields[fieldMeta.Key] = fieldMeta.Value;
-                    }
+                    newIds.Add(fieldId);
+                    newFields[fieldMeta.Key] = fieldMeta.Value;
                 }
 
                 // 3. Assign new meta. Order is important here: meta must be assigned before field IDs.
                 _meta = new BinaryType(_typeId, _typeName, newFields, _affKeyFieldName, _isEnum, 
                     meta.EnumValuesMap, _marshaller);
+                
                 _ids = newIds;
             }
         }

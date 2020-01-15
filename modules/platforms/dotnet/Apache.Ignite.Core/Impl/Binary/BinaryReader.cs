@@ -866,6 +866,14 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
+        /// Gets the schema for the current object, if any.
+        /// </summary>
+        public int[] Schema
+        {
+            get { return _frame.Schema; }
+        }
+
+        /// <summary>
         /// Seeks to raw data.
         /// </summary>
         internal void SeekToRaw()
