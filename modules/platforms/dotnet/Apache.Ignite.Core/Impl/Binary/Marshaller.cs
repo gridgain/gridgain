@@ -275,6 +275,8 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <returns>Metadata or null.</returns>
         public BinaryType GetBinaryType(int typeId)
         {
+            // NOTE: This method results can't (easily) be cached because binary metadata is changing on the fly:
+            // New fields can be added, etc.
             if (Ignite != null)
             {
                 var meta = Ignite.BinaryProcessor.GetBinaryType(typeId);
