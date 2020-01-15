@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelo
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.HeapArrayLockStackTest;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.OffHeapLockStackTest;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileDownloaderTest;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManagerTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.junit.runner.RunWith;
 
@@ -51,6 +52,7 @@ public class IgnitePdsMvccTestSuite4 {
         ignoredTests.add(IgnitePdsPartitionPreloadTest.class);
 
         // Skip irrelevant test
+        ignoredTests.add(FilePageStoreManagerTest.class);
         ignoredTests.add(FileDownloaderTest.class);
         ignoredTests.add(IgnitePdsTaskCancelingTest.class);
 

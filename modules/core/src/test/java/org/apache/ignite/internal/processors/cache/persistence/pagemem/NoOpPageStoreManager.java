@@ -29,6 +29,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
+import org.apache.ignite.internal.pagemem.store.PageStore;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
@@ -86,19 +87,13 @@ public class NoOpPageStoreManager implements IgnitePageStoreManager {
         // No-op.
     }
 
-    /** {@inheritDoc} */
-    @Override public void read(int grpId, long pageId, ByteBuffer pageBuf) throws IgniteCheckedException {
-
+    @Override public PageStore getStore(int grpId, int partId) throws IgniteCheckedException {
+        return null;
     }
 
     /** {@inheritDoc} */
     @Override public boolean exists(int cacheId, int partId) throws IgniteCheckedException {
         return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void readHeader(int grpId, int partId, ByteBuffer buf) throws IgniteCheckedException {
-        // No-op.
     }
 
     /** {@inheritDoc} */

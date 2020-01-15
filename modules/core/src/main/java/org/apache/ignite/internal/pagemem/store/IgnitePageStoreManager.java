@@ -100,15 +100,7 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      */
     public void onPartitionDestroyed(int grpId, int partId, int tag) throws IgniteCheckedException;
 
-    /**
-     * Reads a page for the given cache ID. Cache ID may be {@code 0} if the page is a meta page.
-     *
-     * @param grpId Cache group ID.
-     * @param pageId PageID to read.
-     * @param pageBuf Page buffer to write to.
-     * @throws IgniteCheckedException If failed to read the page.
-     */
-    public void read(int grpId, long pageId, ByteBuffer pageBuf) throws IgniteCheckedException;
+    public PageStore getStore(int grpId, int partId) throws IgniteCheckedException;
 
     /**
      * Checks if partition store exists.
@@ -119,16 +111,6 @@ public interface IgnitePageStoreManager extends GridCacheSharedManager, IgniteCh
      * @throws IgniteCheckedException If failed.
      */
     public boolean exists(int grpId, int partId) throws IgniteCheckedException;
-
-    /**
-     * Reads a header of a page store.
-     *
-     * @param grpId Cache group ID.
-     * @param partId Partition ID.
-     * @param buf Buffer to write to.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void readHeader(int grpId, int partId, ByteBuffer buf) throws IgniteCheckedException;
 
     /**
      * Writes the page for the given cache ID. Cache ID may be {@code 0} if the page is a meta page.

@@ -57,14 +57,6 @@ public interface PageStore {
     public void read(long pageId, ByteBuffer pageBuf, boolean keepCrc) throws IgniteCheckedException;
 
     /**
-     * Reads a header.
-     *
-     * @param buf Buffer to write to.
-     * @throws IgniteCheckedException If failed.
-     */
-    public void readHeader(ByteBuffer buf) throws IgniteCheckedException;
-
-    /**
      * Writes a page.
      *
      * @param pageId Page ID.
