@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include "ignite/cluster/cluster_group.h"
 #include "ignite/impl/ignite_impl.h"
 
 using namespace ignite::common::concurrent;
