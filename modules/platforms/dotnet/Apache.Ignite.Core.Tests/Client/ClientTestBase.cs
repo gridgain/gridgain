@@ -224,7 +224,8 @@ namespace Apache.Ignite.Core.Tests.Client
         /// </summary>
         protected static IEnumerable<string> GetServerRequestNames(int serverIndex = 0, string prefix = null)
         {
-            var grid = Ignition.GetIgnite((serverIndex + 1).ToString());
+            var instanceName = serverIndex == 0 ? null : serverIndex.ToString();
+            var grid = Ignition.GetIgnite(instanceName);
             var logger = (ListLogger) grid.Logger;
          
             return GetServerRequestNames(logger, prefix);
