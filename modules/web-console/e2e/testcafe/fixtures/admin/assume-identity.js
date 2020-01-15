@@ -32,10 +32,7 @@ const _checkListOfActions = async(t, actions, excluded) => {
     for (let i = 0; i < actions.length; i++) {
         const actionLbl = actions[i];
 
-        if (excluded)
-            await t.expect(actionSelector.withText(actionLbl).exists).notOk();
-        else
-            await t.expect(actionSelector.withText(actionLbl).exists).ok();
+        await t.expect(actionSelector.withText(actionLbl).exists).notEql(excluded);
     }
 
     return false;
@@ -53,6 +50,11 @@ const _checkActionSet = async(t, excludeOtherActions = false, excludeCurOnly = f
     await _checkListOfActions(t, actions.otherUserActions, excludeOtherActions);
 };
 
+const CUR_USER = 'John Doe';
+const OTHER_USER = 'User Name';
+
+const LONG_TIMEOUT_OPTION = { timeout: 15000 };
+
 fixture('Assumed identity')
     .beforeEach(async(t) => {
         await dropTestDB();
@@ -68,7 +70,7 @@ fixture('Assumed identity')
 
 test('Become user', async(t) => {
     await t.navigateTo(resolveUrl('/settings/admin'));
-    await t.click(admin.userNameCell.withText('User Name'));
+    await t.click(admin.userNameCell.withText(OTHER_USER));
     await admin.usersTable.performAction('Become this user');
     await t
         .hover(userMenu.button)
@@ -82,7 +84,7 @@ test('Become user', async(t) => {
         .expect(profile.email.control.value).eql(admin.TEST_USER.email)
         .expect(profile.country.control.value).eql(admin.TEST_USER.country)
         .expect(profile.company.control.value).eql(admin.TEST_USER.company)
-        .expect(notifications.assumedUserFullName.innerText).eql('User Name')
+        .expect(notifications.assumedUserFullName.innerText).eql(OTHER_USER)
         .typeText(profile.firstName.control, '1')
         .click(profile.saveChangesButton)
         .expect(notifications.assumedIdentityNotification.visible).ok()
@@ -113,54 +115,61 @@ test("Action availability", async(t) => {
 
     await _checkActionSet(t, true, true);
 
-    await _changeUserSelection('John Doe');
+    await _changeUserSelection(CUR_USER);
 
     await _checkActionSet(t, true, false);
 
-    await _changeUserSelection('John Doe');
+    await _changeUserSelection(CUR_USER);
 
     await _checkActionSet(t, true, true);
 
-    await _changeUserSelection('User Name');
+    await _changeUserSelection(OTHER_USER);
 
     await _checkActionSet(t, false, false);
 
-    await _changeUserSelection('User Name');
+    await _changeUserSelection(OTHER_USER);
 
     await _checkActionSet(t, true, true);
 
-    await _changeUserSelection('User Name');
+    await _changeUserSelection(OTHER_USER);
 
     await admin.usersTable.performAction('Revoke admin');
 
-    await t.expect(successNotification.withText('Admin rights was successfully revoked for user: "User Name"').exists).ok();
+    await t.expect(successNotification.withText(`Admin rights was successfully revoked for user: "${OTHER_USER}"`).exists).ok();
 
+    await t.eval(() => window.location.reload());
+    await t.expect(admin.userNameCell.withText(OTHER_USER).find('i.icon-user').exists).ok(LONG_TIMEOUT_OPTION);
+
+    await _changeUserSelection(OTHER_USER);
     await admin.usersTable.performAction('Grant admin');
 
-    await t.expect(successNotification.withText('Admin rights was successfully granted for user: "User Name"').exists).ok();
+    await t.expect(successNotification.withText(`Admin rights was successfully granted for user: "${OTHER_USER}"`).exists).ok();
+
+    await t.eval(() => window.location.reload());
+    await t.expect(admin.userNameCell.withText(OTHER_USER).find('i.icon-admin').exists).ok(LONG_TIMEOUT_OPTION);
 });
 
 test("Remove user", async(t) => {
     await t.navigateTo(resolveUrl('/settings/admin'))
-        .click(admin.userNameCell.withText('User Name'));
+        .click(admin.userNameCell.withText(OTHER_USER));
 
     await admin.usersTable.performAction('Remove user');
 
-    await t.expect(confirmation.body.exists).ok();
+    await t.expect(confirmation.body.textContent).contains(`Are you sure you want to remove user: "${OTHER_USER}"?`);
 
     await confirmation.cancel();
 
-    await t.expect(admin.userNameCell.withText('User Name').exists).ok();
+    await t.expect(admin.userNameCell.withText(OTHER_USER).exists).ok();
 
     await admin.usersTable.performAction('Remove user');
 
-    await t.expect(confirmation.body.exists).ok();
+    await t.expect(confirmation.body.textContent).contains(`Are you sure you want to remove user: "${OTHER_USER}"?`);
 
     await confirmation.confirm();
 
-    await t.expect(successNotification.withText('User has been removed: "User Name"').exists).ok();
+    await t.expect(successNotification.withText(`User has been removed: "${OTHER_USER}"`).exists).ok();
 
-    await t.expect(admin.userNameCell.withText('User Name').exists).notOk();
+    await t.expect(admin.userNameCell.withText(OTHER_USER).exists).notOk();
 
     await t.hover(admin.usersTable.actionsButton);
 
@@ -168,5 +177,5 @@ test("Remove user", async(t) => {
 
     await t.eval(() => window.location.reload());
 
-    await t.expect(admin.userNameCell.withText('User Name').exists).notOk();
+    await t.expect(admin.userNameCell.withText(OTHER_USER).exists).notOk(LONG_TIMEOUT_OPTION);
 });
