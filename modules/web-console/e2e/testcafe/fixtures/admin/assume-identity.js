@@ -21,8 +21,37 @@ import {pageProfile as profile} from '../../page-models/pageProfile';
 import * as notifications from '../../components/permanentNotifications';
 import {userMenu} from '../../components/userMenu';
 import { Selector } from 'testcafe';
+import { successNotification } from '../../components/notifications';
+import {confirmation} from '../../components/confirmation'
 
 const regularUser = createRegularUser();
+
+const _checkListOfActions = async(t, actions, excluded) => {
+    const actionSelector = Selector('.dropdown-menu a');
+
+    for (let i = 0; i < actions.length; i++) {
+        const actionLbl = actions[i];
+
+        if (excluded)
+            await t.expect(actionSelector.withText(actionLbl).exists).notOk();
+        else
+            await t.expect(actionSelector.withText(actionLbl).exists).ok();
+    }
+
+    return false;
+};
+
+const actions = {
+    alwaysAvailable: ['Add user'],
+    curUserSelectedOnly: ['Activity details'],
+    otherUserActions: ['Become this user', 'Revoke admin', 'Remove user']
+};
+
+const _checkActionSet = async(t, excludeOtherActions = false, excludeCurOnly = false) => {
+    await _checkListOfActions(t, actions.alwaysAvailable);
+    await _checkListOfActions(t, actions.curUserSelectedOnly, excludeCurOnly);
+    await _checkListOfActions(t, actions.otherUserActions, excludeOtherActions);
+};
 
 fixture('Assumed identity')
     .beforeEach(async(t) => {
@@ -64,33 +93,15 @@ test('Become user', async(t) => {
 });
 
 test("Action availability", async(t) => {
-    const _checkListOfActions = async(actions, excluded) => {
-        const actionSelector = Selector('.dropdown-menu a');
-
-        for (let i = 0; i < actions.length; i++) {
-            const actionLbl = actions[i];
-
-            if (excluded)
-                await t.expect(actionSelector.withText(actionLbl).exists).notOk();
-            else
-                await t.expect(actionSelector.withText(actionLbl).exists).ok();
-        }
-
-        return false;
-    };
-
-    const actions = {
-        alwaysAvailable: ['Add user'],
-        curUserSelectedOnly: ['Activity details'],
-        otherUserActions: ['Become this user', 'Revoke admin', 'Remove user']
+    const _changeUserSelection = async(userName) => {
+        await t.click(admin.userNameCell.withText(userName))
+            .hover(admin.usersTable.actionsButton);
     };
 
     await t.navigateTo(resolveUrl('/settings/admin'))
         .hover(admin.usersTable.actionsButton);
 
-    await _checkListOfActions(actions.alwaysAvailable);
-    await _checkListOfActions(actions.curUserSelectedOnly, true);
-    await _checkListOfActions(actions.otherUserActions, true);
+    await _checkActionSet(t, true, true);
 
     await admin.usersTable.performAction('Add user');
 
@@ -100,21 +111,62 @@ test("Action availability", async(t) => {
         .click(createUserDialog.find('button').withText('Cancel'))
         .hover(admin.usersTable.actionsButton);
 
-    await _checkListOfActions(actions.alwaysAvailable);
-    await _checkListOfActions(actions.curUserSelectedOnly, true);
-    await _checkListOfActions(actions.otherUserActions, true);
+    await _checkActionSet(t, true, true);
 
-    await t.click(admin.userNameCell.withText('John Doe'))
-        .hover(admin.usersTable.actionsButton);
+    await _changeUserSelection('John Doe');
 
-    await _checkListOfActions(actions.alwaysAvailable);
-    await _checkListOfActions(actions.curUserSelectedOnly);
-    await _checkListOfActions(actions.otherUserActions, true);
+    await _checkActionSet(t, true, false);
 
-    await t.click(admin.userNameCell.withText('User Name'))
-        .hover(admin.usersTable.actionsButton);
+    await _changeUserSelection('John Doe');
 
-    await _checkListOfActions(actions.alwaysAvailable);
-    await _checkListOfActions(actions.curUserSelectedOnly);
-    await _checkListOfActions(actions.otherUserActions);
+    await _checkActionSet(t, true, true);
+
+    await _changeUserSelection('User Name');
+
+    await _checkActionSet(t, false, false);
+
+    await _changeUserSelection('User Name');
+
+    await _checkActionSet(t, true, true);
+
+    await _changeUserSelection('User Name');
+
+    await admin.usersTable.performAction('Revoke admin');
+
+    await t.expect(successNotification.withText('Admin rights was successfully revoked for user: "User Name"').exists).ok();
+
+    await admin.usersTable.performAction('Grant admin');
+
+    await t.expect(successNotification.withText('Admin rights was successfully granted for user: "User Name"').exists).ok();
+});
+
+test("Remove user", async(t) => {
+    await t.navigateTo(resolveUrl('/settings/admin'))
+        .click(admin.userNameCell.withText('User Name'));
+
+    await admin.usersTable.performAction('Remove user');
+
+    await t.expect(confirmation.body.exists).ok();
+
+    await confirmation.cancel();
+
+    await t.expect(admin.userNameCell.withText('User Name').exists).ok();
+
+    await admin.usersTable.performAction('Remove user');
+
+    await t.expect(confirmation.body.exists).ok();
+
+    await confirmation.confirm();
+
+    await t.expect(successNotification.withText('User has been removed: "User Name"').exists).ok();
+
+    await t.expect(admin.userNameCell.withText('User Name').exists).notOk();
+
+    await t.hover(admin.usersTable.actionsButton);
+
+    await _checkActionSet(t, true, true);
+
+    await t.eval(() => window.location.reload());
+
+    await t.expect(admin.userNameCell.withText('User Name').exists).notOk();
 });
