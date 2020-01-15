@@ -283,17 +283,8 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                 if (meta != null)
                 {
-                    BinaryTypeHolder holder;
-                    if (_metas.TryGetValue(typeId, out holder))
-                    {
-                        holder.Merge(meta);
-                    }
-                    else
-                    {
-                        // TODO: This is recursive. Create holder from meta directly here.
-                        GetBinaryTypeHolder(GetDescriptor(true, typeId)).Merge(meta);
-                    }
-                    
+                    UpdateOrCreateBinaryTypeHolder(meta);
+
                     return meta;
                 }
             }
@@ -362,7 +353,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         private BinaryTypeHolder GetBinaryTypeHolder(IBinaryTypeDescriptor desc)
         {
             BinaryTypeHolder holder;
-
             if (_metas.TryGetValue(desc.TypeId, out holder))
             {
                 return holder;
@@ -372,8 +362,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 if (!_metas.TryGetValue(desc.TypeId, out holder))
                 {
-                    IDictionary<int, BinaryTypeHolder> metas0 =
-                        new Dictionary<int, BinaryTypeHolder>(_metas);
+                    var metas0 = new Dictionary<int, BinaryTypeHolder>(_metas);
 
                     holder = new BinaryTypeHolder(desc.TypeId, desc.TypeName, desc.AffinityKeyFieldName,
                         desc.IsEnum, this);
@@ -385,6 +374,36 @@ namespace Apache.Ignite.Core.Impl.Binary
             }
 
             return holder;
+        }
+        
+        /// <summary>
+        /// Updates or creates cached binary type holder. 
+        /// </summary>
+        private void UpdateOrCreateBinaryTypeHolder(BinaryType meta)
+        {
+            BinaryTypeHolder holder;
+            if (_metas.TryGetValue(meta.TypeId, out holder))
+            {
+                holder.Merge(meta);
+                return;
+            }
+            
+            lock (this)
+            {
+                if (_metas.TryGetValue(meta.TypeId, out holder))
+                {
+                    holder.Merge(meta);
+                    return;
+                }
+                
+                var metas0 = new Dictionary<int, BinaryTypeHolder>(_metas);
+
+                holder = new BinaryTypeHolder(meta.TypeId, meta.TypeName, meta.AffinityKeyFieldName, meta.IsEnum, this);
+
+                metas0[meta.TypeId] = holder;
+
+                _metas = metas0;
+            }
         }
 
         /// <summary>
