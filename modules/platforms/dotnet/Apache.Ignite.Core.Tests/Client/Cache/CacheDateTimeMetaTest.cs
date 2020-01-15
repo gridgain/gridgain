@@ -46,10 +46,14 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             ClearLoggers();
             
             var res = cache.Query(new ScanQuery<int, Foo>()).GetAll();
+            var requests = GetAllServerRequestNames().ToArray();
+
+            // Verify that only one request is sent to the server:
+            // metadata is already cached and should not be requested.
+            Assert.AreEqual(new[] {"ClientCacheScanQuery"}, requests);
             Assert.AreEqual(entryCount, res.Count);
 
-            var requests = GetAllServerRequestNames().ToArray();
-            Assert.AreEqual(new[] {"ClientCacheScanQuery"}, requests);
+            // TODO: Add some compat tests on metadata handling!
         }
 
         private class Foo
