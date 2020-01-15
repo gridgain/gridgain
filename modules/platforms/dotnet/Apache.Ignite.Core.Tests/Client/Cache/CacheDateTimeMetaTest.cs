@@ -48,7 +48,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         private class Foo
         {
             public int Id { get; set; }
+            
             public DateTime? StartDate { get; set; }
+            
             public DateTime? EndDate { get; set; }
         }
     }
