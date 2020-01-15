@@ -1361,7 +1361,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 if (pendingEntries.removex(row)) {
                     if (obsoleteVer == null)
-                        obsoleteVer = ctx.versions().next(cctx.isLocal()cctx.topology());
+                        obsoleteVer = ctx.versions().next(cctx);
 
                     GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
