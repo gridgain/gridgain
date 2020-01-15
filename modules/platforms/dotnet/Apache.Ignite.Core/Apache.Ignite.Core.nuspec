@@ -47,6 +47,9 @@ More info: https://apacheignite-net.readme.io/
         <releaseNotes></releaseNotes>
         <copyright>Copyright 2019</copyright>
         <tags>Apache Ignite In-Memory Distributed Computing SQL NoSQL Grid Map Reduce Cache linqpad-samples</tags>
+        <dependencies>
+            <dependency id="NodaTime" version="1.4.7" />
+        </dependencies>
     </metadata>
     <files>
         <!-- Install script should be in tools -->

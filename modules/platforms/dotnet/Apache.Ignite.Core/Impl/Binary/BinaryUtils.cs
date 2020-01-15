@@ -28,6 +28,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
+    using NodaTime;
 
     /// <summary>
     /// Utilities for binary serialization.
@@ -79,6 +80,12 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             RegistrationDisabled = true
         };
+
+        /** 
+         * We use NodaTime to ensure Java/.NET interoperability since <see cref="TimeZoneInfo"/> adjustment rules 
+         * are incomplete for some time zones.
+         */
+        private static readonly DateTimeZone NodaZone = DateTimeZoneProviders.Tzdb.GetSystemDefault();
 
         /** Method: ReadArray. */
         public static readonly MethodInfo MtdhReadArray =
@@ -405,8 +412,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             long high = stream.ReadLong();
             int low = stream.ReadInt();
 
-            return new DateTime(JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, DateTimeKind.Utc)
-                .ToLocalTime();
+            var utcDateTime = new DateTime(
+                JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, 
+                DateTimeKind.Utc);
+            var nodaTime = Instant.FromDateTimeUtc(utcDateTime).InZone(NodaZone);
+            
+            return new DateTime(
+                nodaTime.Year, 
+                nodaTime.Month, 
+                nodaTime.Day, 
+                nodaTime.Hour, 
+                nodaTime.Minute, 
+                nodaTime.Second, 
+                nodaTime.Millisecond, 
+                DateTimeKind.Local);
         }
 
         /// <summary>
@@ -1588,12 +1607,9 @@ namespace Apache.Ignite.Core.Impl.Binary
          */
         private static void ToJavaDate(DateTime date, out long high, out int low)
         {
-            if (date.Kind != DateTimeKind.Utc)
-            {
-                date = date.ToUniversalTime();
-            }
-
-            long diff = date.Ticks - JavaDateTicks;
+            long diff = date.Kind == DateTimeKind.Utc 
+                ? date.Ticks - JavaDateTicks
+                : LocalDateTime.FromDateTime(date).InZoneStrictly(NodaZone).ToInstant().ToUnixTimeTicks();
 
             high = diff / TimeSpan.TicksPerMillisecond;
 
