@@ -68,9 +68,15 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     @IgniteInstanceResource
     private IgniteEx ignite;
 
+    /**
+     *
+     */
     @LoggerResource
     private IgniteLogger log;
 
+    /**
+     *
+     */
     private boolean consoleMode;
 
     /** {@inheritDoc} */
