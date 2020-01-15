@@ -250,6 +250,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         private static IEnumerable<string> GetBinaryTypeFields(BinaryReader reader, IBinaryTypeDescriptor desc)
         {
+            // TODO: This is expensive and we call this very often.
+            // The best way would be to cache inside Marshaller, but what if fields are updated in the cluster?
+            // Can we get a callback?
             var binaryType = reader.Marshaller.GetBinaryType(desc.TypeId);
 
             if (binaryType == BinaryType.Empty)
