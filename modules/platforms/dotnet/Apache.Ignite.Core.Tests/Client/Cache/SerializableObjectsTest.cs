@@ -30,7 +30,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     public class SerializableObjectsTest : ClientTestBase
     {
         /** */
-        private const int EntryCount = 10;
+        private const int EntryCount = 50;
         
         // TODO: Add some compat tests on metadata handling!
         // TODO: Add Serializable test where new field is being added dynamically
@@ -68,7 +68,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var requests = GetAllServerRequestNames().ToArray();
 
             // Verify that only one metadata request is sent to the server.
-            Assert.AreEqual(new[] {"x",  "ClientCacheScanQuery"}, requests);
+            Assert.AreEqual(new[] {"ClientCacheScanQuery", "ClientBinaryTypeNameGet"}, requests);
             
             // Verify results.
             Assert.AreEqual(EntryCount, res.Count);
