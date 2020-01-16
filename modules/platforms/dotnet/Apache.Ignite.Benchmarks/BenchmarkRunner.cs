@@ -39,7 +39,7 @@ namespace Apache.Ignite.Benchmarks
                 typeof(GetAllBinaryBenchmark).FullName,
                 //typeof(ThinClientGetAllBenchmark).FullName,
                 //typeof(ThinClientGetAllBinaryBenchmark).FullName,
-                "-ConfigPath", Directory.GetCurrentDirectory() + @"\..\..\Config\benchmark.xml",
+                "-ConfigPath", Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "Config", "benchmark.xml"),
                 "-Threads", "1",
                 "-Warmup", "0",
                 "-Duration", "60",
