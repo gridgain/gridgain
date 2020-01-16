@@ -219,15 +219,15 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     /**
      * Generates new grid cache version.
      *
-     * @param cctx Cache context. If given cache context is null or isLocal or if it's topology isn't initialzed,
+     * @param cacheCtx Cache context. If given cache context is null or isLocal or if it's topology isn't initialzed,
      * topology version from kernalContext would be used for version generation, otherwise topology version from cache
      * context would be used.
      * @return Next version based on current topology.
      */
-    public GridCacheVersion next(GridCacheContext cctx) {
-        return cctx == null || cctx.isLocal() || !cctx.topology().initialized() ?
+    public GridCacheVersion next(GridCacheContext cacheCtx) {
+        return cacheCtx == null || cacheCtx.isLocal() || !cacheCtx.topology().initialized() ?
             next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId) :
-            next(cctx.topology().readyTopologyVersion());
+            next(cacheCtx.topology().readyTopologyVersion());
     }
 
     /**
@@ -240,16 +240,16 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     /**
      * Generates new grid cache version.
      *
-     * @param cctx Cache context. If given cache context is null or isLocal or if it's topology isn't initialzed,
+     * @param cacheCtx Cache context. If given cache context is null or isLocal or if it's topology isn't initialzed,
      * topology version from kernalContext would be used for version generation, otherwise topology version from cache
      * context would be used.
      * @param dataCenterId Data center id.
      * @return Next version based on current topology with given data center id.
      */
-    public GridCacheVersion next(GridCacheContext cctx, byte dataCenterId) {
-        return cctx == null || cctx.isLocal() || !cctx.topology().initialized() ?
+    public GridCacheVersion next(GridCacheContext cacheCtx, byte dataCenterId) {
+        return cacheCtx == null || cacheCtx.isLocal() || !cacheCtx.topology().initialized() ?
             next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId) :
-            next(cctx.topology().readyTopologyVersion());
+            next(cacheCtx.topology().readyTopologyVersion());
     }
 
     /**
