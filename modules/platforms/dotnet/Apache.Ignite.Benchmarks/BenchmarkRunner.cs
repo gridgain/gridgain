@@ -66,8 +66,6 @@ namespace Apache.Ignite.Benchmarks
             if (args.Length < 1)
                 throw new Exception("Not enough arguments: " + argsStr);
             
-            Console.WriteLine("Arguments: " + argsStr);
-
             var benchmarkType = Type.GetType(args[0]);
 
             if (benchmarkType == null)
