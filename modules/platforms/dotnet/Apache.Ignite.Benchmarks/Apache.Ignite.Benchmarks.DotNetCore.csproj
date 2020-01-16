@@ -9,6 +9,8 @@
     <SignAssembly>true</SignAssembly>
     <DelaySign>false</DelaySign>
     <OutputType>Exe</OutputType>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Apache.Ignite.Core\Apache.Ignite.Core.DotNetCore.csproj" />
