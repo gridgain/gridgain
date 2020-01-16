@@ -16,6 +16,7 @@
 
 package org.apache.ignite.jdbc.suite;
 
+import java.security.Security;
 import org.apache.ignite.internal.jdbc2.JdbcBlobTest;
 import org.apache.ignite.internal.jdbc2.JdbcBulkLoadSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
@@ -101,6 +102,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinUpdateStatementSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinUpdateStatementSkipReducerOnUpdateSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinWalModeChangeSelfTest;
 import org.apache.ignite.qa.QaJdbcTestSuite;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -250,4 +252,12 @@ import org.junit.runners.Suite;
     JdbcThinQueryMemoryTrackerSelfTest.class
 })
 public class IgniteJdbcDriverTestSuite {
+    /**
+     * Enable NULL algorithm and keep 3DES_EDE_CBC disabled.
+     * See {@link JdbcThinConnectionSSLTest#testDisabledCustomCipher()} for details.
+     */
+    @BeforeClass
+    public static void init() {
+        Security.setProperty("jdk.tls.disabledAlgorithms", "3DES_EDE_CBC");
+    }
 }
