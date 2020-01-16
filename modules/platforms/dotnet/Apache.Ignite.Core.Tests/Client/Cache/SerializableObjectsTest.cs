@@ -32,10 +32,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /** */
         private const int EntryCount = 50;
         
-        // TODO: Add some compat tests on metadata handling!
-        // TODO: Add Serializable test where new field is being added dynamically
-        // TODO: Add GetAll check
-        // TODO: Measure perf?
+        // TODO: Compat tests on metadata handling
+        // TODO: Serializable test with dynamic field set
+        // TODO: Add GetAll test
 
         /// <summary>
         /// Tests DateTime metadata caching.
@@ -96,6 +95,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             return cache;
         }
 
+        /// <summary>
+        /// Gets the data.
+        /// </summary>
         private static IEnumerable<DateTimeTest> GetData(int entryCount)
         {
             return Enumerable.Range(0, entryCount)
@@ -106,6 +108,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 });
         }
 
+        /// <summary>
+        /// Test class with DateTime field.
+        /// </summary>
         private class DateTimeTest
         {
             public static readonly DateTime DefaultDateTime = new DateTime(2002, 2, 2);
