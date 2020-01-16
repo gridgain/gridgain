@@ -86,18 +86,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /// <summary>
-        /// Gets the schema.
-        /// </summary>
-        public int[] GetSchema(int typeId, int schemaId)
-        {
-            return DoOutInOp<int[]>((int) Op.GetSchema, writer =>
-            {
-                writer.WriteInt(typeId);
-                writer.WriteInt(schemaId);
-            });
-        }
-
-        /// <summary>
         /// Put binary types to Grid.
         /// </summary>
         /// <param name="types">Binary types.</param>
