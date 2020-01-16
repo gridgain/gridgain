@@ -122,7 +122,7 @@ public class WalTestUtils {
         String walFileName = desc.file().getName().replace(FilePageStoreManager.ZIP_SUFFIX, "");
 
         // reanaming is needed because unzip removes leading zeros from archived wal segment file name,
-        // but strict name pattern of .wal file is needed for WALIterator
+        // but strict name pattern of wal file is needed for WALIterator
         walFile.renameTo(new File(tmp.getPath() + "/" + walFileName));
 
         walFile = tmp.listFiles()[0];
@@ -156,7 +156,7 @@ public class WalTestUtils {
 
     /**
      * Corrupts zip file. According to section 4.3.7 of zip file specification, this method just sets 0
-     * to the first 30 bytes of the first local file header.
+     * to the first 30 bytes of the first local file header to achieve corruption.
      *
      * @param desc File descriptor.
      * @see <a href="https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT">Zip file specification </a>

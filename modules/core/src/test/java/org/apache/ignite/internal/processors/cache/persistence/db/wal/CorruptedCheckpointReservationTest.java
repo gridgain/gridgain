@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ * https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.persistence.db;
+package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
 import com.google.common.collect.Lists;
 import java.io.File;
@@ -51,7 +51,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_
 
 /**
  * Tests if reservation of corrupted checkpoint works correctly, also checks correct behaviour for corrupted zip wal file
- * during PME
+ * during PME.
  */
 @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
 @WithSystemProperty(key = IGNITE_DISABLE_GRP_STATE_LAZY_STORE, value =  "true")
