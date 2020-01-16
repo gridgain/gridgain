@@ -458,7 +458,7 @@ public class CheckpointHistory {
                 }
             }
             catch (IgniteCheckedException ex) {
-                U.warn(log, "Failed to process checkpoint: " + (chpEntry != null ? chpEntry : "none"));
+                U.warn(log, "Failed to process checkpoint: " + (chpEntry != null ? chpEntry : "none"), ex);
 
                 try {
                     cctx.wal().release(chpEntry.checkpointMark());

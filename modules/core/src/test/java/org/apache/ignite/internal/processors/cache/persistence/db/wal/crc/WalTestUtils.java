@@ -48,7 +48,8 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.serial
  */
 public class WalTestUtils {
     /**
-     * Put zero CRC in one of records for the specified segment.
+     * Puts zero CRC to the one of a randomly choosen record for the specified segment if {@code random} is not null,
+     * otherwsise to the last element.
      *
      * @param desc WAL segment descriptor.
      * @param iterFactory Iterator factory for segment iterating.
@@ -57,7 +58,7 @@ public class WalTestUtils {
      * @throws IOException If IO exception.
      * @throws IgniteCheckedException If iterator failed.
      */
-    public static FileWALPointer corruptWalRecord(
+    public static FileWALPointer corruptRandomWalRecord(
         FileDescriptor desc,
         IgniteWalIteratorFactory iterFactory,
         @Nullable Random random
@@ -81,7 +82,7 @@ public class WalTestUtils {
     }
 
     /**
-     * Put zero CRC in one of records for the specified segment.
+     * Puts zero CRC to record that associated with {@code pointer} for the specified segment.
      *
      * @param desc WAL segment descriptor.
      * @param pointer WAL pointer.
@@ -161,7 +162,7 @@ public class WalTestUtils {
      * @param desc File descriptor.
      * @see <a href="https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT">Zip file specification </a>
      */
-    public static void corruptCompressedSegment(FileDescriptor desc) throws IOException {
+    public static void corruptCompressedFile(FileDescriptor desc) throws IOException {
         int firstLocFileHdrOff = 0;
 
         ByteBuffer firstLocFileHdr = allocate(30);

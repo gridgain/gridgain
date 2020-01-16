@@ -180,7 +180,7 @@ public class IgniteWithoutArchiverWalIteratorInvalidCrcTest extends GridCommonAb
 
         FileDescriptor lastWalFile = walFiles.get(walFiles.size() - 1);
 
-        WalTestUtils.corruptWalRecord(lastWalFile, iterFactory, corruptLastRecord);
+        WalTestUtils.corruptRandomWalRecord(lastWalFile, iterFactory, corruptLastRecord);
 
         GridTestUtils.assertThrows(log, () -> startGrid(0), Exception.class, null);
     }

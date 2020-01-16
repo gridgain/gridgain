@@ -113,7 +113,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
-    public void testCorruptedCheckpointResrvation() throws Exception {
+    public void testCorruptedCheckpointReservation() throws Exception {
         walCompactionEnabled = false;
 
         startGrids(2);
@@ -135,7 +135,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
-    public void testCorruptedCheckpointInCompressedWalResrvation() throws Exception {
+    public void testCorruptedCheckpointInCompressedWalReservation() throws Exception {
         walCompactionEnabled = true;
 
         startGrids(2);
@@ -251,7 +251,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         FileDescriptor cpSegment = walFiles.stream().filter(w -> w.idx() == corruptedCp.index()).findFirst().get();
 
-        WalTestUtils.corruptCompressedSegment(cpSegment);
+        WalTestUtils.corruptCompressedFile(cpSegment);
     }
 
     /**
