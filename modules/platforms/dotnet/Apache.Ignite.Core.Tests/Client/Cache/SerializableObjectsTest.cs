@@ -54,12 +54,12 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             
             // Verify results.
             Assert.AreEqual(entryCount, res.Count);
-            Assert.AreEqual(DateTimeTest.DefaultDateTime, res[0].Value.Date);
+            Assert.AreEqual(DateTimeTest.DefaultDateTime, res.Min(x => x.Value.Date));
         }
 
         private static IEnumerable<DateTimeTest> GetData(int entryCount)
         {
-            return Enumerable.Range(1, entryCount)
+            return Enumerable.Range(0, entryCount)
                 .Select(x => new DateTimeTest
                 {
                     Id = x,
