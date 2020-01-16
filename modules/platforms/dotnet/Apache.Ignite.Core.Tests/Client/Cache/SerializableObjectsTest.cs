@@ -67,8 +67,16 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var res = cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll();
             var requests = GetAllServerRequestNames().ToArray();
 
-            // Verify that only one metadata request is sent to the server.
-            Assert.AreEqual(new[] {"ClientCacheScanQuery", "ClientBinaryTypeNameGet"}, requests);
+            // Verify that only one BinaryTypeGet request per type is sent to the server.
+            var expectedRequests = new[]
+            {
+                "ClientCacheScanQuery", 
+                "ClientBinaryTypeNameGet",
+                "ClientBinaryTypeGet",
+                "ClientBinaryTypeNameGet",
+                "ClientBinaryTypeGet"
+            };
+            Assert.AreEqual(expectedRequests, requests);
             
             // Verify results.
             Assert.AreEqual(EntryCount, res.Count);
