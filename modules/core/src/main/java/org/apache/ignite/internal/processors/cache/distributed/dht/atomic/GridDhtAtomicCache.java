@@ -1054,8 +1054,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                 conflictPutMap = F.viewReadOnly((Map)map, new IgniteClosure<V, GridCacheDrInfo>() {
                     @Override public GridCacheDrInfo apply(V o) {
-                        return new GridCacheDrInfo(ctx.toCacheObject(o),
-                            ctx.versions().next(opCtx.dataCenterId()));
+                        return new GridCacheDrInfo(ctx.toCacheObject(o), ctx.versions().next(opCtx.dataCenterId()));
                     }
                 });
 
@@ -1238,8 +1237,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             assert dcId != null;
 
             if (op == UPDATE) {
-                conflictPutVal = new GridCacheDrInfo(ctx.toCacheObject(val),
-                    ctx.versions().next(dcId));
+                conflictPutVal = new GridCacheDrInfo(ctx.toCacheObject(val), ctx.versions().next(dcId));
 
                 val0 = null;
             }
