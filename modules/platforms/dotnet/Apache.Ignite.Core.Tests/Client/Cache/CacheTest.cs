@@ -852,7 +852,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 var cache = client.GetCache<int, int>(CacheName);
                 var cache2 = Client.GetOrCreateCache<int, int>("TestAsyncCompletionOrder");
 
-                cache.PutAll(Enumerable.Range(1, 500000).Select(x => new KeyValuePair<int, int>(x, x)));
+                cache.PutAll(Enumerable.Range(1, 50000).Select(x => new KeyValuePair<int, int>(x, x)));
                 var t1 = cache.RemoveAllAsync();
                 var t2 = cache2.PutAsync(1, 1);
 
