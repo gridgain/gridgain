@@ -64,6 +64,7 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
 
         executeAction(req, (res) -> {
                 JobResponse r = F.first(res);
+
                 return r != null && r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
     }
@@ -81,6 +82,7 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
+
             return r != null && r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
     }

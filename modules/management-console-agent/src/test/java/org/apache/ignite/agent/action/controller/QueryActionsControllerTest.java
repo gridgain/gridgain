@@ -78,11 +78,13 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             if (r != null && r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
+                JSONArray resArr = ctx.read("$[*]]");
+
                 int id = ctx.read("$[2].rows[0][0]");
 
                 int val = ctx.read("$[2].rows[0][1]");
 
-                return id == 1 && val == 2;
+                return resArr.size() == 3 && id == 1 && val == 2;
             }
 
             return false;
@@ -112,13 +114,15 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             if (r != null && r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
+                JSONArray resArr = ctx.read("$[*]]");
+
                 JSONArray arr = ctx.read("$[3].rows[*]");
 
                 int id = ctx.read("$[3].rows[0][0]");
 
                 int val = ctx.read("$[3].rows[0][1]");
 
-                return arr.size() == 1 && id == 1 && val == 2;
+                return resArr.size() == 4 && arr.size() == 1 && id == 1 && val == 2;
             }
 
             return false;
@@ -149,13 +153,15 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             if (r != null && r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
+                JSONArray resArr = ctx.read("$[*]]");
+
                 JSONArray arr = ctx.read("$[3].rows[*]");
 
                 boolean hasMore = ctx.read("$[3].hasMore");
 
                 cursorId.set(ctx.read("$[3].cursorId"));
 
-                return hasMore && arr.size() == 1;
+                return resArr.size() == 4 && hasMore && arr.size() == 1;
             }
 
             return false;
@@ -292,7 +298,6 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         assertWithPoll(
             () -> {
                 JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
-
                 return res != null && res.getStatus() == FAILED;
             }
         );
@@ -323,6 +328,8 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             if (r != null && r.getStatus() == COMPLETED) {
                 DocumentContext ctx = parse(r.getResult());
 
+                JSONArray resArr = ctx.read("$[*]]");
+
                 JSONArray arr = ctx.read("$[0].rows[*]");
 
                 boolean hasMore = ctx.read("$[0].hasMore");
@@ -331,7 +338,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
 
                 String val = ctx.read("$[0].rows[0][3]");
 
-                return arr.size() == 1 && !hasMore && "key_1".equals(id) && "value_1".equals(val);
+                return resArr.size() == 1 && arr.size() == 1 && !hasMore && "key_1".equals(id) && "value_1".equals(val);
             }
 
             return false;

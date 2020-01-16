@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
-    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Common;
@@ -40,13 +39,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /** <inheritdoc /> */
         public void SetActive(bool isActive)
         {
-            DoOutInOp<object>(ClientOp.ClusterChangeState, w => w.WriteBool(isActive), null);
+            DoOutInOp<object>(ClientOp.ClusterChangeState, ctx => ctx.Stream.WriteBool(isActive), null);
         }
 
         /** <inheritdoc /> */
         public bool IsActive()
         {
-            return DoOutInOp(ClientOp.ClusterIsActive, null, r => r.ReadBool());
+            return DoOutInOp(ClientOp.ClusterIsActive, null, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -54,13 +53,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            Action<IBinaryRawWriter> action = w =>
+            Action<ClientRequestContext> action = ctx =>
             {
-                w.WriteString(cacheName);
-                w.WriteBoolean(false);
+                ctx.Writer.WriteString(cacheName);
+                ctx.Writer.WriteBoolean(false);
             };
             
-            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBoolean());
+            return DoOutInOp(ClientOp.ClusterChangeWalState, action, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -68,13 +67,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            Action<IBinaryRawWriter> action = w =>
+            Action<ClientRequestContext> action = ctx =>
             {
-                w.WriteString(cacheName);
-                w.WriteBoolean(true);
+                ctx.Writer.WriteString(cacheName);
+                ctx.Writer.WriteBoolean(true);
             };
             
-            return DoOutInOp(ClientOp.ClusterChangeWalState, action, r => r.ReadBoolean());
+            return DoOutInOp(ClientOp.ClusterChangeWalState, action, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -82,7 +81,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            return DoOutInOp(ClientOp.ClusterGetWalState, w => w.WriteString(cacheName), r => r.ReadBoolean());
+            return DoOutInOp(ClientOp.ClusterGetWalState, ctx => ctx.Writer.WriteString(cacheName), ctx => ctx.Stream.ReadBool());
         }
     }
 }

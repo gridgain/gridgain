@@ -29,7 +29,6 @@ import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Before;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;

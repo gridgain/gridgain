@@ -65,6 +65,7 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
@@ -406,6 +407,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     private LongJVMPauseDetector pauseDetector;
 
     /** */
+    @GridToStringExclude
+    private DurableBackgroundTasksProcessor durableBackgroundTasksProcessor;
+
+    /** */
     private Thread.UncaughtExceptionHandler hnd;
 
     /** */
@@ -685,6 +690,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
         else if (comp instanceof ManagementConsoleProcessorAdapter)
             mgmtConsoleProc = (ManagementConsoleProcessorAdapter)comp;
+        else if (comp instanceof DurableBackgroundTasksProcessor)
+            durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();
@@ -1262,6 +1269,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public ManagementConsoleProcessorAdapter managementConsole() {
         return mgmtConsoleProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+        return durableBackgroundTasksProcessor;
     }
 
     /** {@inheritDoc} */

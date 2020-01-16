@@ -466,7 +466,7 @@ public class PageLog {
         int columnCount = data.readVarInt();
         Value[] values = new Value[columnCount];
         for (int i = 0; i < columnCount; i++) {
-            values[i] = data.readValue();
+            values[i] = (Value)data.readValue();
         }
         Row row = rowFactory.createRow(values, Row.MEMORY_CALCULATE);
         row.setKey(key);
