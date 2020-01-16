@@ -293,6 +293,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             if (ignite != null)
             {
+                // TODO: BinaryProcessor.GetSchema retrieves BinaryType but does not cache it anywhere.
                 fieldIds = GetCachedSchema(hdr, ignite) ??
                            ignite.BinaryProcessor.GetSchema(hdr.TypeId, hdr.SchemaId);
             }
