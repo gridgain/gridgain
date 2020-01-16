@@ -71,6 +71,7 @@ public class SequenceValue extends Expression {
         case ExpressionVisitor.NOT_FROM_RESOLVER:
         case ExpressionVisitor.GET_COLUMNS1:
         case ExpressionVisitor.GET_COLUMNS2:
+        case ExpressionVisitor.CLEANUP:
             return true;
         case ExpressionVisitor.DETERMINISTIC:
         case ExpressionVisitor.READONLY:
