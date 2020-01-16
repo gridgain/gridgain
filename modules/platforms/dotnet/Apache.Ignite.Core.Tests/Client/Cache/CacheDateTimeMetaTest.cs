@@ -54,6 +54,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.AreEqual(entryCount, res.Count);
 
             // TODO: Add some compat tests on metadata handling!
+            // TODO: Add Serializable test where new field is being added dynamically
         }
 
         private class Foo
