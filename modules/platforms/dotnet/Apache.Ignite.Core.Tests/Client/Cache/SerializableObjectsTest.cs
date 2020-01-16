@@ -19,51 +19,59 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.Serialization;
     using Apache.Ignite.Core.Cache.Query;
     using NUnit.Framework;
 
     /// <summary>
-    /// TODO: Better name. Test other types too (nested types, serializable types, etc).
+    /// Tests <see cref="ISerializable"/> object handling in Thin Client.
     /// </summary>
-    public class CacheDateTimeMetaTest : ClientTestBase
+    public class SerializableObjectsTest : ClientTestBase
     {
+        // TODO: Add some compat tests on metadata handling!
+        // TODO: Add Serializable test where new field is being added dynamically
+        // TODO: Add GetAll check
+        // TODO: Measure perf?
+
         [Test]
         public void TestDateTimeMeta()
         {
             const int entryCount = 5;
             
-            var data = Enumerable.Range(1, entryCount)
-                .Select(x => new Foo
-                {
-                    Id = x,
-                    StartDate = DateTime.Now.AddHours(x),
-                    EndDate = DateTime.Now.AddDays(x)
-                });
+            var data = GetData(entryCount);
 
-            var cache = Client.GetOrCreateCache<int, Foo>("foo");
-            cache.PutAll(data.Select(x => new KeyValuePair<int, Foo>(x.Id, x)));
+            var cache = Client.GetOrCreateCache<int, DateTimeTest>("foo");
+            cache.PutAll(data.Select(x => new KeyValuePair<int, DateTimeTest>(x.Id, x)));
 
             ClearLoggers();
             
-            var res = cache.Query(new ScanQuery<int, Foo>()).GetAll();
+            var res = cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll();
             var requests = GetAllServerRequestNames().ToArray();
 
             // Verify that only one request is sent to the server:
             // metadata is already cached and should not be requested.
             Assert.AreEqual(new[] {"ClientCacheScanQuery"}, requests);
+            
+            // Verify results.
             Assert.AreEqual(entryCount, res.Count);
-
-            // TODO: Add some compat tests on metadata handling!
-            // TODO: Add Serializable test where new field is being added dynamically
+            Assert.AreEqual(DateTimeTest.DefaultDateTime, res[0].Value.Date);
         }
 
-        private class Foo
+        private static IEnumerable<DateTimeTest> GetData(int entryCount)
         {
+            return Enumerable.Range(1, entryCount)
+                .Select(x => new DateTimeTest
+                {
+                    Id = x,
+                    Date = DateTimeTest.DefaultDateTime.AddHours(x),
+                });
+        }
+
+        private class DateTimeTest
+        {
+            public static readonly DateTime DefaultDateTime = new DateTime(2002, 2, 2);
             public int Id { get; set; }
-            
-            public DateTime? StartDate { get; set; }
-            
-            public DateTime? EndDate { get; set; }
+            public DateTime Date { get; set; }
         }
     }
 }
