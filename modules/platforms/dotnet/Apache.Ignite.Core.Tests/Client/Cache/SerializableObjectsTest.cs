@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Linq;
     using System.Runtime.Serialization;
     using Apache.Ignite.Core.Cache.Query;
+    using Apache.Ignite.Core.Client.Cache;
     using NUnit.Framework;
 
     /// <summary>
@@ -28,23 +29,21 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     /// </summary>
     public class SerializableObjectsTest : ClientTestBase
     {
+        /** */
+        private const int EntryCount = 10;
+        
         // TODO: Add some compat tests on metadata handling!
         // TODO: Add Serializable test where new field is being added dynamically
         // TODO: Add GetAll check
         // TODO: Measure perf?
 
+        /// <summary>
+        /// Tests DateTime metadata caching.
+        /// </summary>
         [Test]
-        public void TestDateTimeMeta()
+        public void TestDateTimeMetaCachingOnPut()
         {
-            const int entryCount = 5;
-            
-            var data = GetData(entryCount);
-
-            var cache = Client.GetOrCreateCache<int, DateTimeTest>("foo");
-            cache.PutAll(data.Select(x => new KeyValuePair<int, DateTimeTest>(x.Id, x)));
-
-            ClearLoggers();
-            
+            var cache = GetPopulatedCache();
             var res = cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll();
             var requests = GetAllServerRequestNames().ToArray();
 
@@ -53,8 +52,40 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             Assert.AreEqual(new[] {"ClientCacheScanQuery"}, requests);
             
             // Verify results.
-            Assert.AreEqual(entryCount, res.Count);
+            Assert.AreEqual(EntryCount, res.Count);
             Assert.AreEqual(DateTimeTest.DefaultDateTime, res.Min(x => x.Value.Date));
+        }
+
+        /// <summary>
+        /// Tests DateTime metadata caching.
+        /// </summary>
+        [Test]
+        public void TestDateTimeMetaCachingOnGet()
+        {
+            // Retrieve data from a different client which does not yet have cached meta.
+            var cache = GetClient().GetCache<int, DateTimeTest>(GetPopulatedCache().Name);
+            var res = cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll();
+            var requests = GetAllServerRequestNames().ToArray();
+
+            // Verify that only one metadata request is sent to the server.
+            Assert.AreEqual(new[] {"x",  "ClientCacheScanQuery"}, requests);
+            
+            // Verify results.
+            Assert.AreEqual(EntryCount, res.Count);
+            Assert.AreEqual(DateTimeTest.DefaultDateTime, res.Min(x => x.Value.Date));
+        }
+        
+        /// <summary>
+        /// Gets the populated cache.
+        /// </summary>
+        private ICacheClient<int, DateTimeTest> GetPopulatedCache()
+        {
+            var cacheName = TestContext.CurrentContext.Test.Name;
+            var cache = Client.GetOrCreateCache<int, DateTimeTest>(cacheName);
+            cache.PutAll(GetData(EntryCount).Select(x => new KeyValuePair<int, DateTimeTest>(x.Id, x)));
+
+            ClearLoggers();
+            return cache;
         }
 
         private static IEnumerable<DateTimeTest> GetData(int entryCount)
