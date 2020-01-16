@@ -112,6 +112,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     }
 
     /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21599")
     @Test
     public void simpleSelectWithDistinctOrderByAggregate() {
         checkSortOrder = true;
@@ -121,6 +122,7 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     }
 
     /** */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-21599")
     @Test
     public void simpleSelectWithDistinctOrderByAggregateLazy() {
         checkSortOrder = true;
@@ -500,10 +502,10 @@ public class DiskSpillingQueriesTest extends DiskSpillingAbstractTest {
     public void simpleAggregate() {
         checkGroupsSpilled = true;
 
-        listAggs = Arrays.asList(1, 2, 3);
+        listAggs = Arrays.asList(1, 2, 3, 4);
 
         assertInMemoryAndOnDiskSameResults(false,
-            "SELECT count(*), LISTAGG(name), LISTAGG(name), LISTAGG(name) FROM person"
+            "SELECT count(*), LISTAGG(name), LISTAGG(name), LISTAGG(name), LISTAGG(name) FROM person"
         );
     }
 }

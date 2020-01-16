@@ -25,7 +25,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlStatisticsHolderMemoryQuotas;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
@@ -108,12 +107,13 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (dfltMemLimit == 0)
             dfltMemLimit = globalQuota > 0 ? globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE : -1;
 
-        this.failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
         this.dfltSqlQryMemoryLimit = dfltMemLimit;
 
         this.log = ctx.log(QueryMemoryManager.class);
 
         metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
+        // TODO GG-18629 - get from configuration.
+        this.failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
     }
 
     /** {@inheritDoc} */
@@ -163,15 +163,11 @@ public class QueryMemoryManager extends H2MemoryTracker {
     public QueryMemoryTracker createQueryMemoryTracker(long maxQueryMemory) {
         assert maxQueryMemory >= 0;
 
-        if (dfltSqlQryMemoryLimit < 0) {
-            if (log.isDebugEnabled())
-                LT.warn(log, "SQL memory management is disabled " + ((globalQuota > 0) ? "for query" : "on node"));
-
-            return null;
-        }
-
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
+
+        if (maxQueryMemory < 0)
+            return null;
 
         if (globalQuota > 0 && globalQuota < maxQueryMemory) {
             U.warn(log, "Max query memory can't exceeds SQL memory pool size. Will be reduced down to: " + globalQuota);
