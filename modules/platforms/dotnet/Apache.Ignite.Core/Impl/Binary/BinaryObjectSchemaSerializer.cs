@@ -320,7 +320,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         private static int[] GetCachedSchema(BinaryObjectHeader hdr, IIgniteInternal ignite)
         {
             var cachedHolder = ignite.Marshaller.GetCachedBinaryTypeHolder(hdr.TypeId);
-            if (cachedHolder == null || cachedHolder.BinaryType == null)
+            if (cachedHolder == null || cachedHolder.BinaryType == null || cachedHolder.BinaryType.Schema == null)
             {
                 return null;
             }
