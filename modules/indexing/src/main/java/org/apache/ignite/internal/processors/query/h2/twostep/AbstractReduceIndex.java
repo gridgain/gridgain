@@ -35,7 +35,7 @@ import org.h2.table.Table;
 /**
  * Merge index.
  */
-public abstract class ReduceIndex extends BaseIndex implements Reducer {
+public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
     /**
      * @param ctx  Context.
      * @param tbl  Table.
@@ -43,7 +43,7 @@ public abstract class ReduceIndex extends BaseIndex implements Reducer {
      * @param type Type.
      * @param cols Columns.
      */
-    protected ReduceIndex(GridKernalContext ctx,
+    protected AbstractReduceIndex(GridKernalContext ctx,
         Table tbl,
         String name,
         IndexType type,
@@ -56,7 +56,7 @@ public abstract class ReduceIndex extends BaseIndex implements Reducer {
      * @param ctx Context.
      * @param tbl Fake reduce table.
      */
-    protected ReduceIndex(GridKernalContext ctx, Table tbl) {
+    protected AbstractReduceIndex(GridKernalContext ctx, Table tbl) {
         this(ctx, tbl, null, IndexType.createScan(false), null);
     }
 

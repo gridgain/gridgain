@@ -27,7 +27,7 @@ import org.h2.table.TableFilter;
 /**
  * Unsorted merge index.
  */
-public final class ReduceIndexUnsorted extends ReduceIndex {
+public final class ReduceIndexUnsorted extends AbstractReduceIndex {
     /** Index type. */
     private static final IndexType TYPE = IndexType.createScan(false);
 

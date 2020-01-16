@@ -27,7 +27,7 @@ import org.h2.table.TableFilter;
 /**
  * Sorted index.
  */
-public final class ReduceIndexSorted extends ReduceIndex implements ReduceIndex.RowComparator {
+public final class ReduceIndexSorted extends AbstractReduceIndex {
     /** */
     private static final IndexType TYPE = IndexType.createNonUnique(false);
 
@@ -48,11 +48,11 @@ public final class ReduceIndexSorted extends ReduceIndex implements ReduceIndex.
     ) {
         super(ctx, tbl, name, TYPE, cols);
 
-        delegate = new SortedReducer(ctx, this);
+        delegate = new SortedReducer(ctx, this::compareRows);
     }
 
     /** {@inheritDoc} */
-    protected SortedReducer delegate() {
+    @Override protected SortedReducer delegate() {
         return delegate;
     }
 

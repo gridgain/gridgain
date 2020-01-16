@@ -67,6 +67,7 @@ abstract class BaseReducer implements Reducer {
     }
 
     /** */
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<BaseReducer, ConcurrentMap> LAST_PAGES_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(BaseReducer.class, ConcurrentMap.class, "lastPages");
 

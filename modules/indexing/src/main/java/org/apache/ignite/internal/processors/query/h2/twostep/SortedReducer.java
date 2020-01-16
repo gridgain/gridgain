@@ -51,39 +51,33 @@ import static java.util.Objects.requireNonNull;
  */
 public class SortedReducer extends BaseReducer {
     /** */
-    protected final Comparator<SearchRow> firstRowCmp = new Comparator<SearchRow>() {
-        @SuppressWarnings("ComparatorMethodParameterNotUsed")
-        @Override public int compare(SearchRow rowInList, SearchRow searchRow) {
-            int res = compareRows(rowInList, searchRow);
+    @SuppressWarnings("ComparatorMethodParameterNotUsed")
+    protected final Comparator<SearchRow> firstRowCmp = (rowInList, searchRow) -> {
+        int res = compareRows(rowInList, searchRow);
 
-            return res == 0 ? 1 : res;
-        }
+        return res == 0 ? 1 : res;
     };
 
     /** */
-    protected final Comparator<SearchRow> lastRowCmp = new Comparator<SearchRow>() {
-        @SuppressWarnings("ComparatorMethodParameterNotUsed")
-        @Override public int compare(SearchRow rowInList, SearchRow searchRow) {
-            int res = compareRows(rowInList, searchRow);
+    @SuppressWarnings("ComparatorMethodParameterNotUsed")
+    protected final Comparator<SearchRow> lastRowCmp = (rowInList, searchRow) -> {
+        int res = compareRows(rowInList, searchRow);
 
-            return res == 0 ? -1 : res;
-        }
+        return res == 0 ? -1 : res;
     };
 
     /** */
-    private final Comparator<RowStream> streamCmp = new Comparator<RowStream>() {
-        @Override public int compare(RowStream o1, RowStream o2) {
-            if (o1 == o2) // both nulls
-                return 0;
+    private final Comparator<RowStream> streamCmp = (o1, o2) -> {
+        if (o1 == o2) // both nulls
+            return 0;
 
-            if (o1 == null)
-                return -1;
+        if (o1 == null)
+            return -1;
 
-            if (o2 == null)
-                return 1;
+        if (o2 == null)
+            return 1;
 
-            return compareRows(o1.get(), o2.get());
-        }
+        return compareRows(o1.get(), o2.get());
     };
 
     /** */
@@ -103,9 +97,6 @@ public class SortedReducer extends BaseReducer {
 
     /** */
     private MergeStreamIterator it;
-
-
-
 
     /**
      *  Constructor.
@@ -192,7 +183,7 @@ public class SortedReducer extends BaseReducer {
      * @param first Lower bound.
      * @param last Upper bound.
      */
-    protected void checkBounds(Row lastEvictedRow, SearchRow first, SearchRow last) {
+    @Override protected void checkBounds(Row lastEvictedRow, SearchRow first, SearchRow last) {
         // If our last evicted fetched row was smaller than the given lower bound,
         // then we are ok. This is important for merge join to work.
         if (lastEvictedRow != null && first != null && compareRows(lastEvictedRow, first) < 0)
@@ -232,7 +223,7 @@ public class SortedReducer extends BaseReducer {
         private boolean first = true;
 
         /** */
-        private volatile int off;
+        private int off;
 
         /** */
         private boolean hasNext;
@@ -324,13 +315,13 @@ public class SortedReducer extends BaseReducer {
      */
     private final class RowStream implements Pollable<ReduceResultPage> {
         /** */
-        Iterator<Value[]> iter = emptyIterator();
+        private Iterator<Value[]> iter = emptyIterator();
 
         /** */
-        Row cur;
+        private Row cur;
 
         /** */
-        ReduceResultPage nextPage;
+        private ReduceResultPage nextPage;
 
         /**
          * @param page Page.

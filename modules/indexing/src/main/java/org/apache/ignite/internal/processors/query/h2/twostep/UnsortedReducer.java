@@ -88,7 +88,7 @@ public class UnsortedReducer extends BaseReducer {
     /**
      * @param page Page.
      */
-    protected void addPage0(ReduceResultPage page) {
+    @Override protected void addPage0(ReduceResultPage page) {
         assert page.rowsInPage() > 0 || page.isLast() || page.isFail();
 
         // Do not add empty page to avoid premature stream termination.

@@ -28,7 +28,7 @@ import org.h2.result.Row;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Iterator that transparently and sequentially traverses a bunch of {@link ReduceIndex} objects.
+ * Iterator that transparently and sequentially traverses a bunch of {@link AbstractReduceIndex} objects.
  */
 public class ReduceIndexIterator implements Iterator<List<?>>, AutoCloseable {
     /** Reduce query executor. */

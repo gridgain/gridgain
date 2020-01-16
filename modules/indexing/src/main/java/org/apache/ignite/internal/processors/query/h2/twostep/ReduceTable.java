@@ -67,7 +67,7 @@ public class ReduceTable extends TableBase {
      * @param idx Index.
      * @return Scan index.
      */
-    public static H2ScanIndex<ReduceIndex> createScanIndex(ReduceIndex idx, ReduceTable tbl) {
+    public static H2ScanIndex<AbstractReduceIndex> createScanIndex(AbstractReduceIndex idx, ReduceTable tbl) {
         return new H2ScanIndex<>(idx, tbl, "_SCAN_" + idx.getName());
     }
 

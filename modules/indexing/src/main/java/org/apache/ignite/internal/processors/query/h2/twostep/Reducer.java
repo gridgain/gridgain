@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Merge index.
  */
-public interface Reducer {
+interface Reducer {
     /**
      * Check if node with given nodeId is data source node for the index.
      *
@@ -49,7 +49,7 @@ public interface Reducer {
     /**
      * @return Return source nodes for this merge index.
      */
-    public Set<UUID> sources();
+    Set<UUID> sources();
 
     /**
      * Offer result page for reduce.
@@ -100,6 +100,6 @@ public interface Reducer {
          * @return 0 if both rows are equal, -1 if the first row is smaller,
          *         otherwise 1
          */
-        public int compareRows(SearchRow rowData, SearchRow compare);
+        int compareRows(SearchRow rowData, SearchRow compare);
     }
 }
