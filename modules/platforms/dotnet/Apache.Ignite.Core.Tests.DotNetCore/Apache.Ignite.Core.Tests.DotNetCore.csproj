@@ -97,8 +97,8 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Query\Linq\CacheLinqTestSimpleName.cs" Link="Cache\Query\Linq\CacheLinqTestSimpleName.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Query\Linq\CacheLinqTestSqlEscapeAll.cs" Link="Cache\Query\Linq\CacheLinqTestSqlEscapeAll.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\TestReferenceObject.cs" Link="Cache\TestReferenceObject.cs" />
-    <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\CacheDateTimeMetaTest.cs">
-      <Link>ThinClient\Cache\CacheDateTimeMetaTest.cs</Link>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\SerializableObjectsTest.cs">
+      <Link>ThinClient\Cache\SerializableObjectsTest.cs</Link>
     </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\PartitionAwarenessTest.cs">
       <Link>ThinClient\Cache\PartitionAwarenessTest.cs</Link>
