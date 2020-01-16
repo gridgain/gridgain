@@ -1354,6 +1354,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING = "IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING";
 
     /**
+     * Disable group state lazy store. Should be used for test purposes only.
+     */
+    public static final String IGNITE_DISABLE_GRP_STATE_LAZY_STORE = "IGNITE_DISABLE_GRP_STATE_LAZY_STORE";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {
