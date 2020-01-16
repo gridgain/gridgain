@@ -294,6 +294,7 @@ namespace Apache.Ignite.Core.Impl.Binary
             if (ignite != null)
             {
                 // TODO: BinaryProcessor.GetSchema retrieves BinaryType but does not cache it anywhere.
+                // Should we add caching on the level of BinaryProcessor? It is a bit too much, and leads to different behavior for thick and thin.
                 fieldIds = GetCachedSchema(hdr, ignite) ??
                            ignite.BinaryProcessor.GetSchema(hdr.TypeId, hdr.SchemaId);
             }
