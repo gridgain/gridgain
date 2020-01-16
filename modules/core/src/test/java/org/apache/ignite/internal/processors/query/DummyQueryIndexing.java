@@ -272,6 +272,11 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
+    @Override public void onKernalStart() {
+
+    }
+
+    /** {@inheritDoc} */
     @Override public void onKernalStop() {
 
     }

@@ -82,7 +82,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
 
         IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
 
-        assertEquals(10L * MB, h2.memoryManager().maxMemory());
+        assertEquals(10L * MB, h2.memoryManager().memoryLimit());
 
         try {
             CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
@@ -101,7 +101,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
 
             assertEquals(18, cursors.size());
 
-            assertTrue(h2.memoryManager().maxMemory() < h2.memoryManager().memoryReserved() + MB);
+            assertTrue(h2.memoryManager().memoryLimit() < h2.memoryManager().memoryReserved() + MB);
         }
         finally {
             for (QueryCursor c : cursors)
@@ -123,7 +123,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends Abstrac
         assertTrue(3000 > rowCount);
 
         Map<H2MemoryTracker, Long> collect = localResults.stream().collect(
-            Collectors.toMap(r -> r.getMemoryTracker(), r -> r.memoryReserved(), Long::sum));
+            Collectors.toMap(r -> r.memoryTracker(), r -> r.memoryReserved(), Long::sum));
         assertTrue(collect.values().stream().anyMatch(s -> s + 1000 > maxMem));
     }
 

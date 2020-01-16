@@ -23,9 +23,10 @@ public abstract class LocalResultFactory {
      * @param session the session
      * @param expressions the expression array
      * @param visibleColumnCount the number of visible columns
+     * @param system {@code True} if this is a system query.
      * @return object to collect local result.
      */
-    public abstract LocalResult create(Session session, Expression[] expressions, int visibleColumnCount);
+    public abstract LocalResult create(Session session, Expression[] expressions, int visibleColumnCount, boolean system);
 
     /**
      * Create a local result object.
@@ -45,7 +46,7 @@ public abstract class LocalResultFactory {
         }
 
         @Override
-        public LocalResult create(Session session, Expression[] expressions, int visibleColumnCount) {
+        public LocalResult create(Session session, Expression[] expressions, int visibleColumnCount, boolean system) {
             return new LocalResultImpl(session, expressions, visibleColumnCount);
         }
 

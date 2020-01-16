@@ -67,9 +67,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
     /** Logger. */
     private final IgniteLogger log;
 
-    /** */
-    private final LongBinaryOperator reserveOp;
-
     /** Global query memory quota. */
     //TODO GG-18629: it looks safe to make this configurable at runtime.
     private final long globalQuota;
@@ -80,6 +77,17 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /** Memory reserved by running queries. */
     private final AtomicLong reserved = new AtomicLong();
+
+    /**
+     * Defines an action that occurs when the memory limit is exceeded. Possible variants:
+     * <ul>
+     * <li>{@code true} - exception will be thrown.</li>
+     * <li>{@code false} - intermediate query results will be spilled to the disk.</li>
+     * </ul>
+     *
+     * Default: false.
+     */
+    private final boolean failOnMemLimitExceed;
 
     /**
      * Constructor.
@@ -100,9 +108,8 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (dfltMemLimit == 0)
             dfltMemLimit = globalQuota > 0 ? globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE : -1;
 
+        this.failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
         this.dfltSqlQryMemoryLimit = dfltMemLimit;
-
-        this.reserveOp = new ReservationOp(globalQuota);
 
         this.log = ctx.log(QueryMemoryManager.class);
 
@@ -110,19 +117,32 @@ public class QueryMemoryManager extends H2MemoryTracker {
     }
 
     /** {@inheritDoc} */
-    @Override public void reserve(long size) {
+    @Override public boolean reserved(long size) {
         if (size == 0)
-            return; // Nothing to do.
+            return true; // Nothing to do.
 
-        assert size > 0;
+        long reserved0 = reserved.addAndGet(size);
 
-        reserved.accumulateAndGet(size, reserveOp);
+        if (reserved0 >= globalQuota) {
+            reserved.addAndGet(-size);
+
+            if (failOnMemLimitExceed)
+                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
+                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            else {
+                return false;
+            }
+        }
 
         metrics.trackReserve(size);
+
+        return true;
     }
 
     /** {@inheritDoc} */
-    @Override public void release(long size) {
+    @Override public void released(long size) {
+        assert size >= 0;
+
         if (size == 0)
             return; // Nothing to do.
 
@@ -159,24 +179,17 @@ public class QueryMemoryManager extends H2MemoryTracker {
             maxQueryMemory = globalQuota;
         }
 
-        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory, Math.min(maxQueryMemory, blockSize));
+        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory,
+            Math.min(maxQueryMemory, blockSize), failOnMemLimitExceed);
     }
 
-    /**
-     * Gets memory reserved by running queries.
-     *
-     * @return Reserved memory in bytes.
-     */
-    public long memoryReserved() {
+    /** {@inheritDoc} */
+    @Override public long memoryReserved() {
         return reserved.get();
     }
 
-    /**
-     * Gets global memory limit for queries.
-     *
-     * @return Max memory in bytes.
-     */
-    public long maxMemory() {
+    /** {@inheritDoc} */
+    @Override public long memoryLimit() {
         return globalQuota;
     }
 
@@ -186,30 +199,5 @@ public class QueryMemoryManager extends H2MemoryTracker {
         // For now, it is ok as neither extra memory is actually hold with MemoryManager nor file descriptors are used.
         if (log.isDebugEnabled() && reserved.get() != 0)
             log.debug("Potential memory leak in SQL processor. Some query cursors were not closed or forget to free memory.");
-    }
-
-    /** */
-    private static class ReservationOp implements LongBinaryOperator {
-        /** Operation result high bound.*/
-        private final long limit;
-
-        /**
-         * Constructor.
-         * @param limit Operation result high bound.
-         */
-        ReservationOp(long limit) {
-            this.limit = limit;
-        }
-
-        /** {@inheritDoc} */
-        @Override public long applyAsLong(long prev, long x) {
-            long res = prev + x;
-
-            if (res > limit)
-                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
-                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
-
-            return res;
-        }
     }
 }

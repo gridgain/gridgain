@@ -1901,7 +1901,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param exp Expected.
      * @param act Actual.
      */
-    protected void assertEqualsCollections(Collection<?> exp, Collection<?> act) {
+    protected static void assertEqualsCollections(Collection<?> exp, Collection<?> act) {
         if (exp.size() != act.size())
             fail("Collections are not equal:\nExpected:\t" + exp + "\nActual:\t" + act);
 
