@@ -47,7 +47,7 @@ public class ReduceIndexIterator implements Iterator<List<?>>, AutoCloseable {
     private final boolean distributedJoins;
 
     /** Iterator over indexes. */
-    private final Iterator<ReduceIndex> idxIter;
+    private final Iterator<Reducer> idxIter;
 
     /** Current cursor. */
     private Cursor cursor;
@@ -127,7 +127,7 @@ public class ReduceIndexIterator implements Iterator<List<?>>, AutoCloseable {
 
             while (cursor == null || !(hasNext = cursor.next())) {
                 if (idxIter.hasNext())
-                    cursor = idxIter.next().findInStream(null, null);
+                    cursor = idxIter.next().find(null, null);
                 else {
                     releaseIfNeeded();
 

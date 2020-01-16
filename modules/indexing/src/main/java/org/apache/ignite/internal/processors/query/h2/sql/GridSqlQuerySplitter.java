@@ -288,7 +288,6 @@ public class GridSqlQuerySplitter {
             boolean allCollocated = true;
 
             for (GridCacheSqlQuery mapSqlQry : splitter.mapSqlQrys) {
-
                 Prepared prepared0 = prepare(
                     conn,
                     H2Utils.context(conn.connection()),
@@ -308,6 +307,7 @@ public class GridSqlQuerySplitter {
 
         List<Integer> cacheIds = H2Utils.collectCacheIds(idx, null, splitter.tbls);
         boolean mvccEnabled = H2Utils.collectMvccEnabled(idx, cacheIds);
+        boolean replicatedOnly = splitter.mapSqlQrys.stream().noneMatch(GridCacheSqlQuery::isPartitioned);
 
         H2Utils.checkQuery(idx, cacheIds, splitter.tbls);
 
@@ -321,6 +321,7 @@ public class GridSqlQuerySplitter {
             splitter.skipMergeTbl,
             explain,
             distributedJoins,
+            replicatedOnly,
             splitter.extractor.mergeMapQueries(splitter.mapSqlQrys),
             cacheIds,
             mvccEnabled,
