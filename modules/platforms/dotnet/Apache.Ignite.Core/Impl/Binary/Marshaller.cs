@@ -399,6 +399,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 var metas0 = new Dictionary<int, BinaryTypeHolder>(_metas);
 
                 holder = new BinaryTypeHolder(meta.TypeId, meta.TypeName, meta.AffinityKeyFieldName, meta.IsEnum, this);
+                holder.Merge(meta);
 
                 metas0[meta.TypeId] = holder;
 
