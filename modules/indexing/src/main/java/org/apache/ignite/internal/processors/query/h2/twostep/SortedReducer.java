@@ -29,7 +29,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -46,32 +45,11 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyIterator;
 import static java.util.Objects.requireNonNull;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MERGE_TABLE_MAX_SIZE;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE;
-import static org.apache.ignite.IgniteSystemProperties.getInteger;
 
 /**
  * Sorted merge index.
  */
 public class SortedReducer extends BaseReducer {
-    /** */
-    private static final int MAX_FETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_MAX_SIZE, 10_000);
-
-    /** */
-    private static final int PREFETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE, 1024);
-
-    static {
-        if (!U.isPow2(PREFETCH_SIZE)) {
-            throw new IllegalArgumentException(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE + " (" + PREFETCH_SIZE +
-                ") must be positive and a power of 2.");
-        }
-
-        if (PREFETCH_SIZE >= MAX_FETCH_SIZE) {
-            throw new IllegalArgumentException(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE + " (" + PREFETCH_SIZE +
-                ") must be less than " + IGNITE_SQL_MERGE_TABLE_MAX_SIZE + " (" + MAX_FETCH_SIZE + ").");
-        }
-    }
-
     /** */
     protected final Comparator<SearchRow> firstRowCmp = new Comparator<SearchRow>() {
         @SuppressWarnings("ComparatorMethodParameterNotUsed")
@@ -126,13 +104,8 @@ public class SortedReducer extends BaseReducer {
     /** */
     private MergeStreamIterator it;
 
-    /**
-     * Will be r/w from query execution thread only, does not need to be threadsafe.
-     */
-    private final ReduceBlockList<Row> fetched;
 
-    /** */
-    private Row lastEvictedRow;
+
 
     /**
      *  Constructor.
@@ -145,7 +118,6 @@ public class SortedReducer extends BaseReducer {
 
         this.rowComparator = rowComparator;
 
-        fetched = new ReduceBlockList<>(PREFETCH_SIZE);
     }
 
     /**
@@ -188,13 +160,8 @@ public class SortedReducer extends BaseReducer {
     }
 
     /** {@inheritDoc} */
-    @Override public Cursor find(@Nullable SearchRow first, @Nullable SearchRow last) {
-        checkBounds(lastEvictedRow, first, last);
-
-        if (fetchedAll())
-            return findAllFetched(fetched, first, last);
-
-        return find(first, last);
+    @Override protected Cursor findInStream(@Nullable SearchRow first, @Nullable SearchRow last) {
+        return new FetchingCursor(first, last, it);
     }
 
     /** {@inheritDoc} */
@@ -231,8 +198,7 @@ public class SortedReducer extends BaseReducer {
         if (lastEvictedRow != null && first != null && compareRows(lastEvictedRow, first) < 0)
             return;
 
-        if (lastEvictedRow != null)
-            throw new IgniteException("Fetched result set was too large.");
+        super.checkBounds(lastEvictedRow, first, last);
     }
 
     /** {@inheritDoc} */
@@ -256,24 +222,6 @@ public class SortedReducer extends BaseReducer {
 
             streamsMap.get(src)[page.segmentId()].addPage(page);
         }
-    }
-
-    /**
-     * @param evictedBlock Evicted block.
-     */
-    private void onBlockEvict(List<Row> evictedBlock) {
-        assert evictedBlock.size() == PREFETCH_SIZE;
-
-        // Remember the last row (it will be max row) from the evicted block.
-        lastEvictedRow = requireNonNull(last(evictedBlock));
-    }
-
-    /**
-     * @param l List.
-     * @return Last element.
-     */
-    public static <Z> Z last(List<Z> l) {
-        return l.get(l.size() - 1);
     }
 
     /**
@@ -467,31 +415,31 @@ public class SortedReducer extends BaseReducer {
     /**
      * Fetching cursor.
      */
-    class FetchingCursor implements Cursor {
+    private class FetchingCursor implements Cursor {
         /** */
-        Iterator<Row> stream;
+        private Iterator<Row> stream;
 
         /** */
-        List<Row> rows;
+        private List<Row> rows;
 
         /** */
-        int cur;
+        private int cur;
 
         /** */
-        SearchRow first;
+        private SearchRow first;
 
         /** */
-        SearchRow last;
+        private SearchRow last;
 
         /** */
-        int lastFound = Integer.MAX_VALUE;
+        private int lastFound = Integer.MAX_VALUE;
 
         /**
          * @param first Lower bound.
          * @param last Upper bound.
          * @param stream Stream of all the rows from remote nodes.
          */
-        public FetchingCursor(SearchRow first, SearchRow last, Iterator<Row> stream) {
+         FetchingCursor(SearchRow first, SearchRow last, Iterator<Row> stream) {
             assert stream != null;
 
             // Initially we will use all the fetched rows, after we will switch to the last block.
@@ -599,6 +547,9 @@ public class SortedReducer extends BaseReducer {
 
         /** {@inheritDoc} */
         @Override public boolean next() {
+            if (cur == Integer.MAX_VALUE)
+                return false;
+
             if (++cur == rows.size())
                 fetchRows();
 

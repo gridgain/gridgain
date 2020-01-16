@@ -27,20 +27,45 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import javax.cache.CacheException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageResponse;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.index.Cursor;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.requireNonNull;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MERGE_TABLE_MAX_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE;
+import static org.apache.ignite.IgniteSystemProperties.getInteger;
+
 /**
  * Merge index.
  */
 abstract class BaseReducer implements Reducer {
+    /** */
+    protected static final int MAX_FETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_MAX_SIZE, 10_000);
+
+    /** */
+    protected static final int PREFETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE, 1024);
+
+    static {
+        if (!U.isPow2(PREFETCH_SIZE)) {
+            throw new IllegalArgumentException(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE + " (" + PREFETCH_SIZE +
+                ") must be positive and a power of 2.");
+        }
+
+        if (PREFETCH_SIZE >= MAX_FETCH_SIZE) {
+            throw new IllegalArgumentException(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE + " (" + PREFETCH_SIZE +
+                ") must be less than " + IGNITE_SQL_MERGE_TABLE_MAX_SIZE + " (" + MAX_FETCH_SIZE + ").");
+        }
+    }
+
     /** */
     private static final AtomicReferenceFieldUpdater<BaseReducer, ConcurrentMap> LAST_PAGES_UPDATER =
         AtomicReferenceFieldUpdater.newUpdater(BaseReducer.class, ConcurrentMap.class, "lastPages");
@@ -58,6 +83,11 @@ abstract class BaseReducer implements Reducer {
     /** */
     private int pageSize;
 
+    /**
+     * Will be r/w from query execution thread only, does not need to be threadsafe.
+     */
+    protected final ReduceBlockList<Row> fetched;
+
     /** */
     private Row lastEvictedRow;
 
@@ -68,6 +98,8 @@ abstract class BaseReducer implements Reducer {
      */
     BaseReducer(GridKernalContext ctx) {
         this.ctx = ctx;
+
+        fetched = new ReduceBlockList<>(PREFETCH_SIZE);
     }
 
     /** {@inheritDoc} */
@@ -116,7 +148,48 @@ abstract class BaseReducer implements Reducer {
         });
     }
 
+    /** {@inheritDoc} */
+    @Override public final Cursor find(@Nullable SearchRow first, @Nullable SearchRow last) {
+        checkBounds(lastEvictedRow, first, last);
+
+        if (fetchedAll())
+            return findAllFetched(fetched, first, last);
+
+        return findInStream(first, last);
+    }
+
+    protected abstract Cursor findInStream(@Nullable SearchRow first, @Nullable SearchRow last);
+
     protected abstract Cursor findAllFetched(List<Row> fetched, @Nullable SearchRow first, @Nullable SearchRow last);
+
+    /**
+     * @param lastEvictedRow Last evicted fetched row.
+     * @param first Lower bound.
+     * @param last Upper bound.
+     */
+    protected void checkBounds(Row lastEvictedRow, SearchRow first, SearchRow last) {
+        if (lastEvictedRow != null)
+            throw new IgniteException("Fetched result set was too large.");
+    }
+
+    /**
+     * @param evictedBlock Evicted block.
+     */
+    protected void onBlockEvict(List<Row> evictedBlock) {
+        assert evictedBlock.size() == PREFETCH_SIZE;
+
+        // Remember the last row (it will be max row) from the evicted block.
+        lastEvictedRow = requireNonNull(last(evictedBlock));
+    }
+
+    /**
+     * @param l List.
+     * @return Last element.
+     */
+    public static <Z> Z last(List<Z> l) {
+        return l.get(l.size() - 1);
+    }
+
 
     /** {@inheritDoc} */
     @Override public void addPage(ReduceResultPage page) {
@@ -265,7 +338,6 @@ abstract class BaseReducer implements Reducer {
 
         return page;
     }
-
 
     /**
      * Pollable.

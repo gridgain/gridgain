@@ -112,7 +112,7 @@ public class UnsortedReducer extends BaseReducer {
     }
 
     /** {@inheritDoc} */
-    @Override public Cursor find(SearchRow first, SearchRow last) {
+    @Override protected Cursor findInStream(SearchRow first, SearchRow last) {
         // This index is unsorted: have to ignore bounds.
         return new FetchingCursor(new Iterator<Row>() {
             @Override public boolean hasNext() {
@@ -134,40 +134,68 @@ public class UnsortedReducer extends BaseReducer {
     /**
      * Fetching cursor.
      */
-    static class FetchingCursor implements Cursor {
+    private class FetchingCursor implements Cursor {
         /** */
         private Iterator<Row> stream;
 
         /** */
-        private Row fetched;
+        private List<Row> rows;
+
+        /** */
+        private int cur;
 
         /**
-         * Constructor.
-         *
          * @param stream Stream of all the rows from remote nodes.
          */
-        FetchingCursor(Iterator<Row> stream) {
+         FetchingCursor(Iterator<Row> stream) {
             assert stream != null;
 
+            // Initially we will use all the fetched rows, after we will switch to the last block.
+            rows = fetched;
+
             this.stream = stream;
+
+            cur--; // Set current position before the first row.
+        }
+
+        /**
+         * Fetch rows from the stream.
+         */
+        private void fetchRows() {
+            // Take the current last block and set the position after last.
+            rows = fetched.lastBlock();
+            cur = rows.size();
+
+            // Fetch stream.
+            if (stream.hasNext()) {
+                fetched.add(requireNonNull(stream.next()));
+
+                // Evict block if we've fetched too many rows.
+                if (fetched.size() == MAX_FETCH_SIZE) {
+                    onBlockEvict(fetched.evictFirstBlock());
+
+                    assert fetched.size() < MAX_FETCH_SIZE;
+                }
+            }
+
+            if (cur == rows.size())
+                cur = Integer.MAX_VALUE; // We were not able to fetch anything. Done.
         }
 
         /** {@inheritDoc} */
         @Override public boolean next() {
-            if (stream.hasNext()) {
-                fetched = requireNonNull(stream.next());
+            if (cur == Integer.MAX_VALUE)
+                return false;
 
-                return true;
-            }
-            else
-                fetched = null;
+            if (++cur == rows.size())
+                fetchRows();
 
-            return false;
+            return cur < Integer.MAX_VALUE;
         }
 
         /** {@inheritDoc} */
         @Override public Row get() {
-            return requireNonNull(fetched);
+            return rows.get(cur);
         }
 
         /** {@inheritDoc} */
@@ -181,6 +209,7 @@ public class UnsortedReducer extends BaseReducer {
             throw DbException.getUnsupportedException("previous");
         }
     }
+
 
     /**
      *
