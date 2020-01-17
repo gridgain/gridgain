@@ -23,7 +23,7 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
     /// <summary>
     /// Tests <see cref="DynamicFieldSetSerializable"/> serialization.
     /// </summary>
-    public class TestDynamicFieldSet
+    public class DynamicFieldSetTest
     {
         /** */
         private IIgnite _node1;
