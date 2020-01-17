@@ -16,6 +16,8 @@
 
 namespace Apache.Ignite.Core.Tests.Binary.Serializable
 {
+    using System.Collections.Generic;
+    using System.Linq;
     using NUnit.Framework;
 
     /// <summary>
@@ -62,16 +64,15 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
             var cache1 = _node1.CreateCache<int, DynamicFieldSetSerializable>("c");
             var cache2 = _node2.GetCache<int, DynamicFieldSetSerializable>("c");
             
-            var bin1 = _node1.GetBinary();
-            var bin2 = _node2.GetBinary();
-            
             // Put/get without optional fields.
             var noFields = new DynamicFieldSetSerializable();
             cache1[1] = noFields;
             
             AssertEqual(noFields, cache1[1]);
             AssertEqual(noFields, cache2[1]);
-            Assert.AreEqual(new[] {"1", "2"}, bin1.GetBinaryType(typeof(DynamicFieldSetSerializable)).Fields);
+
+            Assert.AreEqual(new[] {"WriteBar", "WriteFoo"}, GetFields(0));
+            Assert.AreEqual(new[] {"WriteBar", "WriteFoo"}, GetFields(1));
             
             // Put/get with one optional field.
             var oneField = new DynamicFieldSetSerializable
@@ -83,6 +84,8 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
             
             AssertEqual(oneField, cache1[2]);
             AssertEqual(oneField, cache2[2]);
+            Assert.AreEqual(new[] {"Bar", "WriteBar", "WriteFoo"}, GetFields(0));
+            Assert.AreEqual(new[] {"Bar", "WriteBar", "WriteFoo"}, GetFields(1));
             
             // Put/get with another optional field.
             var oneField2 = new DynamicFieldSetSerializable
@@ -94,6 +97,23 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
             
             AssertEqual(oneField2, cache1[3]);
             AssertEqual(oneField2, cache2[3]);
+            
+            Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFields(0));
+            Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFields(1));
+        }
+
+        /// <summary>
+        /// Gets the fields.
+        /// </summary>
+        private IEnumerable<string> GetFields(int nodeIndex)
+        {
+            var node = nodeIndex == 0 ? _node1 : _node2;
+            
+            return node
+                .GetBinary()
+                .GetBinaryType(typeof(DynamicFieldSetSerializable))
+                .Fields
+                .OrderBy(f => f);
         }
 
         /// <summary>
