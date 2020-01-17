@@ -109,6 +109,7 @@
     <Compile Include="Binary\EnumsTestOnline.cs" />
     <Compile Include="Binary\Serializable\DynamicFieldSetSerializable.cs" />
     <Compile Include="Binary\Serializable\GenericCollectionsTest.cs" />
+    <Compile Include="Binary\Serializable\TestDynamicFieldSet.cs" />
     <Compile Include="Cache\Affinity\AffinityAttributeTest.cs" />
     <Compile Include="Cache\CacheCreateTest.cs" />
     <Compile Include="Cache\CacheQueryMetricsTest.cs" />
