@@ -99,7 +99,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.util.IgniteUtils.resolveIgnitePath;
 
 /**
- * Test KILL QUERY requested from the same node where quere was executed.
+ * Test KILL QUERY requested from the same node where query was executed.
  */
 @SuppressWarnings({"ThrowableNotThrown", "AssertWithSideEffects"})
 @RunWith(Parameterized.class)
@@ -662,15 +662,15 @@ public class KillQueryTest extends GridCommonAbstractTest {
     public void testCancelLocalQueryNative() throws Exception {
         IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
 
-        GridTestUtils.assertThrows(log, () -> {
+        GridTestUtils.assertThrowsAnyCause(log, () -> {
             ignite.cache(DEFAULT_CACHE_NAME).query(
                 new SqlFieldsQuery("select * from Integer where _key in " +
-                    "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledInCaseOfCancellation()")
+                    "(select _key from Integer where awaitLatchCancelled() = 0) and shouldNotBeCalledMoreThan(128)")
                     .setLocal(true)
             ).getAll();
 
             return null;
-        }, CacheException.class, "The query was cancelled while executing.");
+        }, QueryCancelledException.class, "The query was cancelled while executing.");
 
         // Ensures that there were no exceptions within async cancellation process.
         cancelRes.get(CHECK_RESULT_TIMEOUT);

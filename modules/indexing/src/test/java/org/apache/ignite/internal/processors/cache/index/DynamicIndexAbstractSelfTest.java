@@ -416,7 +416,9 @@ public abstract class DynamicIndexAbstractSelfTest extends AbstractSchemaSelfTes
         }
         catch (Exception e) {
             for (Throwable th = e; th != null; th = th.getCause()) {
-                if (th.getMessage().contains(CONC_DESTROY_MSG))
+                if (th.getMessage() != null && (
+                        th.getMessage().contains(CONC_DESTROY_MSG)
+                        || th.getMessage().contains("Table was modified concurrently (please retry the query): ")))
                     return;
             }
 

@@ -109,7 +109,10 @@ public enum IgniteFeatures {
     TRACING(26),
 
     /***/
-    MANAGEMENT_CONSOLE(28);
+    MANAGEMENT_CONSOLE(28),
+
+    /** Long operations dump timeout. */
+    LONG_OPERATIONS_DUMP_TIMEOUT(30);
 
     /**
      * Unique feature identifier.

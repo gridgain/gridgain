@@ -97,7 +97,7 @@ namespace Apache.Ignite.Core.Tests
 
             try
             {
-                IgniteProcess.AttachProcessConsoleReader(proc);
+                proc.AttachProcessConsoleReader();
 
                 Assert.IsTrue(proc.WaitForExit(30000));
                 Assert.AreEqual(0, proc.ExitCode);

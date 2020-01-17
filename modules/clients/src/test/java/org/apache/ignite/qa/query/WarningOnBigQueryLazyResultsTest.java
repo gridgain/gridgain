@@ -14,21 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.dto.action;
+package org.apache.ignite.qa.query;
 
 /**
- * Action status.
+ * Tests for log print for long running query.
  */
-public enum ActionStatus {
-    /** Action is running. */
-    RUNNING,
-
-    /** Action completed. */
-    COMPLETED,
-
-    /** Action canceled. */
-    CANCELED,
-
-    /** Action failed with error. */
-    FAILED
+public class WarningOnBigQueryLazyResultsTest extends WarningOnBigQueryResultsTest {
+    /** {@inheritDoc} */
+    @Override protected boolean lazy() {
+        return true;
+    }
 }

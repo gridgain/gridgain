@@ -150,6 +150,7 @@ public class ValueExpression extends Expression {
         case ExpressionVisitor.QUERY_COMPARABLE:
         case ExpressionVisitor.GET_COLUMNS1:
         case ExpressionVisitor.GET_COLUMNS2:
+        case ExpressionVisitor.CLEANUP:
             return true;
         default:
             throw DbException.throwInternalError("type=" + visitor.getType());

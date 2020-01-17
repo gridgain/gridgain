@@ -26,20 +26,31 @@ import java.util.stream.Stream;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.agent.action.Session;
+import org.apache.ignite.agent.dto.action.JobResponse;
+import org.apache.ignite.agent.dto.action.ResponseError;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.GridProcessor;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
+import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
+import org.apache.ignite.plugin.security.SecurityException;
 import org.apache.ignite.plugin.security.SecurityPermission;
 
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.AUTHORIZE_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.Status.FAILED;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.util.typedef.X.hasCause;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_CLIENT;
 
 /**
@@ -64,7 +75,7 @@ public final class AgentUtils {
      * @param clusterId Cluster ID.
      */
     public static String monitoringUri(String srvUri, UUID clusterId) {
-        return srvUri + "/clusters/" + clusterId + "/monitoring-dashboard";
+        return URI.create(srvUri + "/clusters/" + clusterId + "/monitoring-dashboard").normalize().toString();
     }
 
     /**
@@ -213,5 +224,54 @@ public final class AgentUtils {
                 // No-op.
             }
         }
+    }
+
+    /**
+     * @param id Id.
+     * @param nodeConsistentId Node consistent id.
+     * @param e Exception.
+     */
+    public static JobResponse convertToErrorJobResponse(UUID id, String nodeConsistentId, Throwable e) {
+        return new JobResponse()
+            .setRequestId(id)
+            .setStatus(FAILED)
+            .setError(new ResponseError(getErrorCode(e), e.getMessage(), e.getStackTrace()))
+            .setNodeConsistentId(nodeConsistentId);
+    }
+
+    /**
+     * @param e Exception.
+     * @return Integer error code.
+     */
+    public static int getErrorCode(Throwable e) {
+        if (e instanceof SecurityException || hasCause(e, SecurityException.class))
+            return AUTHORIZE_ERROR_CODE;
+        else if (e instanceof IgniteAuthenticationException ||
+            e instanceof IgniteAccessControlException ||
+            hasCause(e, IgniteAuthenticationException.class, IgniteAccessControlException.class)
+        )
+            return AUTHENTICATION_ERROR_CODE;
+        else if (e instanceof IllegalArgumentException)
+            return PARSE_ERROR_CODE;
+
+        return INTERNAL_ERROR_CODE;
+    }
+
+    /**
+     * @return Username of HTTP/HTTP proxy.
+     */
+    public static String getProxyUsername() {
+        String httpsProxyUsername = System.getProperty("https.proxyUsername");
+
+        return F.isEmpty(httpsProxyUsername) ? System.getProperty("http.proxyUsername") : httpsProxyUsername;
+    }
+
+    /**
+     * @return Password of HTTP/HTTP proxy.
+     */
+    public static String getProxyPassword() {
+        String httpsProxyPwd = System.getProperty("https.proxyPassword");
+
+        return F.isEmpty(httpsProxyPwd) ? System.getProperty("http.proxyPassword") : httpsProxyPwd;
     }
 }

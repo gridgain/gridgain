@@ -49,6 +49,11 @@ class AggregateDataSelectivity extends AggregateData {
     }
 
     @Override
+    public void mergeAggregate(Session ses, AggregateData agg) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     Value getValue(Database database, int dataType) {
         if (distinct) {
             count = 0;
@@ -65,6 +70,11 @@ class AggregateDataSelectivity extends AggregateData {
         }
         v = ValueInt.get(s);
         return v.convertTo(dataType);
+    }
+
+    @Override
+    public long getMemory() {
+        throw new UnsupportedOperationException();
     }
 
 }

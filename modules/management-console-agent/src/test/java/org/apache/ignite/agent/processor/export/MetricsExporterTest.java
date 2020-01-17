@@ -26,6 +26,9 @@ import org.apache.ignite.agent.dto.metric.MetricSchema;
 import org.apache.ignite.agent.dto.metric.MetricValueConsumer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
@@ -73,6 +76,72 @@ public class MetricsExporterTest {
     }
 
     /** */
+    @Test
+    public void testDeserializeResponseFromByteArray() {
+        UUID clusterId = UUID.randomUUID();
+
+        String consistentId = "testConsistentId";
+
+        Map<String, MetricRegistry> metrics = generateMetrics();
+
+        MetricResponse msg = exporter.metricMessage(clusterId, "tag", consistentId, metrics);
+
+        MetricResponse newRes = new MetricResponse(msg.body());
+
+        Map<String, Byte> map = new HashMap<>();
+
+        for (MetricRegistry reg : generateMetrics().values()) {
+            for (Metric m : reg) {
+                byte type = -1;
+
+                if (m instanceof BooleanMetric)
+                    type = 0;
+                else if (m instanceof IntMetric)
+                    type = 1;
+                else if (m instanceof LongMetric)
+                    type = 2;
+                else if (m instanceof DoubleMetric)
+                    type = 3;
+                else if (m instanceof LongAdderMetric)
+                    type = 2;
+
+                if (m instanceof HitRateMetric)
+                    map.put(m.name() + ".60000", (byte)2);
+                else if (m instanceof HistogramMetric) {
+                    map.put(m.name() + ".60000", (byte)2);
+                    map.put(m.name() + ".inf", (byte)2);
+                }
+                else {
+                    if (type == -1)
+                        throw new IllegalArgumentException("Unknown metric type.");
+
+                    map.put(m.name(), type);
+                }
+            }
+        }
+
+        newRes.processData(newRes.schema(), new MetricValueConsumer() {
+            @Override public void onBoolean(String name, boolean val) {
+                assertEquals((byte)0, (byte)map.remove(name));
+            }
+
+            @Override public void onInt(String name, int val) {
+                assertEquals((byte)1, (byte)map.remove(name));
+            }
+
+            @Override public void onLong(String name, long val) {
+                assertEquals((byte)2, (byte)map.remove(name));
+            }
+
+            @Override public void onDouble(String name, double val) {
+                assertEquals((byte)3, (byte)map.remove(name));
+            }
+        });
+
+        assertTrue(map.isEmpty());
+    }
+
+    /** */
     private void doTestResponse(String userTag) {
         UUID clusterId = UUID.randomUUID();
 
@@ -94,7 +163,7 @@ public class MetricsExporterTest {
 
         for (MetricRegistry reg : metrics.values()) {
             for (Metric m : reg) {
-                byte type;
+                byte type = -1;
 
                 if (m instanceof BooleanMetric)
                     type = 0;
@@ -104,10 +173,21 @@ public class MetricsExporterTest {
                     type = 2;
                 else if (m instanceof DoubleMetric)
                     type = 3;
-                else
-                    throw new IllegalArgumentException("Unknown metric type.");
+                else if (m instanceof LongAdderMetric)
+                    type = 2;
 
-                map.put(m.name(), type);
+                if (m instanceof HitRateMetric)
+                    map.put(m.name() + ".60000", (byte)2);
+                else if (m instanceof HistogramMetric) {
+                    map.put(m.name() + ".60000", (byte)2);
+                    map.put(m.name() + ".inf", (byte)2);
+                }
+                else {
+                    if (type == -1)
+                        throw new IllegalArgumentException("Unknown metric type.");
+
+                    map.put(m.name(), type);
+                }
             }
         }
 
@@ -129,7 +209,6 @@ public class MetricsExporterTest {
             }
         });
 
-
         assertTrue(map.isEmpty());
     }
 
@@ -150,7 +229,7 @@ public class MetricsExporterTest {
 
             metrics.put(grpName, reg);
 
-            for (int j = 0; j < 16;) {
+            for (int j = 0; j < 14;) {
                 reg.booleanMetric(namePref + "bool." + j++, "description");
 
                 reg.intMetric(namePref + "int." + j++, "description");
@@ -158,6 +237,12 @@ public class MetricsExporterTest {
                 reg.longMetric(namePref + "long." + j++, "description");
 
                 reg.doubleMetric(namePref + "double." + j++, "description");
+
+                reg.hitRateMetric(namePref + "hirtate." + j++, "description", 60_000, 10);
+
+                reg.longAdderMetric(namePref + "longadder." + j++, "description");
+
+                reg.histogram(namePref + "histogram." + j++, new long[] {60_000}, "description");
             }
         }
 

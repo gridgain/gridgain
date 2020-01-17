@@ -120,7 +120,18 @@ public interface Command<T> {
     /**
      * @return Value of {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND}
      */
-    public default boolean experimentalEnabled() {
+    default boolean experimentalEnabled() {
         return IgniteSystemProperties.getBoolean(IGNITE_ENABLE_EXPERIMENTAL_COMMAND, false);
+    }
+
+    /**
+     * Return {@code true} if the command is experimental or {@code false}
+     * otherwise.
+     *
+     * @return {@code true} if the command is experimental or {@code false}
+     *      otherwise.
+     */
+    default boolean experimental() {
+        return false;
     }
 }
