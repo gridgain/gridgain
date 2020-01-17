@@ -178,7 +178,7 @@ public class GridReduceQueryExecutor {
         UUID nodeId = evt.eventNode().id();
 
         for (ReduceQueryRun r : runs.values()) {
-            for (Reducer idx : r.indexes()) {
+            for (Reducer idx : r.reducers()) {
                 if (idx.hasSource(nodeId)) {
                     handleNodeLeft(r, nodeId);
 
@@ -254,7 +254,7 @@ public class GridReduceQueryExecutor {
 
         final int pageSize = r.pageSize();
 
-        Reducer idx = r.indexes().get(msg.query());
+        Reducer idx = r.reducers().get(msg.query());
 
         ReduceResultPage page;
 
@@ -709,10 +709,10 @@ public class GridReduceQueryExecutor {
         int tblIdx = 0;
         int replicatedQrysCnt = 0;
         for (GridCacheSqlQuery mapQry : mapQueries) {
-            Reducer idx;
+            Reducer reducer;
 
             if (skipMergeTbl)
-                idx = UnsortedReducer.createDummy(ctx);
+                reducer = UnsortedReducer.createDummy(ctx);
             else {
                 ReduceTable tbl;
 
@@ -723,7 +723,7 @@ public class GridReduceQueryExecutor {
                     throw new IgniteException(e);
                 }
 
-                idx = tbl.getMergeIndex();
+                reducer = tbl.getReducer();
 
                 fakeTable(conn, tblIdx++).innerTable(tbl);
             }
@@ -736,17 +736,17 @@ public class GridReduceQueryExecutor {
 
                 replicatedQrysCnt++;
 
-                idx.setSources(singletonList(node), 1); // Replicated tables can have only 1 segment.
+                reducer.setSources(singletonList(node), 1); // Replicated tables can have only 1 segment.
             }
             else
-                idx.setSources(nodes, segmentsPerIndex);
+                reducer.setSources(nodes, segmentsPerIndex);
 
-            idx.setPageSize(r.pageSize());
+            reducer.setPageSize(r.pageSize());
 
-            r.indexes().add(idx);
+            r.reducers().add(reducer);
         }
 
-        r.init( (r.indexes().size() - replicatedQrysCnt) * nodes.size() * segmentsPerIndex + replicatedQrysCnt);
+        r.init( (r.reducers().size() - replicatedQrysCnt) * nodes.size() * segmentsPerIndex + replicatedQrysCnt);
 
         return r;
     }
@@ -969,7 +969,7 @@ public class GridReduceQueryExecutor {
         if (distributedJoins)
             send(nodes, new GridQueryCancelRequest(qryReqId), null, true);
 
-        for (Reducer idx : r.indexes()) {
+        for (Reducer idx : r.reducers()) {
             if (!idx.fetchedAll()) {
                 if (!distributedJoins) // cancel request has been already sent for distributed join.
                     send(nodes, new GridQueryCancelRequest(qryReqId), null, true);
@@ -1220,20 +1220,20 @@ public class GridReduceQueryExecutor {
             ArrayList<Index> idxs = new ArrayList<>(2);
 
             if (explain) {
-                idxs.add(new ReduceIndexUnsorted(ctx, tbl,
+                idxs.add(new UnsortedReduceIndexAdapter(ctx, tbl,
                     sortedIndex ? MERGE_INDEX_SORTED : MERGE_INDEX_UNSORTED));
             }
             else if (sortedIndex) {
                 List<GridSqlSortColumn> sortCols = (List<GridSqlSortColumn>)qry.sortColumns();
 
-                ReduceIndexSorted sortedMergeIdx = new ReduceIndexSorted(ctx, tbl, MERGE_INDEX_SORTED,
+                SortedReduceIndexAdapter sortedMergeIdx = new SortedReduceIndexAdapter(ctx, tbl, MERGE_INDEX_SORTED,
                     GridSqlSortColumn.toIndexColumns(tbl, sortCols));
 
                 idxs.add(ReduceTable.createScanIndex(sortedMergeIdx, tbl));
                 idxs.add(sortedMergeIdx);
             }
             else
-                idxs.add(new ReduceIndexUnsorted(ctx, tbl, MERGE_INDEX_UNSORTED));
+                idxs.add(new UnsortedReduceIndexAdapter(ctx, tbl, MERGE_INDEX_UNSORTED));
 
             tbl.indexes(idxs);
 

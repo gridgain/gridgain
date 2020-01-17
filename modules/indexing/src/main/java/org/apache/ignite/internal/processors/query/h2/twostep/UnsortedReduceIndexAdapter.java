@@ -19,15 +19,16 @@ package org.apache.ignite.internal.processors.query.h2.twostep;
 import org.apache.ignite.internal.GridKernalContext;
 import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
+import org.h2.index.Index;
 import org.h2.index.IndexType;
 import org.h2.result.SortOrder;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 
 /**
- * Unsorted merge index.
+ * H2 {@link Index} adapter for {@link UnsortedReducer}.
  */
-public final class ReduceIndexUnsorted extends AbstractReduceIndex {
+public final class UnsortedReduceIndexAdapter extends AbstractReduceIndexAdapter {
     /** Index type. */
     private static final IndexType TYPE = IndexType.createScan(false);
 
@@ -39,7 +40,7 @@ public final class ReduceIndexUnsorted extends AbstractReduceIndex {
      * @param tbl Table.
      * @param name Index name.
      */
-    public ReduceIndexUnsorted(GridKernalContext ctx, ReduceTable tbl, String name) {
+    public UnsortedReduceIndexAdapter(GridKernalContext ctx, ReduceTable tbl, String name) {
         super(ctx, tbl, name, TYPE, IndexColumn.wrap(tbl.getColumns()));
 
         delegate = new UnsortedReducer(ctx);

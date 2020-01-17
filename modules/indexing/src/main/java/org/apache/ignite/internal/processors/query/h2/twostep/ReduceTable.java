@@ -59,15 +59,19 @@ public class ReduceTable extends TableBase {
     /**
      * @return Merge index.
      */
-    public Reducer getMergeIndex() {
-        return (Reducer)idxs.get(idxs.size() - 1); // Sorted index must be the last.
+    public Reducer getReducer() {
+        final Index index = idxs.get(idxs.size() - 1);
+
+        assert index instanceof AbstractReduceIndexAdapter;
+
+        return ((AbstractReduceIndexAdapter)index).reducer(); // Sorted index must be the last.
     }
 
     /**
      * @param idx Index.
      * @return Scan index.
      */
-    public static H2ScanIndex<AbstractReduceIndex> createScanIndex(AbstractReduceIndex idx, ReduceTable tbl) {
+    public static H2ScanIndex<AbstractReduceIndexAdapter> createScanIndex(AbstractReduceIndexAdapter idx, ReduceTable tbl) {
         return new H2ScanIndex<>(idx, tbl, "_SCAN_" + idx.getName());
     }
 

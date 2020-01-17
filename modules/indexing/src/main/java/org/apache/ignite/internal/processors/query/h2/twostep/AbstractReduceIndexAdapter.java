@@ -16,15 +16,11 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
-import java.util.Collection;
-import java.util.Set;
-import java.util.UUID;
-import javax.cache.CacheException;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.h2.engine.Session;
 import org.h2.index.BaseIndex;
 import org.h2.index.Cursor;
+import org.h2.index.Index;
 import org.h2.index.IndexType;
 import org.h2.message.DbException;
 import org.h2.result.Row;
@@ -33,9 +29,9 @@ import org.h2.table.IndexColumn;
 import org.h2.table.Table;
 
 /**
- * Merge index.
+ * H2 {@link Index} adapter base class.
  */
-public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
+public abstract class AbstractReduceIndexAdapter extends BaseIndex {
     /**
      * @param ctx  Context.
      * @param tbl  Table.
@@ -43,7 +39,7 @@ public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
      * @param type Type.
      * @param cols Columns.
      */
-    protected AbstractReduceIndex(GridKernalContext ctx,
+    protected AbstractReduceIndexAdapter(GridKernalContext ctx,
         Table tbl,
         String name,
         IndexType type,
@@ -53,27 +49,9 @@ public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
     }
 
     /**
-     * @param ctx Context.
-     * @param tbl Fake reduce table.
-     */
-    protected AbstractReduceIndex(GridKernalContext ctx, Table tbl) {
-        this(ctx, tbl, null, IndexType.createScan(false), null);
-    }
-
-    /**
      * @return Index reducer.
      */
-    protected abstract AbstractReducer reducer();
-
-    /** {@inheritDoc} */
-    @Override public Set<UUID> sources() {
-        return reducer().sources();
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean hasSource(UUID nodeId) {
-        return reducer().hasSource(nodeId);
-    }
+    abstract AbstractReducer reducer();
 
     /** {@inheritDoc} */
     @Override public long getRowCount(Session ses) {
@@ -93,38 +71,8 @@ public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
     }
 
     /** {@inheritDoc} */
-    @Override public void setSources(Collection<ClusterNode> nodes, int segmentsCnt) {
-        reducer().setSources(nodes, segmentsCnt);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void onFailure(UUID nodeId, final CacheException e) {
-        reducer().onFailure(nodeId, e);
-    }
-
-    /** {@inheritDoc} */
-    @Override public final void addPage(ReduceResultPage page) {
-        reducer().addPage(page);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void setPageSize(int pageSize) {
-        reducer().setPageSize(pageSize);
-    }
-
-    /** {@inheritDoc} */
     @Override public final Cursor find(Session ses, SearchRow first, SearchRow last) {
-        return find(first, last);
-    }
-
-    /** {@inheritDoc} */
-    @Override public Cursor find(SearchRow first, SearchRow last) {
         return reducer().find(first, last);
-    }
-
-    /** {@inheritDoc} */
-    @Override public boolean fetchedAll() {
-        return reducer().fetchedAll();
     }
 
     /** {@inheritDoc} */

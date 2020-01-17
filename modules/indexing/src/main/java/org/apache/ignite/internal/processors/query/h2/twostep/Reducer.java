@@ -27,7 +27,7 @@ import org.h2.result.SearchRow;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Merge index.
+ * Reducer for remote index lookup results.
  */
 interface Reducer {
     /**

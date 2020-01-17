@@ -46,7 +46,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MERGE_TABLE_PR
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 
 /**
- * Merge index.
+ * Base class for reducer of remote index lookup results.
  */
 public abstract class AbstractReducer implements Reducer {
     /** */

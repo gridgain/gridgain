@@ -181,7 +181,7 @@ public class ReduceQueryRun {
     /**
      * @return Indexes.
      */
-    List<Reducer> indexes() {
+    List<Reducer> reducers() {
         return idxs;
     }
 

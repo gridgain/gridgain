@@ -19,15 +19,16 @@ package org.apache.ignite.internal.processors.query.h2.twostep;
 import org.apache.ignite.internal.GridKernalContext;
 import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
+import org.h2.index.Index;
 import org.h2.index.IndexType;
 import org.h2.result.SortOrder;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableFilter;
 
 /**
- * Sorted index.
+ * H2 {@link Index} adapter for {@link SortedReducer}.
  */
-public final class ReduceIndexSorted extends AbstractReduceIndex {
+public final class SortedReduceIndexAdapter extends AbstractReduceIndexAdapter {
     /** */
     private static final IndexType TYPE = IndexType.createNonUnique(false);
 
@@ -40,7 +41,7 @@ public final class ReduceIndexSorted extends AbstractReduceIndex {
      * @param name Index name,
      * @param cols Columns.
      */
-    public ReduceIndexSorted(
+    public SortedReduceIndexAdapter(
         GridKernalContext ctx,
         ReduceTable tbl,
         String name,
