@@ -30,6 +30,8 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Client.Cache;
+    using Apache.Ignite.Core.Impl.Log;
+    using Apache.Ignite.Core.Log;
 
     /// <summary>
     /// Socket wrapper with reconnect/failover functionality: reconnects on failure.
@@ -69,6 +71,9 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Distribution map locker. */
         private readonly object _distributionMapSyncRoot = new object();
 
+        /** Logger. */
+        private readonly ILogger _logger;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ClientFailoverSocket"/> class.
         /// </summary>
@@ -97,8 +102,10 @@ namespace Apache.Ignite.Core.Impl.Client
                 throw new IgniteClientException("Failed to resolve all specified hosts.");
             }
 
+            _logger = (_config.Logger ?? NoopLogger.Instance).GetLogger(GetType());
+            
             Connect();
-        }
+       }
 
         /** <inheritdoc /> */
         public T DoOutInOp<T>(ClientOp opId, Action<IBinaryStream> writeAction, Func<IBinaryStream, T> readFunc,
@@ -284,8 +291,8 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 try
                 {
-                    _socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, null,
-                        OnAffinityTopologyVersionChange);
+                    _socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, 
+                        _config.ProtocolVersion, OnAffinityTopologyVersionChange);
 
                     endPoint.Socket = _socket;
 
@@ -306,6 +313,19 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 throw new AggregateException("Failed to establish Ignite thin client connection, " +
                                              "examine inner exceptions for details.", errors);
+            }
+
+            if (_socket != null &&
+                _config.EnablePartitionAwareness &&
+                _socket.ServerVersion < ClientOp.CachePartitions.GetMinVersion())
+            {
+                _config.EnablePartitionAwareness = false;
+
+                _logger.Warn("Partition awareness has been disabled: server protocol version {0} " +
+                             "is lower than required {1}",
+                    _socket.ServerVersion,
+                    ClientOp.CachePartitions.GetMinVersion()
+                );
             }
         }
 
@@ -483,8 +503,8 @@ namespace Apache.Ignite.Core.Impl.Client
                 {
                     try
                     {
-                        var socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, null,
-                            OnAffinityTopologyVersionChange);
+                        var socket = new ClientSocket(_config, endPoint.EndPoint, endPoint.Host, 
+                            _config.ProtocolVersion, OnAffinityTopologyVersionChange);
 
                         endPoint.Socket = socket;
                     }

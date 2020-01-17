@@ -31,18 +31,23 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MessageOrderLogListener;
+import org.apache.ignite.testframework.junits.SystemPropertiesRule;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.ClassRule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 
 /** */
 public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
+    /** Class rule. */
+    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
+
     /** */
     private static final String IDX_NAME = "A_IDX";
 
@@ -136,59 +141,53 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
     }
 
     /** */
+    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
     @Test
     public void testCorruptedTree() throws Exception {
-        boolean curSensVal = S.INCLUDE_SENSITIVE;
+        IgniteEx srv = startGrid(0);
+
+        srv.cluster().active(true);
+
+        IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        cache.query(new SqlFieldsQuery("create table a (col1 varchar primary key, col2 varchar) with " +
+            "\"CACHE_GROUP=" + GRP_NAME + "\""));
+        cache.query(new SqlFieldsQuery("create index " + IDX_NAME + " on a(col2)"));
+
+        failWithCorruptTree.set(true);
 
         try {
-            IgniteEx srv = startGrid(0);
+            cache.query(new SqlFieldsQuery("insert into a(col1, col2) values (1, ?1)")
+                .setArgs(VERY_SENS_STR_DATA));
 
-            srv.cluster().active(true);
-
-            GridTestUtils.setFieldValue(S.class.getField("INCLUDE_SENSITIVE"), false);
-
-            IgniteCache<Integer, Integer> cache = srv.getOrCreateCache(DEFAULT_CACHE_NAME);
-
-            cache.query(new SqlFieldsQuery("create table a (col1 varchar primary key, col2 varchar) with " +
-                "\"CACHE_GROUP=" + GRP_NAME + "\""));
-            cache.query(new SqlFieldsQuery("create index " + IDX_NAME + " on a(col2)"));
-
-            failWithCorruptTree.set(true);
-
-            try {
-                cache.query(new SqlFieldsQuery("insert into a(col1, col2) values (1, ?1)")
-                    .setArgs(VERY_SENS_STR_DATA));
-
-                fail("Cache operations are expected to fail");
-            }
-            catch (Throwable e) {
-                assertTrue(X.hasCause(e, CorruptedTreeException.class));
-            }
-
-            assertTrue(logListener.check());
-
-            assertFalse(logSensListener.check());
-
-            GridTestUtils.setFieldValue(S.class.getField("INCLUDE_SENSITIVE"), true);
-
-            logListener.reset();
-
-            logSensListener.reset();
-
-            try {
-                cache.query(new SqlFieldsQuery("insert into a(col1, col2) values (2, ?1)")
-                    .setArgs(VERY_SENS_STR_DATA));
-            }
-            catch (Throwable e) {
-                assertTrue(X.hasCause(e, CorruptedTreeException.class));
-            }
-
-            assertFalse(logListener.check());
-
-            assertTrue(logSensListener.check());
+            fail("Cache operations are expected to fail");
         }
-        finally {
-            GridTestUtils.setFieldValue(S.class.getField("INCLUDE_SENSITIVE"), curSensVal);
+        catch (Throwable e) {
+            assertTrue(X.hasCause(e, CorruptedTreeException.class));
         }
+
+        assertTrue(logListener.check());
+
+        assertFalse(logSensListener.check());
+
+        System.setProperty(IGNITE_TO_STRING_INCLUDE_SENSITIVE, Boolean.TRUE.toString());
+
+        clearGridToStringClassCache();
+
+        logListener.reset();
+
+        logSensListener.reset();
+
+        try {
+            cache.query(new SqlFieldsQuery("insert into a(col1, col2) values (2, ?1)")
+                .setArgs(VERY_SENS_STR_DATA));
+        }
+        catch (Throwable e) {
+            assertTrue(X.hasCause(e, CorruptedTreeException.class));
+        }
+
+        assertFalse(logListener.check());
+
+        assertTrue(logSensListener.check());
     }
 }

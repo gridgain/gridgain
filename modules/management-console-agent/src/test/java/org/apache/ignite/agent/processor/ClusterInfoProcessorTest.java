@@ -44,7 +44,7 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendInitialStates() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteClusterEx cluster = ignite.cluster();
 
@@ -77,7 +77,7 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendChangedClusterTopology() throws Exception {
         IgniteEx ignite = startGrid(0);
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteClusterEx cluster = ignite.cluster();
 
@@ -101,7 +101,7 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendChangedTopologyWhenBaselineWasChanged() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
 
-        changeManagementConsoleUri(ignite_1);
+        changeManagementConsoleConfig(ignite_1);
 
         ignite_1.cluster().baselineAutoAdjustEnabled(false);
 
@@ -139,7 +139,7 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendChangedActiveState() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
 
-        changeManagementConsoleUri(ignite_1);
+        changeManagementConsoleConfig(ignite_1);
 
         IgniteClusterEx cluster = ignite_1.cluster();
 

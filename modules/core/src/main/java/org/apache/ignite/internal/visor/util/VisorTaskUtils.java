@@ -1105,7 +1105,6 @@ public class VisorTaskUtils {
     }
 
     /**
-
      * Split addresses.
      *
      * @param s String with comma separted addresses.
