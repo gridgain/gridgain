@@ -25,7 +25,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlStatisticsHolderMemoryQuotas;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
@@ -67,9 +66,6 @@ public class QueryMemoryManager extends H2MemoryTracker {
     /** Logger. */
     private final IgniteLogger log;
 
-    /** */
-    private final LongBinaryOperator reserveOp;
-
     /** Global query memory quota. */
     //TODO GG-18629: it looks safe to make this configurable at runtime.
     private final long globalQuota;
@@ -80,6 +76,17 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
     /** Memory reserved by running queries. */
     private final AtomicLong reserved = new AtomicLong();
+
+    /**
+     * Defines an action that occurs when the memory limit is exceeded. Possible variants:
+     * <ul>
+     * <li>{@code true} - exception will be thrown.</li>
+     * <li>{@code false} - intermediate query results will be spilled to the disk.</li>
+     * </ul>
+     *
+     * Default: false.
+     */
+    private final boolean failOnMemLimitExceed;
 
     /**
      * Constructor.
@@ -102,27 +109,40 @@ public class QueryMemoryManager extends H2MemoryTracker {
 
         this.dfltSqlQryMemoryLimit = dfltMemLimit;
 
-        this.reserveOp = new ReservationOp(globalQuota);
-
         this.log = ctx.log(QueryMemoryManager.class);
 
         metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
+        // TODO GG-18629 - get from configuration.
+        this.failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
     }
 
     /** {@inheritDoc} */
-    @Override public void reserve(long size) {
+    @Override public boolean reserved(long size) {
         if (size == 0)
-            return; // Nothing to do.
+            return true; // Nothing to do.
 
-        assert size > 0;
+        long reserved0 = reserved.addAndGet(size);
 
-        reserved.accumulateAndGet(size, reserveOp);
+        if (reserved0 >= globalQuota) {
+            reserved.addAndGet(-size);
+
+            if (failOnMemLimitExceed)
+                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
+                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            else {
+                return false;
+            }
+        }
 
         metrics.trackReserve(size);
+
+        return true;
     }
 
     /** {@inheritDoc} */
-    @Override public void release(long size) {
+    @Override public void released(long size) {
+        assert size >= 0;
+
         if (size == 0)
             return; // Nothing to do.
 
@@ -143,15 +163,11 @@ public class QueryMemoryManager extends H2MemoryTracker {
     public QueryMemoryTracker createQueryMemoryTracker(long maxQueryMemory) {
         assert maxQueryMemory >= 0;
 
-        if (dfltSqlQryMemoryLimit < 0) {
-            if (log.isDebugEnabled())
-                LT.warn(log, "SQL memory management is disabled " + ((globalQuota > 0) ? "for query" : "on node"));
-
-            return null;
-        }
-
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
+
+        if (maxQueryMemory < 0)
+            return null;
 
         if (globalQuota > 0 && globalQuota < maxQueryMemory) {
             U.warn(log, "Max query memory can't exceeds SQL memory pool size. Will be reduced down to: " + globalQuota);
@@ -159,24 +175,17 @@ public class QueryMemoryManager extends H2MemoryTracker {
             maxQueryMemory = globalQuota;
         }
 
-        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory, Math.min(maxQueryMemory, blockSize));
+        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory,
+            Math.min(maxQueryMemory, blockSize), failOnMemLimitExceed);
     }
 
-    /**
-     * Gets memory reserved by running queries.
-     *
-     * @return Reserved memory in bytes.
-     */
-    public long memoryReserved() {
+    /** {@inheritDoc} */
+    @Override public long memoryReserved() {
         return reserved.get();
     }
 
-    /**
-     * Gets global memory limit for queries.
-     *
-     * @return Max memory in bytes.
-     */
-    public long maxMemory() {
+    /** {@inheritDoc} */
+    @Override public long memoryLimit() {
         return globalQuota;
     }
 
@@ -186,30 +195,5 @@ public class QueryMemoryManager extends H2MemoryTracker {
         // For now, it is ok as neither extra memory is actually hold with MemoryManager nor file descriptors are used.
         if (log.isDebugEnabled() && reserved.get() != 0)
             log.debug("Potential memory leak in SQL processor. Some query cursors were not closed or forget to free memory.");
-    }
-
-    /** */
-    private static class ReservationOp implements LongBinaryOperator {
-        /** Operation result high bound.*/
-        private final long limit;
-
-        /**
-         * Constructor.
-         * @param limit Operation result high bound.
-         */
-        ReservationOp(long limit) {
-            this.limit = limit;
-        }
-
-        /** {@inheritDoc} */
-        @Override public long applyAsLong(long prev, long x) {
-            long res = prev + x;
-
-            if (res > limit)
-                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
-                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
-
-            return res;
-        }
     }
 }

@@ -209,7 +209,7 @@ public class UndoLogRecord {
         int columnCount = buff.readInt();
         Value[] values = new Value[columnCount];
         for (int i = 0; i < columnCount; i++) {
-            values[i] = buff.readValue();
+            values[i] = (Value)buff.readValue();
         }
         row = getTable().getDatabase().createRow(values, Row.MEMORY_CALCULATE);
         row.setKey(key);
