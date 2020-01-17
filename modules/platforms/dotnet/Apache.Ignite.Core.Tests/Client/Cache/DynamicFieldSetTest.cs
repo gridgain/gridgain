@@ -72,6 +72,23 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFieldsServer());
             Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFieldsClient());
+            
+            // Put/get with both optional fields.
+            var twoField = new DynamicFieldSetSerializable
+            {
+                Bar = "x",
+                Foo = 42,
+                WriteBar = true,
+                WriteFoo = true
+            };
+            cache1[4] = twoField;
+
+            AssertExtensions.ReflectionEqual(twoField, cache1[4]);
+            AssertExtensions.ReflectionEqual(twoField, cache2[4]);
+            
+            // Re-check initial object without optional fields.
+            AssertExtensions.ReflectionEqual(noFields, cache1[1]);
+            AssertExtensions.ReflectionEqual(noFields, cache2[1]);
         }
 
         /// <summary>
