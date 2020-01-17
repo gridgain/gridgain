@@ -31,7 +31,6 @@ import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.TaskResponse;
 import org.apache.ignite.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
-import org.apache.ignite.agent.dto.action.query.RunningQueriesArgument;
 import org.apache.ignite.agent.dto.action.query.ScanQueryArgument;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
@@ -381,10 +380,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         Request req = new Request()
             .setAction("QueryActions.runningQueries")
             .setId(UUID.randomUUID())
-            .setArgument(
-                new RunningQueriesArgument()
-                    .setDuration(1)
-            );
+            .setArgument(1);
 
         executeAction(req, (res) -> {
             TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
@@ -440,10 +436,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         Request req = new Request()
             .setAction("QueryActions.runningQueries")
             .setId(UUID.randomUUID())
-            .setArgument(
-                new RunningQueriesArgument()
-                    .setDuration(1)
-            );
+            .setArgument(1);
 
         executeAction(req, (res) -> {
             TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);

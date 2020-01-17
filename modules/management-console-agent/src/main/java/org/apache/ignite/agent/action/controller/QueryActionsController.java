@@ -30,7 +30,6 @@ import org.apache.ignite.agent.action.query.QueryHolderRegistry;
 import org.apache.ignite.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryResult;
-import org.apache.ignite.agent.dto.action.query.RunningQueriesArgument;
 import org.apache.ignite.agent.dto.action.query.RunningQuery;
 import org.apache.ignite.agent.dto.action.query.ScanQueryArgument;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -203,13 +202,13 @@ public class QueryActionsController {
     }
 
     /**
-     * @param arg Argument.
+     * @param duration Duration in milliseconds.
      * @return List of running queries.
      */
-    public Collection<RunningQuery> runningQueries(RunningQueriesArgument arg) {
+    public Collection<RunningQuery> runningQueries(long duration) {
         long curTime = U.currentTimeMillis();
 
-        return ctx.query().runningQueries(arg.getDuration())
+        return ctx.query().runningQueries(duration)
             .stream()
             .map(q -> new RunningQuery()
                 .setId(q.id())
