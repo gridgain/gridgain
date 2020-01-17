@@ -47,12 +47,12 @@ import static org.apache.ignite.IgniteSystemProperties.getInteger;
 /**
  * Merge index.
  */
-abstract class BaseReducer implements Reducer {
+public abstract class BaseReducer implements Reducer {
     /** */
-    protected static final int MAX_FETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_MAX_SIZE, 10_000);
+    static final int MAX_FETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_MAX_SIZE, 10_000);
 
     /** */
-    protected static final int PREFETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE, 1024);
+    static final int PREFETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_PREFETCH_SIZE, 1024);
 
     static {
         if (!U.isPow2(PREFETCH_SIZE)) {
