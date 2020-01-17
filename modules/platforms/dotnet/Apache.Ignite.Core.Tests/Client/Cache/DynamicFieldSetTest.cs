@@ -14,46 +14,18 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Binary.Serializable
+namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System.Collections.Generic;
     using System.Linq;
+    using Apache.Ignite.Core.Tests.Binary.Serializable;
     using NUnit.Framework;
 
     /// <summary>
-    /// Tests <see cref="DynamicFieldSetSerializable"/> serialization.
+    /// Tests <see cref="DynamicFieldSetSerializable"/> serialization in thin client.
     /// </summary>
-    public class DynamicFieldSetTest
+    public class DynamicFieldSetTest : ClientTestBase
     {
-        /** */
-        private IIgnite _node1;
-        
-        /** */
-        private IIgnite _node2;
-        
-        /// <summary>
-        /// Sets up the test.
-        /// </summary>
-        [SetUp]
-        public void SetUp()
-        {
-            _node1 = Ignition.Start(TestUtils.GetTestConfiguration());
-            
-            _node2 = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
-            {
-                AutoGenerateIgniteInstanceName = true
-            });
-        }
-        
-        /// <summary>
-        /// Tears down the test.
-        /// </summary>
-        [TearDown]
-        public void TearDown()
-        {
-            Ignition.StopAll(true);
-        }
-        
         /// <summary>
         /// Tests that dynamically added and removed fields are deserialized correctly.
         /// This verifies proper metadata and schema handling.
@@ -61,19 +33,19 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
         [Test]
         public void TestAddRemoveFieldsDynamically()
         {
-            var cache1 = _node1.CreateCache<int, DynamicFieldSetSerializable>("c");
-            var cache2 = _node2.GetCache<int, DynamicFieldSetSerializable>("c");
-            
+            var cache1 = Ignition.GetIgnite().CreateCache<int, DynamicFieldSetSerializable>("c");
+            var cache2 = Client.GetCache<int, DynamicFieldSetSerializable>("c");
+
             // Put/get without optional fields.
             var noFields = new DynamicFieldSetSerializable();
             cache1[1] = noFields;
-            
+
             AssertExtensions.ReflectionEqual(noFields, cache1[1]);
             AssertExtensions.ReflectionEqual(noFields, cache2[1]);
 
-            Assert.AreEqual(new[] {"WriteBar", "WriteFoo"}, GetFields(0));
-            Assert.AreEqual(new[] {"WriteBar", "WriteFoo"}, GetFields(1));
-            
+            Assert.AreEqual(new[] {"WriteBar", "WriteFoo"}, GetFieldsServer());
+            Assert.AreEqual(new[] {"WriteBar", "WriteFoo"}, GetFieldsClient());
+
             // Put/get with one optional field.
             var oneField = new DynamicFieldSetSerializable
             {
@@ -81,12 +53,12 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
                 WriteBar = true
             };
             cache1[2] = oneField;
-            
+
             AssertExtensions.ReflectionEqual(oneField, cache1[2]);
             AssertExtensions.ReflectionEqual(oneField, cache2[2]);
-            Assert.AreEqual(new[] {"Bar", "WriteBar", "WriteFoo"}, GetFields(0));
-            Assert.AreEqual(new[] {"Bar", "WriteBar", "WriteFoo"}, GetFields(1));
-            
+            Assert.AreEqual(new[] {"Bar", "WriteBar", "WriteFoo"}, GetFieldsServer());
+            Assert.AreEqual(new[] {"Bar", "WriteBar", "WriteFoo"}, GetFieldsClient());
+
             // Put/get with another optional field.
             var oneField2 = new DynamicFieldSetSerializable
             {
@@ -94,22 +66,33 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
                 WriteFoo = true
             };
             cache1[3] = oneField2;
-            
+
             AssertExtensions.ReflectionEqual(oneField2, cache1[3]);
             AssertExtensions.ReflectionEqual(oneField2, cache2[3]);
-            
-            Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFields(0));
-            Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFields(1));
+
+            Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFieldsServer());
+            Assert.AreEqual(new[] {"Bar", "Foo", "WriteBar", "WriteFoo"}, GetFieldsClient());
         }
 
         /// <summary>
         /// Gets the fields.
         /// </summary>
-        private IEnumerable<string> GetFields(int nodeIndex)
+        private IEnumerable<string> GetFieldsServer()
         {
-            var node = nodeIndex == 0 ? _node1 : _node2;
-            
-            return node
+            return Ignition
+                .GetIgnite()
+                .GetBinary()
+                .GetBinaryType(typeof(DynamicFieldSetSerializable))
+                .Fields
+                .OrderBy(f => f);
+        }
+
+        /// <summary>
+        /// Gets the fields.
+        /// </summary>
+        private IEnumerable<string> GetFieldsClient()
+        {
+            return Client
                 .GetBinary()
                 .GetBinaryType(typeof(DynamicFieldSetSerializable))
                 .Fields
