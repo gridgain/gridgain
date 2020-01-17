@@ -107,6 +107,7 @@
     <Compile Include="Binary\BinaryReaderWriterTest.cs" />
     <Compile Include="Binary\BinarySelfTestSimpleName.cs" />
     <Compile Include="Binary\EnumsTestOnline.cs" />
+    <Compile Include="Binary\Serializable\DynamicFieldSetSerializable.cs" />
     <Compile Include="Binary\Serializable\GenericCollectionsTest.cs" />
     <Compile Include="Cache\Affinity\AffinityAttributeTest.cs" />
     <Compile Include="Cache\CacheCreateTest.cs" />
