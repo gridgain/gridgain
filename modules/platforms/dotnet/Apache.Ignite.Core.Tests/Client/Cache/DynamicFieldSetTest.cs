@@ -31,10 +31,18 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /// This verifies proper metadata and schema handling.
         /// </summary>
         [Test]
-        public void TestAddRemoveFieldsDynamically()
+        public void TestAddRemoveFieldsDynamically([Values(true, false)] bool clientToServer)
         {
-            var cache1 = Ignition.GetIgnite().CreateCache<int, DynamicFieldSetSerializable>("c");
+            var cache1 = Ignition.GetIgnite().CreateCache<int, DynamicFieldSetSerializable>("c").AsCacheClient();
             var cache2 = Client.GetCache<int, DynamicFieldSetSerializable>("c");
+
+            if (clientToServer)
+            {
+                // Swap caches to verify that metadata propagates both ways.
+                var tmp = cache1;
+                cache1 = cache2;
+                cache2 = tmp;
+            }
 
             // Put/get without optional fields.
             var noFields = new DynamicFieldSetSerializable();
