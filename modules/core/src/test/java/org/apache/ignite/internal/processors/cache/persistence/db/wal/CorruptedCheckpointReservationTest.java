@@ -20,6 +20,7 @@ import com.google.common.collect.Lists;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -35,6 +36,7 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.crc.WalTestUtils;
+import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.FilteredWalIterator;
@@ -44,6 +46,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_GRP_STATE_LAZY_STORE;
@@ -81,7 +84,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         DataStorageConfiguration dbCfg = new DataStorageConfiguration()
             .setWalMode(WALMode.LOG_ONLY)
-            .setWalSegmentSize(2 * 1024 * 1024)
+            .setWalSegmentSize(1024 * 1024)
             .setCheckpointFrequency(Integer.MAX_VALUE)
             .setWalCompactionEnabled(walCompactionEnabled)
             .setDefaultDataRegionConfiguration(
@@ -124,7 +127,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         generateCps(ig0);
 
-        corruptWalRecord(ig0, 3);
+        corruptWalRecord(ig0, 3, false);
 
         startGrid(1);
 
@@ -146,7 +149,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         generateCps(ig0);
 
-        corruptWalRecord(ig0, 3);
+        corruptWalRecord(ig0, 3, true);
 
         startGrid(1);
 
@@ -181,7 +184,7 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
     private void generateCps(IgniteEx ig) throws IgniteCheckedException {
         IgniteCache<Object, Object> cache = ig.cache(CACHE_NAME);
 
-        final int entryCnt = PARTS_CNT * 10000;
+        final int entryCnt = PARTS_CNT * 1000;
 
         for (int i = 0; i < entryCnt; i++)
             cache.put(i, i);
@@ -215,10 +218,32 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
      * @param ig Ignite.
      * @param cpIdx Checkpoint index.
      */
-    private void corruptWalRecord(IgniteEx ig, int cpIdx) throws IgniteCheckedException, IOException {
+    private void corruptWalRecord(IgniteEx ig, int cpIdx, boolean segmentCompressed) throws IgniteCheckedException, IOException {
         IgniteWriteAheadLogManager walMgr = ig.context().cache().context().wal();
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
+
+        Optional<FileDescriptor> cpSegment = getFileDescriptor(segmentCompressed, walMgr, corruptedCp);
+
+        if (segmentCompressed) {
+            assertTrue("Cannot find " + FilePageStoreManager.ZIP_SUFFIX + " segment for checkpoint.", cpSegment.isPresent());
+
+            WalTestUtils.corruptWalRecordInCompressedSegment(cpSegment.get(), corruptedCp);
+        }
+        else {
+            assertTrue("Cannot find " + FileDescriptor.WAL_SEGMENT_FILE_EXT + " segment for checkpoint.", cpSegment.isPresent());
+
+            WalTestUtils.corruptWalRecord(cpSegment.get(), corruptedCp);
+        }
+    }
+
+    /**
+     * @param segmentCompressed Segment compressed.
+     * @param walMgr Wal manager.
+     * @param corruptedCp Corrupted checkpoint.
+     */
+    @NotNull private Optional<FileDescriptor> getFileDescriptor(boolean segmentCompressed,
+        IgniteWriteAheadLogManager walMgr, FileWALPointer corruptedCp) {
 
         IgniteWalIteratorFactory iterFactory = new IgniteWalIteratorFactory();
 
@@ -226,12 +251,11 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         List<FileDescriptor> walFiles = getWalFiles(walArchiveDir, iterFactory);
 
-        FileDescriptor cpSegment = walFiles.stream().filter(w -> w.idx() == corruptedCp.index()).findFirst().get();
+        String suffix = segmentCompressed ? FilePageStoreManager.ZIP_SUFFIX : FileDescriptor.WAL_SEGMENT_FILE_EXT;
 
-        if (cpSegment.isCompressed())
-            WalTestUtils.corruptWalRecordInCompressedSegment(cpSegment, corruptedCp);
-        else
-            WalTestUtils.corruptWalRecord(cpSegment, corruptedCp);
+        return walFiles.stream().filter(
+            w -> w.idx() == corruptedCp.index() && w.file().getName().endsWith(suffix)
+        ).findFirst();
     }
 
     /**
@@ -243,15 +267,11 @@ public class CorruptedCheckpointReservationTest extends GridCommonAbstractTest {
 
         FileWALPointer corruptedCp = getCp(ig, cpIdx);
 
-        IgniteWalIteratorFactory iterFactory = new IgniteWalIteratorFactory();
+        Optional<FileDescriptor> cpSegment = getFileDescriptor(true, walMgr, corruptedCp);
 
-        File walArchiveDir = U.field(walMgr, "walArchiveDir");
+        assertTrue("Cannot find " + FilePageStoreManager.ZIP_SUFFIX + " segment for checkpoint.", cpSegment.isPresent());
 
-        List<FileDescriptor> walFiles = getWalFiles(walArchiveDir, iterFactory);
-
-        FileDescriptor cpSegment = walFiles.stream().filter(w -> w.idx() == corruptedCp.index()).findFirst().get();
-
-        WalTestUtils.corruptCompressedFile(cpSegment);
+        WalTestUtils.corruptCompressedFile(cpSegment.get());
     }
 
     /**
