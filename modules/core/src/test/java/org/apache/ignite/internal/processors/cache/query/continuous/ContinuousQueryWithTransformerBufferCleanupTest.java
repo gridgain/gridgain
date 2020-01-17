@@ -16,19 +16,29 @@
 
 package org.apache.ignite.internal.processors.cache.query.continuous;
 
+import javax.cache.configuration.Factory;
+import javax.cache.configuration.FactoryBuilder;
+import javax.cache.event.CacheEntryEvent;
 import org.apache.ignite.cache.query.AbstractContinuousQuery;
-import org.apache.ignite.cache.query.ContinuousQuery;
+import org.apache.ignite.cache.query.ContinuousQueryWithTransformer;
+import org.apache.ignite.lang.IgniteClosure;
 
 /**
- * Test for continuous query buffer cleanup.
+ * Test for continuous query with transformer buffer cleanup.
  */
-public class ContinuousQueryBufferCleanupTest extends ContinuousQueryBufferCleanupAbstractTest {
+public class ContinuousQueryWithTransformerBufferCleanupTest extends ContinuousQueryBufferCleanupAbstractTest {
     /** {@inheritDoc} */
     @Override
     protected AbstractContinuousQuery<Integer, String> getContinuousQuery() {
-        ContinuousQuery<Integer, String> qry = new ContinuousQuery<>();
+        ContinuousQueryWithTransformer<Integer, String, String> qry = new ContinuousQueryWithTransformer<>();
 
-        qry.setLocalListener((evts) -> evts.forEach(e -> System.out.println("key=" + e.getKey() + ", val=" + e.getValue())));
+        Factory factory = FactoryBuilder.factoryOf(
+            (IgniteClosure<CacheEntryEvent, String>)event -> ((String)event.getValue())
+        );
+
+        qry.setRemoteTransformerFactory(factory);
+
+        qry.setLocalListener((evts) -> evts.forEach(e -> System.out.println("val=" + e)));
 
         return qry;
     }
