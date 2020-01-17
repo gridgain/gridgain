@@ -1,48 +1,43 @@
 /*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-* contributor license agreements.  See the NOTICE file distributed with
-* this work for additional information regarding copyright ownership.
-* The ASF licenses this file to You under the Apache License, Version 2.0
-* (the "License"); you may not use this file except in compliance with
-* the License.  You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
-import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -56,6 +51,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
             ig,
             new VisorPartitionReconciliationTaskArg.Builder()
                 .caches(new HashSet<>(Arrays.asList(caches)))
+                .recheckDelay(1)
                 .fixMode(fixMode)
         );
     }
@@ -77,83 +73,42 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         );
     }
 
-    public static <T> Set<T> conflictKeys(
-        IgniteEx ig,
-        ReconciliationResult res,
-        String cacheName,
-        byte keyType
-    ) {
-        PartitionReconciliationResult res0 = res.partitionReconciliationResult();
-
-        HashSet<T> keys = new HashSet<>();
-
-        Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = res0.inconsistentKeys();
-
-        IgniteInternalCache<Object, Object> cachex = ig.cachex(cacheName);
-
-        CacheObjectContext coCtx = cachex.context().cacheObjectContext();
-
-        IgniteCacheObjectProcessor coProc = ig.context().cacheObjects();
-
-        for (Map.Entry<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> cacheEntry : inconsistentKeys.entrySet()) {
-            for (Map.Entry<Integer, List<PartitionReconciliationDataRowMeta>> partitionEntry : cacheEntry.getValue().entrySet()) {
-                for (PartitionReconciliationDataRowMeta meta : partitionEntry.getValue()) {
-                    try {
-                        Object key = coProc.toKeyCacheObject(coCtx, keyType, meta.keyMeta().binaryView());
-
-                        keys.add((T)key);
-                    }
-                    catch (IgniteCheckedException e) {
-                        throw new IgniteException(e);
-                    }
-                }
-            }
-        }
-
-        return keys;
+    /**
+     *
+     */
+    public static Set<Integer> conflictKeys(ReconciliationResult res, String cacheName) {
+        return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(PartitionReconciliationDataRowMeta::keyMeta)
+            .map(k -> (String)U.field(k, "strView"))
+            .map(Integer::valueOf)
+            .collect(Collectors.toSet());
     }
 
+    /**
+     *
+     */
     public static void assertResultContainsConflictKeys(
-        IgniteEx ig,
         ReconciliationResult res,
         String cacheName,
-        Collection<?> keys,
-        byte keyType
+        Set<Integer> keys
     ) {
-        PartitionReconciliationResult res0 = res.partitionReconciliationResult();
-
-        HashSet<Object> unmatchedKeys = new HashSet<>();
-
-        Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = res0.inconsistentKeys();
-
-        IgniteInternalCache<Object, Object> cachex = ig.cachex(cacheName);
-
-        CacheObjectContext coCtx = cachex.context().cacheObjectContext();
-
-        IgniteCacheObjectProcessor coProc = ig.context().cacheObjects();
-
-        for (Map.Entry<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> cacheEntry : inconsistentKeys.entrySet()) {
-            for (Map.Entry<Integer, List<PartitionReconciliationDataRowMeta>> partitionEntry : cacheEntry.getValue().entrySet()) {
-                for (PartitionReconciliationDataRowMeta meta : partitionEntry.getValue()) {
-                    try {
-                        Object key = coProc.toKeyCacheObject(coCtx, keyType, meta.keyMeta().binaryView());
-
-                        unmatchedKeys.remove(key);
-                    }
-                    catch (IgniteCheckedException e) {
-                        fail("Failed to unmarshal key from partition reconciliation result: " + e);
-                    }
-                }
-            }
-        }
-
-        assertTrue("The following keys are not present in the result: " + unmatchedKeys, unmatchedKeys.isEmpty());
+        for (Integer key : keys)
+            assertTrue("Key doesn't contain: " + key, conflictKeys(res, cacheName).contains(key));
     }
 
+    /**
+     *
+     */
     public static void simulateOutdatedVersionCorruption(GridCacheContext<?, ?> ctx, Object key) {
         corruptDataEntry(ctx, key, false, true, new GridCacheVersion(0, 0, 0L), "_broken");
     }
 
+    /**
+     *
+     */
     public static void simulateMissingEntryCorruption(GridCacheContext<?, ?> ctx, Object key) {
         GridCacheAdapter<Object, Object> cache = (GridCacheAdapter<Object, Object>)ctx.cache();
 

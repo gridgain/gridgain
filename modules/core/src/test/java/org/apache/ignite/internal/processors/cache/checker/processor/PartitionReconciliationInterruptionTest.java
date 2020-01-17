@@ -36,7 +36,7 @@ import org.junit.runners.Parameterized;
  *
  */
 @RunWith(Parameterized.class)
-public class PartitionReconciliationInterruptionTest extends PartitionReconciliationAbstractTest {
+public abstract class PartitionReconciliationInterruptionTest extends PartitionReconciliationAbstractTest {
     /**
      *
      */

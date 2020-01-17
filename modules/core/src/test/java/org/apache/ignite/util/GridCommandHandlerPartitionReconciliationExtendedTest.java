@@ -111,7 +111,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         assertEquals(0, reconciliationSessionId());
 
         GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAJORITY", "--recheck-attempts", "100000")));
+            "MAJORITY", "--recheck-attempts", "5")));
 
         assertTrue(GridTestUtils.waitForCondition(() -> reconciliationSessionId() != 0, 10_000));
 
@@ -161,7 +161,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         ignite.getOrCreateCache(new CacheConfiguration<>("100_backups").setBackups(100));
 
         System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "4");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--load-factor", "0.0001"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups", "--load-factor", "0.0001"));
         assertTrue(lsnrOneLevel.check(10_000));
 
         System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "120");
