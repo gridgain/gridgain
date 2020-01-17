@@ -42,7 +42,7 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED && cluster.active();
+            return r != null && r.getStatus() == COMPLETED && cluster.active();
         });
     }
 
@@ -59,7 +59,7 @@ public class ClusterActionsControllerTest extends AbstractActionControllerTest {
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED && !cluster.active();
+            return r != null && r.getStatus() == COMPLETED && !cluster.active();
         });
     }
 }
