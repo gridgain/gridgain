@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.sql;
+package org.apache.ignite.internal.processors.query;
 
 import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -24,7 +24,7 @@ import org.junit.Test;
 
 /**
  */
-public class IgniteMergeInsertImplicitColumnsTest extends AbstractIndexingCommonTest {
+public class SqlInsertMergeImplicitColumnsTest extends AbstractIndexingCommonTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         startGrid(0);
