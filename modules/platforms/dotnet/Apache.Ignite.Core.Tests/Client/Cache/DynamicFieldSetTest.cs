@@ -33,7 +33,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         [Test]
         public void TestAddRemoveFieldsDynamically([Values(true, false)] bool clientToServer)
         {
-            var cache1 = Ignition.GetIgnite().CreateCache<int, DynamicFieldSetSerializable>("c").AsCacheClient();
+            var cache1 = Ignition.GetIgnite().GetOrCreateCache<int, DynamicFieldSetSerializable>("c").AsCacheClient();
             var cache2 = Client.GetCache<int, DynamicFieldSetSerializable>("c");
 
             if (clientToServer)
