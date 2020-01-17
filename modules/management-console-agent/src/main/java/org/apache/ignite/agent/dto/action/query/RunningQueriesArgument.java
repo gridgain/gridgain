@@ -22,7 +22,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Running queries argument.
  */
 public class RunningQueriesArgument {
-    /** Duration. */
+    /** Duration in milliseconds. */
     private long duration;
 
     /**
