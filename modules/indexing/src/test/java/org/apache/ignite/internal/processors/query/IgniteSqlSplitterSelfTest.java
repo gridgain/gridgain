@@ -48,7 +48,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.query.h2.twostep.AbstractReduceIndex;
 import org.apache.ignite.internal.processors.query.h2.twostep.BaseReducer;
 import org.apache.ignite.internal.util.GridRandom;
 import org.apache.ignite.internal.util.typedef.F;
@@ -693,7 +692,7 @@ public class IgniteSqlSplitterSelfTest extends AbstractIndexingCommonTest {
             }
         }
         finally {
-            GridTestUtils.setFieldValue(null, AbstractReduceIndex.class, "PREFETCH_SIZE", 1024);
+            GridTestUtils.setFieldValue(null, BaseReducer.class, "PREFETCH_SIZE", 1024);
 
             c.destroy();
         }
