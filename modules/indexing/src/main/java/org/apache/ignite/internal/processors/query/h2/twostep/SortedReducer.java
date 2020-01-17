@@ -49,7 +49,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Sorted merge index.
  */
-public class SortedReducer extends BaseReducer {
+public class SortedReducer extends AbstractReducer {
     /** */
     @SuppressWarnings("ComparatorMethodParameterNotUsed")
     protected final Comparator<SearchRow> firstRowCmp = (rowInList, searchRow) -> {

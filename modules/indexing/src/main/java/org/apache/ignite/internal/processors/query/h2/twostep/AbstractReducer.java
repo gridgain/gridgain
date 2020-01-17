@@ -37,6 +37,7 @@ import org.h2.index.Cursor;
 import org.h2.result.Row;
 import org.h2.result.SearchRow;
 import org.h2.value.Value;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
@@ -47,7 +48,7 @@ import static org.apache.ignite.IgniteSystemProperties.getInteger;
 /**
  * Merge index.
  */
-public abstract class BaseReducer implements Reducer {
+public abstract class AbstractReducer implements Reducer {
     /** */
     static final int MAX_FETCH_SIZE = getInteger(IGNITE_SQL_MERGE_TABLE_MAX_SIZE, 10_000);
 
@@ -68,8 +69,8 @@ public abstract class BaseReducer implements Reducer {
 
     /** */
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<BaseReducer, ConcurrentMap> LAST_PAGES_UPDATER =
-        AtomicReferenceFieldUpdater.newUpdater(BaseReducer.class, ConcurrentMap.class, "lastPages");
+    private static final AtomicReferenceFieldUpdater<AbstractReducer, ConcurrentMap> LAST_PAGES_UPDATER =
+        AtomicReferenceFieldUpdater.newUpdater(AbstractReducer.class, ConcurrentMap.class, "lastPages");
 
     /** */
     private final GridKernalContext ctx;
@@ -97,7 +98,7 @@ public abstract class BaseReducer implements Reducer {
      *
      * @param ctx Kernal context.
      */
-    BaseReducer(GridKernalContext ctx) {
+    AbstractReducer(GridKernalContext ctx) {
         this.ctx = ctx;
 
         fetched = new ReduceBlockList<>(PREFETCH_SIZE);
@@ -159,8 +160,19 @@ public abstract class BaseReducer implements Reducer {
         return findInStream(first, last);
     }
 
+    /**
+     * @param first Row.
+     * @param last Row.
+     * @return Cursor over remote streams.
+     */
     protected abstract Cursor findInStream(@Nullable SearchRow first, @Nullable SearchRow last);
 
+    /**
+     * @param fetched Fetched data.
+     * @param first Row.
+     * @param last Row.
+     * @return Cursor over fetched data.
+     */
     protected abstract Cursor findAllFetched(List<Row> fetched, @Nullable SearchRow first, @Nullable SearchRow last);
 
     /**
@@ -176,7 +188,7 @@ public abstract class BaseReducer implements Reducer {
     /**
      * @param evictedBlock Evicted block.
      */
-    protected void onBlockEvict(List<Row> evictedBlock) {
+    protected void onBlockEvict(@NotNull List<Row> evictedBlock) {
         assert evictedBlock.size() == PREFETCH_SIZE;
 
         // Remember the last row (it will be max row) from the evicted block.
@@ -187,7 +199,7 @@ public abstract class BaseReducer implements Reducer {
      * @param l List.
      * @return Last element.
      */
-    public static <Z> Z last(List<Z> l) {
+    static <Z> Z last(List<Z> l) {
         return l.get(l.size() - 1);
     }
 

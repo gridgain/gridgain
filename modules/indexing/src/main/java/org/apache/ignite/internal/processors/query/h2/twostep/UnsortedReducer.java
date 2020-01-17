@@ -38,7 +38,7 @@ import static java.util.Objects.requireNonNull;
 /**
  * Unsorted merge index.
  */
-public class UnsortedReducer extends BaseReducer {
+public class UnsortedReducer extends AbstractReducer {
     /** */
     private final PollableQueue<ReduceResultPage> queue = new PollableQueue<>();
 
@@ -213,7 +213,7 @@ public class UnsortedReducer extends BaseReducer {
     /**
      *
      */
-    private static class PollableQueue<X> extends LinkedBlockingQueue<X> implements BaseReducer.Pollable<X> {
+    private static class PollableQueue<X> extends LinkedBlockingQueue<X> implements AbstractReducer.Pollable<X> {
         // No-op.
     }
 }

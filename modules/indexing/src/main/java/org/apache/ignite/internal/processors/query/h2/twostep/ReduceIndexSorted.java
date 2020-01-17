@@ -52,7 +52,7 @@ public final class ReduceIndexSorted extends AbstractReduceIndex {
     }
 
     /** {@inheritDoc} */
-    @Override protected SortedReducer delegate() {
+    @Override protected SortedReducer reducer() {
         return delegate;
     }
 

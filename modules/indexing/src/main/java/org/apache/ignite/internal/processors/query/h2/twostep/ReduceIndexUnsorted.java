@@ -46,7 +46,7 @@ public final class ReduceIndexUnsorted extends AbstractReduceIndex {
     }
 
     /** {@inheritDoc} */
-    @Override protected UnsortedReducer delegate() {
+    @Override protected UnsortedReducer reducer() {
         return delegate;
     }
 

@@ -60,16 +60,19 @@ public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
         this(ctx, tbl, null, IndexType.createScan(false), null);
     }
 
-    protected abstract BaseReducer delegate();
+    /**
+     * @return Index reducer.
+     */
+    protected abstract AbstractReducer reducer();
 
     /** {@inheritDoc} */
     @Override public Set<UUID> sources() {
-        return delegate().sources();
+        return reducer().sources();
     }
 
     /** {@inheritDoc} */
     @Override public boolean hasSource(UUID nodeId) {
-        return delegate().hasSource(nodeId);
+        return reducer().hasSource(nodeId);
     }
 
     /** {@inheritDoc} */
@@ -91,22 +94,22 @@ public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
 
     /** {@inheritDoc} */
     @Override public void setSources(Collection<ClusterNode> nodes, int segmentsCnt) {
-        delegate().setSources(nodes, segmentsCnt);
+        reducer().setSources(nodes, segmentsCnt);
     }
 
     /** {@inheritDoc} */
     @Override public void onFailure(UUID nodeId, final CacheException e) {
-        delegate().onFailure(nodeId, e);
+        reducer().onFailure(nodeId, e);
     }
 
     /** {@inheritDoc} */
     @Override public final void addPage(ReduceResultPage page) {
-        delegate().addPage(page);
+        reducer().addPage(page);
     }
 
     /** {@inheritDoc} */
     @Override public void setPageSize(int pageSize) {
-        delegate().setPageSize(pageSize);
+        reducer().setPageSize(pageSize);
     }
 
     /** {@inheritDoc} */
@@ -116,12 +119,12 @@ public abstract class AbstractReduceIndex extends BaseIndex implements Reducer {
 
     /** {@inheritDoc} */
     @Override public Cursor find(SearchRow first, SearchRow last) {
-        return delegate().find(first, last);
+        return reducer().find(first, last);
     }
 
     /** {@inheritDoc} */
     @Override public boolean fetchedAll() {
-        return delegate().fetchedAll();
+        return reducer().fetchedAll();
     }
 
     /** {@inheritDoc} */
