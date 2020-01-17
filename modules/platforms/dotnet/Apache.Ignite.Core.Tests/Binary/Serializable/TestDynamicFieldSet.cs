@@ -23,40 +23,91 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
     /// </summary>
     public class TestDynamicFieldSet
     {
+        /** */
+        private IIgnite _node1;
+        
+        /** */
+        private IIgnite _node2;
+        
         /// <summary>
-        /// Tests that dynamically added fields are deserialized correctly on local node.
+        /// Sets up the test.
         /// </summary>
-        [Test]
-        public void TestNewFieldsOnLocalNode()
+        [SetUp]
+        public void SetUp()
         {
+            _node1 = Ignition.Start(TestUtils.GetTestConfiguration());
             
+            _node2 = Ignition.Start(new IgniteConfiguration(TestUtils.GetTestConfiguration())
+            {
+                AutoGenerateIgniteInstanceName = true
+            });
         }
         
         /// <summary>
-        /// Tests that dynamically added fields are deserialized correctly on remote node.
+        /// Tears down the test.
+        /// </summary>
+        [TearDown]
+        public void TearDown()
+        {
+            Ignition.StopAll(true);
+        }
+        
+        /// <summary>
+        /// Tests that dynamically added and removed fields are deserialized correctly.
+        /// This verifies proper metadata and schema handling.
         /// </summary>
         [Test]
-        public void TestNewFieldsOnRemoteNode()
+        public void TestAddRemoveFieldsDynamically()
         {
+            var cache1 = _node1.CreateCache<int, DynamicFieldSetSerializable>("c");
+            var cache2 = _node2.GetCache<int, DynamicFieldSetSerializable>("c");
             
+            var bin1 = _node1.GetBinary();
+            var bin2 = _node2.GetBinary();
+            
+            // Put/get without optional fields.
+            var noFields = new DynamicFieldSetSerializable();
+            cache1[1] = noFields;
+            
+            AssertEqual(noFields, cache1[1]);
+            AssertEqual(noFields, cache2[1]);
+            Assert.AreEqual(new[] {"1", "2"}, bin1.GetBinaryType(typeof(DynamicFieldSetSerializable)).Fields);
+            
+            // Put/get with one optional field.
+            var oneField = new DynamicFieldSetSerializable
+            {
+                Bar = "abc",
+                WriteBar = true
+            };
+            cache1[2] = oneField;
+            
+            AssertEqual(oneField, cache1[2]);
+            AssertEqual(oneField, cache2[2]);
+            
+            // Put/get with another optional field.
+            var oneField2 = new DynamicFieldSetSerializable
+            {
+                Foo = 25,
+                WriteFoo = true
+            };
+            cache1[3] = oneField2;
+            
+            AssertEqual(oneField2, cache1[3]);
+            AssertEqual(oneField2, cache2[3]);
         }
 
         /// <summary>
-        /// Tests that dynamically removed fields are deserialized correctly on local node.
+        /// Asserts that two instances of <see cref="DynamicFieldSetSerializable"/> are equal.
         /// </summary>
-        [Test]
-        public void TestMissingFieldsOnLocalNode()
+        private static void AssertEqual(DynamicFieldSetSerializable x, DynamicFieldSetSerializable y)
         {
+            Assert.NotNull(x);
+            Assert.NotNull(y);
             
-        }
-
-        /// <summary>
-        /// Tests that dynamically removed fields are deserialized correctly on remote node.
-        /// </summary>
-        [Test]
-        public void TestMissingFieldsOnRemoteNode()
-        {
-            
+            Assert.AreEqual(x.WriteFoo, y.WriteFoo);
+            Assert.AreEqual(x.WriteBar, y.WriteBar);
+            Assert.AreEqual(x.Foo, y.Foo);
+            Assert.AreEqual(x.Bar, y.Bar);
         }
     }
 }
