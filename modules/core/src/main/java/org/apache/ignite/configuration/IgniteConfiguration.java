@@ -243,6 +243,16 @@ public class IgniteConfiguration {
     /** Default SQL query history size. */
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
 
+    /** Default SQL query global memory quota. */
+    public static final long DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA =
+        (long)(Runtime.getRuntime().maxMemory() * 0.6); // 60% of heap.
+
+    /** Default SQL per query memory quota. */
+    public static final long DFLT_SQL_QUERY_MEMORY_QUOTA = 0L;
+
+    /** Default value for SQL offloading flag. */
+    public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
+
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
 
@@ -554,6 +564,15 @@ public class IgniteConfiguration {
     /** SQL schemas to be created on node start. */
     private String[] sqlSchemas;
 
+    /** Global memory quota. */
+    private long sqlGlobalMemoryQuota = DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA;
+
+    /** Per query memory quota. */
+    private long sqlQueryMemoryQuota = DFLT_SQL_QUERY_MEMORY_QUOTA;
+
+    /** Offloading enabled flag - whether to start offloading where quota is exceeded or throw an exception. */
+    private boolean sqlOffloadingEnabled = DFLT_SQL_QUERY_OFFLOADING_ENABLED;
+
     /**
      * Creates valid grid configuration with all default values.
      */
@@ -676,6 +695,9 @@ public class IgniteConfiguration {
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
+        sqlGlobalMemoryQuota = cfg.getSqlGlobalMemoryQuota();
+        sqlQueryMemoryQuota = cfg.getSqlQueryMemoryQuota();
+        sqlOffloadingEnabled = cfg.isSqlOffloadingEnabled();
     }
 
     /**
@@ -3321,6 +3343,112 @@ public class IgniteConfiguration {
      */
     public IgniteConfiguration setSqlSchemas(String... sqlSchemas) {
         this.sqlSchemas = sqlSchemas;
+
+        return this;
+    }
+
+    /**
+     * Returns global memory pool size for SQL queries.
+     * <p>
+     * See {@link #setSqlGlobalMemoryQuota(long)} for details.
+     *
+     * @return Global memory pool size for SQL queries in bytes.
+     */
+    public long getSqlGlobalMemoryQuota() {
+        return sqlGlobalMemoryQuota;
+    }
+
+    /**
+     * Sets global memory pool size for SQL queries.
+     * <p>
+     * Global SQL query memory pool size or SQL query memory quota - is an upper bound for the heap memory part
+     * which might be occupied by the SQL query execution engine. This quota is shared among all simultaneously
+     * running queries, hence it be easily consumed by the single heavy analytics query. If you want to control
+     * memory quota on per-query basis consider {@link #setSqlQueryMemoryQuota(long)}.
+     * <p>
+     * There are two options of query behaviour when either query or global memory quota is exceeded:
+     * <ul>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
+     * </ul>
+     * See {@link #setSqlOffloadingEnabled(boolean)} for details.
+     * <p>
+     * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
+     *
+     * @param sizeInBytes Size of global memory pool for SQL queries in bytes.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setSqlGlobalMemoryQuota(long sizeInBytes) {
+        this.sqlGlobalMemoryQuota = sizeInBytes;
+
+        return this;
+    }
+
+    /**
+     * Returns per-query memory quota.
+     * See {@link #setSqlQueryMemoryQuota(long)} for details.
+     *
+     * @return Per-query memory quota.
+     */
+    public long getSqlQueryMemoryQuota() {
+        return sqlQueryMemoryQuota;
+    }
+
+    /**
+     * Sets per-query memory quota.
+     * <p>
+     * It is the maximum amount of memory intended for the particular single query execution.
+     * If a query execution exceeds this bound, the either would happen:
+     * <ul>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
+     * </ul>
+     * See {@link #setSqlOffloadingEnabled(boolean)} for details.
+     * <p>
+     * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_MEMORY_QUOTA}.
+     *
+     * @param sizeInBytes Size of per-query memory quota in bytes.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setSqlQueryMemoryQuota(long sizeInBytes) {
+        this.sqlQueryMemoryQuota = sizeInBytes;
+
+        return this;
+    }
+
+    /**
+     * Returns flag whether disk offloading is enabled.
+     * See {@link #setSqlOffloadingEnabled(boolean)} for details.
+     *
+     * @return Flag whether disk offloading is enabled.
+     */
+    public boolean isSqlOffloadingEnabled() {
+        return sqlOffloadingEnabled;
+    }
+
+    /**
+     * Sets the SQL query offloading enabled flag.
+     * <p>
+     * Offloading flag specifies the query execution behavior on memory quota excess - either global quota
+     * (see {@link #setSqlGlobalMemoryQuota(long)}) or per query quota (see {@link #setSqlQueryMemoryQuota(long)}).
+     * Possible options on quota excess are:
+     * <ul>
+     *     <li>
+     *         If {@code offloadingEnabled} flag set to {@code false}, the exception will be thrown when
+     *         memory quota is exceeded.
+     *     </li>
+     *     <li>
+     *         If {@code offloadingEnabled} flag set to {@code true}, the intermediate query results will be
+     *         offloaded to disk. It may slow down the query execution time by orders of magnitude, but eventually
+     *         the query will be executed and the caller will get a result.
+     *     </li>
+     * </ul>
+     *
+     * @param offloadingEnabled Offloading enabled flag.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
+        this.sqlOffloadingEnabled = offloadingEnabled;
 
         return this;
     }

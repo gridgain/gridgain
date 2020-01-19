@@ -25,7 +25,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
-public class QueryMemoryTracker extends H2MemoryTracker {
+public class QueryMemoryTracker implements H2MemoryTracker {
     /** Parent tracker. */
     private final H2MemoryTracker parent;
 

@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
@@ -55,7 +54,6 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager tests.
  */
-@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
     static final int SMALL_TABLE_SIZE = 1000;
@@ -72,12 +70,14 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** Node client mode flag. */
     private boolean client;
 
+    /** Flag whether to use jdbc2 node config with global quota. */
+    protected boolean useJdbcV2GlobalQuotaCfg;
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
-        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, Long.toString(10L * MB));
         System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, Long.toString(KB));
 
         startGrid(0);
@@ -98,7 +98,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         stopAllGrids();
 
         System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
         System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
     }
 
@@ -107,6 +106,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         super.beforeTest();
 
         maxMem = MB;
+        useJdbcV2GlobalQuotaCfg = false;
 
         localResults.clear();
 
@@ -168,7 +168,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setClientMode(client);
+            .setClientMode(client)
+            .setSqlOffloadingEnabled(false)
+            .setSqlGlobalMemoryQuota(10L * MB);
     }
 
     /**

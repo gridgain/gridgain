@@ -32,8 +32,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.KB;
 /**
  * Query memory manager.
  */
-public class QueryMemoryManager extends H2MemoryTracker {
-    //TODO: GG-18629: Move defaults to memory quotas configuration.
+public class QueryMemoryManager implements H2MemoryTracker {
     /**
      * Default memory reservation block size.
      */
@@ -67,11 +66,9 @@ public class QueryMemoryManager extends H2MemoryTracker {
     private final IgniteLogger log;
 
     /** Global query memory quota. */
-    //TODO GG-18629: it looks safe to make this configurable at runtime.
     private final long globalQuota;
 
     /** Reservation block size. */
-    //TODO GG-18629: it looks safe to make this configurable at runtime.
     private final long blockSize;
 
     /** Memory reserved by running queries. */
@@ -92,26 +89,24 @@ public class QueryMemoryManager extends H2MemoryTracker {
      * Constructor.
      *
      * @param ctx Kernal context.
-     * @param globalQuota Node memory available for sql queries.
      */
-    public QueryMemoryManager(GridKernalContext ctx, long globalQuota) {
+    public QueryMemoryManager(GridKernalContext ctx) {
+        long globalQuota = ctx.config().getSqlGlobalMemoryQuota();
+
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
-        if (globalQuota == 0) {
-            globalQuota = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
-                (long)(Runtime.getRuntime().maxMemory() * 0.6d));
-        }
-
-        long dfltMemLimit = Long.getLong(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT, 0);
+        long dfltMemLimit = ctx.config().getSqlQueryMemoryQuota();
 
         if (dfltMemLimit == 0)
             dfltMemLimit = globalQuota > 0 ? globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE : -1;
 
-        this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
+        this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
+            DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
+
         this.globalQuota = globalQuota;
-        // TODO GG-18629 - get from configuration.
-        this.failOnMemLimitExceed = !Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
+
+        this.failOnMemLimitExceed = !ctx.config().isSqlOffloadingEnabled();
 
         this.dfltSqlQryMemoryLimit = dfltMemLimit;
 
@@ -170,7 +165,7 @@ public class QueryMemoryManager extends H2MemoryTracker {
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
 
-        if (dfltSqlQryMemoryLimit < 0)
+        if (maxQueryMemory < 0)
             return null;
 
         if (globalQuota > 0 && globalQuota < maxQueryMemory) {

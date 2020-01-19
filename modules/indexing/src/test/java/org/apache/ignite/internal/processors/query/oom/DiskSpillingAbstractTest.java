@@ -73,6 +73,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        cfg.setSqlOffloadingEnabled(true);
 
         // Dummy cache.
         CacheConfiguration<?,?> cache = defaultCacheConfiguration();
