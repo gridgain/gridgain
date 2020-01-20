@@ -19,7 +19,8 @@ package org.apache.ignite.internal.processors.query;
 import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
-import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.transactions.TransactionDuplicateKeyException;
 import org.junit.Test;
 
 /**
@@ -47,7 +48,9 @@ public class SqlInsertMergeImplicitColumnsTest extends AbstractIndexingCommonTes
 
         checkDml("INSERT INTO test3 values (1,'Kenny', null)", 1);
         checkDml("INSERT INTO test3 set id=2, val1='Bobby'", 1);
-        checkDml("INSERT INTO test3 set id=3, val2='Kennedy'", 1);
+
+        GridTestUtils.assertThrows(log, () -> sql("INSERT INTO test3 set id=1, val2='Kennedy'"),
+            TransactionDuplicateKeyException.class, "Duplicate key during INSERT [key=1]");
     }
 
     /**
