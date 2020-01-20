@@ -566,6 +566,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var nearConfiguration = _grid.GetCache<TK, TV>(name).GetConfiguration().NearConfiguration;
             
+            // For server nodes we could just say GetCache - near is created automatically.
             return GetIgnite(mode).GetOrCreateNearCache<TK, TV>(name, nearConfiguration);
         }
 
