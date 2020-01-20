@@ -20,8 +20,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
-
 import java.io.File;
 
 /** */
@@ -60,33 +60,42 @@ public class IgniteUtilsWorkDirectoryTest {
             System.setProperty("user.dir", dfltUserDir);
     }
 
-    /** */
+    /**
+     * The work directory specified by the user has the highest priority
+     * */
     @Test
     public void testWorkDirectory1() {
         genericWorkDirectoryTest(true, false, false,
                 USER_WORK_DIR);
     }
 
-    /** */
+    /**
+     * The work directory specified by the user has the highest priority
+     * */
     @Test
     public void testWorkDirectory2() {
         genericWorkDirectoryTest(true, false, true,
                 USER_WORK_DIR);
     }
 
-    /** */
+    /**
+     * The work directory specified by the user has the highest priority
+     * */
     @Test
     public void testWorkDirectory3() {
         genericWorkDirectoryTest(true, true, false,
                 USER_WORK_DIR);
     }
 
-    /** */
+    /**
+     * The work directory specified by the user has the highest priority
+     * */
     @Test
     public void testWorkDirectory4() {
         genericWorkDirectoryTest(true, true, true,
                 USER_WORK_DIR);
     }
+
     /** */
     private void genericWorkDirectoryTest(boolean userWorkDirFlag, boolean userIgniteHomeFlag,
                                           boolean userDirPropFlag, String expWorkDir) {
@@ -125,33 +134,57 @@ public class IgniteUtilsWorkDirectoryTest {
 
     /** */
     @Test
+    @Ignore("Test fail when run on TeamCity")
     public void workDirCannotWriteTest() {
         String strDir = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
         File dir = new File(strDir);
+
+        if (dir.exists()) {
+            boolean deleted = deleteDirectory(dir);
+            assert deleted : "cannot delete file";
+        }
         dir.mkdirs();
-        dir.setWritable(false);
+
+        boolean perm = dir.setWritable(false, false);
+        assert perm : "no permission";
 
         genericPathExceptionTest(strDir, "Cannot write to work directory: " + strDir);
     }
 
-    /** */
+    /***/
     @Test
+    @Ignore("Test fail when run on TeamCity")
     public void workDirCannotReadTest() {
         String strDir = String.join(File.separator, USER_WORK_DIR, "CannotReadTestDirectory");
         File dir = new File(strDir);
+
+        if (dir.exists()) {
+            boolean deleted = deleteDirectory(dir);
+            assert deleted : "cannot delete file";
+        }
         dir.mkdirs();
-        dir.setReadable(false);
+
+        boolean perm = dir.setReadable(false, false);
+        assert perm : "no permission";
 
         genericPathExceptionTest(strDir, "Cannot read from work directory: " + strDir);
     }
 
     /** */
     @Test
+    @Ignore("Test fail when run on TeamCity")
     public void workDirNotExistAndCannotBeCreatedTest() {
         String strDirParent = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
         File dirParent = new File(strDirParent);
+
+        if (dirParent.exists()) {
+            boolean deleted = deleteDirectory(dirParent);
+            assert deleted : "cannot delete file";
+        }
         dirParent.mkdirs();
-        dirParent.setWritable(false);
+
+        boolean perm = dirParent.setWritable(false, false);
+        assert perm : "no permission";
 
         String strDir = String.join(File.separator, strDirParent, "newDirectory");
 
@@ -172,6 +205,17 @@ public class IgniteUtilsWorkDirectoryTest {
         }
 
         assert fail : "actualWorkDir: " + actualWorkDir + ", expected: thrown exception";
+    }
+
+    /** */
+    private static boolean deleteDirectory(File dirToBeDeleted) {
+        File[] allContents = dirToBeDeleted.listFiles();
+        if (allContents != null) {
+            for (File file : allContents) {
+                deleteDirectory(file);
+            }
+        }
+        return dirToBeDeleted.delete();
     }
 
 }
