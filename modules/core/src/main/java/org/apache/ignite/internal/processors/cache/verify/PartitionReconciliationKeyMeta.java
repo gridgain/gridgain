@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.verify;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Arrays;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -68,5 +69,19 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
      */
     public byte[] binaryView() {
         return binaryView;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        PartitionReconciliationKeyMeta meta = (PartitionReconciliationKeyMeta)o;
+
+        if (!Arrays.equals(binaryView, meta.binaryView))
+            return false;
+        return strView != null ? strView.equals(meta.strView) : meta.strView == null;
     }
 }

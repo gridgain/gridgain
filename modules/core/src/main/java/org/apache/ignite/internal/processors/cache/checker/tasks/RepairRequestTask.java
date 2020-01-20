@@ -279,6 +279,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
                     CacheObject valToFixWith = null;
 
+                    RepairAlgorithm usedRepairAlg = repairAlg;
+
                     // Are there any nodes with missing key?
                     if (dataEntry.getValue().size() != ownersNodesSize) {
                         if (repairAlg == RepairAlgorithm.PRINT_ONLY)
@@ -325,6 +327,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                             assert keyWasSuccessfullyFixed;
                         }
                         else {
+                            usedRepairAlg = RepairAlgorithm.MAX_GRID_CACHE_VERSION;
+
                             valToFixWith = calculateValueToFixWith(
                                 RepairAlgorithm.MAX_GRID_CACHE_VERSION,
                                 nodeToVersionedValues,
@@ -352,7 +356,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 new RepairMeta(
                                     true,
                                     valToFixWith,
-                                    repairAlg)
+                                    usedRepairAlg)
                             ),
                             dataEntry.getValue());
                     }

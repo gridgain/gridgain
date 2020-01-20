@@ -103,4 +103,20 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
         return "fixed=" + fixed + ", new_val=" + (val != null ? val.stringView(verbose) : "null") +
             ", repairAlg=" + repairAlg;
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        PartitionReconciliationRepairMeta meta = (PartitionReconciliationRepairMeta)o;
+
+        if (fixed != meta.fixed)
+            return false;
+        if (val != null ? !val.equals(meta.val) : meta.val != null)
+            return false;
+        return repairAlg == meta.repairAlg;
+    }
 }

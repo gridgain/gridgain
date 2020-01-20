@@ -131,4 +131,20 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
     @Override public String toString() {
         return S.toString(PartitionReconciliationDataRowMeta.class, this);
     }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        PartitionReconciliationDataRowMeta meta = (PartitionReconciliationDataRowMeta)o;
+
+        if (keyMeta != null ? !keyMeta.equals(meta.keyMeta) : meta.keyMeta != null)
+            return false;
+        if (valMeta != null ? !valMeta.equals(meta.valMeta) : meta.valMeta != null)
+            return false;
+        return repairMeta != null ? repairMeta.equals(meta.repairMeta) : meta.repairMeta == null;
+    }
 }

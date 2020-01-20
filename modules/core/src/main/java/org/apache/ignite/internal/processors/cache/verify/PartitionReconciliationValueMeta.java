@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.verify;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Arrays;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -76,5 +77,21 @@ public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
             ver.topologyVersion() + ", order=" + ver.order() + ", nodeOrder=" + ver.nodeOrder() + ']' : "" ):
             HIDDEN_DATA + (ver != null ? " ver=[topVer=" + ver.topologyVersion() + ", order=" + ver.order() +
                 ", nodeOrder=" + ver.nodeOrder() : "") + ']';
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        PartitionReconciliationValueMeta meta = (PartitionReconciliationValueMeta)o;
+
+        if (!Arrays.equals(binaryView, meta.binaryView))
+            return false;
+        if (strView != null ? !strView.equals(meta.strView) : meta.strView != null)
+            return false;
+        return ver != null ? ver.equals(meta.ver) : meta.ver == null;
     }
 }
