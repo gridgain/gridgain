@@ -425,12 +425,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestFifoEvictionPolicyRemovesNearCacheValue(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            // TODO: Test local and non-local entries
+            // TODO: Use non-primary keys in case of server nodes.
             var cache = GetCache<int, Foo>(mode);
             
             Assert.AreEqual(0, cache.GetSize());
 
-            var items = Enumerable.Range(0, NearCacheMaxSize + 1).Select(x => new Foo(x)).ToArray();
+            var items = Enumerable.Range(0, NearCacheMaxSize + 1000).Select(x => new Foo(x)).ToArray();
 
             foreach (var item in items)
             {
@@ -445,10 +445,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // First item is deserialized on get:
             var fromCache = cache[0];
-            Assert.AreNotEqual(items[0], fromCache);
+            Assert.AreNotSame(items[0], fromCache);
             
             // And now it is near again:
-            Assert.AreEqual(fromCache, cache[0]);
+            Assert.AreSame(fromCache, cache[0]);
         }
 
         /// <summary>
