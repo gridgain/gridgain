@@ -16,14 +16,11 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
-    using System.IO;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
-    using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
 
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
