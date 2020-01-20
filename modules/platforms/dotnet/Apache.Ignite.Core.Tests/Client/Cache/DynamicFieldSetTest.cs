@@ -24,19 +24,32 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     /// <summary>
     /// Tests <see cref="DynamicFieldSetSerializable"/> serialization in thin client.
     /// </summary>
+    [TestFixture(true)]
+    [TestFixture(false)]
     public class DynamicFieldSetTest : ClientTestBase
     {
+        /** */
+        private readonly bool _clientToServer;
+
+        /// <summary>
+        /// Initializes a new instance of <see cref="DynamicFieldSetTest"/>. 
+        /// </summary>
+        public DynamicFieldSetTest(bool clientToServer)
+        {
+            _clientToServer = clientToServer;
+        }
+
         /// <summary>
         /// Tests that dynamically added and removed fields are deserialized correctly.
         /// This verifies proper metadata and schema handling.
         /// </summary>
         [Test]
-        public void TestAddRemoveFieldsDynamically([Values(true, false)] bool clientToServer)
+        public void TestAddRemoveFieldsDynamically()
         {
             var cache1 = Ignition.GetIgnite().GetOrCreateCache<int, DynamicFieldSetSerializable>("c").AsCacheClient();
             var cache2 = Client.GetCache<int, DynamicFieldSetSerializable>("c");
 
-            if (clientToServer)
+            if (_clientToServer)
             {
                 // Swap caches to verify that metadata propagates both ways.
                 var tmp = cache1;
