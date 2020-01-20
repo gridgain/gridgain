@@ -109,63 +109,38 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var pos = stream.Position;
             var reader = marshaller.StartUnmarshal(stream);
 
-            UpdateMap(reader);
+            var key = reader.ReadObject<object>();
+            var hasVal = reader.ReadBoolean();
+            var val = hasVal ? reader.ReadObject<object>() : null;
 
-            stream.Seek(pos, SeekOrigin.Begin);
-            UpdateFallbackMap(reader);
-        }
-
-        private void UpdateFallbackMap(BinaryReader reader)
-        {
-            if (_fallbackMap == null)
-            {
-                return;
-            }
-            
-            var key = reader.Deserialize<object>();
-
-            if (reader.ReadBoolean())
-            {
-                var val = reader.Deserialize<object>();
-                _fallbackMap[key] = new NearCacheEntry<object>(true, val);
-            }
-            else
-            {
-                NearCacheEntry<object> unused;
-                _fallbackMap.TryRemove(key, out unused);
-            }
-        }
-
-        private void UpdateMap(BinaryReader reader)
-        {
             var map = _map;
-            if (map == null)
+            if (map != null && key is TK)
             {
-                return;
-            }
-            
-            var key0 = reader.Deserialize<object>();
-            if (!(key0 is TK))
-            {
-                return;
-            }
-
-            var key = (TK) key0;
-            
-            if (reader.ReadBoolean())
-            {
-                var val0 = reader.Deserialize<object>();
-                if (!(val0 is TV))
+                if (hasVal)
                 {
-                    return;
+                    if (val is TV)
+                    {
+                        _map[(TK)key] = new NearCacheEntry<TV>(true, (TV) val);
+                    }
                 }
-
-                _map[key] = new NearCacheEntry<TV>(true, (TV) val0);
+                else
+                {
+                    NearCacheEntry<TV> unused;
+                    _map.TryRemove((TK) key, out unused);
+                }
             }
-            else
+
+            if (_fallbackMap != null)
             {
-                NearCacheEntry<TV> unused;
-                _map.TryRemove(key, out unused);
+                if (hasVal)
+                {
+                    _fallbackMap[key] = new NearCacheEntry<object>(true, val);
+                }
+                else
+                {
+                    NearCacheEntry<object> unused;
+                    _fallbackMap.TryRemove(key, out unused);
+                }
             }
         }
 
@@ -175,13 +150,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(marshaller != null);
             
             var pos = stream.Position;
+            var reader = marshaller.StartUnmarshal(stream);
 
             var map = _map;
             if (map != null)
             {
                 try
                 {
-                    var key = marshaller.Unmarshal<TK>(stream);
+                    var key = reader.ReadObject<TK>();
                     NearCacheEntry<TV> unused;
                     _map.TryRemove(key, out unused);
                 }
@@ -195,7 +171,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (_fallbackMap != null)
             {
                 stream.Seek(pos, SeekOrigin.Begin);
-                var key = marshaller.Unmarshal<object>(stream);
+                var key = reader.ReadObject<object>();
                 
                 NearCacheEntry<object> unused;
                 _fallbackMap.TryRemove(key, out unused);
