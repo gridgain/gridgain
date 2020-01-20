@@ -493,7 +493,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestScanQueryUsesValueFromNearCache()
         {
             // TODO: Can we pass only the key to scan query filter, and pass value only when needed?
+            //       - yes, should be easy within callback (.NET side "replies" into the same stream with a flag)
             // TODO: When receiving scan query results, can we also use existing values from near cache?
+            //      - yes we can, by writing keys for the batch first, then retrieving missing values as a separate call
         }
 
         [Test]
