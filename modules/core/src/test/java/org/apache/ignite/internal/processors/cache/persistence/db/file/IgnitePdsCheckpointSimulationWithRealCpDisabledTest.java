@@ -352,10 +352,10 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                 val = cctx.toCacheObject("value-" + i);
 
             entries.add(mvcc ?
-                new MvccDataEntry(cctx.cacheId(), key, val, op, null, cctx.versions().next(cctx),
+                new MvccDataEntry(cctx.cacheId(), key, val, op, null, cctx.cache().nextVersion(),
                     0L,
                     cctx.affinity().partition(i), i, new MvccVersionImpl(1000L, 10L, i + 1 /* Non-zero */)) :
-                new DataEntry(cctx.cacheId(), key, val, op, null, cctx.versions().next(cctx),
+                new DataEntry(cctx.cacheId(), key, val, op, null, cctx.cache().nextVersion(),
                     0L,
                     cctx.affinity().partition(i), i));
         }

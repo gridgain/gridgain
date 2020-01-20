@@ -1804,7 +1804,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
 
                             if (created) {
                                 if (obsoleteVer == null)
-                                    obsoleteVer = ctx.versions().next(ctx);
+                                    obsoleteVer = ctx.cache().nextVersion();
 
                                 if (entry.markObsolete(obsoleteVer))
                                     removeEntry(entry);
@@ -1943,7 +1943,7 @@ public abstract class GridDhtTransactionalCacheAdapter<K, V> extends GridDhtCach
         GridCacheEntryEx nearEntry = near().peekEx(key);
 
         if (nearEntry != null)
-            nearEntry.markObsolete(ctx.versions().next(ctx));
+            nearEntry.markObsolete(ctx.cache().nextVersion());
     }
 
     /**

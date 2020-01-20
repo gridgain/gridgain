@@ -860,7 +860,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
 
         String taskName = ctx.kernalContext().job().currentTaskName();
 
-        GridCacheVersion ver = ctx.versions().next();
+        GridCacheVersion ver = ctx.cache().nextVersion();
 
         UUID subjId = ctx.subjectIdPerCall(null);
 

@@ -997,7 +997,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 long ttl = ttlExtras();
 
                 // Generate new version.
-                GridCacheVersion nextVer = cctx.versions().nextForLoad(ver);
+                GridCacheVersion nextVer = cctx.versions().nextForLoad(ver.topologyVersion());
 
                 // If entry was loaded during read step.
                 if (wasNew && !isNew())
@@ -3150,7 +3150,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         ver0 = ver;
                     }
                     else {
-                        rmv = markObsolete0(cctx.versions().next(this.ver), true, null);
+                        rmv = markObsolete0(cctx.versions().next(this.ver.topologyVersion()), true, null);
 
                         return null;
                     }
@@ -3615,7 +3615,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         return entryGetResult(this.val, ver, false);
 
                     if (newVer == null)
-                        newVer = cctx.versions().next(cctx);
+                        newVer = cctx.cache().nextVersion();
 
                     long ttl;
                     long expTime;
@@ -3683,7 +3683,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private GridCacheVersion nextVersion() {
         // Do not change topology version when generating next version.
-        return cctx.versions().next(ver);
+        return cctx.versions().next(ver.topologyVersion());
     }
 
     /** {@inheritDoc} */
@@ -4655,7 +4655,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return false;
 
                 if (checkExpired()) {
-                    rmv = markObsolete0(cctx.versions().next(this.ver), true, null);
+                    rmv = markObsolete0(cctx.versions().next(this.ver.topologyVersion()), true, null);
 
                     return false;
                 }
@@ -5825,7 +5825,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     entry.deletedUnlocked(true);
             }
             else
-                entry.markObsolete0(cctx.versions().next(cctx), true, null);
+                entry.markObsolete0(cctx.cache().nextVersion(), true, null);
 
             if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
                 cctx.events().addEvent(entry.partition(),
@@ -6196,7 +6196,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     entry.deletedUnlocked(true);
             }
             else
-                entry.markObsolete0(cctx.versions().next(cctx), true, null);
+                entry.markObsolete0(cctx.cache().nextVersion(), true, null);
 
             if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
                 cctx.events().addEvent(entry.partition(),

@@ -192,7 +192,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
     public GridCacheVersion onReceivedAndNext(UUID nodeId, GridCacheVersion ver) {
         onReceived(nodeId, ver);
 
-        return next(ver);
+        return next(ver.topologyVersion());
     }
 
     /**
@@ -216,37 +216,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         return ISOLATED_STREAMER_VER;
     }
 
-    /**
-     * Generates new grid cache version.
-     *
-     * @param cacheCtx Cache context. If given cache context is null or isLocal or if it's topology isn't initialzed,
-     * topology version from kernalContext would be used for version generation, otherwise topology version from cache
-     * context would be used.
-     * @return Next version based on current topology.
-     */
-    public GridCacheVersion next(GridCacheContext cacheCtx) {
-        return cacheCtx == null || cacheCtx.isLocal() || !cacheCtx.topology().initialized() ?
-            next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId) :
-            next(cacheCtx.topology().readyTopologyVersion());
-    }
-
-    /**
-     * @return Next version based on current topology.
-     */
-    public GridCacheVersion next() {
-        return next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId);
-    }
-
-    /**
-     * Generates new grid cache version.
-     *
-     * @param dataCenterId Data center id.
-     * @return Next version based on current topology with given data center id.
-     */
-    public GridCacheVersion next(byte dataCenterId) {
-        return next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId);
-    }
-
+    // TODO: 20.01.20 Verify javadoc
     /**
      * Gets next version based on given topology version. Given value should be
      * real topology version calculated as number of grid topology changes and
@@ -255,8 +225,13 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @param topVer Topology version for which new version should be obtained.
      * @return Next version based on given topology version.
      */
-    public GridCacheVersion next(AffinityTopologyVersion topVer) {
-        return next(topVer.topologyVersion(), true, false, dataCenterId);
+    public GridCacheVersion next(long topVer) {
+        return next(topVer, true, false, dataCenterId);
+    }
+
+    // TODO: 20.01.20 Verify javadoc
+    public GridCacheVersion next(long topVer, byte dataCenterId) {
+        return next(topVer, true, false, dataCenterId);
     }
 
     /**
@@ -268,32 +243,9 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         return next(cctx.kernalContext().discovery().topologyVersion(), true, true, dataCenterId);
     }
 
-    /**
-     * Gets next version for cache store load and reload operations.
-     *
-     * @return Next version for cache store operations.
-     */
-    public GridCacheVersion nextForLoad(AffinityTopologyVersion topVer) {
-        return next(topVer.topologyVersion(), true, true, dataCenterId);
-    }
-
-    /**
-     * Gets next version for cache store load and reload operations.
-     *
-     * @return Next version for cache store operations.
-     */
-    public GridCacheVersion nextForLoad(GridCacheVersion ver) {
-        return next(ver.topologyVersion(), false, true, dataCenterId);
-    }
-
-    /**
-     * Gets next version based on given cache version.
-     *
-     * @param ver Cache version for which new version should be obtained.
-     * @return Next version based on given cache version.
-     */
-    public GridCacheVersion next(GridCacheVersion ver) {
-        return next(ver.topologyVersion(), false, false, dataCenterId);
+    // TODO: 20.01.20 javdoc
+    public GridCacheVersion nextForLoad(long topVer) {
+        return next(topVer, true, true, dataCenterId);
     }
 
     /**
@@ -308,7 +260,7 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
      * @param dataCenterId Data center id.
      * @return New lock order.
      */
-    private GridCacheVersion next(long topVer, boolean addTime, boolean forLoad, byte dataCenterId) {
+    public GridCacheVersion next(long topVer, boolean addTime, boolean forLoad, byte dataCenterId) {
         if (topVer == -1)
             topVer = cctx.kernalContext().discovery().topologyVersion();
 
