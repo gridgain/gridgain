@@ -26,6 +26,7 @@ import java.util.Comparator;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.commons.io.Charsets;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
@@ -34,6 +35,7 @@ import org.apache.ignite.internal.pagemem.impl.PageMemoryNoStoreImpl;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.h2.database.InlineIndexColumn;
+import org.apache.ignite.testframework.junits.GridTestBinaryMarshaller;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.h2.table.Column;
 import org.h2.util.DateTimeUtils;
@@ -78,7 +80,10 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
     private static final long MB = 1024;
 
     /** */
-    private static final Comparator ALWAYS_FAILS_COMPARATOR = new AlwaysFailsComparator();
+    private static final Comparator<Value> ALWAYS_FAILS_COMPARATOR = new AlwaysFailsComparator();
+
+    /** */
+    private final GridTestBinaryMarshaller marsh = new GridTestBinaryMarshaller(log);
 
     /** Whether to inline objects as hash or as bytes. */
     private boolean inlineObjHash;
@@ -452,7 +457,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
 
             InlineIndexColumn ih = factory.createInlineHelper(new Column("", Value.JAVA_OBJECT), true);
 
-            ValueJavaObject exp = ValueJavaObject.getNoCopy(new TestPojo(4, 3L), null, null);
+            Value exp = wrap(new TestPojo(4, 3L), TestPojo.class);
 
             {
                 int maxSize = 3;
@@ -880,7 +885,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
      *
      * @return {@link Value} which wraps provided value.
      */
-    private <T> Value wrap(T val, Class<T> cls) {
+    private <T> Value wrap(T val, Class<T> cls) throws IgniteCheckedException {
         if (val == null)
             return ValueNull.INSTANCE;
 
@@ -929,7 +934,7 @@ public class InlineIndexColumnTest extends AbstractIndexingCommonTest {
                 return ValueStringIgnoreCase.get(((IgnoreCaseString)val).val);
 
             case Value.JAVA_OBJECT:
-                return ValueJavaObject.getNoCopy(val, null, null);
+                return ValueJavaObject.getNoCopy(marsh.marshal(val), null, null);
         }
 
         throw new IllegalStateException("Unknown value type: type=" + type + ", cls=" + cls.getName());

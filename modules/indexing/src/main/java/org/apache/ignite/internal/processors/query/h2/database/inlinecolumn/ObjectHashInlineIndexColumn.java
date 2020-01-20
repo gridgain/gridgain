@@ -38,10 +38,8 @@ public class ObjectHashInlineIndexColumn extends AbstractInlineIndexColumn {
         if (type() != type)
             return COMPARE_UNSUPPORTED;
 
-        // TODO: here should be assert not fast return
-        // should be fixed after https://ggsystems.atlassian.net/browse/GG-26697
-        if (!(v.getObject() instanceof BinaryObject))
-            return COMPARE_UNSUPPORTED;
+        assert v.getObject() instanceof BinaryObject : Value.class.getName() + " should wrap binary object," +
+            " but wraps " + (v.getObject() == null ? "null" : v.getObject().getClass().getName());
 
         int val1 = PageUtils.getInt(pageAddr, off + 1);
         int val2 = v.getObject().hashCode();
@@ -54,7 +52,8 @@ public class ObjectHashInlineIndexColumn extends AbstractInlineIndexColumn {
     /** {@inheritDoc} */
     @Override protected int put0(long pageAddr, int off, Value val, int maxSize) {
         assert type() == val.getValueType();
-        assert val.getObject() instanceof BinaryObject : "Value should wrap binary object only";
+        assert val.getObject() instanceof BinaryObject : Value.class.getName() + " should wrap binary object," +
+            " but wraps " + (val.getObject() == null ? "null" : val.getObject().getClass().getName());
 
         PageUtils.putByte(pageAddr, off, (byte)val.getValueType());
         PageUtils.putInt(pageAddr, off + 1, val.getObject().hashCode());
