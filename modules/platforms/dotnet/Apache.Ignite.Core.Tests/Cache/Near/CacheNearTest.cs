@@ -432,15 +432,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var items = Enumerable.Range(0, NearCacheMaxSize + 1).Select(x => new Foo(x)).ToArray();
 
-            for (var i = 0; i < NearCacheMaxSize + 1; i++)
+            foreach (var item in items)
             {
-                cache[i] = items[i];
+                cache[item.Bar] = item;
             }
             
             // Recent items are in near cache:
-            for (var i = 1; i < NearCacheMaxSize + 1; i++)
+            foreach (var item in items.Skip(items.Length - NearCacheMaxSize))
             {
-                Assert.AreSame(items[i], cache[i]);
+                Assert.AreSame(item, cache[item.Bar]);
             }
             
             // First item is deserialized on get:
