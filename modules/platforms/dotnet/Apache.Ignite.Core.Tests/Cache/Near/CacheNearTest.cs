@@ -426,39 +426,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
             var cache = GetCache<int, Foo>(mode);
-            Assert.AreEqual(0, cache.GetSize());
             
-            // Wait for rebalance.
-            Assert.IsTrue(TestUtils.WaitForCondition(
-                () => _grid2.GetAffinity(cache.Name).MapKeyToNode(1).IsLocal, 2000));
-
-            // Use non-primary keys: primary keys are not evicted.
-            var items = TestUtils
-                .GetKeys(GetIgnite(mode), cache.Name, primary: false)
-                .Take(NearCacheMaxSize + 1)
-                .Select(x => new Foo(x))
-                .ToArray();
-
-            foreach (var item in items)
-            {
-                cache[item.Bar] = item;
-            }
-            
-            // Recent items are in near cache:
-            foreach (var item in items.Skip(items.Length - NearCacheMaxSize))
-            {
-                Assert.AreSame(item, cache[item.Bar]);
-            }
-            
-            // First item is deserialized on get:
-            var localItem = items[0];
-            var key = localItem.Bar;
-            
-            var fromCache = cache[key];
-            Assert.AreNotSame(localItem, fromCache);
-            
-            // And now it is near again:
-            Assert.AreSame(fromCache, cache[key]);
+            TestEvictionPolicyRemovesNearCacheValue(mode, cache);
         }
 
         /// <summary>
@@ -483,25 +452,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var ignite = GetIgnite(mode);
             var cache = ignite.CreateCache<int, Foo>(cfg, cfg.NearConfiguration);
-            var items = Enumerable.Range(0, NearCacheMaxSize + 1).Select(x => new Foo(x)).ToArray();
-
-            for (var i = 0; i < NearCacheMaxSize + 1; i++)
-            {
-                cache.Put(i, items[i]);
-            }
             
-            // Recent items are in near cache:
-            for (var i = 1; i < NearCacheMaxSize + 1; i++)
-            {
-                Assert.AreSame(items[i], cache[i]);
-            }
-            
-            // First item is deserialized on get:
-            var fromCache = cache[0];
-            Assert.AreNotEqual(items[0], fromCache);
-            
-            // And now it is near again:
-            Assert.AreEqual(fromCache, cache[0]);
+            TestEvictionPolicyRemovesNearCacheValue(mode, cache);
         }
 
         /// <summary>
@@ -586,6 +538,46 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         private IIgnite GetIgnite(CacheTestMode mode)
         {
             return new[] {_grid, _grid2, _client}[(int) mode];
+        }
+
+        /// <summary>
+        /// Tests that eviction policy removes near cache data for the key. 
+        /// </summary>
+        private void TestEvictionPolicyRemovesNearCacheValue(CacheTestMode mode, ICache<int, Foo> cache)
+        {
+            Assert.AreEqual(0, cache.GetSize());
+
+            // Wait for rebalance.
+            Assert.IsTrue(TestUtils.WaitForCondition(
+                () => _grid2.GetAffinity(cache.Name).MapKeyToNode(1).IsLocal, 2000));
+
+            // Use non-primary keys: primary keys are not evicted.
+            var items = TestUtils
+                .GetKeys(GetIgnite(mode), cache.Name, primary: false)
+                .Take(NearCacheMaxSize + 1)
+                .Select(x => new Foo(x))
+                .ToArray();
+
+            foreach (var item in items)
+            {
+                cache[item.Bar] = item;
+            }
+
+            // Recent items are in near cache:
+            foreach (var item in items.Skip(items.Length - NearCacheMaxSize))
+            {
+                Assert.AreSame(item, cache[item.Bar]);
+            }
+
+            // First item is deserialized on get:
+            var localItem = items[0];
+            var key = localItem.Bar;
+
+            var fromCache = cache[key];
+            Assert.AreNotSame(localItem, fromCache);
+
+            // And now it is near again:
+            Assert.AreSame(fromCache, cache[key]);
         }
 
         /** <inheritdoc /> */
