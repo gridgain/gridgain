@@ -45,37 +45,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// When the use case above is detected, we downgrade near cache map to {object, object}, which will cause
         /// more boxing and casting. 
         /// </summary>
-        public INearCache<TK, TV> GetNearCache<TK, TV>(string cacheName,
+        public INearCache GetNearCache<TK, TV>(string cacheName,
             NearCacheConfiguration nearCacheConfiguration)
         {
             Debug.Assert(!string.IsNullOrEmpty(cacheName));
             Debug.Assert(nearCacheConfiguration != null);
 
             var cacheId = BinaryUtils.GetCacheId(cacheName);
-
-            var nearCache = _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>());
-
-            var genericNearCache = nearCache as NearCache<TK, TV>;
-            if (genericNearCache != null)
-            {
-                // Normal case: there is only one set of generic parameters for a given cache.
-                return genericNearCache;
-            }
-
-            // Non-recommended usage: multiple generic parameters for the same cache.
-            // Downgrade to {object, object} - near cache works, but causes more boxing and casting.
-            var nonGenericNearCache = nearCache as NearCache<object, object>;
-            if (nonGenericNearCache == null)
-            {
-                nonGenericNearCache = new NearCache<object, object>();
-                
-                // TODO: Bug - old ICache instances still use old near caches, data will go stale.
-                // Instead, we should perform downgrade within NearCache implementation by catching cast exceptions.
-                // Keep two maps inside, one generic and one objects, switch dynamically
-                _nearCaches.Set(cacheId, nonGenericNearCache);
-            }
-
-            return new NearCacheGenericWrapper<TK, TV>(nonGenericNearCache);
+            
+            INearCache nearCache;
+            return _nearCaches.TryGetValue(cacheId, out nearCache) 
+                ? nearCache 
+                : _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>());
         }
 
         /// <summary>

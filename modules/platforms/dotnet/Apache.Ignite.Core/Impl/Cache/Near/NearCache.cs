@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
+    using System.IO;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
@@ -26,29 +27,44 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
     /// </summary>
-    internal class NearCache<TK, TV> : INearCache, INearCache<TK, TV>
+    internal sealed class NearCache<TK, TV> : INearCache
     {
         // TODO: Init capacity from settings
         // TODO: Eviction
-        // TODO: Is it ok to use .NET-based comparison here, because it differs from Java-based comparison for keys?
-        private readonly ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
+        private volatile ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
             new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
 
-        public bool TryGetValue(TK key, out TV val)
-        {
-            NearCacheEntry<TV> entry;
+        private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
-            if (_map.TryGetValue(key, out entry) && entry.HasValue)
+        public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
+        {
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
             {
-                val = entry.Value;
-                return true;
+                NearCacheEntry<TVal> entry;
+                if (map.TryGetValue(key, out entry) && entry.HasValue)
+                {
+                    val = entry.Value;
+                    return true;
+                }
+            }
+            
+            if (_fallbackMap != null)
+            {
+                NearCacheEntry<object> fallbackEntry;
+                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && fallbackEntry.HasValue)
+                {
+                    val = (TVal) fallbackEntry.Value;
+                    return true;
+                }
             }
 
-            val = default(TV);
+            val = default(TVal);
             return false;
         }
 
-        public void Put(TK key, TV val)
+        public void Put<TKey, TVal>(TKey key, TVal val)
         {
             // TODO: Eviction according to limits.
             // Eviction callbacks from Java work for 2 out of 3 cases:
@@ -57,12 +73,31 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // - Server node (primary keys) - because there is no need to store primary keys in near cache
             // We can just ignore the third case and never evict primary keys - after all, we are on a server node,
             // and it is fine to keep primary keys in memory.
-            _map[key] = new NearCacheEntry<TV>(true, val);
+
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                map[key] = new NearCacheEntry<TVal>(true, val);
+                return;
+            }
+
+            EnsureFallbackMap();
+            _fallbackMap[key] = new NearCacheEntry<object>(true, val);
         }
 
-        public INearCacheEntry<TV> GetOrCreateEntry(TK key)
+        public INearCacheEntry<TVal> GetOrCreateEntry<TKey, TVal>(TKey key)
         {
-            return _map.GetOrAdd(key, _ => new NearCacheEntry<TV>());
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                return map.GetOrAdd(key, _ => new NearCacheEntry<TVal>());
+            }
+            
+            EnsureFallbackMap();
+            var entry = _fallbackMap.GetOrAdd(key, _ => new NearCacheEntry<object>());
+            return new NearCacheEntryGenericWrapper<TVal>(entry);
         }
 
         public void Update(IBinaryStream stream, Marshaller marshaller)
@@ -70,22 +105,49 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
 
+            var pos = stream.Position;
             var reader = marshaller.StartUnmarshal(stream);
-            
-            // TODO: This throws when new type parameters come into play
-            var key = reader.Deserialize<TK>();
 
-            if (reader.ReadBoolean())
+            var map = _map;
+            if (map != null)
             {
-                // TODO: This throws when new type parameters come into play
-                // Catch exception?
-                var val = reader.Deserialize<TV>();
-                _map[key] = new NearCacheEntry<TV>(true, val);
+                try
+                {
+                    var key = reader.Deserialize<TK>();
+
+                    if (reader.ReadBoolean())
+                    {
+                        var val = reader.Deserialize<TV>();
+                        _map[key] = new NearCacheEntry<TV>(true, val);
+                    }
+                    else
+                    {
+                        NearCacheEntry<TV> unused;
+                        _map.TryRemove(key, out unused);
+                    }
+                }
+                catch (InvalidCastException)
+                {
+                    // Ignore.
+                    // _fallbackMap use case is not recommended, we expect this to be rare.
+                }
             }
-            else
+
+            if (_fallbackMap != null)
             {
-                NearCacheEntry<TV> unused;
-                _map.TryRemove(key, out unused);
+                stream.Seek(pos, SeekOrigin.Begin);
+                var key = reader.Deserialize<object>();
+
+                if (reader.ReadBoolean())
+                {
+                    var val = reader.Deserialize<object>();
+                    _fallbackMap[key] = new NearCacheEntry<object>(true, val);
+                }
+                else
+                {
+                    NearCacheEntry<object> unused;
+                    _fallbackMap.TryRemove(key, out unused);
+                }
             }
         }
 
@@ -93,23 +155,75 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
-
-            var key = marshaller.Unmarshal<TK>(stream);
             
-            Console.WriteLine("Evict: " + key);
-            NearCacheEntry<TV> unused;
-            _map.TryRemove(key, out unused);
+            var pos = stream.Position;
+
+            var map = _map;
+            if (map != null)
+            {
+                try
+                {
+                    var key = marshaller.Unmarshal<TK>(stream);
+                    NearCacheEntry<TV> unused;
+                    _map.TryRemove(key, out unused);
+                }
+                catch (InvalidCastException)
+                {
+                    // Ignore.
+                    // _fallbackMap use case is not recommended, we expect this to be rare.
+                }
+            }
+            
+            if (_fallbackMap != null)
+            {
+                stream.Seek(pos, SeekOrigin.Begin);
+                var key = marshaller.Unmarshal<object>(stream);
+                
+                NearCacheEntry<object> unused;
+                _fallbackMap.TryRemove(key, out unused);
+            }
         }
 
         public void Clear()
         {
-            _map.Clear();
+            if (_fallbackMap != null)
+            {
+                _fallbackMap.Clear();
+            }
+            else
+            {
+                var map = _map;
+                if (map != null)
+                {
+                    map.Clear();
+                }
+            }
         }
 
-        public void Remove(TK key)
+        public void Remove<TKey, TVal>(TKey key)
         {
-            NearCacheEntry<TV> unused;
-            _map.TryRemove(key, out unused);
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                NearCacheEntry<TVal> unused;
+                map.TryRemove(key, out unused);
+            }
+
+            if (_fallbackMap != null)
+            {
+                NearCacheEntry<object> unused;
+                _fallbackMap.TryRemove(key, out unused);
+            }
+        }
+
+        /// <summary>
+        /// Switches this instance to fallback mode (generic downgrade).
+        /// </summary>
+        private void EnsureFallbackMap()
+        {
+            _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, NearCacheEntry<object>>();
+            _map = null;
         }
     }
 }

@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         private readonly Func<IBinaryStream, Exception> _readException;
 
         /** Near cache. */
-        private readonly INearCache<TK, TV> _nearCache;
+        private readonly INearCache _nearCache;
 
         /// <summary>
         /// Constructor.
@@ -459,7 +459,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             // TODO: Wrap into _nearCache.GetOrAdd?
-            var entry = _nearCache.GetOrCreateEntry(key);
+            var entry = _nearCache.GetOrCreateEntry<TK, TV>(key);
 
             val = GetInternal(key);
             entry.SetValueIfEmpty(val);
@@ -555,7 +555,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 }
                 catch (Exception)
                 {
-                    _nearCache.Remove(key);
+                    _nearCache.Remove<TK, TV>(key);
                     throw;
                 }
             }

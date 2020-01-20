@@ -20,17 +20,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
 
-    internal interface INearCache<in TK, TV>
-    {
-        bool TryGetValue(TK key, out TV val);
-        
-        void Put(TK key, TV val);
-        
-        INearCacheEntry<TV> GetOrCreateEntry(TK key);
-        
-        void Remove(TK key);
-    }
-
     /// <summary>
     /// Non-generic near cache facade.
     /// </summary>
@@ -50,5 +39,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Reads cache key and evicts corresponding entry.
         /// </summary>
         void Evict(PlatformMemoryStream stream, Marshaller marshaller);
+
+        bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
+        
+        void Put<TKey, TVal>(TKey key, TVal val);
+        
+        INearCacheEntry<TVal> GetOrCreateEntry<TKey, TVal>(TKey key);
+        
+        void Remove<TKey, TVal>(TKey key);
     }
 }
