@@ -34,6 +34,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -65,11 +66,15 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
     @Parameterized.Parameter(2)
     public boolean fixMode;
 
+    /** Repair algorithm. */
+    @Parameterized.Parameter(3)
+    public RepairAlgorithm repairAlgorithm;
+
     /** Crd server node. */
-    private IgniteEx ig;
+    protected IgniteEx ig;
 
     /** Client. */
-    private IgniteEx client;
+    protected IgniteEx client;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
@@ -129,7 +134,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
-                params.add(new Object[] {atomicityMode, parts, false});
+                params.add(new Object[] {atomicityMode, parts, false, null});
         }
 
         return params;
@@ -190,7 +195,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
             }
         }, 6, "rand-loader");
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, DEFAULT_CACHE_NAME);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 

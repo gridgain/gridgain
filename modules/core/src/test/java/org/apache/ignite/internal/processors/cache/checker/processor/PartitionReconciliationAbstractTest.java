@@ -36,26 +36,36 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 
 /**
  *
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
-    public static ReconciliationResult partitionReconciliation(Ignite ig, boolean fixMode, String... caches) {
+    /**
+     *
+     */
+    public static ReconciliationResult partitionReconciliation(Ignite ig, boolean fixMode,
+        @Nullable RepairAlgorithm repairAlgorithm, String... caches) {
         return partitionReconciliation(
             ig,
             new VisorPartitionReconciliationTaskArg.Builder()
                 .caches(new HashSet<>(Arrays.asList(caches)))
                 .recheckDelay(1)
                 .fixMode(fixMode)
+                .repairAlg(repairAlgorithm)
         );
     }
 
+    /**
+     *
+     */
     public static ReconciliationResult partitionReconciliation(
         Ignite ig,
         VisorPartitionReconciliationTaskArg.Builder argBuilder
