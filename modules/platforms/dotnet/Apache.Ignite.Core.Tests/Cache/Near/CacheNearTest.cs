@@ -263,11 +263,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.IsTrue(TestUtils.WaitForCondition(() =>
             {
-                // TODO: Get may fail - we should wait for key to be propagated?
-                var res1 = localCache.Get(key);
-                var res2 = localCache.Get(key);
+                Foo val;
 
-                return ReferenceEquals(res1, res2);
+                return localCache.TryGet(key, out val) && 
+                       ReferenceEquals(val, localCache.Get(key));
             }, 300));
             
             // Invalidate after get.
@@ -275,10 +274,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.IsTrue(TestUtils.WaitForCondition(() =>
             {
-                var res1 = localCache.Get(key);
-                var res2 = localCache.Get(key);
+                Foo val;
 
-                return res1.Bar == 1 && ReferenceEquals(res1, res2);
+                return localCache.TryGet(key, out val) &&
+                       val.Bar == 1 &&
+                       ReferenceEquals(val, localCache.Get(key));
             }, 300));
         }
         
