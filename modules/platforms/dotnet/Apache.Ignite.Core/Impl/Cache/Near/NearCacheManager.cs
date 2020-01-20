@@ -90,6 +90,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // Can we get rid of it? Is it possible to miss updates if we don't use evict calls?
             // E.g.: entry is evicted from Near in Java and we no longer get updates for it, making it stale.
             // TODO: Investigate tests for this in Java.
+            
+            // TODO: Evict is NOT called on server nodes when GetCache was used
+            // Looks like we can't rely on a callback. Implement our own eviction/expiry.
             nearCache.Evict(stream, marshaller);
         }
 
