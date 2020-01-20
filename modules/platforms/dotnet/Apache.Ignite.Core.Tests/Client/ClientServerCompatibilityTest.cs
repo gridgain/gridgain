@@ -120,27 +120,6 @@ namespace Apache.Ignite.Core.Tests.Client
         }
         
         /// <summary>
-        /// Tests that WithExpiryPolicy throws proper exception on older server versions.
-        /// </summary>
-        [Test]
-        public void TestWithExpiryPolicyThrowCorrectExceptionOnVersionsOlderThan150()
-        {
-            if (_clientProtocolVersion >= ClientSocket.Ver150)
-            {
-                return;
-            }
-            
-            using (var client = StartClient())
-            {
-                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
-                var cacheWithExpiry = cache.WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(1), null, null));
-
-                ClientProtocolCompatibilityTest.AssertNotSupportedOperation(
-                    () => cacheWithExpiry.Put(1, 2), _clientProtocolVersion.ToString(), "WithExpiryPolicy");
-            }
-        }
-
-        /// <summary>
         /// Tests that server-side configured expiry policy works on all client versions.
         /// </summary>
         [Test]
@@ -231,7 +210,6 @@ namespace Apache.Ignite.Core.Tests.Client
                 SqlSchema = Guid.NewGuid().ToString(),
                 CopyOnRead = false,
                 DataRegionName = DataStorageConfiguration.DefaultDataRegionName,
-                ExpiryPolicyFactory = new TestExpiryPolicyFactory(),
                 OnheapCacheEnabled = true,
                 PartitionLossPolicy = PartitionLossPolicy.ReadWriteAll,
                 ReadFromBackup = false,
