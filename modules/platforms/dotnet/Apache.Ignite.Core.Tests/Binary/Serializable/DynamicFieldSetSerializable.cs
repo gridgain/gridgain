@@ -35,6 +35,8 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
         /// <summary>
         /// Initializes a new instance of the <see cref="EmptyObject"/> class.
         /// </summary>
+        // ReSharper disable once UnusedMember.Global
+        // ReSharper disable once UnusedParameter.Local
         public DynamicFieldSetSerializable(SerializationInfo info, StreamingContext context)
         {
             WriteFoo = info.GetBoolean("WriteFoo");
