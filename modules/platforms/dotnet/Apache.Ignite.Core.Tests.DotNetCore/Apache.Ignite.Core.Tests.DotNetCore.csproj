@@ -59,7 +59,19 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Binary\JavaBinaryInteropTest.cs" Link="Binary\JavaBinaryInteropTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\AdvancedSerializationTest.cs" Link="Binary\Serializable\AdvancedSerializationTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\CallbacksTest.cs" Link="Binary\Serializable\CallbacksTest.cs" />
+    <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\DynamicFieldSetSerializable.cs">
+      <Link>Binary\Serializable\DynamicFieldSetSerializable.cs</Link>
+    </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\DynamicFieldSetTest.cs">
+      <Link>Binary\Serializable\DynamicFieldSetTest.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\GenericCollectionsTest.cs" Link="Binary\Serializable\GenericCollectionsTest.cs" />
+    <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\ObjectReferenceTests.cs">
+      <Link>Binary\Serializable\ObjectReferenceTests.cs</Link>
+    </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\PrimitivesTest.cs">
+      <Link>Binary\Serializable\PrimitivesTest.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Binary\Serializable\SqlDmlTest.cs" Link="Binary\Serializable\SqlDmlTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\AddArgCacheEntryProcessor.cs" Link="Cache\AddArgCacheEntryProcessor.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\BinarizableAddArgCacheEntryProcessor.cs" Link="Cache\BinarizableAddArgCacheEntryProcessor.cs" />
