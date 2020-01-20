@@ -111,8 +111,9 @@ namespace Apache.Ignite.Benchmarks.Model
             Payload = new byte[payloadSize];
 
             Points = 100;
-            Birthday = DateTime.Now.AddHours(id);
-            Timestamp = DateTime.UtcNow.AddMinutes(id);
+
+            Birthday = new DateTime(2005, 5, 5, 1, 1, 1, DateTimeKind.Local).AddHours(id);
+            Timestamp = new DateTime(2005, 5, 5, 1, 1, 1, DateTimeKind.Utc).AddMinutes(id);
         }
 
         /** <inheritDoc /> */
