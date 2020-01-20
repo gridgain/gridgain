@@ -554,6 +554,8 @@ public abstract class IgniteAbstractDynamicCacheStartFailTest extends GridCacheA
 
             clientNode.cluster().baselineAutoAdjustEnabled(false);
 
+            clientNode.cluster().baselineAutoAdjustEnabled(false);
+
             List<BaselineNode> baseline = new ArrayList<>(grid(0).cluster().currentBaselineTopology());
 
             baseline.add(serverNode.cluster().localNode());

@@ -16,6 +16,9 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLSocket;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -2725,6 +2728,9 @@ class ServerImpl extends TcpDiscoveryImpl {
         /** */
         final IgniteUuid id;
 
+        /** */
+        final boolean verified;
+
         /**
          * @param msg Message.
          */
@@ -2735,6 +2741,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             id = msg.id();
             customMsg = msg instanceof TcpDiscoveryCustomEventMessage;
+            verified = msg.verified();
         }
 
         /** {@inheritDoc} */
@@ -2804,14 +2811,22 @@ class ServerImpl extends TcpDiscoveryImpl {
             @Nullable IgniteUuid customDiscardId
         ) {
             this.msgs.clear();
+            this.customDiscardId = null;
+            this.discardId = null;
 
             if (msgs != null) {
-                for (TcpDiscoveryAbstractMessage msg : msgs)
-                    this.msgs.add(new PendingMessage(msg));
-            }
+                for (TcpDiscoveryAbstractMessage msg : msgs) {
+                    PendingMessage pm = new PendingMessage(msg);
 
-            this.discardId = discardId;
-            this.customDiscardId = customDiscardId;
+                    this.msgs.add(pm);
+
+                    if (pm.customMsg && pm.id.equals(customDiscardId))
+                        this.customDiscardId = customDiscardId;
+
+                    if (!pm.customMsg && pm.id.equals(discardId))
+                        this.discardId = discardId;
+                }
+            }
         }
 
         /**
@@ -2865,7 +2880,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                         if (F.eq(customDiscardId, msg.id)) {
                             msg.msg = null;
 
-                            return;
+                            if (msg.verified)
+                                return;
                         }
                     }
                 }
@@ -2876,7 +2892,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                         if (F.eq(discardId, msg.id)) {
                             msg.msg = null;
 
-                            return;
+                            if (msg.verified)
+                                return;
                         }
                     }
                 }
@@ -2947,7 +2964,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         if (skipCustomMsg) {
                             assert customDiscardId != null;
 
-                            if (F.eq(customDiscardId, msg0.id))
+                            if (F.eq(customDiscardId, msg0.id) && msg0.verified)
                                 skipCustomMsg = false;
 
                             continue;
@@ -2957,7 +2974,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         if (skipMsg) {
                             assert discardId != null;
 
-                            if (F.eq(discardId, msg0.id))
+                            if (F.eq(discardId, msg0.id) && msg0.verified)
                                 skipMsg = false;
 
                             continue;

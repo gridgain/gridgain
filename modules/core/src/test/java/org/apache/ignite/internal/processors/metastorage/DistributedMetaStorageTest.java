@@ -482,6 +482,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     }
 
     /** */
+    /** */
     @Test
     public void testClient() throws Exception {
         IgniteEx igniteEx = startGrid(0);

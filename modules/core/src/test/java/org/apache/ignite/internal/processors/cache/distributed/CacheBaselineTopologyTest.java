@@ -1196,6 +1196,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
 
         ignite.cluster().baselineAutoAdjustEnabled(false);
 
+        ignite.cluster().baselineAutoAdjustEnabled(false);
+
         ignite.cluster().active(true);
 
         stopGrid(1);
