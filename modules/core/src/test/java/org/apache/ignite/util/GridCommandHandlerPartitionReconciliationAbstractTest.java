@@ -938,7 +938,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
             Collections.singletonMap(
                 DEFAULT_CACHE_NAME,
                 Collections.singletonMap(
-                    4,
+                    ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().affinity().partition(INVALID_KEY),
                     Collections.singletonList(
                         new PartitionReconciliationDataRowMeta(
                             invalidDataRowMeta.keyMeta(),
