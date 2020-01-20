@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -164,8 +165,18 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups", "--load-factor", "0.0001"));
         assertTrue(lsnrOneLevel.check(10_000));
 
+        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "220");
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups", "--load-factor", "1"));
+        assertTrue(lsnrTwoLevel.check(10_000));
+
+        ignite.getOrCreateCache(new CacheConfiguration<>("100_backups_replicated").setCacheMode(CacheMode.REPLICATED).setBackups(100));
+
+        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "4");
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups_replicated", "--load-factor", "0.0001"));
+        assertTrue(lsnrOneLevel.check(10_000));
+
         System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "120");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--load-factor", "1"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups_replicated", "--load-factor", "1"));
         assertTrue(lsnrTwoLevel.check(10_000));
 
         System.clearProperty(AVAILABLE_PROCESSORS_RECONCILIATION);

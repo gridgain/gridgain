@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -48,6 +49,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static java.io.File.separatorChar;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
+import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
  *
@@ -288,8 +290,11 @@ public class ConsistencyCheckUtils {
 
         int totalBackupCnt = 0;
 
-        for (String cache : caches)
-            totalBackupCnt += (ignite.cachex(cache).configuration().getBackups() + 1);
+        for (String cache : caches) {
+            CacheMode mode = ignite.cachex(cache).configuration().getCacheMode();
+            totalBackupCnt += (mode == REPLICATED ? ignite.context().discovery().aliveServerNodes().size()
+                : ignite.cachex(cache).configuration().getBackups() + 1);
+        }
 
         int cpus = Math.max(4, getInteger(AVAILABLE_PROCESSORS_RECONCILIATION, Runtime.getRuntime().availableProcessors()));
 
