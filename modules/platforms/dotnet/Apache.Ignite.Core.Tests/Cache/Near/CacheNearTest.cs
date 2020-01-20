@@ -381,7 +381,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cfg = new CacheConfiguration
             {
-                Name = "destroy-test",
+                Name = "destroy-test-" + mode,
                 NearConfiguration = new NearCacheConfiguration()
             };
 
@@ -396,7 +396,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // TODO: why does message start with class o.a.i...?
             StringAssert.EndsWith(
-                "Failed to perform cache operation (cache is stopped): destroy-test", 
+                "Failed to perform cache operation (cache is stopped): " + cache.Name, 
                 ex.Message);
         }
 
