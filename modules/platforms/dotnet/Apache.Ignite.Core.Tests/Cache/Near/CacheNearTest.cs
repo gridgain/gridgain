@@ -565,6 +565,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         private ICache<TK, TV> GetCache<TK, TV>(CacheTestMode mode, string name = CacheName)
         {
             // TODO: Provide an explanation: why do we create caches differently?
+            // This BS does not make any sense. Screw Java Near Cache, let's not depend on it - waste or JVM heap.
             switch (mode)
             {
                 case CacheTestMode.ServerLocal:
@@ -574,9 +575,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     return _grid2.GetCache<TK, TV>(name);
                 
                 case CacheTestMode.Client:
-                    return _client.GetCache<TK, TV>(name);
-                    // return _client.GetOrCreateNearCache<TK, TV>(name,
-                    //     _grid.GetCache<TK, TV>(name).GetConfiguration().NearConfiguration);
+                    return _client.GetOrCreateNearCache<TK, TV>(name,
+                        _grid.GetCache<TK, TV>(name).GetConfiguration().NearConfiguration);
                 
                 default:
                     throw new ArgumentOutOfRangeException("mode", mode, null);
