@@ -16,31 +16,17 @@
 
 package org.apache.ignite.internal.processors.cache.transactions;
 
-import org.apache.ignite.configuration.DataRegionConfiguration;
-import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.WALMode;
 
 /**
  * Test partitions consistency in various scenarios when all rebalance is historical and compaction is enabled.
  */
-public class TxPartitionCounterStateConsistencyHistoryRebalanceCompactionEnabledTest extends TxPartitionCounterStateConsistencyHistoryRebalanceTest {
+public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest extends TxPartitionCounterStateConsistencyHistoryRebalanceTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        DataStorageConfiguration dbCfg = new DataStorageConfiguration()
-            .setWalMode(WALMode.LOG_ONLY)
-            .setWalSegmentSize(2 * 1024 * 1024)
-            .setCheckpointFrequency(Integer.MAX_VALUE)
-            .setWalCompactionEnabled(true)
-            .setDefaultDataRegionConfiguration(
-                new DataRegionConfiguration()
-                    .setPersistenceEnabled(true)
-                    .setMaxSize(100 * 1024 * 1024)
-            );
-
-        cfg.setDataStorageConfiguration(dbCfg);
+        cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
 
         return cfg;
     }
