@@ -63,12 +63,22 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
                 size += v.getMemory();
 
-                memTracker.reserve(size);
+                memTracker.reserved(size);
 
                 memReserved += size;
             }
         }
         a.count++;
+    }
+
+    @Override
+    public void mergeAggregate(Session ses, AggregateData agg) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public long getMemory() {
+        return memReserved;
     }
 
     @Override
@@ -91,7 +101,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
         if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
             values = null;
 
-            memTracker.release(memReserved);
+            memTracker.released(memReserved);
         }
     }
 }

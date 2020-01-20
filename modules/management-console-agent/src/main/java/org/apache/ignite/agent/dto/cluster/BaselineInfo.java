@@ -46,7 +46,7 @@ public class BaselineInfo {
     }
 
     /**
-     * @return @{code True} if auto adjust is enabled.
+     * @return {@code true} if auto adjust is enabled.
      */
     public boolean isAutoAdjustEnabled() {
         return isAutoAdjustEnabled;

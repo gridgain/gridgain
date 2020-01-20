@@ -16,7 +16,6 @@
 
 package org.apache.ignite.agent.dto.action.query;
 
-import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -41,8 +40,8 @@ public class QueryArgument {
     /** Enforce join order flag. */
     private boolean enforceJoinOrder;
 
-    /** Target node ID. */
-    private UUID targetNodeId;
+    /** Is should be run locally. */
+    private boolean isLoc;
 
     /** Result batch size. */
     private int pageSize;
@@ -122,7 +121,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if distributed joins should be used.
+     * @return {@code true} if distributed joins should be used.
      */
     public boolean isDistributedJoins() {
         return distributedJoins;
@@ -139,7 +138,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if enforce join order should be used.
+     * @return {@code true} if enforce join order should be used.
      */
     public boolean isEnforceJoinOrder() {
         return enforceJoinOrder;
@@ -156,19 +155,18 @@ public class QueryArgument {
     }
 
     /**
-     * @return Node ID on which query will be executed.
+     * @return {@code true} if query should be executed on local node.
      */
-    public UUID getTargetNodeId() {
-        return targetNodeId;
+    public boolean isLocal() {
+        return isLoc;
     }
 
     /**
-     * @param targetNodeId Target node id.
-     * @return {@code This} for chaining method calls.
+     * @param isLocal Is local flag.
+     * @return This for chaining method calls.
      */
-    public QueryArgument setTargetNodeId(UUID targetNodeId) {
-        this.targetNodeId = targetNodeId;
-
+    public QueryArgument setLocal(boolean isLocal) {
+        this.isLoc = isLocal;
         return this;
     }
 
@@ -190,7 +188,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if it's lazy query.
+     * @return {@code true} if it's lazy query.
      */
     public boolean isLazy() {
         return lazy;
@@ -207,7 +205,7 @@ public class QueryArgument {
     }
 
     /**
-     * @return @{code true} if it's collocated query.
+     * @return {@code true} if it's collocated query.
      */
     public boolean isCollocated() {
         return collocated;
