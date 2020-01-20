@@ -233,6 +233,9 @@ namespace Apache.Ignite.Core.Tests.Client
             return GetServerRequestNames(logger, prefix);
         }
 
+        /// <summary>
+        /// Gets client request names from a given logger.
+        /// </summary>
         protected static IEnumerable<string> GetServerRequestNames(ListLogger logger, string prefix = null)
         {
             // Full request class name examples:
@@ -250,11 +253,17 @@ namespace Apache.Ignite.Core.Tests.Client
                 .Select(m => m.Groups[1].Value);
         }
 
+        /// <summary>
+        /// Gets client request names from all server nodes.
+        /// </summary>
         protected static IEnumerable<string> GetAllServerRequestNames(string prefix = null)
         {
             return GetLoggers().SelectMany(l => GetServerRequestNames(l, prefix));
         }
 
+        /// <summary>
+        /// Gets loggers from all server nodes.
+        /// </summary>
         private static IEnumerable<ListLogger> GetLoggers()
         {
             return Ignition.GetAll()
@@ -263,6 +272,9 @@ namespace Apache.Ignite.Core.Tests.Client
                 .Cast<ListLogger>();
         }
 
+        /// <summary>
+        /// Clears loggers of all server nodes.
+        /// </summary>
         protected static void ClearLoggers()
         {
             foreach (var logger in GetLoggers())
