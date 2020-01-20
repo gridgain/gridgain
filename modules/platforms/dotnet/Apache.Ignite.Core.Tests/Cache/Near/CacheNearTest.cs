@@ -534,6 +534,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: When receiving scan query results, can we also use existing values from near cache?
         }
 
+        [Test]
+        public void TestExpiryPolicyRemovesValuesFromNearCache()
+        {
+            // TODO: WithExpiryPolicy
+            // TODO: CacheConfiguration.ExpiryPolicy
+        }
+
         /// <summary>
         /// Asserts the cache is near.
         /// </summary>
