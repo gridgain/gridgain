@@ -282,7 +282,7 @@ namespace Apache.Ignite.Core.Tests
             var aff = ignite.GetAffinity(cacheName);
             node = node ?? ignite.GetCluster().GetLocalNode();
 
-            return Enumerable.Range(1, int.MaxValue).Where(x => aff.IsPrimary(node, x));
+            return Enumerable.Range(1, int.MaxValue).Where(x => aff.IsPrimary(node, x) == primary);
         }
 
         /// <summary>
