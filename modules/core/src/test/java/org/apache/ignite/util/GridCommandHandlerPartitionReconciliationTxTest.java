@@ -18,6 +18,7 @@ package org.apache.ignite.util;
 
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 
@@ -35,6 +36,7 @@ public class GridCommandHandlerPartitionReconciliationTxTest extends
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setCacheMode(PARTITIONED)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setBackups(3));
 

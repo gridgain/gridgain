@@ -50,7 +50,7 @@ public class ConsistencyCheckUtilsTest {
         {
             Map<UUID, VersionedValue> actualKey = new HashMap<>(); // All keys was removed
 
-            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -60,7 +60,7 @@ public class ConsistencyCheckUtilsTest {
             actualKey.put(node3, versionedValue(4)); // Max version increase
             actualKey.put(node4, versionedValue(2));
 
-            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -69,7 +69,7 @@ public class ConsistencyCheckUtilsTest {
             actualKey.put(node2, versionedValue(3)); // Max of node 3 was removed
             actualKey.put(node4, versionedValue(2));
 
-            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -79,7 +79,7 @@ public class ConsistencyCheckUtilsTest {
             actualKey.put(node3, versionedValue(3));
             actualKey.put(node4, versionedValue(3));
 
-            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -89,7 +89,7 @@ public class ConsistencyCheckUtilsTest {
             actualKey.put(node3, versionedValue(3));
             actualKey.put(node4, versionedValue(4));
 
-            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -99,7 +99,7 @@ public class ConsistencyCheckUtilsTest {
             actualKey.put(node3, versionedValue(3));
             actualKey.put(node4, versionedValue(2));
 
-            assertFalse(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertFalse(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -109,7 +109,7 @@ public class ConsistencyCheckUtilsTest {
             actualKey.put(node3, versionedValue(3));
             actualKey.put(node4, versionedValue(3));
 
-            assertFalse(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertFalse(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -118,7 +118,7 @@ public class ConsistencyCheckUtilsTest {
             actualKey.put(node3, versionedValue(3));
             actualKey.put(node4, versionedValue(3));
 
-            assertFalse(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertFalse(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
     }
 
@@ -140,14 +140,14 @@ public class ConsistencyCheckUtilsTest {
                 Map<UUID, VersionedValue> actualKey = new HashMap<>();
                 actualKey.put(node1, versionedValue(1));
 
-                assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+                assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
             }
 
             {
                 Map<UUID, VersionedValue> actualKey = new HashMap<>();
                 actualKey.put(node2, versionedValue(1));
 
-                assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+                assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
             }
         }
 
@@ -160,7 +160,7 @@ public class ConsistencyCheckUtilsTest {
             Map<UUID, VersionedValue> actualKey = new HashMap<>();
             actualKey.put(node3, versionedValue(4));
 
-            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
 
         {
@@ -172,7 +172,7 @@ public class ConsistencyCheckUtilsTest {
             Map<UUID, VersionedValue> actualKey = new HashMap<>();
             actualKey.put(node1, versionedValue(4));
 
-            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey));
+            assertTrue(ConsistencyCheckUtils.checkConsistency(oldKey, actualKey, 4));
         }
     }
 

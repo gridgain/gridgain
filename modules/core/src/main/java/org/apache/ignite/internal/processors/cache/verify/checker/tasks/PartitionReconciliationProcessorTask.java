@@ -68,9 +68,15 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     @IgniteInstanceResource
     private IgniteEx ignite;
 
+    /**
+     *
+     */
     @LoggerResource
     private IgniteLogger log;
 
+    /**
+     *
+     */
     private boolean consoleMode;
 
     /** {@inheritDoc} */
@@ -83,7 +89,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         LocalDateTime startTime = LocalDateTime.now();
         long sesId = startTime.toEpochSecond(ZoneOffset.UTC);
 
-        ignite.compute().broadcast(() -> ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(sesId));
+        ignite.compute()
+            .broadcastAsync(() -> ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(sesId))
+            .get();
 
         for (ClusterNode node : subgrid)
             jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);

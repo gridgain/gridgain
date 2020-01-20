@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -37,7 +38,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  *
  */
 public class PartitionReconciliationResult extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** A sequence of characters that is used to hide sensitive data in case of non-verbose mode. */
@@ -196,11 +199,21 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
 
         this.nodesIdsToConsistenceIdsMap.putAll(outer.nodesIdsToConsistenceIdsMap);
 
-        this.inconsistentKeys.putAll(outer.inconsistentKeys);
+        for (Map.Entry<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> entry : outer.inconsistentKeys.entrySet()) {
+            Map<Integer, List<PartitionReconciliationDataRowMeta>> map = this.inconsistentKeys.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
+
+            for (Map.Entry<Integer, List<PartitionReconciliationDataRowMeta>> listEntry : entry.getValue().entrySet())
+                map.computeIfAbsent(listEntry.getKey(), k -> new ArrayList<>()).addAll(listEntry.getValue());
+        }
+
+        for (Map.Entry<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> entry : outer.skippedEntries.entrySet()) {
+            Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> map = this.skippedEntries.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
+
+            for (Map.Entry<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> setEntry : entry.getValue().entrySet())
+                map.computeIfAbsent(setEntry.getKey(), k -> new HashSet<>()).addAll(setEntry.getValue());
+        }
 
         this.skippedCaches.addAll(outer.skippedCaches);
-
-        this.skippedEntries.putAll(outer.skippedEntries);
     }
 
     /**
@@ -242,7 +255,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
      * @return Inconsisitent keys count.
      */
     public int inconsistentKeysCount() {
-        return inconsistentKeys.size();
+        return inconsistentKeys.values().stream().flatMap(m -> m.values().stream()).mapToInt(List::size).sum();
     }
 
     /**
