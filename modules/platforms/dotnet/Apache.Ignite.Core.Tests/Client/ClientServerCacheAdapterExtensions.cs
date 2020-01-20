@@ -19,8 +19,14 @@ namespace Apache.Ignite.Core.Tests.Client
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Client.Cache;
 
+    /// <summary>
+    /// Extension methods related to <see cref="ClientServerCacheAdapter{TK, TV}"/>.
+    /// </summary>
     public static class ClientServerCacheAdapterExtensions
     {
+        /// <summary>
+        /// Returns given <see cref="ICache{TK,TV}"/> wrapped as <see cref="ICacheClient{TK,TV}"/>.
+        /// </summary>
         public static ICacheClient<TK, TV> AsCacheClient<TK, TV>(this ICache<TK, TV> cache)
         {
             return new ClientServerCacheAdapter<TK, TV>(cache);
