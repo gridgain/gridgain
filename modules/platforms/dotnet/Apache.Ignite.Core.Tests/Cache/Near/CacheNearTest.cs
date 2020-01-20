@@ -427,6 +427,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cache = GetCache<int, Foo>(mode);
             Assert.AreEqual(0, cache.GetSize());
+            
+            // Wait for rebalance.
+            Assert.IsTrue(TestUtils.WaitForCondition(
+                () => _grid2.GetAffinity(cache.Name).MapKeyToNode(1).IsLocal, 2000));
 
             // Use non-primary keys: primary keys are not evicted.
             var items = TestUtils
