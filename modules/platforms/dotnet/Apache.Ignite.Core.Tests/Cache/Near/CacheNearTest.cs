@@ -557,6 +557,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         private ICache<TK, TV> GetCache<TK, TV>(CacheTestMode mode, string name = CacheName)
         {
+            // TODO: Provide an explanation: why do we create caches differently?
             switch (mode)
             {
                 case CacheTestMode.ServerLocal:
