@@ -99,8 +99,6 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
 
-            // TODO: Design consideration. Can we get make .NET Near Cache independent of Java Near Cache?
-            // It does not make sense to waste JVM memory when only .NET Near Cache is actually required.
             if (configuration.NearConfiguration != null)
             {
                 _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name, configuration.NearConfiguration);
