@@ -707,8 +707,12 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * @param repairAlg Used repair algorithm.
      * @throws IgniteCheckedException If failed to marshal expected value within repair meta.
      */
-    private void validateFix(PartitionReconciliationDataRowMeta invalidDataRowMeta, ReconciliationResult res,
-        String invalidVal, RepairAlgorithm repairAlg) throws IgniteCheckedException {
+    private void validateFix(
+        PartitionReconciliationDataRowMeta invalidDataRowMeta,
+        ReconciliationResult res,
+        String invalidVal,
+        RepairAlgorithm repairAlg
+    ) throws IgniteCheckedException {
         // Validate partition reconciliation result.
         validateResult(
             invalidDataRowMeta,
