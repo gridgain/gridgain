@@ -18,7 +18,11 @@ package org.apache.ignite.util;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -30,14 +34,21 @@ import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
+import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.junit.Test;
 
 import static java.io.File.separatorChar;
-import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 
 /**
@@ -134,6 +145,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         U.delete(customDiagnosticDir);
     }
 
+
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -183,18 +196,14 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testRemovedEntryOnPrimaryWithDefaultRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(true);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode",
-            "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).build());
 
-        // TODO: 12.12.19 Validate output.
-
-        for (int i = 0; i < 4; i++) {
-            Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
-
-            assertEquals(VALUE_PREFIX + INVALID_KEY, val);
-        }
+        // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY, RepairAlgorithm.MAJORITY);
     }
 
     /**
@@ -236,18 +245,14 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testRemovedEntryOnPrimaryWithMajorityRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(true);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAJORITY", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).repairAlg(RepairAlgorithm.MAJORITY).build());
 
-        // TODO: 12.12.19 Validate output.
-
-        for (int i = 0; i < 4; i++) {
-            Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
-
-            assertEquals(VALUE_PREFIX + INVALID_KEY, val);
-        }
+        // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY, RepairAlgorithm.MAJORITY);
     }
 
     /**
@@ -288,13 +293,22 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testRemovedEntryOnPrimaryWithPrimaryRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(true);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRIMARY", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).repairAlg(RepairAlgorithm.PRIMARY).build());
 
-        // TODO: 12.12.19 Validate output.
+        // Validate partition reconciliation result.
+        validateResult(
+            invalidDataRowMeta,
+            res,
+            new PartitionReconciliationRepairMeta(
+                true,
+                null,
+                RepairAlgorithm.PRIMARY));
 
+        // Enusre that invalid key was successfully fixed.
         for (int i = 0; i < 4; i++) {
             Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
 
@@ -342,18 +356,16 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testRemovedEntryOnPrimaryWithMaxGridCacheVersionRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(true);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAX_GRID_CACHE_VERSION", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).
+                repairAlg(RepairAlgorithm.MAX_GRID_CACHE_VERSION).build());
 
-        // TODO: 12.12.19 Validate output.
-
-        for (int i = 0; i < 4; i++) {
-            Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
-
-            assertEquals(VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2, val);
-        }
+        // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
+            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
     }
 
     /**
@@ -394,13 +406,28 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testRemovedEntryOnPrimaryWithPrintOnlyRepairAlg() throws Exception {
-        List<ClusterNode> nodes = populateCacheWithInconsistentEntry(true);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRINT_ONLY", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).
+                repairAlg(RepairAlgorithm.PRINT_ONLY).build());
 
-        // TODO: 12.12.19 Validate output.
+        List<ClusterNode> nodes = ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().affinity().
+            nodesByKey(
+                INVALID_KEY,
+                ignite(0).cachex(DEFAULT_CACHE_NAME).context().topology().readyTopologyVersion());
 
+        // Validate partition reconciliation result.
+        validateResult(
+            invalidDataRowMeta,
+            res,
+            new PartitionReconciliationRepairMeta(
+                true,
+                null,
+                RepairAlgorithm.PRINT_ONLY));
+
+        // Enusre that invalid key wasn't fixed.
         assertNull(((IgniteEx)grid(nodes.get(0))).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null));
 
         assertEquals(VALUE_PREFIX + INVALID_KEY,
@@ -431,7 +458,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Run partition_reconciliation command in fix mode.</li>
      * <p>
      * <b>Expected result:</b>
-     * Cause there are no missing keys neither totally missing, nor available only in deferred delete queue, default
+     * Cause there are no missing keys: neither totally missing, nor available only in deferred delete queue, default
      * MAJORITY algorithm won't be used, MAX_GRID_CACHE_VERSION will be used instead.
      * <ul>
      * <li>Parse output and ensure that one key was added to 'inconsistent keys section' with corresponding
@@ -454,18 +481,15 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testMissedUpdateWithDefaultRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(false);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode",
-            "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).build());
 
-        // TODO: 12.12.19 Validate output.
-
-        for (int i = 0; i < 4; i++) {
-            Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
-
-            assertEquals(VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2, val);
-        }
+        // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
+            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
     }
 
     /**
@@ -486,7 +510,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Run partition_reconciliation command in fix mode with fix-alg <b>MAJORITY</b>.</li>
      * <p>
      * <b>Expected result:</b>
-     * Cause there are no missing keys neither totally missing, nor available only in deferred delete queue, MAJORITY
+     * Cause there are no missing keys: neither totally missing, nor available only in deferred delete queue, MAJORITY
      * algorithm won't be used, MAX_GRID_CACHE_VERSION will be used instead.
      * <ul>
      * <li>Parse output and ensure that one key was added to 'inconsistent keys section' with corresponding
@@ -509,18 +533,15 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testMissedUpdateOnPrimaryWithMajorityRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(false);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAJORITY", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).repairAlg(RepairAlgorithm.MAJORITY).build());
 
-        // TODO: 12.12.19 Validate output.
-
-        for (int i = 0; i < 4; i++) {
-            Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
-
-            assertEquals(VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2, val);
-        }
+        // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
+            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
     }
 
     /**
@@ -564,18 +585,15 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testMissedUpdateOnPrimaryWithPrimaryRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(false);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRIMARY", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).repairAlg(RepairAlgorithm.PRIMARY).build());
 
-        // TODO: 12.12.19 Validate output.
-
-        for (int i = 0; i < 4; i++) {
-            Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
-
-            assertEquals(VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2, val);
-        }
+        // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
+            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
     }
 
     /**
@@ -617,18 +635,16 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testMissedUpdateOnPrimaryWithMaxGridCacheVersionRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(false);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAX_GRID_CACHE_VERSION", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).
+                repairAlg(RepairAlgorithm.MAX_GRID_CACHE_VERSION).build());
 
-        // TODO: 12.12.19 Validate output.
-
-        for (int i = 0; i < 4; i++) {
-            Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
-
-            assertEquals(VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2, val);
-        }
+        // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
+            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
     }
 
     /**
@@ -672,17 +688,46 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      */
     @Test
     public void testMissedUpdateOnPrimaryWithPrintOnlyRepairAlg() throws Exception {
-        populateCacheWithInconsistentEntry(false);
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRINT_ONLY", "--recheck-delay", "0"));
+        ReconciliationResult res = ignite(0).compute().execute(
+            PartitionReconciliationProcessorTask.class.getName(),
+            new VisorPartitionReconciliationTaskArg.Builder().fixMode(true).
+                repairAlg(RepairAlgorithm.PRINT_ONLY).build());
+        validateFix(invalidDataRowMeta, res, VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
+            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
 
-        // TODO: 12.12.19 Validate output.
+    }
+
+    /**
+     * Validate partition reconciliation result and Enusre that invalid key was successfully fixed.
+     *
+     * @param invalidDataRowMeta Invalidated data row.
+     * @param res Partition reconciliation result.
+     * @param invalidVal Invalid value.
+     * @param repairAlg Used repair algorithm.
+     * @throws IgniteCheckedException If failed to marshal expected value within repair meta.
+     */
+    private void validateFix(PartitionReconciliationDataRowMeta invalidDataRowMeta, ReconciliationResult res,
+        String invalidVal, RepairAlgorithm repairAlg) throws IgniteCheckedException {
+        // Validate partition reconciliation result.
+        validateResult(
+            invalidDataRowMeta,
+            res,
+            new PartitionReconciliationRepairMeta(
+                true,
+                new PartitionReconciliationValueMeta(
+                    grid(0).context().cacheObjects().marshal(
+                        ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().cacheObjectContext(),
+                        invalidVal),
+                    invalidVal,
+                    null),
+                repairAlg));
 
         for (int i = 0; i < 4; i++) {
             Object val = ignite(i).cachex(DEFAULT_CACHE_NAME).localPeek(INVALID_KEY, null);
 
-            assertEquals(VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2, val);
+            assertEquals(invalidVal, val);
         }
     }
 
@@ -702,8 +747,19 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * @param dropEntry Boolean flag in order to define whether to drop entry on primary or not.
      * @return List of affinity nodes.
      */
-    private List<ClusterNode> populateCacheWithInconsistentEntry(boolean dropEntry) {
-        List<ClusterNode> nodes = ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().affinity().
+    private PartitionReconciliationDataRowMeta populateCacheWithInconsistentEntry(boolean dropEntry)
+        throws IgniteCheckedException {
+        Map<UUID, PartitionReconciliationValueMeta> valMetas = new HashMap<>();
+
+        GridCacheContext<Object, Object> cctx = ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context();
+
+        PartitionReconciliationDataRowMeta res = new PartitionReconciliationDataRowMeta(
+                new PartitionReconciliationKeyMeta(
+                    grid(0).context().cacheObjects().marshal(cctx.cacheObjectContext(), INVALID_KEY),
+                    String.valueOf(INVALID_KEY)),
+            valMetas);
+
+        List<ClusterNode> nodes = cctx.affinity().
             nodesByKey(
                 INVALID_KEY,
                 ignite(0).cachex(DEFAULT_CACHE_NAME).context().topology().readyTopologyVersion());
@@ -715,40 +771,87 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
                 clearLocallyAll(Collections.singleton(INVALID_KEY), true, true, true);
         }
         else {
+            GridCacheVersion invalidVerNode0 = new GridCacheVersion(0, 0, 1);
+
             corruptDataEntry(((IgniteEx)grid(nodes.get(0))).cachex(
                 DEFAULT_CACHE_NAME).context(),
                 INVALID_KEY,
                 false,
-                false,
-                new GridCacheVersion(0, 0, 1),
+                true,
+                invalidVerNode0,
                 BROKEN_POSTFIX_1);
+
+            String brokenValNode0 = VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_1;
+
+            valMetas.put(
+                nodes.get(0).id(),
+                new PartitionReconciliationValueMeta(
+                    grid(0).context().cacheObjects().marshal(cctx.cacheObjectContext(), brokenValNode0),
+                    brokenValNode0,
+                    invalidVerNode0));
         }
+
+        //Node 1
+        GridCacheVersion invalidVerNode1 = new GridCacheVersion(0, 0, 1);
 
         corruptDataEntry(((IgniteEx)grid(nodes.get(1))).cachex(
             DEFAULT_CACHE_NAME).context(),
             INVALID_KEY,
             false,
             false,
-            new GridCacheVersion(0, 0, 2),
+            invalidVerNode1,
             null);
+
+        String brokenValNode1 = VALUE_PREFIX + INVALID_KEY;
+
+        valMetas.put(
+            nodes.get(1).id(),
+            new PartitionReconciliationValueMeta(
+                grid(1).context().cacheObjects().marshal(cctx.cacheObjectContext(), brokenValNode1),
+                brokenValNode1,
+                invalidVerNode1));
+
+        //Node 2
+        GridCacheVersion invalidVerNode2 = new GridCacheVersion(0, 0, 2);
 
         corruptDataEntry(((IgniteEx)grid(nodes.get(2))).cachex(
             DEFAULT_CACHE_NAME).context(),
             INVALID_KEY,
             false,
             false,
-            new GridCacheVersion(0, 0, 2),
+            invalidVerNode2,
             null);
+
+        String brokenValNode2 = VALUE_PREFIX + INVALID_KEY;
+
+        valMetas.put(
+            nodes.get(2).id(),
+            new PartitionReconciliationValueMeta(
+                grid(2).context().cacheObjects().marshal(cctx.cacheObjectContext(), brokenValNode2),
+                brokenValNode2,
+                invalidVerNode2));
+
+        // Node 3
+        GridCacheVersion invalidVerNode3 = new GridCacheVersion(0, 0, 3);
 
         corruptDataEntry(((IgniteEx)grid(nodes.get(3))).cachex(
             DEFAULT_CACHE_NAME).context(),
             INVALID_KEY,
             false,
             true,
-            new GridCacheVersion(0, 0, 3),
+            invalidVerNode3,
             BROKEN_POSTFIX_2);
 
-        return nodes;
+        String brokenValNode3 = VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2;
+
+        valMetas.put(
+            nodes.get(3).id(),
+            new PartitionReconciliationValueMeta(
+                grid(3).context().cacheObjects().marshal(cctx.cacheObjectContext(), brokenValNode3),
+                brokenValNode3,
+                invalidVerNode3));
+
+        return res;
     }
 
     /**
@@ -810,5 +913,34 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         catch (IgniteCheckedException e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Utility method to validate partition reconciliation result.
+     *
+     * @param invalidDataRowMeta Invalidated data row.
+     * @param res Partition reconciliation result.
+     * @param repairMeta Repair meta.
+     */
+    private void validateResult(
+        PartitionReconciliationDataRowMeta invalidDataRowMeta,
+        ReconciliationResult res,
+        PartitionReconciliationRepairMeta repairMeta) {
+        assertEquals(0, res.errors().size());
+        assertEquals(0, res.partitionReconciliationResult().skippedEntriesCount());
+        assertEquals(0, res.partitionReconciliationResult().skippedCachesCount());
+        assertEquals(1, res.partitionReconciliationResult().inconsistentKeysCount());
+
+        assertEquals(
+            Collections.singletonMap(
+                DEFAULT_CACHE_NAME,
+                Collections.singletonMap(
+                    4,
+                    Collections.singletonList(
+                        new PartitionReconciliationDataRowMeta(
+                            invalidDataRowMeta.keyMeta(),
+                            invalidDataRowMeta.valueMeta(),
+                            repairMeta)))),
+            res.partitionReconciliationResult().inconsistentKeys());
     }
 }
