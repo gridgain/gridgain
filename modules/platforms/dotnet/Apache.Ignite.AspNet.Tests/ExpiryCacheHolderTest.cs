@@ -569,11 +569,6 @@ namespace Apache.Ignite.AspNet.Tests
             {
                 throw new NotImplementedException();
             }
-
-            public void Dispose()
-            {
-                throw new NotImplementedException();
-            }
         }
     }
 }

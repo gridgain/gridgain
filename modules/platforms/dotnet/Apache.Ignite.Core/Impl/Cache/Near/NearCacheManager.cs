@@ -30,7 +30,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal class NearCacheManager
     {
-        /** TODO: Use weak references? Java keeps near cache data forever... */
+        /// <summary>
+        /// Near caches per cache id.
+        /// Multiple <see cref="CacheImpl{TK,TV}"/> instances can point to the same Ignite cache,
+        /// and share one <see cref="NearCache{TK,TV}"/> instance. 
+        /// </summary> 
         private readonly CopyOnWriteConcurrentDictionary<int, INearCache> _nearCaches
             = new CopyOnWriteConcurrentDictionary<int, INearCache>();
 

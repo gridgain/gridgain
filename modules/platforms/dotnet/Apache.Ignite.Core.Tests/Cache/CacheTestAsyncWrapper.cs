@@ -644,11 +644,6 @@ namespace Apache.Ignite.Core.Tests.Cache
         {
             return _cache.LocalPreloadPartition(partition);
         }
-
-        public void Dispose()
-        {
-            _cache.Dispose();
-        }
     }
 
     /// <summary>
