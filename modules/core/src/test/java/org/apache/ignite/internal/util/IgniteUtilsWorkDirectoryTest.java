@@ -151,7 +151,7 @@ public class IgniteUtilsWorkDirectoryTest {
         genericPathExceptionTest(strDir, "Cannot write to work directory: " + strDir);
     }
 
-    /***/
+    /** */
     @Test
     @Ignore("Test fail when run on TeamCity")
     public void workDirCannotReadTest() {
