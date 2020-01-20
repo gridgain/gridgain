@@ -106,7 +106,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
 
-            var pos = stream.Position;
             var reader = marshaller.StartUnmarshal(stream);
 
             var key = reader.ReadObject<object>();
@@ -149,30 +148,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
             
-            var pos = stream.Position;
             var reader = marshaller.StartUnmarshal(stream);
+            var key = reader.ReadObject<object>();
 
             var map = _map;
-            if (map != null)
+            if (map != null && key is TK)
             {
-                try
-                {
-                    var key = reader.ReadObject<TK>();
-                    NearCacheEntry<TV> unused;
-                    _map.TryRemove(key, out unused);
-                }
-                catch (InvalidCastException)
-                {
-                    // Ignore.
-                    // _fallbackMap use case is not recommended, we expect this to be rare.
-                }
+                NearCacheEntry<TV> unused;
+                _map.TryRemove((TK) key, out unused);
             }
-            
+
             if (_fallbackMap != null)
             {
-                stream.Seek(pos, SeekOrigin.Begin);
-                var key = reader.ReadObject<object>();
-                
                 NearCacheEntry<object> unused;
                 _fallbackMap.TryRemove(key, out unused);
             }
