@@ -36,6 +36,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -60,7 +61,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteInClosure;
-import org.apache.ignite.logger.NullLogger;
+import org.apache.ignite.testframework.ConsoleTestLogger;
 import org.apache.ignite.testframework.GridTestNode;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -282,7 +283,7 @@ public class PartitionReconciliationProcessorTest {
         MockedProcessor processor = MockedProcessor.create(true);
         processor.useRealScheduler = true;
         processor.registerListener((stage, workload) -> {
-            if(stage.equals(ReconciliationEventListener.WorkLoadStage.STARTING))
+            if (stage.equals(ReconciliationEventListener.WorkLoadStage.STARTING))
                 evtHist.add(workload.getClass().getName());
         });
 
@@ -395,7 +396,7 @@ public class PartitionReconciliationProcessorTest {
 
             IgniteEx igniteMock = mock(IgniteEx.class);
 
-            when(igniteMock.log()).thenReturn(new NullLogger());
+            when(igniteMock.log()).thenReturn(new ConsoleTestLogger(PartitionReconciliationProcessor.class.getName()));
 
             GridKernalContext ctxMock = mock(GridKernalContext.class);
 
@@ -411,6 +412,10 @@ public class PartitionReconciliationProcessorTest {
             GridCacheContext cacheCtxMock = mock(GridCacheContext.class);
             when(cacheMock.context()).thenReturn(cacheCtxMock);
 
+            GridCacheAffinityManager affinityManager = mock(GridCacheAffinityManager.class);
+            when(cacheCtxMock.affinity()).thenReturn(affinityManager);
+            when(affinityManager.partition(any())).thenReturn(4);
+
             GridDhtPartitionTopology topMock = mock(GridDhtPartitionTopology.class);
             when(cacheCtxMock.topology()).thenReturn(topMock);
 
@@ -425,7 +430,7 @@ public class PartitionReconciliationProcessorTest {
             when(igniteMock.compute(any())).thenReturn(igniteComputeMock);
 
             return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, parallelismLevel,
-                10, MAX_RECHECK_ATTEMPTS, 0);
+                10, MAX_RECHECK_ATTEMPTS, 10);
         }
 
         /**
