@@ -35,17 +35,15 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /** */
         private static readonly int[] Keys = Enumerable.Range(0, EntryCount).ToArray();
         
-        // TODO: Compat tests on metadata handling
-        // TODO: Add GetAll test
-
         /// <summary>
         /// Tests DateTime metadata caching.
         /// </summary>
         [Test]
         public void TestDateTimeMetaCachingOnPut([Values(true, false)] bool scanQuery)
         {
-            var request = scanQuery ? "ClientCacheScanQuery" : "ClientCacheGetAll";
+            var requestName = scanQuery ? "ClientCacheScanQuery" : "ClientCacheGetAll";
             var cache = GetPopulatedCache();
+            
             var res = scanQuery
                 ? cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll()
                 : cache.GetAll(Keys);
@@ -54,7 +52,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             // Verify that only one request is sent to the server:
             // metadata is already cached and should not be requested.
-            Assert.AreEqual(new[] {request}, requests);
+            Assert.AreEqual(new[] {requestName}, requests);
 
             // Verify results.
             Assert.AreEqual(EntryCount, res.Count);
@@ -65,17 +63,22 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /// Tests DateTime metadata caching.
         /// </summary>
         [Test]
-        public void TestDateTimeMetaCachingOnGet()
+        public void TestDateTimeMetaCachingOnGet([Values(true, false)] bool scanQuery)
         {
             // Retrieve data from a different client which does not yet have cached meta.
+            var requestName = scanQuery ? "ClientCacheScanQuery" : "ClientCacheGetAll";
             var cache = GetClient().GetCache<int, DateTimeTest>(GetPopulatedCache().Name);
-            var res = cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll();
+            
+            var res = scanQuery
+                ? cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll()
+                : cache.GetAll(Keys);
+            
             var requests = GetAllServerRequestNames().ToArray();
 
             // Verify that only one BinaryTypeGet request per type is sent to the server.
             var expectedRequests = new[]
             {
-                "ClientCacheScanQuery", 
+                requestName, 
                 "ClientBinaryTypeNameGet",
                 "ClientBinaryTypeGet",
                 "ClientBinaryTypeNameGet",
@@ -119,8 +122,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /// </summary>
         private class DateTimeTest
         {
+            /** */
             public static readonly DateTime DefaultDateTime = new DateTime(2002, 2, 2);
+            
+            /** */
             public int Id { get; set; }
+            
+            /** */
             public DateTime Date { get; set; }
         }
     }
