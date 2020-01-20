@@ -23,6 +23,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
+    using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
 
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
@@ -108,46 +109,63 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var pos = stream.Position;
             var reader = marshaller.StartUnmarshal(stream);
 
-            var map = _map;
-            if (map != null)
-            {
-                try
-                {
-                    var key = reader.Deserialize<TK>();
+            UpdateMap(reader);
 
-                    if (reader.ReadBoolean())
-                    {
-                        var val = reader.Deserialize<TV>();
-                        _map[key] = new NearCacheEntry<TV>(true, val);
-                    }
-                    else
-                    {
-                        NearCacheEntry<TV> unused;
-                        _map.TryRemove(key, out unused);
-                    }
-                }
-                catch (InvalidCastException)
-                {
-                    // Ignore.
-                    // _fallbackMap use case is not recommended, we expect this to be rare.
-                }
+            stream.Seek(pos, SeekOrigin.Begin);
+            UpdateFallbackMap(reader);
+        }
+
+        private void UpdateFallbackMap(BinaryReader reader)
+        {
+            if (_fallbackMap == null)
+            {
+                return;
+            }
+            
+            var key = reader.Deserialize<object>();
+
+            if (reader.ReadBoolean())
+            {
+                var val = reader.Deserialize<object>();
+                _fallbackMap[key] = new NearCacheEntry<object>(true, val);
+            }
+            else
+            {
+                NearCacheEntry<object> unused;
+                _fallbackMap.TryRemove(key, out unused);
+            }
+        }
+
+        private void UpdateMap(BinaryReader reader)
+        {
+            var map = _map;
+            if (map == null)
+            {
+                return;
+            }
+            
+            var key0 = reader.Deserialize<object>();
+            if (!(key0 is TK))
+            {
+                return;
             }
 
-            if (_fallbackMap != null)
+            var key = (TK) key0;
+            
+            if (reader.ReadBoolean())
             {
-                stream.Seek(pos, SeekOrigin.Begin);
-                var key = reader.Deserialize<object>();
+                var val0 = reader.Deserialize<object>();
+                if (!(val0 is TV))
+                {
+                    return;
+                }
 
-                if (reader.ReadBoolean())
-                {
-                    var val = reader.Deserialize<object>();
-                    _fallbackMap[key] = new NearCacheEntry<object>(true, val);
-                }
-                else
-                {
-                    NearCacheEntry<object> unused;
-                    _fallbackMap.TryRemove(key, out unused);
-                }
+                _map[key] = new NearCacheEntry<TV>(true, (TV) val0);
+            }
+            else
+            {
+                NearCacheEntry<TV> unused;
+                _map.TryRemove(key, out unused);
             }
         }
 
