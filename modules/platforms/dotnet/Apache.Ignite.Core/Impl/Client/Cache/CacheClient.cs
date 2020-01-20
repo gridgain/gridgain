@@ -702,19 +702,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private void WriteRequest(Action<ClientRequestContext> writeAction, ClientRequestContext ctx)
         {
             ctx.Stream.WriteInt(_id);
-
-            if (_expiryPolicy != null)
-            {
-                // Check whether WithExpiryPolicy is supported by the protocol here - 
-                // ctx.ProtocolVersion refers to exact connection for this request. 
-                ClientUtils.ValidateOp(
-                    ClientCacheRequestFlag.WithExpiryPolicy, ctx.ProtocolVersion, ClientSocket.Ver150);
-                
-                ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.WithExpiryPolicy);
-                ExpiryPolicySerializer.WritePolicy(ctx.Writer, _expiryPolicy);
-            }
-            else
-                ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.None); // Flags (skipStore, etc).
+            ctx.Stream.WriteByte(0); // Flags (skipStore, etc).
 
             if (writeAction != null)
             {
