@@ -31,25 +31,31 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     {
         /** */
         private const int EntryCount = 50;
+
+        /** */
+        private static readonly int[] Keys = Enumerable.Range(0, EntryCount).ToArray();
         
         // TODO: Compat tests on metadata handling
-        // TODO: Serializable test with dynamic field set
         // TODO: Add GetAll test
 
         /// <summary>
         /// Tests DateTime metadata caching.
         /// </summary>
         [Test]
-        public void TestDateTimeMetaCachingOnPut()
+        public void TestDateTimeMetaCachingOnPut([Values(true, false)] bool scanQuery)
         {
+            var request = scanQuery ? "ClientCacheScanQuery" : "ClientCacheGetAll";
             var cache = GetPopulatedCache();
-            var res = cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll();
+            var res = scanQuery
+                ? cache.Query(new ScanQuery<int, DateTimeTest>()).GetAll()
+                : cache.GetAll(Keys);
+
             var requests = GetAllServerRequestNames().ToArray();
 
             // Verify that only one request is sent to the server:
             // metadata is already cached and should not be requested.
-            Assert.AreEqual(new[] {"ClientCacheScanQuery"}, requests);
-            
+            Assert.AreEqual(new[] {request}, requests);
+
             // Verify results.
             Assert.AreEqual(EntryCount, res.Count);
             Assert.AreEqual(DateTimeTest.DefaultDateTime, res.Min(x => x.Value.Date));
@@ -89,7 +95,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         {
             var cacheName = TestContext.CurrentContext.Test.Name;
             var cache = Client.GetOrCreateCache<int, DateTimeTest>(cacheName);
-            cache.PutAll(GetData(EntryCount).Select(x => new KeyValuePair<int, DateTimeTest>(x.Id, x)));
+            cache.PutAll(GetData().Select(x => new KeyValuePair<int, DateTimeTest>(x.Id, x)));
 
             ClearLoggers();
             return cache;
@@ -98,9 +104,9 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /// <summary>
         /// Gets the data.
         /// </summary>
-        private static IEnumerable<DateTimeTest> GetData(int entryCount)
+        private static IEnumerable<DateTimeTest> GetData()
         {
-            return Enumerable.Range(0, entryCount)
+            return Keys
                 .Select(x => new DateTimeTest
                 {
                     Id = x,
