@@ -1526,7 +1526,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             removeObsolete(tx);
 
             // 7. Assign transaction number at the end of transaction.
-            tx.endVersion(cctx.cacheContext(tx.txState().firstCacheId()).cache().nextVersion());
+            tx.endVersion(cctx.versions().next(tx.topologyVersion().topologyVersion()));
 
             // 8. Remove from per-thread storage.
             clearThreadMap(tx);
