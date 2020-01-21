@@ -46,13 +46,13 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class PartitionReconciliationStressTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
-    private static final int NODES_CNT = 4;
+    protected static final int NODES_CNT = 4;
 
     /** Keys count. */
-    private static final int KEYS_CNT = 2000;
+    protected static final int KEYS_CNT = 2000;
 
     /** Corrupted keys count. */
-    private static final int BROKEN_KEYS_CNT = 500;
+    protected static final int BROKEN_KEYS_CNT = 500;
 
     /** Cache atomicity mode. */
     @Parameterized.Parameter(0)
@@ -212,7 +212,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
     }
 
     /** */
-    private static boolean isHotKey(int key) {
+    protected static boolean isHotKey(int key) {
         return key % 13 == 5 || key % 13 == 7 || key % 13 == 11;
     }
 }
