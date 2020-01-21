@@ -29,6 +29,7 @@ namespace Apache.Ignite.Core.Impl.Binary
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
     using NodaTime;
+    using NodaTime.TimeZones;
 
     /// <summary>
     /// Utilities for binary serialization.
@@ -86,6 +87,10 @@ namespace Apache.Ignite.Core.Impl.Binary
          * are incomplete for some time zones.
          */
         private static readonly DateTimeZone NodaZone = DateTimeZoneProviders.Tzdb.GetSystemDefault();
+
+        /** Ambiguous and skipped local time resolvers. */
+        private static readonly ZoneLocalMappingResolver NodaZoneMappingResolver =
+            Resolvers.CreateMappingResolver(Resolvers.ReturnEarlier, Resolvers.ReturnStartOfIntervalAfter);
 
         /** Method: ReadArray. */
         public static readonly MethodInfo MtdhReadArray =
@@ -1607,9 +1612,12 @@ namespace Apache.Ignite.Core.Impl.Binary
          */
         private static void ToJavaDate(DateTime date, out long high, out int low)
         {
-            long diff = date.Kind == DateTimeKind.Utc 
+            long diff = date.Kind == DateTimeKind.Utc
                 ? date.Ticks - JavaDateTicks
-                : LocalDateTime.FromDateTime(date).InZoneStrictly(NodaZone).ToInstant().ToUnixTimeTicks();
+                : LocalDateTime.FromDateTime(date)
+                    .InZone(NodaZone, NodaZoneMappingResolver)
+                    .ToInstant()
+                    .ToUnixTimeTicks();
 
             high = diff / TimeSpan.TicksPerMillisecond;
 
