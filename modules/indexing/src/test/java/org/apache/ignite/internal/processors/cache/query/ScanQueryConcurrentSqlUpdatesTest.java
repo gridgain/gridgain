@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.ignite.internal.processors.cache.query;
 
 import org.apache.ignite.IgniteCache;
@@ -10,11 +26,18 @@ import org.apache.ignite.internal.IgniteEx;
 import javax.cache.expiry.CreatedExpiryPolicy;
 import javax.cache.expiry.Duration;
 
+/**
+ * {@link ScanQueryConcurrentUpdatesAbstractTest} with caches created, updates and destroyed using SQL DDL queries.
+ */
 public class ScanQueryConcurrentSqlUpdatesTest extends ScanQueryConcurrentUpdatesAbstractTest {
+    /**
+     * A name for a cache that will be used to execute DDL queries.
+     */
     private static final String DUMMY_CACHE_NAME = "dummy";
 
+    /** {@inheritDoc} */
     @Override protected IgniteCache<Integer, Integer> createCache(String cacheName, CacheMode cacheMode,
-        Duration expiration) {
+                                                                  Duration expiration) {
         CacheConfiguration<Integer, Integer> cacheCfg = new CacheConfiguration<>(cacheName);
         cacheCfg.setCacheMode(cacheMode);
         if (expiration != null) {
@@ -32,6 +55,7 @@ public class ScanQueryConcurrentSqlUpdatesTest extends ScanQueryConcurrentUpdate
         return ignite.cache("SQL_PUBLIC_" + cacheName.toUpperCase());
     }
 
+    /** {@inheritDoc} */
     @Override protected void updateCache(IgniteCache<Integer, Integer> cache, int recordsNum) {
         String tblName = tableName(cache);
 
@@ -42,10 +66,15 @@ public class ScanQueryConcurrentSqlUpdatesTest extends ScanQueryConcurrentUpdate
         }
     }
 
+    /** {@inheritDoc} */
     @Override protected void destroyCache(IgniteCache<Integer, Integer> cache) {
         grid(0).cache(DUMMY_CACHE_NAME).query(new SqlFieldsQuery("DROP TABLE " + tableName(cache)));
     }
 
+    /**
+     * @param cache Cache to determine a table name for.
+     * @return Name of the table corresponding to the provided cache.
+     */
     @SuppressWarnings("unchecked")
     private String tableName(IgniteCache<Integer, Integer> cache) {
         CacheConfiguration<Integer, Integer> cacheCfg =
