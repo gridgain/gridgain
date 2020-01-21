@@ -1859,6 +1859,9 @@ public class GridSqlQuerySplitter {
 
                 break;
 
+            case UNKNOWN_FUNCTION:
+                throw new IgniteSQLException("Custom aggregation function is not supported for not collocated data.", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+
             default:
                 throw new IgniteException("Unsupported aggregate: " + agg.type());
         }
