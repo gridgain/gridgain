@@ -63,7 +63,7 @@ public class GridSqlFunction extends GridSqlElement {
      * @param type Type.
      * @param name Name.
      */
-    private GridSqlFunction(String schema, GridSqlFunctionType type, String name) {
+    protected GridSqlFunction(String schema, GridSqlFunctionType type, String name) {
         super(new ArrayList<GridSqlAst>());
 
         if (name == null)
