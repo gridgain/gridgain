@@ -132,22 +132,20 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
         final CountDownLatch realMtdCalled = new CountDownLatch(1);
         final CountDownLatch checked = new CountDownLatch(1);
 
-        Mockito.doAnswer(new Answer() {
-            @Override public Object answer(InvocationOnMock invocation) throws Throwable {
-                checkpointLocked.countDown();
+        Mockito.doAnswer(invocation -> {
+            checkpointLocked.countDown();
 
-                assertTrue(U.await(cpFutCreated, 30, TimeUnit.SECONDS));
+            assertTrue(U.await(cpFutCreated, 30, TimeUnit.SECONDS));
 
-                Object ret = invocation.callRealMethod();
+            Object ret = invocation.callRealMethod();
 
-                // After calling clearing code cp future must be eventually completed.
-                realMtdCalled.countDown();
+            // After calling clearing code cp future must be eventually completed and cp read lock reacquired.
+            realMtdCalled.countDown();
 
-                // Wait for checkpoint future while holding lock.
-                U.awaitQuiet(checked);
+            // Wait for checkpoint future while holding lock.
+            U.awaitQuiet(checked);
 
-                return ret;
-            }
+            return ret;
         }).when(mgr).stopCache(Mockito.anyInt(), Mockito.anyBoolean());
 
         final Field field = U.findField(CacheGroupContext.class, "offheapMgr");
@@ -156,6 +154,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
         final IgniteInternalFuture<Object> fut = runAsync(() -> {
             assertTrue(U.await(checkpointLocked, 30, TimeUnit.SECONDS));
 
+            // Trigger checkpoint while holding checkpoint read lock on cache destroy.
             final IgniteInternalFuture cpFut = g1.context().cache().context().database().wakeupForCheckpoint("test");
 
             assertFalse(cpFut.isDone());
@@ -165,7 +164,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
             assertTrue(U.await(realMtdCalled, 30, TimeUnit.SECONDS));
 
             try {
-                cpFut.get(); // Future must be completed after cache clearing but before releasing checkpoint lock on top.
+                cpFut.get(); // Future must be completed after cache clearing but before releasing checkpoint lock.
             }
             finally {
                 checked.countDown();
