@@ -104,24 +104,36 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
     }
 
     /**
-     *
+     * Tests if a checkpoint is not blocked forever by concurrent cache destroying (DHT).
      */
     @Test
     public void testDestroyCacheOperationNotBlockingCheckpointTest() throws Exception {
-        final IgniteEx ignite = startGrids(2);
+        doTestDestroyCacheOperationNotBlockingCheckpointTest(false);
+    }
+
+    /**
+     * Tests if a checkpoint is not blocked forever by concurrent cache destroying (local).
+     */
+    @Test
+    public void testDestroyCacheOperationNotBlockingCheckpointTest_LocalCache() throws Exception {
+        doTestDestroyCacheOperationNotBlockingCheckpointTest(true);
+    }
+
+    /**
+     *
+     */
+    private void doTestDestroyCacheOperationNotBlockingCheckpointTest(boolean loc) throws Exception {
+        final IgniteEx ignite = startGrids(1);
 
         ignite.cluster().active(true);
 
-        startGroupCachesDynamically(ignite);
+        startGroupCachesDynamically(ignite, loc);
 
-        loadCaches(ignite, true);
-
-        // Mock offheap manager on g1.
-        final IgniteEx g1 = grid(1);
+        loadCaches(ignite, !loc);
 
         // It's important to clear cache in group having > 1 caches.
         final String cacheName = cacheName(0);
-        final CacheGroupContext grp = g1.cachex(cacheName).context().group();
+        final CacheGroupContext grp = ignite.cachex(cacheName).context().group();
 
         final IgniteCacheOffheapManager offheap = grp.offheap();
 
@@ -155,7 +167,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
             assertTrue(U.await(checkpointLocked, 30, TimeUnit.SECONDS));
 
             // Trigger checkpoint while holding checkpoint read lock on cache destroy.
-            final IgniteInternalFuture cpFut = g1.context().cache().context().database().wakeupForCheckpoint("test");
+            final IgniteInternalFuture cpFut = ignite.context().cache().context().database().wakeupForCheckpoint("test");
 
             assertFalse(cpFut.isDone());
 
@@ -164,7 +176,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
             assertTrue(U.await(realMtdCalled, 30, TimeUnit.SECONDS));
 
             try {
-                cpFut.get(); // Future must be completed after cache clearing but before releasing checkpoint lock.
+                cpFut.get(3_000); // Future must be completed after cache clearing but before releasing checkpoint lock.
             }
             finally {
                 checked.countDown();
@@ -173,7 +185,10 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
             return null;
         });
 
-        ignite.destroyCache(cacheName);
+        if (loc)
+            ignite.cache(cacheName).close();
+        else
+            ignite.destroyCache(cacheName);
 
         fut.get();
     }
