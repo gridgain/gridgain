@@ -60,7 +60,7 @@ public abstract class ContinuousQueryBufferCleanupAbstractTest extends GridCommo
      * @throws Exception If fail.
      */
     @Test
-    public void testSingleNode() throws Exception {
+    public void checkCacheWithSingleNode() throws Exception {
         checkBuffer(1, 0, true);
     }
 
@@ -68,7 +68,7 @@ public abstract class ContinuousQueryBufferCleanupAbstractTest extends GridCommo
      * @throws Exception If fail.
      */
     @Test
-    public void testMultipleNodes() throws Exception {
+    public void checkCacheWithMultipleNodes() throws Exception {
         checkBuffer(2, 0, true);
     }
 
@@ -76,7 +76,7 @@ public abstract class ContinuousQueryBufferCleanupAbstractTest extends GridCommo
      * @throws Exception If fail.
      */
     @Test
-    public void testMultipleNodesWithBackups() throws Exception {
+    public void checkCacheWithMultipleNodesWithBackups() throws Exception {
         checkBuffer(2, 1, true);
     }
 
@@ -84,7 +84,7 @@ public abstract class ContinuousQueryBufferCleanupAbstractTest extends GridCommo
      * @throws Exception If fail.
      */
     @Test
-    public void testMultipleNodesWithBackupsWithoutClient() throws Exception {
+    public void checkCacheWithMultipleNodesWithBackupsWithoutClient() throws Exception {
         checkBuffer(2, 1, false);
     }
 
