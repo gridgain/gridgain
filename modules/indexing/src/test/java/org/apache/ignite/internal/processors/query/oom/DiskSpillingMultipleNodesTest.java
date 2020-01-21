@@ -13,22 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.ignite.agent.dto.action;
+package org.apache.ignite.internal.processors.query.oom;
 
 /**
- * Action status.
+ * Test case for multiple nodes.
  */
-public enum ActionStatus {
-    /** Action is running. */
-    RUNNING,
-
-    /** Action completed. */
-    COMPLETED,
-
-    /** Action canceled. */
-    CANCELED,
-
-    /** Action failed with error. */
-    FAILED
+public class DiskSpillingMultipleNodesTest extends DiskSpillingQueriesTest {
+    /** {@inheritDoc} */
+    @Override protected int nodeCount() {
+        return 3;
+    }
 }

@@ -8,7 +8,6 @@ package org.h2.expression.analysis;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-
 import org.h2.api.ErrorCode;
 import org.h2.command.dml.Select;
 import org.h2.command.dml.SelectGroups;
@@ -366,6 +365,7 @@ public abstract class DataAnalysisOperation extends Expression {
         case ExpressionVisitor.SET_MAX_DATA_MODIFICATION_ID:
         case ExpressionVisitor.GET_COLUMNS1:
         case ExpressionVisitor.GET_COLUMNS2:
+        case ExpressionVisitor.CLEANUP:
             return true;
         default:
             throw DbException.throwInternalError("type=" + visitor.getType());

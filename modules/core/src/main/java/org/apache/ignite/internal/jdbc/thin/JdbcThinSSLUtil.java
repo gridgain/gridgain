@@ -18,9 +18,6 @@ package org.apache.ignite.internal.jdbc.thin;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.file.FileSystems;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.sql.SQLException;
@@ -34,6 +31,10 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.ssl.SslContextFactory;
+
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 
 /**
  * SSL utility method to create SSL connetion.
@@ -138,7 +139,7 @@ public class JdbcThinSSLUtil {
             cliCertKeyStorePwd = System.getProperty("javax.net.ssl.keyStorePassword");
 
         if (cliCertKeyStoreType == null)
-            cliCertKeyStoreType = System.getProperty("javax.net.ssl.keyStoreType", "JKS");
+            cliCertKeyStoreType = System.getProperty("javax.net.ssl.keyStoreType", DFLT_STORE_TYPE);
 
         if (trustCertKeyStoreUrl == null)
             trustCertKeyStoreUrl = System.getProperty("javax.net.ssl.trustStore");
@@ -147,10 +148,13 @@ public class JdbcThinSSLUtil {
             trustCertKeyStorePwd = System.getProperty("javax.net.ssl.trustStorePassword");
 
         if (trustCertKeyStoreType == null)
-            trustCertKeyStoreType = System.getProperty("javax.net.ssl.trustStoreType", "JKS");
+            trustCertKeyStoreType = System.getProperty("javax.net.ssl.trustStoreType", DFLT_STORE_TYPE);
 
         if (sslProtocol == null)
-            sslProtocol = "TLS";
+            sslProtocol = DFLT_SSL_PROTOCOL;
+
+        if (keyAlgorithm == null)
+            keyAlgorithm = DFLT_KEY_ALGORITHM;
 
         SslContextFactory f = new SslContextFactory();
 

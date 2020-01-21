@@ -39,11 +39,12 @@ import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
-import org.h2.result.H2BaseLocalResult;
 import org.h2.result.LocalResult;
+import org.h2.result.LocalResultImpl;
 import org.junit.Ignore;
 import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
@@ -54,6 +55,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager tests.
  */
+@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
     static final int SMALL_TABLE_SIZE = 1000;
@@ -148,7 +150,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         // Reset memory manager.
         if (memoryManager.memoryReserved() > 0)
-            memoryManager.release(memoryManager.memoryReserved());
+            memoryManager.released(memoryManager.memoryReserved());
     }
 
     /**
@@ -499,7 +501,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
         IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
 
-        assertEquals(10L * MB, h2.memoryManager().maxMemory());
+        assertEquals(10L * MB, h2.memoryManager().memoryLimit());
 
         try {
             CacheException ex = (CacheException)GridTestUtils.assertThrows(log, () -> {
@@ -525,7 +527,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
             long globallyReserved = h2.memoryManager().memoryReserved();
 
-            assertTrue(h2.memoryManager().maxMemory() < globallyReserved + MB);
+            assertTrue(h2.memoryManager().memoryLimit() < globallyReserved + MB);
         }
         finally {
             for (QueryCursor c : cursors)
@@ -601,7 +603,10 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
      */
     public static class TestH2LocalResultFactory extends H2LocalResultFactory {
         /** {@inheritDoc} */
-        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt) {
+        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
+            if (system)
+                return new LocalResultImpl(ses, expressions, visibleColCnt);
+
             H2MemoryTracker memoryTracker = ses.queryMemoryTracker();
 
             if (memoryTracker != null) {
@@ -609,7 +614,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
 
-                        getMemoryTracker().release(memoryReserved());
+                        memoryTracker().released(memoryReserved());
                     }
                 };
 
@@ -618,7 +623,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                 return res;
             }
 
-            return new H2BaseLocalResult(ses, expressions, visibleColCnt);
+            return new H2ManagedLocalResult(ses, null, expressions, visibleColCnt);
         }
 
         /** {@inheritDoc} */
