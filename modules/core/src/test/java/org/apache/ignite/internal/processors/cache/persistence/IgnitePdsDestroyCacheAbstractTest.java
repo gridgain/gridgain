@@ -53,7 +53,6 @@ public abstract class IgnitePdsDestroyCacheAbstractTest extends GridCommonAbstra
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         return cfg.setDataStorageConfiguration(new DataStorageConfiguration()
-            .setCheckpointFrequency(1000000000)
             .setWalSegmentSize(4 * 1024 * 1024)
             .setPageSize(1024)
             .setDefaultDataRegionConfiguration(new DataRegionConfiguration()

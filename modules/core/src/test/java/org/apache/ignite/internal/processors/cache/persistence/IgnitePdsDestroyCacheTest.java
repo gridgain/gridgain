@@ -28,8 +28,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
