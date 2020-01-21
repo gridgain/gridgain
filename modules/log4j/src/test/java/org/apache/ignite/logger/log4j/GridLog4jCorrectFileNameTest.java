@@ -111,7 +111,7 @@ public class GridLog4jCorrectFileNameTest extends GridCommonAbstractTest {
      * @param igniteInstanceName Ignite instance name.
      * @return Grid configuration.
      */
-    protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setGridLogger(new Log4JLogger());
