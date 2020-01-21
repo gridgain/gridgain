@@ -567,7 +567,7 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
                                                 entry.unswap();
 
-                                                GridCacheVersion newVer = ctx.cache().nextVersion();
+                                                GridCacheVersion newVer = nextVersion();
 
                                                 EntryGetResult verVal = entry.versionedValue(
                                                     cacheVal,
