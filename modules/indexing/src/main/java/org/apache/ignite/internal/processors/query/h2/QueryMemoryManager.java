@@ -20,11 +20,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongBinaryOperator;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlStatisticsHolderMemoryQuotas;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
@@ -91,28 +91,22 @@ public class QueryMemoryManager implements H2MemoryTracker {
      * @param ctx Kernal context.
      */
     public QueryMemoryManager(GridKernalContext ctx) {
-        long globalQuota = ctx.config().getSqlGlobalMemoryQuota();
+        globalQuota = ctx.config().getSqlGlobalMemoryQuota();
 
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
-        long dfltMemLimit = ctx.config().getSqlQueryMemoryQuota();
-
-        if (dfltMemLimit == 0)
-            dfltMemLimit = globalQuota > 0 ? globalQuota / IgniteConfiguration.DFLT_QUERY_THREAD_POOL_SIZE : -1;
-
+        this.dfltSqlQryMemoryLimit = ctx.config().getSqlQueryMemoryQuota();
+        this.failOnMemLimitExceed = !ctx.config().isSqlOffloadingEnabled();
+        this.log = ctx.log(QueryMemoryManager.class);
+        this.metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        this.globalQuota = globalQuota;
-
-        this.failOnMemLimitExceed = !ctx.config().isSqlOffloadingEnabled();
-
-        this.dfltSqlQryMemoryLimit = dfltMemLimit;
-
-        this.log = ctx.log(QueryMemoryManager.class);
-
-        metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
+        A.ensure(globalQuota >= 0, "Sql global memory quota must be >= 0. But was " + globalQuota);
+        A.ensure(dfltSqlQryMemoryLimit >= 0,
+            "Sql query memory quota must be >= 0. But was " + dfltSqlQryMemoryLimit);
+        A.ensure(blockSize > 0, "Block size must be > 0. But was " + blockSize);
     }
 
     /** {@inheritDoc} */
@@ -165,11 +159,14 @@ public class QueryMemoryManager implements H2MemoryTracker {
         if (maxQueryMemory == 0)
             maxQueryMemory = dfltSqlQryMemoryLimit;
 
-        if (maxQueryMemory < 0)
-            return null;
+        if (maxQueryMemory == 0)
+            maxQueryMemory = globalQuota;
+
+        if (maxQueryMemory == 0)
+            return null; // No memory tracking configured.
 
         if (globalQuota > 0 && globalQuota < maxQueryMemory) {
-            U.warn(log, "Max query memory can't exceeds SQL memory pool size. Will be reduced down to: " + globalQuota);
+            U.warn(log, "Max query memory can't exceed SQL memory pool size. Will be reduced down to: " + globalQuota);
 
             maxQueryMemory = globalQuota;
         }

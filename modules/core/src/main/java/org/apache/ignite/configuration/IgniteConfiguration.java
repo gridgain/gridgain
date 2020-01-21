@@ -3374,6 +3374,7 @@ public class IgniteConfiguration {
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
      * <p>
      * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
+     * Value {@code 0} means no quota at all.
      *
      * @param sizeInBytes Size of global memory pool for SQL queries in bytes.
      * @return {@code this} for chaining.
@@ -3406,6 +3407,7 @@ public class IgniteConfiguration {
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
      * <p>
      * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_MEMORY_QUOTA}.
+     * Value {@code 0} means no quota at all.
      *
      * @param sizeInBytes Size of per-query memory quota in bytes.
      * @return {@code this} for chaining.
@@ -3443,6 +3445,8 @@ public class IgniteConfiguration {
      *         the query will be executed and the caller will get a result.
      *     </li>
      * </ul>
+     *
+     * If not provided, the default value is {@code false}.
      *
      * @param offloadingEnabled Offloading enabled flag.
      * @return {@code this} for chaining.
