@@ -149,7 +149,6 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
         U.delete(customDiagnosticDir);
     }
 
-
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);

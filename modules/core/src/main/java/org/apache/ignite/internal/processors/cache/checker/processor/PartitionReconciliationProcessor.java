@@ -29,12 +29,10 @@ import javax.cache.configuration.Factory;
 import javax.cache.expiry.EternalExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
-import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
@@ -114,20 +112,25 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      *
      */
-    private final IgniteLogger log;
-
-    /**
-     *
-     */
     private final WorkProgress workProgress = new WorkProgress();
 
     /**
+     * Creates a new instance of Partition reconciliation processor.
      *
+     * @param sesId Session identifier that allows to identify different runs of the utility.
+     * @param ignite Local Ignite instance to be used as an entry point for the execution of the utility.
+     * @param caches Collection of cache names to be checked.
+     * @param fixMode Flag indicates that inconsistencies should be repaired.
+     * @param parallelismLevel Number of batches that can be handled simultaneously.
+     * @param batchSize Amount of keys to retrieve within one job.
+     * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
+     * @param repairAlg Repair algorithm to be used to fix inconsistency.
+     * @param recheckDelay Specifies the time interval between two consequent attempts to check keys.
      */
-    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public PartitionReconciliationProcessor(
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    public PartitionReconciliationProcessor(
         long sesId,
         IgniteEx ignite,
-        GridCachePartitionExchangeManager<Object, Object> exchMgr,
         Collection<String> caches,
         boolean fixMode,
         int parallelismLevel,
@@ -136,8 +139,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         RepairAlgorithm repairAlg,
         int recheckDelay
     ) throws IgniteCheckedException {
-        super(sesId, ignite, exchMgr, parallelismLevel);
-        log = ignite.log().getLogger(this);
+        super(sesId, ignite, parallelismLevel);
+
         this.recheckDelay = recheckDelay;
         this.caches = caches;
         this.fixMode = fixMode;
@@ -350,7 +353,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      *
      */
     private Repair repair(
-        UUID sessionId,
+        UUID sesId,
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts,
@@ -365,7 +368,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 res.put(key, versionedByNodes);
         }
 
-        return new Repair(sessionId, cacheName, partId, res, repairAttempts);
+        return new Repair(sesId, cacheName, partId, res, repairAttempts);
     }
 
     /**

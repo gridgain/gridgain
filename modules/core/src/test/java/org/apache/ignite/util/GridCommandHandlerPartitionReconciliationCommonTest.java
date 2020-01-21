@@ -19,19 +19,29 @@ package org.apache.ignite.util;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.internal.ComputeTaskInternalFuture;
+import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
+import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
+import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.GridTopic.TOPIC_TASK;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
@@ -266,6 +276,105 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
 
         // Check inconsistency report.
         assertContains(log, inconsistencyReport, PartitionReconciliationResult.HIDDEN_DATA + " ver=[topVer=");
+    }
+
+    /**
+     * Checks that partition reconciliation task does not block graceful stop of a node for a long period of time.
+     * <b>Preconditions:</b>
+     * <ul>
+     *     <li>Grid with 4 nodes is started, cache with 3 backups with some data is up and running</li>
+     * </ul>
+     * <b>Test steps:</b>
+     * <ol>
+     *     <li>Start bin/control.sh --cache partition_reconciliation --console --recheck-delay 10</li>
+     *     <li>Try to gracefuly stop a node/cluster.</li>
+     * </ol>
+     * <b>Expected result:</b>
+     * <ul>
+     *     <li>Check that grid will be stopped in less than 20 sec.</li>
+     * </ul>
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testPartitionReconciliationTaskDoesNotBlockGracefulStop() throws Exception {
+        ignite(0).cache(DEFAULT_CACHE_NAME).put(INVALID_KEY, VALUE_PREFIX + INVALID_KEY);
+
+        List<ClusterNode> nodes = ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().affinity().
+            nodesByKey(
+                INVALID_KEY,
+                ignite(0).cachex(DEFAULT_CACHE_NAME).context().topology().readyTopologyVersion());
+
+        corruptDataEntry(((IgniteEx)grid(nodes.get(1))).cachex(
+            DEFAULT_CACHE_NAME).context(),
+            INVALID_KEY,
+            false,
+            false,
+            new GridCacheVersion(0, 0, 2),
+            null);
+
+        // Triggers graceful stop of the cluster when patrition reconciliation task is in progress.
+        final CountDownLatch evtLatch = new CountDownLatch(1);
+
+        G.allGrids().forEach(ig -> ((IgniteEx)ig).context().io().addMessageListener(
+            TOPIC_TASK,
+            new GridMessageListener() {
+                /** {@inheritDoc} */
+                @Override public void onMessage(UUID nodeId, Object msg, byte plc) {
+                    if (msg instanceof GridJobExecuteResponse) {
+                        GridJobExecuteResponse jobRes = (GridJobExecuteResponse)msg;
+
+                        ComputeTaskInternalFuture<?> fut = ((IgniteEx)ig)
+                            .context()
+                            .task()
+                            .taskFuture(jobRes.getSessionId());
+
+                        boolean partReconciliationTask =
+                            fut != null &&
+                            fut.getTaskSession().getTaskName()
+                                .contains(PartitionReconciliationProcessorTask.class.getSimpleName());
+
+                        if (partReconciliationTask)
+                            evtLatch.countDown();
+                    }
+                }
+            }));
+
+        long start = System.nanoTime();
+
+        int batchSize = INVALID_KEY / 4;
+        int recheckAttempts = 3;
+        int recheckDelay = 10;
+
+        CommandHandler hnd = new CommandHandler();
+
+        GridTestUtils.runAsync(() -> {
+            execute(
+                hnd,
+                "--cache",
+                "partition_reconciliation",
+                "--load-factor", "0.1",
+                "--batch-size", Integer.toString(batchSize),
+                "--recheck-attempts", Integer.toString(recheckAttempts),
+                "--recheck-delay", Integer.toString(recheckDelay));
+        });
+
+        assertTrue(
+            "The partition reconciliation task is not started in " + (recheckDelay * recheckAttempts) +" sec.",
+            evtLatch.await(recheckDelay * recheckAttempts, TimeUnit.SECONDS));
+
+        try {
+            stopAllGrids();
+
+            long end = System.nanoTime();
+
+            assertTrue(
+                "It seems that partition reconciliation task blocked garceful stop of the cluster.",
+                TimeUnit.SECONDS.toNanos(recheckDelay * recheckAttempts) > (end - start));
+        }
+        finally {
+            ignite = startGrids(4);
+        }
     }
 
     /**

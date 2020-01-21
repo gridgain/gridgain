@@ -17,24 +17,26 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 /**
- * Event listener factory for test approach.
+ * Event listener factory for testing purposes.
  */
 public class ReconciliationEventListenerFactory {
     /** Default instance. */
-    private static volatile ReconciliationEventListener defaultInstance = (stage, workload) -> {
+    private static volatile ReconciliationEventListener dfltInstance = (stage, workload) -> {
     };
 
     /**
-     *
+     * @return Default implementation of ReconciliationEventListener.
      */
-    public static ReconciliationEventListener create() {
-        return defaultInstance;
+    public static ReconciliationEventListener defaultListenerInstance() {
+        return dfltInstance;
     }
 
     /**
+     * Sets a new instance of ReconciliationEventListener.
      *
+     * @param dfltInstance New instance of ReconciliationEventListener.
      */
-    public static void setDefaultInstance(ReconciliationEventListener defaultInstance) {
-        ReconciliationEventListenerFactory.defaultInstance = defaultInstance;
+    public static void defaultListenerInstance(ReconciliationEventListener dfltInstance) {
+        ReconciliationEventListenerFactory.dfltInstance = dfltInstance;
     }
 }

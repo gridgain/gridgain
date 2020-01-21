@@ -49,6 +49,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -61,6 +62,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 /**
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
+@GridInternal
 public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, ExecutionResult<RepairResult>> {
     /** */
     private static final long serialVersionUID = 0L;

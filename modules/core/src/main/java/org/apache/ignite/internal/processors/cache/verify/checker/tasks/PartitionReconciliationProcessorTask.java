@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PartitionRe
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
+import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
@@ -59,29 +60,25 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<VisorPartitionReconciliationTaskArg, ReconciliationResult> {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** Ignite instance. */
     @IgniteInstanceResource
     private IgniteEx ignite;
 
-    /**
-     *
-     */
+    /** Ignite logger. */
     @LoggerResource
     private IgniteLogger log;
 
-    /**
-     *
-     */
+    /** Flag indicates that the result of the utility should be logged to the console. */
     private boolean consoleMode;
 
     /** {@inheritDoc} */
-    @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
-        VisorPartitionReconciliationTaskArg arg) throws IgniteException {
+    @Override public Map<? extends ComputeJob, ClusterNode> map(
+        List<ClusterNode> subgrid,
+        VisorPartitionReconciliationTaskArg arg
+    ) throws IgniteException {
         consoleMode = arg.console();
 
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
@@ -89,9 +86,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         LocalDateTime startTime = LocalDateTime.now();
         long sesId = startTime.toEpochSecond(ZoneOffset.UTC);
 
-        ignite.compute()
-            .broadcastAsync(() -> ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(sesId))
-            .get();
+        ignite.compute().broadcastAsync(new ReconciliationSessionId(sesId)).get();
 
         for (ClusterNode node : subgrid)
             jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
@@ -210,7 +205,6 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
-                    ignite.context().cache().context().exchange(),
                     caches,
                     reconciliationTaskArg.fixMode(),
                     parallelismLevel(reconciliationTaskArg.loadFactor(), caches, ignite),
@@ -265,6 +259,29 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
 
             return null;
+        }
+    }
+
+    /**
+     * Task that is used to set a partition reconciliation session identifier.
+     */
+    @GridInternal
+    public static class ReconciliationSessionId implements IgniteRunnable {
+        /** Session id. */
+        private final long sesId;
+
+        /**
+         * Creates a new instance.
+         *
+         * @param sesId Partition reconsiliation session identifier.
+         */
+        public ReconciliationSessionId(long sesId) {
+            this.sesId = sesId;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void run() {
+            ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(sesId);
         }
     }
 }

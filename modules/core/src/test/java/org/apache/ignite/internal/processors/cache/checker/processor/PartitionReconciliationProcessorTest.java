@@ -39,6 +39,8 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
+import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
+import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
@@ -401,8 +403,13 @@ public class PartitionReconciliationProcessorTest {
             GridKernalContext ctxMock = mock(GridKernalContext.class);
 
             DiagnosticProcessor diagnosticProcessorMock = mock(DiagnosticProcessor.class);
+            GridCacheProcessor cacheProcessorMock = mock(GridCacheProcessor.class);
+            GridCacheSharedContext cacheSharedCtxMock = mock(GridCacheSharedContext.class);
             when(diagnosticProcessorMock.getReconciliationSessionId()).thenReturn(SESSION_ID);
             when(ctxMock.diagnostic()).thenReturn(diagnosticProcessorMock);
+            when(ctxMock.cache()).thenReturn(cacheProcessorMock);
+            when(cacheProcessorMock.context()).thenReturn(cacheSharedCtxMock);
+            when(cacheSharedCtxMock.exchange()).thenReturn(exchMgr);
 
             when(igniteMock.context()).thenReturn(ctxMock);
 
@@ -429,18 +436,23 @@ public class PartitionReconciliationProcessorTest {
             when(igniteComputeMock.executeAsync(any(Class.class), any())).thenReturn(mock(ComputeTaskFuture.class));
             when(igniteMock.compute(any())).thenReturn(igniteComputeMock);
 
-            return new MockedProcessor(igniteMock, exchMgr, Collections.emptyList(), fixMode, parallelismLevel,
+            return new MockedProcessor(igniteMock, Collections.emptyList(), fixMode, parallelismLevel,
                 10, MAX_RECHECK_ATTEMPTS, 10);
         }
 
         /**
          *
          */
-        public MockedProcessor(IgniteEx ignite,
-            GridCachePartitionExchangeManager<Object, Object> exchMgr,
-            Collection<String> caches, boolean fixMode, int parallelismLevel, int batchSize,
-            int recheckAttempts, int recheckDelay) throws IgniteCheckedException {
-            super(SESSION_ID, ignite, exchMgr, caches, fixMode, parallelismLevel, batchSize, recheckAttempts,
+        public MockedProcessor(
+            IgniteEx ignite,
+            Collection<String> caches,
+            boolean fixMode,
+            int parallelismLevel,
+            int batchSize,
+            int recheckAttempts,
+            int recheckDelay
+        ) throws IgniteCheckedException {
+            super(SESSION_ID, ignite, caches, fixMode, parallelismLevel, batchSize, recheckAttempts,
                 RepairAlgorithm.MAJORITY, recheckDelay);
         }
 
@@ -456,11 +468,11 @@ public class PartitionReconciliationProcessorTest {
                 if (res == null)
                     throw new IllegalStateException("Please add result for: " + taskCls.getSimpleName());
 
-                eventListener.registerEvent(ReconciliationEventListener.WorkLoadStage.STARTING, arg);
+                evtLsnr.registerEvent(ReconciliationEventListener.WorkLoadStage.STARTING, arg);
 
                 lsnr.apply(res.getResult());
 
-                eventListener.registerEvent(ReconciliationEventListener.WorkLoadStage.FINISHING, arg);
+                evtLsnr.registerEvent(ReconciliationEventListener.WorkLoadStage.FINISHING, arg);
             }
             else
                 super.compute(taskCls, arg, lsnr);

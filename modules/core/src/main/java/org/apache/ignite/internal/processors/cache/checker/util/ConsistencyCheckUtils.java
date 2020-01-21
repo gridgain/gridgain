@@ -286,7 +286,6 @@ public class ConsistencyCheckUtils {
      */
     public static int parallelismLevel(double loadFactor, Collection<String> caches, IgniteEx ignite) {
         assert loadFactor > 0 && loadFactor <= 1;
-        assert caches.size() > 0;
 
         int totalBackupCnt = 0;
 
@@ -298,6 +297,6 @@ public class ConsistencyCheckUtils {
 
         int cpus = Math.max(4, getInteger(AVAILABLE_PROCESSORS_RECONCILIATION, Runtime.getRuntime().availableProcessors()));
 
-        return Math.max(1, (int)((loadFactor * cpus) / ((double)totalBackupCnt / caches.size())));
+        return Math.max(1, (int)((loadFactor * cpus) / ((double)totalBackupCnt / (caches.isEmpty() ? 1 : caches.size()))));
     }
 }

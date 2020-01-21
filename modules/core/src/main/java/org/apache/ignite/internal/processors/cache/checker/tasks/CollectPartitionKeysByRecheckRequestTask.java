@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
@@ -50,6 +51,7 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
 /**
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
+@GridInternal
 public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter<RecheckRequest, ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>>> {
     /**
      *
