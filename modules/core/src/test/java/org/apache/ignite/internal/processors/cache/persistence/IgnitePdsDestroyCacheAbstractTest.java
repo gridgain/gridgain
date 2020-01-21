@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cache.persistence;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
@@ -41,16 +43,19 @@ public abstract class IgnitePdsDestroyCacheAbstractTest extends GridCommonAbstra
     protected static final int NODES = 3;
 
     /** */
-    private static final int NUM_OF_KEYS = 100;
+    private static final int NUM_OF_KEYS = 2000;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         return cfg.setDataStorageConfiguration(new DataStorageConfiguration()
-                            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
-                                .setMaxSize(200 * 1024 * 1024)
-                                .setPersistenceEnabled(true)));
+            .setCheckpointFrequency(1000000000)
+            .setWalSegmentSize(4 * 1024 * 1024)
+            .setPageSize(1024)
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                .setMaxSize(200 * 1024 * 1024)
+                .setPersistenceEnabled(true)));
     }
 
     /** {@inheritDoc} */
@@ -71,13 +76,19 @@ public abstract class IgnitePdsDestroyCacheAbstractTest extends GridCommonAbstra
 
     /**
      * @param ignite Ignite.
+     * @param singlePart {@code True} to load data to single partition.
      */
-    private void loadCaches(Ignite ignite) {
+    protected void loadCaches(Ignite ignite, boolean singlePart) {
+        final List<Integer> keys;
+
+        keys = singlePart ? partitionKeys(ignite.cache(cacheName(0)), 1, NUM_OF_KEYS, 0) :
+            IntStream.range(0, NUM_OF_KEYS).boxed().collect(Collectors.toList());
+
         for (int i = 0; i < CACHES; i++) {
             try (IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(cacheName(i))) {
                 s.allowOverwrite(true);
 
-                for (int j = 0; j < NUM_OF_KEYS; j++)
+                for (Integer j : keys)
                     s.addData(j, "cache: " + i + " data: " + j);
 
                 s.flush();
@@ -89,7 +100,7 @@ public abstract class IgnitePdsDestroyCacheAbstractTest extends GridCommonAbstra
      * @param ignite Ignite.
      */
     protected void checkDestroyCaches(Ignite ignite) throws Exception {
-        loadCaches(ignite);
+        loadCaches(ignite, false);
 
         log.warning("destroying caches....");
 
@@ -127,7 +138,7 @@ public abstract class IgnitePdsDestroyCacheAbstractTest extends GridCommonAbstra
      * @param ignite Ignite instance.
      */
     protected void checkDestroyCachesAbruptly(Ignite ignite) throws Exception {
-        loadCaches(ignite);
+        loadCaches(ignite, false);
 
         log.warning("Destroying caches");
 

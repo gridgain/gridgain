@@ -16,9 +16,22 @@
 
 package org.apache.ignite.internal.processors.cache.persistence;
 
+import java.lang.reflect.Field;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 
 /**
  * Test correct clean up cache configuration data after destroying cache.
@@ -88,5 +101,81 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
         startGroupCachesDynamically(ignite);
 
         checkDestroyCachesAbruptly(ignite);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testDestroyCacheOperationNotBlockingCheckpointTest() throws Exception {
+        final IgniteEx ignite = startGrids(2);
+
+        ignite.cluster().active(true);
+
+        startGroupCachesDynamically(ignite);
+
+        loadCaches(ignite, true);
+
+        // Mock offheap manager on g1.
+        final IgniteEx g1 = grid(1);
+
+        // It's important to clear cache in group having > 1 caches.
+        final String cacheName = cacheName(0);
+        final CacheGroupContext grp = g1.cachex(cacheName).context().group();
+
+        final IgniteCacheOffheapManager offheap = grp.offheap();
+
+        IgniteCacheOffheapManager mgr = Mockito.spy(offheap);
+
+        final CountDownLatch checkpointLocked = new CountDownLatch(1);
+        final CountDownLatch cpFutCreated = new CountDownLatch(1);
+        final CountDownLatch realMtdCalled = new CountDownLatch(1);
+        final CountDownLatch checked = new CountDownLatch(1);
+
+        Mockito.doAnswer(new Answer() {
+            @Override public Object answer(InvocationOnMock invocation) throws Throwable {
+                checkpointLocked.countDown();
+
+                assertTrue(U.await(cpFutCreated, 30, TimeUnit.SECONDS));
+
+                Object ret = invocation.callRealMethod();
+
+                // After calling clearing code cp future must be eventually completed.
+                realMtdCalled.countDown();
+
+                // Wait for checkpoint future while holding lock.
+                U.awaitQuiet(checked);
+
+                return ret;
+            }
+        }).when(mgr).stopCache(Mockito.anyInt(), Mockito.anyBoolean());
+
+        final Field field = U.findField(CacheGroupContext.class, "offheapMgr");
+        field.set(grp, mgr);
+
+        final IgniteInternalFuture<Object> fut = runAsync(() -> {
+            assertTrue(U.await(checkpointLocked, 30, TimeUnit.SECONDS));
+
+            final IgniteInternalFuture cpFut = g1.context().cache().context().database().wakeupForCheckpoint("test");
+
+            assertFalse(cpFut.isDone());
+
+            cpFutCreated.countDown();
+
+            assertTrue(U.await(realMtdCalled, 30, TimeUnit.SECONDS));
+
+            try {
+                cpFut.get(); // Future must be completed after cache clearing but before releasing checkpoint lock on top.
+            }
+            finally {
+                checked.countDown();
+            }
+
+            return null;
+        });
+
+        ignite.destroyCache(cacheName);
+
+        fut.get();
     }
 }
