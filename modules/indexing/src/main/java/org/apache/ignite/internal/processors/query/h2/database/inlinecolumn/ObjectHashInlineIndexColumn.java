@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
 
-import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.h2.table.Column;
 import org.h2.value.Value;
@@ -38,9 +37,6 @@ public class ObjectHashInlineIndexColumn extends AbstractInlineIndexColumn {
         if (type() != type)
             return COMPARE_UNSUPPORTED;
 
-        assert v.getObject() instanceof BinaryObject : Value.class.getName() + " should wrap binary object," +
-            " but wraps " + (v.getObject() == null ? "null" : v.getObject().getClass().getName());
-
         int val1 = PageUtils.getInt(pageAddr, off + 1);
         int val2 = v.getObject().hashCode();
 
@@ -52,8 +48,6 @@ public class ObjectHashInlineIndexColumn extends AbstractInlineIndexColumn {
     /** {@inheritDoc} */
     @Override protected int put0(long pageAddr, int off, Value val, int maxSize) {
         assert type() == val.getValueType();
-        assert val.getObject() instanceof BinaryObject : Value.class.getName() + " should wrap binary object," +
-            " but wraps " + (val.getObject() == null ? "null" : val.getObject().getClass().getName());
 
         PageUtils.putByte(pageAddr, off, (byte)val.getValueType());
         PageUtils.putInt(pageAddr, off + 1, val.getObject().hashCode());
