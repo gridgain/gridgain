@@ -1169,6 +1169,11 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
                 res.add(arg);
         }
 
+        String srvcGridProp = System.getProperty(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
+
+        if (srvcGridProp != null)
+            res.add("-D" + IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED + '=' + srvcGridProp);
+
         return res;
     }
 
