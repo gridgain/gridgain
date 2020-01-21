@@ -82,9 +82,9 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_DISTRIBUTED_JOINS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_ENFORCE_JOIN_ORDER;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LAZY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LOCAL;
-import static org.apache.ignite.IgniteJdbcDriver.PROP_QRY_MAX_MEMORY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_MULTIPLE_STMTS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_NODE_ID;
+import static org.apache.ignite.IgniteJdbcDriver.PROP_QRY_MAX_MEMORY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_SCHEMA;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_SKIP_REDUCER_ON_UPDATE;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING;
@@ -109,7 +109,11 @@ public class JdbcConnection implements Connection {
 
     /** Multiple statements V2 task supported since version. */
     private static final IgniteProductVersion MULTIPLE_STATEMENTS_TASK_V2_SUPPORTED_SINCE =
-        IgniteProductVersion.fromString("8.8.0");
+        IgniteProductVersion.fromString("8.7.8");
+
+    /** Multiple statements V2 task supported since version. */
+    private static final IgniteProductVersion CLOSE_CURSOR_TASK_SUPPORTED_SINCE =
+        IgniteProductVersion.fromString("8.7.12");
 
     /**
      * Ignite nodes cache.
@@ -880,6 +884,13 @@ public class JdbcConnection implements Connection {
      */
     boolean isMultipleStatementsTaskV2Supported() {
         return U.isOldestNodeVersionAtLeast(MULTIPLE_STATEMENTS_TASK_V2_SUPPORTED_SINCE, ignite.cluster().nodes());
+    }
+
+    /**
+     * @return {@code true} if multiple statements allowed, {@code false} otherwise.
+     */
+    boolean isCloseCursorTaskSupported() {
+        return U.isOldestNodeVersionAtLeast(CLOSE_CURSOR_TASK_SUPPORTED_SINCE, ignite.cluster().nodes());
     }
 
     /**

@@ -20,6 +20,7 @@ import java.security.Security;
 import org.apache.ignite.internal.jdbc2.JdbcBlobTest;
 import org.apache.ignite.internal.jdbc2.JdbcBulkLoadSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
+import org.apache.ignite.internal.jdbc2.JdbcCursorLeaksTest;
 import org.apache.ignite.internal.jdbc2.JdbcDiskSpillingClientsTest;
 import org.apache.ignite.internal.jdbc2.JdbcDistributedJoinsQueryTest;
 import org.apache.ignite.internal.jdbc2.JdbcQueryMemoryTrackerSelfTest;
@@ -128,6 +129,7 @@ import org.junit.runners.Suite;
     JdbcConnectionReopenTest.class,
 
     // Ignite client node based driver tests
+    JdbcCursorLeaksTest.class,
     org.apache.ignite.internal.jdbc2.JdbcConnectionSelfTest.class,
     org.apache.ignite.internal.jdbc2.JdbcSpringSelfTest.class,
     org.apache.ignite.internal.jdbc2.JdbcStatementSelfTest.class,

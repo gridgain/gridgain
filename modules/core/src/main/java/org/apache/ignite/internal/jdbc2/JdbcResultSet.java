@@ -264,8 +264,19 @@ public class JdbcResultSet implements ResultSet {
      * @throws SQLException On error.
      */
     void closeInternal() throws SQLException  {
-        if (((JdbcConnection)stmt.getConnection()).nodeId() == null && uuid != null)
-            JdbcQueryTask.remove(uuid);
+        if (uuid != null) {
+            if (((JdbcConnection)stmt.getConnection()).nodeId() == null)
+                JdbcQueryTask.remove(uuid);
+            else {
+                JdbcConnection conn = (JdbcConnection)stmt.getConnection();
+
+                if (conn.isCloseCursorTaskSupported()) {
+                    Ignite ignite = conn.ignite();
+
+                    ignite.compute(ignite.cluster().forNodeId(conn.nodeId())).call(new JdbcCloseCursorTask(uuid));
+                }
+            }
+        }
 
         closed = true;
     }

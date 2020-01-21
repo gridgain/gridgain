@@ -247,6 +247,8 @@ public class JdbcStatement implements Statement {
             it.remove();
         }
 
+        closeResults();
+
         closed = true;
     }
 
