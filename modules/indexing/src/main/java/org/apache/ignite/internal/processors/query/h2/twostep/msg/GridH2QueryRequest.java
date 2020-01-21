@@ -517,9 +517,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** {@inheritDoc} */
     @SuppressWarnings("IfMayBeConditional")
     @Override public void unmarshall(Marshaller m, GridKernalContext ctx) {
-        if (paramsBytes == null)
-            return;
-
         assert paramsBytes != null;
 
         try {
@@ -530,8 +527,6 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
                 params = ((BinaryMarshaller)m).binaryMarshaller().unmarshal(paramsBytes, ldr);
             else
                 params = U.unmarshal(m, paramsBytes, ldr);
-
-            paramsBytes = null;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
