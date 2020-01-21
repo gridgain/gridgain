@@ -27,6 +27,7 @@ import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunction
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.MAX;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.MIN;
 import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.SUM;
+import static org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunctionType.UNKNOWN_FUNCTION;
 
 /**
  * Aggregate function.
@@ -102,6 +103,17 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
     }
 
     /**
+     * @param type Type.
+     * @param name Name.
+     * @param distinct Distinct.
+     */
+    public GridSqlAggregateFunction(GridSqlFunctionType type, String name, boolean distinct) {
+        super(null, type, name);
+
+        this.distinct = distinct;
+    }
+
+    /**
      * Checks if the aggregate type is valid.
      *
      * @param type Aggregate type.
@@ -164,7 +176,17 @@ public class GridSqlAggregateFunction extends GridSqlFunction {
         if (distinct)
             buff.append("DISTINCT ");
 
-        buff.append(child().getSQL());
+        if (type == UNKNOWN_FUNCTION) {
+            for (int i = 0; i < size(); i++) {
+                if (i > 0)
+                    buff.append(", ");
+
+                buff.append(child(i).getSQL());
+            }
+        }
+        else {
+            buff.append(child().getSQL());
+        }
 
         if (!F.isEmpty(groupConcatOrderExpression)) {
             buff.append(" ORDER BY ");
