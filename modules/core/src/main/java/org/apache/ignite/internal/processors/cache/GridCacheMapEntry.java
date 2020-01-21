@@ -3150,7 +3150,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         ver0 = ver;
                     }
                     else {
-                        rmv = markObsolete0(cctx.versions().next(this.ver.topologyVersion()), true, null);
+                        rmv = markObsolete0(nextVersion(), true, null);
 
                         return null;
                     }
@@ -4655,7 +4655,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return false;
 
                 if (checkExpired()) {
-                    rmv = markObsolete0(cctx.versions().next(this.ver.topologyVersion()), true, null);
+                    rmv = markObsolete0(nextVersion(), true, null);
 
                     return false;
                 }
