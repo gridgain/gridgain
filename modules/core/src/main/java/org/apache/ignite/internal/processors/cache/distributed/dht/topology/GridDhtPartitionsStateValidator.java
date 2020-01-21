@@ -94,17 +94,18 @@ public class GridDhtPartitionsStateValidator {
 
         StringBuilder error = new StringBuilder();
 
-        if (!resultUpdCnt.isEmpty())
-            error.append("Partitions update counters are inconsistent for " + fold(topVer, resultUpdCnt));
-
         if (!cctx.cache().cacheGroup(top.groupId()).mvccEnabled()) { // TODO: Remove "if" clause in IGNITE-9451.
             // Validate cache sizes.
             Map<Integer, Map<UUID, Long>> resultSize = validatePartitionsSizes(top, messages, ignoringNodes);
 
-            if (!resultSize.isEmpty()) {
-                if (error.length() > 0)
-                    error.append(System.lineSeparator());
+            if (!resultUpdCnt.isEmpty() && resultSize.isEmpty())
+                error.append("Partitions update counters are inconsistent for " + fold(topVer, resultUpdCnt));
 
+            if (!resultUpdCnt.isEmpty() && !resultSize.isEmpty()) {
+                error.append("Partitions cache size and update counters are inconsistent for " + fold(topVer, resultSize) + fold(topVer, resultUpdCnt));
+            }
+
+            if (resultUpdCnt.isEmpty() && !resultSize.isEmpty()) {
                 error.append("Partitions cache sizes are inconsistent for " + fold(topVer, resultSize));
             }
         }
