@@ -3577,14 +3577,23 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         return igniteIterator(keepBinary, null);
     }
 
-    // TODO: 20.01.20 javadoc
+    /**
+     * Gets next grid cache version.
+     *
+     * @return Next version based on given topology version.
+     */
     public GridCacheVersion nextVersion() {
         return ctx.topology().initialized() ?
             ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion()) :
             ctx.versions().next(ctx.kernalContext().discovery().topologyVersion());
     }
 
-    // TODO: 20.01.20 javadoc
+    /**
+     * Gets next grid cache version.
+     *
+     * @param dataCenterId Data center id.
+     * @return Next version based on given topology version.
+     */
     public GridCacheVersion nextVersion(byte dataCenterId) {
         return ctx.topology().initialized() ?
             ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion(), dataCenterId) :

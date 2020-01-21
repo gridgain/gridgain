@@ -23,8 +23,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
@@ -216,7 +214,6 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         return ISOLATED_STREAMER_VER;
     }
 
-    // TODO: 20.01.20 Verify javadoc
     /**
      * Gets next version based on given topology version. Given value should be
      * real topology version calculated as number of grid topology changes and
@@ -229,7 +226,15 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         return next(topVer, true, false, dataCenterId);
     }
 
-    // TODO: 20.01.20 Verify javadoc
+    /**
+     * Gets next version based on given topology version. Given value should be
+     * real topology version calculated as number of grid topology changes and
+     * obtained from discovery manager.
+     *
+     * @param topVer Topology version for which new version should be obtained.
+     * @param dataCenterId Data center id.
+     * @return Next version based on given topology version.
+     */
     public GridCacheVersion next(long topVer, byte dataCenterId) {
         return next(topVer, true, false, dataCenterId);
     }
@@ -243,7 +248,12 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         return next(cctx.kernalContext().discovery().topologyVersion(), true, true, dataCenterId);
     }
 
-    // TODO: 20.01.20 javdoc
+    /**
+     * Gets next version for cache store load and reload operations.
+     *
+     * @param topVer Topology version for which new version should be obtained.
+     * @return Next version for cache store operations.
+     */
     public GridCacheVersion nextForLoad(long topVer) {
         return next(topVer, true, true, dataCenterId);
     }
