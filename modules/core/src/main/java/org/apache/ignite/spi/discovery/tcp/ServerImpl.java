@@ -77,6 +77,7 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
+import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
@@ -153,6 +154,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeLeftMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingRequest;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingResponse;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRedirectToClient;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRequiredFeatureSupport;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheckMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryServerOnlyCustomEventMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusCheckMessage;
@@ -3312,6 +3314,45 @@ class ServerImpl extends TcpDiscoveryImpl {
                 byte[] msgBytes = null;
 
                 for (ClientMessageWorker clientMsgWorker : clientMsgWorkers.values()) {
+                    if (msg instanceof TcpDiscoveryCustomEventMessage) {
+                        try {
+                            DiscoverySpiCustomMessage customMsg =
+                                ((TcpDiscoveryCustomEventMessage)msg).message(
+                                    spi.marshaller(),
+                                    U.resolveClassLoader(spi.ignite().configuration()));
+
+                            DiscoveryCustomMessage delegateMsg = ((CustomMessageWrapper)customMsg).delegate();
+                            TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
+                                delegateMsg.getClass(),
+                                TcpDiscoveryRequiredFeatureSupport.class
+                            );
+
+                            if (featAnnot != null) {
+                                IgniteFeatures reqFeature = featAnnot.feature();
+                                ClusterNode node = ring.node(clientMsgWorker.clientNodeId);
+
+                                if (node != null) {
+                                    byte[] featuresBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
+
+                                    if (!IgniteFeatures.nodeSupports(featuresBytes, reqFeature)) {
+                                        if (log.isDebugEnabled())
+                                            log.debug("Client node " + node.id() +
+                                                " doesn't support feature " + reqFeature +
+                                                ", sending message " + delegateMsg.getClass() +
+                                                " to the client is skipped.");
+
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+                        catch (Throwable e) {
+                            U.error(log, "Failed when unmarshalling a message: " + msg, e);
+
+                            break;
+                        }
+                    }
+
                     if (msgBytes == null) {
                         try {
                             msgBytes = U.marshal(spi.marshaller(), msg);
