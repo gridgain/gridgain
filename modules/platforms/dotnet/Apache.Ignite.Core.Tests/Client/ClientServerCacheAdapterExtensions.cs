@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.examples;
+namespace Apache.Ignite.Core.Tests.Client
+{
+    using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Client.Cache;
 
-import org.apache.ignite.examples.datagrid.SpatialQueryExample;
-
-/**
- * * Tests {@link SpatialQueryExample} in the multi node mode.
- */
-public class SpatialQueryExampleMultiNodeSelfTest extends SpatialQueryExampleSelfTest {
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        for (int i = 0; i < RMT_NODES_CNT; i++)
-            startGrid("node-" + i, DFLT_CFG);
+    /// <summary>
+    /// Extension methods related to <see cref="ClientServerCacheAdapter{TK, TV}"/>.
+    /// </summary>
+    public static class ClientServerCacheAdapterExtensions
+    {
+        /// <summary>
+        /// Returns given <see cref="ICache{TK,TV}"/> wrapped as <see cref="ICacheClient{TK,TV}"/>.
+        /// </summary>
+        public static ICacheClient<TK, TV> AsCacheClient<TK, TV>(this ICache<TK, TV> cache)
+        {
+            return new ClientServerCacheAdapter<TK, TV>(cache);
+        }
     }
 }
