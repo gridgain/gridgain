@@ -16,12 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.Test;
+import org.apache.ignite.cache.CacheEntry;
+import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.cache.store.CacheStoreAdapter;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -29,9 +33,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
@@ -39,6 +40,10 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager.TOP_VER_BASE_TIME;
 
+/**
+ * Tests to enuse that there's no race in grid cache version generation
+ * between retrieveing records from 3rd party storage and put variations.
+ */
 public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
@@ -60,6 +65,20 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
         return cfg;
     }
 
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+    }
+
+    /**
+     * Verify that there's no race in grid cache version generation between get and put.
+     * For more details see
+     * {@code GridCacheVersionGenerationWithCacheStorageTest#checkGridCacheVersionsGenerationOrder()}
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testCacheVersionGenerationWithCacheStoreGetPut() throws Exception {
         checkGridCacheVersionsGenerationOrder(
@@ -74,9 +93,18 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
                 }
 
                 ign.cache(DEFAULT_CACHE_NAME).put(0, 0);
-            });
+            },
+            Collections.singleton(0)
+        );
     }
 
+    /**
+     * Verify that there's no race in grid cache version generation between getAll and putAll.
+     * For more details see
+     * {@code GridCacheVersionGenerationWithCacheStorageTest#checkGridCacheVersionsGenerationOrder()}
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testCacheVersionGenerationWithCacheStoreGetAllPutAll() throws Exception {
         checkGridCacheVersionsGenerationOrder(
@@ -92,9 +120,17 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
 
                 ign.cache(DEFAULT_CACHE_NAME).putAll(
                     IntStream.range(0, 2).boxed().collect(Collectors.toMap(Function.identity(), i -> i)));
-            });
+            },
+            IntStream.range(0, 2).boxed().collect(Collectors.toSet()));
     }
 
+    /**
+     * Verify that there's no race in grid cache version generation between getAsync and putAsync.
+     * For more details see
+     * {@code GridCacheVersionGenerationWithCacheStorageTest#checkGridCacheVersionsGenerationOrder()}
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testCacheVersionGenerationWithCacheStoreGetAsyncPutAsync() throws Exception {
         checkGridCacheVersionsGenerationOrder(
@@ -109,9 +145,18 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
                 }
 
                 ign.cache(DEFAULT_CACHE_NAME).putAsync(0, 0);
-            });
+            },
+            Collections.singleton(0)
+        );
     }
 
+    /**
+     * Verify that there's no race in grid cache version generation between getAllAsync and putAllAsync.
+     * For more details see
+     * {@code GridCacheVersionGenerationWithCacheStorageTest#checkGridCacheVersionsGenerationOrder()}
+     *
+     * @throws Exception If failed.
+     */
     @Test
     public void testCacheVersionGenerationWithCacheStoreGetAllAsyncPutAllAsync() throws Exception {
         checkGridCacheVersionsGenerationOrder(
@@ -127,11 +172,27 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
 
                 ign.cache(DEFAULT_CACHE_NAME).putAllAsync(
                     IntStream.range(0, 2).boxed().collect(Collectors.toMap(Function.identity(), i -> i)));
-            });
+            },
+            IntStream.range(0, 2).boxed().collect(Collectors.toSet())
+        );
     }
 
-
-    private void checkGridCacheVersionsGenerationOrder(Consumer<IgniteEx> actions) throws Exception {
+    /**
+     * <or>
+     *     <li>Start node.</li>
+     *     <li>Start one more node asyncronously</li>
+     *     <li>With the help of {@link PartitionsExchangeAware) slow down exchange in order to run some cache operations
+     *      after discovery message processing but before exchange topology lock.</li>
+     * </or>
+     *
+     * Ensure that topology version of entry and current topology version* are equals after exchange
+     * and operation were finished.
+     *
+     * @param actions Actions to check: get, put etc.
+     * @throws Exception
+     */
+    private void checkGridCacheVersionsGenerationOrder(Consumer<IgniteEx> actions, Set<Integer> keySetToCheck)
+        throws Exception {
         IgniteEx ign = startGrid(0);
 
         CountDownLatch latch = new CountDownLatch(1);
@@ -161,17 +222,12 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
 
         newNodeJoinFut.get();
 
-        GridCacheContext<Object, Object> cctx = ign.context().cache().cache(DEFAULT_CACHE_NAME).context();
+        long expTop = (ign.context().cache().cache(DEFAULT_CACHE_NAME).
+            context().kernalContext().discovery().gridStartTime() - TOP_VER_BASE_TIME) / 1000 + 1;
 
-        GridDhtLocalPartition part = cctx.group().topology().localPartition(ign.affinity(DEFAULT_CACHE_NAME).partition(0));
-
-        GridCursor<? extends CacheDataRow> cursor = cctx.group().offheap().dataStore(part).cursor(cctx.cacheId());
-
-        cursor.next();
-
-        CacheDataRow dataRow = cursor.get();
-
-        assertEquals((cctx.kernalContext().discovery().gridStartTime() - TOP_VER_BASE_TIME) / 1000 + 1, dataRow.version().topologyVersion());
+        ign.cache(DEFAULT_CACHE_NAME).getEntries(keySetToCheck).stream().
+            map(CacheEntry::version).forEach(
+                v -> assertEquals(expTop, ((GridCacheVersion)v).topologyVersion()));
     }
 
     /**
