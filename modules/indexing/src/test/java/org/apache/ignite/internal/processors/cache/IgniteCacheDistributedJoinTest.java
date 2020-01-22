@@ -218,6 +218,7 @@ public class IgniteCacheDistributedJoinTest extends GridCommonAbstractTest {
         }
     }
 
+    /** */
     @Test
     public void testManyTables() {
         Ignite ignite = ignite(0);
