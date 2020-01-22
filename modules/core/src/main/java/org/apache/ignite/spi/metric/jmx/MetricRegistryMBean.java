@@ -21,15 +21,15 @@ import java.util.Iterator;
 import java.util.List;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
+import org.apache.ignite.spi.metric.HistogramMetric;
 import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.ObjectMetric;
+import org.apache.ignite.spi.metric.ReadOnlyMetricManager;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 
 import static java.util.Arrays.binarySearch;
@@ -42,12 +42,12 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.hist
  */
 public class MetricRegistryMBean extends ReadOnlyDynamicMBean {
     /** Metric registry. */
-    MetricRegistry mreg;
+    ReadOnlyMetricRegistry mreg;
 
     /**
      * @param mreg Metric registry.
      */
-    public MetricRegistryMBean(MetricRegistry mreg) {
+    public MetricRegistryMBean(ReadOnlyMetricRegistry mreg) {
         this.mreg = mreg;
     }
 
@@ -112,7 +112,7 @@ public class MetricRegistryMBean extends ReadOnlyDynamicMBean {
         });
 
         return new MBeanInfo(
-            ReadOnlyMetricRegistry.class.getName(),
+            ReadOnlyMetricManager.class.getName(),
             mreg.name(),
             attributes.toArray(new MBeanAttributeInfo[attributes.size()]),
             null,
@@ -155,7 +155,7 @@ public class MetricRegistryMBean extends ReadOnlyDynamicMBean {
      * @return Specific bucket value or {@code null} if not found.
      * @see MetricUtils#histogramBucketNames(HistogramMetric)
      */
-    public static Long searchHistogram(String name, MetricRegistry mreg) {
+    public static Long searchHistogram(String name, ReadOnlyMetricRegistry mreg) {
         int highBoundIdx;
 
         boolean isInf = name.endsWith(INF);
