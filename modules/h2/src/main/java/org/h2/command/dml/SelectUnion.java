@@ -129,14 +129,14 @@ public class SelectUnion extends Query {
     @Override
     public ResultInterface queryMeta() {
         int columnCount = left.getColumnCount();
-        LocalResult result = session.getDatabase().getResultFactory().create(session, expressionArray, columnCount);
+        LocalResult result = session.getDatabase().getResultFactory().create(session, expressionArray, columnCount, true);
         result.done();
         return result;
     }
 
     public LocalResult getEmptyResult() {
         int columnCount = left.getColumnCount();
-        return session.getDatabase().getResultFactory().create(session, expressionArray, columnCount);
+        return session.getDatabase().getResultFactory().create(session, expressionArray, columnCount, false);
     }
 
     @Override
@@ -189,7 +189,7 @@ public class SelectUnion extends Query {
                 return lazyResult;
             }
         }
-        LocalResult result = db.getResultFactory().create(session, expressionArray, columnCount);
+        LocalResult result = db.getResultFactory().create(session, expressionArray, columnCount, false);
         if (sort != null) {
             result.setSortOrder(sort);
         }
@@ -239,11 +239,12 @@ public class SelectUnion extends Query {
             break;
         }
         case INTERSECT: {
-            LocalResult temp = db.getResultFactory().create(session, expressionArray, columnCount);
+            LocalResult temp = db.getResultFactory().create(session, expressionArray, columnCount, false);
             temp.setDistinct();
             while (l.next()) {
                 temp.addRow(convert(l.currentRow(), columnCount));
             }
+            temp.done();
             while (r.next()) {
                 Value[] values = convert(r.currentRow(), columnCount);
                 if (temp.containsDistinct(values)) {

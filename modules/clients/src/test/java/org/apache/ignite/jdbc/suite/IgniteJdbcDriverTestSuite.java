@@ -20,6 +20,7 @@ import java.security.Security;
 import org.apache.ignite.internal.jdbc2.JdbcBlobTest;
 import org.apache.ignite.internal.jdbc2.JdbcBulkLoadSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
+import org.apache.ignite.internal.jdbc2.JdbcDiskSpillingClientsTest;
 import org.apache.ignite.internal.jdbc2.JdbcDistributedJoinsQueryTest;
 import org.apache.ignite.internal.jdbc2.JdbcQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcSchemaCaseSelfTest;
@@ -58,6 +59,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinConnectionTimeoutSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataPageScanPropertySelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataSourceSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDeleteStatementSelfTest;
+import org.apache.ignite.jdbc.thin.JdbcThinDiskSpillingClientsTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicPartitionedNearSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicPartitionedSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicReplicatedSelfTest;
@@ -243,6 +245,8 @@ import org.junit.runners.Suite;
     JdbcThinTransactionsLeaksMvccTest.class,
 
     JdbcThinQueryMemoryTrackerSelfTest.class,
+    JdbcThinDiskSpillingClientsTest.class,
+    JdbcDiskSpillingClientsTest.class,
 
     // Data types coverage.
     JdbcThinCacheToJdbcDataTypesCoverageTest.class,
