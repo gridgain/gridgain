@@ -997,7 +997,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 long ttl = ttlExtras();
 
                 // Generate new version.
-                GridCacheVersion nextVer = cctx.versions().nextForLoad(ver.topologyVersion());
+                GridCacheVersion nextVer = cctx.versions().nextForLoad(ver);
 
                 // If entry was loaded during read step.
                 if (wasNew && !isNew())
@@ -3683,7 +3683,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private GridCacheVersion nextVersion() {
         // Do not change topology version when generating next version.
-        return cctx.versions().next(ver.topologyVersion());
+        return cctx.versions().next(ver);
     }
 
     /** {@inheritDoc} */
