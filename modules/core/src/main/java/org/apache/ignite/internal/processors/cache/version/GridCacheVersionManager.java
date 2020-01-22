@@ -23,7 +23,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedManagerAdapter;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
@@ -316,42 +315,6 @@ public class GridCacheVersionManager extends GridCacheSharedManagerAdapter {
         lastDataVer.value(last.order());
 
         return next;
-    }
-
-    /**
-     * @return Next version based on current topology.
-     */
-    public GridCacheVersion next() {
-        return next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId);
-    }
-
-    /**
-     * @param dataCenterId Data center id.
-     * @return Next version based on current topology with given data center id.
-     */
-    public GridCacheVersion next(byte dataCenterId) {
-        return next(cctx.kernalContext().discovery().topologyVersion(), true, false, dataCenterId);
-    }
-
-    /**
-     * Gets next version based on given topology version. Given value should be
-     * real topology version calculated as number of grid topology changes and
-     * obtained from discovery manager.
-     *
-     * @param topVer Topology version for which new version should be obtained.
-     * @return Next version based on given topology version.
-     */
-    public GridCacheVersion next(AffinityTopologyVersion topVer) {
-        return next(topVer.topologyVersion(), true, false, dataCenterId);
-    }
-
-    /**
-     * Gets next version for cache store load and reload operations.
-     *
-     * @return Next version for cache store operations.
-     */
-    public GridCacheVersion nextForLoad(AffinityTopologyVersion topVer) {
-        return next(topVer.topologyVersion(), true, true, dataCenterId);
     }
 
     /**
