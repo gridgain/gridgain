@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.examples;
+package org.apache.ignite.internal.processors.cache.transactions;
 
-import org.apache.ignite.examples.datagrid.SpatialQueryExample;
+import org.apache.ignite.configuration.IgniteConfiguration;
 
 /**
- * * Tests {@link SpatialQueryExample} in the multi node mode.
+ * Test partitions consistency in various scenarios when all rebalance is historical and compaction is enabled.
  */
-public class SpatialQueryExampleMultiNodeSelfTest extends SpatialQueryExampleSelfTest {
+public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest extends TxPartitionCounterStateConsistencyHistoryRebalanceTest {
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        for (int i = 0; i < RMT_NODES_CNT; i++)
-            startGrid("node-" + i, DFLT_CFG);
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.getDataStorageConfiguration().setWalCompactionEnabled(true);
+
+        return cfg;
     }
 }
