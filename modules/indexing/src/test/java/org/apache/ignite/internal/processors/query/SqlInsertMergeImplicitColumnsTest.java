@@ -34,16 +34,15 @@ public class SqlInsertMergeImplicitColumnsTest extends AbstractIndexingCommonTes
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         for (String cache : grid(0).cacheNames())
-            grid(0).cache(cache).destroy();
+            grid(0).destroyCache(cache);
 
         super.afterTest();
     }
 
     /**
-     * @throws Exception If failed.
      */
     @Test
-    public void testInsert() throws Exception {
+    public void testInsert() {
         sql("CREATE TABLE test3 (id int primary key, val1 varchar, val2 varchar)");
 
         checkDml("INSERT INTO test3 values (1,'Kenny', null)", 1);
@@ -54,10 +53,9 @@ public class SqlInsertMergeImplicitColumnsTest extends AbstractIndexingCommonTes
     }
 
     /**
-     * @throws Exception If failed.
      */
     @Test
-    public void testMerge() throws Exception {
+    public void testMerge() {
         sql("CREATE TABLE test3 (id int primary key, val1 varchar, val2 varchar)");
 
         checkDml("INSERT INTO test3 values (1,'Kenny', null)", 1);
@@ -65,21 +63,22 @@ public class SqlInsertMergeImplicitColumnsTest extends AbstractIndexingCommonTes
     }
 
     /**
-     * @param sql MERGE query.
+     * @param sql DML query.
+     * @param expUpdateCounts expected update count of the DML query.
      */
-    private void checkDml(String sql, long expectedUpdateCounts) throws Exception {
-        List<List<?>> resMrg = sql(sql);
+    private void checkDml(String sql, long expUpdateCounts) {
+        List<List<?>> res = sql(sql);
 
-        assertEquals(1, resMrg.size());
-        assertEquals(1, resMrg.get(0).size());
-        assertEquals(expectedUpdateCounts, resMrg.get(0).get(0));
+        assertEquals(1, res.size());
+        assertEquals(1, res.get(0).size());
+        assertEquals(expUpdateCounts, res.get(0).get(0));
     }
 
     /**
      * @param sql SQL query.
      * @return Results.
      */
-    protected List<List<?>> sql(String sql) throws Exception {
+    protected List<List<?>> sql(String sql)  {
         GridQueryProcessor qryProc = grid(0).context().query();
 
         SqlFieldsQuery qry = new SqlFieldsQuery(sql).setSchema("PUBLIC");
