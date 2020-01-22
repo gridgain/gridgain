@@ -112,7 +112,10 @@ public enum IgniteFeatures {
     MANAGEMENT_CONSOLE(28),
 
     /** Long operations dump timeout. */
-    LONG_OPERATIONS_DUMP_TIMEOUT(30);
+    LONG_OPERATIONS_DUMP_TIMEOUT(30),
+
+    /** Cluster has task to get value from cache by key value. */
+    WC_CACHE_GET_VALUE(31);
 
     /**
      * Unique feature identifier.
