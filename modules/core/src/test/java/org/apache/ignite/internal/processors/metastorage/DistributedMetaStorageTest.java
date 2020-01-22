@@ -31,7 +31,10 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -83,6 +86,9 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         if (discoSpi instanceof TcpDiscoverySpi)
             ((TcpDiscoverySpi)discoSpi).setNetworkTimeout(1000);
 
+        if (igniteInstanceName.contains("client"))
+            cfg.setClientMode(true);
+
         return cfg;
     }
 
@@ -130,6 +136,75 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         metastorage.remove("key");
 
         assertNull(metastorage.read("key"));
+    }
+
+    /**
+     *  Test verifies that Distributed Metastorage on client is not operational until client connects to some cluster.
+     *
+     *  After successful join DMS on client becomes operational.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDistributedMetastorageOperationsOnClient() throws Exception {
+        String clientName = "client0";
+
+        String key = "key";
+        String value = "value";
+
+        IgniteInternalFuture<IgniteEx> clFut = GridTestUtils.runAsync(() -> startGrid(clientName));
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                IgniteKernal clientGrid = IgnitionEx.gridx(clientName);
+
+                return clientGrid != null && clientGrid.context().distributedMetastorage() != null;
+            }
+            catch (Exception ignored) {
+                return false;
+            }
+        }, 1_000);
+
+        IgniteKernal cl0 = IgnitionEx.gridx("client0");
+
+        final DistributedMetaStorage clDms = cl0.context().distributedMetastorage();
+
+        assertNotNull(clDms);
+
+        // DMS on client blocks if client is not connected to the cluster
+        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
+            try {
+                clDms.write(key, value);
+            }
+            catch (IgniteCheckedException ignored) {
+                // No-op.
+            }
+        });
+
+        GridTestUtils.assertThrows(null, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                fut.get(500);
+
+                return null;
+            }
+        }, IgniteFutureTimeoutCheckedException.class, null);
+
+        startGrid(0);
+
+        clFut.get();
+
+        DistributedMetaStorage clDms0 = cl0.context().distributedMetastorage();
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                return clDms0.read(key) != null;
+            }
+            catch (IgniteCheckedException ignored) {
+                return false;
+            }
+        }, 1_000);
+
+        assertEquals(value, clDms0.read(key));
     }
 
     /**
