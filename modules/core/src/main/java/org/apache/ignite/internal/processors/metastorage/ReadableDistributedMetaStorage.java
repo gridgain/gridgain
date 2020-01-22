@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.metastorage;
 
 import java.io.Serializable;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
