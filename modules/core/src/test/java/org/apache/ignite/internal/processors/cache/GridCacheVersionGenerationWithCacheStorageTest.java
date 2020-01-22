@@ -214,7 +214,8 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
 
         assertEquals(2, ignite(0).context().discovery().topologyVersion());
 
-        assertEquals(1, ignite(0).cachex(DEFAULT_CACHE_NAME).context().topology().readyTopologyVersion().topologyVersion());
+        assertEquals(1,
+            ignite(0).cachex(DEFAULT_CACHE_NAME).context().topology().readyTopologyVersion().topologyVersion());
 
         actions.accept(ign);
 
