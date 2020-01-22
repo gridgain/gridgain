@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.tree.AllocationContext;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -160,12 +161,26 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     private void processPartitions(List<GridDhtLocalPartition> parts, SchemaIndexCacheVisitorClosure clo,
         int remainder)
         throws IgniteCheckedException {
-        for (int i = 0, size = parts.size(); i < size; i++) {
-            if (stop)
-                break;
+        Thread curThread = Thread.currentThread();
 
-            if ((i % parallelism) == remainder)
-                processPartition(parts.get(i), clo);
+        if (curThread instanceof IgniteThread) {
+            AllocationContext allocCtx = new AllocationContext(cctx.kernalContext().config().getDataStorageConfiguration().getPageSize());
+
+            ((IgniteThread)curThread).allocator(allocCtx);
+        }
+
+        try {
+            for (int i = 0, size = parts.size(); i < size; i++) {
+                if (stop)
+                    break;
+
+                if ((i % parallelism) == remainder)
+                    processPartition(parts.get(i), clo);
+            }
+        }
+        finally {
+            if (curThread instanceof IgniteThread)
+                ((IgniteThread)curThread).allocator(null);
         }
     }
 

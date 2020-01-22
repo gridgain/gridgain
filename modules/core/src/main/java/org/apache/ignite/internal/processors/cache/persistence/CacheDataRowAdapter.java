@@ -42,6 +42,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.pagemem.PageIdUtils.itemId;
@@ -83,12 +84,25 @@ public class CacheDataRowAdapter implements CacheDataRow {
     @GridToStringInclude
     protected int cacheId;
 
+    /** */
+    protected boolean tmpAlloc;
+
     /**
      * @param link Link.
      */
     public CacheDataRowAdapter(long link) {
         // Link can be 0 here.
         this.link = link;
+    }
+
+    /**
+     * @param link Link.
+     * @param tmpAlloc Temporal allocation flag. If {@code true}, will use temp buffer for object comparison.
+     */
+    public CacheDataRowAdapter(long link, boolean tmpAlloc) {
+        // Link can be 0 here.
+        this.link = link;
+        this.tmpAlloc = tmpAlloc;
     }
 
     /**
@@ -502,7 +516,15 @@ public class CacheDataRowAdapter implements CacheDataRow {
             byte type = PageUtils.getByte(addr, off);
             off++;
 
-            byte[] bytes = PageUtils.getBytes(addr, off, len);
+            byte[] bytes;
+
+            if (tmpAlloc) {
+                bytes = ((IgniteThread)Thread.currentThread()).allocator().tmpBuf;
+
+                PageUtils.getBytes(addr, off, bytes, 0, len);
+            }
+            else
+                bytes = PageUtils.getBytes(addr, off, len);
             off += len;
 
             key = coctx.kernalContext().cacheObjects().toKeyCacheObject(coctx, type, bytes);

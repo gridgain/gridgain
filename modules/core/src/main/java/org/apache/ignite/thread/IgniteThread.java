@@ -18,6 +18,7 @@ package org.apache.ignite.thread;
 
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
+import org.apache.ignite.internal.processors.cache.persistence.tree.AllocationContext;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -60,6 +61,9 @@ public class IgniteThread extends Thread {
 
     /** */
     private boolean forbiddenToRequestBinaryMetadata;
+
+    /** */
+    private AllocationContext allocCtx;
 
     /**
      * Creates thread with given worker.
@@ -226,6 +230,20 @@ public class IgniteThread extends Thread {
 
         return thread.getClass() == IgniteThread.class || thread instanceof IgniteThread ?
             ((IgniteThread)thread) : null;
+    }
+
+    /**
+     * @return Attachment.
+     */
+    public AllocationContext allocator() {
+        return allocCtx;
+    }
+
+    /**
+     * @param allocCtx Attachment.
+     */
+    public void allocator(AllocationContext allocCtx) {
+        this.allocCtx = allocCtx;
     }
 
     /**
