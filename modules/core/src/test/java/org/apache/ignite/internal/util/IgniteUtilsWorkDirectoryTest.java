@@ -19,6 +19,7 @@ package org.apache.ignite.internal.util;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,13 +29,16 @@ import java.io.File;
 public class IgniteUtilsWorkDirectoryTest {
 
     /** */
-    private static final String USER_WORK_DIR = String.join(File.separator, U.getIgniteHome() , "userWorkDirTest");
+    private static final String USER_WORK_DIR = String.join(File.separator,
+            U.getIgniteHome() , "userWorkDirTest");
 
     /** */
-    private static final String USER_IGNITE_HOME = String.join(File.separator, U.getIgniteHome() , "userIgniteHomeTest");
+    private static final String USER_IGNITE_HOME = String.join(File.separator,
+            U.getIgniteHome() , "userIgniteHomeTest");
 
     /** */
-    private static final String USER_DIR_PROPERTY_VALUE = String.join(File.separator,new File(U.getIgniteHome()).getParent(), "userDirPropertyTest");
+    private static final String USER_DIR_PROPERTY_VALUE = String.join(File.separator,
+            new File(U.getIgniteHome()).getParent(), "userDirPropertyTest");
 
     /** */
     private static String dfltIgniteHome;
@@ -194,17 +198,11 @@ public class IgniteUtilsWorkDirectoryTest {
 
     /** */
     private void genericPathExceptionTest(String userWorkDir, String expMsg) {
-        String actualWorkDir = null;
-        boolean fail = false;
-
-        try {
-            actualWorkDir = IgniteUtils.workDirectory(userWorkDir, null);
-        } catch (IgniteCheckedException e) {
-            assert e.getMessage().contains(expMsg) : "expected IgniteCheckedException with " + expMsg + " in message";
-            fail = true;
-        }
-
-        assert fail : "actualWorkDir: " + actualWorkDir + ", expected: thrown exception";
+        GridTestUtils.assertThrows(null,
+                () -> IgniteUtils.workDirectory(userWorkDir, null),
+                IgniteCheckedException.class,
+                expMsg
+                );
     }
 
     /** */
