@@ -192,8 +192,7 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
 
             Object val = cache.withKeepBinary().get(key);
 
-            return new VisorCacheModifyTaskResult(nid, VisorTaskUtils.compactClass(val),
-                VisorQueryUtils.convertValue(val));
+            return new VisorCacheModifyTaskResult(nid, VisorTaskUtils.compactClass(val), val);
         }
 
         /** {@inheritDoc} */
