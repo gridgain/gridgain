@@ -28,7 +28,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.store.GridCacheWriteBehindStore;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
-import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
@@ -186,19 +186,19 @@ public class CacheMetricsImpl implements CacheMetrics {
     private final AtomicLongMetric evictingPartitions;
 
     /** Get time. */
-    private final HistogramMetric getTime;
+    private final HistogramMetricImpl getTime;
 
     /** Put time. */
-    private final HistogramMetric putTime;
+    private final HistogramMetricImpl putTime;
 
     /** Remove time. */
-    private final HistogramMetric rmvTime;
+    private final HistogramMetricImpl rmvTime;
 
     /** Commit time. */
-    private final HistogramMetric commitTime;
+    private final HistogramMetricImpl commitTime;
 
     /** Rollback time. */
-    private final HistogramMetric rollbackTime;
+    private final HistogramMetricImpl rollbackTime;
 
     /** Cache metrics. */
     @GridToStringExclude

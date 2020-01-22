@@ -14,25 +14,14 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.systemview;
-
-import java.util.function.Consumer;
-import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
-import org.apache.ignite.spi.metric.MetricExporterSpi;
-import org.apache.ignite.spi.systemview.view.SystemView;
+package org.apache.ignite.spi.metric;
 
 /**
- * Read only system view registry.
- *
- * @see GridSystemViewManager
- * @see SystemView
- * @see MetricExporterSpi
+ * Histogram metric calculates counts of measurements that gets into each bounds interval.
+ * Note, that {@link #value()} will return array length of {@code bounds.length + 1}.
+ * Last element will contains count of measurements bigger then most right value of bounds.
  */
-public interface ReadOnlySystemViewRegistry extends Iterable<SystemView<?>> {
-    /**
-     * Adds listener of view creation events.
-     *
-     * @param lsnr Listener.
-     */
-    public void addSystemViewCreationListener(Consumer<SystemView<?>> lsnr);
+public interface HistogramMetric extends ObjectMetric<long[]> {
+    /** @return Bounds of this histogram. */
+    public long[] bounds();
 }

@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.systemview;
+package org.apache.ignite.spi.metric;
 
 import java.util.function.Consumer;
-import org.apache.ignite.internal.managers.systemview.GridSystemViewManager;
-import org.apache.ignite.spi.metric.MetricExporterSpi;
-import org.apache.ignite.spi.systemview.view.SystemView;
 
 /**
- * Read only system view registry.
- *
- * @see GridSystemViewManager
- * @see SystemView
- * @see MetricExporterSpi
+ * Read only metric manager.
  */
-public interface ReadOnlySystemViewRegistry extends Iterable<SystemView<?>> {
+public interface ReadOnlyMetricManager extends Iterable<ReadOnlyMetricRegistry> {
     /**
-     * Adds listener of view creation events.
+     * Adds listener of metrics registry creation events.
      *
      * @param lsnr Listener.
      */
-    public void addSystemViewCreationListener(Consumer<SystemView<?>> lsnr);
+    public void addMetricRegistryCreationListener(Consumer<ReadOnlyMetricRegistry> lsnr);
+
+    /**
+     * Adds listener of metrics registry remove events.
+     *
+     * @param lsnr Listener.
+     */
+    public void addMetricRegistryRemoveListener(Consumer<ReadOnlyMetricRegistry> lsnr);
 }

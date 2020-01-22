@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
+import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 
 import static java.util.stream.Collectors.toMap;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.SEPARATOR;
@@ -62,7 +63,7 @@ public class TcpCommunicationMetricsListener {
     private final GridMetricManager mmgr;
 
     /** Metrics registry. */
-    private final MetricRegistry mreg;
+    private final org.apache.ignite.internal.processors.metric.MetricRegistry mreg;
 
     /** Current ignite instance. */
     private final Ignite ignite;
@@ -139,7 +140,9 @@ public class TcpCommunicationMetricsListener {
         sentMsgsMetric = mreg.longAdderMetric(SENT_MESSAGES_METRIC_NAME, SENT_MESSAGES_METRIC_DESC);
         rcvdMsgsMetric = mreg.longAdderMetric(RECEIVED_MESSAGES_METRIC_NAME, RECEIVED_MESSAGES_METRIC_DESC);
 
-        mmgr.addMetricRegistryCreationListener(mreg -> {
+        mmgr.addMetricRegistryCreationListener(roMreg -> {
+            MetricRegistry mreg = (MetricRegistry)roMreg;
+
             // Metrics for the specific nodes.
             if (!mreg.name().startsWith(COMMUNICATION_METRICS_GROUP_NAME + SEPARATOR))
                 return;
@@ -307,7 +310,7 @@ public class TcpCommunicationMetricsListener {
 
         String mregPrefix = COMMUNICATION_METRICS_GROUP_NAME + SEPARATOR;
 
-        for (MetricRegistry mreg : mmgr) {
+        for (ReadOnlyMetricRegistry mreg : mmgr) {
             if (mreg.name().startsWith(mregPrefix)) {
                 String nodeConsIdStr = mreg.name().substring(mregPrefix.length());
 
@@ -340,7 +343,7 @@ public class TcpCommunicationMetricsListener {
                 metric.reset();
         }
 
-        for (MetricRegistry mreg : mmgr) {
+        for (ReadOnlyMetricRegistry mreg : mmgr) {
             if (mreg.name().startsWith(COMMUNICATION_METRICS_GROUP_NAME + SEPARATOR)) {
                 mreg.findMetric(SENT_MESSAGES_BY_NODE_CONSISTENT_ID_METRIC_NAME).reset();
 
