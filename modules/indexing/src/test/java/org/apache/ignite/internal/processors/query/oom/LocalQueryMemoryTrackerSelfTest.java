@@ -16,9 +16,12 @@
 
 package org.apache.ignite.internal.processors.query.oom;
 
+import org.apache.ignite.testframework.junits.WithSystemProperty;
+
 /**
  * Query memory manager for local queries.
  */
+@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
 public class LocalQueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {

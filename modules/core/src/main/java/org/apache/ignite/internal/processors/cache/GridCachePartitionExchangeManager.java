@@ -292,6 +292,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /** Histogram of blocking PME durations. */
     private volatile HistogramMetric blockingDurationHistogram;
 
+    /** Delay before rebalancing code is start executing after exchange completion. For tests only. */
+    private volatile long rebalanceDelay;
+
     /** */
     private final boolean bltForInMemoryCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
@@ -2564,6 +2567,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
+     * @param delay Rebalance delay.
+     */
+    public void rebalanceDelay(long delay) {
+        this.rebalanceDelay = delay;
+    }
+
+    /**
      * For testing only.
      *
      * @return Current version to wait for.
@@ -3395,6 +3405,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             rebTopVer = NONE;
 
                         if (!cctx.kernalContext().clientNode() && rebTopVer.equals(NONE)) {
+                            if (rebalanceDelay > 0)
+                                U.sleep(rebalanceDelay);
+
                             assignsMap = new HashMap<>();
 
                             IgniteCacheSnapshotManager snp = cctx.snapshot();

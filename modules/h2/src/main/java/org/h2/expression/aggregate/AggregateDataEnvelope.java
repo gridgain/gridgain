@@ -66,8 +66,17 @@ class AggregateDataEnvelope extends AggregateData {
     }
 
     @Override
+    public void mergeAggregate(Session ses, AggregateData agg) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     Value getValue(Database database, int dataType) {
         return ValueGeometry.fromEnvelope(envelope);
     }
 
+    @Override
+    public long getMemory() {
+        throw new UnsupportedOperationException();
+    }
 }

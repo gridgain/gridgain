@@ -16,14 +16,20 @@
 
 package org.apache.ignite.internal.processors.query.h2.opt;
 
+import java.util.ArrayList;
+import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.disk.ManagedGroupByData;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
+import org.h2.command.dml.GroupByData;
+import org.h2.engine.Session;
+import org.h2.expression.Expression;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -46,7 +52,10 @@ public class QueryContext implements H2QueryContext {
     private final PartitionReservation reservations;
 
     /** */
-    private QueryMemoryTracker memTracker;
+    private final H2MemoryTracker memTracker;
+
+    /** */
+    private final GridKernalContext ctx;
 
     /** {@code True} for local queries, {@code false} for distributed ones. */
     private final boolean loc;
@@ -59,6 +68,7 @@ public class QueryContext implements H2QueryContext {
      * @param mvccSnapshot MVCC snapshot.
      * @param memTracker Query memory tracker.
      * @param loc {@code True} for local queries, {@code false} for distributed ones.
+     * @param ctx Kernal context.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public QueryContext(
@@ -67,9 +77,9 @@ public class QueryContext implements H2QueryContext {
         @Nullable DistributedJoinContext distributedJoinCtx,
         @Nullable MvccSnapshot mvccSnapshot,
         @Nullable PartitionReservation reservations,
-        @Nullable QueryMemoryTracker memTracker,
-        boolean loc
-    ) {
+        boolean loc,
+        @Nullable H2MemoryTracker memTracker,
+        GridKernalContext ctx) {
         this.segment = segment;
         this.filter = filter;
         this.distributedJoinCtx = distributedJoinCtx;
@@ -77,6 +87,7 @@ public class QueryContext implements H2QueryContext {
         this.reservations = reservations;
         this.memTracker = memTracker;
         this.loc = loc;
+        this.ctx = ctx;
     }
 
     /**
@@ -91,8 +102,9 @@ public class QueryContext implements H2QueryContext {
             null,
             null,
             null,
+            local,
             null,
-            local
+            null
         );
     }
 
@@ -143,11 +155,34 @@ public class QueryContext implements H2QueryContext {
         return memTracker;
     }
 
+    /** {@inheritDoc} */
+    @Override public GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions,
+        boolean isGrpQry, int[] grpIdx) {
+        if (memTracker == null)
+            return null;
+
+        boolean spillingEnabled = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
+
+        if (!spillingEnabled)
+            return null;
+
+        assert isGrpQry; // isGrpQry == false allowed only for window queries which are not supported yet.
+
+        return new ManagedGroupByData(ses, grpIdx);
+    }
+
     /**
      * @return {@code True} for local queries, {@code false} for distributed ones.
      */
     public boolean local() {
         return loc;
+    }
+
+    /**
+     * @return Node kernal context.
+     */
+    public GridKernalContext context() {
+        return ctx;
     }
 
     /** {@inheritDoc} */

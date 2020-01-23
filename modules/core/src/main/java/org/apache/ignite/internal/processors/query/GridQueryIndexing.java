@@ -371,6 +371,11 @@ public interface GridQueryIndexing {
     public void cancelQueries(Collection<Long> queries);
 
     /**
+     * Callback executed after the kernal started.
+     */
+    public void onKernalStart();
+
+    /**
      * Cancels all executing queries.
      */
     public void onKernalStop();

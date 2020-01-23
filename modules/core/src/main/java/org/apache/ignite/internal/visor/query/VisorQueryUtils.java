@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
@@ -364,14 +365,16 @@ public class VisorQueryUtils {
         final VisorQueryTaskArg arg,
         final GridQueryCancel cancel
     ) {
-        SecurityContext initCtx = ignite.context().security().securityContext();
+        IgniteSecurity security = ignite.context().security();
+
+        SecurityContext initCtx = security.securityContext();
 
         ignite.context().closure().runLocalSafe(() -> {
             IgniteLogger log = ignite.log();
 
-            try(OperationSecurityContext ctx = ignite.context().security().withContext(initCtx)) {
-                if (log.isDebugEnabled())
-                    log.debug("Operation started with subject: " + ignite.context().security().securityContext().subject());
+            try(OperationSecurityContext ignored = security.withContext(initCtx)) {
+                if (log.isDebugEnabled() && security.enabled())
+                    log.debug("Operation started with subject: " + security.securityContext().subject());
 
                 SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 

@@ -5,6 +5,7 @@
  */
 package org.h2.expression.aggregate;
 
+import org.h2.engine.Constants;
 import org.h2.engine.Database;
 import org.h2.engine.Session;
 import org.h2.value.Value;
@@ -14,7 +15,7 @@ import org.h2.value.ValueNull;
 /**
  * Data stored while calculating a COUNT aggregate.
  */
-class AggregateDataCount extends AggregateData {
+public class AggregateDataCount extends AggregateData {
 
     private final boolean all;
 
@@ -22,6 +23,11 @@ class AggregateDataCount extends AggregateData {
 
     AggregateDataCount(boolean all) {
         this.all = all;
+    }
+
+    private AggregateDataCount(boolean all, long count) {
+        this.all = all;
+        this.count = count;
     }
 
     @Override
@@ -32,8 +38,31 @@ class AggregateDataCount extends AggregateData {
     }
 
     @Override
+    public void mergeAggregate(Session ses, AggregateData agg) {
+        assert agg != null;
+        assert agg instanceof AggregateDataCount : agg.getClass();
+
+        count += ((AggregateDataCount)agg).count;
+    }
+
+    @Override
     Value getValue(Database database, int dataType) {
         return ValueLong.get(count).convertTo(dataType);
     }
 
+    public boolean isAll() {
+        return all;
+    }
+
+    public long count() {
+        return count;
+    }
+
+    public static AggregateDataCount from(boolean all, long count) {
+        return new AggregateDataCount(all, count);
+    }
+
+    @Override public long getMemory() {
+        return Constants.MEMORY_OBJECT + /*long*/8 + /*bool*/1 ;
+    }
 }
