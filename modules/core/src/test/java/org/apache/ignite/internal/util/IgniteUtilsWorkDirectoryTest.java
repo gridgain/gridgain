@@ -18,12 +18,15 @@ package org.apache.ignite.internal.util;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.InputStreamReader;
 
 /** */
 public class IgniteUtilsWorkDirectoryTest {
@@ -138,62 +141,82 @@ public class IgniteUtilsWorkDirectoryTest {
 
     /** */
     @Test
-    @Ignore("Test fail when run on TeamCity")
     public void workDirCannotWriteTest() {
         String strDir = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
         File dir = new File(strDir);
 
         if (dir.exists()) {
+            resetPermission(strDir);
             boolean deleted = deleteDirectory(dir);
             assert deleted : "cannot delete file";
         }
+
         dir.mkdirs();
 
-        boolean perm = dir.setWritable(false, false);
-        assert perm : "no permission";
+        try {
+            executeCommand("chmod 444 " + strDir);
+            executeCommand("chattr +i " + strDir);
 
-        genericPathExceptionTest(strDir, "Cannot write to work directory: " + strDir);
+            genericPathExceptionTest(strDir, "Cannot write to work directory: " + strDir);
+        }
+        finally {
+            resetPermission(strDir);
+        }
     }
 
     /** */
     @Test
-    @Ignore("Test fail when run on TeamCity")
-    public void workDirCannotReadTest() {
-        String strDir = String.join(File.separator, USER_WORK_DIR, "CannotReadTestDirectory");
-        File dir = new File(strDir);
-
-        if (dir.exists()) {
-            boolean deleted = deleteDirectory(dir);
-            assert deleted : "cannot delete file";
-        }
-        dir.mkdirs();
-
-        boolean perm = dir.setReadable(false, false);
-        assert perm : "no permission";
-
-        genericPathExceptionTest(strDir, "Cannot read from work directory: " + strDir);
-    }
-
-    /** */
-    @Test
-    @Ignore("Test fail when run on TeamCity")
     public void workDirNotExistAndCannotBeCreatedTest() {
         String strDirParent = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
         File dirParent = new File(strDirParent);
 
         if (dirParent.exists()) {
+            resetPermission(strDirParent);
             boolean deleted = deleteDirectory(dirParent);
             assert deleted : "cannot delete file";
         }
         dirParent.mkdirs();
 
-        boolean perm = dirParent.setWritable(false, false);
-        assert perm : "no permission";
+        try {
+            executeCommand("chmod 444 " + strDirParent);
+            executeCommand("chattr +i " + strDirParent);
 
-        String strDir = String.join(File.separator, strDirParent, "newDirectory");
+            String strDir = String.join(File.separator, strDirParent, "newDirectory");
 
-        genericPathExceptionTest(strDir,
-                "Work directory does not exist and cannot be created: " + strDir);
+            genericPathExceptionTest(strDir,"Work directory does not exist and cannot be created: " + strDir);
+        }
+        finally {
+            resetPermission(strDirParent);
+        }
+    }
+
+    /** */
+    private static void resetPermission(String dir) {
+        executeCommand("chattr -i " + dir);
+        executeCommand("chmod 777 " + dir);
+    }
+    /** */
+    private static void executeCommand(String cmd) {
+        X.println("Command to execute: " + cmd);
+
+        try {
+            Process proc = Runtime.getRuntime().exec(cmd);
+
+            BufferedReader stdInput = new BufferedReader(new
+                    InputStreamReader(proc.getInputStream()));
+            BufferedReader stdError = new BufferedReader(new
+                    InputStreamReader(proc.getErrorStream()));
+
+            String s;
+
+            while ((s = stdInput.readLine()) != null)
+                X.println("stdInput: " + s);
+            while ((s = stdError.readLine()) != null)
+                X.println("stdError:" + s);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /** */
