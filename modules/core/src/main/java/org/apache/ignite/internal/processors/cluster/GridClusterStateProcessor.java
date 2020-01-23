@@ -121,6 +121,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /** */
     private static final String METASTORE_CURR_BLT_KEY = "metastoreBltKey";
 
+    /**
+     * Error message for join node validation, if cluster in {@link ClusterState#ACTIVE_READ_ONLY} and joining node not
+     * supports that cluster state.
+     **/
+    private static final String NODE_JOIN_ERROR_MSG_READ_ONLY_MODE_NOT_SUPPORTED = "Node not supporting " +
+        ACTIVE_READ_ONLY + " mode. The node is not allowed to join the cluster " + "with enabled" + ACTIVE_READ_ONLY +
+        " mode";
+
     /** */
     private boolean inMemoryMode;
 
@@ -1073,11 +1081,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (forceChangeBaselineTop && isBaselineAutoAdjustEnabled != isAutoAdjust)
             throw new BaselineAdjustForbiddenException(isBaselineAutoAdjustEnabled);
 
-        if (state == ACTIVE_READ_ONLY &&
-            !allNodesSupports(ctx, ctx.discovery().discoCache().serverNodes(), CLUSTER_READ_ONLY_MODE)) {
-                return new GridFinishedFuture<>(
-                    new IgniteException("Not all nodes in cluster supports cluster state " + ACTIVE_READ_ONLY)
-                );
+        if (state == ACTIVE_READ_ONLY && !allNodesSupportsReadOnlyMode()) {
+            return new GridFinishedFuture<>(
+                new IgniteException("Not all nodes in cluster supports cluster state " + ACTIVE_READ_ONLY)
+            );
         }
 
         if (ctx.isDaemon() || ctx.clientNode())
@@ -1195,15 +1202,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         ClusterNode node,
         DiscoveryDataBag.JoiningNodeDiscoveryData discoData
     ) {
-        if (node.isClient() || node.isDaemon())
+        if (node.isDaemon())
             return null;
 
-        if (globalState.state() == ACTIVE_READ_ONLY && !nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE)) {
-            String msg = "Node not supporting cluster read-only mode is not allowed to join the cluster with enabled" +
-                " read-only mode";
+        if (globalState.state() == ACTIVE_READ_ONLY && !nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE))
+            return new IgniteNodeValidationResult(node.id(), NODE_JOIN_ERROR_MSG_READ_ONLY_MODE_NOT_SUPPORTED);
 
-            return new IgniteNodeValidationResult(node.id(), msg, msg);
-        }
+        if (node.isClient())
+            return null;
 
         if (discoData.joiningNodeData() == null) {
             if (globalState.baselineTopology() != null) {
@@ -1248,13 +1254,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 "to join cluster in the process of first activation: " + node.consistentId();
 
             return new IgniteNodeValidationResult(node.id(), msg);
-        }
-
-        if (globalState.state() == ACTIVE_READ_ONLY && !nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE)) {
-            String msg = "Node not supporting " + ACTIVE_READ_ONLY + " mode. Join to the cluster in state " +
-                ACTIVE_READ_ONLY + " is not allowed.";
-
-            return new IgniteNodeValidationResult(node.id(), msg, msg);
         }
 
         BaselineTopology clusterBlt;
@@ -1343,17 +1342,15 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         ClusterGroupAdapter servers = (ClusterGroupAdapter)ctx.cluster().get().forServers();
 
-        ClusterGroupAdapter serversWithFeature = (ClusterGroupAdapter)servers.forPredicate(this::nodeSupportsReadOnlyMode);
-
         IgniteFuture<Void> fut;
 
-        if (F.isEmpty(serversWithFeature.nodes())) {
+        if (allNodesSupportsReadOnlyMode())
+            fut = servers.compute().runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
+        else {
             assert state != ACTIVE_READ_ONLY : "No one server node doesn't supports this feature.";
 
             fut = servers.compute().runAsync(new ClientChangeGlobalStateComputeRequest(ClusterState.active(state), blt, forceBlt));
         }
-        else
-            fut = serversWithFeature.compute().runAsync(new ClientSetGlobalStateComputeRequest(state, blt, forceBlt));
 
         return ((IgniteFutureImpl<Void>)fut).internalFuture();
     }
@@ -1378,11 +1375,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         if (F.isEmpty(serverNodesAdapter.nodes()))
             return new IgniteFinishedFutureImpl<>(INACTIVE);
 
-        ClusterGroupAdapter serverNodesWithFeature =
-            (ClusterGroupAdapter)serverNodesAdapter.forPredicate(this::nodeSupportsReadOnlyMode);
-
-        if (!F.isEmpty(serverNodesWithFeature.nodes()))
-            return serverNodesWithFeature.compute().callAsync(new GetClusterStateComputeRequest());
+        if (allNodesSupportsReadOnlyMode())
+            return serverNodesAdapter.compute().callAsync(new GetClusterStateComputeRequest());
         else {
             // Backward compatibility.
             return serverNodesAdapter.compute().callAsync(new CheckGlobalStateComputeRequest())
@@ -1426,17 +1420,6 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             fut.onDone(e);
         }
-    }
-
-
-    /**
-     * Check given {@code node} supports {@link IgniteFeatures#CLUSTER_READ_ONLY_MODE} or not.
-     *
-     * @param node Checked node.
-     * @return {@code true} if node supports, and {@code false} otherwise.
-     */
-    private boolean nodeSupportsReadOnlyMode(ClusterNode node) {
-        return nodeSupports(ctx, node, CLUSTER_READ_ONLY_MODE);
     }
 
     /**
@@ -1966,6 +1949,15 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         }
 
         return defaultValue;
+    }
+
+    /**
+     * Checks that all nodes supports {@link IgniteFeatures#CLUSTER_READ_ONLY_MODE} or not.
+     *
+     * @return {@code True} if all nodes supports, and {@code false} otherwise.
+     */
+    private boolean allNodesSupportsReadOnlyMode() {
+        return allNodesSupports(ctx, ctx.cluster().get().nodes(), CLUSTER_READ_ONLY_MODE);
     }
 
     /** {@inheritDoc} */
