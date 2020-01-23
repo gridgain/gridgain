@@ -3316,35 +3316,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 for (ClientMessageWorker clientMsgWorker : clientMsgWorkers.values()) {
                     if (msg instanceof TcpDiscoveryCustomEventMessage) {
                         try {
-                            DiscoverySpiCustomMessage customMsg =
-                                ((TcpDiscoveryCustomEventMessage)msg).message(
-                                    spi.marshaller(),
-                                    U.resolveClassLoader(spi.ignite().configuration()));
-
-                            DiscoveryCustomMessage delegateMsg = ((CustomMessageWrapper)customMsg).delegate();
-                            TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
-                                delegateMsg.getClass(),
-                                TcpDiscoveryRequiredFeatureSupport.class
-                            );
-
-                            if (featAnnot != null) {
-                                IgniteFeatures reqFeature = featAnnot.feature();
-                                ClusterNode node = ring.node(clientMsgWorker.clientNodeId);
-
-                                if (node != null) {
-                                    byte[] featuresBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
-
-                                    if (!IgniteFeatures.nodeSupports(featuresBytes, reqFeature)) {
-                                        if (log.isDebugEnabled())
-                                            log.debug("Client node " + node.id() +
-                                                " doesn't support feature " + reqFeature +
-                                                ", sending message " + delegateMsg.getClass() +
-                                                " to the client is skipped.");
-
-                                        continue;
-                                    }
-                                }
-                            }
+                            if (!clientSupportsRequiredFeatures((TcpDiscoveryCustomEventMessage)msg,
+                                clientMsgWorker.clientNodeId))
+                                continue;
                         }
                         catch (Throwable e) {
                             U.error(log, "Failed when unmarshalling a message: " + msg, e);
@@ -3390,6 +3364,48 @@ class ServerImpl extends TcpDiscoveryImpl {
                     clientMsgWorker.addMessage(msg0, msgBytes0);
                 }
             }
+        }
+
+        /**
+         * Checks that client node with given ID supports features required to handle given discovery custom message.
+         *
+         * @param msg Custom message that may require support of particular Ignite Feature.
+         * @param clientNodeId UUID of client node that should support required feature.
+         * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
+         * @throws Throwable If deserialization of the message has failed.
+         */
+        private boolean clientSupportsRequiredFeatures(TcpDiscoveryCustomEventMessage msg, UUID clientNodeId) throws Throwable {
+            DiscoverySpiCustomMessage customMsg = msg.message(
+                spi.marshaller(),
+                U.resolveClassLoader(spi.ignite().configuration()));
+
+            DiscoveryCustomMessage delegateMsg = ((CustomMessageWrapper)customMsg).delegate();
+
+            TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
+                delegateMsg.getClass(),
+                TcpDiscoveryRequiredFeatureSupport.class
+            );
+
+            if (featAnnot != null) {
+                IgniteFeatures reqFeature = featAnnot.feature();
+                ClusterNode node = ring.node(clientNodeId);
+
+                if (node != null) {
+                    byte[] featuresBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
+
+                    if (!IgniteFeatures.nodeSupports(featuresBytes, reqFeature)) {
+                        if (log.isDebugEnabled())
+                            log.debug("Client node " + node.id() +
+                                " doesn't support feature " + reqFeature +
+                                ", sending message " + delegateMsg.getClass() +
+                                " to the client is skipped.");
+
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         /**

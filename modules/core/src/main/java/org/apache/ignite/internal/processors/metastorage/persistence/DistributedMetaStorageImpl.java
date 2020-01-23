@@ -987,7 +987,7 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
        if (!isSupported(ctx))
             throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
 
-       if (key.getBytes().length > MAX_KEY_LEN)
+       if (DistributedMetaStorageUtil.localKey(key).getBytes().length > MAX_KEY_LEN)
            throw new IgniteCheckedException("Key is too long. Maximum key length is "
                + MAX_KEY_LEN
                + " bytes in UTF8");
