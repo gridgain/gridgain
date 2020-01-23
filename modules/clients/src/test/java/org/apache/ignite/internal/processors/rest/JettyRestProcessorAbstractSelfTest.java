@@ -150,6 +150,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     /** Used to sent request charset. */
     private static final String CHARSET = StandardCharsets.UTF_8.name();
 
+    /** Expected message when unsupported key type is specified in {@link VisorCacheGetValueTaskArg}. */
     private static final String UNSUPPORTED_KEY_TYPE = "Specified key type is not supported";
 
     /** */
@@ -1648,7 +1649,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     public void testVisorGetCacheValueTask() throws Exception {
         ClusterNode locNode = grid(1).localNode();
 
-        Person p = new Person(1, "John", "Doe", 300);
+        Person p = new Person(100, "John", "Doe", 300);
 
         // Check integer key.
 
@@ -1665,11 +1666,11 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         String resStr = res.get("result").toString();
 
-        assertTrue(resStr.contains("id=" + p.getId()));
-        assertTrue(resStr.contains("orgId=" + p.getOrganizationId()));
-        assertTrue(resStr.contains("firstName=" + p.getFirstName()));
-        assertTrue(resStr.contains("lastName=" + p.getLastName()));
-        assertTrue(resStr.contains("salary=" + p.getSalary()));
+        assertTrue(resStr.contains("\"id\":" + p.getId()));
+        assertTrue(resStr.contains("\"orgId\":" + p.getOrganizationId()));
+        assertTrue(resStr.contains("\"firstName\":\"" + p.getFirstName() + "\""));
+        assertTrue(resStr.contains("\"lastName\":\"" + p.getLastName() + "\""));
+        assertTrue(resStr.contains("\"salary\":" + p.getSalary()));
 
         // Check UUID key.
 
@@ -1791,7 +1792,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, "UNSUPPOERTED", ""));
+            .addArguments(DEFAULT_CACHE_NAME, "UNSUPPORTED", "2"));
 
         info("VisorCacheGetValueTask result for unsupported key type: " + ret);
 
@@ -1799,6 +1800,28 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         assertFalse(err.isNull());
         assertTrue(err.textValue().contains(UNSUPPORTED_KEY_TYPE));
+    }
+
+    /**
+     * Tests work of VisorCacheGetValueTask result with missed value.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testVisorGetCacheValueWithMissedValue() throws Exception {
+        ClusterNode locNode = grid(1).localNode();
+
+        String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
+            .setNode(locNode)
+            .setTaskArgument(VisorCacheGetValueTaskArg.class)
+            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.INT, "1"));
+
+        info("VisorCacheGetValueTask result for integer key type with missed value: " + ret);
+
+        JsonNode res = jsonTaskResult(ret);
+
+        assertFalse(res.get("affinityNode").isNull());
+        assertTrue(res.get("result").isNull());
     }
 
     /**

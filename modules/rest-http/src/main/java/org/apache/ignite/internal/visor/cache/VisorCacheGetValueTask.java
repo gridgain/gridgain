@@ -21,7 +21,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -33,7 +36,6 @@ import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
-import org.apache.ignite.internal.visor.query.VisorQueryUtils;
 import org.apache.ignite.internal.visor.util.VisorTaskUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -80,6 +82,9 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
          */
         private Object parseArgumentValue(VisorObjectType type, String value) {
             switch (type) {
+                case STRING:
+                    return value;
+
                 case CHARACTER:
                     return value.charAt(0);
 
@@ -115,7 +120,7 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
 
                 case BINARY:
                     try {
-                        JsonNode obj = MAPPER.readTree(value);
+                        VisorBinaryClassDescriptor obj = new VisorBinaryClassDescriptor(MAPPER.readTree(value));
 
                         return constructBinaryValue(obj);
                     }
@@ -124,7 +129,7 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
                     }
 
                 default:
-                    return value;
+                    throw new IllegalArgumentException("Specified type is not supported: " + type);
             }
         }
 
@@ -134,22 +139,14 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
          * @param value JSON specification of {@link BinaryObject} value.
          * @return {@link BinaryObject} for specified value.
          */
-        private BinaryObject constructBinaryValue(JsonNode value) {
-            String clsName = value.get("className").textValue();
+        private BinaryObject constructBinaryValue(VisorBinaryClassDescriptor value) {
+            BinaryObjectBuilder b = ignite.binary().builder(value.className);
 
-            BinaryObjectBuilder b = ignite.binary().builder(clsName);
-
-            for (Iterator<JsonNode> it = value.get("fields").elements(); it.hasNext();) {
-                JsonNode fld = it.next();
-
-                String fldName = fld.get("name").textValue();
-                VisorObjectType fldType = VisorObjectType.valueOf(fld.get("type").textValue());
-                JsonNode fldValue = fld.get("value");
-
-                if (fldType == VisorObjectType.BINARY)
-                    b.setField(fldName, constructBinaryValue(fldValue));
+            for (VisorBinaryFieldDescription fld: value.fields) {
+                if (fld.getType() == VisorObjectType.BINARY)
+                    b.setField(fld.getFldName(), constructBinaryValue((VisorBinaryClassDescriptor)fld.value));
                 else
-                    b.setField(fldName, parseArgumentValue(fldType, fldValue.asText()));
+                    b.setField(fld.getFldName(), parseArgumentValue(fld.getType(), fld.value.toString()));
             }
 
             return b.build();
@@ -167,13 +164,13 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
             ignite.context().cache().internalCache(cacheName);
 
             if (cache == null)
-                throw new IllegalArgumentException("Failed to find cache with specified name [cacheName=" + arg.getCacheName() + "]");
+                throw new IllegalArgumentException("Failed to find cache with specified name: " + arg.getCacheName());
 
             String keyStr = arg.getKey();
             assert keyStr != null;
             assert !keyStr.isEmpty();
 
-            Object key = null;
+            Object key;
 
             try {
                 VisorObjectType type = VisorObjectType.valueOf(arg.getType());
@@ -198,6 +195,87 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
         /** {@inheritDoc} */
         @Override public String toString() {
             return S.toString(VisorCacheModifyJob.class, this);
+        }
+    }
+
+    /**
+     * Object field description.
+     */
+    private static class VisorBinaryFieldDescription {
+        /** Field type. */
+        private VisorObjectType type;
+
+        /** Field name. */
+        private String fldName;
+
+        /** Field value. */
+        private Object value;
+
+        /**  */
+        public VisorBinaryFieldDescription(JsonNode obj) {
+            type = VisorObjectType.valueOf(obj.get("type").textValue());
+            fldName = obj.get("name").textValue();
+
+            value = type == VisorObjectType.BINARY
+                ? new VisorBinaryClassDescriptor(obj.get("value"))
+                : obj.get("value").asText();
+        }
+
+        /**
+         * @return Field type.
+         */
+        public VisorObjectType getType() {
+            return type;
+        }
+
+        /**
+         * @return Field name.
+         */
+        public String getFldName() {
+            return fldName;
+        }
+
+        /**
+         * @return Field value.
+         */
+        public Object getValue() {
+            return value;
+        }
+    }
+
+    /**
+     * Object description.
+     */
+    private static class VisorBinaryClassDescriptor {
+        /** Class name. */
+        private String className;
+
+        /** Object fields. */
+        private List<VisorBinaryFieldDescription> fields;
+
+        /**  */
+        public VisorBinaryClassDescriptor(JsonNode obj) {
+            className = obj.get("className").textValue();
+            fields = new ArrayList<>();
+
+            Iterator<JsonNode> it;
+
+            for (it = obj.get("fields").elements(); it.hasNext();)
+                fields.add(new VisorBinaryFieldDescription(it.next()));
+        }
+
+        /**
+         * @return Class name.
+         */
+        public String getClassName() {
+            return className;
+        }
+
+        /**
+         * @return Object fields.
+         */
+        public List<VisorBinaryFieldDescription> getFields() {
+            return Collections.unmodifiableList(fields);
         }
     }
 }
