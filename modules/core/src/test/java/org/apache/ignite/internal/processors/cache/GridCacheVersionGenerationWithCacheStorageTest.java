@@ -39,12 +39,17 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.internal.processors.cache.version.GridCacheVersionManager.TOP_VER_BASE_TIME;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Tests to enuse that there's no race in grid cache version generation
  * between retrieveing records from 3rd party storage and put variations.
  */
 public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAbstractTest {
+    /** Latch in order to slow down exchange. */
+    private CountDownLatch latch = new CountDownLatch(1);
+
+
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -68,6 +73,9 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
+
+        // In case of exiting waitForCondition because of timeout.
+        latch.countDown();
 
         stopAllGrids();
     }
@@ -193,9 +201,8 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
      */
     private void checkGridCacheVersionsGenerationOrder(Consumer<IgniteEx> actions, Set<Integer> keySetToCheck)
         throws Exception {
-        IgniteEx ign = startGrid(0);
 
-        CountDownLatch latch = new CountDownLatch(1);
+        IgniteEx ign = startGrid(0);
 
         ign.context().cache().context().exchange().registerExchangeAwareComponent(new PartitionsExchangeAware() {
             @Override public void onInitBeforeTopologyLock(GridDhtPartitionsExchangeFuture fut) {
@@ -210,7 +217,7 @@ public class GridCacheVersionGenerationWithCacheStorageTest extends GridCommonAb
 
         IgniteInternalFuture<?> newNodeJoinFut = GridTestUtils.runAsync(() -> startGrid(1));
 
-        Thread.sleep(3_000);
+        waitForCondition(() -> (ignite(0).context().discovery().topologyVersion() == 2), 10_000);
 
         assertEquals(2, ignite(0).context().discovery().topologyVersion());
 
