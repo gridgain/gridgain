@@ -310,12 +310,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cache = GetCache<int, Foo>(CacheTestMode.Client);
 
-            cache[1] = new Foo(5);
+            var value = new Foo(5);
+            cache[1] = value;
+            Assert.AreSame(value, cache[1]);
             
-            cache.Query(new SqlFieldsQuery("TODO: Update with DML"));
+            cache.Query(new SqlFieldsQuery("update Foo set Bar = 7 where Bar = 5"));
 
             var res = cache[1];
             Assert.AreEqual(7, res.Bar);
+            Assert.AreNotSame(value, cache[1]);
         }
 
         /// <summary>
