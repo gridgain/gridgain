@@ -34,6 +34,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.apache.ignite.internal.visor.util.VisorTaskUtils;
@@ -187,7 +188,13 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
 
             Object val = cache.withKeepBinary().get(key);
 
-            return new VisorCacheModifyTaskResult(nid, VisorTaskUtils.compactClass(val), val);
+            return new VisorCacheModifyTaskResult(
+                nid,
+                val instanceof BinaryObject
+                    ? U.compact(((BinaryObject)val).type().typeName())
+                    : VisorTaskUtils.compactClass(val),
+                val
+            );
         }
 
         /** {@inheritDoc} */
