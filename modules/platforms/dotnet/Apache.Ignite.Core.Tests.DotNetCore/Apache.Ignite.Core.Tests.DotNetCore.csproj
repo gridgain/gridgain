@@ -84,6 +84,7 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheTestAsyncWrapper.cs" Link="Cache\CacheTestAsyncWrapper.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheTestKey.cs" Link="Cache\CacheTestKey.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\DataRegionMetricsTest.cs" Link="Cache\DataRegionMetricsTest.cs" />
+    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\MemoryMetricsTest.cs" Link="Cache\MemoryMetricsTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearReconnectTest.cs">
       <Link>Cache\Near\CacheNearReconnectTest.cs</Link>
     </Compile>
