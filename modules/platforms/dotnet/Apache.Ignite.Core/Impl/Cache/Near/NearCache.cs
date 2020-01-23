@@ -27,11 +27,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
-        // TODO: Init capacity from settings
-        // TODO: Eviction
+        /** Generic map, used by default, should fit most use cases. */
         private volatile ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
             new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
 
+        /** Non-generic map. Switched to when same cache is used with different generic arguments.
+         * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
