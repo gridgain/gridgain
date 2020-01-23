@@ -19,9 +19,12 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -140,6 +143,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     /** */
     public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
 
+    /** Locks. */
+    static ThreadLocal<Set> locks = ThreadLocal.withInitial(HashSet::new);
+
     /**
      * NOTE
      * <br/>
@@ -222,9 +228,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     @GridToStringInclude
     private GridCacheEntryExtras extras;
 
+    //CycleDetectingLockFactory factory = CycleDetectingLockFactory.newInstance(CycleDetectingLockFactory.Policies.DISABLED);
+
+    //Random rnd = new Random();
     /** */
     @GridToStringExclude
     private final ReentrantLock lock = new ReentrantLock();
+    //private final ReentrantLock lock = factory.newReentrantLock(String.valueOf(rnd.nextInt()));
 
     /** Read Lock for continuous query listener */
     @GridToStringExclude
@@ -5019,12 +5029,23 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public void lockEntry() {
+        lockEntry(false);
+    }
+
+    public void lockEntry(boolean nestedLocksAllowed) {
+        if (!nestedLocksAllowed && !locks.get().isEmpty() && !locks.get().contains(lock))
+            throw new RuntimeException("Nested locks are not allowed");
+
         lock.lock();
+
+        locks.get().add(lock);
     }
 
     /** {@inheritDoc} */
     @Override public void unlockEntry() {
         lock.unlock();
+
+        locks.get().remove(lock);
     }
 
     /**
