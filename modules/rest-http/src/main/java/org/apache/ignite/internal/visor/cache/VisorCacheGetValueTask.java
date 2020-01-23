@@ -52,14 +52,14 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
     private static final long serialVersionUID = 0L;
 
     /** {@inheritDoc} */
-    @Override protected VisorCacheModifyJob job(VisorCacheGetValueTaskArg arg) {
-        return new VisorCacheModifyJob(arg, debug);
+    @Override protected VisorCacheGetValueJob job(VisorCacheGetValueTaskArg arg) {
+        return new VisorCacheGetValueJob(arg, debug);
     }
 
     /**
      * Job that get value in specified cache for specified key value.
      */
-    private static class VisorCacheModifyJob extends VisorJob<VisorCacheGetValueTaskArg, VisorCacheModifyTaskResult> {
+    private static class VisorCacheGetValueJob extends VisorJob<VisorCacheGetValueTaskArg, VisorCacheModifyTaskResult> {
         /** */
         private static final long serialVersionUID = 0L;
 
@@ -69,7 +69,7 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
          * @param arg Task argument.
          * @param debug Debug flag.
          */
-        private VisorCacheModifyJob(VisorCacheGetValueTaskArg arg, boolean debug) {
+        private VisorCacheGetValueJob(VisorCacheGetValueTaskArg arg, boolean debug) {
             super(arg, debug);
         }
 
@@ -161,8 +161,6 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
 
             @Nullable IgniteCache<Object, Object> cache = ignite.cache(cacheName);
 
-            ignite.context().cache().internalCache(cacheName);
-
             if (cache == null)
                 throw new IllegalArgumentException("Failed to find cache with specified name: " + arg.getCacheName());
 
@@ -194,7 +192,7 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return S.toString(VisorCacheModifyJob.class, this);
+            return S.toString(VisorCacheGetValueJob.class, this);
         }
     }
 
@@ -241,6 +239,11 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
         public Object getValue() {
             return value;
         }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(VisorBinaryFieldDescription.class, this);
+        }
     }
 
     /**
@@ -276,6 +279,11 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
          */
         public List<VisorBinaryFieldDescription> getFields() {
             return Collections.unmodifiableList(fields);
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return S.toString(VisorBinaryClassDescriptor.class, this);
         }
     }
 }

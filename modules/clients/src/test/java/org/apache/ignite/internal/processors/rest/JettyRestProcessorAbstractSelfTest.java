@@ -1766,7 +1766,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
                     "\"className\":\"org.apache.ignite.internal.processors.rest.JettyRestProcessorAbstractSelfTest$ComposedKeyExternal\"," +
                     "\"fields\":[" +
                         "{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getId() + "}," +
-                        "{\"type\":\"BINARY\",\"name\":\"orgId\",\"value\":{" +
+                        "{\"type\":\"BINARY\",\"name\":\"internal\",\"value\":{" +
                             "\"className\":\"org.apache.ignite.internal.processors.rest.JettyRestProcessorAbstractSelfTest$ComposedKeyInternal\"," +
                             "\"fields\":[{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getInternal().getId() + "}]" +
                         "}}" +
