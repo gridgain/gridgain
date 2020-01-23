@@ -163,7 +163,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             catch (Exception ignored) {
                 return false;
             }
-        }, 1_000);
+        }, 20_000);
 
         IgniteKernal cl0 = IgnitionEx.gridx("client0");
 
@@ -183,7 +183,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         GridTestUtils.assertThrows(null, new Callable<Object>() {
             @Override public Object call() throws Exception {
-                fut.get(500);
+                fut.get(1000);
 
                 return null;
             }
@@ -202,7 +202,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             catch (IgniteCheckedException ignored) {
                 return false;
             }
-        }, 1_000);
+        }, 20_000);
 
         assertEquals(value, clDms0.read(key));
     }
