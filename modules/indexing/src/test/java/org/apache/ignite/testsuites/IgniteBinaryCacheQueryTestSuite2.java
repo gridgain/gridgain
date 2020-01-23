@@ -86,6 +86,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingPersistenceTe
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueriesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueryParallelismTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingWithBaselineTest;
+import org.apache.ignite.internal.processors.query.oom.DynamicMemoryQuotaTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
@@ -184,6 +185,7 @@ import org.junit.runners.Suite;
     SqlStatisticsUserQueriesLongTest.class,
 
     QueryMemoryTrackerSelfTest.class,
+    DynamicMemoryQuotaTest.class,
 
     DmlBatchSizeDeadlockTest.class,
 

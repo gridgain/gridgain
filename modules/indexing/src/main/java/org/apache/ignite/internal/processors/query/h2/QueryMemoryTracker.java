@@ -30,18 +30,16 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     private final H2MemoryTracker parent;
 
     /** Query memory limit. */
-    private final long maxMem;
+    private final long quota;
 
     /**
      * Defines an action that occurs when the memory limit is exceeded. Possible variants:
      * <ul>
-     * <li>{@code true} - exception will be thrown.</li>
-     * <li>{@code false} - intermediate query results will be spilled to the disk.</li>
+     * <li>{@code false} - exception will be thrown.</li>
+     * <li>{@code true} - intermediate query results will be spilled to the disk.</li>
      * </ul>
-     *
-     * Default: false.
      */
-    private final boolean failOnMemLimitExceed;
+    private final boolean offloadingEnabled;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -59,16 +57,16 @@ public class QueryMemoryTracker implements H2MemoryTracker {
      * Constructor.
      *
      * @param parent Parent memory tracker.
-     * @param maxMem Query memory limit in bytes.
+     * @param quota Query memory limit in bytes.
      * @param blockSize Reservation block size.
-     * @param failOnMemLimitExceed Flag whether to fail when memory limit is exceeded.
+     * @param offloadingEnabled Flag whether to fail when memory limit is exceeded.
      */
-    QueryMemoryTracker(H2MemoryTracker parent, long maxMem, long blockSize, boolean failOnMemLimitExceed) {
-        assert maxMem > 0;
+    QueryMemoryTracker(H2MemoryTracker parent, long quota, long blockSize, boolean offloadingEnabled) {
+        assert quota > 0;
 
-        this.failOnMemLimitExceed = failOnMemLimitExceed;
+        this.offloadingEnabled = offloadingEnabled;
         this.parent = parent;
-        this.maxMem = maxMem;
+        this.quota = quota;
         this.blockSize = blockSize;
     }
 
@@ -82,8 +80,8 @@ public class QueryMemoryTracker implements H2MemoryTracker {
 
             reserved += size;
 
-            if (reserved >= maxMem) {
-                if (failOnMemLimitExceed)
+            if (reserved >= quota) {
+                if (!offloadingEnabled)
                     throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded.",
                         IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
                 else
@@ -95,7 +93,7 @@ public class QueryMemoryTracker implements H2MemoryTracker {
                     // If single block size is too small.
                     long blockSize = Math.max(reserved - reservedFromParent, this.blockSize);
                     // If we are too close to limit.
-                    blockSize = Math.min(blockSize, maxMem - reservedFromParent);
+                    blockSize = Math.min(blockSize, quota - reservedFromParent);
 
                     parent.reserved(blockSize);
 
@@ -148,7 +146,7 @@ public class QueryMemoryTracker implements H2MemoryTracker {
 
     /** {@inheritDoc} */
     @Override public long memoryLimit() {
-        return maxMem;
+        return quota;
     }
 
     /**

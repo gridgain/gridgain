@@ -54,36 +54,34 @@ public class QueryMemoryManager implements H2MemoryTracker {
         }
     };
 
+    /** Logger. */
+    private final IgniteLogger log;
+
+    /** Global memory quota. */
+    private volatile long globalQuota;
+
     /**
      * Default query memory limit.
      *
      * Note: Actually, it is  per query (Map\Reduce) stage limit. With QueryParallelism every query-thread will be
      * treated as separate Map query.
      */
-    private final long dfltSqlQryMemoryLimit;
-
-    /** Logger. */
-    private final IgniteLogger log;
-
-    /** Global query memory quota. */
-    private final long globalQuota;
+    private volatile long qryQuota;
 
     /** Reservation block size. */
     private final long blockSize;
 
-    /** Memory reserved by running queries. */
-    private final AtomicLong reserved = new AtomicLong();
-
     /**
      * Defines an action that occurs when the memory limit is exceeded. Possible variants:
      * <ul>
-     * <li>{@code true} - exception will be thrown.</li>
-     * <li>{@code false} - intermediate query results will be spilled to the disk.</li>
+     * <li>{@code false} - exception will be thrown.</li>
+     * <li>{@code true} - intermediate query results will be spilled to the disk.</li>
      * </ul>
-     *
-     * Default: false.
      */
-    private final boolean failOnMemLimitExceed;
+    private volatile boolean offloadingEnabled;
+
+    /** Memory reserved by running queries. */
+    private final AtomicLong reserved = new AtomicLong();
 
     /**
      * Constructor.
@@ -91,21 +89,21 @@ public class QueryMemoryManager implements H2MemoryTracker {
      * @param ctx Kernal context.
      */
     public QueryMemoryManager(GridKernalContext ctx) {
-        globalQuota = ctx.config().getSqlGlobalMemoryQuota();
+        this.log = ctx.log(QueryMemoryManager.class);
 
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
-        this.dfltSqlQryMemoryLimit = ctx.config().getSqlQueryMemoryQuota();
-        this.failOnMemLimitExceed = !ctx.config().isSqlOffloadingEnabled();
-        this.log = ctx.log(QueryMemoryManager.class);
+        this.globalQuota = ctx.config().getSqlGlobalMemoryQuota();
+        this.qryQuota = ctx.config().getSqlQueryMemoryQuota();
+        this.offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
         this.metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
+
         A.ensure(globalQuota >= 0, "Sql global memory quota must be >= 0. But was " + globalQuota);
-        A.ensure(dfltSqlQryMemoryLimit >= 0,
-            "Sql query memory quota must be >= 0. But was " + dfltSqlQryMemoryLimit);
+        A.ensure(qryQuota >= 0, "Sql query memory quota must be >= 0. But was " + qryQuota);
         A.ensure(blockSize > 0, "Block size must be > 0. But was " + blockSize);
     }
 
@@ -119,9 +117,10 @@ public class QueryMemoryManager implements H2MemoryTracker {
         if (reserved0 >= globalQuota) {
             reserved.addAndGet(-size);
 
-            if (failOnMemLimitExceed)
+            if (!offloadingEnabled) {
                 throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
                     IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+            }
             else {
                 return false;
             }
@@ -147,7 +146,7 @@ public class QueryMemoryManager implements H2MemoryTracker {
     /**
      * Query memory tracker factory method.
      *
-     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#dfltSqlQryMemoryLimit}  will be used.
+     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#qryQuota}  will be used.
      * Note: Negative values are reserved for disable memory tracking.
      *
      * @param maxQueryMemory Query memory limit in bytes.
@@ -157,22 +156,51 @@ public class QueryMemoryManager implements H2MemoryTracker {
         assert maxQueryMemory >= 0;
 
         if (maxQueryMemory == 0)
-            maxQueryMemory = dfltSqlQryMemoryLimit;
+            maxQueryMemory = qryQuota;
+
+        long globalQuota0 = globalQuota;
 
         if (maxQueryMemory == 0)
-            maxQueryMemory = globalQuota;
+            maxQueryMemory = globalQuota0;
 
         if (maxQueryMemory == 0)
             return null; // No memory tracking configured.
 
-        if (globalQuota > 0 && globalQuota < maxQueryMemory) {
+        if (globalQuota0 > 0 && globalQuota0 < maxQueryMemory) {
             U.warn(log, "Max query memory can't exceed SQL memory pool size. Will be reduced down to: " + globalQuota);
 
-            maxQueryMemory = globalQuota;
+            maxQueryMemory = globalQuota0;
         }
 
-        return new QueryMemoryTracker(globalQuota < 0 ? null : this, maxQueryMemory,
-            Math.min(maxQueryMemory, blockSize), failOnMemLimitExceed);
+        return new QueryMemoryTracker(globalQuota0 == 0 ? null : this, maxQueryMemory,
+            Math.min(maxQueryMemory, blockSize), offloadingEnabled);
+    }
+
+    /**
+     * Sets new global query quota.
+     *
+     * @param newGlobalQuota New global query quota.
+     */
+    public void setGlobalQuota(long newGlobalQuota) {
+        this.globalQuota = newGlobalQuota;
+    }
+
+    /**
+     * Sets new per-query quota.
+     *
+     * @param newQryQuota New per-query quota.
+     */
+    public void setQueryQuota(long newQryQuota) {
+        this.qryQuota = newQryQuota;
+    }
+
+    /**
+     * Sets offloading enabled flag.
+     *
+     * @param offloadingEnabled Offloading enabled flag.
+     */
+    public void setOffloadingEnabled(boolean offloadingEnabled) {
+        this.offloadingEnabled = offloadingEnabled;
     }
 
     /** {@inheritDoc} */
