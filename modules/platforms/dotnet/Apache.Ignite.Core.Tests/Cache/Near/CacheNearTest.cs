@@ -83,6 +83,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             };
 
             _client = Ignition.Start(clientCfg);
+            
+            WaitForRebalance();
         }
 
         /// <summary>
@@ -416,9 +418,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         private void TestEvictionPolicyRemovesNearCacheValue(CacheTestMode mode, ICache<int, Foo> cache)
         {
-            Assert.AreEqual(0, cache.GetSize());
-            WaitForRebalance(cache);
-
             // Use non-primary keys: primary keys are not evicted.
             var items = TestUtils
                 .GetKeys(GetIgnite(mode), cache.Name, primary: false)
@@ -448,11 +447,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreSame(fromCache, cache[key]);
         }
 
-        private void WaitForRebalance(ICache<int, Foo> cache)
+        private void WaitForRebalance()
         {
             Assert.IsTrue(
                 TestUtils.WaitForCondition(
-                    () => _grid2.GetAffinity(cache.Name).MapKeyToNode(1).IsLocal, 2000));
+                    () => _grid2.GetAffinity(CacheName).MapKeyToNode(1).IsLocal, 2000));
         }
 
         /** */
