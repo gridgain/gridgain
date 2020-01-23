@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
+    using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Events;
     using NUnit.Framework;
 
@@ -59,10 +60,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         {
                             EvictionPolicy = new FifoEvictionPolicy {MaxSize = NearCacheMaxSize}
                         },
-                        Name = CacheName
+                        Name = CacheName,
+                        QueryEntities = new[]
+                        {
+                            new QueryEntity(typeof(Foo))
+                        }
                     }
                 },
-                IncludedEventTypes = new[] { EventType.CacheEntryCreated },
                 IgniteInstanceName = "server1"
             };
 
@@ -304,7 +308,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestSqlUpdatesNearCache()
         {
-            // TODO
+            var cache = GetCache<int, Foo>(CacheTestMode.Client);
+
+            cache[1] = new Foo(5);
+            
+            cache.Query(new SqlFieldsQuery("TODO: Update with DML"));
+
+            var res = cache[1];
+            Assert.AreEqual(7, res.Bar);
         }
 
         /// <summary>
@@ -462,8 +473,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Bar = bar;
             }
 
+            [QuerySqlField]
             public readonly int Bar;
 
+            [QuerySqlField]
             public readonly string TestName = TestContext.CurrentContext.Test.Name;
 
             public override string ToString()
