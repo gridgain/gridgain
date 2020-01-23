@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
-    using System;
     using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -27,7 +26,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     /// <summary>
     /// Near cache test.
     /// </summary>
-    public class CacheNearTest : IEventListener<CacheEvent>
+    public class CacheNearTest
     {
         /** */
         protected const string CacheName = "default";
@@ -43,9 +42,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         /** */
         private IIgnite _client;
-        
-        /** */
-        private volatile CacheEvent _lastEvent;
 
         /// <summary>
         /// Fixture set up.
@@ -125,87 +121,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             cache[1] = 2;
             Assert.AreEqual(2, nearCache[1]);
-        }
-
-        /// <summary>
-        /// Tests the created near cache.
-        /// </summary>
-        [Test]
-        public void TestCreateNearCache(
-            [Values( /* TODO: CacheMode.Local,*/ CacheMode.Partitioned, CacheMode.Replicated)]
-            CacheMode cacheMode,
-            [Values(CacheAtomicityMode.Atomic, CacheAtomicityMode.Transactional)]
-            CacheAtomicityMode atomicityMode)
-        {
-            var cacheName = string.Format("dyn_cache_{0}_{1}", cacheMode, atomicityMode);
-
-            var cfg = new CacheConfiguration(cacheName)
-            {
-                AtomicityMode = atomicityMode,
-                CacheMode = cacheMode
-            };
-
-            var cache = _grid.CreateCache<int, int>(cfg);
-            cache[1] = 1;
-
-            var nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration());
-            Assert.AreEqual(1, nearCache[1]);
-
-            // Create when exists.
-            nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration());
-            Assert.AreEqual(1, nearCache[1]);
-
-            // Update entry.
-            cache[1] = 2;
-            Assert.True(TestUtils.WaitForCondition(() => nearCache[1] == 2, 300));
-
-            // Update through near.
-            nearCache[1] = 3;
-            Assert.AreEqual(3, nearCache[1]);
-
-            // Remove.
-            cache.Remove(1);
-            Assert.True(TestUtils.WaitForCondition(() => !nearCache.ContainsKey(1), 300));
-        }
-
-        /// <summary>
-        /// Tests near cache on the client node.
-        /// </summary>
-        [Test]
-        public void TestCreateNearCacheOnClientNode()
-        {
-            const string cacheName = "client_cache";
-
-            _client.CreateCache<int, int>(cacheName);
-
-            // Near cache can't be started on client node
-            Assert.Throws<CacheException>(
-                () => _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration()));
-        }
-
-        /// <summary>
-        /// Tests near cache on the client node.
-        /// </summary>
-        [Test]
-        public void TestCreateCacheWithNearConfigOnClientNode()
-        {
-            const string cacheName = "client_with_near_cache";
-
-            var cache = _client.CreateCache<int, int>(new CacheConfiguration(cacheName),
-                new NearCacheConfiguration());
-
-            AssertCacheIsNear(cache);
-
-            cache[1] = 1;
-            Assert.AreEqual(1, cache[1]);
-
-            var cache2 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cacheName),
-                new NearCacheConfiguration());
-
-            Assert.AreEqual(1, cache2[1]);
-
-            cache[1] = 2;
-            Assert.AreEqual(2, cache2[1]);
         }
 
         /// <summary>
@@ -373,34 +288,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Tests that near cache data is cleared when underlying cache is destroyed.
-        /// </summary>
-        [Test]
-        public void TestDestroyCacheClearsNearCacheData(
-            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
-        {
-            var cfg = new CacheConfiguration
-            {
-                Name = "destroy-test-" + mode,
-                NearConfiguration = new NearCacheConfiguration()
-            };
-
-            var ignite = GetIgnite(mode);
-            
-            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
-            
-            cache[1] = 1;
-            ignite.DestroyCache(cache.Name);
-
-            var ex = Assert.Throws<InvalidOperationException>(() => cache.Get(1));
-            
-            // TODO: why does message start with class o.a.i...?
-            StringAssert.EndsWith(
-                "Failed to perform cache operation (cache is stopped): " + cache.Name, 
-                ex.Message);
-        }
-
-        /// <summary>
         /// Tests that error during Put removes near cache value for that key.
         /// </summary>
         [Test]
@@ -504,24 +391,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: WithExpiryPolicy
             // TODO: CacheConfiguration.ExpiryPolicy
         }
-
-        /// <summary>
-        /// Asserts the cache is near.
-        /// </summary>
-        private void AssertCacheIsNear(ICache<int, int> cache)
-        {
-            var events = cache.Ignite.GetEvents();
-            events.LocalListen(this, EventType.CacheEntryCreated);
-
-            _lastEvent = null;
-            cache[-1] = int.MinValue;
-
-            TestUtils.WaitForCondition(() => _lastEvent != null, 500);
-            Assert.IsNotNull(_lastEvent);
-            Assert.IsTrue(_lastEvent.IsNear);
-
-            events.StopLocalListen(this, EventType.CacheEntryCreated);
-        }
         
         /// <summary>
         /// Gets the cache instance.
@@ -550,8 +419,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(0, cache.GetSize());
 
             // Wait for rebalance.
-            Assert.IsTrue(TestUtils.WaitForCondition(
-                () => _grid2.GetAffinity(cache.Name).MapKeyToNode(1).IsLocal, 2000));
+            TestUtils.WaitForCondition(
+                () => _grid2.GetAffinity(cache.Name).MapKeyToNode(1).IsLocal, 2000);
 
             // Use non-primary keys: primary keys are not evicted.
             var items = TestUtils
@@ -582,13 +451,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreSame(fromCache, cache[key]);
         }
 
-        /** <inheritdoc /> */
-        public bool Invoke(CacheEvent evt)
-        {
-            _lastEvent = evt;
-            return true;
-        }
-        
         /** */
         private class Foo
         {
