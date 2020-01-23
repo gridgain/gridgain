@@ -21,7 +21,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// <summary>
     /// <see cref="NearCache{TK, TV}"/> entry.
     /// </summary>
-    internal class NearCacheEntry<T> : INearCacheEntry<T>
+    internal class NearCacheEntry<T> : INearCacheEntry<T> // TODO: Why not struct?
     {
         /** */
         private volatile int _hasValue;
