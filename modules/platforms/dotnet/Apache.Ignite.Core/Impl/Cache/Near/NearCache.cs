@@ -65,14 +65,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public void Put<TKey, TVal>(TKey key, TVal val)
         {
-            // TODO: Eviction according to limits.
-            // Eviction callbacks from Java work for 2 out of 3 cases:
-            // + Client node (all keys)
-            // + Server node (non-primary keys)
-            // - Server node (primary keys) - because there is no need to store primary keys in near cache
-            // We can just ignore the third case and never evict primary keys - after all, we are on a server node,
-            // and it is fine to keep primary keys in memory.
-
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
@@ -143,6 +135,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public void Evict(PlatformMemoryStream stream, Marshaller marshaller)
         {
+            // Eviction callbacks from Java work for 2 out of 3 cases:
+            // + Client node (all keys)
+            // + Server node (non-primary keys)
+            // - Server node (primary keys) - because there is no need to store primary keys in near cache
+
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
             
