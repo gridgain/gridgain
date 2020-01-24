@@ -100,7 +100,7 @@ public class IgniteCacheTestSuite3 {
     public static List<Class<?>> suite(Collection<Class> ignoredTests) {
         List<Class<?>> suite = new ArrayList<>();
 
-        GridTestUtils.addTestIfNeeded(suite, IgniteCacheGroupsTest.class, ignoredTests);
+        /*GridTestUtils.addTestIfNeeded(suite, IgniteCacheGroupsTest.class, ignoredTests);
 
         // Value consistency tests.
         GridTestUtils.addTestIfNeeded(suite, GridCacheValueConsistencyAtomicSelfTest.class, ignoredTests);
@@ -180,10 +180,10 @@ public class IgniteCacheTestSuite3 {
         GridTestUtils.addTestIfNeeded(suite, GridCacheVersionTopologyChangeTest.class, ignoredTests);
 
         // Memory leak tests.
-        GridTestUtils.addTestIfNeeded(suite, GridCacheReferenceCleanupSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, GridCacheReferenceCleanupSelfTest.class, ignoredTests);*/
         GridTestUtils.addTestIfNeeded(suite, GridCacheReloadSelfTest.class, ignoredTests);
 
-        GridTestUtils.addTestIfNeeded(suite, GridCacheMixedModeSelfTest.class, ignoredTests);
+        /*GridTestUtils.addTestIfNeeded(suite, GridCacheMixedModeSelfTest.class, ignoredTests);
 
         // Cache interceptor tests.
         suite.addAll(IgniteCacheInterceptorSelfTestSuite.suite(ignoredTests));
@@ -193,7 +193,7 @@ public class IgniteCacheTestSuite3 {
         GridTestUtils.addTestIfNeeded(suite, CacheAsyncOperationsTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, IgniteTxRemoveTimeoutObjectsTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, IgniteTxRemoveTimeoutObjectsNearTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, IgniteTxRemoveTimeoutObjectsNearTest.class, ignoredTests);*/
 
         return suite;
     }
