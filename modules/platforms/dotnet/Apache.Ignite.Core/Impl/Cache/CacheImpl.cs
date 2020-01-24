@@ -472,13 +472,14 @@ namespace Apache.Ignite.Core.Impl.Cache
             // -- Concurrent invalidation: another value is set for the given key, we should not overwrite it,
             //    our value is potentially old
             //
-            // Concurrent eviction is what forces us to use NearCacheEntry wrapper
-            // TODO: There is a bug right now, we should re-check if the entry is still in place somehow.
+            // Concurrent eviction is what forces us to use NearCacheEntry wrapper.
 
             // TODO: Wrap into _nearCache.GetOrAdd?
             var entry = _nearCache.GetOrCreateEntry<TK, TV>(key);
 
             val = GetInternal(key);
+            
+            // Concurrent eviction could have removed this entry from .NET near cache, we don't care here.
             entry.SetValueIfEmpty(val);
 
             return val;
