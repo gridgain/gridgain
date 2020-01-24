@@ -153,19 +153,35 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestNearCacheRepeatedGetReturnsSameObjectReference(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode,
-            [Values(true, false)] bool primaryKey)
+            [Values(true, false)] bool primaryKey,
+            [Values(true, false)] bool localPut)
         {
             var cache = GetCache<int, Foo>(mode);
             var key = TestUtils.GetKey(_grid, cache.Name, primaryKey: primaryKey);
 
-            var obj = new Foo();
-            
-            cache[key] = obj;
+            var obj = new Foo(3);
+
+            if (localPut)
+            {
+                // Local put through the same cache instance: obj is in .NET Near Cache directly.
+                cache[key] = obj;
+            }
+            else
+            {
+                // Put through remote node: near cache is updated only on Get.
+                var remoteCache = GetCache<int, Foo>(
+                    mode == CacheTestMode.Client ? CacheTestMode.ServerRemote : CacheTestMode.Client);
+                
+                remoteCache[key] = obj;
+            }
             
             var res1 = cache[key];
             var res2 = cache[key];
             
             Assert.AreSame(res1, res2);
+            Assert.AreEqual(3, res1.Bar);
+
+            Assert.AreEqual(localPut, ReferenceEquals(obj, res1));
         }
         
         /// <summary>
