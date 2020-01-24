@@ -26,6 +26,7 @@ public class SupportFeaturesUtils {
      * Undocumented experimental internal API that must not be touched by regular users.
      */
     public static final String IGNITE_DISTRIBUTED_META_STORAGE_FEATURE = "IGNITE_DISTRIBUTED_META_STORAGE_FEATURE";
+
     /**
      * Flag to turn on and off support of baseline topology for in-memory caches feature.
      *
@@ -33,14 +34,22 @@ public class SupportFeaturesUtils {
      */
     public static final String IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE =
         "IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE";
+
     /**
      * Flag to enable baseline auto-adjust feature.
      */
     public static final String IGNITE_BASELINE_AUTO_ADJUST_FEATURE = "IGNITE_BASELINE_AUTO_ADJUST_FEATURE";
+
     /**
      * Disables Cluster ID and Tag feature. Default value is <code>true</code>.
      */
     public static final String IGNITE_CLUSTER_ID_AND_TAG_FEATURE = "IGNITE_CLUSTER_ID_AND_TAG_FEATURE";
+
+    /**
+     * Disables cache configuration splitting.
+     */
+    public static final String IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER =
+        "IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER";
 
     /**
      * @param featureName System property feature name.

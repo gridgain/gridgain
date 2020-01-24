@@ -77,6 +77,7 @@ import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 
 /**
@@ -1297,20 +1298,31 @@ class ClusterCachesInfo {
         boolean allowSplitCacheConfigurations = spi.allNodesSupport(IgniteFeatures.SPLITTED_CACHE_CONFIGURATIONS, ALL_NODES);
 
         if (!allowSplitCacheConfigurations) {
+            boolean hasNonCompatibleConfigurations = false;
+
             List<String> cachesToDestroy = new ArrayList<>();
 
             for (DynamicCacheDescriptor cacheDescriptor : registeredCaches().values()) {
                 CacheData clusterCacheData = clusterWideCacheData.caches().get(cacheDescriptor.cacheName());
 
                 // Node spawned new cache.
-                if (clusterCacheData.receivedFrom().equals(cacheDescriptor.receivedFrom()))
+                if (clusterCacheData.receivedFrom().equals(cacheDescriptor.receivedFrom())) {
                     cachesToDestroy.add(cacheDescriptor.cacheName());
+
+                    // At this point in time the configuration is already enriched and thefore it does not make sense to check cacheDescriptor.isConfigurationEnriched().
+                    // Looks like, we need the enrichment itself to check that it does not contain specific values.
+                    if (!cacheDescriptor.isConfigurationEnriched())
+                        hasNonCompatibleConfigurations = true;
+                }
             }
 
-            if (!cachesToDestroy.isEmpty()) {
+            if (hasNonCompatibleConfigurations) {
                 ctx.cache().dynamicDestroyCaches(cachesToDestroy, false);
 
-                throw new IllegalStateException("Node can't join to cluster in compatibility mode with newly configured caches: " + cachesToDestroy);
+                throw new IllegalStateException("Node can't join to cluster in compatibility mode " +
+                    "with newly configured caches: " + cachesToDestroy + ". Please consider setting \"" +
+                    IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER +
+                    "\" environment variable in order to start these caches using backward compatible protocol.");
             }
         }
     }
