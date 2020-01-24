@@ -17,6 +17,8 @@
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
@@ -429,6 +431,47 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             // TODO: Test concurrent updates from same node or different nodes
             // Separate reader thread should check happens-after semantics
+            var localCache = GetCache<int, Foo>(CacheTestMode.Client);
+            var remoteCache = GetCache<int, Foo>(CacheTestMode.ServerRemote);
+            var cancel = false;
+            var key = 1;
+            var id = 1;
+            remoteCache[1] = new Foo(id);
+
+            var localUpdater = Task.Factory.StartNew(() =>
+            {
+                while (!cancel)
+                {
+                    Interlocked.Increment(ref id);
+                    localCache.Put(key, new Foo(id));
+                }
+            });
+
+            var remoteUpdater = Task.Factory.StartNew(() =>
+            {
+                while (!cancel)
+                {
+                    Interlocked.Increment(ref id);
+                    remoteCache.Put(key, new Foo(id));
+                }
+            });
+            
+            var localReader = Task.Factory.StartNew(() =>
+            {
+                var prev = 0;
+                while (!cancel)
+                {
+                    var cur = localCache[key].Bar;
+                    Assert.GreaterOrEqual(cur, prev);
+                    prev = cur;
+                }
+            });
+
+            Thread.Sleep(1000);
+            cancel = true;
+            
+            Assert.AreEqual(id, localCache[key]);
+            Assert.AreEqual(id, remoteCache[key]);
         }
 
         [Test]
