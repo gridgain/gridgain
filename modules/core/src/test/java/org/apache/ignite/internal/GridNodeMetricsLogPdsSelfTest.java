@@ -25,6 +25,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
+import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -100,7 +101,7 @@ public class GridNodeMetricsLogPdsSelfTest extends GridNodeMetricsLogSelfTest {
 
             if (F.isEmpty(regName))
                 summaryFmtMatches = true;
-            else
+            else if (!DataStructuresProcessor.VOLATILE_DATA_REGION_NAME.equals(regName))
                 regions.add(regName);
         }
 
