@@ -469,6 +469,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Thread.Sleep(1000);
             cancel = true;
+            Task.WaitAll(localUpdater, remoteUpdater, localReader);
             
             Assert.AreEqual(id, localCache[key]);
             Assert.AreEqual(id, remoteCache[key]);
