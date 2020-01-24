@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.security;
 
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityPluginConfiguration;
@@ -37,6 +40,9 @@ public class InvalidServerTest extends AbstractSecurityTest {
     /** Test server name. */
     private static final String TEST_SERVER_NAME = "test_server";
 
+    /** Critical failures. */
+    private final List<Throwable> failures = Collections.synchronizedList(new LinkedList<>());
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String instanceName,
         TestSecurityPluginConfiguration pluginCfg) throws Exception {
@@ -47,6 +53,12 @@ public class InvalidServerTest extends AbstractSecurityTest {
                 if (msg instanceof TcpDiscoveryNodeAddedMessage && msg.verified())
                     TestSecurityProcessor.PERMS.remove(new SecurityCredentials(TEST_SERVER_NAME, ""));
             }
+        });
+
+        cfg.setFailureHandler((ignite, failureContext) -> {
+            failures.add(failureContext.error());
+
+            return false;
         });
 
         return cfg;
@@ -61,5 +73,7 @@ public class InvalidServerTest extends AbstractSecurityTest {
         startGridAllowAll("server2");
 
         assertThrowsWithCause(() -> startGridAllowAll(TEST_SERVER_NAME), IgniteAuthenticationException.class);
+
+        assertTrue(failures.isEmpty());
     }
 }
