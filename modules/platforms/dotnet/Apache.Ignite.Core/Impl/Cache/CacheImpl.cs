@@ -471,6 +471,9 @@ namespace Apache.Ignite.Core.Impl.Cache
             //    We should not store retrieved value in .NET near cache, since it will become stale.
             // -- Concurrent invalidation: another value is set for the given key, we should not overwrite it,
             //    our value is potentially old
+            //
+            // Concurrent eviction is what forces us to use NearCacheEntry wrapper
+            // TODO: There is a bug right now, we should re-check if the entry is still in place somehow.
 
             // TODO: Wrap into _nearCache.GetOrAdd?
             var entry = _nearCache.GetOrCreateEntry<TK, TV>(key);
