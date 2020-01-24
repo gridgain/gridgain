@@ -63,9 +63,10 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     private static final String LONG_KEY;
 
     static {
-        String template = "01234567890abcdefghijklmnopqrstuvwxyz";
+        String template = "012345678901234567890123456789";
 
-        LONG_KEY = template + template + template;
+        // Two templates - 60 bytes. Key is considered as long if it is shorter than 62 bytes.
+        LONG_KEY = template + template + "01";
     }
 
     /** {@inheritDoc} */
