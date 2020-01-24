@@ -455,16 +455,6 @@ public class PlatformCache extends PlatformAbstractTarget {
                 case OP_GET:
                     return writeResult(mem, cache.get(reader.readObjectDetached()));
 
-                case OP_GET_NEAR: {
-                    Object key = reader.readObjectDetached();
-
-                    // TODO: Error handling
-                    // TODO: Why is skipNearCacheUpdate needed for GET operation? Needs an explanation
-                    platformCtx.skipNearCacheUpdate(cache.context().cacheId(), key);
-
-                    return writeResult(mem, cache.get(key));
-                }
-
                 case OP_REMOVE_BOOL:
                     return cache.remove(reader.readObjectDetached(), reader.readObjectDetached()) ? TRUE : FALSE;
 
