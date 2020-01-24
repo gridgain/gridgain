@@ -148,6 +148,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     private final boolean failNodeOnPartitionInconsistency = Boolean.getBoolean(
         IgniteSystemProperties.IGNITE_FAIL_NODE_ON_UNRECOVERABLE_PARTITION_INCONSISTENCY);
 
+    /** Batch size for cache removals during destroy. */
+    private static final int BATCH_SIZE = 1000;
+
     /** */
     protected GridCacheSharedContext ctx;
 
@@ -720,7 +723,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     try {
                         if (obsoleteVer == null)
-                            obsoleteVer = ctx.versions().next();
+                            obsoleteVer = cctx.cache().nextVersion();
 
                         GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
@@ -1361,7 +1364,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 if (pendingEntries.removex(row)) {
                     if (obsoleteVer == null)
-                        obsoleteVer = ctx.versions().next();
+                        obsoleteVer = cctx.cache().nextVersion();
 
                     GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
@@ -2885,7 +2888,17 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             GridCursor<? extends CacheDataRow> cur =
                 cursor(cacheId, null, null, CacheDataRowAdapter.RowData.KEY_ONLY);
 
+            int rmv = 0;
+
             while (cur.next()) {
+                if (++rmv == BATCH_SIZE) {
+                    ctx.database().checkpointReadUnlock();
+
+                    rmv = 0;
+
+                    ctx.database().checkpointReadLock();
+                }
+
                 CacheDataRow row = cur.get();
 
                 assert row.link() != 0 : row;

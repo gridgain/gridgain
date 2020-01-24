@@ -7,7 +7,6 @@ package org.h2.command.dml;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
 import org.h2.api.ErrorCode;
 import org.h2.api.Trigger;
 import org.h2.command.Command;
@@ -305,7 +304,7 @@ public class Insert extends CommandWithValues implements ResultTarget {
                 // special case where table is used as a sequence
                 columns = new Column[0];
             } else {
-                columns = table.getColumns();
+                columns = table.getVisibleColums();
             }
         }
         if (!valuesExpressionList.isEmpty()) {
