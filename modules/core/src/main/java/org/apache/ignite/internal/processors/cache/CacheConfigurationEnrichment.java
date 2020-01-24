@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.io.Serializable;
 import java.util.Map;
+import org.apache.ignite.internal.util.tostring.GridToStringInclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -34,13 +36,16 @@ public class CacheConfigurationEnrichment implements Serializable {
     private final Map<String, byte[]> enrichFields;
 
     /** Field name -> Field value class name. */
+    @GridToStringInclude
     private final Map<String, String> fieldClassNames;
 
     /** Enrichment fields for {@link org.apache.ignite.configuration.NearCacheConfiguration}. */
     private volatile @Nullable CacheConfigurationEnrichment nearCacheCfgEnrichment;
 
     /**
-     * @param enrichFields Enrich fields.
+     * Creates a new instance of CacheConfigurationEnrichment.
+     *
+     * @param enrichFields Mapping a field name to its serialized value.
      * @param fieldClassNames Field class names.
      */
     public CacheConfigurationEnrichment(
@@ -53,6 +58,7 @@ public class CacheConfigurationEnrichment implements Serializable {
 
     /**
      * @param fieldName Field name.
+     * @return Serialized value of the given field.
      */
     public byte[] getFieldSerializedValue(String fieldName) {
         return enrichFields.get(fieldName);
@@ -60,6 +66,7 @@ public class CacheConfigurationEnrichment implements Serializable {
 
     /**
      * @param fieldName Field name.
+     * @return Class name of the given field.
      */
     public String getFieldClassName(String fieldName) {
         return fieldClassNames.get(fieldName);
@@ -81,8 +88,6 @@ public class CacheConfigurationEnrichment implements Serializable {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "CacheConfigurationEnrichment{" +
-            "enrichFields=" + enrichFields +
-            '}';
+        return S.toString(CacheConfigurationEnrichment.class, this);
     }
 }
