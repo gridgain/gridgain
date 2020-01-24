@@ -50,7 +50,6 @@ import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
-import static org.apache.ignite.Ignition.localIgnite;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.parallelismLevel;
@@ -270,6 +269,10 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /** Session id. */
         private final long sesId;
 
+        /** */
+        @IgniteInstanceResource
+        private IgniteEx ignite;
+
         /**
          * Creates a new instance.
          *
@@ -281,7 +284,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         /** {@inheritDoc} */
         @Override public void run() {
-            ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(sesId);
+            ignite.context().diagnostic().setReconciliationSessionId(sesId);
         }
     }
 }

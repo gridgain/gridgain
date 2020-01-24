@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
@@ -31,11 +33,13 @@ import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -98,6 +102,19 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     }
 
     /**
+     * @param res Response.
+     * @param cacheName Cache name.
+     */
+    public static Set<PartitionReconciliationKeyMeta> conflictKeyMetas(ReconciliationResult res, String cacheName) {
+        return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(PartitionReconciliationDataRowMeta::keyMeta)
+            .collect(Collectors.toSet());
+    }
+
+    /**
      *
      */
     public static void assertResultContainsConflictKeys(
@@ -150,18 +167,25 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         try {
             long updateCntr = ctx.topology().localPartition(partId).updateCounter();
 
-            Object valToPut = ctx.cache().keepBinary().get(key);
+            CacheEntry<Object, Object> e = ctx.cache().keepBinary().getEntry(key);
+
+            Object valToPut = e.getValue();
+
+            KeyCacheObject keyCacheObj = e.getKey() instanceof BinaryObject ?
+                (KeyCacheObject)e.getKey() :
+                new KeyCacheObjectImpl(e.getKey(), null, partId);
 
             if (breakCntr)
                 updateCntr++;
 
             if (breakData)
-                valToPut = valToPut.toString() + brokenValPostfix;
+                valToPut = e.getValue().toString() + brokenValPostfix;
 
             // Create data entry
+
             DataEntry dataEntry = new DataEntry(
                 ctx.cacheId(),
-                new KeyCacheObjectImpl(key, null, partId),
+                keyCacheObj,
                 new CacheObjectImpl(valToPut, null),
                 GridCacheOperation.UPDATE,
                 new GridCacheVersion(),

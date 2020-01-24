@@ -93,26 +93,27 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         Map<UUID, Map<KeyCacheObject, Map<UUID, VersionedValue>>> targetNodesToData = new HashMap<>();
 
         for (Map.Entry<KeyCacheObject, Map<UUID, VersionedValue>> dataEntry: repairReq.data().entrySet()) {
-            KeyCacheObject keyCacheObject;
+            KeyCacheObject keyCacheObj;
+
+            GridCacheContext<Object, Object> ctx = ignite.cachex(repairReq.cacheName()).context();
 
             try {
-                keyCacheObject = unmarshalKey(dataEntry.getKey(), ignite.cachex(repairReq.cacheName()).context());
+                keyCacheObj = unmarshalKey(dataEntry.getKey(), ctx);
             }
-            catch (IgniteCheckedException e) {
+            catch (IgniteCheckedException ignored) {
                 U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey() + "], key is skipped.");
 
                 continue;
             }
 
-            Object key = keyCacheObject.value(
-                ignite.cachex(repairReq.cacheName()).context().cacheObjectContext(), false);
+            int part = ctx.affinity().partition(keyCacheObj);
 
-            UUID primaryNodeId = ignite.affinity(
-                repairReq.cacheName()).mapKeyToPrimaryAndBackups(key).iterator().next().id();
+            UUID primaryNodeId = ctx.affinity().nodesByPartition(
+                part, AffinityTopologyVersion.NONE).get(0).id();
 
             targetNodesToData.putIfAbsent(primaryNodeId, new HashMap<>());
 
-            targetNodesToData.get(primaryNodeId).put(keyCacheObject, dataEntry.getValue());
+            targetNodesToData.get(primaryNodeId).put(keyCacheObj, dataEntry.getValue());
         }
 
         for (ClusterNode node : subgrid) {
@@ -125,7 +126,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
                             entry -> new PartitionKeyVersion(null, entry.getKey(), null),
-                            entry -> entry.getValue())),
+                            Map.Entry::getValue)),
                         arg.cacheName(),
                         repairReq.repairAlg(),
                         repairReq.repairAttempt(),
@@ -146,7 +147,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
                             entry -> new PartitionKeyVersion(null, entry.getKey(), null),
-                            entry -> entry.getValue())),
+                            Map.Entry::getValue)),
                         arg.cacheName(),
                         repairReq.repairAlg(),
                         repairReq.repairAttempt(),
@@ -266,13 +267,16 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
                     CacheObjectContext cacheObjCtx = ctx.cacheObjectContext();
 
-                    Object key = unmarshalKey(dataEntry.getKey().getKey(), ctx).value(cacheObjCtx, false);
+                    Object key = unmarshalKey(dataEntry.getKey().getKey(), ctx);
 
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
                     int ownersNodesSize = ctx.topology().owners(partId, startTopVer).size();
 
-                    UUID primaryUUID = ctx.affinity().nodesByKey(key,startTopVer).get(0).id();
+                    int part = ctx.affinity().partition(key);
+
+                    UUID primaryUUID = ctx.affinity().nodesByPartition(
+                        part, AffinityTopologyVersion.NONE).get(0).id();
 
                     Boolean keyWasSuccessfullyFixed;
 
@@ -295,7 +299,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = ignite.cache(cacheName).<Boolean>invoke(
+                            keyWasSuccessfullyFixed = ignite.cache(cacheName).withKeepBinary().<Boolean>invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -317,7 +321,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
+                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).withKeepBinary().invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -338,7 +342,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).invoke(
+                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).withKeepBinary().invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,

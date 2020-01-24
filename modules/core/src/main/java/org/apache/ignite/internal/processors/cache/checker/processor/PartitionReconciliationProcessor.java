@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.workload.Re
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTask;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTask;
+import org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
@@ -424,7 +425,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                             cacheObjOpt.isPresent() ?
                                 new PartitionReconciliationValueMeta(
                                     cacheObjOpt.get().valueBytes(ctx),
-                                    Optional.ofNullable(cacheObjOpt.get().value(ctx, false)).map(Object::toString).orElse(null),
+                                    cacheObjOpt.map(o -> ConsistencyCheckUtils.objectStringView(ctx, o)).orElse(null),
                                     uuidBasedEntry.getValue().version())
                                 :
                                 null);
@@ -434,8 +435,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                     key.finishUnmarshal(ctx, null);
 
-                    Object keyVal = key.value(ctx, false);
-
                     RepairMeta repairMeta = entry.getKey().get2();
 
                     Optional<CacheObject> cacheObjRepairValOpt = Optional.ofNullable(repairMeta.value());
@@ -444,14 +443,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         new PartitionReconciliationDataRowMeta(
                             new PartitionReconciliationKeyMeta(
                                 key.valueBytes(ctx),
-                                keyVal != null ? keyVal.toString() : null),
+                                ConsistencyCheckUtils.objectStringView(ctx, key)),
                             valMap,
                             new PartitionReconciliationRepairMeta(
                                 repairMeta.fixed(),
                                 cacheObjRepairValOpt.isPresent() ?
                                     new PartitionReconciliationValueMeta(
                                         cacheObjRepairValOpt.get().valueBytes(ctx),
-                                        Optional.ofNullable(cacheObjRepairValOpt.get().value(ctx, false)).map(Object::toString).orElse(null),
+                                        cacheObjRepairValOpt.map(o -> ConsistencyCheckUtils.objectStringView(ctx, o)).orElse(null),
                                         null)
                                     :
                                     null,
