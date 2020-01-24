@@ -414,6 +414,19 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: Test concurrent updates from same node or different nodes
             // Separate reader thread should check happens-after semantics
         }
+
+        [Test]
+        public void TestNearCacheAllOperations()
+        {
+            // TODO: Can we split this test?
+            // Write ops:
+            // - check reference equality locally
+            // - check update remotely
+            // Read ops:
+            // - check reference equality after multiple calls
+            // - check update from local (reference equality)
+            // - check update from remote
+        }
         
         /// <summary>
         /// Gets the cache instance.
