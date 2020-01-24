@@ -66,7 +66,6 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -184,9 +183,6 @@ public class CacheGroupContext {
 
     /** Statistics holder to track IO operations for data pages. */
     private final IoStatisticsHolder statHolderData;
-
-    /** */
-    private volatile boolean hasAtomicCaches;
 
     /** Cache group metrics. */
     private final CacheGroupMetricsImpl metrics;
@@ -387,9 +383,6 @@ public class CacheGroupContext {
 
         if (!drEnabled && cctx.isDrEnabled())
             drEnabled = true;
-
-        if (!hasAtomicCaches)
-            hasAtomicCaches = cctx.config().getAtomicityMode() == ATOMIC;
     }
 
     /**
@@ -1312,13 +1305,6 @@ public class CacheGroupContext {
      */
     public IoStatisticsHolder statisticsHolderData() {
         return statHolderData;
-    }
-
-    /**
-     * @return {@code True} if group has atomic caches.
-     */
-    public boolean hasAtomicCaches() {
-        return hasAtomicCaches;
     }
 
     /**

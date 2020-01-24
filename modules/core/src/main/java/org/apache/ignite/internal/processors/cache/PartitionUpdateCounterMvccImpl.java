@@ -19,11 +19,11 @@ package org.apache.ignite.internal.processors.cache;
 /**
  * Update counter implementation for MVCC mode.
  */
-public class PartitionMvccTxUpdateCounterImpl extends PartitionTxUpdateCounterImpl {
+public class PartitionUpdateCounterMvccImpl extends PartitionUpdateCounterTrackingImpl {
     /**
      * @param grp Group.
      */
-    public PartitionMvccTxUpdateCounterImpl(CacheGroupContext grp) {
+    public PartitionUpdateCounterMvccImpl(CacheGroupContext grp) {
         super(grp);
     }
 
