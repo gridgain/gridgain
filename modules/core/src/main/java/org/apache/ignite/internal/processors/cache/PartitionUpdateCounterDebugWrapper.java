@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.Iterator;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.util.GridLongList;
@@ -23,28 +24,35 @@ import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Update counter implementation useful for debugging.
+ * Update counter wrapper with logging capabilities.
  */
-public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCounterImpl {
+public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounter {
     /** */
-    private IgniteLogger log;
+    private final IgniteLogger log;
 
     /** */
-    private int partId;
+    private final int partId;
+
+    /** */
+    private final CacheGroupContext grp;
+
+    /** */
+    private final PartitionUpdateCounter delegate;
 
     /**
-     * @param grp Group.
      * @param partId Part id.
+     * @param delegate Delegate.
      */
-    public PartitionTxUpdateCounterDebugWrapper(CacheGroupContext grp, int partId) {
-        super(grp);
-        this.log = grp.shared().logger(getClass());
+    public PartitionUpdateCounterDebugWrapper(int partId, PartitionUpdateCounter delegate) {
         this.partId = partId;
+        this.grp = delegate.context();
+        this.log = grp.shared().logger(getClass());
+        this.delegate = delegate;
     }
 
     /** {@inheritDoc} */
     @Override public void init(long initUpdCntr, @Nullable byte[] cntrUpdData) {
-        super.init(initUpdCntr, cntrUpdData);
+        delegate.init(initUpdCntr, cntrUpdData);
 
         log.debug("[op=init" +
             ", grpId=" + grp.groupId() +
@@ -70,7 +78,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
             ", before=" + toString());
 
         try {
-            super.updateInitial(start, delta);
+            delegate.updateInitial(start, delta);
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -88,7 +96,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
             ", before=" + toString());
 
         try {
-            return super.next();
+            return delegate.next();
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -107,7 +115,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
             ", before=" + toString());
 
         try {
-            return super.next();
+            return delegate.next();
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -126,7 +134,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
             ", before=" + toString());
 
         try {
-            super.update(val);
+            delegate.update(val);
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -145,7 +153,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
             ']');
 
         try {
-            return super.finalizeUpdateCounters();
+            return delegate.finalizeUpdateCounters();
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -164,14 +172,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
             ", before=" + toString());
 
         try {
-            long cntr = get();
-
-            long reserved = reserveCntr.getAndAdd(delta);
-
-            assert reserved >= cntr : "LWM after HWM: lwm=" + cntr + ", hwm=" + reserved + ", grpId=" + grp.groupId()
-                + ", partId=" + partId + ", cntr=" + super.toString();
-
-            return reserved;
+            return delegate.reserve(delta);
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -192,7 +193,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
         boolean updated = false;
 
         try {
-            updated = super.update(start, delta);
+            updated = delegate.update(start, delta);
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
@@ -202,6 +203,7 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
         return updated;
     }
 
+    /** {@inheritDoc} */
     @Override public synchronized void reset() {
         SB sb = new SB();
 
@@ -211,11 +213,51 @@ public class PartitionTxUpdateCounterDebugWrapper extends PartitionTxUpdateCount
             ", before=" + toString());
 
         try {
-            super.reset();
+            delegate.reset();
         }
         finally {
             log.debug(sb.a(", after=" + toString() +
                 ']').toString());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public long initial() {
+        return delegate.initial();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long get() {
+        return delegate.get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long reserved() {
+        return delegate.reserved();
+    }
+
+    /** {@inheritDoc} */
+    @Nullable @Override public byte[] getBytes() {
+        return delegate.getBytes();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean sequential() {
+        return delegate.sequential();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean empty() {
+        return false;
+    }
+
+    /** {@inheritDoc} */
+    @Override public Iterator<long[]> iterator() {
+        return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public CacheGroupContext context() {
+        return delegate.context();
     }
 }
