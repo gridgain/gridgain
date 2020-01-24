@@ -16,9 +16,7 @@
 
 package org.apache.ignite.internal.processors.security;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.security.impl.TestSecurityPluginConfiguration;
@@ -40,8 +38,8 @@ public class InvalidServerTest extends AbstractSecurityTest {
     /** Test server name. */
     private static final String TEST_SERVER_NAME = "test_server";
 
-    /** Critical failures. */
-    private final List<Throwable> failures = Collections.synchronizedList(new LinkedList<>());
+    /** Critical failures flag. */
+    private final AtomicBoolean criticalFailuresFlag = new AtomicBoolean(false);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String instanceName,
@@ -56,7 +54,7 @@ public class InvalidServerTest extends AbstractSecurityTest {
         });
 
         cfg.setFailureHandler((ignite, failureContext) -> {
-            failures.add(failureContext.error());
+            criticalFailuresFlag.set(true);
 
             return false;
         });
@@ -74,6 +72,6 @@ public class InvalidServerTest extends AbstractSecurityTest {
 
         assertThrowsWithCause(() -> startGridAllowAll(TEST_SERVER_NAME), IgniteAuthenticationException.class);
 
-        assertTrue(failures.isEmpty());
+        assertFalse(criticalFailuresFlag.get());
     }
 }
