@@ -458,21 +458,19 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             var localReader = Task.Factory.StartNew(() =>
             {
-                var prev = 0;
                 while (!cancel)
                 {
                     var cur = localCache[key].Bar;
-                    Assert.GreaterOrEqual(cur, prev);
-                    prev = cur;
+                    Assert.GreaterOrEqual(id, cur);
                 }
             });
 
-            Thread.Sleep(1000);
+            Thread.Sleep(3000);
             cancel = true;
             Task.WaitAll(localUpdater, remoteUpdater, localReader);
             
-            Assert.AreEqual(id, localCache[key]);
-            Assert.AreEqual(id, remoteCache[key]);
+            Assert.AreEqual(id, localCache[key].Bar);
+            Assert.AreEqual(id, remoteCache[key].Bar);
         }
 
         [Test]
