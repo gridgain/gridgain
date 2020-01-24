@@ -458,23 +458,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return val;
             }
 
-            // Near cache on Java side works as a "subscription":
-            // When you first get or put the given key, subscription to the changes is established.
-            // This subscription can be later removed by eviction.
-            // The problem on .NET side is that we want to store the value for a new subscription
-            // in the .NET near cache, but we should account for concurrent invalidation or eviction.
-            // Possibilities:
-            // - Subscription already exists => .NET near cache already has the value, it is returned above.
-            // - Subscription does not exist
-            // -- Trivial case: subscription is created, store retrieved value in .NET Near Cache
-            // -- Concurrent eviction: near cache entry is evicted in parallel, and subscription is removed.
-            //    We should not store retrieved value in .NET near cache, since it will become stale.
-            // -- Concurrent invalidation: another value is set for the given key, we should not overwrite it,
-            //    our value is potentially old
-            //
-            // Concurrent eviction is what forces us to use NearCacheEntry wrapper.
-
-            // TODO: Wrap into _nearCache.GetOrAdd?
             var entry = _nearCache.GetOrCreateEntry<TK, TV>(key);
 
             val = GetInternal(key);

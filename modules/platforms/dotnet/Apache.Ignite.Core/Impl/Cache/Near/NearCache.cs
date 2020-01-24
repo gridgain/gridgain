@@ -85,11 +85,24 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public object GetOrCreateEntry<TKey, TVal>(TKey key)
         {
-            // TODO: We want to reduce allocations and memory usage.
-            // Ideally, entry should be a struct.
-            // But we can't have mutable struct inside ConcurrentDictionary.
-            // 1. Immutable struct with unique ID (like Interlocked.Increment) +8 bytes per entry, no extra GC pressure
-            // 2. Use class - it has unique reference +8 bytes, extra GC pressure
+            // Near cache on Java side works as a "subscription":
+            // When you first get or put the given key, subscription to the changes is established.
+            // This subscription can be later removed by eviction.
+            // The problem on .NET side is that we want to store the value for a new subscription
+            // in the .NET near cache, but we should account for concurrent invalidation or eviction.
+            // Possibilities:
+            // - Subscription already exists => .NET near cache already has the value, it is returned.
+            // - Subscription does not exist
+            // -- Trivial case: subscription is created, store retrieved value in .NET Near Cache
+            // -- Concurrent eviction: near cache entry is evicted in parallel, and subscription is removed.
+            //    We should not store retrieved value in .NET near cache, since it will become stale.
+            // -- Concurrent invalidation: another value is set for the given key, we should not overwrite it,
+            //    our value is potentially old
+            //
+            // Concurrent eviction is what forces us to use a wrapper: NearCacheEntry.
+            // Since NearCacheEntry is a struct (to reduce allocations), we have to use a unique counter
+            // to avoid stale values in case when update happens concurrently between calls to GetOrCreateEntry and
+            // SetEntryValue
             
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
