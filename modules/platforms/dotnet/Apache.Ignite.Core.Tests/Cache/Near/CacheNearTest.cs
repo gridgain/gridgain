@@ -407,6 +407,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: WithExpiryPolicy
             // TODO: CacheConfiguration.ExpiryPolicy
         }
+
+        [Test]
+        public void TestMultithreadedConcurrentUpdates()
+        {
+            // TODO: Test concurrent updates from same node or different nodes
+            // Separate reader thread should check happens-after semantics
+        }
         
         /// <summary>
         /// Gets the cache instance.
