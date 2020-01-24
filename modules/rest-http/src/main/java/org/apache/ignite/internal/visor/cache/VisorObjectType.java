@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.visor.cache;
 
+import org.apache.ignite.IgniteException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -63,6 +64,21 @@ public enum VisorObjectType {
 
     /** Enumerated values. */
     private static final VisorObjectType[] VALS = values();
+
+    /**
+     * Get enum value in accondance to specified string or generate exception when enum value is not found.
+     *
+     * @param value String value.
+     * @return Enum value.
+     */
+    public static VisorObjectType parse(String value) {
+        try {
+            return valueOf(value);
+        }
+        catch (IllegalArgumentException iae) {
+            throw new IgniteException("Unsupported object type: " + value);
+        }
+    }
 
     /**
      * Efficiently gets enumerated value from its ordinal.

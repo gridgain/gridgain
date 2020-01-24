@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -151,10 +152,13 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     private static final String CHARSET = StandardCharsets.UTF_8.name();
 
     /** Expected message when unsupported key type is specified in {@link VisorCacheGetValueTaskArg}. */
-    private static final String UNSUPPORTED_KEY_TYPE = "Specified key type is not supported";
+    private static final String UNSUPPORTED_KEY_TYPE = "Unsupported object type";
 
     /** */
     private static boolean memoryMetricsEnabled;
+
+    /** */
+    private static final AtomicInteger KEY_GEN = new AtomicInteger(0);
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -1652,13 +1656,12 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         Person p = new Person(100, "John", "Doe", 300);
 
         // Check integer key.
-
         jcache().put(1, p);
 
         String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.INT.toString(), "1"));
+            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.INT, "1"));
 
         info("VisorCacheGetValueTask result for Integer key: " + ret);
 
@@ -1673,7 +1676,6 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         assertTrue(resStr.contains("\"salary\":" + p.getSalary()));
 
         // Check UUID key.
-
         UUID uuidKey = UUID.randomUUID();
 
         jcache().put(uuidKey, 2);
@@ -1681,7 +1683,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.UUID.toString(), uuidKey.toString()));
+            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.UUID, uuidKey.toString()));
 
         info("VisorCacheGetValueTask result for UUID key: " + ret);
 
@@ -1692,15 +1694,14 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         assertTrue("2".equals(resStr));
 
         // Check Timestamp key.
-
-        Long timestamp = System.currentTimeMillis();
+        long timestamp = System.currentTimeMillis();
 
         jcache().put(new Timestamp(timestamp), 3);
 
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.TIMESTAMP.toString(), timestamp.toString()));
+            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.TIMESTAMP, timestamp));
 
         info("VisorCacheGetValueTask result for Timestamp key: " + ret);
 
@@ -1711,13 +1712,12 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         assertTrue("3".equals(resStr));
 
         // Check Date key.
-
         jcache().put(new Date(timestamp), 4);
 
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.DATE.toString(), timestamp.toString()));
+            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.DATE, timestamp));
 
         info("VisorCacheGetValueTask result for Date key: " + ret);
 
@@ -1728,15 +1728,14 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         assertTrue("4".equals(resStr));
 
         // Check object key.
-
         jcache().put(p, 5);
 
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.BINARY.toString(),
+            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.BINARY,
                 "{" +
-                    "\"className\":\"org.apache.ignite.internal.processors.rest.JettyRestProcessorAbstractSelfTest$Person\"," +
+                    "\"className\":\"" + Person.class.getName() + "\"," +
                     "\"fields\":[" +
                     "{\"type\":\"INT\",\"name\":\"id\",\"value\":" + p.getId() + "}," +
                     "{\"type\":\"INT\",\"name\":\"orgId\",\"value\":" + p.getOrganizationId() + "}," +
@@ -1752,22 +1751,21 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         assertEquals("5", res.get("result").toString());
 
-        // Check composed object key.
-
-        ComposedKeyExternal key = new ComposedKeyExternal(new ComposedKeyInternal());
+        // Check composite object key.
+        CompositeKeyExternal key = new CompositeKeyExternal(new CompositeKeyInternal());
 
         jcache().put(key, 6);
 
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.BINARY.toString(),
+            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.BINARY,
                 "{" +
-                    "\"className\":\"org.apache.ignite.internal.processors.rest.JettyRestProcessorAbstractSelfTest$ComposedKeyExternal\"," +
+                    "\"className\":\"" + CompositeKeyExternal.class.getName() + "\"," +
                     "\"fields\":[" +
                         "{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getId() + "}," +
                         "{\"type\":\"BINARY\",\"name\":\"internal\",\"value\":{" +
-                            "\"className\":\"org.apache.ignite.internal.processors.rest.JettyRestProcessorAbstractSelfTest$ComposedKeyInternal\"," +
+                            "\"className\":\"" + CompositeKeyInternal.class.getName() + "\"," +
                             "\"fields\":[{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getInternal().getId() + "}]" +
                         "}}" +
                     "]" +
@@ -3011,9 +3009,6 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
      * Person class.
      */
     public static class Person implements Serializable {
-        /** Person id. */
-        private static int PERSON_ID = 0;
-
         /** Person ID (indexed). */
         @QuerySqlField(index = true)
         private Integer id;
@@ -3040,7 +3035,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
          * @param salary Salary.
          */
         Person(Integer orgId, String firstName, String lastName, double salary) {
-            id = PERSON_ID++;
+            id = KEY_GEN.getAndIncrement();
 
             this.orgId = orgId;
             this.firstName = firstName;
@@ -3087,17 +3082,14 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     /**
      * Class of internal object for conposed key type.
      */
-    public static class ComposedKeyInternal implements Serializable {
-        /** Object id. */
-        private static int INTERNAL_ID = 0;
-
+    public static class CompositeKeyInternal implements Serializable {
         /** Object ID (indexed). */
         @QuerySqlField(index = true)
         private Integer id;
 
         /**  */
-        ComposedKeyInternal() {
-            id = INTERNAL_ID++;
+        CompositeKeyInternal() {
+            id = KEY_GEN.getAndIncrement();
         }
 
         /**
@@ -3109,22 +3101,19 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     }
 
     /**
-     * Class of extermal object for conposed key type.
+     * Class of extermal object for composite key type.
      */
-    public static class ComposedKeyExternal implements Serializable {
-        /** Object id. */
-        private static int EXTERNAL_ID = 0;
-
+    public static class CompositeKeyExternal implements Serializable {
         /** Object ID (indexed). */
         @QuerySqlField(index = true)
         private Integer id;
 
         /** Internal object. */
-        private ComposedKeyInternal internal;
+        private CompositeKeyInternal internal;
 
         /**  */
-        ComposedKeyExternal(ComposedKeyInternal internal) {
-            id = EXTERNAL_ID++;
+        CompositeKeyExternal(CompositeKeyInternal internal) {
+            id = KEY_GEN.getAndIncrement();
 
             this.internal = internal;
         }
@@ -3139,7 +3128,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         /**
          * @return Internal object.
          */
-        public ComposedKeyInternal getInternal() {
+        public CompositeKeyInternal getInternal() {
             return internal;
         }
     }

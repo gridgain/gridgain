@@ -47,7 +47,7 @@ import org.jetbrains.annotations.Nullable;
 @GridVisorManagementTask
 public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueTaskArg, VisorCacheModifyTaskResult> {
     /** */
-    protected static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     /** */
     private static final long serialVersionUID = 0L;
@@ -169,16 +169,9 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
             assert keyStr != null;
             assert !keyStr.isEmpty();
 
-            Object key;
+            VisorObjectType type = VisorObjectType.parse(arg.getType());
 
-            try {
-                VisorObjectType type = VisorObjectType.valueOf(arg.getType());
-
-                key = parseArgumentValue(type, keyStr);
-            }
-            catch (IllegalArgumentException iae) {
-                throw new IgniteException("Specified key type is not supported", iae);
-            }
+            Object key = parseArgumentValue(type, keyStr);
 
             assert key != null;
 
@@ -218,7 +211,7 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
 
         /**  */
         public VisorBinaryFieldDescription(JsonNode obj) {
-            type = VisorObjectType.valueOf(obj.get("type").textValue());
+            type = VisorObjectType.parse(obj.get("type").textValue());
             fldName = obj.get("name").textValue();
 
             value = type == VisorObjectType.BINARY
