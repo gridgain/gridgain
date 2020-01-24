@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
+    using System;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
@@ -434,8 +435,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var localCache = GetCache<int, Foo>(CacheTestMode.Client);
             var remoteCache = GetCache<int, Foo>(CacheTestMode.ServerRemote);
             var cancel = false;
-            var key = 1;
+            const int key = 1;
             var id = 1;
+            var getCount = 0;
             remoteCache[1] = new Foo(id);
 
             var localUpdater = Task.Factory.StartNew(() =>
@@ -462,6 +464,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 {
                     var cur = localCache[key].Bar;
                     Assert.GreaterOrEqual(id, cur);
+                    getCount++;
                 }
             });
 
@@ -469,8 +472,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cancel = true;
             Task.WaitAll(localUpdater, remoteUpdater, localReader);
             
-            Assert.AreEqual(id, localCache[key].Bar);
-            Assert.AreEqual(id, remoteCache[key].Bar);
+            // TODO: Remove delay, switch to Release mode - is there a race?
+            Thread.Sleep(300); // TODO: Wait for keys to update
+            Assert.AreEqual(id, localCache[key].Bar, "Local value");
+            Assert.AreEqual(id, remoteCache[key].Bar, "Remote value");
+            Console.WriteLine("Writes: {0}, Reads: {1}", id, getCount);
         }
 
         [Test]
