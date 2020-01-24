@@ -44,7 +44,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         
         void Put<TKey, TVal>(TKey key, TVal val);
         
-        INearCacheEntry<TVal> GetOrCreateEntry<TKey, TVal>(TKey key);
+        object GetOrCreateEntry<TKey, TVal>(TKey key);
+
+        void SetEntryValue<TKey, TVal>(object entry, TKey key, TVal val);
         
         void Remove<TKey, TVal>(TKey key);
     }

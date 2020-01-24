@@ -16,8 +16,10 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
+    using System.Threading;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
@@ -34,6 +36,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Non-generic map. Switched to when same cache is used with different generic arguments.
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
+
+        /** Entry ID counter. */
+        // ReSharper disable once StaticMemberInGenericType (reviewed).
+        private static long _entryId;
 
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
@@ -77,18 +83,37 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             _fallbackMap[key] = new NearCacheEntry<object>(true, val);
         }
 
-        public INearCacheEntry<TVal> GetOrCreateEntry<TKey, TVal>(TKey key)
+        public object GetOrCreateEntry<TKey, TVal>(TKey key)
+        {
+            // TODO: We want to reduce allocations and memory usage.
+            // Ideally, entry should be a struct.
+            // But we can't have mutable struct inside ConcurrentDictionary.
+            // 1. Immutable struct with unique ID (like Interlocked.Increment) +8 bytes per entry, no extra GC pressure
+            // 2. Use class - it has unique reference +8 bytes, extra GC pressure
+            
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
+            if (map != null)
+            {
+                return map.GetOrAdd(key, _ => new NearCacheEntry<TVal>(false));
+            }
+            
+            EnsureFallbackMap();
+            return _fallbackMap.GetOrAdd(key, _ => new NearCacheEntry<object>(false));
+        }
+
+        public void SetEntryValue<TKey, TVal>(object entry, TKey key, TVal val)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
-                return map.GetOrAdd(key, _ => new NearCacheEntry<TVal>());
+                map.TryUpdate(key, new NearCacheEntry<TVal>(true, val), (NearCacheEntry<TVal>) entry);
+                return;
             }
             
             EnsureFallbackMap();
-            var entry = _fallbackMap.GetOrAdd(key, _ => new NearCacheEntry<object>());
-            return new NearCacheEntryGenericWrapper<TVal>(entry);
+            _fallbackMap.TryUpdate(key, new NearCacheEntry<object>(true, val), (NearCacheEntry<object>) entry);
         }
 
         public void Update(IBinaryStream stream, Marshaller marshaller)
@@ -200,6 +225,47 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, NearCacheEntry<object>>();
             _map = null;
+        }
+        
+        private struct NearCacheEntry<T> : IEquatable<NearCacheEntry<T>>
+        {
+            public readonly T Value;
+
+            public readonly bool HasValue;
+
+            private readonly long _id;
+
+            public NearCacheEntry(bool hasValue, T val = default(T))
+            {
+                HasValue = hasValue;
+                Value = val;
+                _id = Interlocked.Increment(ref _entryId);
+            }
+
+            public bool Equals(NearCacheEntry<T> other)
+            {
+                return _id == other._id;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj))
+                {
+                    return false;
+                }
+
+                if (obj.GetType() != GetType())
+                {
+                    return false;
+                }
+                
+                return Equals((NearCacheEntry<T>) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return _id.GetHashCode();
+            }
         }
     }
 }

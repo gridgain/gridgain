@@ -480,7 +480,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             val = GetInternal(key);
             
             // Concurrent eviction could have removed this entry from .NET near cache, we don't care here.
-            entry.SetValueIfEmpty(val);
+            _nearCache.SetEntryValue(entry, key, val);
 
             return val;
         }
