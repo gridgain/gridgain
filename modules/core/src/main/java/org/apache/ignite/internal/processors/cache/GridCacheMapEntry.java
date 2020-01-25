@@ -78,6 +78,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConfl
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
@@ -4464,24 +4465,29 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void updateIndex(SchemaIndexCacheVisitorClosure clo) throws IgniteCheckedException,
+    @Override public GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo) throws IgniteCheckedException,
         GridCacheEntryRemovedException {
         lockEntry();
 
         try {
             if (isInternal())
-                return;
+                return null;
 
             checkObsolete();
 
             CacheDataRow row = cctx.offheap().read(this);
 
-            if (row != null)
+            if (row != null) {
                 clo.apply(row);
+
+                return cctx.kernalContext().query().typeByValue(cctx.cache().name(),
+                    cctx.cacheObjectContext(), row.key(), row.value(), true);
+            }
         }
         finally {
             unlockEntry();
         }
+        return null;
     }
 
     /** {@inheritDoc} */

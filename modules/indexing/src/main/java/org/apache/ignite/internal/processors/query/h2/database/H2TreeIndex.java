@@ -325,6 +325,16 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     log,
                     stats
                 );
+
+                log.debug("DBG: H2Tree [cacheName=" + cctx.name() +
+                    ", cacheId=" + cctx.cacheId() +
+                    ", grpName=" + cctx.group().name() +
+                    ", grpId=" + cctx.groupId() +
+                    ", segment=" + i +
+                    ", size=" + segments[i].size() +
+                    ", pageId=" + page.pageId().pageId() +
+                    ", allocated=" + page.isAllocated() +
+                    ", tree=" + segments[i] + ']');
             }
             finally {
                 db.checkpointReadUnlock();
@@ -1049,5 +1059,23 @@ public class H2TreeIndex extends H2TreeIndexBase {
             IgniteLogger log,
             IoStatisticsHolder stats
         ) throws IgniteCheckedException;
+    }
+
+    /**
+     * Returns number of elements in the tree by scanning pages of the bottom (leaf) level.
+     *
+     * @return Number of elements in the tree.
+     * @throws IgniteCheckedException If failed.
+     */
+    public long size() throws IgniteCheckedException {
+        long ret = 0;
+
+        for (int i = 0; i < segmentsCount(); i++) {
+            final H2Tree tree = treeForRead(i);
+
+            ret += tree.size();
+        }
+
+        return ret;
     }
 }

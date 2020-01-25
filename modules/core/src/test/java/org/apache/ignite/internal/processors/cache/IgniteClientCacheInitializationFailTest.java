@@ -263,5 +263,10 @@ public class IgniteClientCacheInitializationFailTest extends GridCommonAbstractT
             String colNamePtrn){
             return null;
         }
+
+        /** {@inheritDoc} */
+        @Override public long indexSize(String schemaName, String idxName) {
+            return 0;
+        }
     }
 }

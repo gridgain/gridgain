@@ -208,6 +208,7 @@ public class IndexStorageImpl implements IndexStorage {
 
     /** {@inheritDoc} */
     @Override public boolean nameIsAssosiatedWithCache(String idxName, int cacheId) {
+        // TODO FIXME looks wrong
         return !grpShared || idxName.startsWith(Integer.toString(cacheId));
     }
 

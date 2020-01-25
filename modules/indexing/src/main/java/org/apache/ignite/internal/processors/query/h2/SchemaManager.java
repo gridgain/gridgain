@@ -753,7 +753,7 @@ public class SchemaManager {
             if (F.eq(dataTableEntry.getKey().schema(), schemaName)) {
                 GridH2Table h2Tbl = dataTableEntry.getValue();
 
-                if (h2Tbl.containsUserIndex(idxName))
+                if (h2Tbl.containsUserIndex(idxName) >= 0)
                     return h2Tbl;
             }
         }
