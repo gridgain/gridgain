@@ -473,10 +473,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Task.WaitAll(localUpdater, remoteUpdater, localReader);
             
             // TODO: Remove delay, switch to Release mode - is there a race?
-            Thread.Sleep(300); // TODO: Wait for keys to update
+            Thread.Sleep(3000); // TODO: Wait for keys to update
+            var actualValue = (int) localCache.Query(new SqlFieldsQuery("select Bar from Foo")).GetAll()[0][0];
+            Assert.AreEqual(id, actualValue);
             Assert.AreEqual(id, localCache[key].Bar, "Local value");
             Assert.AreEqual(id, remoteCache[key].Bar, "Remote value");
             Console.WriteLine("Writes: {0}, Reads: {1}", id, getCount);
+            Console.WriteLine("Actual value: " + actualValue);
         }
 
         [Test]
