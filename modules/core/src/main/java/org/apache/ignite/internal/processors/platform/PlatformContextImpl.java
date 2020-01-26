@@ -686,6 +686,8 @@ public class PlatformContextImpl implements PlatformContext {
             return adder;
         });
 
-        return decremented[0];
+        // TODO: We can't skip updates like this: creates a race condition
+        // return decremented[0];
+        return false;
     }
 }
