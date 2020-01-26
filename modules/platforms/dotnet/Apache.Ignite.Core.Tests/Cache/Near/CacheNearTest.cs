@@ -471,9 +471,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Thread.Sleep(3000);
             cancel = true;
             Task.WaitAll(localUpdater, remoteUpdater, localReader);
-            
-            // TODO: Remove delay, switch to Release mode - is there a race?
-            Thread.Sleep(3000); // TODO: Wait for keys to update
+
+            // Get actual value with SQL to bypass caches and verify.
             var actualValue = (int) localCache.Query(new SqlFieldsQuery("select Bar from Foo")).GetAll()[0][0];
             Assert.AreEqual(id, actualValue);
             Assert.AreEqual(id, localCache[key].Bar, "Local value");
