@@ -547,23 +547,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             StartTxIfNeeded();
 
-            if (CanUseNear)
-            {
-                try
-                {
-                    _nearCache.Put(key, val);
-                    DoOutOp(CacheOp.NearPut, key, val);
-                }
-                catch (Exception)
-                {
-                    _nearCache.Remove<TK, TV>(key);
-                    throw;
-                }
-            }
-            else
-            {
-                DoOutOp(CacheOp.Put, key, val);
-            }
+            DoOutOp(CacheOp.Put, key, val);
         }
 
         /** <inheritDoc /> */

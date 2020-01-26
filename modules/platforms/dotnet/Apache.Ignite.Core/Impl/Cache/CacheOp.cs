@@ -111,7 +111,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         LocalPreloadPartition = 89,
         SizeLong = 90,
         SizeLongAsync = 91,
-        SizeLongLoc = 92,
-        NearPut = 1026
+        SizeLongLoc = 92
     }
 }

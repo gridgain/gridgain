@@ -66,7 +66,6 @@ import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStrea
 import org.apache.ignite.internal.processors.platform.message.PlatformMessageFilter;
 import org.apache.ignite.internal.processors.platform.messaging.PlatformMessageFilterImpl;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
 import java.sql.Timestamp;
@@ -76,7 +75,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Implementation of platform context.
@@ -103,10 +101,6 @@ public class PlatformContextImpl implements PlatformContext {
 
     /** Node ids that has been sent to native platform. */
     private final Set<UUID> sentNodes = Collections.newSetFromMap(new ConcurrentHashMap<UUID, Boolean>());
-
-    /** Keys that should be skipped during platform near cache update callback. */
-    private final ConcurrentHashMap<IgniteBiTuple<Integer, Object>, LongAdder> nearCacheSkipUpdate
-            = new ConcurrentHashMap<>();
 
     /** Platform name. */
     private final String platform;
@@ -595,9 +589,6 @@ public class PlatformContextImpl implements PlatformContext {
         assert key != null;
         assert keyBytes != null;
 
-        if (decrementSkipCount(cacheId, key))
-            return;
-
         // TODO: Track active caches and avoid unnecessary callbacks?
         try (PlatformMemory mem0 = mem.allocate()) {
             PlatformOutputStream out = mem0.output();
@@ -621,28 +612,6 @@ public class PlatformContextImpl implements PlatformContext {
     }
 
     /** {@inheritDoc} */
-    @Override public void skipNearCacheUpdate(int cacheId, Object key) {
-        assert key != null;
-
-        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, key), (k, adder) -> {
-            if (adder == null) {
-                adder = new LongAdder();
-            }
-
-            adder.increment();
-
-            return adder;
-        });
-    }
-
-    /** {@inheritDoc} */
-    @Override public void restoreNearCacheUpdate(int cacheId, Object key) {
-        assert key != null;
-
-        decrementSkipCount(cacheId, key);
-    }
-
-    /** {@inheritDoc} */
     @Override public void evictFromNearCache(int cacheId, byte[] keyBytes) {
         assert keyBytes != null;
 
@@ -657,37 +626,5 @@ public class PlatformContextImpl implements PlatformContext {
 
             gateway().nearCacheEvict(mem0.pointer());
         }
-    }
-
-    /**
-     * Decrements skip count for the given key.
-     *
-     * @param cacheId Cache id.
-     * @param key Key.
-     * @return True if skip count was greater than zero; otherwise, false.
-     */
-    private boolean decrementSkipCount(int cacheId, Object key) {
-        assert key != null;
-
-        final boolean[] decremented = {false};
-
-        nearCacheSkipUpdate.compute(new IgniteBiTuple<>(cacheId, key), (k, adder) -> {
-            if (adder == null) {
-                return null;
-            }
-
-            adder.decrement();
-            decremented[0] = true;
-
-            if (adder.intValue() == 0) {
-                return null;
-            }
-
-            return adder;
-        });
-
-        // TODO: We can't skip updates like this: creates a race condition
-        // return decremented[0];
-        return false;
     }
 }
