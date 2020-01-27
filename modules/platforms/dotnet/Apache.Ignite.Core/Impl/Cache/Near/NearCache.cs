@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Binary;
@@ -79,7 +80,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     if (val is TV)
                     {
+#if DEBUG
+                        _map.AddOrUpdate((TK) key, (TV)val, (k, oldVal) =>
+                        {
+                            if (Equals(oldVal, val))
+                            {
+                                throw new Exception(
+                                    "Suspicious NearCache update, old and new values are identical: " + val);
+                            }
+
+                            return (TV)val;
+                        });
+#else
                         _map[(TK) key] = (TV) val;
+#endif
+                        
                         return;
                     }
                 }
