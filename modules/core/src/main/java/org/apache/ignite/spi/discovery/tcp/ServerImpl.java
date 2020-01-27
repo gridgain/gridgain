@@ -77,6 +77,7 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
+import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
@@ -107,6 +108,7 @@ import org.apache.ignite.internal.worker.WorkersRegistry;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -152,6 +154,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeLeftMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingRequest;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingResponse;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRedirectToClient;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRequiredFeatureSupport;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheckMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryServerOnlyCustomEventMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusCheckMessage;
@@ -179,6 +182,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_COMPACT_FOOTER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_BINARY_STRING_SER_VER_2;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_DFLT_SUID;
+import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 import static org.apache.ignite.spi.IgnitePortProtocol.TCP;
 import static org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoverySpiState.AUTH_FAILED;
@@ -354,9 +358,9 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean allNodesSupport(IgniteFeatures feature) {
+    @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
         // It is ok to see visible node without order here because attributes are available when node is created.
-        return IgniteFeatures.allNodesSupports(gridKernalContext(), upcast(ring.allNodes()), feature);
+        return IgniteFeatures.allNodesSupports(gridKernalContext(), F.view(upcast(ring.allNodes()), nodesPred), feature);
     }
 
     /** {@inheritDoc} */
@@ -2125,7 +2129,11 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param rmtPerms The second set of permissions.
      * @return {@code True} if given parameters contain the same permissions, {@code False} otherwise.
      */
-    private boolean permissionsEqual(SecurityPermissionSet locPerms, SecurityPermissionSet rmtPerms) {
+    private boolean permissionsEqual(@Nullable SecurityPermissionSet locPerms,
+        @Nullable SecurityPermissionSet rmtPerms) {
+        if (locPerms == null || rmtPerms == null)
+            return false;
+
         boolean dfltAllowMatch = locPerms.defaultAllowAll() == rmtPerms.defaultAllowAll();
 
         boolean bothHaveSamePerms = F.eqNotOrdered(rmtPerms.systemPermissions(), locPerms.systemPermissions()) &&
@@ -3310,6 +3318,19 @@ class ServerImpl extends TcpDiscoveryImpl {
                 byte[] msgBytes = null;
 
                 for (ClientMessageWorker clientMsgWorker : clientMsgWorkers.values()) {
+                    if (msg instanceof TcpDiscoveryCustomEventMessage) {
+                        try {
+                            if (!clientSupportsRequiredFeatures((TcpDiscoveryCustomEventMessage)msg,
+                                clientMsgWorker.clientNodeId))
+                                continue;
+                        }
+                        catch (Throwable e) {
+                            U.error(log, "Failed when unmarshalling a message: " + msg, e);
+
+                            break;
+                        }
+                    }
+
                     if (msgBytes == null) {
                         try {
                             msgBytes = U.marshal(spi.marshaller(), msg);
@@ -3347,6 +3368,48 @@ class ServerImpl extends TcpDiscoveryImpl {
                     clientMsgWorker.addMessage(msg0, msgBytes0);
                 }
             }
+        }
+
+        /**
+         * Checks that client node with given ID supports features required to handle given discovery custom message.
+         *
+         * @param msg Custom message that may require support of particular Ignite Feature.
+         * @param clientNodeId UUID of client node that should support required feature.
+         * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
+         * @throws Throwable If deserialization of the message has failed.
+         */
+        private boolean clientSupportsRequiredFeatures(TcpDiscoveryCustomEventMessage msg, UUID clientNodeId) throws Throwable {
+            DiscoverySpiCustomMessage customMsg = msg.message(
+                spi.marshaller(),
+                U.resolveClassLoader(spi.ignite().configuration()));
+
+            DiscoveryCustomMessage delegateMsg = ((CustomMessageWrapper)customMsg).delegate();
+
+            TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
+                delegateMsg.getClass(),
+                TcpDiscoveryRequiredFeatureSupport.class
+            );
+
+            if (featAnnot != null) {
+                IgniteFeatures reqFeature = featAnnot.feature();
+                ClusterNode node = ring.node(clientNodeId);
+
+                if (node != null) {
+                    byte[] featuresBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
+
+                    if (!IgniteFeatures.nodeSupports(featuresBytes, reqFeature)) {
+                        if (log.isDebugEnabled())
+                            log.debug("Client node " + node.id() +
+                                " doesn't support feature " + reqFeature +
+                                ", sending message " + delegateMsg.getClass() +
+                                " to the client is skipped.");
+
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         /**
@@ -5005,7 +5068,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 spi.marshaller(), U.resolveClassLoader(spi.ignite().configuration()), node
                             );
 
-                            if (!permissionsEqual(coordSubj.subject().permissions(), subj.subject().permissions())) {
+                            if (!permissionsEqual(getPermissions(coordSubj), getPermissions(subj))) {
                                 // Node has not pass authentication.
                                 LT.warn(log, "Authentication failed [nodeId=" + node.id() +
                                     ", addrs=" + U.addressesAsString(node) + ']');
@@ -5106,8 +5169,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                         spi.marshaller(), ldr, locNode
                                     );
 
-                                    if (!permissionsEqual(locCrd.subject().permissions(),
-                                        rmCrd.subject().permissions())) {
+                                    if (!permissionsEqual(getPermissions(locCrd), getPermissions(rmCrd))) {
                                         // Node has not pass authentication.
                                         LT.warn(log,
                                             "Failed to authenticate local node " +
@@ -5214,6 +5276,17 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (sendMessageToRemotes(msg))
                 sendMessageAcrossRing(msg);
+        }
+
+        /**
+         * @param secCtx Security context.
+         * @return Security permission set.
+         */
+        private @Nullable SecurityPermissionSet getPermissions(SecurityContext secCtx) {
+            if (secCtx == null || secCtx.subject() == null)
+                return null;
+
+            return secCtx.subject().permissions();
         }
 
         /**
@@ -5512,7 +5585,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 //we will need to recalculate this value since the topology changed
                 if (!nodeCompactRepresentationSupported) {
                     nodeCompactRepresentationSupported =
-                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION, ALL_NODES);
                 }
 
                 TcpDiscoveryNode leftNode = ring.removeNode(leavingNodeId);
@@ -5727,7 +5800,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 //we will need to recalculate this value since the topology changed
                 if (!nodeCompactRepresentationSupported) {
                     nodeCompactRepresentationSupported =
-                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION, ALL_NODES);
                 }
 
                 failedNode = ring.removeNode(failedNodeId);
@@ -6864,7 +6937,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     TcpDiscoveryHandshakeResponse res =
                         new TcpDiscoveryHandshakeResponse(locNodeId, locNode.internalOrder());
 
-                    res.setDiscoveryDataPacketCompression(allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION));
+                    res.setDiscoveryDataPacketCompression(allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES));
 
                     if (req.client())
                         res.clientAck(true);
