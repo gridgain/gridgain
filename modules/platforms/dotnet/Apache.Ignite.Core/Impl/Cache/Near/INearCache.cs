@@ -41,13 +41,5 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         void Evict(PlatformMemoryStream stream, Marshaller marshaller);
 
         bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
-        
-        void Put<TKey, TVal>(TKey key, TVal val);
-        
-        object GetOrCreateEntry<TKey, TVal>(TKey key);
-
-        void SetEntryValue<TKey, TVal>(object entry, TKey key, TVal val);
-        
-        void Remove<TKey, TVal>(TKey key);
     }
 }
