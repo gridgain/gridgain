@@ -20,9 +20,7 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSemaphore;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.yardstick.IgniteAbstractBenchmark;
 import org.yardstickframework.BenchmarkConfiguration;
 
@@ -44,15 +42,11 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
     /** Whether key should be type of Java object or simple (e.g. integer or long). */
     private boolean isJavaObj;
 
-    /** Whether to run init step or skip it. */
-    private boolean initStep;
-
     /** {@inheritDoc} */
     @Override public void setUp(BenchmarkConfiguration cfg) throws Exception {
         super.setUp(cfg);
 
         range = args.range();
-        initStep = args.getBooleanParameter("init", false);
         isJavaObj = args.getBooleanParameter("javaObject", false);
 
         if (isJavaObj) {
@@ -121,19 +115,9 @@ public class IgniteInlineIndexBenchmark extends IgniteAbstractBenchmark {
             : ThreadLocalRandom.current().nextInt(range);
     }
 
-    /**
-     * @param sql SQL query.
-     * @param args Query parameters.
-     * @return Results cursor.
-     */
-    private void sql(String sql, Object... args) {
-        ((IgniteEx)ignite()).context().query().querySqlFields(new SqlFieldsQuery(sql).setArgs(args), false).getAll();
-    }
-
     /** */
     private void printParameters() {
         println("Benchmark parameter:");
-        println("    init: " + initStep);
         println("    range: " + range);
         println("    is JavaObject: " + isJavaObj);
     }
