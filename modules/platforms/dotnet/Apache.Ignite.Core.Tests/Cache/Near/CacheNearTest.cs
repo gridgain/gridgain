@@ -139,10 +139,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         [Test]
         public void TestNearCachePutGetReturnsNewObject(
-            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode,
+            [Values(true, false)] bool primaryKey)
         {
             var cache = GetCache<int, Foo>(mode);
-            var key = (int) mode;
+            var key = TestUtils.GetKey(_grid, cache.Name, primaryKey: primaryKey);
 
             var obj = new Foo(key);
             
