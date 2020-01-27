@@ -128,4 +128,11 @@ BOOST_AUTO_TEST_CASE(TestConnectionRestore)
     BOOST_CHECK_EQUAL(ExecQueryAndReturnError(), "");
 }
 
+BOOST_AUTO_TEST_CASE(TestConnectionMemoryLeak)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    // SQLDisconnect(dbc);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
