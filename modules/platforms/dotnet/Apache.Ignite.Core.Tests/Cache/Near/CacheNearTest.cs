@@ -437,8 +437,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestMultithreadedConcurrentUpdates()
         {
-            // TODO: Test concurrent updates from same node or different nodes
-            // Separate reader thread should check happens-after semantics
             var localCache = GetCache<int, Foo>(CacheTestMode.Client);
             var remoteCache = GetCache<int, Foo>(CacheTestMode.ServerRemote);
             var cancel = false;
@@ -476,7 +474,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             });
 
-            Thread.Sleep(3000);
+            Thread.Sleep(5000);
             cancel = true;
             Task.WaitAll(localUpdater, remoteUpdater, localReader);
 
