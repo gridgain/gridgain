@@ -1309,20 +1309,20 @@ class ClusterCachesInfo {
                 if (clusterCacheData.receivedFrom().equals(cacheDescriptor.receivedFrom())) {
                     cachesToDestroy.add(cacheDescriptor.cacheName());
 
-                    // At this point in time the configuration is already enriched and thefore it does not make sense to check cacheDescriptor.isConfigurationEnriched().
-                    // Looks like, we need the enrichment itself to check that it does not contain specific values.
-                    if (!cacheDescriptor.isConfigurationEnriched())
+                    // At this point, the configuration is already enriched
+                    // and thefore it does not make sense to check cacheDescriptor.isConfigurationEnriched().
+                    if (!cacheDescriptor.cacheConfigurationEnrichment().isEmpty())
                         hasNonCompatibleConfigurations = true;
                 }
             }
 
             if (hasNonCompatibleConfigurations) {
-                ctx.cache().dynamicDestroyCaches(cachesToDestroy, false);
+                ctx.cache().dynamicDestroyCaches(cachesToDestroy, false);//.get();
 
                 throw new IllegalStateException("Node can't join to cluster in compatibility mode " +
                     "with newly configured caches: " + cachesToDestroy + ". Please consider setting \"" +
                     IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER +
-                    "\" environment variable in order to start these caches using backward compatible protocol.");
+                    "\" environment variable in order to start these cache(s) using backward compatible protocol.");
             }
         }
     }

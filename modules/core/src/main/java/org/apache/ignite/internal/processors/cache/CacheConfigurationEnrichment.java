@@ -86,6 +86,17 @@ public class CacheConfigurationEnrichment implements Serializable {
         return nearCacheCfgEnrichment;
     }
 
+    /**
+     * Returns {@code true} if all field class names are {@code null}.
+     * The current implementation assumes that {@code null} value is the default value for a enriched field.
+     * Be aware this method is used for backward compatibility only and will be removed in future releases.
+     *
+     * @return {@code true} if all field values are {@code null}.
+     */
+    public boolean isEmpty() {
+        return !fieldClassNames.values().stream().filter(s -> s != null).findAny().isPresent();
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheConfigurationEnrichment.class, this);
