@@ -41,6 +41,8 @@ public class DefaultQueryTimeoutThinJavaTest extends DefaultQueryTimeoutTest {
     @Override protected void assertQueryCancelled(Callable<?> c) {
         try {
             c.call();
+
+            fail("Exception is expected");
         }
         catch (Exception e) {
             assertTrue(X.hasCause(e, "The query was cancelled while executing", ClientServerError.class));
