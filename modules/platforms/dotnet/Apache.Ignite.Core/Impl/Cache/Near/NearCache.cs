@@ -101,16 +101,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 // Type mismatch: must switch to fallback map and update it.
                 EnsureFallbackMap();
             }
-            else if (_fallbackMap != null)
-            {
-                // Type match, but fallback map exists: wait for init and proceed to update.
-                _fallbackInit.Wait();
-            }
-            else
+            else if (_fallbackMap == null)
             {
                 // Type match and no fallback map: exit.
                 return;
             }
+            
+            _fallbackInit.Wait();
 
             if (hasVal)
             {
