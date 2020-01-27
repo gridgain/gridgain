@@ -547,6 +547,8 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             StartTxIfNeeded();
 
+            // TODO: Near cache: For primary keys on server nodes we can put key/val to ThreadLocal
+            // and avoid deserialization costs.
             DoOutOp(CacheOp.Put, key, val);
         }
 
