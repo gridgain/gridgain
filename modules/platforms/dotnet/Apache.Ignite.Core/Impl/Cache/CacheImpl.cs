@@ -459,27 +459,13 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             // TODO: Avoid deserialization in GetInternal: we get the callback anyway.
-            var val2 = GetInternal(key);
-            
+            GetInternal(key);
             if (_nearCache.TryGetValue(key, out val))
             {
                 return val;
             }
 
-            return val2;
-        }
-
-        private TV GetInternal(TK key)
-        {
-            return DoOutInOpX((int) CacheOp.Get,
-                w => w.Write(key),
-                (stream, res) =>
-                {
-                    if (res != True)
-                        throw GetKeyNotFoundException();
-
-                    return Unmarshal<TV>(stream);
-                }, _readException);
+            throw GetKeyNotFoundException();
         }
 
         /** <inheritDoc /> */
@@ -487,13 +473,24 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return DoOutOpAsync(CacheOp.GetAsync, w => w.WriteObject(key), reader =>
+            if (!CanUseNear)
             {
-                if (reader != null)
-                    return reader.ReadObject<TV>();
+                return GetAsyncInternal(key);
+            }
+            
+            TV val;
+            if (_nearCache.TryGetValue(key, out val))
+            {
+                return TaskRunner.FromResult(val);
+            }
 
-                throw GetKeyNotFoundException();
-            });
+            GetAsyncInternal(key);
+            if (_nearCache.TryGetValue(key, out val))
+            {
+                return TaskRunner.FromResult(val);
+            }
+
+            throw GetKeyNotFoundException();
         }
 
         /** <inheritDoc /> */
@@ -1736,6 +1733,30 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return 0;
 
             return _ignite.HandleRegistry.Allocate(obj);
+        }
+        
+        private TV GetInternal(TK key)
+        {
+            return DoOutInOpX((int) CacheOp.Get,
+                w => w.Write(key),
+                (stream, res) =>
+                {
+                    if (res != True)
+                        throw GetKeyNotFoundException();
+
+                    return Unmarshal<TV>(stream);
+                }, _readException);
+        }
+
+        private Task<TV> GetAsyncInternal(TK key)
+        {
+            return DoOutOpAsync(CacheOp.GetAsync, w => w.WriteObject(key), reader =>
+            {
+                if (reader != null)
+                    return reader.ReadObject<TV>();
+
+                throw GetKeyNotFoundException();
+            });
         }
     }
 }
