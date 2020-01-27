@@ -89,6 +89,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingWithBaselineT
 import org.apache.ignite.internal.processors.query.oom.DynamicMemoryQuotaTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
+import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerConfigurationSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.sqltests.SqlDataTypesCoverageTests;
 import org.junit.runner.RunWith;
@@ -177,18 +178,18 @@ import org.junit.runners.Suite;
 
     LongRunningQueryTest.class,
 
-    LocalQueryMemoryTrackerSelfTest.class,
-    LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
-
-    SqlStatisticsMemoryQuotaTest.class,
     SqlStatisticsUserQueriesFastTest.class,
     SqlStatisticsUserQueriesLongTest.class,
 
+    // Memory quota tests.
+    SqlStatisticsMemoryQuotaTest.class,
+    LocalQueryMemoryTrackerSelfTest.class,
+    LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
     QueryMemoryTrackerSelfTest.class,
     DynamicMemoryQuotaTest.class,
+    QueryMemoryManagerConfigurationSelfTest.class,
 
-    DmlBatchSizeDeadlockTest.class,
-
+    // Offloading tests.
     DiskSpillingBasicTest.class,
     DiskSpillingGlobalQuotaTest.class,
     DiskSpillingQueriesTest.class,
@@ -207,7 +208,9 @@ import org.junit.runners.Suite;
 
     SqlDataTypesCoverageTests.class,
 
-    SqlQueriesTopologyMappingTest.class
+    SqlQueriesTopologyMappingTest.class,
+
+    DmlBatchSizeDeadlockTest.class,
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }

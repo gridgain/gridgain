@@ -36,7 +36,7 @@ public class QueryMemoryManager implements H2MemoryTracker {
     /**
      * Default memory reservation block size.
      */
-    private static final long DFLT_MEMORY_RESERVATION_BLOCK_SIZE = 512 * KB;
+    public static final long DFLT_MEMORY_RESERVATION_BLOCK_SIZE = 512 * KB;
 
     /** Set of metrics that collect info about memory this memory manager tracks. */
     private final SqlStatisticsHolderMemoryQuotas metrics;
