@@ -458,10 +458,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return val;
             }
 
-            // TODO: Can we get rid of this complicated mechanism? It works for most cases anyway.
-            // Maybe some callback point is missing in Java?
-            // var entry = _nearCache.GetOrCreateEntry<TK, TV>(key);
-
             // TODO: Avoid deserialization in GetInternal: we get the callback anyway.
             var val2 = GetInternal(key);
             
@@ -469,9 +465,6 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 return val;
             }
-            
-            // Concurrent eviction could have removed this entry from .NET near cache, we don't care here.
-            // _nearCache.SetEntryValue(entry, key, val);
 
             return val2;
         }
