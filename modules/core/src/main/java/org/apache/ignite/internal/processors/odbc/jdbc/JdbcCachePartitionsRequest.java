@@ -59,9 +59,11 @@ public class JdbcCachePartitionsRequest extends JdbcRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver)
+    @Override public void writeBinary(BinaryWriterExImpl writer,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features)
         throws BinaryObjectException {
-        super.writeBinary(writer, ver);
+        super.writeBinary(writer, ver, features);
 
         assert cacheIds != null;
         assert !cacheIds.isEmpty();
@@ -72,9 +74,11 @@ public class JdbcCachePartitionsRequest extends JdbcRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver)
+    @Override public void readBinary(BinaryReaderExImpl reader,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features)
         throws BinaryObjectException {
-        super.readBinary(reader, ver);
+        super.readBinary(reader, ver, features);
         int cacheIdsSize = reader.readInt();
 
         cacheIds = new HashSet<>();

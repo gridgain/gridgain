@@ -55,16 +55,18 @@ public class JdbcColumnMetaV2 extends JdbcColumnMeta{
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) {
-        super.writeBinary(writer, ver);
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
+        super.writeBinary(writer, ver, features);
 
         writer.writeBoolean(nullable);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) {
-        super.readBinary(reader, ver);
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
+        super.readBinary(reader, ver, features);
 
         nullable = reader.readBoolean();
     }

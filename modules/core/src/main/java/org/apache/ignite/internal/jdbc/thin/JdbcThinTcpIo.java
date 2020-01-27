@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.internal.ThinClientFeatures;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -47,6 +48,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryFetchRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryMetadataRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
 import org.apache.ignite.internal.util.ipc.loopback.IpcClientTcpEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
@@ -84,8 +86,11 @@ public class JdbcThinTcpIo {
     /** Version 2.8.1. */
     private static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
 
+    /** Version 2.8.2. Adds features flags support. */
+    private static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_2;
 
     /** Initial output stream capacity for handshake. */
     private static final int HANDSHAKE_MSG_SIZE = 13;
@@ -137,6 +142,9 @@ public class JdbcThinTcpIo {
 
     /** Current protocol version used to connection to Ignite. */
     private final ClientListenerProtocolVersion srvProtoVer;
+
+    /** Features set are supported by the current protocol. */
+    private JdbcThinFeatures features;
 
     /**
      * Start connection and perform handshake.
@@ -259,6 +267,9 @@ public class JdbcThinTcpIo {
         if (ver.compareTo(VER_2_8_1) >= 0)
             JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
+        if (ver.compareTo(VER_2_8_2) >= 0)
+            writer.writeByteArray(JdbcThinFeatures.allFeatures());
+
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
 
@@ -290,6 +301,13 @@ public class JdbcThinTcpIo {
                     handshakeRes.nodeId(reader.readUuid());
 
                 handshakeRes.igniteVersion(new IgniteProductVersion(maj, min, maintenance, stage, ts, hash));
+
+                if (ver.compareTo(VER_2_8_2) >= 0) {
+                    byte[] srvFeatures = reader.readByteArray();
+
+                    features = new JdbcThinFeatures(
+                        ThinClientFeatures.matchFeatures(srvFeatures, JdbcThinFeatures.allFeatures()));
+                }
             }
             else {
                 handshakeRes.igniteVersion(
@@ -452,7 +470,7 @@ public class JdbcThinTcpIo {
 
         JdbcResponse res = new JdbcResponse();
 
-        res.readBinary(reader, srvProtoVer);
+        res.readBinary(reader, srvProtoVer, features);
 
         return res;
     }
@@ -496,7 +514,7 @@ public class JdbcThinTcpIo {
         BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(cap),
             null, null);
 
-        req.writeBinary(writer, srvProtoVer);
+        req.writeBinary(writer, srvProtoVer, features);
 
         synchronized (connMux) {
             send(writer.array());
@@ -611,6 +629,15 @@ public class JdbcThinTcpIo {
         assert srvProtoVer != null;
 
         return srvProtoVer.compareTo(VER_2_8_0) >= 0;
+    }
+
+    /**
+     * @return True if Partition Awareness supported, false otherwise.
+     */
+    boolean isFeaturesSupported() {
+        assert srvProtoVer != null;
+
+        return srvProtoVer.compareTo(VER_2_8_2) >= 0;
     }
 
     /**

@@ -37,17 +37,23 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
     /** Client protocol version. */
     private final ClientListenerProtocolVersion ver;
 
+    /** Features. */
+    private final JdbcThinFeatures features;
+
     /** Initial output stream capacity. */
     protected static final int INIT_CAP = 1024;
 
     /**
      * @param ctx Context.
      * @param ver Client protocol version.
+     * @param features Features supported by the protocol.
      */
     public JdbcMessageParser(GridKernalContext ctx,
-        ClientListenerProtocolVersion ver) {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
         this.ctx = ctx;
         this.ver = ver;
+        this.features = features;
     }
 
     /**
@@ -74,7 +80,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryReaderExImpl reader = createReader(msg);
 
-        return JdbcRequest.readRequest(reader, ver);
+        return JdbcRequest.readRequest(reader, ver, features);
     }
 
     /** {@inheritDoc} */
@@ -87,7 +93,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryWriterExImpl writer = createWriter(INIT_CAP);
 
-        res.writeBinary(writer, ver);
+        res.writeBinary(writer, ver, features);
 
         return writer.array();
     }

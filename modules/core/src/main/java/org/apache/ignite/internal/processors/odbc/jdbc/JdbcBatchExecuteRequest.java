@@ -133,8 +133,11 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.writeBinary(writer, ver);
+    @Override public void writeBinary(
+        BinaryWriterExImpl writer,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
+        super.writeBinary(writer, ver, features);
 
         writer.writeString(schemaName);
 
@@ -142,7 +145,7 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
             writer.writeInt(queries.size());
 
             for (JdbcQuery q : queries)
-                q.writeBinary(writer, ver);
+                q.writeBinary(writer, ver, features);
 
         }
         else
@@ -156,8 +159,9 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.readBinary(reader, ver);
+    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
+        super.readBinary(reader, ver, features);
 
         schemaName = reader.readString();
 
@@ -168,7 +172,7 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
         for (int i = 0; i < n; ++i) {
             JdbcQuery qry = new JdbcQuery();
 
-            qry.readBinary(reader, ver);
+            qry.readBinary(reader, ver, features);
 
             queries.add(qry);
         }

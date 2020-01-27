@@ -80,8 +80,9 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.writeBinary(writer, ver);
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
+        super.writeBinary(writer, ver, features);
 
         writer.writeString(schemaName);
         writer.writeString(tblName);
@@ -92,8 +93,9 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.readBinary(reader, ver);
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
+        super.readBinary(reader, ver, features);
 
         schemaName = reader.readString();
         tblName = reader.readString();

@@ -124,7 +124,8 @@ public class JdbcIndexMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
         writer.writeString(schemaName);
         writer.writeString(tblName);
         writer.writeString(idxName);
@@ -144,7 +145,8 @@ public class JdbcIndexMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
         schemaName = reader.readString();
         tblName = reader.readString();
         idxName = reader.readString();

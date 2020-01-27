@@ -69,8 +69,9 @@ public class JdbcColumnMetaV4 extends JdbcColumnMetaV3 {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) {
-        super.writeBinary(writer, ver);
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
+        super.writeBinary(writer, ver, features);
 
         writer.writeInt(precision);
         writer.writeInt(scale);
@@ -78,8 +79,9 @@ public class JdbcColumnMetaV4 extends JdbcColumnMetaV3 {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) {
-        super.readBinary(reader, ver);
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
+        super.readBinary(reader, ver, features);
 
         precision = reader.readInt();
         scale = reader.readInt();

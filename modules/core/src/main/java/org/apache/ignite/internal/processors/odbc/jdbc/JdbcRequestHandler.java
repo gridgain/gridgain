@@ -84,6 +84,7 @@ import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionCont
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_4_0;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_7_0;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_2;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest.BATCH_EXEC;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest.BATCH_EXEC_ORDERED;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest.BULK_LOAD_BATCH;
@@ -506,6 +507,10 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         // Write node id.
         if (protocolVer.compareTo(VER_2_8_0) >= 0)
             writer.writeUuid(connCtx.kernalContext().localNodeId());
+
+        // Write all features supported by the node.
+        if (protocolVer.compareTo(VER_2_8_2) >= 0)
+            writer.writeByteArray(JdbcThinFeatures.allFeatures());
     }
 
     /**

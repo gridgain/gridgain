@@ -60,28 +60,33 @@ public class JdbcCachePartitionsResult extends JdbcResult {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver)
+    @Override public void writeBinary(BinaryWriterExImpl writer,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features)
         throws BinaryObjectException {
-        super.writeBinary(writer, ver);
+        super.writeBinary(writer, ver, features);
 
         assert mappings != null;
 
         writer.writeInt(mappings.size());
 
         for (JdbcThinPartitionAwarenessMappingGroup mappingGroup : mappings)
-            mappingGroup.writeBinary(writer, ver);
+            mappingGroup.writeBinary(writer, ver, features);
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver)
+    @Override public void readBinary(BinaryReaderExImpl reader,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features)
         throws BinaryObjectException {
-        super.readBinary(reader, ver);
+        super.readBinary(reader, ver, features);
+
         List<JdbcThinPartitionAwarenessMappingGroup> res = new ArrayList<>();
 
         int mappingsSize = reader.readInt();
 
         for (int i = 0; i < mappingsSize; i++)
-            res.add(JdbcThinPartitionAwarenessMappingGroup.readGroup(reader, ver));
+            res.add(JdbcThinPartitionAwarenessMappingGroup.readGroup(reader, ver, features));
 
         mappings = res;
     }

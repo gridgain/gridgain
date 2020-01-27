@@ -118,14 +118,15 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
         writer.writeInt(status());
 
         if (status() == STATUS_SUCCESS) {
             writer.writeBoolean(res != null);
 
             if (res != null)
-                res.writeBinary(writer, ver);
+                res.writeBinary(writer, ver, features);
         }
         else
             writer.writeString(error());
@@ -144,12 +145,13 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
         status(reader.readInt());
 
         if (status() == STATUS_SUCCESS) {
             if (reader.readBoolean())
-                res = JdbcResult.readResult(reader, ver);
+                res = JdbcResult.readResult(reader, ver, features);
         }
         else
             error(reader.readString());

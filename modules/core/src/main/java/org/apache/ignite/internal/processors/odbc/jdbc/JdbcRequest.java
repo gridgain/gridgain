@@ -98,7 +98,8 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
         writer.writeByte(type);
 
         if (ver.compareTo(VER_2_8_0) >= 0)
@@ -107,7 +108,8 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
 
         if (ver.compareTo(VER_2_8_0) >= 0)
             reqId = reader.readLong();
@@ -132,7 +134,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
      * @throws BinaryObjectException On error.
      */
     public static JdbcRequest readRequest(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver, JdbcThinFeatures features) throws BinaryObjectException {
         int reqType = reader.readByte();
 
         JdbcRequest req;
@@ -217,7 +219,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
                 throw new IgniteException("Unknown SQL listener request ID: [request ID=" + reqType + ']');
         }
 
-        req.readBinary(reader, ver);
+        req.readBinary(reader, ver, features);
 
         return req;
     }

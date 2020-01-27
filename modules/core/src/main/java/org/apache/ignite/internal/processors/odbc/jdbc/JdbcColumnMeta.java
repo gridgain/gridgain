@@ -159,7 +159,8 @@ public class JdbcColumnMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
         writer.writeString(schemaName);
         writer.writeString(tblName);
         writer.writeString(colName);
@@ -171,7 +172,8 @@ public class JdbcColumnMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
         schemaName = reader.readString();
         tblName = reader.readString();
         colName = reader.readString();

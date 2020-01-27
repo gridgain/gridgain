@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.ThinClientFeatures;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -66,8 +67,11 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.8.1: adds query memory quotas.*/
     static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
 
+    /** Version 2.8.2: adds features flags support.*/
+    static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_2;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
@@ -90,11 +94,15 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Request handler. */
     private JdbcRequestHandler handler = null;
 
+    /** Current protocol features. */
+    private JdbcThinFeatures features;
+
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
 
     static {
         SUPPORTED_VERS.add(CURRENT_VER);
+        SUPPORTED_VERS.add(VER_2_8_1);
         SUPPORTED_VERS.add(VER_2_8_0);
         SUPPORTED_VERS.add(VER_2_7_0);
         SUPPORTED_VERS.add(VER_2_5_0);
@@ -178,10 +186,17 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             updateBatchSize = JdbcUtils.readNullableInteger(reader);
 
-            if (ver.compareTo(VER_2_8_1) >= 0){
+            if (ver.compareTo(VER_2_8_1) >= 0) {
                 if (reader.readBoolean())
                     maxMemory = reader.readLong();
             }
+        }
+
+        if (ver.compareTo(VER_2_8_2) >= 0) {
+            byte [] cliFeatures = reader.readByteArray();
+
+            features = new JdbcThinFeatures(
+                ThinClientFeatures.matchFeatures(cliFeatures, JdbcThinFeatures.allFeatures()));
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
@@ -201,7 +216,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        parser = new JdbcMessageParser(ctx, ver);
+        parser = new JdbcMessageParser(ctx, ver, features);
 
         ClientListenerResponseSender sender = new ClientListenerResponseSender() {
             @Override public void send(ClientListenerResponse resp) {

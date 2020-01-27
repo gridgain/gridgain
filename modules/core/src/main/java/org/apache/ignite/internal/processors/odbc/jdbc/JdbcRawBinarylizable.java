@@ -31,17 +31,24 @@ public interface JdbcRawBinarylizable {
      *
      * @param writer Binary object writer.
      * @param ver ver Protocol version.
+     * @param features Features supported by protocol.
      * @throws BinaryObjectException In case of error.
      */
-    public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver) throws BinaryObjectException;
+    public void writeBinary(
+        BinaryWriterExImpl writer,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException;
 
     /**
      * Reads fields from provided reader.
      *
      * @param reader Binary object reader.
      * @param ver Protocol version.
+     * @param features Features supported by protocol.
      * @throws BinaryObjectException In case of error.
      */
-    public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException;
+    public void readBinary(
+        BinaryReaderExImpl reader,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException;
 }

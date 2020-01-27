@@ -64,7 +64,8 @@ public class JdbcQuery implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
         writer.writeString(sql);
 
         if (args == null || args.length == 0)
@@ -79,7 +80,8 @@ public class JdbcQuery implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) {
         sql = reader.readString();
 
         int argsNum = reader.readInt();

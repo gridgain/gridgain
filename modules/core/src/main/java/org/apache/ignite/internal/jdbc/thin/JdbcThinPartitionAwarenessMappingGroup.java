@@ -27,13 +27,13 @@ import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRawBinarylizable;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.jetbrains.annotations.NotNull;
 
 /**
  * Contains cache partitions distributions with corresponding set of cache ids.
  */
 public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinarylizable {
-
     /** Set of cache Ids. */
     private final Set<Integer> cacheIds = new HashSet<>();
 
@@ -94,9 +94,8 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
         UUID[] reverted = new UUID[partsCnt];
 
         for (UUID nodeId : partitionsMappings.keySet()) {
-            for (Integer partition : partitionsMappings.get(nodeId)) {
+            for (Integer partition : partitionsMappings.get(nodeId))
                 reverted[partition] = nodeId;
-            }
         }
 
         return reverted;
@@ -110,7 +109,9 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver)
+    @Override public void writeBinary(BinaryWriterExImpl writer,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features)
         throws BinaryObjectException {
         writer.writeInt(cacheIds.size());
 
@@ -135,7 +136,9 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver)
+    @Override public void readBinary(BinaryReaderExImpl reader,
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features)
         throws BinaryObjectException {
         // No-op.
     }
@@ -149,7 +152,8 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
      * @throws BinaryObjectException In case of error.
      */
     public static JdbcThinPartitionAwarenessMappingGroup readGroup(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        ClientListenerProtocolVersion ver,
+        JdbcThinFeatures features) throws BinaryObjectException {
         JdbcThinPartitionAwarenessMappingGroup res = new JdbcThinPartitionAwarenessMappingGroup();
 
         int cacheIdsSize = reader.readInt();
