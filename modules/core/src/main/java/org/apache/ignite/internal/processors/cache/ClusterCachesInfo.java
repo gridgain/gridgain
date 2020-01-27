@@ -41,6 +41,9 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.GridCachePluginContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -1317,12 +1320,25 @@ class ClusterCachesInfo {
             }
 
             if (hasNonCompatibleConfigurations) {
-                ctx.cache().dynamicDestroyCaches(cachesToDestroy, false);//.get();
+                ctx.discovery().setCustomEventListener(DynamicCacheChangeBatch.class, (top, snd, msg) -> {
+                    DynamicCacheChangeBatch stopReq = (DynamicCacheChangeBatch)msg;
 
-                throw new IllegalStateException("Node can't join to cluster in compatibility mode " +
-                    "with newly configured caches: " + cachesToDestroy + ". Please consider setting \"" +
-                    IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER +
-                    "\" environment variable in order to start these cache(s) using backward compatible protocol.");
+                    Set<String> names =
+                        stopReq.requests().stream().map(req -> req.cacheName()).collect(Collectors.toSet());
+
+                    if (snd.id().equals(ctx.localNodeId()) && !stopReq.startCaches() && names.containsAll(cachesToDestroy)) {
+                        Exception err = new IllegalStateException("Node can't join to cluster in compatibility mode " +
+                            "with newly configured caches: " + cachesToDestroy + ". Please consider setting \"" +
+                            IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER +
+                            "\" environment variable in order to start these cache(s) using backward compatible protocol.");
+
+                        ctx.failure().process(
+                            new FailureContext(FailureType.CRITICAL_ERROR, err),
+                            new StopNodeFailureHandler());
+                    }
+                });
+
+                ctx.cache().dynamicDestroyCaches(cachesToDestroy, false);
             }
         }
     }
