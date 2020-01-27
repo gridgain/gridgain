@@ -448,6 +448,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var localUpdater = Task.Factory.StartNew(() =>
             {
+                // ReSharper disable once AccessToModifiedClosure
                 while (!cancel)
                 {
                     Interlocked.Increment(ref id);
@@ -457,6 +458,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var remoteUpdater = Task.Factory.StartNew(() =>
             {
+                // ReSharper disable once AccessToModifiedClosure
                 while (!cancel)
                 {
                     Interlocked.Increment(ref id);
@@ -466,6 +468,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             var localReader = Task.Factory.StartNew(() =>
             {
+                // ReSharper disable once AccessToModifiedClosure
                 while (!cancel)
                 {
                     var cur = localCache[key].Bar;
@@ -480,7 +483,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             // Get actual value with SQL to bypass caches and verify.
             var actualValue = (int) localCache.Query(new SqlFieldsQuery("select Bar from Foo")).GetAll()[0][0];
-            Assert.AreEqual(id, actualValue);
+            Assert.AreEqual(id, actualValue, "Actual value");
             Assert.AreEqual(id, localCache[key].Bar, "Local value");
             Assert.AreEqual(id, remoteCache[key].Bar, "Remote value");
             Console.WriteLine("Writes: {0}, Reads: {1}", id, getCount);
