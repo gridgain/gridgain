@@ -25,6 +25,7 @@ import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
 
+// t0d0 broken tests should pass after supporting thin java client compatibility for default query timeout
 public class DefaultQueryTimeoutThinJavaTest extends DefaultQueryTimeoutTest {
     @Override protected void executeQuery(String sql) throws Exception {
         try (IgniteClient cli = G.startClient(new ClientConfiguration().setAddresses("127.0.0.1"))) {
