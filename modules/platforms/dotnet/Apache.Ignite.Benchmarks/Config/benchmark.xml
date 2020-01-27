@@ -36,6 +36,17 @@
                     <property name="backups" value="0"/>
                     <property name="atomicityMode" value="ATOMIC"/>
                 </bean>
+                <bean id="cacheNear" class="org.apache.ignite.configuration.CacheConfiguration">
+                    <property name="name" value="cache"/>
+                    <property name="cacheMode" value="PARTITIONED"/>
+                    <property name="writeSynchronizationMode" value="FULL_SYNC"/>
+                    <property name="rebalanceMode" value="SYNC"/>
+                    <property name="backups" value="0"/>
+                    <property name="atomicityMode" value="ATOMIC"/>
+                    <property name="nearConfiguration">
+                        <bean class="org.apache.ignite.configuration.NearCacheConfiguration"/>
+                    </property>                    
+                </bean>
             </list>
         </property>
 

@@ -58,6 +58,7 @@
     <Compile Include="Interop\GetBenchmark.cs" />
     <Compile Include="Interop\PutAsyncBenchmark.cs" />
     <Compile Include="Interop\PutBenchmark.cs" />
+    <Compile Include="Interop\PutNearBenchmark.cs" />
     <Compile Include="Interop\TaskBenchmark.cs" />
     <Compile Include="Interop\TxBenchmark.cs" />
     <Compile Include="Model\Address.cs" />
