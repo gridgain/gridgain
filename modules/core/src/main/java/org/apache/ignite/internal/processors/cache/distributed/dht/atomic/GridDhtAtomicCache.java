@@ -2999,7 +2999,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
             while (true) {
                 GridDhtCacheEntry entry = entryExx(key, topVer);
 
-                entry.lockEntry(true);
+                entry.lockEntry(false);
 
                 if (entry.obsolete())
                     entry.unlockEntry();

@@ -19,16 +19,16 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.LongBinaryOperator;
 import javax.cache.Cache;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
@@ -144,7 +144,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
 
     /** Locks. */
-    static ThreadLocal<Set> locks = ThreadLocal.withInitial(HashSet::new);
+    static ThreadLocal<ConcurrentHashMap<ReentrantLock, LongAdder>> locks = ThreadLocal.withInitial(ConcurrentHashMap::new);
 
     /**
      * NOTE
@@ -5033,19 +5033,33 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     public void lockEntry(boolean nestedLocksAllowed) {
-        if (!nestedLocksAllowed && !locks.get().isEmpty() && !locks.get().contains(lock))
-            throw new RuntimeException("Nested locks are not allowed");
+        ConcurrentHashMap<ReentrantLock, LongAdder> map = locks.get();
+
+        map.putIfAbsent(lock, new LongAdder());
+
+        boolean nestedLocksExists = map.reduceValuesToLong(1, LongAdder::longValue, 0L, new LongBinaryOperator() {
+            @Override public long applyAsLong(long left, long right) {
+                return left + right;
+            }
+        }) - map.get(lock).longValue() > 0;
+
+        if (!nestedLocksAllowed) {
+            if (!map.isEmpty()) {
+                if (nestedLocksExists)
+                    throw new RuntimeException("Nested locks are not allowed");
+            }
+        }
 
         lock.lock();
 
-        locks.get().add(lock);
+        map.get(lock).increment();
     }
 
     /** {@inheritDoc} */
     @Override public void unlockEntry() {
         lock.unlock();
 
-        locks.get().remove(lock);
+        locks.get().get(lock).decrement();
     }
 
     /**
