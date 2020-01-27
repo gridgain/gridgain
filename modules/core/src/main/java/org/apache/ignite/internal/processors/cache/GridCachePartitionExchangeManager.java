@@ -3359,7 +3359,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             }
                         }
 
-                        if (!cctx.kernalContext().clientNode() && (exchFut == null || isRebalanceRequire(exchFut))) {
+                        if (rebalanceRequired(exchFut)) {
                             if (rebalanceDelay > 0)
                                 U.sleep(rebalanceDelay);
 
@@ -3512,12 +3512,19 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         }
 
         /**
-         * Checks all caches and dicides required rebalance or not for specific exchange.
+         * Rebalance is not required on client node and always required when exchange future is null.
+         * In othe cases the methid checks all caches and decides required rebalance or not for specific exchange.
          *
          * @param exchFut Exchnage future.
-         * @return True than rebalance required, false otherwise.
+         * @return {@code True} if rebalance is required at least for one of cache groups.
          */
-        private boolean isRebalanceRequire(GridDhtPartitionsExchangeFuture exchFut) {
+        private boolean rebalanceRequired(GridDhtPartitionsExchangeFuture exchFut) {
+            if (cctx.kernalContext().clientNode())
+                return false;
+
+            if (exchFut == null)
+                return true;
+
             for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                 if (grp.isLocal())
                     continue;

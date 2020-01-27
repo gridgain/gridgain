@@ -314,7 +314,8 @@ public class GridDhtPartitionDemander {
             }
 
             if (!force && (!oldFut.isDone() || oldFut.result()) && oldFut.compatibleWith(assignments)) {
-                commonRebalanceFuture.add(oldFut);
+                if (!oldFut.isDone())
+                    commonRebalanceFuture.add(oldFut);
 
                 return null;
             }
@@ -335,6 +336,8 @@ public class GridDhtPartitionDemander {
             else
                 fut.listen(f -> oldFut.onDone(f.result()));
 
+            //Clear partitions which will be fully rebalance.
+            //Can to do this only after made decision to trigger new rebalance.
             for (Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> e : assignments.entrySet()) {
                 for (Integer partId: e.getValue().partitions().fullSet()) {
                     GridDhtLocalPartition part = grp.topology().localPartition(partId);
@@ -439,8 +442,8 @@ public class GridDhtPartitionDemander {
         }
 
         if (fut.isDone()) {
-            assert !fut.result() : "Rebalance future was done, but partitions never requested grp = "
-                + grp.cacheOrGroupName();
+            assert !fut.result() : "Rebalance future was done, but partitions never requested [grp="
+                + grp.cacheOrGroupName() + ", topVer=" + fut.topologyVersion() + "]";
 
             return;
         }
@@ -1619,6 +1622,8 @@ public class GridDhtPartitionDemander {
 
         /**
          * @param otherAssignments Newest assigmnets.
+         *
+         * @return {@code True} when future compared with other, {@False} otherwise.
          */
         public boolean compatibleWith(GridDhtPreloaderAssignments otherAssignments) {
             if (isInitial())
