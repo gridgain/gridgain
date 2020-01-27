@@ -100,8 +100,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
             try {
                 keyCacheObj = unmarshalKey(dataEntry.getKey(), ctx);
             }
-            catch (IgniteCheckedException ignored) {
-                U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey() + "], key is skipped.");
+            catch (IgniteCheckedException e) {
+                U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey() + "], key is skipped.", e);
 
                 continue;
             }

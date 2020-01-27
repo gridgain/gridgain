@@ -39,6 +39,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
@@ -307,7 +308,7 @@ public class ConsistencyCheckUtils {
      * @param obj Object.
      */
     public static String objectStringView(CacheObjectContext ctx, CacheObject obj) {
-        if (obj instanceof KeyCacheObjectImpl)
+        if (obj instanceof KeyCacheObjectImpl || obj instanceof CacheObjectImpl)
             return Objects.toString(obj.value(ctx, false));
 
         return Objects.toString(obj);
