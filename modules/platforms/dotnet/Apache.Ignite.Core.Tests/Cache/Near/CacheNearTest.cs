@@ -285,10 +285,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestSameNearCacheWithDifferentGenericTypeParameters()
         {
-            var cache1 = _grid.GetCache<int, int>(CacheName);
-            var cache2 = _grid.GetCache<string, string>(CacheName);
-            var cache3 = _grid.GetCache<int, Foo>(CacheName);
-            var cache4 = _grid.GetCache<object, object>(CacheName);
+            var cacheName = TestContext.CurrentContext.Test.Name;
+            
+            var cache1 = _grid.CreateCache<int, int>(cacheName);
+            var cache2 = _grid.GetCache<string, string>(cacheName);
+            var cache3 = _grid.GetCache<int, Foo>(cacheName);
+            var cache4 = _grid.GetCache<object, object>(cacheName);
 
             cache1[1] = 1;
             cache2["1"] = "1";
