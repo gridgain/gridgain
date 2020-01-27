@@ -134,21 +134,30 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Tests that near cache returns the same object instance as we put there.
+        /// Tests that near cache does not return same instance that we Put there:
+        /// there is always serialize-deserialize roundtrip.
         /// </summary>
         [Test]
-        public void TestNearCachePutGetReturnsSameObjectReference(
+        public void TestNearCachePutGetReturnsNewObject(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
             var cache = GetCache<int, Foo>(mode);
             var key = (int) mode;
 
-            var obj1 = new Foo(key);
+            var obj = new Foo(key);
             
-            cache[key] = obj1;
+            cache[key] = obj;
             var res1 = cache[key];
+            var res2 = cache[key];
 
-            Assert.AreSame(obj1, res1);
+            // Returned object is Equal to the initial.
+            Assert.AreEqual(obj, res1);
+            
+            // But not the same - new instance is stored in Near Cache.
+            Assert.AreNotSame(obj, res1);
+            
+            // Repeated Get call returns same instance from Near Cache.
+            Assert.AreSame(res1, res2);
         }
 
         /// <summary>
@@ -555,7 +564,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /** */
-        private class Foo
+        private class Foo : IEquatable<Foo>
         {
             public Foo(int bar = 0)
             {
@@ -571,6 +580,27 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             public override string ToString()
             {
                 return string.Format("Foo [Bar={0}, TestName={1}]", Bar, TestName);
+            }
+
+            public bool Equals(Foo other)
+            {
+                return Bar == other.Bar && TestName == other.TestName;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((Foo) obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    return (Bar * 397) ^ (TestName != null ? TestName.GetHashCode() : 0);
+                }
             }
         }
         
