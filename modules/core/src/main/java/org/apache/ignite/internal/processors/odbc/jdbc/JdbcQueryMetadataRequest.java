@@ -54,18 +54,16 @@ public class JdbcQueryMetadataRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.writeBinary(writer, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.writeBinary(writer, binCtx);
 
         writer.writeLong(cursorId);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.readBinary(reader, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.readBinary(reader, binCtx);
 
         cursorId = reader.readLong();
     }

@@ -18,6 +18,8 @@ package org.apache.ignite.internal.jdbc.thin;
 
 import java.util.UUID;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBinaryContext;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 /**
@@ -33,6 +35,9 @@ class HandshakeResult {
 
     /** Current protocol version used to connection to Ignite. */
     private ClientListenerProtocolVersion srvProtoVer;
+
+    /** Features. */
+    private JdbcThinFeatures features;
 
     /**
      * @return Ignite server version.
@@ -74,5 +79,19 @@ class HandshakeResult {
      */
     void serverProtocolVersion(ClientListenerProtocolVersion srvProtoVer) {
         this.srvProtoVer = srvProtoVer;
+    }
+
+    /**
+     * @param features Supported features.
+     */
+    public void features(JdbcThinFeatures features) {
+        this.features = features;
+    }
+
+    /**
+     * @return Supported features.
+     */
+    public JdbcThinFeatures features() {
+        return features;
     }
 }

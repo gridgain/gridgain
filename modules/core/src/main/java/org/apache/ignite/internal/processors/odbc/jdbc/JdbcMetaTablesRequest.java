@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
@@ -80,27 +79,25 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.writeBinary(writer, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.writeBinary(writer, binCtx);
 
         writer.writeString(schemaName);
         writer.writeString(tblName);
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
             writer.writeStringArray(tblTypes);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.readBinary(reader, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.readBinary(reader, binCtx);
 
         schemaName = reader.readString();
         tblName = reader.readString();
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
             tblTypes = reader.readStringArray();
     }
 

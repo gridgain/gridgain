@@ -95,7 +95,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     private JdbcRequestHandler handler = null;
 
     /** Current protocol features. */
-    private JdbcThinFeatures features;
+    private JdbcBinaryContext binCtx;
 
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
@@ -192,6 +192,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         }
 
+        JdbcThinFeatures features = null;
+
         if (ver.compareTo(VER_2_8_2) >= 0) {
             byte [] cliFeatures = reader.readByteArray();
 
@@ -216,7 +218,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        parser = new JdbcMessageParser(ctx, ver, features);
+        binCtx = new JdbcBinaryContext(ver, features);
+
+        parser = new JdbcMessageParser(ctx, binCtx);
 
         ClientListenerResponseSender sender = new ClientListenerResponseSender() {
             @Override public void send(ClientListenerResponse resp) {

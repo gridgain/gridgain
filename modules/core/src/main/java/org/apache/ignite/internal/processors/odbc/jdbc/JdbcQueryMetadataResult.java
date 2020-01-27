@@ -59,9 +59,8 @@ public class JdbcQueryMetadataResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.writeBinary(writer, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.writeBinary(writer, binCtx);
 
         if (F.isEmpty(meta))
             writer.writeInt(0);
@@ -69,14 +68,14 @@ public class JdbcQueryMetadataResult extends JdbcResult {
             writer.writeInt(meta.size());
 
             for (JdbcColumnMeta m : meta)
-                m.writeBinary(writer, ver, features);
+                m.writeBinary(writer, binCtx);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,  JdbcThinFeatures features) throws BinaryObjectException {
-        super.readBinary(reader, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.readBinary(reader, binCtx);
 
         int size = reader.readInt();
 
@@ -88,7 +87,7 @@ public class JdbcQueryMetadataResult extends JdbcResult {
             for (int i = 0; i < size; ++i) {
                 JdbcColumnMeta m = new JdbcColumnMeta();
 
-                m.readBinary(reader, ver, features);
+                m.readBinary(reader, binCtx);
 
                 meta.add(m);
             }

@@ -81,15 +81,14 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.writeBinary(writer, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.writeBinary(writer, binCtx);
 
         if (results != null && !results.isEmpty()) {
             writer.writeInt(results.size());
 
             for (JdbcResultInfo r : results)
-                r.writeBinary(writer, ver, features);
+                r.writeBinary(writer, binCtx);
 
             if (results.get(0).isQuery()) {
                 writer.writeBoolean(last);
@@ -104,9 +103,8 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.readBinary(reader, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.readBinary(reader, binCtx);
 
         int cnt = reader.readInt();
 
@@ -118,7 +116,7 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
             for (int i = 0; i < cnt; ++i) {
                 JdbcResultInfo r = new JdbcResultInfo();
 
-                r.readBinary(reader, ver, features);
+                r.readBinary(reader, binCtx);
 
                 results.add(r);
             }

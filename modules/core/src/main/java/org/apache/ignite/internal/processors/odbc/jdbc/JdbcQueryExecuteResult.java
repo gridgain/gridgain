@@ -124,9 +124,8 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.writeBinary(writer, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.writeBinary(writer, binCtx);
 
         writer.writeLong(cursorId);
         writer.writeBoolean(isQuery);
@@ -143,15 +142,14 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
         writer.writeBoolean(partRes != null);
 
-        if (ver.compareTo(VER_2_8_0) >= 0 && partRes != null)
+        if (binCtx.version().compareTo(VER_2_8_0) >= 0 && partRes != null)
             PartitionResultMarshaler.marshal(writer, partRes);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.readBinary(reader, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.readBinary(reader, binCtx);
 
         cursorId = reader.readLong();
         isQuery = reader.readBoolean();
@@ -167,7 +165,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
             updateCnt = reader.readLong();
         }
 
-        if (ver.compareTo(VER_2_8_0) >= 0 && reader.readBoolean())
+        if (binCtx.version().compareTo(VER_2_8_0) >= 0 && reader.readBoolean())
             partRes = PartitionResultMarshaler.unmarshal(reader);
     }
 

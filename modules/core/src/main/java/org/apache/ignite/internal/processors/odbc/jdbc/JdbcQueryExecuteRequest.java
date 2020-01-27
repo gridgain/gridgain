@@ -141,9 +141,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.writeBinary(writer, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.writeBinary(writer, binCtx);
 
         writer.writeString(schemaName);
         writer.writeInt(pageSize);
@@ -157,20 +156,19 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
                 SqlListenerUtils.writeObject(writer, arg, false);
         }
 
-        if (ver.compareTo(VER_2_7_0) >= 0)
+        if (binCtx.version().compareTo(VER_2_7_0) >= 0)
             writer.writeBoolean(autoCommit);
 
         writer.writeByte((byte)stmtType.ordinal());
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
             writer.writeBoolean(partResReq);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.readBinary(reader, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.readBinary(reader, binCtx);
 
         schemaName = reader.readString();
         pageSize = reader.readInt();
@@ -184,7 +182,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         for (int i = 0; i < argsNum; ++i)
             args[i] = SqlListenerUtils.readObject(reader, false);
 
-        if (ver.compareTo(VER_2_7_0) >= 0)
+        if (binCtx.version().compareTo(VER_2_7_0) >= 0)
             autoCommit = reader.readBoolean();
 
         try {
@@ -197,7 +195,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             throw new BinaryObjectException(e);
         }
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
             partResReq = reader.readBoolean();
     }
 

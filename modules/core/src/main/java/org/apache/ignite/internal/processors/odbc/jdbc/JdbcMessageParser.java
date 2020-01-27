@@ -23,7 +23,6 @@ import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryHeapOutputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 
@@ -34,26 +33,20 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
     /** Kernal context. */
     private final GridKernalContext ctx;
 
-    /** Client protocol version. */
-    private final ClientListenerProtocolVersion ver;
-
-    /** Features. */
-    private final JdbcThinFeatures features;
+    /** Binary context. */
+    private final JdbcBinaryContext binCtx;
 
     /** Initial output stream capacity. */
     protected static final int INIT_CAP = 1024;
 
     /**
      * @param ctx Context.
-     * @param ver Client protocol version.
-     * @param features Features supported by the protocol.
+     * @param binCtx Binary context.
      */
     public JdbcMessageParser(GridKernalContext ctx,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) {
+        JdbcBinaryContext binCtx) {
         this.ctx = ctx;
-        this.ver = ver;
-        this.features = features;
+        this.binCtx = binCtx;
     }
 
     /**
@@ -80,7 +73,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryReaderExImpl reader = createReader(msg);
 
-        return JdbcRequest.readRequest(reader, ver, features);
+        return JdbcRequest.readRequest(reader, binCtx);
     }
 
     /** {@inheritDoc} */
@@ -93,7 +86,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryWriterExImpl writer = createWriter(INIT_CAP);
 
-        res.writeBinary(writer, ver, features);
+        res.writeBinary(writer, binCtx);
 
         return writer.array();
     }

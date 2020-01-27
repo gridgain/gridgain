@@ -26,6 +26,7 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBinaryContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRawBinarylizable;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.jetbrains.annotations.NotNull;
@@ -110,8 +111,7 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features)
+        JdbcBinaryContext binCtx)
         throws BinaryObjectException {
         writer.writeInt(cacheIds.size());
 
@@ -137,8 +137,7 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features)
+        JdbcBinaryContext binCtx)
         throws BinaryObjectException {
         // No-op.
     }
@@ -147,13 +146,12 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
      * Reads <code>JdbcThinPartitionAwarenessMappingGroup</code> from provided reader.
      *
      * @param reader Binary object reader.
-     * @param ver Protocol version.
+     * @param binCtx Binary context.
      * @return Deserialized instance of <code>JdbcThinPartitionAwarenessMappingGroup</code>.
      * @throws BinaryObjectException In case of error.
      */
     public static JdbcThinPartitionAwarenessMappingGroup readGroup(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
         JdbcThinPartitionAwarenessMappingGroup res = new JdbcThinPartitionAwarenessMappingGroup();
 
         int cacheIdsSize = reader.readInt();

@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBatchExecuteRequest;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBinaryContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcOrderedBatchExecuteRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQuery;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryCancelRequest;
@@ -144,7 +145,7 @@ public class JdbcThinTcpIo {
     private final ClientListenerProtocolVersion srvProtoVer;
 
     /** Features set are supported by the current protocol. */
-    private JdbcThinFeatures features;
+    private JdbcBinaryContext binCtx;
 
     /**
      * Start connection and perform handshake.
@@ -226,6 +227,8 @@ public class JdbcThinTcpIo {
         nodeId = handshakeRes.nodeId();
 
         srvProtoVer = handshakeRes.serverProtocolVersion();
+
+        binCtx = new JdbcBinaryContext(srvProtoVer, handshakeRes.features());
     }
 
     /**
@@ -305,8 +308,8 @@ public class JdbcThinTcpIo {
                 if (ver.compareTo(VER_2_8_2) >= 0) {
                     byte[] srvFeatures = reader.readByteArray();
 
-                    features = new JdbcThinFeatures(
-                        AbstractThinClientFeatures.matchFeatures(srvFeatures, JdbcThinFeatures.allFeatures()));
+                    handshakeRes.features(
+                        new JdbcThinFeatures(AbstractThinClientFeatures.matchFeatures(srvFeatures, JdbcThinFeatures.allFeatures())));
                 }
             }
             else {
@@ -470,7 +473,7 @@ public class JdbcThinTcpIo {
 
         JdbcResponse res = new JdbcResponse();
 
-        res.readBinary(reader, srvProtoVer, features);
+        res.readBinary(reader, binCtx);
 
         return res;
     }
@@ -514,7 +517,7 @@ public class JdbcThinTcpIo {
         BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(cap),
             null, null);
 
-        req.writeBinary(writer, srvProtoVer, features);
+        req.writeBinary(writer, binCtx);
 
         synchronized (connMux) {
             send(writer.array());

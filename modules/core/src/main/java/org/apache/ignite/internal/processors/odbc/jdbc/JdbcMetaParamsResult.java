@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -50,9 +49,8 @@ public class JdbcMetaParamsResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.writeBinary(writer, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.writeBinary(writer, binCtx);
 
         if (F.isEmpty(meta))
             writer.writeInt(0);
@@ -60,15 +58,14 @@ public class JdbcMetaParamsResult extends JdbcResult {
             writer.writeInt(meta.size());
 
             for(JdbcParameterMeta m : meta)
-                m.writeBinary(writer, ver, features);
+                m.writeBinary(writer, binCtx);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver,
-        JdbcThinFeatures features) throws BinaryObjectException {
-        super.readBinary(reader, ver, features);
+        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        super.readBinary(reader, binCtx);
 
         int size = reader.readInt();
 
@@ -80,7 +77,7 @@ public class JdbcMetaParamsResult extends JdbcResult {
             for (int i = 0; i < size; ++i) {
                 JdbcParameterMeta m = new JdbcParameterMeta();
 
-                m.readBinary(reader, ver, features);
+                m.readBinary(reader, binCtx);
 
                 meta.add(m);
             }
