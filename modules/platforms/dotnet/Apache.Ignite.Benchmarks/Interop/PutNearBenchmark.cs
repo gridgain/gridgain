@@ -25,7 +25,7 @@
         /** <inheritDoc /> */
         protected override void GetDescriptors(ICollection<BenchmarkOperationDescriptor> descs)
         {
-            descs.Add(BenchmarkOperationDescriptor.Create("Put", Put, 1));
+            descs.Add(BenchmarkOperationDescriptor.Create("PutNear", Put, 1));
         }
         
         /// <summary>
