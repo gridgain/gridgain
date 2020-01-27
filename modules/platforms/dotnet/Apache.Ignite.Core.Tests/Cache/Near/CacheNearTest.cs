@@ -183,8 +183,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.AreSame(res1, res2);
             Assert.AreEqual(3, res1.Bar);
-
-            Assert.AreEqual(localPut, ReferenceEquals(obj, res1));
         }
         
         /// <summary>
@@ -331,13 +329,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var value = new Foo(5);
             cache[1] = value;
-            Assert.AreSame(value, cache[1]);
             
             cache.Query(new SqlFieldsQuery("update Foo set Bar = 7 where Bar = 5"));
 
             var res = cache[1];
             Assert.AreEqual(7, res.Bar);
-            Assert.AreNotSame(value, cache[1]);
         }
 
         /// <summary>
