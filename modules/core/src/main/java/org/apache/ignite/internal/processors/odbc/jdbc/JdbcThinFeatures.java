@@ -18,12 +18,12 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.util.HashSet;
 import java.util.Set;
-import org.apache.ignite.internal.ThinClientFeatures;
+import org.apache.ignite.internal.AbstractThinClientFeatures;
 
 /**
  * Defines supported features for JDBC thin client.
  */
-public class JdbcThinFeatures extends ThinClientFeatures {
+public class JdbcThinFeatures extends AbstractThinClientFeatures {
     /** All features. */
     private static final Set<Feature> ALL_FEATURES = new HashSet<>();
 
@@ -46,12 +46,12 @@ public class JdbcThinFeatures extends ThinClientFeatures {
     }
 
     /** */
-    public static class Feature extends ThinClientFeatures.Feature {
+    public static class Feature extends AbstractFeature {
         /**
          * @param featureId Feature Id.
          * @param name Feature name.
          */
-        public Feature(int featureId, String name) {
+        private Feature(int featureId, String name) {
             super(featureId, name);
         }
     }

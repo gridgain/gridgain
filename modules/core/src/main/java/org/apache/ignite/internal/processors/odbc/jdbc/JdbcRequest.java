@@ -130,6 +130,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
     /**
      * @param reader Binary reader.
      * @param ver Protocol version.
+     * @param features Supported features.
      * @return Request object.
      * @throws BinaryObjectException On error.
      */

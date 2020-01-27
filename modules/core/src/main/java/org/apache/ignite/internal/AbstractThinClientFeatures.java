@@ -24,33 +24,35 @@ import java.util.Set;
 /**
  * Defines supported features for thin clients (JDBC, ODBC, thin client) and node.
  */
-public class ThinClientFeatures {
+public abstract class AbstractThinClientFeatures {
     /** Features. */
     private final byte [] features;
 
     /**
      * @param features Supported features.
      */
-    public ThinClientFeatures(byte [] features) {
+    protected AbstractThinClientFeatures(byte [] features) {
         this.features = features;
     }
 
     /**
      * @param feature The feature to chek support.
      * @return {@code True} if feature is declared to be supported.
+     * @param <E> Features type (JDBC, thin cli, ODBC)
      */
-    <E extends Feature> boolean supports(E feature) {
+    public <E extends AbstractFeature> boolean supports(E feature) {
         return supports(features, feature);
     }
 
     /**
      * @param features Features set.
      * @return Byte array representing all supported features by current node.
+     * @param <E> Features type (JDBC, thin cli, ODBC)
      */
-    public static <E extends Feature> byte[] features(Collection<E> features) {
+    public static <E extends AbstractFeature> byte[] features(Collection<E> features) {
         final BitSet set = new BitSet();
 
-        for (Feature f : features) {
+        for (AbstractFeature f : features) {
             final int featureBit = f.bitIdx + (f.byteIdx << 3);
 
             assert !set.get(featureBit) : "Duplicate thin clients feature ID found for [" + f.name() + "] having same ID ["
@@ -68,8 +70,9 @@ public class ThinClientFeatures {
      * @param featuresAttrBytes Byte array value of supported features.
      * @param feature Feature to check.
      * @return {@code True} if feature is declared to be supported.
+     * @param <E> Features type (JDBC, thin cli, ODBC),
      */
-    public static <E extends Feature> boolean supports(byte[] featuresAttrBytes, E feature) {
+    public static <E extends AbstractFeature> boolean supports(byte[] featuresAttrBytes, E feature) {
         if (featuresAttrBytes == null)
             return false;
 
@@ -96,21 +99,22 @@ public class ThinClientFeatures {
     /**
      * @param features features set.
      * @param f feature to register.
+     * @param <E> Features type (JDBC, thin cli, ODBC)
      */
-    public static <E extends Feature> void register(Set<E> features, E f) {
+    public static <E extends AbstractFeature> void register(Set<E> features, E f) {
         boolean res = features.add(f);
 
         assert res : "Duplicate thin clients feature ID found for [" + f.name() + "] having same ID";
     }
 
     /**
-     *
+     * The base feature class.
      */
-    public static class Feature {
-        /** Feature id. */
+    public abstract static class AbstractFeature {
+        /** Feature byte index. */
         private final int byteIdx;
 
-        /** Feature id. */
+        /** Feature bit index. */
         private final int bitIdx;
 
         /** Name. */
@@ -120,9 +124,9 @@ public class ThinClientFeatures {
          * @param featureId Feature Id.
          * @param name Feature name.
          */
-        public Feature (int featureId, String name) {
-            this.byteIdx = featureId >>> 3;
-            this.bitIdx = featureId & 0x7;
+        protected AbstractFeature(int featureId, String name) {
+            byteIdx = featureId >>> 3;
+            bitIdx = featureId & 0x7;
             this.name = name;
         }
 
@@ -134,14 +138,14 @@ public class ThinClientFeatures {
         }
 
         /**
-         * @return
+         * @return The feature's flag bit index in the byte.
          */
         int bitIdx() {
             return bitIdx;
         }
 
         /**
-         * @return
+         * @return The feature's byte index where the features flag is placed.
          */
         int byteIdx() {
             return byteIdx;
@@ -153,7 +157,7 @@ public class ThinClientFeatures {
                 return true;
             if (o == null || getClass() != o.getClass())
                 return false;
-            Feature feature = (Feature)o;
+            AbstractFeature feature = (AbstractFeature)o;
             return byteIdx == feature.byteIdx &&
                 bitIdx == feature.bitIdx;
         }

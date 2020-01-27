@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
-import org.apache.ignite.internal.ThinClientFeatures;
+import org.apache.ignite.internal.AbstractThinClientFeatures;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -306,7 +306,7 @@ public class JdbcThinTcpIo {
                     byte[] srvFeatures = reader.readByteArray();
 
                     features = new JdbcThinFeatures(
-                        ThinClientFeatures.matchFeatures(srvFeatures, JdbcThinFeatures.allFeatures()));
+                        AbstractThinClientFeatures.matchFeatures(srvFeatures, JdbcThinFeatures.allFeatures()));
                 }
             }
             else {
