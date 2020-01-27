@@ -25,10 +25,8 @@ import java.util.UUID;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBinaryContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRawBinarylizable;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.jetbrains.annotations.NotNull;
 
 /**

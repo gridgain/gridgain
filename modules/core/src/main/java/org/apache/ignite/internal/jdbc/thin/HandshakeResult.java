@@ -18,7 +18,6 @@ package org.apache.ignite.internal.jdbc.thin;
 
 import java.util.UUID;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBinaryContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.apache.ignite.lang.IgniteProductVersion;
 
