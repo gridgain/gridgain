@@ -353,10 +353,7 @@ public class PlatformCache extends PlatformAbstractTarget {
     public static final int OP_NEAR_CACHE_QRY_CONTINUOUS = 93;
 
     /** */
-    public static final int OP_GET_NEAR = 1005;
-
-    /** */
-    private static final int OP_PUT_NEAR = 1026;
+    public static final int OP_GET_NEAR = 1001;
 
     /** Underlying JCache in binary mode. */
     private final IgniteCacheProxy cache;
@@ -440,6 +437,11 @@ public class PlatformCache extends PlatformAbstractTarget {
 
                 case OP_GET:
                     return writeResult(mem, cache.get(reader.readObjectDetached()));
+
+                case OP_GET_NEAR:
+                    cache.get(reader.readObjectDetached());
+
+                    return TRUE;
 
                 case OP_REMOVE_BOOL:
                     return cache.remove(reader.readObjectDetached(), reader.readObjectDetached()) ? TRUE : FALSE;

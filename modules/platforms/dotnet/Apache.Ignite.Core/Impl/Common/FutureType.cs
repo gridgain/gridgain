@@ -49,6 +49,9 @@ namespace Apache.Ignite.Core.Impl.Common
         Double = 8,
 
         /// <summary> Future type: object. </summary>
-        Object = 9
+        Object = 9,
+        
+        /// <summary> Future type: force null (ignore result). </summary>
+        Null = 10
     }
 }
