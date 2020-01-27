@@ -2961,6 +2961,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (trackNear && oldExpireTime != 0 && (expireTime != oldExpireTime || isStartVersion()))
             cctx.ttl().removeTrackedEntry((GridNearCacheEntry)this);
 
+        // TODO: This is called on client on Get when first loading the value from remote node
+        // Needs a callback to Platform
         value(val);
 
         ttlAndExpireTimeExtras(ttl, expireTime);
