@@ -443,7 +443,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cancel = false;
             const int key = 1;
             var id = 1;
-            var getCount = 0;
             remoteCache[1] = new Foo(id);
 
             var localUpdater = Task.Factory.StartNew(() =>
@@ -473,7 +472,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 {
                     var cur = localCache[key].Bar;
                     Assert.GreaterOrEqual(id, cur);
-                    getCount++;
                 }
             });
 
@@ -482,12 +480,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Task.WaitAll(localUpdater, remoteUpdater, localReader);
 
             // Get actual value with SQL to bypass caches and verify.
-            var actualValue = (int) localCache.Query(new SqlFieldsQuery("select Bar from Foo")).GetAll()[0][0];
-            Assert.AreEqual(id, actualValue, "Actual value");
+            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            {
+                var actualValue = (int) localCache.Query(new SqlFieldsQuery("select Bar from Foo")).GetAll()[0][0];
+                return id == actualValue;
+            }, 3000), "Actual value");
+            
             Assert.AreEqual(id, localCache[key].Bar, "Local value");
             Assert.AreEqual(id, remoteCache[key].Bar, "Remote value");
-            Console.WriteLine("Writes: {0}, Reads: {1}", id, getCount);
-            Console.WriteLine("Actual value: " + actualValue);
         }
 
         [Test]
@@ -587,7 +587,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             public bool Equals(Foo other)
             {
-                return Bar == other.Bar && TestName == other.TestName;
+                return other != null && Bar == other.Bar && TestName == other.TestName;
             }
 
             public override bool Equals(object obj)
