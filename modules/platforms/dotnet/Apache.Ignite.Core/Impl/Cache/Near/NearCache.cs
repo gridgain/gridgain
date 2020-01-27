@@ -147,27 +147,28 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     if (val is TV)
                     {
-                        _map[(TK)key] = new NearCacheEntry<TV>(true, (TV) val);
+                        _map[(TK) key] = new NearCacheEntry<TV>(true, (TV) val);
+                        return;
                     }
                 }
                 else
                 {
                     NearCacheEntry<TV> unused;
                     _map.TryRemove((TK) key, out unused);
+                    return;
                 }
             }
 
-            if (_fallbackMap != null)
+            EnsureFallbackMap();
+
+            if (hasVal)
             {
-                if (hasVal)
-                {
-                    _fallbackMap[key] = new NearCacheEntry<object>(true, val);
-                }
-                else
-                {
-                    NearCacheEntry<object> unused;
-                    _fallbackMap.TryRemove(key, out unused);
-                }
+                _fallbackMap[key] = new NearCacheEntry<object>(true, val);
+            }
+            else
+            {
+                NearCacheEntry<object> unused;
+                _fallbackMap.TryRemove(key, out unused);
             }
         }
 
