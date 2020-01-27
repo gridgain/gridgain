@@ -457,8 +457,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return val;
             }
 
-            // TODO: Avoid deserialization in GetInternal: we get the callback anyway.
-            GetInternal(key);
+            DoOutOp(CacheOp.GetNear, key);
             if (_nearCache.TryGetValue(key, out val))
             {
                 return val;

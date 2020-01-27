@@ -439,6 +439,7 @@ public class PlatformCache extends PlatformAbstractTarget {
                     return writeResult(mem, cache.get(reader.readObjectDetached()));
 
                 case OP_GET_NEAR:
+                    // Result is delivered through PlatformContext.updateNearCache
                     cache.get(reader.readObjectDetached());
 
                     return TRUE;
