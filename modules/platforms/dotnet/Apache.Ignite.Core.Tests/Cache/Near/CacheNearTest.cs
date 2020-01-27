@@ -483,16 +483,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cancel = true;
             Task.WaitAll(localUpdater, remoteUpdater, localReader);
 
-            // Get actual value with SQL to bypass caches and verify.
-            int actualValue = -1;
-            Assert.IsTrue(TestUtils.WaitForCondition(() =>
-            {
-                actualValue = (int) localCache.Query(new SqlFieldsQuery("select Bar from Foo")).GetAll()[0][0];
-                return id == actualValue;
-            }, 3000), string.Format("Value from SQL `{0}` is not equal to the latest ID `{1}`", actualValue, id));
+            // Get actual value with SQL to bypass caches.
+            // Actual value may not be equal to the latest id because two threads compete in Put calls.
+            var actualValue = (int) localCache.Query(new SqlFieldsQuery("select Bar from Foo")).GetAll()[0][0];
             
-            Assert.AreEqual(id, localCache[key].Bar, "Local value");
-            Assert.AreEqual(id, remoteCache[key].Bar, "Remote value");
+            Assert.AreEqual(actualValue, localCache[key].Bar, "Local value");
+            Assert.AreEqual(actualValue, remoteCache[key].Bar, "Remote value");
         }
 
         [Test]
