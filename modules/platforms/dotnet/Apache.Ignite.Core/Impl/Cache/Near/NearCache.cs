@@ -16,9 +16,9 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
+    using System.Threading;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
@@ -35,6 +35,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Non-generic map. Switched to when same cache is used with different generic arguments.
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, object> _fallbackMap;
+        
+        /** Lock object for fallback mode switch. */
+        private readonly object _fallbackLock = new object();
+        
+        /** Fallback init gate. */
+        private readonly ManualResetEventSlim _fallbackInit = new ManualResetEventSlim(false);
 
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
@@ -50,6 +56,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             
             if (_fallbackMap != null)
             {
+                _fallbackInit.Wait();
+                
                 object fallbackEntry;
                 if (_fallbackMap.TryGetValue(key, out fallbackEntry))
                 {
@@ -72,42 +80,37 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var key = reader.ReadObject<object>();
             var hasVal = reader.ReadBoolean();
             var val = hasVal ? reader.ReadObject<object>() : null;
+            var typeMatch = key is TK && (!hasVal || val is TV);
 
             var map = _map;
-            if (map != null && key is TK)
+            if (map != null && typeMatch)
             {
                 if (hasVal)
                 {
-                    if (val is TV)
-                    {
-#if DEBUG
-                        _map.AddOrUpdate((TK) key, (TV)val, (k, oldVal) =>
-                        {
-                            if (Equals(oldVal, val))
-                            {
-                                var msg = "Suspicious NearCache update, old and new values are identical: " + val;
-                                Console.WriteLine(msg);
-                                throw new Exception(msg);
-                            }
-
-                            return (TV) val;
-                        });
-#endif
-                        
-                        _map[(TK) key] = (TV) val;
-
-                        return;
-                    }
+                    _map[(TK) key] = (TV) val;
                 }
                 else
                 {
                     TV unused;
-                    _map.TryRemove((TK) key, out unused);
-                    return;
+                    map.TryRemove((TK) key, out unused);
                 }
             }
 
-            EnsureFallbackMap();
+            if (!typeMatch)
+            {
+                // Type mismatch: must switch to fallback map and update it.
+                EnsureFallbackMap();
+            }
+            else if (_fallbackMap != null)
+            {
+                // Type match, but fallback map exists: wait for init and proceed to update.
+                _fallbackInit.Wait();
+            }
+            else
+            {
+                // Type match and no fallback map: exit.
+                return;
+            }
 
             if (hasVal)
             {
@@ -137,11 +140,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (map != null && key is TK)
             {
                 TV unused;
-                _map.TryRemove((TK) key, out unused);
+                map.TryRemove((TK) key, out unused);
             }
 
             if (_fallbackMap != null)
             {
+                _fallbackInit.Wait();
                 object unused;
                 _fallbackMap.TryRemove(key, out unused);
             }
@@ -151,6 +155,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             if (_fallbackMap != null)
             {
+                _fallbackInit.Wait();
                 _fallbackMap.Clear();
             }
             else
@@ -163,13 +168,31 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
         }
 
-        /// <summary>
-        /// Switches this instance to fallback mode (generic downgrade).
-        /// </summary>
         private void EnsureFallbackMap()
         {
-            _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, object>();
-            _map = null;
+            if (_fallbackMap != null)
+            {
+                return;
+            }
+            
+            lock (_fallbackLock)
+            {
+                if (_fallbackMap != null)
+                {
+                    return;
+                }
+                
+                _fallbackMap = new ConcurrentDictionary<object, object>();
+                var oldMap = _map;
+                _map = null;
+
+                foreach (var pair in oldMap)
+                {
+                    _fallbackMap[pair.Key] = pair.Value;
+                }
+
+                _fallbackInit.Set();
+            }
         }
     }
 }
