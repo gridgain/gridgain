@@ -33,8 +33,8 @@ public class VisorCacheGetValueTaskArg extends IgniteDataTransferObject {
     /** Cache name. */
     private String cacheName;
 
-    /** Type of key object. String presentation of {@link VisorObjectType} value. */
-    private String type;
+    /** Type of key object. */
+    private VisorDataType type;
 
     /** String presentation of key value. */
     private String key;
@@ -48,9 +48,10 @@ public class VisorCacheGetValueTaskArg extends IgniteDataTransferObject {
 
     /**
      * @param cacheName Cache name.
+     * @param type Type of key object.
      * @param key Specified key.
      */
-    public VisorCacheGetValueTaskArg(String cacheName, String type, String key) {
+    public VisorCacheGetValueTaskArg(String cacheName, VisorDataType type, String key) {
         this.cacheName = cacheName;
         this.type = type;
         this.key = key;
@@ -66,7 +67,7 @@ public class VisorCacheGetValueTaskArg extends IgniteDataTransferObject {
     /**
      * @return Key type.
      */
-    public String getType() {
+    public VisorDataType getType() {
         return type;
     }
 
@@ -80,14 +81,14 @@ public class VisorCacheGetValueTaskArg extends IgniteDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeString(out, cacheName);
-        U.writeString(out, type);
+        U.writeEnum(out, type);
         U.writeString(out, key);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         cacheName = U.readString(in);
-        type = U.readString(in);
+        type = VisorDataType.fromOrdinal(in.readByte());
         key = U.readString(in);
     }
 

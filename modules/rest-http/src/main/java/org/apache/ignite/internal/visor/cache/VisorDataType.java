@@ -16,13 +16,12 @@
 
 package org.apache.ignite.internal.visor.cache;
 
-import org.apache.ignite.IgniteException;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Enumeration of all supported cache key types in {@link VisorCacheGetValueTask}.
  */
-public enum VisorObjectType {
+public enum VisorDataType {
     /**  */
     STRING,
 
@@ -63,22 +62,7 @@ public enum VisorObjectType {
     BINARY;
 
     /** Enumerated values. */
-    private static final VisorObjectType[] VALS = values();
-
-    /**
-     * Get enum value in accondance to specified string or generate exception when enum value is not found.
-     *
-     * @param value String value.
-     * @return Enum value.
-     */
-    public static VisorObjectType parse(String value) {
-        try {
-            return valueOf(value);
-        }
-        catch (IllegalArgumentException iae) {
-            throw new IgniteException("Unsupported object type: " + value);
-        }
-    }
+    private static final VisorDataType[] VALS = values();
 
     /**
      * Efficiently gets enumerated value from its ordinal.
@@ -86,7 +70,7 @@ public enum VisorObjectType {
      * @param ord Ordinal value.
      * @return Enumerated value or {@code null} if ordinal out of range.
      */
-    @Nullable public static VisorObjectType fromOrdinal(int ord) {
+    @Nullable public static VisorDataType fromOrdinal(int ord) {
         return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
     }
 }

@@ -80,7 +80,7 @@ import org.apache.ignite.internal.visor.cache.VisorCacheStartTask;
 import org.apache.ignite.internal.visor.cache.VisorCacheStartTaskArg;
 import org.apache.ignite.internal.visor.cache.VisorCacheStopTask;
 import org.apache.ignite.internal.visor.cache.VisorCacheStopTaskArg;
-import org.apache.ignite.internal.visor.cache.VisorObjectType;
+import org.apache.ignite.internal.visor.cache.VisorDataType;
 import org.apache.ignite.internal.visor.compute.VisorComputeCancelSessionsTask;
 import org.apache.ignite.internal.visor.compute.VisorComputeCancelSessionsTaskArg;
 import org.apache.ignite.internal.visor.compute.VisorComputeResetMetricsTask;
@@ -1661,7 +1661,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.INT, "1"));
+            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.INT, "1"));
 
         info("VisorCacheGetValueTask result for Integer key: " + ret);
 
@@ -1683,7 +1683,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.UUID, uuidKey.toString()));
+            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.UUID, uuidKey.toString()));
 
         info("VisorCacheGetValueTask result for UUID key: " + ret);
 
@@ -1701,7 +1701,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.TIMESTAMP, timestamp));
+            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.TIMESTAMP, timestamp));
 
         info("VisorCacheGetValueTask result for Timestamp key: " + ret);
 
@@ -1717,7 +1717,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.DATE, timestamp));
+            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.DATE, timestamp));
 
         info("VisorCacheGetValueTask result for Date key: " + ret);
 
@@ -1733,7 +1733,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.BINARY,
+            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.BINARY,
                 "{" +
                     "\"className\":\"" + Person.class.getName() + "\"," +
                     "\"fields\":[" +
@@ -1759,7 +1759,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.BINARY,
+            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.BINARY,
                 "{" +
                     "\"className\":\"" + CompositeKeyExternal.class.getName() + "\"," +
                     "\"fields\":[" +
@@ -1812,7 +1812,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorObjectType.INT, "1"));
+            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.INT, "1"));
 
         info("VisorCacheGetValueTask result for integer key type with missed value: " + ret);
 
