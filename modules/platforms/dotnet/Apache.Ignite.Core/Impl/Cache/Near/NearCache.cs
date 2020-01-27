@@ -85,16 +85,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                         {
                             if (Equals(oldVal, val))
                             {
-                                throw new Exception(
-                                    "Suspicious NearCache update, old and new values are identical: " + val);
+                                var msg = "Suspicious NearCache update, old and new values are identical: " + val;
+                                Console.WriteLine(msg);
+                                throw new Exception(msg);
                             }
 
-                            return (TV)val;
+                            return (TV) val;
                         });
-#else
-                        _map[(TK) key] = (TV) val;
 #endif
                         
+                        _map[(TK) key] = (TV) val;
+
                         return;
                     }
                 }
