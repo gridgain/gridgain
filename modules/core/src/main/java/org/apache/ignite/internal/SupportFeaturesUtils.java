@@ -47,6 +47,9 @@ public class SupportFeaturesUtils {
      * @return {@code true} If given feature is enabled.
      */
     public static boolean isFeatureEnabled(String featureName) {
+        if (IGNITE_DISTRIBUTED_META_STORAGE_FEATURE.equals(featureName))
+            return IgniteSystemProperties.getBoolean(featureName, true);
+
         return IgniteSystemProperties.getBoolean(featureName, false);
     }
 }
