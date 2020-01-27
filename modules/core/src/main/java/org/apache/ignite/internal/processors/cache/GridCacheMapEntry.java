@@ -6948,7 +6948,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      *
      * @param val Updated value, null on remove.
      */
-    private void updatePlatformNearCache(@Nullable CacheObject val) {
+    protected void updatePlatformNearCache(@Nullable CacheObject val) {
         if (!hasPlatformNearCache())
             return;
 
