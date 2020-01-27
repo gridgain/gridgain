@@ -17,9 +17,19 @@
 #include <stdint.h>
 
 #include <vector>
+
+#pragma warning(push)
+#pragma warning(disable : 4355)
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif // _WIN32_WINNT
+
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
+
+#pragma warning(pop)
 
 #include <ignite/binary/binary.h>
 #include <ignite/impl/binary/binary_utils.h>
@@ -88,7 +98,7 @@ void TestServerSession::HandleRequestReceived(const boost::system::error_code& e
 
     const std::vector<int8_t>& response = responses.at(requestsResponded);
 
-    async_write(socket, boost::asio::const_buffer(response.data(), response.size()),
+    async_write(socket, boost::asio::buffer(response.data(), response.size()),
         boost::bind(&TestServerSession::HandleResponseSent, this,
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred));
