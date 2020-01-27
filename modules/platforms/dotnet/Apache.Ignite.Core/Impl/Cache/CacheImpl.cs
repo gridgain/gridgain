@@ -458,6 +458,8 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return val;
             }
 
+            // TODO: Can we get rid of this complicated mechanism? It works for most cases anyway.
+            // Maybe some callback point is missing in Java?
             var entry = _nearCache.GetOrCreateEntry<TK, TV>(key);
 
             val = GetInternal(key);
