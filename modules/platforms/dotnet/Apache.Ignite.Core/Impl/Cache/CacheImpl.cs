@@ -457,6 +457,9 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return val;
             }
 
+            // TODO: GetNear does not make sense:
+            // - Optimizes a rare scenario with great complexity (near cache data carry over, separate op codes)
+            // - Can fail in case of eviction
             DoOutOp(CacheOp.GetNear, key);
             if (_nearCache.TryGetValue(key, out val))
             {
