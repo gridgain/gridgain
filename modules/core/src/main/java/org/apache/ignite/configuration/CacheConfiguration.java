@@ -1316,7 +1316,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
 
     /**
      * Gets maximum inline size for sql indexes. If -1 returned then
-     * {@code IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE} system property is used.
+     * {@link IgniteSystemProperties#IGNITE_MAX_INDEX_PAYLOAD_SIZE} system property is used.
      * <p>
      * If not set, default value is {@link #DFLT_SQL_INDEX_MAX_INLINE_SIZE}.
      *

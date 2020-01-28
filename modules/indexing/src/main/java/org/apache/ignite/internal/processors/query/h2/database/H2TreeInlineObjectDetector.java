@@ -34,7 +34,7 @@ public class H2TreeInlineObjectDetector implements BPlusTree.TreeRowClosure<H2Ro
     private final int inlineSize;
 
     /** Inline helpers. */
-    private final List<InlineIndexHelper> inlineHelpers;
+    private final List<InlineIndexColumn> inlineHelpers;
 
     /** Inline object supported flag. */
     private boolean inlineObjSupported = true;
@@ -52,7 +52,7 @@ public class H2TreeInlineObjectDetector implements BPlusTree.TreeRowClosure<H2Ro
      * @param inlineSize Inline size.
      * @param inlineHelpers Inline helpers.
      */
-    H2TreeInlineObjectDetector(int inlineSize, List<InlineIndexHelper> inlineHelpers, String tblName, String idxName,
+    H2TreeInlineObjectDetector(int inlineSize, List<InlineIndexColumn> inlineHelpers, String tblName, String idxName,
         IgniteLogger log) {
         this.inlineSize = inlineSize;
         this.inlineHelpers = inlineHelpers;
@@ -73,7 +73,7 @@ public class H2TreeInlineObjectDetector implements BPlusTree.TreeRowClosure<H2Ro
 
         boolean varLenPresents = false;
 
-        for (InlineIndexHelper ih : inlineHelpers) {
+        for (InlineIndexColumn ih : inlineHelpers) {
             if (fieldOff >= inlineSize)
                 return false;
 
@@ -156,10 +156,10 @@ public class H2TreeInlineObjectDetector implements BPlusTree.TreeRowClosure<H2Ro
      * @param inlineSize Inline size.
      * @return {@code true} If the object may be inlined.
      */
-    public static boolean objectMayBeInlined(int inlineSize, List<InlineIndexHelper> inlineHelpers) {
+    public static boolean objectMayBeInlined(int inlineSize, List<InlineIndexColumn> inlineHelpers) {
         int remainSize = inlineSize;
 
-        for (InlineIndexHelper ih : inlineHelpers) {
+        for (InlineIndexColumn ih : inlineHelpers) {
             if (ih.type() == Value.JAVA_OBJECT)
                 break;
 
