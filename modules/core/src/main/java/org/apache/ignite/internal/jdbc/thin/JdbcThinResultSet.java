@@ -57,7 +57,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryMetadataResult;
  * JDBC result set implementation.
  */
 public class JdbcThinResultSet implements ResultSet {
-    /** Decimal format to convert streing to decimal. */
+    /** Decimal format to convert string to decimal. */
     private static final ThreadLocal<DecimalFormat> decimalFormat = new ThreadLocal<DecimalFormat>() {
         /** {@inheritDoc} */
         @Override protected DecimalFormat initialValue() {
