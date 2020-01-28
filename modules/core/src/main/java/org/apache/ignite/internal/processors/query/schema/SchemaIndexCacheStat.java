@@ -20,13 +20,14 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- *
+ * Class for accumulation of record types and number of indexed records in index tree.
  */
 public class SchemaIndexCacheStat {
     /**
      * Indexed types.
      */
     public Set<String> types = new HashSet<>();
+
     /**
      * Indexed keys.
      */

@@ -134,26 +134,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> fut = null;
 
         if (parallelism > 1) {
-            fut = new GridCompoundFuture<>(new IgniteReducer<SchemaIndexCacheStat, SchemaIndexCacheStat>() {
-                private final SchemaIndexCacheStat res = new SchemaIndexCacheStat();
-
-                @Override public boolean collect(SchemaIndexCacheStat msg) {
-                    synchronized (res) {
-                        if (msg != null) {
-                            res.scanned += msg.scanned;
-                            res.types.addAll(msg.types);
-                        }
-                    }
-
-                    return true;
-                }
-
-                @Override public SchemaIndexCacheStat reduce() {
-                    synchronized (res) {
-                        return res;
-                    }
-                }
-            });
+            fut = new GridCompoundFuture<>(new SchemaIndexCacheStatFutureReducer());
 
             for (int i = 1; i < parallelism; i++)
                 fut.add(processPartitionsAsync(parts, clo, i));
@@ -161,16 +142,16 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             fut.markInitialized();
         }
 
-        final SchemaIndexCacheStat stat0 = processPartitions(parts, clo, 0);
+        final SchemaIndexCacheStat stat = processPartitions(parts, clo, 0);
 
         if (fut != null) {
             final SchemaIndexCacheStat st = fut.get();
 
-            stat0.scanned += st.scanned;
-            stat0.types.addAll(st.types);
+            stat.scanned += st.scanned;
+            stat.types.addAll(st.types);
         }
 
-        printIndexStats(stat0);
+        printIndexStats(stat);
     }
 
     /**
@@ -431,6 +412,33 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             }
             finally {
                 fut.onDone(err);
+            }
+        }
+    }
+
+    /**
+     * Reducer for parallel index rebuild.
+     */
+    private static class SchemaIndexCacheStatFutureReducer implements IgniteReducer<SchemaIndexCacheStat, SchemaIndexCacheStat> {
+        /**  */
+        private final SchemaIndexCacheStat res = new SchemaIndexCacheStat();
+
+        /** {@inheritDoc} */
+        @Override public boolean collect(SchemaIndexCacheStat stat) {
+            if (stat != null) {
+                synchronized (res) {
+                    res.scanned += stat.scanned;
+                    res.types.addAll(stat.types);
+                }
+            }
+
+            return true;
+        }
+
+        /** {@inheritDoc} */
+        @Override public SchemaIndexCacheStat reduce() {
+            synchronized (res) {
+                return res;
             }
         }
     }

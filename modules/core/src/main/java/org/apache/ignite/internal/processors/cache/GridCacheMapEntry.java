@@ -4480,8 +4480,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (row != null) {
                 clo.apply(row);
 
-                return cctx.kernalContext().query().typeByValue(cctx.cache().name(),
-                    cctx.cacheObjectContext(), row.key(), row.value(), true);
+                return cctx.kernalContext().query().typeByValue(
+                    cctx.cache().name(),
+                    cctx.cacheObjectContext(),
+                    row.key(),
+                    row.value(),
+                    true
+                );
             }
         }
         finally {
