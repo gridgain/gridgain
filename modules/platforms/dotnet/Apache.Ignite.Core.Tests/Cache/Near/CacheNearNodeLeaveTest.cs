@@ -64,8 +64,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // * callback on topology change: remove all near entries (simple; potentially breaks subscription)
             
             // TODO:
-            //   We care only for NodeLeft event - in this case all keys for that node must be removed from Near Cache.
-            //   See ICache.GetLostPartitions - can we determine exact keys, or should we just remove all? 
+            // We care only for NodeLeft event - in this case all keys for that node must be removed from Near Cache.
+            // - simply iterate over all NearCacheEntry instances, call isValid, pass invalid keys to .NET. Then pass value to .NET again when entry becomes valid (if it does). 
+            // - OR See ICache.GetLostPartitions - can we determine exact keys, or should we just remove all?
             Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
