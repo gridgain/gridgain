@@ -352,12 +352,6 @@ public class PlatformCache extends PlatformAbstractTarget {
     /** */
     public static final int OP_NEAR_CACHE_QRY_CONTINUOUS = 93;
 
-    /** */
-    public static final int OP_GET_NEAR = 1005;
-
-    /** */
-    private static final int OP_PUT_NEAR = 1026;
-
     /** Underlying JCache in binary mode. */
     private final IgniteCacheProxy cache;
 
