@@ -3025,7 +3025,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                     if (entry == null)
                         continue;
 
-                    entry.lockEntry();
+                    entry.lockEntry(false);
 
                     if (entry.obsolete()) {
                         // Unlock all locked.

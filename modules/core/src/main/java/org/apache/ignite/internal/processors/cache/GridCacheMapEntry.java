@@ -144,7 +144,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
 
     /** Locks. */
-    static ThreadLocal<ConcurrentHashMap<ReentrantLock, LongAdder>> locks = ThreadLocal.withInitial(ConcurrentHashMap::new);
+    static ThreadLocal<ConcurrentHashMap<ReentrantLock, Long>> locks = ThreadLocal.withInitial(ConcurrentHashMap::new);
 
     /**
      * NOTE
@@ -5033,33 +5033,29 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     public void lockEntry(boolean nestedLocksAllowed) {
-        ConcurrentHashMap<ReentrantLock, LongAdder> map = locks.get();
-
-        map.putIfAbsent(lock, new LongAdder());
-
-        boolean nestedLocksExists = map.reduceValuesToLong(1, LongAdder::longValue, 0L, new LongBinaryOperator() {
-            @Override public long applyAsLong(long left, long right) {
-                return left + right;
-            }
-        }) - map.get(lock).longValue() > 0;
+        ConcurrentHashMap<ReentrantLock, Long> map = locks.get();
 
         if (!nestedLocksAllowed) {
             if (!map.isEmpty()) {
-                if (nestedLocksExists)
+                if (!map.containsKey(lock))
                     throw new RuntimeException("Nested locks are not allowed");
             }
         }
 
         lock.lock();
 
-        map.get(lock).increment();
+        map.merge(lock, 1L, Long::sum);
     }
 
     /** {@inheritDoc} */
     @Override public void unlockEntry() {
         lock.unlock();
+        ConcurrentHashMap<ReentrantLock, Long> map = locks.get();
 
-        locks.get().get(lock).decrement();
+        if (map.get(lock) == 1L)
+            map.remove(lock);
+        else
+            map.merge(lock, -1L, Long::sum);
     }
 
     /**
