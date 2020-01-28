@@ -59,6 +59,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // * callback when invalid entry is detected - but this won't happen unless we try to read it
             // * call Java before returning any near entry - wasteful
             // * callback on topology change: remove all near entries (simple; potentially breaks subscription)
+            
+            // TODO:
+            //   We care only for NodeLeft event - in this case all keys for that node must be removed from Near Cache.
+            //   Otherwise we should be fine.
             Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
