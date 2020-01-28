@@ -36,7 +36,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility;
-import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
@@ -63,22 +62,6 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
 
     /** */
     private boolean initCacheVisitorEnableVal;
-
-    /** */
-    private boolean initH2TreeEnableVal;
-
-    /** */
-    private static final Pattern h2TreeInitPattert = Pattern.compile(
-        "H2Tree created \\[cacheName=.*" +
-            ", cacheId=.*" +
-            ", grpName=.*" +
-            ", grpId=.*" +
-            ", segment=.*" +
-            ", size=.*" +
-            ", pageId=.*" +
-            ", allocated=.*" +
-            ", tree=.*" + ']',
-        Pattern.DOTALL);
 
     /** */
     private static final Pattern idxRebuildPattert = Pattern.compile(
@@ -205,17 +188,12 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
 
         initCacheVisitorEnableVal = GridTestUtils.getFieldValue(SchemaIndexCacheVisitorImpl.class,
             "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED");
-
-        initH2TreeEnableVal = GridTestUtils.getFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED");
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED",
             initCacheVisitorEnableVal);
-
-        GridTestUtils.setFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED",
-            initH2TreeEnableVal);
 
         super.afterTestsStopped();
     }
@@ -244,19 +222,14 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     @Test
     public void testRebuildIndexWithLogging() throws Exception {
         GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", true);
-        GridTestUtils.setFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", true);
 
         srvLog = new ListeningTestLogger(false, log);
-
-        LogListener h2TreeInitLsnr = LogListener.matches(h2TreeInitPattert).build();
-        srvLog.registerListener(h2TreeInitLsnr);
 
         LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
         srvLog.registerListener(idxRebuildLsnr);
 
         triggerIndexRebuild();
 
-        assertTrue(h2TreeInitLsnr.check());
         assertTrue(idxRebuildLsnr.check());
     }
 
@@ -266,19 +239,14 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     @Test
     public void testRebuildIndexWithoutLogging() throws Exception {
         GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", false);
-        GridTestUtils.setFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", false);
 
         srvLog = new ListeningTestLogger(false, log);
-
-        LogListener h2TreeInitLsnr = LogListener.matches(h2TreeInitPattert).build();
-        srvLog.registerListener(h2TreeInitLsnr);
 
         LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
         srvLog.registerListener(idxRebuildLsnr);
 
         triggerIndexRebuild();
 
-        assertFalse(h2TreeInitLsnr.check());
         assertFalse(idxRebuildLsnr.check());
     }
 
