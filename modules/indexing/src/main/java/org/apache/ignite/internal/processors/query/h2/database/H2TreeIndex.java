@@ -28,7 +28,6 @@ import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.internal.GridKernalContext;
@@ -48,12 +47,12 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTask;
 import org.apache.ignite.internal.processors.query.h2.H2Cursor;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
-import org.apache.ignite.internal.processors.query.h2.DurableBackgroundCleanupIndexTreeTask;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Cursor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RowDescriptor;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
@@ -99,7 +98,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.singletonList;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
@@ -113,11 +111,6 @@ import static org.h2.result.Row.MEMORY_CALCULATE;
  */
 @SuppressWarnings({"TypeMayBeWeakened", "unchecked"})
 public class H2TreeIndex extends H2TreeIndexBase {
-    //TODO: field is not final for testability. This should be fixed.
-    /** Is extra index rebuild logging enabled. */
-    private static boolean IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED =
-        IgniteSystemProperties.getBoolean(IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, false);
-
     /** */
     private final H2Tree[] segments;
 
@@ -272,10 +265,12 @@ public class H2TreeIndex extends H2TreeIndexBase {
         InlineIndexColumnFactory idxHelperFactory = new InlineIndexColumnFactory(tbl.getCompareMode());
 
         for (int i = 0; i < segments.length; i++) {
+            RootPage page;
+
             db.checkpointReadLock();
 
             try {
-                RootPage page = getMetaPage(cctx, treeName, i);
+                page = getMetaPage(cctx, treeName, i);
 
                 segments[i] = h2TreeFactory.create(
                     cctx,
@@ -305,18 +300,6 @@ public class H2TreeIndex extends H2TreeIndexBase {
                     idxHelperFactory,
                     inlineSize
                 );
-
-                if (IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED) {
-                    log.info("H2Tree created [cacheName=" + cctx.name() +
-                        ", cacheId=" + cctx.cacheId() +
-                        ", grpName=" + cctx.group().name() +
-                        ", grpId=" + cctx.groupId() +
-                        ", segment=" + i +
-                        ", size=" + segments[i].size() +
-                        ", rootPageId=" + page.pageId().pageId() +
-                        ", rootPageAllocated=" + page.isAllocated() +
-                        ", tree=" + segments[i] + ']');
-                }
             }
             finally {
                 db.checkpointReadUnlock();
