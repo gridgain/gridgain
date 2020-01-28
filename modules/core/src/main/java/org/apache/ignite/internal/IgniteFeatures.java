@@ -247,7 +247,7 @@ public enum IgniteFeatures {
             if (BASELINE_AUTO_ADJUSTMENT == value && !isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
                 continue;
 
-            if (SPLITTED_CACHE_CONFIGURATIONS == value && !isFeatureEnabled(IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER))
+            if (SPLITTED_CACHE_CONFIGURATIONS == value && isFeatureEnabled(IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER))
                 continue;
 
             final int featureId = value.getFeatureId();

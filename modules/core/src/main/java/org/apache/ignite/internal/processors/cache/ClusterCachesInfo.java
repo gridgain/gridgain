@@ -1314,7 +1314,8 @@ class ClusterCachesInfo {
 
                     // At this point, the configuration is already enriched
                     // and thefore it does not make sense to check cacheDescriptor.isConfigurationEnriched().
-                    if (!cacheDescriptor.cacheConfigurationEnrichment().isEmpty())
+                    if (cacheDescriptor.cacheConfigurationEnrichment() != null &&
+                        !cacheDescriptor.cacheConfigurationEnrichment().isEmpty())
                         hasNonCompatibleConfigurations = true;
                 }
             }
