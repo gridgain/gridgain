@@ -152,7 +152,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
     private static final String CHARSET = StandardCharsets.UTF_8.name();
 
     /** Expected message when unsupported key type is specified in {@link VisorCacheGetValueTaskArg}. */
-    private static final String UNSUPPORTED_KEY_TYPE = "Unsupported object type";
+    private static final String UNSUPPORTED_KEY_TYPE = "No enum constant org.apache.ignite.internal.visor.cache.VisorDataType.UNSUPPORTED";
 
     /** */
     private static boolean memoryMetricsEnabled;
