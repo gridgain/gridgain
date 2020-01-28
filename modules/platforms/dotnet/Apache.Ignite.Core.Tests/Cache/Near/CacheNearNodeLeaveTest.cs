@@ -55,8 +55,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             grid2.Dispose();
             Assert.IsTrue(grid1.WaitTopology(1));
 
-            // TODO: See GridNearCacheEntry.valid() - we need a callback when invalid entry is detected (possible?)
-            // Or we'll have to call Java before returning any near value :(
+            // TODO: See GridNearCacheEntry.valid()
+            // * callback when invalid entry is detected - but this won't happen unless we try to read it
+            // * call Java before returning any near entry - wasteful
+            // * callback on topology change: remove all near entries (simple; potentially breaks subscription)
             Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
