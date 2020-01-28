@@ -180,7 +180,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             res.append("        Type name=" + type.name());
             res.append(U.nl());
 
-            String pk = "_key_PK";
+            final String pk = "_key_PK";
 
             res.append("            Index: name=" + pk + ", size=" + idx.indexSize(type.schemaName(), pk));
             res.append(U.nl());

@@ -313,8 +313,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
                         ", grpId=" + cctx.groupId() +
                         ", segment=" + i +
                         ", size=" + segments[i].size() +
-                        ", pageId=" + page.pageId().pageId() +
-                        ", allocated=" + page.isAllocated() +
+                        ", rootPageId=" + page.pageId().pageId() +
+                        ", rootPageAllocated=" + page.isAllocated() +
                         ", tree=" + segments[i] + ']');
                 }
             }
