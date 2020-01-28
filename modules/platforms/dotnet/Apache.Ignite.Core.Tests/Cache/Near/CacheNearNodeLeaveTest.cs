@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
+    using System.Collections.Generic;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
 
@@ -48,7 +49,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var key = TestUtils.GetPrimaryKey(grid2, cache.Name);
             cache[key] = new Foo(key);
             
-            Assert.AreSame(cache[key], cache[key], "key is in near cache on grid1");
+            Assert.AreSame(cache.Get(key), cache.Get(key), "key is in near cache on grid1");
+            grid2.Dispose();
+            Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
         
         /// <summary>
