@@ -258,7 +258,8 @@ Get-ChildItem *.csproj -Recurse | where Name -NotLike "*Examples*" `
                      | where Name -NotLike "*Tests*" `
                      | where Name -NotLike "*DotNetCore*" `
                      | where Name -NotLike "*Benchmarks*" | % {
-    $dir = join-path (split-path -parent $_) "bin" $configuration "*"
+    $projDir = split-path -parent $_.FullName 
+    $dir = [IO.Path]::Combine($projDir, "bin", $configuration, "*")
     echo "Copying files to bin from '$dir'"
     Copy-Item -Force -Recurse $dir bin
 }
