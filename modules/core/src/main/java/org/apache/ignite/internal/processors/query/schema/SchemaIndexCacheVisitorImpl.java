@@ -420,6 +420,9 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * Reducer for parallel index rebuild.
      */
     private static class SchemaIndexCacheStatFutureReducer implements IgniteReducer<SchemaIndexCacheStat, SchemaIndexCacheStat> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /**  */
         private final SchemaIndexCacheStat res = new SchemaIndexCacheStat();
 
