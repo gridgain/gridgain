@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.management;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
@@ -37,11 +37,14 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     /** Default console URI. */
     private static final String DFLT_CONSOLE_URI = "http://localhost:3000";
 
+    /** Hosted console URI. */
+    private static final String HOSTED_CONSOLE_URI = "https://ggcc.gridgain.com/";
+
     /** */
     private boolean enabled = true;
 
     /** */
-    private List<String> consoleUris = Collections.singletonList(DFLT_CONSOLE_URI);
+    private List<String> consoleUris = Arrays.asList(DFLT_CONSOLE_URI, HOSTED_CONSOLE_URI);
 
     /** */
     @GridToStringExclude

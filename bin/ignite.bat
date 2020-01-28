@@ -178,6 +178,16 @@ if %ERRORLEVEL% equ 0 (
 )
 
 ::
+:: Special JVM options for GGCC demo:
+::
+set JVM_OPTS=%JVM_OPTS% ^
+    -Djava.net.preferIPv4Stack=true ^
+    -DIGNITE_UPDATE_NOTIFIER=false ^
+    -DIGNITE_PERFORMANCE_SUGGESTIONS_DISABLED=true ^
+    -DIGNITE_DISTRIBUTED_META_STORAGE_FEATURE=true ^
+    -DIGNITE_CLUSTER_ID_AND_TAG_FEATURE=true
+
+::
 :: Uncomment the following GC settings if you see spikes in your throughput due to Garbage Collection.
 ::
 :: set JVM_OPTS=%JVM_OPTS% -XX:+UseG1GC
