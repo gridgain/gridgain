@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System.Collections.Concurrent;
     using System.Diagnostics;
-    using System.Threading;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
@@ -36,12 +35,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, object> _fallbackMap;
         
-        /** Lock object for fallback mode switch. */
-        private readonly object _fallbackLock = new object();
-        
-        /** Fallback init gate. */
-        private readonly ManualResetEventSlim _fallbackInit = new ManualResetEventSlim(false);
-
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
@@ -56,8 +49,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             
             if (_fallbackMap != null)
             {
-                _fallbackInit.Wait();
-                
                 object fallbackEntry;
                 if (_fallbackMap.TryGetValue(key, out fallbackEntry))
                 {
@@ -87,7 +78,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             {
                 if (hasVal)
                 {
-                    _map[(TK) key] = (TV) val;
+                    map[(TK) key] = (TV) val;
                 }
                 else
                 {
@@ -99,7 +90,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (!typeMatch)
             {
                 // Type mismatch: must switch to fallback map and update it.
-                EnsureFallbackMap();
+                _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, object>();
             }
             else if (_fallbackMap == null)
             {
@@ -107,8 +98,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return;
             }
             
-            _fallbackInit.Wait();
-
             if (hasVal)
             {
                 _fallbackMap[key] = val;
@@ -142,7 +131,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             if (_fallbackMap != null)
             {
-                _fallbackInit.Wait();
                 object unused;
                 _fallbackMap.TryRemove(key, out unused);
             }
@@ -152,7 +140,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             if (_fallbackMap != null)
             {
-                _fallbackInit.Wait();
                 _fallbackMap.Clear();
             }
             else
@@ -162,33 +149,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     map.Clear();
                 }
-            }
-        }
-
-        private void EnsureFallbackMap()
-        {
-            if (_fallbackMap != null)
-            {
-                return;
-            }
-            
-            lock (_fallbackLock)
-            {
-                if (_fallbackMap != null)
-                {
-                    return;
-                }
-                
-                _fallbackMap = new ConcurrentDictionary<object, object>();
-                var oldMap = _map;
-                _map = null;
-
-                foreach (var pair in oldMap)
-                {
-                    _fallbackMap[pair.Key] = pair.Value;
-                }
-
-                _fallbackInit.Set();
             }
         }
     }
