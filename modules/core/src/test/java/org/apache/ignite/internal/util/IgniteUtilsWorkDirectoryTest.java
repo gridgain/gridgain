@@ -28,28 +28,42 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 
-/** */
+/**
+ *
+ */
 public class IgniteUtilsWorkDirectoryTest {
 
-    /** */
+    /**
+     *
+     */
     private static final String USER_WORK_DIR = String.join(File.separator,
-            U.getIgniteHome() , "userWorkDirTest");
+        U.getIgniteHome(), "userWorkDirTest");
 
-    /** */
+    /**
+     *
+     */
     private static final String USER_IGNITE_HOME = String.join(File.separator,
-            U.getIgniteHome() , "userIgniteHomeTest");
+        U.getIgniteHome(), "userIgniteHomeTest");
 
-    /** */
+    /**
+     *
+     */
     private static final String USER_DIR_PROPERTY_VALUE = String.join(File.separator,
-            new File(U.getIgniteHome()).getParent(), "userDirPropertyTest");
+        new File(U.getIgniteHome()).getParent(), "userDirPropertyTest");
 
-    /** */
+    /**
+     *
+     */
     private static String dfltIgniteHome;
 
-    /** */
+    /**
+     *
+     */
     private static String dfltUserDir;
 
-    /** */
+    /**
+     *
+     */
     @After
     public void setup() {
         dfltIgniteHome = System.getProperty(IgniteSystemProperties.IGNITE_HOME);
@@ -58,7 +72,9 @@ public class IgniteUtilsWorkDirectoryTest {
         System.clearProperty("user.dir");
     }
 
-    /** */
+    /**
+     *
+     */
     @After
     public void tearDown() {
         if (dfltIgniteHome != null)
@@ -69,43 +85,45 @@ public class IgniteUtilsWorkDirectoryTest {
 
     /**
      * The work directory specified by the user has the highest priority
-     * */
+     */
     @Test
     public void testWorkDirectory1() {
         genericWorkDirectoryTest(true, false, false,
-                USER_WORK_DIR);
+            USER_WORK_DIR);
     }
 
     /**
      * The work directory specified by the user has the highest priority
-     * */
+     */
     @Test
     public void testWorkDirectory2() {
         genericWorkDirectoryTest(true, false, true,
-                USER_WORK_DIR);
+            USER_WORK_DIR);
     }
 
     /**
      * The work directory specified by the user has the highest priority
-     * */
+     */
     @Test
     public void testWorkDirectory3() {
         genericWorkDirectoryTest(true, true, false,
-                USER_WORK_DIR);
+            USER_WORK_DIR);
     }
 
     /**
      * The work directory specified by the user has the highest priority
-     * */
+     */
     @Test
     public void testWorkDirectory4() {
         genericWorkDirectoryTest(true, true, true,
-                USER_WORK_DIR);
+            USER_WORK_DIR);
     }
 
-    /** */
+    /**
+     *
+     */
     private void genericWorkDirectoryTest(boolean userWorkDirFlag, boolean userIgniteHomeFlag,
-                                          boolean userDirPropFlag, String expWorkDir) {
+        boolean userDirPropFlag, String expWorkDir) {
         if (userDirPropFlag)
             System.setProperty("user.dir", USER_DIR_PROPERTY_VALUE);
         else
@@ -124,7 +142,8 @@ public class IgniteUtilsWorkDirectoryTest {
         String actualWorkDir = null;
         try {
             actualWorkDir = IgniteUtils.workDirectory(userWorkDir, userIgniteHome);
-        } catch (Throwable e) {
+        }
+        catch (Throwable e) {
             e.printStackTrace();
         }
 
@@ -132,14 +151,18 @@ public class IgniteUtilsWorkDirectoryTest {
 
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void nonAbsolutePathTest() {
         genericPathExceptionTest("nonAbsolutePathTestDirectory",
-                "Work directory path must be absolute: nonAbsolutePathTestDirectory");
+            "Work directory path must be absolute: nonAbsolutePathTestDirectory");
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void workDirCannotWriteTest() {
         String strDir = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
@@ -164,7 +187,9 @@ public class IgniteUtilsWorkDirectoryTest {
         }
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void workDirNotExistAndCannotBeCreatedTest() {
         String strDirParent = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
@@ -183,19 +208,24 @@ public class IgniteUtilsWorkDirectoryTest {
 
             String strDir = String.join(File.separator, strDirParent, "newDirectory");
 
-            genericPathExceptionTest(strDir,"Work directory does not exist and cannot be created: " + strDir);
+            genericPathExceptionTest(strDir, "Work directory does not exist and cannot be created: " + strDir);
         }
         finally {
             resetPermission(strDirParent);
         }
     }
 
-    /** */
+    /**
+     *
+     */
     private static void resetPermission(String dir) {
         executeCommand("chattr -i " + dir);
         executeCommand("chmod 777 " + dir);
     }
-    /** */
+
+    /**
+     *
+     */
     private static void executeCommand(String cmd) {
         X.println("Command to execute: " + cmd);
 
@@ -203,9 +233,9 @@ public class IgniteUtilsWorkDirectoryTest {
             Process proc = Runtime.getRuntime().exec(cmd);
 
             BufferedReader stdInput = new BufferedReader(new
-                    InputStreamReader(proc.getInputStream()));
+                InputStreamReader(proc.getInputStream()));
             BufferedReader stdError = new BufferedReader(new
-                    InputStreamReader(proc.getErrorStream()));
+                InputStreamReader(proc.getErrorStream()));
 
             String s;
 
@@ -219,16 +249,20 @@ public class IgniteUtilsWorkDirectoryTest {
         }
     }
 
-    /** */
+    /**
+     *
+     */
     private void genericPathExceptionTest(String userWorkDir, String expMsg) {
         GridTestUtils.assertThrows(null,
-                () -> IgniteUtils.workDirectory(userWorkDir, null),
-                IgniteCheckedException.class,
-                expMsg
-                );
+            () -> IgniteUtils.workDirectory(userWorkDir, null),
+            IgniteCheckedException.class,
+            expMsg
+        );
     }
 
-    /** */
+    /**
+     *
+     */
     private static boolean deleteDirectory(File dirToBeDeleted) {
         File[] allContents = dirToBeDeleted.listFiles();
         if (allContents != null) {
