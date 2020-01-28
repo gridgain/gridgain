@@ -1,12 +1,11 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.Arrays;
@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.binary.BinaryObject;
+import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
@@ -31,11 +33,13 @@ import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -98,6 +102,19 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     }
 
     /**
+     * @param res Response.
+     * @param cacheName Cache name.
+     */
+    public static Set<PartitionReconciliationKeyMeta> conflictKeyMetas(ReconciliationResult res, String cacheName) {
+        return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
+            .values()
+            .stream()
+            .flatMap(Collection::stream)
+            .map(PartitionReconciliationDataRowMeta::keyMeta)
+            .collect(Collectors.toSet());
+    }
+
+    /**
      *
      */
     public static void assertResultContainsConflictKeys(
@@ -150,18 +167,25 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         try {
             long updateCntr = ctx.topology().localPartition(partId).updateCounter();
 
-            Object valToPut = ctx.cache().keepBinary().get(key);
+            CacheEntry<Object, Object> e = ctx.cache().keepBinary().getEntry(key);
+
+            Object valToPut = e.getValue();
+
+            KeyCacheObject keyCacheObj = e.getKey() instanceof BinaryObject ?
+                (KeyCacheObject)e.getKey() :
+                new KeyCacheObjectImpl(e.getKey(), null, partId);
 
             if (breakCntr)
                 updateCntr++;
 
             if (breakData)
-                valToPut = valToPut.toString() + brokenValPostfix;
+                valToPut = e.getValue().toString() + brokenValPostfix;
 
             // Create data entry
+
             DataEntry dataEntry = new DataEntry(
                 ctx.cacheId(),
-                new KeyCacheObjectImpl(key, null, partId),
+                keyCacheObj,
                 new CacheObjectImpl(valToPut, null),
                 GridCacheOperation.UPDATE,
                 new GridCacheVersion(),
