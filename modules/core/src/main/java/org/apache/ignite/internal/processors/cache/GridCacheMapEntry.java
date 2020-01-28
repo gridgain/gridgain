@@ -22,13 +22,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.LongBinaryOperator;
+import java.util.stream.Collectors;
 import javax.cache.Cache;
 import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
@@ -144,7 +144,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     public static final GridCacheAtomicVersionComparator ATOMIC_VER_COMPARATOR = new GridCacheAtomicVersionComparator();
 
     /** Locks. */
-    static ThreadLocal<ConcurrentHashMap<ReentrantLock, Long>> locks = ThreadLocal.withInitial(ConcurrentHashMap::new);
+    static ThreadLocal<ConcurrentHashMap<GridCacheMapEntry, Long>> locks = ThreadLocal.withInitial(ConcurrentHashMap::new);
 
     /**
      * NOTE
@@ -228,7 +228,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     @GridToStringInclude
     private GridCacheEntryExtras extras;
 
-    //CycleDetectingLockFactory factory = CycleDetectingLockFactory.newInstance(CycleDetectingLockFactory.Policies.DISABLED);
+    //CycleDetectingLockFactory factory = CycleDetectingLockFactory.newInstance(CycleDetectingLockFactory.Policies.WARN);
 
     //Random rnd = new Random();
     /** */
@@ -5033,29 +5033,31 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     public void lockEntry(boolean nestedLocksAllowed) {
-        ConcurrentHashMap<ReentrantLock, Long> map = locks.get();
+        ConcurrentHashMap<GridCacheMapEntry, Long> map = locks.get();
 
         if (!nestedLocksAllowed) {
             if (!map.isEmpty()) {
-                if (!map.containsKey(lock))
-                    throw new RuntimeException("Nested locks are not allowed");
+                if (!map.containsKey(this)) {
+                    if ((cctx.cacheId() != -2100569601))
+                        throw new RuntimeException("Nested locks are not allowed");
+                }
             }
         }
 
         lock.lock();
 
-        map.merge(lock, 1L, Long::sum);
+        map.merge(this, 1L, Long::sum);
     }
 
     /** {@inheritDoc} */
     @Override public void unlockEntry() {
         lock.unlock();
-        ConcurrentHashMap<ReentrantLock, Long> map = locks.get();
+        ConcurrentHashMap<GridCacheMapEntry, Long> map = locks.get();
 
-        if (map.get(lock) == 1L)
-            map.remove(lock);
+        if (map.get(this) == 1L)
+            map.remove(this);
         else
-            map.merge(lock, -1L, Long::sum);
+            map.merge(this, -1L, Long::sum);
     }
 
     /**
