@@ -36,7 +36,7 @@ public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
     /**{@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setSqlGlobalMemoryQuota(16384);
+            .setSqlGlobalMemoryQuota("16k");
     }
 
     /** */

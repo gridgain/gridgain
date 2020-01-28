@@ -162,7 +162,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         return super.getConfiguration(igniteInstanceName)
             .setClientMode(client)
             .setSqlOffloadingEnabled(false)
-            .setSqlGlobalMemoryQuota(globalQuotaSize());
+            .setSqlGlobalMemoryQuota(Long.toString(globalQuotaSize()));
     }
 
     /** */

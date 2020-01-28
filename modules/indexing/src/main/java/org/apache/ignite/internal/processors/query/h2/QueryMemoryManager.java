@@ -94,8 +94,8 @@ public class QueryMemoryManager implements H2MemoryTracker {
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
-        this.globalQuota = ctx.config().getSqlGlobalMemoryQuota();
-        this.qryQuota = ctx.config().getSqlQueryMemoryQuota();
+        this.globalQuota = U.parseBytes(ctx.config().getSqlGlobalMemoryQuota());
+        this.qryQuota = U.parseBytes(ctx.config().getSqlQueryMemoryQuota());
         this.offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
         this.metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,

@@ -244,11 +244,10 @@ public class IgniteConfiguration {
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
 
     /** Default SQL query global memory quota. */
-    public static final long DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA =
-        (long)(Runtime.getRuntime().maxMemory() * 0.6); // 60% of heap.
+    public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "60%"; // 60% of heap.
 
     /** Default SQL per query memory quota. */
-    public static final long DFLT_SQL_QUERY_MEMORY_QUOTA = 0L;
+    public static final String DFLT_SQL_QUERY_MEMORY_QUOTA = "0";
 
     /** Default value for SQL offloading flag. */
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
@@ -565,10 +564,10 @@ public class IgniteConfiguration {
     private String[] sqlSchemas;
 
     /** Global memory quota. */
-    private long sqlGlobalMemoryQuota = DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA;
+    private String sqlGlobalMemoryQuota = DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA;
 
     /** Per query memory quota. */
-    private long sqlQueryMemoryQuota = DFLT_SQL_QUERY_MEMORY_QUOTA;
+    private String sqlQueryMemoryQuota = DFLT_SQL_QUERY_MEMORY_QUOTA;
 
     /** Offloading enabled flag - whether to start offloading where quota is exceeded or throw an exception. */
     private boolean sqlOffloadingEnabled = DFLT_SQL_QUERY_OFFLOADING_ENABLED;
@@ -3350,11 +3349,11 @@ public class IgniteConfiguration {
     /**
      * Returns global memory pool size for SQL queries.
      * <p>
-     * See {@link #setSqlGlobalMemoryQuota(long)} for details.
+     * See {@link #setSqlGlobalMemoryQuota(String)} for details.
      *
-     * @return Global memory pool size for SQL queries in bytes.
+     * @return Global memory pool size for SQL queries.
      */
-    public long getSqlGlobalMemoryQuota() {
+    public String getSqlGlobalMemoryQuota() {
         return sqlGlobalMemoryQuota;
     }
 
@@ -3364,7 +3363,7 @@ public class IgniteConfiguration {
      * Global SQL query memory pool size or SQL query memory quota - is an upper bound for the heap memory part
      * which might be occupied by the SQL query execution engine. This quota is shared among all simultaneously
      * running queries, hence it be easily consumed by the single heavy analytics query. If you want to control
-     * memory quota on per-query basis consider {@link #setSqlQueryMemoryQuota(long)}.
+     * memory quota on per-query basis consider {@link #setSqlQueryMemoryQuota(String)}.
      * <p>
      * There are two options of query behaviour when either query or global memory quota is exceeded:
      * <ul>
@@ -3374,24 +3373,35 @@ public class IgniteConfiguration {
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
      * <p>
      * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
+     * <p>
+     * The value is specified as string value of size of in bytes.
+     * <p>
      * Value {@code 0} means no quota at all.
+     *  <p>
+     *  Quota may be specified also in:
+     *  <ul>
+     *      <li>Kilobytes - just append the letter 'K' of 'k': {@code 10k, 400K}</li>
+     *      <li>Megabytes - just append the letter 'M' of 'm': {@code 60m, 420M}</li>
+     *      <li>Gigabytes - just append the letter 'G' of 'g': {@code 7g, 2G}</li>
+     *      <li>Percent of heap - just append the sign '%': {@code 45%, 80%}</li>
+     *  </ul>
      *
-     * @param sizeInBytes Size of global memory pool for SQL queries in bytes.
+     * @param size Size of global memory pool for SQL queries.
      * @return {@code this} for chaining.
      */
-    public IgniteConfiguration setSqlGlobalMemoryQuota(long sizeInBytes) {
-        this.sqlGlobalMemoryQuota = sizeInBytes;
+    public IgniteConfiguration setSqlGlobalMemoryQuota(String size) {
+        this.sqlGlobalMemoryQuota = size;
 
         return this;
     }
 
     /**
      * Returns per-query memory quota.
-     * See {@link #setSqlQueryMemoryQuota(long)} for details.
+     * See {@link #setSqlQueryMemoryQuota(String)} for details.
      *
      * @return Per-query memory quota.
      */
-    public long getSqlQueryMemoryQuota() {
+    public String getSqlQueryMemoryQuota() {
         return sqlQueryMemoryQuota;
     }
 
@@ -3407,13 +3417,24 @@ public class IgniteConfiguration {
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
      * <p>
      * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_MEMORY_QUOTA}.
+     * <p>
+     * The value is specified as string value of size of in bytes.
+     * <p>
      * Value {@code 0} means no quota at all.
+     *  <p>
+     *  Quota may be specified also in:
+     *  <ul>
+     *      <li>Kilobytes - just append the letter 'K' of 'k': {@code 10k, 400K}</li>
+     *      <li>Megabytes - just append the letter 'M' of 'm': {@code 60m, 420M}</li>
+     *      <li>Gigabytes - just append the letter 'G' of 'g': {@code 7g, 2G}</li>
+     *      <li>Percent of the heap - just append the sign '%': {@code 45%, 80%}</li>
+     *  </ul>
      *
-     * @param sizeInBytes Size of per-query memory quota in bytes.
+     * @param size Size of per-query memory quota.
      * @return {@code this} for chaining.
      */
-    public IgniteConfiguration setSqlQueryMemoryQuota(long sizeInBytes) {
-        this.sqlQueryMemoryQuota = sizeInBytes;
+    public IgniteConfiguration setSqlQueryMemoryQuota(String size) {
+        this.sqlQueryMemoryQuota = size;
 
         return this;
     }
@@ -3432,7 +3453,7 @@ public class IgniteConfiguration {
      * Sets the SQL query offloading enabled flag.
      * <p>
      * Offloading flag specifies the query execution behavior on memory quota excess - either global quota
-     * (see {@link #setSqlGlobalMemoryQuota(long)}) or per query quota (see {@link #setSqlQueryMemoryQuota(long)}).
+     * (see {@link #setSqlGlobalMemoryQuota(String)}) or per query quota (see {@link #setSqlQueryMemoryQuota(String)}).
      * Possible options on quota excess are:
      * <ul>
      *     <li>

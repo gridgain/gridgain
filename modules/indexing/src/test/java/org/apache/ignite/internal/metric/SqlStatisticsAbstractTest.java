@@ -65,7 +65,9 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
     protected void startGridWithMaxMem(int nodeIdx, long maxMem, boolean client) throws Exception {
         String name = getTestIgniteInstanceName(nodeIdx);
 
-        startGrid(name, getConfiguration(name).setClientMode(client).setSqlGlobalMemoryQuota(maxMem));
+        startGrid(name, getConfiguration(name)
+            .setClientMode(client)
+            .setSqlGlobalMemoryQuota(Long.toString(maxMem)));
     }
 
     /**
