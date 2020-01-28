@@ -51,8 +51,14 @@ public interface IgniteDiscoverySpi extends DiscoverySpi {
 
     /**
      * @param feature Feature to check.
-     * @param nodesPred Predicate to filter cluster nodes.
      * @return {@code true} if all nodes support the given feature.
+     */
+    public boolean allNodesSupport(IgniteFeatures feature);
+
+    /**
+     * @param feature Feature to check.
+     * @param nodesPred Predicate to filter cluster nodes.
+     * @return {@code true} if all nodes passed the filter support the given feature.
      */
     public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred);
 
