@@ -51,17 +51,6 @@ namespace Apache.Ignite.Core.Impl.Common
         }
 
         /// <summary>
-        /// ContinueWith using default scheduler.
-        /// </summary>
-        public static Task<TResult> ContWith<TResult>(this Task task,
-            Func<Task, TResult> continuationFunction)
-        {
-            IgniteArgumentCheck.NotNull(task, "task");
-            
-            return task.ContinueWith(continuationFunction, TaskScheduler.Default);
-        }
-
-        /// <summary>
         /// Run new task using default scheduler.
         /// </summary>
         public static Task Run(Action action,

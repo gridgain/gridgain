@@ -60,9 +60,6 @@ public class PlatformFutureUtils {
     /** Future type: object. */
     public static final int TYP_OBJ = 9;
 
-    /** Future type: force null (ignore result). */
-    public static final int TYP_NULL = 10;
-
     /**
      * Listen future.
      *
@@ -221,7 +218,7 @@ public class PlatformFutureUtils {
                             }
                         }
                     }
-                    else if (res == null || typ == TYP_NULL)
+                    else if (res == null)
                         gate.futureNullResult(futPtr);
                     else {
                         switch (typ) {

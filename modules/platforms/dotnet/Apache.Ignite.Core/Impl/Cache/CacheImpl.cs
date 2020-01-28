@@ -167,19 +167,20 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs async operation.
         /// </summary>
-        private Task DoOutOpAsync(CacheOp op, Action<BinaryWriter> writeAction = null, bool ignoreResult = false)
+        private Task DoOutOpAsync(CacheOp op, Action<BinaryWriter> writeAction = null)
         {
-            return DoOutOpAsync<object>(op, writeAction, null, ignoreResult);
+            return DoOutOpAsync<object>(op, writeAction);
         }
 
         /// <summary>
         /// Performs async operation.
         /// </summary>
         private Task<T> DoOutOpAsync<T>(CacheOp op, Action<BinaryWriter> writeAction = null,
-            Func<BinaryReader, T> convertFunc = null, bool ignoreResult = false)
+            Func<BinaryReader, T> convertFunc = null)
         {
-            return DoOutOpAsync((int)op, writeAction, IsKeepBinary, convertFunc, ignoreResult);
+            return DoOutOpAsync((int)op, writeAction, IsKeepBinary, convertFunc);
         }
+
 
         /** <inheritDoc /> */
         public string Name
@@ -483,13 +484,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (!CanUseNear)
             {
-                return DoOutOpAsync(CacheOp.GetAsync, w => w.WriteObject(key), reader =>
-                {
-                    if (reader != null)
-                        return reader.ReadObject<TV>();
-
-                    throw GetKeyNotFoundException();
-                });
+                return GetAsyncInternal(key);
             }
             
             TV val;
@@ -498,16 +493,13 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return TaskRunner.FromResult(val);
             }
 
-            return DoOutOpAsync(CacheOp.GetAsync, w => w.WriteObject(key), true)
-                .ContWith(t =>
-                {
-                    if (_nearCache.TryGetValue(key, out val))
-                    {
-                        return val;
-                    }
+            GetAsyncInternal(key);
+            if (_nearCache.TryGetValue(key, out val))
+            {
+                return TaskRunner.FromResult(val);
+            }
 
-                    throw GetKeyNotFoundException();
-                });
+            throw GetKeyNotFoundException();
         }
 
         /** <inheritDoc /> */
@@ -1750,6 +1742,17 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return 0;
 
             return _ignite.HandleRegistry.Allocate(obj);
+        }
+        
+        private Task<TV> GetAsyncInternal(TK key)
+        {
+            return DoOutOpAsync(CacheOp.GetAsync, w => w.WriteObject(key), reader =>
+            {
+                if (reader != null)
+                    return reader.ReadObject<TV>();
+
+                throw GetKeyNotFoundException();
+            });
         }
     }
 }
