@@ -76,6 +76,7 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
+import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -1559,6 +1560,9 @@ public class IgnitionEx {
         /** Indexing pool. */
         private ThreadPoolExecutor idxExecSvc;
 
+        /** Thread pool for rebuild indexes. */
+        private ThreadPoolExecutor rebuildIdxExecSvc;
+
         /** Continuous query executor service. */
         private IgniteStripedThreadPoolExecutor callbackExecSvc;
 
@@ -1928,6 +1932,19 @@ public class IgnitionEx {
                     GridIoPolicy.IDX_POOL,
                     oomeHnd
                 );
+
+                rebuildIdxExecSvc = new IgniteThreadPoolExecutor(
+                    "rebuild-idx-runner",
+                    cfg.getIgniteInstanceName(),
+                    0,
+                    QueryUtils.DFLT_BUILD_IDX_PARALLELISM,
+                    DFLT_THREAD_KEEP_ALIVE_TIME,
+                    new LinkedBlockingQueue<>(),
+                    GridIoPolicy.UNDEFINED,
+                    oomeHnd
+                );
+
+                rebuildIdxExecSvc.allowCoreThreadTimeOut(true);
             }
 
             validateThreadPoolSize(cfg.getQueryThreadPoolSize(), "query");
@@ -2014,6 +2031,7 @@ public class IgnitionEx {
                     restExecSvc,
                     affExecSvc,
                     idxExecSvc,
+                    rebuildIdxExecSvc,
                     callbackExecSvc,
                     qryExecSvc,
                     schemaExecSvc,
@@ -2683,6 +2701,10 @@ public class IgnitionEx {
             U.shutdownNow(getClass(), idxExecSvc, log);
 
             idxExecSvc = null;
+
+            U.shutdownNow(getClass(), rebuildIdxExecSvc, log);
+
+            rebuildIdxExecSvc = null;
 
             U.shutdownNow(getClass(), callbackExecSvc, log);
 

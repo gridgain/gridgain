@@ -1486,16 +1486,12 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** {@inheritDoc} */
     @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture exchangeFut) {
-        assert nonNull(exchangeFut);
-
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
         if (!qryProc.moduleEnabled())
             return;
 
         GridCompoundFuture allCacheIdxsCompoundFut = null;
-
-        ExecutorService rebuildIdxExecSvc = null;
 
         for (GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
             if (!cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()))
@@ -1504,10 +1500,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             int cacheId = cacheCtx.cacheId();
             GridFutureAdapter<Void> usrFut = idxRebuildFuts.get(cacheId);
 
-            if (isNull(rebuildIdxExecSvc))
-                rebuildIdxExecSvc = qryProc.getIndexing().rebuildIndexExecutorService(0);
-
-            IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx, rebuildIdxExecSvc);
+            IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx);
 
             if (nonNull(rebuildFut)) {
                 if (log.isInfoEnabled())
@@ -1543,19 +1536,13 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
         }
 
         if (nonNull(allCacheIdxsCompoundFut)) {
-            ExecutorService finalRebuildIdxExecSvc = rebuildIdxExecSvc;
-
             allCacheIdxsCompoundFut.listen(fut -> {
                 if (log.isInfoEnabled())
                     log.info("Indexes rebuilding completed for all caches.");
-
-                finalRebuildIdxExecSvc.shutdown();
             });
 
             allCacheIdxsCompoundFut.markInitialized();
         }
-        else if (nonNull(rebuildIdxExecSvc))
-            rebuildIdxExecSvc.shutdown();
     }
 
     /**

@@ -374,6 +374,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     @GridToStringExclude
     protected ExecutorService idxExecSvc;
 
+    /** Thread pool for rebuild indexes. */
+    @GridToStringExclude
+    private ExecutorService rebuildIdxExecSvc;
+
     /** */
     @GridToStringExclude
     protected IgniteStripedThreadPoolExecutor callbackExecSvc;
@@ -476,6 +480,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
      * @param restExecSvc REST executor service.
      * @param affExecSvc Affinity executor service.
      * @param idxExecSvc Indexing executor service.
+     * @param rebuildIdxExecSvc Rebuild indexes executor service.
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
@@ -503,6 +508,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         ExecutorService restExecSvc,
         ExecutorService affExecSvc,
         @Nullable ExecutorService idxExecSvc,
+        @Nullable ExecutorService rebuildIdxExecSvc,
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
@@ -532,6 +538,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         this.restExecSvc = restExecSvc;
         this.affExecSvc = affExecSvc;
         this.idxExecSvc = idxExecSvc;
+        this.rebuildIdxExecSvc = rebuildIdxExecSvc;
         this.callbackExecSvc = callbackExecSvc;
         this.qryExecSvc = qryExecSvc;
         this.schemaExecSvc = schemaExecSvc;
@@ -1274,6 +1281,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
         return durableBackgroundTasksProcessor;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ExecutorService rebuildIndexExecutorService() {
+        return rebuildIdxExecSvc;
     }
 
     /** {@inheritDoc} */

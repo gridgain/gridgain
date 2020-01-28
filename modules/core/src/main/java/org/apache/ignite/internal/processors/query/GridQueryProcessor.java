@@ -2017,12 +2017,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * Rebuilds indexes for provided caches from corresponding hash indexes.
      *
      * @param cctx Cache context.
-     * @param execSvc Thread pool for rebuilding indexes.
      * @return Future that will be completed when rebuilding is finished.
      */
-    public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, ExecutorService execSvc) {
+    public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
         assert nonNull(cctx);
-        assert nonNull(execSvc);
 
         // Indexing module is disabled, nothing to rebuild.
         if (rebuildIsMeaningless(cctx))
@@ -2048,7 +2046,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
 
         try {
-            return idx.rebuildIndexesFromHash(cctx, execSvc);
+            return idx.rebuildIndexesFromHash(cctx);
         }
         finally {
             busyLock.leaveBusy();

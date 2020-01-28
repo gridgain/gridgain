@@ -238,7 +238,6 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         @Override protected void rebuildIndexesFromHash0(
             GridCacheContext cctx,
             SchemaIndexCacheVisitorClosure clo,
-            ExecutorService execSvc,
             GridCompoundFuture<Void, Void> compoundFut
         ) {
             if (!firstRbld) {
@@ -252,7 +251,7 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
             else
                 firstRbld = false;
 
-            super.rebuildIndexesFromHash0(cctx, clo, execSvc, compoundFut);
+            super.rebuildIndexesFromHash0(cctx, clo, compoundFut);
         }
     }
 }

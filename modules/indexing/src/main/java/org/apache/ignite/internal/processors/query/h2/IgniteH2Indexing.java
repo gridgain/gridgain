@@ -192,13 +192,12 @@ import org.h2.util.JdbcUtils;
 import org.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
-import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
-import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_THREAD_KEEP_ALIVE_TIME;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -232,13 +231,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
-
-        int parallelism = getInteger(INDEX_REBUILDING_PARALLELISM, 0);
-
-        if (parallelism > 0)
-            DFLT_PARALLELISM = min(parallelism, Runtime.getRuntime().availableProcessors());
-        else
-            DFLT_PARALLELISM = min(4, Math.max(1, Runtime.getRuntime().availableProcessors() / 4));
     }
 
     /**
@@ -249,9 +241,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Default number of attempts to re-run DELETE and UPDATE queries in case of concurrent modifications of values. */
     private static final int DFLT_UPDATE_RERUN_ATTEMPTS = 4;
-
-    /** Default index creating/rebuilding parallelism level. */
-    private static final int DFLT_PARALLELISM;
 
     /** Cached value of {@code IgniteSystemProperties.IGNITE_ALLOW_DML_INSIDE_TRANSACTION}. */
     private final boolean updateInTxAllowed =
@@ -639,7 +628,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tx != null) {
             int remaining = (int)tx.remainingTime();
 
-            return remaining > 0 && qryTimeout > 0 ? min(remaining, qryTimeout) : Math.max(remaining, qryTimeout);
+            return remaining > 0 && qryTimeout > 0 ? min(remaining, qryTimeout) : max(remaining, qryTimeout);
         }
 
         return qryTimeout;
@@ -1966,9 +1955,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx, ExecutorService execSvc) {
+    @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
         assert nonNull(cctx);
-        assert nonNull(execSvc);
 
         // No data in fresh in-memory cache.
         if (!cctx.group().persistenceEnabled())
@@ -2009,7 +1997,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         GridCompoundFuture<Void, Void> rebuildCacheIdxFut = new GridCompoundFuture<>();
 
-        rebuildIndexesFromHash0(cctx, clo, execSvc, rebuildCacheIdxFut);
+        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
 
         rebuildCacheIdxFut.listen((IgniteInClosure<IgniteInternalFuture<?>>)fut -> {
             Throwable err = fut.error();
@@ -2039,16 +2027,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      *
      * @param cctx Cache context.
      * @param clo Closure.
-     * @param execSvc Thread pool for rebuild indexes.
      * @param compoundFut Future for rebuild indexes.
      */
     protected void rebuildIndexesFromHash0(
         GridCacheContext cctx,
         SchemaIndexCacheVisitorClosure clo,
-        ExecutorService execSvc,
         GridCompoundFuture<Void, Void> compoundFut
     ) {
-        new SchemaIndexCacheVisitorImpl(cctx, null, execSvc, compoundFut).visit(clo);
+        new SchemaIndexCacheVisitorImpl(cctx, null, ctx.rebuildIndexExecutorService(), compoundFut).visit(clo);
     }
 
     /**
@@ -3178,7 +3164,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (parallelism > 0)
             parallelism = min(Runtime.getRuntime().availableProcessors(), parallelism);
         else
-            parallelism = DFLT_PARALLELISM;
+            parallelism = QueryUtils.DFLT_BUILD_IDX_PARALLELISM;
 
         return new IgniteThreadPoolExecutor(
             "build-idx",
