@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
-    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
@@ -567,47 +566,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     () => _grid2.GetAffinity(CacheName).MapKeyToNode(1).IsLocal, 2000));
         }
 
-        /** */
-        private class Foo : IEquatable<Foo>
-        {
-            public Foo(int bar = 0)
-            {
-                Bar = bar;
-            }
-
-            [QuerySqlField]
-            public readonly int Bar;
-
-            [QuerySqlField]
-            public readonly string TestName = TestContext.CurrentContext.Test.Name;
-
-            public override string ToString()
-            {
-                return string.Format("Foo [Bar={0}, TestName={1}]", Bar, TestName);
-            }
-
-            public bool Equals(Foo other)
-            {
-                return other != null && Bar == other.Bar && TestName == other.TestName;
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
-                if (obj.GetType() != this.GetType()) return false;
-                return Equals((Foo) obj);
-            }
-
-            public override int GetHashCode()
-            {
-                unchecked
-                {
-                    return (Bar * 397) ^ (TestName != null ? TestName.GetHashCode() : 0);
-                }
-            }
-        }
-        
         /** */
         public enum CacheTestMode
         {

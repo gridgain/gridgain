@@ -122,6 +122,7 @@
     <Compile Include="Cache\Near\CacheNearTest.cs" />
     <Compile Include="Cache\Near\CacheNearTestGenericDowngrade.cs" />
     <Compile Include="Cache\Near\CacheNearRebalanceTest.cs" />
+    <Compile Include="Cache\Near\Foo.cs" />
     <Compile Include="Cache\PartitionPreloadTest.cs" />
     <Compile Include="Cache\PersistenceTest.cs" />
     <Compile Include="Cache\PersistentStoreTestObsolete.cs" />

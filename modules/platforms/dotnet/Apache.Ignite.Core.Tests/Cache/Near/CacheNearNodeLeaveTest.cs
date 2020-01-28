@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
+    using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
 
     /// <summary>
@@ -24,12 +25,30 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     public class CacheNearNodeLeaveTest
     {
         /// <summary>
+        /// Tears down the test.
+        /// </summary>
+        [TearDown]
+        public void TearDown()
+        {
+            Ignition.StopAll(true);
+        }
+        
+        /// <summary>
         /// Tests that near cache is cleared when primary node for a given key leaves and there are no backups.
         /// </summary>
         [Test]
         public void TestPrimaryNodeLeaveNoBackupClearsNearCache()
         {
+            var grid1 = Ignition.Start(TestUtils.GetTestConfiguration());
+            var grid2 = Ignition.Start(TestUtils.GetTestConfiguration(name: "node2"));
+
+            var cacheConfiguration = new CacheConfiguration("c") {NearConfiguration = new NearCacheConfiguration()};
+            var cache = grid1.CreateCache<int, Foo>(cacheConfiguration);
             
+            var key = TestUtils.GetPrimaryKey(grid2, cache.Name);
+            cache[key] = new Foo(key);
+            
+            Assert.AreSame(cache[key], cache[key], "key is in near cache on grid1");
         }
         
         /// <summary>
