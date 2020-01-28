@@ -260,7 +260,7 @@ Get-ChildItem *.csproj -Recurse | where Name -NotLike "*Examples*" `
                      | where Name -NotLike "*Benchmarks*" | % {
     $dir = join-path (split-path -parent $_) "bin" $configuration "*"
     echo "Copying files to bin from '$dir'"
-    Copy-Item -Force -Recurse $dir\* bin
+    Copy-Item -Force -Recurse $dir bin
 }
 
 
