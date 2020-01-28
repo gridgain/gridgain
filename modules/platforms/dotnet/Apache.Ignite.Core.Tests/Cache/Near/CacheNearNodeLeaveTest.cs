@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System.Collections.Generic;
+    using System.Linq;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
 
@@ -54,6 +55,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             grid2.Dispose();
             Assert.IsTrue(grid1.WaitTopology(1));
 
+            // TODO: See GridNearCacheEntry.valid() - we need a callback when invalid entry is detected (possible?)
+            // Or we'll have to call Java before returning any near value :(
             Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
