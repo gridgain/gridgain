@@ -18,14 +18,15 @@ package org.apache.ignite.internal.processors.cache.persistence.db;
 
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -37,13 +38,19 @@ import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
+import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.runAsync;
+import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
+import static org.apache.ignite.testframework.GridTestUtils.waitForAllFutures;
 
 /**
  * Test TTL worker with persistence enabled
@@ -51,38 +58,25 @@ import org.junit.Test;
 @WithSystemProperty(key = IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, value = "5")
 public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstractTest {
     /** */
-    public static final String CACHE_NAME = "expirable-cache-";
+    private static final String CACHE_NAME = "expirable-cache";
 
     /** */
-    public static final String GROUP_NAME = "group1";
+    private static final String GROUP_NAME = "group1";
 
     /** */
-    public static final int PART_SIZE = 32;
+    private static final int PART_SIZE = 2;
 
     /** */
-    private static final int EXPIRATION_TIMEOUT = 1;
+    private static final int EXPIRATION_TIMEOUT = 10;
 
     /** */
-    public static final int ENTRIES = 5_000;
+    private static final int ENTRIES = 10;
 
     /** */
-    public static final int CACHES_CNT = 20;
-
-    /** */
-    public static final int WORKLOAD_THREADS_CNT = 8;
+    private static final int WORKLOAD_THREADS_CNT = 8;
 
     /** Fail. */
-    volatile boolean fail;
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-    }
+    private volatile boolean fail;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -99,7 +93,6 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        //protection if test failed to finish, e.g. by error
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -117,12 +110,7 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
                         .setPersistenceEnabled(true)
                 ).setWalMode(WALMode.LOG_ONLY));
 
-        List<CacheConfiguration> ccgfs = new ArrayList<>();
-
-        for (int i = 0; i < CACHES_CNT; ++i)
-            ccgfs.add(getCacheConfiguration(CACHE_NAME + i));
-
-        cfg.setCacheConfiguration(ccgfs.toArray(new CacheConfiguration[0]));
+        cfg.setCacheConfiguration(getCacheConfiguration(CACHE_NAME));
 
         return cfg;
     }
@@ -140,6 +128,7 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
 
     /**
      * Returns a new cache configuration with the given name and {@code GROUP_NAME} group.
+     *
      * @param name Cache name.
      * @return Cache configuration.
      */
@@ -149,9 +138,10 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
         ccfg.setName(name);
         ccfg.setGroupName(GROUP_NAME);
         ccfg.setAffinity(new RendezvousAffinityFunction(false, PART_SIZE));
-        ccfg.setExpiryPolicyFactory(AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.SECONDS, EXPIRATION_TIMEOUT)));
+        ccfg.setExpiryPolicyFactory(AccessedExpiryPolicy.factoryOf(new Duration(TimeUnit.MILLISECONDS, EXPIRATION_TIMEOUT)));
         ccfg.setEagerTtl(true);
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+        ccfg.setRebalanceMode(CacheRebalanceMode.SYNC);
 
         return ccfg;
     }
@@ -160,51 +150,107 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
      * @throws Exception if failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-21444")
-    public void test() throws Exception {
+    public void shouldNotBeProblemToPutToExpiredCacheConcurrentlyWithCheckpoint() throws Exception {
+        IgniteEx ig0 = startGrid(0);
+
+        ig0.cluster().active(true);
+
+        IgniteCache<Object, Object> cache = ig0.getOrCreateCache(CACHE_NAME);
+
+        AtomicBoolean timeoutReached = new AtomicBoolean(false);
+
+        GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ig0.context().cache().context().database();
+
+        IgniteInternalFuture ldrFut = runMultiThreadedAsync(() -> {
+            while (!timeoutReached.get()) {
+                Map map = new TreeMap();
+
+                for (int i = 0; i < ENTRIES; i++)
+                    map.put(i, i);
+
+                cache.putAll(map);
+            }
+        }, WORKLOAD_THREADS_CNT, "loader");
+
+        IgniteInternalFuture updaterFut = runMultiThreadedAsync(() -> {
+            while (!timeoutReached.get()) {
+                for (int i = 0; i < ENTRIES; i++)
+                    cache.put(i, i * 10);
+            }
+        }, WORKLOAD_THREADS_CNT, "updater");
+
+        IgniteInternalFuture cpWriteLockUnlockFut = runAsync(() -> {
+            ReentrantReadWriteLock lock = U.field(db, "checkpointLock");
+
+            while (!timeoutReached.get()) {
+                try {
+                    lock.writeLock().lockInterruptibly();
+
+                    doSleep(30);
+                }
+                catch (InterruptedException ignored) {
+                    break;
+                }
+                finally {
+                    lock.writeLock().unlock();
+                }
+
+                doSleep(30);
+            }
+        }, "cp-write-lock-holder");
+
+        doSleep(10_000);
+
+        timeoutReached.set(true);
+
+        waitForAllFutures(cpWriteLockUnlockFut, ldrFut, updaterFut);
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void shouldNotBeProblemToPutToExpiredCacheConcurrently() throws Exception {
         final AtomicBoolean end = new AtomicBoolean();
 
         final IgniteEx srv = startGrid(0);
 
-        startGrid(1);
-
         srv.cluster().active(true);
 
         // Start high workload
-        AtomicInteger cnt = new AtomicInteger();
+        IgniteInternalFuture loadFut = runMultiThreadedAsync(() -> {
+            while (!end.get() && !fail) {
+                IgniteCache<Integer, byte[]> cache = srv.cache(CACHE_NAME);
 
-        IgniteInternalFuture loadFut = GridTestUtils.runMultiThreadedAsync(()-> {
-            int cacheIdx = cnt.getAndIncrement() % CACHES_CNT;
+                for (int i = 0; i < ENTRIES; i++)
+                    cache.put(i, new byte[1024]);
 
-            try {
-                while (!end.get() && !fail)
-                    fillCache(srv.cache(CACHE_NAME + cacheIdx));
-            }
-            catch (Exception e) {
-                // ignore cache stop exceptions
+                //Touch entries.
+                for (int i = 0; i < ENTRIES; i++)
+                    cache.get(i); // touch entries
             }
         }, WORKLOAD_THREADS_CNT, "high-workload");
 
-        doSleep(15_000);
-
-        srv.cluster().active(false);
-
-        end.set(true);
-
         try {
-            loadFut.get();
+            // Let's wait some time.
+            loadFut.get(10, TimeUnit.SECONDS);
         }
         catch (Exception e) {
-            // ignore
+            assertFalse("Failure handler was called. See log above.", fail);
+
+            assertTrue(X.hasCause(e, IgniteFutureTimeoutCheckedException.class));
+        }
+        finally {
+            end.set(true);
         }
 
         assertFalse("Failure handler was called. See log above.", fail);
     }
 
     /** */
-    protected void fillCache(IgniteCache<Integer, String> cache) {
+    protected void fillCache(IgniteCache<Integer, byte[]> cache) {
         for (int i = 0; i < ENTRIES; i++)
-            cache.put(i, "deadbeef");
+            cache.put(i, new byte[1024]);
 
         //Touch entries.
         for (int i = 0; i < ENTRIES; i++)
