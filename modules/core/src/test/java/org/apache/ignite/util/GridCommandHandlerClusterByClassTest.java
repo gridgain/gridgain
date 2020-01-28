@@ -890,14 +890,16 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         corruptDataEntry(storedSysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("sq" + parts / 2,
             "default-ds-group"), false, true);
 
-        CacheGroupContext memorySysCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId("default-volatile-ds-group"));
+        CacheGroupContext memoryVolatileCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId("default-volatile-ds-group"));
 
-        assertNotNull(memorySysCacheCtx);
+        assertNotNull(memoryVolatileCacheCtx);
+        assertEquals("volatileMemPlc", memoryVolatileCacheCtx.dataRegion().config().getName());
+        assertEquals(false, memoryVolatileCacheCtx.dataRegion().config().isPersistenceEnabled());
 
-        corruptDataEntry(memorySysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s0",
+        corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s0",
             "default-volatile-ds-group"), true, false);
 
-        corruptDataEntry(memorySysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s" + parts / 2,
+        corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s" + parts / 2,
             "default-volatile-ds-group"), false, true);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump", "--cache-filter", "SYSTEM"));
@@ -909,7 +911,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             U.log(log, dumpWithConflicts);
 
-            assertContains(log, dumpWithConflicts, "found 4 conflict partitions: [counterConflicts=2, " +
+            // Non-persistent caches do not have counter conflicts
+            assertContains(log, dumpWithConflicts, "found 3 conflict partitions: [counterConflicts=1, " +
                 "hashConflicts=2]");
         }
         else

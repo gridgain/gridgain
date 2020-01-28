@@ -30,6 +30,7 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePrimar
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxCachePrimarySyncTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteTxConcurrentRemoveObjectsTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePartitionConsistencyTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest;
 import org.apache.ignite.internal.metric.IoStatisticsCachePersistenceSelfTest;
 import org.apache.ignite.internal.metric.IoStatisticsCacheSelfTest;
@@ -88,6 +89,7 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(TxPartitionCounterStateConsistencyHistoryRebalanceTest.class);
         ignoredTests.add(TxPartitionCounterStateConsistencyVolatileRebalanceTest.class);
         ignoredTests.add(TxCrossCachePartitionConsistencyTest.class);
+        ignoredTests.add(TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest.class);
 
         // IO statistics.
         ignoredTests.add(IoStatisticsCacheSelfTest.class);
