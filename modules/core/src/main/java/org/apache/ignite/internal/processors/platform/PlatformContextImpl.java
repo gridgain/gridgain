@@ -590,6 +590,7 @@ public class PlatformContextImpl implements PlatformContext {
         assert keyBytes != null;
 
         // TODO: Track active caches and avoid unnecessary callbacks?
+        // TODO: At least, disable those callbacks for unsupported platforms.
         try (PlatformMemory mem0 = mem.allocate()) {
             PlatformOutputStream out = mem0.output();
 
