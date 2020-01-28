@@ -902,17 +902,18 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         corruptDataEntry(storedSysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("sq" + parts / 2,
             "default-ds-group"), false, true);
 
-        CacheGroupContext memoryVolatileCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId("default-volatile-ds-group"));
+        CacheGroupContext memoryVolatileCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId(
+            "default-volatile-ds-group@volatileMemPlc"));
 
         assertNotNull(memoryVolatileCacheCtx);
         assertEquals("volatileMemPlc", memoryVolatileCacheCtx.dataRegion().config().getName());
         assertEquals(false, memoryVolatileCacheCtx.dataRegion().config().isPersistenceEnabled());
 
         corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s0",
-            "default-volatile-ds-group"), true, false);
+            "default-volatile-ds-group@volatileMemPlc"), true, false);
 
         corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s" + parts / 2,
-            "default-volatile-ds-group"), false, true);
+            "default-volatile-ds-group@volatileMemPlc"), false, true);
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump", "--cache-filter", "SYSTEM"));
 
