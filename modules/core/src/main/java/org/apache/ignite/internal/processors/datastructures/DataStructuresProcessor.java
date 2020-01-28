@@ -364,8 +364,8 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
      */
     public static boolean isReservedGroup(@Nullable String grpName) {
         return grpName != null &&
-            DEFAULT_DS_GROUP_NAME.equals(grpName) ||
-            grpName.startsWith(DEFAULT_VOLATILE_DS_GROUP_NAME);
+            (DEFAULT_DS_GROUP_NAME.equals(grpName) ||
+            grpName.startsWith(DEFAULT_VOLATILE_DS_GROUP_NAME));
     }
 
     /**
