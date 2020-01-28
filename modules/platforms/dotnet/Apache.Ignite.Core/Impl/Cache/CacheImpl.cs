@@ -448,7 +448,15 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (!CanUseNear)
             {
-                return GetInternal(key);
+                return DoOutInOpX((int) CacheOp.Get,
+                    w => w.Write(key),
+                    (stream, res) =>
+                    {
+                        if (res != True)
+                            throw GetKeyNotFoundException();
+
+                        return Unmarshal<TV>(stream);
+                    }, _readException);
             }
 
             TV val;
@@ -456,17 +464,16 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 return val;
             }
+            
+            return DoOutInOpX((int) CacheOp.Get,
+                w => w.Write(key),
+                (stream, res) =>
+                {
+                    if (res != True)
+                        throw GetKeyNotFoundException();
 
-            // TODO: GetNear does not make sense:
-            // - Optimizes a rare scenario with great complexity (near cache data carry over, separate op codes)
-            // - Can fail in case of eviction
-            DoOutOp(CacheOp.GetNear, key);
-            if (_nearCache.TryGetValue(key, out val))
-            {
-                return val;
-            }
-
-            throw GetKeyNotFoundException();
+                    return _nearCache.TryGetValue(key, out val) ? val : Unmarshal<TV>(stream);
+                }, _readException);
         }
 
         /** <inheritDoc /> */
@@ -1743,19 +1750,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return 0;
 
             return _ignite.HandleRegistry.Allocate(obj);
-        }
-        
-        private TV GetInternal(TK key)
-        {
-            return DoOutInOpX((int) CacheOp.Get,
-                w => w.Write(key),
-                (stream, res) =>
-                {
-                    if (res != True)
-                        throw GetKeyNotFoundException();
-
-                    return Unmarshal<TV>(stream);
-                }, _readException);
         }
     }
 }
