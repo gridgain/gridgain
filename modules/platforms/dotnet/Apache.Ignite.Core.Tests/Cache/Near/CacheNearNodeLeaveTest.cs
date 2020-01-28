@@ -53,7 +53,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             grid2.Dispose();
             Assert.IsTrue(grid1.WaitTopology(1));
-            
+
+            Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
         
