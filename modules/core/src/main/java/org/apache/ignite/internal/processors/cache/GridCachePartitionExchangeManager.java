@@ -410,31 +410,20 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         }
                     }
                     else if (exchangeInProgress()) {
-                        if (log.isInfoEnabled())
-                            log.info("Ignore single message without exchange id (there is exchange in progress) [nodeId=" + node.id() + "]");
+                        GridDhtPartitionsExchangeFuture currentExchange = lastTopologyFuture();
 
-                        return;
-                    }
-
-                    if (!crdInitFut.isDone() && !msg.restoreState()) {
-                        GridDhtPartitionExchangeId exchId = msg.exchangeId();
-
-                        if (log.isInfoEnabled()) {
-                            log.info("Waiting for coordinator initialization [node=" + node.id() +
-                                ", nodeOrder=" + node.order() +
-                                ", ver=" + (exchId != null ? exchId.topologyVersion() : null) + ']');
-                        }
-
-                        crdInitFut.listen(new CI1<IgniteInternalFuture>() {
-                            @Override public void apply(IgniteInternalFuture fut) {
-                                processSinglePartitionUpdate(node, msg);
-                            }
+                        currentExchange.listen(fut -> {
+                            preprocessSingleMessage(node, msg);
                         });
 
+                        if (log.isInfoEnabled())
+                            log.info("Delayed single message without exchange id until to exchange completed " +
+                                "(there is exchange in progress) [nodeId=" + node.id() + "]");
+
                         return;
                     }
 
-                    processSinglePartitionUpdate(node, msg);
+                    preprocessSingleMessage(node, msg);
                 }
             });
 
@@ -518,6 +507,34 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
         durationHistogram = mreg.findMetric(PME_DURATION_HISTOGRAM);
         blockingDurationHistogram = mreg.findMetric(PME_OPS_BLOCKED_DURATION_HISTOGRAM);
+    }
+
+    /**
+     * Preprocess {@code msg} which was sended by {@code node}.
+     *
+     * @param node Cluster node.
+     * @param msg Message.
+     */
+    private void preprocessSingleMessage(ClusterNode node, GridDhtPartitionsSingleMessage msg) {
+        if (!crdInitFut.isDone() && !msg.restoreState()) {
+            GridDhtPartitionExchangeId exchId = msg.exchangeId();
+
+            if (log.isInfoEnabled()) {
+                log.info("Waiting for coordinator initialization [node=" + node.id() +
+                    ", nodeOrder=" + node.order() +
+                    ", ver=" + (exchId != null ? exchId.topologyVersion() : null) + ']');
+            }
+
+            crdInitFut.listen(new CI1<IgniteInternalFuture>() {
+                @Override public void apply(IgniteInternalFuture fut) {
+                    processSinglePartitionUpdate(node, msg);
+                }
+            });
+
+            return;
+        }
+
+        processSinglePartitionUpdate(node, msg);
     }
 
     /**
@@ -2807,13 +2824,13 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
      * @return {@code True} If there is any exchange future in progress.
      */
     private boolean exchangeInProgress() {
-        if (exchWorker.hasPendingServerExchange())
-            return true;
-
         GridDhtPartitionsExchangeFuture current = lastTopologyFuture();
 
         if (current == null)
             return false;
+
+        if (exchWorker.hasPendingServerExchange())
+            return true;
 
         GridDhtTopologyFuture finished = lastFinishedFut.get();
 
