@@ -35,6 +35,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT;
+import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustData.NULL_BASELINE_DATA;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
@@ -141,7 +142,7 @@ public class ChangeTopologyWatcher implements GridLocalEventListener {
         DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
 
         if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(BASELINE_AUTO_ADJUSTMENT);
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(BASELINE_AUTO_ADJUSTMENT, ALL_NODES);
         else {
             Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
 

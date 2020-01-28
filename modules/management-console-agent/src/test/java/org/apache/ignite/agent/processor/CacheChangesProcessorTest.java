@@ -34,6 +34,8 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.P1;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterCachesInfoDest;
@@ -59,6 +61,45 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
 
         assertWithPoll(() -> interceptor.getPayload(buildClusterCachesInfoDest(cluster.id())) != null);
         assertWithPoll(() -> interceptor.getPayload(buildClusterCachesSqlMetaDest(cluster.id())) != null);
+    }
+
+    /** */
+    @Test
+    public void shouldSendValidCacheInfo() throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid();
+
+        changeManagementConsoleConfig(ignite);
+
+        IgniteCluster cluster = ignite.cluster();
+
+        cluster.active(true);
+
+        ignite.getOrCreateCache("test-cache");
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            CacheInfo actual = F.find(cacheInfos, null,
+                (P1<CacheInfo>)i -> "test-cache".equals(i.getName()));
+
+            return actual != null &&
+                CU.cacheId("test-cache") == actual.getCacheId() && !actual.isCreatedBySql();
+        });
+
+        ignite.context().query().querySqlFields(
+            new SqlFieldsQuery("CREATE TABLE mc_agent_test_table_1 (id int, value int, PRIMARY KEY (id));"),
+            true
+        );
+
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            CacheInfo actual = F.find(cacheInfos, null,
+                (P1<CacheInfo>)i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+
+            return actual != null &&
+                CU.cacheId("SQL_PUBLIC_MC_AGENT_TEST_TABLE_1") == actual.getCacheId() && actual.isCreatedBySql();
+        });
     }
 
     /**
@@ -558,7 +599,6 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
             return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
         });
     }
-
 
     /**
      * @return Country cache configuration.

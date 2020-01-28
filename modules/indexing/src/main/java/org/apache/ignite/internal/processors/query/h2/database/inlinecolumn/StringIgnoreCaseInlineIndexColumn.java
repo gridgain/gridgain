@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache;
+package org.apache.ignite.internal.processors.query.h2.database.inlinecolumn;
+
+import org.h2.table.Column;
+import org.h2.value.Value;
+import org.h2.value.ValueStringIgnoreCase;
 
 /**
- * Update counter implementation for MVCC mode.
+ * Inline index column implementation for inlining strings ignore case.
  */
-public class PartitionMvccTxUpdateCounterImpl extends PartitionTxUpdateCounterImpl {
+public class StringIgnoreCaseInlineIndexColumn extends StringInlineIndexColumn {
     /**
-     * @param grp Group.
+     * @param col Column.
      */
-    public PartitionMvccTxUpdateCounterImpl(CacheGroupContext grp) {
-        super(grp);
+    public StringIgnoreCaseInlineIndexColumn(Column col, boolean useOptimizedCompare) {
+        super(col, Value.STRING_IGNORECASE, useOptimizedCompare, true);
     }
 
     /** {@inheritDoc} */
-    @Override public long reserve(long delta) {
-        return next(delta);
-    }
-
-    /** {@inheritDoc} */
-    @Override public long reserved() {
-        return get();
+    @Override protected Value get0(long pageAddr, int off) {
+        return ValueStringIgnoreCase.get(new String(readBytes(pageAddr, off), CHARSET));
     }
 }
