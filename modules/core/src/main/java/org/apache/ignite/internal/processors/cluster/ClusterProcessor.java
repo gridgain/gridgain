@@ -64,11 +64,13 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.mxbean.IgniteClusterMXBean;
@@ -155,6 +157,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** */
     private volatile DistributedMetaStorage metastorage;
+
+    /** */
+    private final IgnitePredicate<ClusterNode> SRVS_NODES_FILTER = node -> !node.isClient() && !node.isDaemon();
 
     /** */
     private ObjectName mBean;
@@ -261,7 +266,22 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         this.metastorage = metastorage;
 
         // Fast and dirty workaround for tests.
-        if (ctx.clientNode())
+        if (ctx.clientNode()) {
+            try {
+                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+                if (idAndTag != null) {
+                    locClusterId = idAndTag.id();
+                    locClusterTag = idAndTag.tag();
+
+                    cluster.setId(locClusterId);
+                    cluster.setTag(locClusterTag);
+                }
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, e);
+            }
+
             return;
 
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
@@ -316,10 +336,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+            if (!ctx.discovery().localNode().isClient()) {
+                cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
 
-        cluster.setTag(locClusterTag != null ? locClusterTag :
-            ClusterTagGenerator.generateTag());
+                cluster.setTag(locClusterTag != null ? locClusterTag :
+                    ClusterTagGenerator.generateTag());
+            }
     }
 
     /** {@inheritDoc} */
@@ -504,7 +526,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
-        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
+        if (!dataBag.isJoiningNodeClient())
+            dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
 
     /**
