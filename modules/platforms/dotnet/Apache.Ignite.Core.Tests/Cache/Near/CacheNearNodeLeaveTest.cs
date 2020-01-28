@@ -19,12 +19,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System.Collections.Generic;
     using System.Linq;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Events;
     using NUnit.Framework;
 
     /// <summary>
     /// Tests Near Cache behavior when primary node leaves.
     /// </summary>
-    public class CacheNearNodeLeaveTest
+    public class CacheNearNodeLeaveTest : IEventListener<IEvent>
     {
         /// <summary>
         /// Tears down the test.
@@ -52,6 +53,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.AreSame(cache.Get(key), cache.Get(key), "key is in near cache on grid1");
             
+            grid1.GetEvents().EnableLocal(EventType.NodeLeft);
+            grid1.GetEvents().LocalListen<IEvent>(this, EventType.NodeLeft);
             grid2.Dispose();
             Assert.IsTrue(grid1.WaitTopology(1));
 
@@ -62,7 +65,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // TODO:
             //   We care only for NodeLeft event - in this case all keys for that node must be removed from Near Cache.
-            //   Otherwise we should be fine.
+            //   See ICache.GetLostPartitions - can we determine exact keys, or should we just remove all? 
             Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
@@ -74,6 +77,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestPrimaryNodeLeaveWithBackupKeepsNearCache()
         {
             
+        }
+
+        public bool Invoke(IEvent evt)
+        {
+            return true;
         }
     }
 }
