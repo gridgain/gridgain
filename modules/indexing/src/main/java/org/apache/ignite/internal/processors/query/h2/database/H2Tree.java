@@ -311,7 +311,11 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      * @throws IgniteCheckedException If failed.
      */
     private H2CacheRow createRow0(long link) throws IgniteCheckedException {
-        CacheDataRowAdapter row = new CacheDataRowAdapter(link);
+        Thread curThread = Thread.currentThread();
+
+        boolean tmp = curThread instanceof IgniteThread && ((IgniteThread)curThread).allocator() != null && ((IgniteThread)curThread).allocator().tmpContext;
+
+        final CacheDataRowAdapter row = new CacheDataRowAdapter(link, tmp);
 
         row.initFromLink(
             cctx.group(),
