@@ -17,15 +17,11 @@
 package org.apache.ignite.internal.processors.metastorage;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
-import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
-import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -42,15 +38,7 @@ public interface ReadableDistributedMetaStorage {
      * @see IgniteFeatures#DISTRIBUTED_METASTORAGE
      */
     public static boolean isSupported(GridKernalContext ctx) {
-        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
-
-        if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(DISTRIBUTED_METASTORAGE);
-        else {
-            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
-
-            return IgniteFeatures.allNodesSupports(ctx, nodes, DISTRIBUTED_METASTORAGE);
-        }
+        return IgniteFeatures.allNodesSupport(ctx, DISTRIBUTED_METASTORAGE);
     }
 
     /**

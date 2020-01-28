@@ -17,11 +17,14 @@
 package org.apache.ignite.internal;
 
 import java.util.BitSet;
+import java.util.Collection;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
@@ -114,8 +117,11 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /***/
-    MANAGEMENT_CONSOLE(28);
+    /** */
+    MANAGEMENT_CONSOLE(28),
+
+    /** */
+    VOLATILE_DATA_STRUCTURES_REGION(33);
 
     /**
      * Unique feature identifier.
@@ -201,6 +207,24 @@ public enum IgniteFeatures {
         }
 
         return true;
+    }
+
+    /**
+     * @param ctx Kernal context.
+     * @param feature Feature to check.
+     *
+     * @return {@code True} if all nodes in the cluster support given feature.
+     */
+    public static boolean allNodesSupport(GridKernalContext ctx, IgniteFeatures feature) {
+        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
+
+        if (discoSpi instanceof IgniteDiscoverySpi)
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature);
+        else {
+            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
+
+            return allNodesSupports(ctx, nodes, feature);
+        }
     }
 
     /**

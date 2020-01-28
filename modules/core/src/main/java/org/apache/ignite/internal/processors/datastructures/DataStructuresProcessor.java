@@ -49,6 +49,7 @@ import org.apache.ignite.configuration.CollectionConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -75,7 +76,6 @@ import org.apache.ignite.internal.util.typedef.CX1;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.GPR;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -89,6 +89,7 @@ import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.internal.IgniteFeatures.VOLATILE_DATA_STRUCTURES_REGION;
 import static org.apache.ignite.internal.processors.datastructures.DataStructureType.ATOMIC_LONG;
 import static org.apache.ignite.internal.processors.datastructures.DataStructureType.ATOMIC_REF;
 import static org.apache.ignite.internal.processors.datastructures.DataStructureType.ATOMIC_SEQ;
@@ -362,8 +363,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
      * @return {@code True} if group name is reserved to store data structures.
      */
     public static boolean isReservedGroup(@Nullable String grpName) {
-        return DEFAULT_DS_GROUP_NAME.equals(grpName) ||
-            DEFAULT_VOLATILE_DS_GROUP_NAME.equals(grpName);
+        return grpName != null &&
+            DEFAULT_DS_GROUP_NAME.equals(grpName) ||
+            grpName.startsWith(DEFAULT_VOLATILE_DS_GROUP_NAME);
     }
 
     /**
@@ -518,10 +520,15 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         final String grpName;
 
         if (type.isVolatile()) {
-            if (CU.isPersistenceEnabled(ctx.config()))
+            String volatileGrpName = DEFAULT_VOLATILE_DS_GROUP_NAME;
+
+            if (IgniteFeatures.allNodesSupport(ctx, VOLATILE_DATA_STRUCTURES_REGION)) {
                 dataRegionName = VOLATILE_DATA_REGION_NAME;
 
-            grpName = DEFAULT_VOLATILE_DS_GROUP_NAME;
+                volatileGrpName += "@" + dataRegionName;
+            }
+
+            grpName = volatileGrpName;
         } else if (cfg.getGroupName() != null)
             grpName = cfg.getGroupName();
         else
