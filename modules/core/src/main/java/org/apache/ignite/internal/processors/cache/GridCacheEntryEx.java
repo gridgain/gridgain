@@ -1002,6 +1002,7 @@ public interface GridCacheEntryEx {
      * Update index from within entry lock, passing key, value, and expiration time to provided closure.
      *
      * @param clo Closure to apply to key, value, and expiration time.
+     * @return Type descriptor.
      * @throws IgniteCheckedException If failed.
      * @throws GridCacheEntryRemovedException If entry was removed.
      * @return Type descriptor.

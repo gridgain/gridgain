@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -33,9 +34,16 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility;
+import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -49,6 +57,38 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 public class RebuildIndexTest extends GridCommonAbstractTest {
     /** Rebalance cache name. */
     private static final String CACHE_NAME = "cache_name";
+
+    /** Server listening logger. */
+    private ListeningTestLogger srvLog;
+
+    /** */
+    private boolean initCacheVisitorEnableVal;
+
+    /** */
+    private boolean initH2TreeEnableVal;
+
+    /** */
+    private static final Pattern h2TreeInitPattert = Pattern.compile(
+        "H2Tree created \\[cacheName=.*" +
+            ", cacheId=.*" +
+            ", grpName=.*" +
+            ", grpId=.*" +
+            ", segment=.*" +
+            ", size=.*" +
+            ", pageId=.*" +
+            ", allocated=.*" +
+            ", tree=.*" + ']',
+        Pattern.DOTALL);
+
+    /** */
+    private static final Pattern idxRebuildPattert = Pattern.compile(
+        "Details for cache rebuilding \\[name=cache_name, grpName=null].*" +
+            "Scanned rows 2, visited types \\[UserValue].*" +
+            "Type name=UserValue.*" +
+            "Index: name=_key_PK, size=2.*" +
+            "Index: name=IDX_2, size=2.*" +
+            "Index: name=IDX_1, size=2.*",
+        Pattern.DOTALL);
 
     /**
      * User key.
@@ -152,7 +192,32 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
                         .setMaxSize(50L * 1024 * 1024)
                 )
         );
+
+        if (srvLog != null)
+            cfg.setGridLogger(srvLog);
+
         return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        initCacheVisitorEnableVal = GridTestUtils.getFieldValue(SchemaIndexCacheVisitorImpl.class,
+            "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED");
+
+        initH2TreeEnableVal = GridTestUtils.getFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED");
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED",
+            initCacheVisitorEnableVal);
+
+        GridTestUtils.setFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED",
+            initH2TreeEnableVal);
+
+        super.afterTestsStopped();
     }
 
     /** {@inheritDoc} */
@@ -169,10 +234,58 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        srvLog = null;
     }
 
+    /**
+     * @throws Exception if failed.
+     */
     @Test
-    public void testRebuildIndex() throws Exception {
+    public void testRebuildIndexWithLogging() throws Exception {
+        GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", true);
+        GridTestUtils.setFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", true);
+
+        srvLog = new ListeningTestLogger(false, log);
+
+        LogListener h2TreeInitLsnr = LogListener.matches(h2TreeInitPattert).build();
+        srvLog.registerListener(h2TreeInitLsnr);
+
+        LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
+        srvLog.registerListener(idxRebuildLsnr);
+
+        triggerIndexRebuild();
+
+        assertTrue(h2TreeInitLsnr.check());
+        assertTrue(idxRebuildLsnr.check());
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testRebuildIndexWithoutLogging() throws Exception {
+        GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", false);
+        GridTestUtils.setFieldValue(H2TreeIndex.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", false);
+
+        srvLog = new ListeningTestLogger(false, log);
+
+        LogListener h2TreeInitLsnr = LogListener.matches(h2TreeInitPattert).build();
+        srvLog.registerListener(h2TreeInitLsnr);
+
+        LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
+        srvLog.registerListener(idxRebuildLsnr);
+
+        triggerIndexRebuild();
+
+        assertFalse(h2TreeInitLsnr.check());
+        assertFalse(idxRebuildLsnr.check());
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    private void triggerIndexRebuild() throws Exception {
         IgniteEx node1 = startGrid(0);
         startGrid(1);
 
@@ -190,6 +303,11 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
         IgniteEx node2 = startGrid(0);
 
         awaitPartitionMapExchange();
+
+        final IgniteCacheDatabaseSharedManager db = node2.context().cache().context().database();
+
+        while (IdleVerifyUtility.isCheckpointNow(db))
+            doSleep(500);
 
         // Validate indexes on start.
         ValidateIndexesClosure clo = new ValidateIndexesClosure(Collections.singleton(CACHE_NAME), 0, 0);
