@@ -256,6 +256,7 @@ Make-Dir("bin")
 
 Get-ChildItem *.csproj -Recurse | where Name -NotLike "*Examples*" `
                      | where Name -NotLike "*Tests*" `
+                     | where Name -NotLike "*DotNetCore*" `
                      | where Name -NotLike "*Benchmarks*" | % {
     $dir = join-path (split-path -parent $_) "bin" $configuration "*"
     echo "Copying files to bin from '$dir'"
