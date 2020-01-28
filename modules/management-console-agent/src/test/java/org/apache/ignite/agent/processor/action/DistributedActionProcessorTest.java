@@ -63,7 +63,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, res -> {
             List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id()), TaskResponse.class);
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
@@ -74,7 +74,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             return false;
         });
 
-        JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id()), JobResponse.class);
 
         assertEquals(consistentId, res.getNodeConsistentId());
         assertEquals(crdId, UUID.fromString((String) res.getResult()));
@@ -92,7 +92,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, res -> {
             List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id()), TaskResponse.class);
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
@@ -108,7 +108,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             return false;
         });
 
-        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id()), JobResponse.class);
         boolean responsesHasCorrectConsistentIds = nonCrdNodeConsistentIds.containsAll(
             responses
                 .stream()
@@ -130,7 +130,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, res -> {
             List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id()), TaskResponse.class);
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
@@ -146,7 +146,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             return false;
         });
 
-        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id()), JobResponse.class);
         boolean responsesHasCorrectConsistentIds = allNodeConsistentIds.containsAll(
             responses
                 .stream()
@@ -169,7 +169,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeActionAndStopNode(req, 1000, 1, res -> {
             List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id()), TaskResponse.class);
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> failedTask = taskResults.stream().filter(r -> r.getStatus() == FAILED).findFirst();
@@ -199,8 +199,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getStatus() == FAILED && r.getError().getCode() == INTERNAL_ERROR_CODE;
         });
@@ -218,8 +217,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
         });
@@ -237,8 +235,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
         });
