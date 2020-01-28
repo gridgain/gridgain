@@ -3386,7 +3386,8 @@ public class IgniteConfiguration {
      *      <li>Percent of heap - just append the sign '%': {@code 45%, 80%}</li>
      *  </ul>
      *
-     * @param size Size of global memory pool for SQL queries.
+     * @param size Size of global memory pool for SQL queries in bytes, kilobytes, megabytes,
+     * or percentage of the max heap.
      * @return {@code this} for chaining.
      */
     public IgniteConfiguration setSqlGlobalMemoryQuota(String size) {
@@ -3430,7 +3431,7 @@ public class IgniteConfiguration {
      *      <li>Percent of the heap - just append the sign '%': {@code 45%, 80%}</li>
      *  </ul>
      *
-     * @param size Size of per-query memory quota.
+     * @param size Size of per-query memory quota in bytes, kilobytes, megabytes, or percentage of the max heap.
      * @return {@code this} for chaining.
      */
     public IgniteConfiguration setSqlQueryMemoryQuota(String size) {

@@ -84,7 +84,7 @@ public class DynamicMemoryQuotaTest extends AbstractQueryMemoryTrackerSelfTest {
                 .getIndexing())
                 .memoryManager();
 
-            memMgr.setGlobalQuota(newQuota);
+            memMgr.setGlobalQuota(String.valueOf(newQuota));
         }
     }
 

@@ -60,6 +60,9 @@ public class QueryMemoryManager implements H2MemoryTracker {
     /** Global memory quota. */
     private volatile long globalQuota;
 
+    /** String representation of global quota. */
+    private String globalQuotaStr;
+
     /**
      * Default query memory limit.
      *
@@ -67,6 +70,9 @@ public class QueryMemoryManager implements H2MemoryTracker {
      * treated as separate Map query.
      */
     private volatile long qryQuota;
+
+    /** String representation of query quota. */
+    private String qryQuotaStr;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -94,8 +100,8 @@ public class QueryMemoryManager implements H2MemoryTracker {
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
-        this.globalQuota = U.parseBytes(ctx.config().getSqlGlobalMemoryQuota());
-        this.qryQuota = U.parseBytes(ctx.config().getSqlQueryMemoryQuota());
+        setGlobalQuota(ctx.config().getSqlGlobalMemoryQuota());
+        setQueryQuota(ctx.config().getSqlQueryMemoryQuota());
         this.offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
         this.metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
@@ -181,8 +187,16 @@ public class QueryMemoryManager implements H2MemoryTracker {
      *
      * @param newGlobalQuota New global query quota.
      */
-    public void setGlobalQuota(long newGlobalQuota) {
-        this.globalQuota = newGlobalQuota;
+    public void setGlobalQuota(String newGlobalQuota) {
+        this.globalQuota = U.parseBytes(newGlobalQuota);
+        this.globalQuotaStr = newGlobalQuota;
+    }
+
+    /**
+     * @return Current global query quota.
+     */
+    public String getGlobalQuota() {
+        return globalQuotaStr;
     }
 
     /**
@@ -190,8 +204,16 @@ public class QueryMemoryManager implements H2MemoryTracker {
      *
      * @param newQryQuota New per-query quota.
      */
-    public void setQueryQuota(long newQryQuota) {
-        this.qryQuota = newQryQuota;
+    public void setQueryQuota(String newQryQuota) {
+        this.qryQuota = U.parseBytes(newQryQuota);
+        this.qryQuotaStr = newQryQuota;
+    }
+
+    /**
+     * @return Current query quota.
+     */
+    public String getQryQuotaStr() {
+        return qryQuotaStr;
     }
 
     /**
@@ -201,6 +223,13 @@ public class QueryMemoryManager implements H2MemoryTracker {
      */
     public void setOffloadingEnabled(boolean offloadingEnabled) {
         this.offloadingEnabled = offloadingEnabled;
+    }
+
+    /**
+     * @return Flag whether offloading is enabled.
+     */
+    public boolean isOffloadingEnabled() {
+        return offloadingEnabled;
     }
 
     /** {@inheritDoc} */
