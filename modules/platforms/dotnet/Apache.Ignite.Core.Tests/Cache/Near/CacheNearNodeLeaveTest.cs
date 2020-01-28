@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System.Collections.Generic;
-    using System.Linq;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Events;
     using NUnit.Framework;
@@ -52,9 +51,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache[key] = new Foo(key);
 
             Assert.AreSame(cache.Get(key), cache.Get(key), "key is in near cache on grid1");
-            
+
+            // TODO: Figure out a good way to get NodeLeft callback without subscribing.
             grid1.GetEvents().EnableLocal(EventType.NodeLeft);
-            grid1.GetEvents().LocalListen<IEvent>(this, EventType.NodeLeft);
+            grid1.GetEvents().LocalListen(this, EventType.NodeLeft);
             grid2.Dispose();
             Assert.IsTrue(grid1.WaitTopology(1));
 
