@@ -16,6 +16,7 @@
 
 package org.apache.ignite.agent.action.controller;
 
+import java.util.UUID;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -55,7 +56,7 @@ public class SecurityActionsController {
      * @param reqCreds Request credentials.
      * @return Completable feature with token.
      */
-    public String authenticate(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
+    public UUID authenticate(AuthenticateCredentials reqCreds) throws IgniteCheckedException {
         Session ses = authenticate0(reqCreds);
 
         registry.saveSession(ses);
@@ -63,7 +64,7 @@ public class SecurityActionsController {
         if (log.isDebugEnabled())
             log.debug("Session ID was generated for request: " + ses.id());
 
-        return ses.id().toString();
+        return ses.id();
     }
 
     /**
