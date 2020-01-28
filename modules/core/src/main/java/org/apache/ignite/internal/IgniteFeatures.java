@@ -114,8 +114,11 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /***/
-    MANAGEMENT_CONSOLE(28);
+    /** */
+    MANAGEMENT_CONSOLE(28),
+
+    /** Partition Map Exchange-free switch on baseline node left at fully rebalanced cluster. */
+    PME_FREE_SWITCH(32);
 
     /**
      * Unique feature identifier.
