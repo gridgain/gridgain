@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System.Diagnostics;
+    using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl.Binary;
@@ -40,14 +41,24 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             = new CopyOnWriteConcurrentDictionary<int, INearCache>();
 
         /// <summary>
+        /// Initialized flag.
+        /// </summary>
+        private int _initialized;
+
+        /// <summary>
+        /// Ignite.
+        /// </summary>
+        private readonly IIgnite _ignite;
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="NearCacheManager"/> class. 
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         public NearCacheManager(IIgnite ignite)
         {
             Debug.Assert(ignite != null);
-            
-            ignite.GetEvents().LocalListen(this, EventType.NodeFailed, EventType.NodeLeft, EventType.NodeSegmented);
+
+            _ignite = ignite;
         }
 
         /// <summary>
@@ -66,6 +77,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             Debug.Assert(!string.IsNullOrEmpty(cacheName));
             Debug.Assert(nearCacheConfiguration != null);
+
+            Initialize();
 
             var cacheId = BinaryUtils.GetCacheId(cacheName);
             
@@ -134,6 +147,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             foreach (var nearCache in _nearCaches)
             {
                 nearCache.Value.Clear();
+            }
+        }
+        
+        /// <summary>
+        /// Initializes this instance, if necessary.
+        /// </summary>
+        private void Initialize()
+        {
+            if (Interlocked.CompareExchange(ref _initialized, 1, 0) == 0)
+            {
+                _ignite.GetEvents()
+                    .LocalListen(this, EventType.NodeFailed, EventType.NodeLeft, EventType.NodeSegmented);
             }
         }
     }
