@@ -481,13 +481,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return TaskRunner.FromResult(val);
             }
 
-            GetAsyncInternal(key);
-            if (_nearCache.TryGetValue(key, out val))
-            {
-                return TaskRunner.FromResult(val);
-            }
-
-            throw GetKeyNotFoundException();
+            return GetAsyncInternal(key).ContWith(t => _nearCache.GetOrAdd(key, t.Result));
         }
 
         /** <inheritDoc /> */
