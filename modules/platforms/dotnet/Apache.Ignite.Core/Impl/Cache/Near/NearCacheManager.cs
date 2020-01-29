@@ -156,6 +156,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (!evt.Node.IsClient)
             {
                 // Clear all caches on node leave: data may have been lost.
+                // We could refine this by checking every key (GridNearCacheEntry.valid()),
+                // but the complexity does not seem to be worth it.
                 ClearAll();
             }
 
