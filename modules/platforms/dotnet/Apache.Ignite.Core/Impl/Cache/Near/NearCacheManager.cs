@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System.Diagnostics;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
@@ -28,7 +29,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// Multiple <see cref="CacheImpl{TK,TV}"/> instances can exist for a given cache, and all of them share the same
     /// <see cref="NearCache{TK,TV}"/> instance.
     /// </summary>
-    internal class NearCacheManager
+    internal class NearCacheManager : IEventListener<DiscoveryEvent>
     {
         /// <summary>
         /// Near caches per cache id.
@@ -37,6 +38,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary> 
         private readonly CopyOnWriteConcurrentDictionary<int, INearCache> _nearCaches
             = new CopyOnWriteConcurrentDictionary<int, INearCache>();
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NearCacheManager"/> class. 
+        /// </summary>
+        /// <param name="ignite">Ignite.</param>
+        public NearCacheManager(IIgnite ignite)
+        {
+            Debug.Assert(ignite != null);
+            
+            ignite.GetEvents().LocalListen(this, EventType.NodeFailed, EventType.NodeLeft, EventType.NodeSegmented);
+        }
 
         /// <summary>
         /// Gets the near cache.
@@ -85,7 +97,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return;
             }
             
-            // TODO: Investigate - are there any redundant collbacks?
+            // TODO: Investigate - are there any redundant callbacks?
             nearCache.Evict(stream, marshaller);
         }
 
@@ -99,6 +111,29 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             {
                 cache.Clear();
                 _nearCaches.Remove(cacheId);
+            }
+        }
+
+        /** <inheritdoc /> */
+        bool IEventListener<DiscoveryEvent>.Invoke(DiscoveryEvent evt)
+        {
+            if (!evt.Node.IsClient)
+            {
+                // Clear all caches on node leave: data may have been lost.
+                ClearAll();
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Clears all caches.
+        /// </summary>
+        private void ClearAll()
+        {
+            foreach (var nearCache in _nearCaches)
+            {
+                nearCache.Value.Clear();
             }
         }
     }

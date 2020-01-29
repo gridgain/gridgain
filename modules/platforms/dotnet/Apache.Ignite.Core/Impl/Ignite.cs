@@ -142,7 +142,7 @@ namespace Apache.Ignite.Core.Impl
         private readonly PluginProcessor _pluginProcessor;
 
         /** Near cache manager. */
-        private readonly NearCacheManager _nearCacheManager = new NearCacheManager();
+        private readonly NearCacheManager _nearCacheManager;
 
         /// <summary>
         /// Constructor.
@@ -185,6 +185,8 @@ namespace Apache.Ignite.Core.Impl
             SetCompactFooter();
 
             _pluginProcessor = new PluginProcessor(this);
+            
+            _nearCacheManager = new NearCacheManager(this);
         }
 
         /// <summary>
