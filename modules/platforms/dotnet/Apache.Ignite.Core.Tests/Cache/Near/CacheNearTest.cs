@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
@@ -318,10 +319,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache1[1] = new Foo(42);
             cache1[2] = new Foo(43);
             
+            // Perform generic downgrade by using different type parameters.
+            // Existing near cache data is thrown away.
             var cache2 = _grid.GetCache<int, string>(cfg.Name);
             cache2[1] = "x";
 
-            Assert.AreEqual("x", cache1[1]);
+            // Check that near cache still works for old entries. 
+            Assert.Throws<InvalidCastException>(() => cache1.Get(1));
+            Assert.AreEqual(43, cache1[2].Bar);
+            Assert.AreSame(cache1[2], cache1[2]);
         }
 
         /// <summary>
