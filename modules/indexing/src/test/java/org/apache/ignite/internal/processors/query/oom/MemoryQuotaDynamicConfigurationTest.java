@@ -26,14 +26,12 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
-import static org.apache.ignite.internal.util.IgniteUtils.MB;
 
 /**
- * Test cases for dynamic query quota. TODO rework to
+ * Test cases for dynamic query quota.
  */
-public class DynamicMemoryQuotaTest extends AbstractQueryMemoryTrackerSelfTest {
+public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrackerSelfTest {
     private static long GLOBAL_QUOTA = 50L * KB;
-    private static long QUERY_QUOTA = 100L * MB;
 
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
@@ -50,24 +48,20 @@ public class DynamicMemoryQuotaTest extends AbstractQueryMemoryTrackerSelfTest {
         return true;
     }
 
-    /** Check query failure with ORDER BY indexed col. */
+    /**  */
     @Test
-    public void testQueryWithSortByIndexedCol() throws Exception {
-        maxMem = QUERY_QUOTA;
+    public void testGlobalQuota() throws Exception {
+        maxMem = 0; // Disable implicit query quota.
+        setGlobalQuota(GLOBAL_QUOTA);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
 
         assertEquals(1, localResults.size());
         assertTrue(localResults.get(0).memoryReserved() < GLOBAL_QUOTA);
-
         localResults.clear();
 
         setGlobalQuota(0);
-
         execQuery("select * from K ORDER BY K.indexed", false);
-
-        assertEquals(2, localResults.size());
-        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
-        assertTrue(localResults.get(1).memoryReserved() > GLOBAL_QUOTA);
+        assertEquals(0, localResults.size());
         localResults.clear();
 
         setGlobalQuota(GLOBAL_QUOTA);
@@ -76,16 +70,75 @@ public class DynamicMemoryQuotaTest extends AbstractQueryMemoryTrackerSelfTest {
         assertTrue(localResults.get(0).memoryReserved() < GLOBAL_QUOTA);
     }
 
+    /**  */
+    @Test
+    public void testDefaultQueryQuota() throws Exception {
+        maxMem = 0; // Disable implicit query quota.
+        setGlobalQuota(0);
+
+        // All quotas turned off, nothing should happen.
+        execQuery("select * from K ORDER BY K.indexed", false);
+        assertEquals(0, localResults.size());
+        localResults.clear();
+
+        // Default query quota is set to 100, we expect exception.
+        setDefaultQueryQuota(100);
+        checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
+        assertEquals(1, localResults.size());
+        localResults.clear();
+
+        // Turn on offloading, expect no error.
+        setOffloadingEnabled(true);
+        execQuery("select * from K ORDER BY K.indexed", false);
+        assertEquals(2, localResults.size());
+        assertTrue(localResults.get(0).memoryReserved() < 100);
+        localResults.clear();
+
+        // Turn off offloading, expect error.
+        setOffloadingEnabled(false);
+        checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
+        assertEquals(1, localResults.size());
+        localResults.clear();
+
+        // Turn off quota, expect no error.
+        setDefaultQueryQuota(0);
+        execQuery("select * from K ORDER BY K.indexed", false);
+        assertEquals(0, localResults.size());
+    }
+
     /** */
     public void setGlobalQuota(long newQuota) {
         for (Ignite node : G.allGrids()) {
-            QueryMemoryManager memMgr = ((IgniteH2Indexing)((IgniteEx)node).context()
-                .query()
-                .getIndexing())
-                .memoryManager();
+            QueryMemoryManager memMgr = memoryManager((IgniteEx)node);
 
             memMgr.setGlobalQuota(String.valueOf(newQuota));
         }
+    }
+
+    /** */
+    public void setDefaultQueryQuota(long newQuota) {
+        for (Ignite node : G.allGrids()) {
+            QueryMemoryManager memMgr = memoryManager((IgniteEx)node);
+
+            memMgr.setQueryQuota(String.valueOf(newQuota));
+        }
+    }
+
+    /** */
+    public void setOffloadingEnabled(boolean enabled) {
+        for (Ignite node : G.allGrids()) {
+            QueryMemoryManager memMgr = memoryManager((IgniteEx)node);
+
+            memMgr.setOffloadingEnabled(enabled);
+        }
+    }
+
+    /** */
+    public static QueryMemoryManager memoryManager(IgniteEx node) {
+        return ((IgniteH2Indexing)node.context()
+                    .query()
+                    .getIndexing())
+                    .memoryManager();
     }
 
     /** {@inheritDoc} */
@@ -94,7 +147,7 @@ public class DynamicMemoryQuotaTest extends AbstractQueryMemoryTrackerSelfTest {
             execQuery(sql, lazy);
 
             return null;
-        }, IgniteSQLException.class, "SQL query run out of memory: Global quota exceeded.");
+        }, IgniteSQLException.class, "SQL query run out of memory: ");
 
         assertNotNull("SQL exception missed.", sqlEx);
         assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, sqlEx.statusCode());
