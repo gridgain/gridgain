@@ -83,6 +83,14 @@ public abstract class AggregateData {
     abstract void add(Session ses, Value v);
 
     /**
+     * Merges two aggregates.
+     *
+     * @param ses Session.
+     * @param agg Aggregate to be merged.
+     */
+    public abstract void mergeAggregate(Session ses, AggregateData agg);
+
+    /**
      * Get the aggregate result.
      *
      * @param database the database
@@ -96,4 +104,9 @@ public abstract class AggregateData {
      * @param ses Session.
      */
     public void cleanup(Session ses) {}
+
+    /**
+     * @return Aggregate size in bytes.
+     */
+    public abstract long getMemory();
 }

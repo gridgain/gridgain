@@ -18,13 +18,15 @@ package org.apache.ignite.agent.action.controller;
 
 import java.util.UUID;
 import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.SecurityCredentials;
 import org.junit.Test;
 
-import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
-import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
 import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
+import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
+import static org.apache.ignite.agent.dto.action.Status.FAILED;
 
 /**
  * Action controller base test with authentication.
@@ -43,7 +45,11 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
             .setArgument(10)
             .setSessionId(sesId);
 
-        executeAction(req, (r) -> r.getStatus() == COMPLETED);
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == COMPLETED;
+        });
     }
 
     /**
@@ -56,7 +62,11 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
             .setAction("IgniteTestActionController.numberAction")
             .setArgument(10);
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
+        executeAction(req, (res) -> {
+                JobResponse r = F.first(res);
+
+                return r != null && r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
+        });
     }
 
     /**
@@ -70,6 +80,10 @@ public class ActionControllerWithAuthenticationBaseTest extends AbstractActionCo
             .setArgument(10)
             .setSessionId(UUID.randomUUID());
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE);
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
+        });
     }
 }

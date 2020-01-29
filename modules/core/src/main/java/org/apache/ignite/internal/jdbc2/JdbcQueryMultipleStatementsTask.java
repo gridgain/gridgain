@@ -117,16 +117,16 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
 
     /** {@inheritDoc} */
     @Override public List<JdbcStatementResultInfo> call() throws Exception {
-        SqlFieldsQuery qry = (isQry != null ? new SqlFieldsQueryEx(sql, isQry).setMaxMemory(maxMem) :
-            new SqlFieldsQuery(sql)).setArgs(args);
-
-        qry.setPageSize(fetchSize);
-        qry.setLocal(locQry);
-        qry.setCollocated(collocatedQry);
-        qry.setDistributedJoins(distributedJoins);
-        qry.setEnforceJoinOrder(enforceJoinOrder);
-        qry.setLazy(lazy);
-        qry.setSchema(schemaName);
+        SqlFieldsQuery qry = new SqlFieldsQueryEx(sql, isQry)
+            .setMaxMemory(maxMem)
+            .setArgs(args)
+            .setPageSize(fetchSize)
+            .setLocal(locQry)
+            .setCollocated(collocatedQry)
+            .setDistributedJoins(distributedJoins)
+            .setEnforceJoinOrder(enforceJoinOrder)
+            .setLazy(lazy)
+            .setSchema(schemaName);
 
         GridKernalContext ctx = ((IgniteKernal)ignite).context();
 

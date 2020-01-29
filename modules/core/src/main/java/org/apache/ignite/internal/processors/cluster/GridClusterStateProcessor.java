@@ -104,6 +104,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.STATE_PROC;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
+import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 
 /**
@@ -1122,7 +1123,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
                     IgniteDiscoverySpi spi = (IgniteDiscoverySpi) ctx.discovery().getInjectedDiscoverySpi();
 
-                    boolean splittedCacheCfgs = spi.allNodesSupport(IgniteFeatures.SPLITTED_CACHE_CONFIGURATIONS);
+                    boolean splittedCacheCfgs = spi.allNodesSupport(IgniteFeatures.SPLITTED_CACHE_CONFIGURATIONS, ALL_NODES);
 
                     storedCfgs = storedCfgs.stream()
                         .map(storedCacheData -> splittedCacheCfgs

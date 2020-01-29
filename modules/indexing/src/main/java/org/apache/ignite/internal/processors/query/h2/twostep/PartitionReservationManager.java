@@ -63,6 +63,10 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
      */
     private final ConcurrentMap<PartitionReservationKey, GridReservable> reservations = new ConcurrentHashMap<>();
 
+    /**
+     */
+    private volatile AffinityTopologyVersion lastAffChangedTopVer;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -326,13 +330,19 @@ public class PartitionReservationManager implements PartitionsExchangeAware {
      */
     @Override public void onDoneAfterTopologyUnlock(final GridDhtPartitionsExchangeFuture fut) {
         try {
+            final AffinityTopologyVersion newTopVer = ctx.cache().context().exchange()
+                .lastAffinityChangedTopologyVersion(fut.topologyVersion());
+
+            // Do nothing: cache already has been cleared on previous version change (e.g. client node join/leave).
+            if (F.eq(newTopVer, lastAffChangedTopVer))
+                return;
+
+            lastAffChangedTopVer = newTopVer;
+
             // Must not do anything at the exchange thread. Dispatch to the management thread pool.
             ctx.closure().runLocal(() -> {
-                    AffinityTopologyVersion topVer = ctx.cache().context().exchange()
-                        .lastAffinityChangedTopologyVersion(fut.topologyVersion());
-
                     reservations.forEach((key, r) -> {
-                        if (r != REPLICATED_RESERVABLE && !F.eq(key.topologyVersion(), topVer)) {
+                        if (r != REPLICATED_RESERVABLE && newTopVer.after(key.topologyVersion())) {
                             assert r instanceof GridDhtPartitionsReservation;
 
                             ((GridDhtPartitionsReservation)r).invalidate();

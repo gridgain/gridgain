@@ -314,7 +314,8 @@ public abstract class DataStructure {
         X arg,
         int intArg,
         R lockFailed,
-        IoStatisticsHolder statHolder) throws IgniteCheckedException {
+        IoStatisticsHolder statHolder
+    ) throws IgniteCheckedException {
         return PageHandler.writePage(pageMem, grpId, pageId, lockLsnr, h,
             init, wal, null, arg, intArg, lockFailed, statHolder);
     }
