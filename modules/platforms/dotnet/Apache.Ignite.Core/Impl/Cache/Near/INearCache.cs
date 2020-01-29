@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
@@ -41,5 +42,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         void Evict(PlatformMemoryStream stream, Marshaller marshaller);
 
         bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
+        
+        TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory);
     }
 }

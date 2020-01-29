@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
     using Apache.Ignite.Core.Impl.Binary;
@@ -34,6 +35,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Non-generic map. Switched to when same cache is used with different generic arguments.
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, object> _fallbackMap;
+        
+        /** Fallback init lock. */
+        private readonly object _fallbackMapLock = new object();
         
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
@@ -59,6 +63,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             val = default(TVal);
             return false;
+        }
+
+        public TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory)
+        {
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, TVal>;
+            if (map != null)
+            {
+                return map.GetOrAdd(key, valueFactory);
+            }
+            
+            EnsureFallbackMap();
+            
+            return (TVal) _fallbackMap.GetOrAdd(key, k => valueFactory((TKey) k));
         }
 
         public void Update(IBinaryStream stream, Marshaller marshaller)
@@ -90,8 +108,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (!typeMatch)
             {
                 // Type mismatch: must switch to fallback map and update it.
-                _map = null;
-                _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, object>();
+                EnsureFallbackMap();
             }
             else if (_fallbackMap == null)
             {
@@ -150,6 +167,25 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     map.Clear();
                 }
+            }
+        }
+        
+        private void EnsureFallbackMap()
+        {
+            if (_fallbackMap != null)
+            {
+                return;
+            }
+
+            lock (_fallbackMapLock)
+            {
+                if (_fallbackMap != null)
+                {
+                    return;
+                }
+                
+                _map = null;
+                _fallbackMap = new ConcurrentDictionary<object, object>();
             }
         }
     }
