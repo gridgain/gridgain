@@ -22,7 +22,7 @@ import java.util.Set;
 /**
  * Class for accumulation of record types and number of indexed records in index tree.
  */
-public class SchemaIndexCacheStat {
+class SchemaIndexCacheStat {
     /**
      * Indexed types.
      */

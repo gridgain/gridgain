@@ -2205,9 +2205,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * Gets type descriptor by type name.
      *
      * @param name Type name.
-     * @return Type descriptor.
+     * @return Type descriptor, or {@code null}, if descriptor not found.
      */
-    public QueryTypeDescriptorImpl typeByName(String name) {
+    @Nullable public QueryTypeDescriptorImpl typeByName(String name) {
         for (QueryTypeDescriptorImpl descriptor : types.values()) {
             if (descriptor.name().equals(name))
                 return descriptor;

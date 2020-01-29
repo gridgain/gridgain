@@ -43,6 +43,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteReducer;
 import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
 import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
@@ -223,14 +224,15 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @param parts Partitions.
      * @param clo Closure.
      * @param remainder Remainder.
-     * @return Index statistics.
+     * @return Index statistics of {@code null}, if
+     * {@link IgniteSystemProperties#IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING} is {@code false}.
      * @throws IgniteCheckedException If failed.
      */
-    private SchemaIndexCacheStat processPartitions(List<GridDhtLocalPartition> parts, SchemaIndexCacheVisitorClosure clo,
+    @Nullable private SchemaIndexCacheStat processPartitions(List<GridDhtLocalPartition> parts, SchemaIndexCacheVisitorClosure clo,
         int remainder)
         throws IgniteCheckedException {
 
-        SchemaIndexCacheStat tmp = new SchemaIndexCacheStat();
+        SchemaIndexCacheStat tmp = IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED ? new SchemaIndexCacheStat() : null;
 
         for (int i = 0, size = parts.size(); i < size; i++) {
             if (stop)
@@ -248,10 +250,10 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      *
      * @param part Partition.
      * @param clo Index closure.
-     * @param res String builder to accumulate details.
+     * @param stat Index build statistics accumulator (can be {@code }
      * @throws IgniteCheckedException If failed.
      */
-    private void processPartition(GridDhtLocalPartition part, SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat res)
+    private void processPartition(GridDhtLocalPartition part, SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat)
         throws IgniteCheckedException {
         checkCancelled();
 
@@ -283,8 +285,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
                     final GridQueryTypeDescriptor type = processKey(key, clo);
 
-                    if (type != null)
-                        res.types.add(type.name());
+                    if (type != null && stat != null)
+                        stat.types.add(type.name());
 
                     if (++cntr % BATCH_SIZE == 0) {
                         cctx.shared().database().checkpointReadUnlock();
@@ -296,7 +298,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                         break;
                 }
 
-                res.scanned += cntr;
+                if (stat != null)
+                    stat.scanned += cntr;
             }
             finally {
                 if (locked)

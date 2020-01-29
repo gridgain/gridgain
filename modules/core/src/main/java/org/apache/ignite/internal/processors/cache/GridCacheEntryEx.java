@@ -1007,7 +1007,7 @@ public interface GridCacheEntryEx {
      * @throws GridCacheEntryRemovedException If entry was removed.
      * @return Type descriptor.
      */
-    public @Nullable GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo)
+    @Nullable public GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo)
         throws IgniteCheckedException, GridCacheEntryRemovedException;
 
     /**
