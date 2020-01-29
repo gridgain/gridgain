@@ -33,7 +33,7 @@ public interface CacheConfigurationSplitter {
      * the corresponding values into {@link CacheConfiguration} are changed with the default ones.
      *
      * @param desc Cache group description to split.
-     * @return Splitted cache configuration.
+     * @return Split cache configuration.
      * @see SerializeSeparately
      */
     default T2<CacheConfiguration, CacheConfigurationEnrichment> split(CacheGroupDescriptor desc) {
@@ -50,7 +50,7 @@ public interface CacheConfigurationSplitter {
      * the corresponding values into {@link CacheConfiguration} are changed with the default ones.
      *
      * @param desc Cache description to split.
-     * @return Splitted cache configuration.
+     * @return Split cache configuration.
      * @see SerializeSeparately
      */
     default T2<CacheConfiguration, CacheConfigurationEnrichment> split(DynamicCacheDescriptor desc) {
@@ -67,7 +67,7 @@ public interface CacheConfigurationSplitter {
      * the corresponding values into {@link CacheConfiguration} are changed with the default ones.
      *
      * @param ccfg Cache configuration to split.
-     * @return Splitted cache configuration.
+     * @return Split cache configuration.
      * @see SerializeSeparately
      */
     T2<CacheConfiguration, CacheConfigurationEnrichment> split(CacheConfiguration ccfg);
