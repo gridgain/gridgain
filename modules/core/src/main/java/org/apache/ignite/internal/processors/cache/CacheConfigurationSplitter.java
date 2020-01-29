@@ -29,7 +29,7 @@ public interface CacheConfigurationSplitter {
     /**
      * Splits cache configuration associated with the given {@code desc} into two parts
      * {@link CacheConfiguration} and {@link CacheConfigurationEnrichment} that are serialized separately.
-     * The fields marked with {@link SerializeSeparately} are pleced into {@link CacheConfigurationEnrichment},
+     * The fields marked with {@link SerializeSeparately} are placed into {@link CacheConfigurationEnrichment},
      * the corresponding values into {@link CacheConfiguration} are changed with the default ones.
      *
      * @param desc Cache group description to split.
@@ -46,7 +46,7 @@ public interface CacheConfigurationSplitter {
     /**
      * Splits cache configuration associated with the given {@code desc} into two parts
      * {@link CacheConfiguration} and {@link CacheConfigurationEnrichment} that are serialized separately.
-     * The fields marked with {@link SerializeSeparately} are pleced into {@link CacheConfigurationEnrichment},
+     * The fields marked with {@link SerializeSeparately} are placed into {@link CacheConfigurationEnrichment},
      * the corresponding values into {@link CacheConfiguration} are changed with the default ones.
      *
      * @param desc Cache description to split.
@@ -63,7 +63,7 @@ public interface CacheConfigurationSplitter {
     /**
      * Splits the given cache configuration into two parts
      * {@link CacheConfiguration} and {@link CacheConfigurationEnrichment} that are serialized separately.
-     * The fields marked with {@link SerializeSeparately} are pleced into {@link CacheConfigurationEnrichment},
+     * The fields marked with {@link SerializeSeparately} are placed into {@link CacheConfigurationEnrichment},
      * the corresponding values into {@link CacheConfiguration} are changed with the default ones.
      *
      * @param ccfg Cache configuration to split.

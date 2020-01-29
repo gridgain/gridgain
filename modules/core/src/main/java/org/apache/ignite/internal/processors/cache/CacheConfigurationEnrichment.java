@@ -88,7 +88,7 @@ public class CacheConfigurationEnrichment implements Serializable {
 
     /**
      * Returns {@code true} if all field class names are {@code null}.
-     * The current implementation assumes that {@code null} value is the default value for a enriched field.
+     * The current implementation assumes that {@code null} value is the default value for an enriched field.
      * Be aware this method is used for backward compatibility only and will be removed in future releases.
      *
      * @return {@code true} if all field values are {@code null}.
