@@ -16,13 +16,14 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.AbstractThinProtocolFeature;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.AbstractThinClientFeatures;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -192,13 +193,13 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         }
 
-        JdbcThinFeatures features = null;
+        EnumSet<JdbcThinFeature> features = null;
 
         if (ver.compareTo(VER_2_8_2) >= 0) {
             byte [] cliFeatures = reader.readByteArray();
 
-            features = new JdbcThinFeatures(
-                AbstractThinClientFeatures.matchFeatures(cliFeatures, JdbcThinFeatures.allFeatures()));
+            features = JdbcThinFeature.enumSet(
+                AbstractThinProtocolFeature.matchFeatures(cliFeatures, JdbcThinFeature.allFeatures()));
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {

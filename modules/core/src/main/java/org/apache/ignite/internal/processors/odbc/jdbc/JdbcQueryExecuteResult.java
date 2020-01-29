@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.util.EnumSet;
 import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
@@ -134,7 +135,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
             writer.writeBoolean(last);
 
-            JdbcUtils.writeItems(writer, items);
+            JdbcUtils.writeItems(writer, items, binCtx);
         }
         else
             writer.writeLong(updateCnt);
@@ -156,7 +157,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
         if (isQuery) {
             last = reader.readBoolean();
 
-            items = JdbcUtils.readItems(reader);
+            items = JdbcUtils.readItems(reader, binCtx);
         }
         else {
             last = true;

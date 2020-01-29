@@ -33,7 +33,7 @@ public class JdbcUtils {
      * @param writer Binary writer.
      * @param items Query results items.
      */
-    public static void writeItems(BinaryWriterExImpl writer, List<List<Object>> items) {
+    public static void writeItems(BinaryWriterExImpl writer, List<List<Object>> items, JdbcBinaryContext binCtx) {
         writer.writeInt(items.size());
 
         for (List<Object> row : items) {
@@ -50,7 +50,7 @@ public class JdbcUtils {
      * @param reader Binary reader.
      * @return Query results items.
      */
-    public static List<List<Object>> readItems(BinaryReaderExImpl reader) {
+    public static List<List<Object>> readItems(BinaryReaderExImpl reader, JdbcBinaryContext ctx) {
         int rowsSize = reader.readInt();
 
         if (rowsSize > 0) {
