@@ -29,7 +29,7 @@ import org.apache.ignite.marshaller.Marshaller;
 
 /**
  * Splits cache configuration into two parts that can be serialized, deserialized separately.
- * This allows do not deserialize a part of the configuration and therefore,
+ * This eliminates the need to deserialize part of the configuration and therefore,
  * it does not require user classes on non-affinity nodes.
  */
 public class CacheConfigurationSplitterImpl implements CacheConfigurationSplitter {
