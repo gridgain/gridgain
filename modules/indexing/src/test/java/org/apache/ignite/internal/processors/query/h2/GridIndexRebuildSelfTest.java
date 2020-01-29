@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.io.File;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
