@@ -2859,6 +2859,10 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
                 ctx.event().record(evt, discoCache);
             }
+
+            if (ctx.platform().hasContext()) {
+                ctx.platform().context().onDiscoveryEvent(type);
+            }
         }
 
         /**
