@@ -127,18 +127,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
         }
 
-        /** <inheritdoc /> */
-        bool IEventListener<DiscoveryEvent>.Invoke(DiscoveryEvent evt)
-        {
-            if (!evt.Node.IsClient)
-            {
-                // Clear all caches on node leave: data may have been lost.
-                ClearAll();
-            }
-
-            return true;
-        }
-
         /// <summary>
         /// Clears all caches.
         /// </summary>
@@ -149,7 +137,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 nearCache.Value.Clear();
             }
         }
-        
+
         /// <summary>
         /// Initializes this instance, if necessary.
         /// </summary>
@@ -160,6 +148,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 _ignite.GetEvents()
                     .LocalListen(this, EventType.NodeFailed, EventType.NodeLeft, EventType.NodeSegmented);
             }
+        }
+        
+        /** <inheritdoc /> */
+        bool IEventListener<DiscoveryEvent>.Invoke(DiscoveryEvent evt)
+        {
+            if (!evt.Node.IsClient)
+            {
+                // Clear all caches on node leave: data may have been lost.
+                ClearAll();
+            }
+
+            return true;
         }
     }
 }
