@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -36,6 +37,7 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.F;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
 
 /**
@@ -215,6 +217,14 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 }
             }
         };
+
+        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, false) && maxMemory != 0L) {
+            log.warning("Memory quotas per connection is disabled." +
+                " To enable it please set Ignite system property \"" + IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA
+                + "\" to \"true\"");
+
+            maxMemory = 0L;
+        }
 
         handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
             collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, nestedTxMode,
