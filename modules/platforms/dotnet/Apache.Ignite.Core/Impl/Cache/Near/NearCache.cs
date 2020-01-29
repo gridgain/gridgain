@@ -90,6 +90,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (!typeMatch)
             {
                 // Type mismatch: must switch to fallback map and update it.
+                _map = null;
                 _fallbackMap = _fallbackMap ?? new ConcurrentDictionary<object, object>();
             }
             else if (_fallbackMap == null)
