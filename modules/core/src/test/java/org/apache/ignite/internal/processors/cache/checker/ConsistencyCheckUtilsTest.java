@@ -20,6 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
@@ -28,14 +33,20 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.junit.Test;
-import org.mockito.Mockito;
 
+import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAX_GRID_CACHE_VERSION;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
@@ -58,16 +69,16 @@ public class ConsistencyCheckUtilsTest {
     private static final KeyCacheObject TEST_KEY = new KeyCacheObjectImpl(123, null, -1);
 
     /** Cctx. */
-    private GridCacheContext cctx = Mockito.mock(GridCacheContext.class);
+    private GridCacheContext cctx = mock(GridCacheContext.class);
 
     /** Topology. */
-    private GridDhtPartitionTopology top = Mockito.mock(GridDhtPartitionTopology.class);
+    private GridDhtPartitionTopology top = mock(GridDhtPartitionTopology.class);
 
     /** Aff. */
-    private GridCacheAffinityManager aff = Mockito.mock(GridCacheAffinityManager.class);
+    private GridCacheAffinityManager aff = mock(GridCacheAffinityManager.class);
 
     /** Owners. */
-    private List owners = Mockito.mock(List.class);
+    private List owners = mock(List.class);
 
     {
         when(cctx.topology()).thenReturn(top);
@@ -302,6 +313,146 @@ public class ConsistencyCheckUtilsTest {
     /**
      *
      */
+    @Test
+    public void testCalcValuePrimaryNodeHasValue() throws IgniteCheckedException {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue verVal = versionedValue(1, new CacheObjectImpl(1, null));
+        nodeToVersionedValues.put(NODE_1, verVal);
+
+        CacheObject val = calculateValueToFixWith(PRIMARY, nodeToVersionedValues, NODE_1, null, 4);
+
+        assertEquals(verVal.value().valueBytes(cacheObjectContext()), val.valueBytes(cacheObjectContext()));
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCalcValuePrimaryNodeDoesNotHaveValue() throws IgniteCheckedException {
+        CacheObject val = calculateValueToFixWith(PRIMARY, new HashMap<>(), NODE_1, null, 4);
+
+        assertNull(val);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCalcValueMaxGridVersionNodeDoesNotHaveValue() throws IgniteCheckedException {
+        CacheObject val = calculateValueToFixWith(MAX_GRID_CACHE_VERSION, new HashMap<>(), NODE_1, null, 4);
+
+        assertNull(val);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCalcValueMaxGridVersionNodeFindMaxVersion() throws IgniteCheckedException {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+        VersionedValue maxVerVal = versionedValue(5, new CacheObjectImpl(232, "232".getBytes()));
+        VersionedValue ver4 = versionedValue(3, new CacheObjectImpl(165, "165".getBytes()));
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+        nodeToVersionedValues.put(NODE_3, maxVerVal);
+        nodeToVersionedValues.put(NODE_4, ver4);
+
+        CacheObject val = calculateValueToFixWith(MAX_GRID_CACHE_VERSION, nodeToVersionedValues, NODE_1, null, 4);
+
+        assertEquals(maxVerVal.value().valueBytes(cacheObjectContext()), val.valueBytes(cacheObjectContext()));
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCalcValueMajorityNodeDoesNotHaveValue() throws IgniteCheckedException {
+        CacheObject val = calculateValueToFixWith(MAJORITY, new HashMap<>(), NODE_1, null, 4);
+
+        assertNull(val);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCalcValueMajorityMajorityWithoutQuorum() throws IgniteCheckedException {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, null));
+        nodeToVersionedValues.put(NODE_1, ver1);
+
+        CacheObject val = calculateValueToFixWith(MAJORITY, nodeToVersionedValues, NODE_1, null, 4);
+
+        assertNull(val);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCalcValueMajorityNullValuesMoreThenValued() throws IgniteCheckedException {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+        VersionedValue ver3 = versionedValue(3, new CacheObjectImpl(232, "232".getBytes()));
+        VersionedValue ver4 = versionedValue(4, new CacheObjectImpl(165, "165".getBytes()));
+
+        // Full quorum
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+        nodeToVersionedValues.put(NODE_3, ver3);
+        nodeToVersionedValues.put(NODE_4, ver4);
+        nodeToVersionedValues.put(UUID.randomUUID(), ver4);
+        // 3 nodes with null
+
+        CacheObject val = calculateValueToFixWith(MAJORITY, nodeToVersionedValues, NODE_1, cacheObjectContext(), 8);
+
+        assertNull(val);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCalcValueMajorityByValue() throws IgniteCheckedException {
+        Map<UUID, VersionedValue> nodeToVersionedValues = new HashMap<>();
+        VersionedValue ver1 = versionedValue(1, new CacheObjectImpl(644, "644".getBytes()));
+        VersionedValue ver2 = versionedValue(2, new CacheObjectImpl(331, "331".getBytes()));
+        VersionedValue ver3 = versionedValue(3, new CacheObjectImpl(232, "232".getBytes()));
+        VersionedValue ver4 = versionedValue(4, new CacheObjectImpl(165, "165".getBytes()));
+
+        nodeToVersionedValues.put(NODE_1, ver1);
+        nodeToVersionedValues.put(NODE_2, ver2);
+        nodeToVersionedValues.put(NODE_3, ver3);
+        nodeToVersionedValues.put(NODE_4, ver4);
+        nodeToVersionedValues.put(UUID.randomUUID(), ver4);
+        nodeToVersionedValues.put(UUID.randomUUID(), ver4);
+        // 2 nodes with null
+
+        CacheObject val = calculateValueToFixWith(MAJORITY, nodeToVersionedValues, NODE_1, cacheObjectContext(), 8);
+
+        assertEquals(ver4.value().valueBytes(cacheObjectContext()), val.valueBytes(cacheObjectContext()));
+    }
+
+    /**
+     *
+     */
+    private CacheObjectContext cacheObjectContext() throws IgniteCheckedException {
+        CacheObjectContext coc = mock(CacheObjectContext.class);
+        IgniteCacheObjectProcessor cop = mock(IgniteCacheObjectProcessor.class);
+        GridKernalContext kernalCtx = mock(GridKernalContext.class);
+        when(coc.kernalContext()).thenReturn(kernalCtx);
+        when(kernalCtx.cacheObjects()).thenReturn(cop);
+        when(cop.marshal(any(), any())).thenAnswer(ans -> ans.getArguments()[1].toString().getBytes());
+
+        return coc;
+    }
+
+    /**
+     *
+     */
     private GridCacheVersion version(int ver) {
         return new GridCacheVersion(1, 0, ver);
     }
@@ -309,7 +460,14 @@ public class ConsistencyCheckUtilsTest {
     /**
      *
      */
+    private VersionedValue versionedValue(int ver, CacheObject val) {
+        return new VersionedValue(val, new GridCacheVersion(1, 0, ver), 1, 1);
+    }
+
+    /**
+     *
+     */
     private VersionedValue versionedValue(int ver) {
-        return new VersionedValue(null, new GridCacheVersion(1, 0, ver), 1, 1);
+        return versionedValue(ver, null);
     }
 }

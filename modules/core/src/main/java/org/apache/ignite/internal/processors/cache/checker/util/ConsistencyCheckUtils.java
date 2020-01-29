@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,8 +45,11 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.jetbrains.annotations.Nullable;
 
 import static java.io.File.separatorChar;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
@@ -172,6 +176,80 @@ public class ConsistencyCheckUtils {
         }
 
         return allNonMaxChanged;
+    }
+
+    /**
+     * Calculate value
+     *
+     * @param repairAlg RepairAlgorithm
+     * @param nodeToVersionedValues Map of nodes to corresponding values with values.
+     * @param primaryNodeID Primary node id.
+     * @param cacheObjCtx Cache object context.
+     * @param affinityNodesCnt nodes count according to affinity.
+     * @return Value to repair with.
+     * @throws IgniteCheckedException If failed to retrieve value from value CacheObject.
+     */
+    @Nullable public static CacheObject calculateValueToFixWith(RepairAlgorithm repairAlg,
+        Map<UUID, VersionedValue> nodeToVersionedValues,
+        UUID primaryNodeID,
+        CacheObjectContext cacheObjCtx,
+        int affinityNodesCnt) throws IgniteCheckedException {
+        CacheObject valToFixWith = null;
+
+        switch (repairAlg) {
+            case PRIMARY:
+                VersionedValue versionedVal = nodeToVersionedValues.get(primaryNodeID);
+
+                return versionedVal != null ? versionedVal.value() : null;
+
+            case MAJORITY:
+                if (affinityNodesCnt > nodeToVersionedValues.size() * 2)
+                    return null;
+
+                Map<String, T2<Integer, CacheObject>> majorityCntr = new HashMap<>();
+
+                majorityCntr.put("", new T2<>(affinityNodesCnt - nodeToVersionedValues.size(), null));
+
+                for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
+                    byte[] valBytes = versionedValue.value().valueBytes(cacheObjCtx);
+
+                    String valBytesStr = Arrays.toString(valBytes);
+
+                    if (majorityCntr.putIfAbsent(valBytesStr, new T2<>(1, versionedValue.value())) == null)
+                        continue;
+
+                    T2<Integer, CacheObject> valTuple = majorityCntr.get(valBytesStr);
+
+                    valTuple.set1(valTuple.getKey() + 1);
+                }
+
+                int maxMajority = -1;
+
+                for (T2<Integer, CacheObject> majorityValues : majorityCntr.values()) {
+                    if (majorityValues.get1() > maxMajority) {
+                        maxMajority = majorityValues.get1();
+                        valToFixWith = majorityValues.get2();
+                    }
+                }
+
+                return valToFixWith;
+
+            case MAX_GRID_CACHE_VERSION:
+                GridCacheVersion maxVer = new GridCacheVersion(0, 0, 0);
+
+                for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
+                    if (versionedValue.version().compareTo(maxVer) > 0) {
+                        maxVer = versionedValue.version();
+
+                        valToFixWith = versionedValue.value();
+                    }
+                }
+
+                return valToFixWith;
+
+            default:
+                throw new IllegalArgumentException("Unsupported repair algorithm=[" + repairAlg + ']');
+        }
     }
 
     /**
