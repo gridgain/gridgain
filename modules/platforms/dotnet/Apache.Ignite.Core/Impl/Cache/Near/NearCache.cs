@@ -79,6 +79,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return (TVal) _fallbackMap.GetOrAdd(key, k => valueFactory((TKey) k));
         }
 
+        public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
+        {
+            // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
+            var map = _map as ConcurrentDictionary<TKey, TVal>;
+            if (map != null)
+            {
+                return map.GetOrAdd(key, val);
+            }
+            
+            EnsureFallbackMap();
+            
+            return (TVal) _fallbackMap.GetOrAdd(key, val);
+        }
+
         public void Update(IBinaryStream stream, Marshaller marshaller)
         {
             Debug.Assert(stream != null);

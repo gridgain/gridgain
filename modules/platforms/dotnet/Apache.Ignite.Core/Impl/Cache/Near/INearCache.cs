@@ -44,5 +44,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
         
         TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory);
+        
+        TVal GetOrAdd<TKey, TVal>(TKey key, TVal val);
     }
 }

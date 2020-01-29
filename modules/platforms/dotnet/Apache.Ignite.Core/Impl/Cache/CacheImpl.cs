@@ -504,6 +504,11 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             value = res.Value;
 
+            if (CanUseNear && res.Success)
+            {
+                _nearCache.GetOrAdd(key, value);
+            }
+
             return res.Success;
         }
 
