@@ -5038,7 +5038,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (!nestedLocksAllowed) {
             if (!map.isEmpty()) {
                 if (!map.containsKey(this)) {
-                    if ((cctx.cacheId() != -2100569601))
+                    if ((cctx.cacheId() != CU.UTILITY_CACHE_GROUP_ID))
                         throw new RuntimeException("Nested locks are not allowed");
                 }
             }

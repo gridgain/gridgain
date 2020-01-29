@@ -1477,7 +1477,7 @@ public class GridLocalAtomicCache<K, V> extends GridLocalCache<K, V> {
             for (int i = 0; i < locked.size(); i++) {
                 GridCacheEntryEx entry = locked.get(i);
 
-                entry.lockEntry();
+                entry.lockEntry(true);
 
                 if (entry.obsolete()) {
                     // Unlock all locked.
