@@ -29,6 +29,8 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PartitionRe
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationStressTest;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskTest;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTaskTest;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairEntryProcessorTest;
+import org.apache.ignite.internal.processors.cache.checker.tasks.RepairRequestTaskTest;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.apache.ignite.util.GridCommandHandlerPartitionReconciliationAtomicPersistentTest;
@@ -78,6 +80,8 @@ public class PartitionReconciliationTestSuite {
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFullFixStressTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, CollectPartitionKeysByRecheckRequestTaskTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ConsistencyCheckUtilsTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, RepairEntryProcessorTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, RepairRequestTaskTest.class, ignoredTests);
 
         return suite;
     }
