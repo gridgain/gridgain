@@ -16,75 +16,70 @@
 
 package org.apache.ignite.internal.visor.cache;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
-import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Argument for {@link VisorCacheGetValueTask}.
  */
-public class VisorCacheGetValueTaskArg extends IgniteDataTransferObject {
-    /** */
-    private static final ObjectMapper MAPPER = new GridJettyObjectMapper();
-
+public class VisorCacheKeyObject extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
-    /** Cache name. */
-    private String cacheName;
+    /** Type of key object. */
+    private VisorDataType type;
 
-    /** Key value object. */
-    private VisorCacheKeyObject keyValueHolder;
+    /** Key value. */
+    private Object key;
 
     /**
      * Default constructor.
      */
-    public VisorCacheGetValueTaskArg() {
+    public VisorCacheKeyObject() {
         // No-op.
     }
 
     /**
-     * @param cacheName Cache name.
-     * @param keyValueStr JSON string presentation of key value object.
+     * @param type Type of key object.
+     * @param key Specified key.
      */
-    public VisorCacheGetValueTaskArg(String cacheName, String keyValueStr) throws IOException {
-        this.cacheName = cacheName;
-        keyValueHolder = MAPPER.readValue(keyValueStr, VisorCacheKeyObject.class);
+    public VisorCacheKeyObject(VisorDataType type, Object key) {
+        this.type = type;
+        this.key = key;
     }
 
     /**
-     * @return Cache name.
+     * @return Key type.
      */
-    public String getCacheName() {
-        return cacheName;
+    public VisorDataType getType() {
+        return type;
     }
 
     /**
-     * @return Key value object.
+     * @return Key.
      */
-    public VisorCacheKeyObject getKeyValueHolder() {
-        return keyValueHolder;
+    public Object getKey() {
+        return key;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
-        U.writeString(out, cacheName);
-        out.writeObject(keyValueHolder);
+        U.writeEnum(out, type);
+        out.writeObject(key);
     }
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        cacheName = U.readString(in);
-        keyValueHolder = (VisorCacheKeyObject)in.readObject();
+        type = VisorDataType.fromOrdinal(in.readByte());
+        key = in.readObject();
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(VisorCacheGetValueTaskArg.class, this);
+        return S.toString(VisorCacheKeyObject.class, this);
     }
 }

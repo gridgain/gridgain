@@ -33,10 +33,13 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.DefaultSerializerProvider;
 import com.fasterxml.jackson.databind.ser.SerializerFactory;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.DateFormat;
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -50,6 +53,7 @@ import org.apache.ignite.internal.binary.BinaryObjectImpl;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlIndexMetadata;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlMetadata;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.visor.cache.VisorCacheKeyObject;
 import org.apache.ignite.internal.visor.cache.VisorDataType;
 import org.apache.ignite.internal.visor.util.VisorExceptionWrapper;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -75,7 +79,7 @@ public class GridJettyObjectMapper extends ObjectMapper {
             .addSerializer(GridCacheSqlMetadata.class, IGNITE_SQL_METADATA_SERIALIZER)
             .addSerializer(GridCacheSqlIndexMetadata.class, IGNITE_SQL_INDEX_METADATA_SERIALIZER)
             .addSerializer(BinaryObjectImpl.class, IGNITE_BINARY_OBJECT_SERIALIZER)
-            .addDeserializer(BinaryObject.class, IGNITE_BINARY_DESERIALIZER);
+            .addDeserializer(VisorCacheKeyObject.class, VISOR_CACHE_KEY_OBJECT_DESERIALIZER);
 
         registerModule(module);
     }
@@ -135,7 +139,7 @@ public class GridJettyObjectMapper extends ObjectMapper {
     }
 
     /** Custom deserializer for {@link BinaryObjectImpl} */
-    private static final JsonDeserializer<BinaryObject> IGNITE_BINARY_DESERIALIZER = new JsonDeserializer<BinaryObject>() {
+    private static final JsonDeserializer<VisorCacheKeyObject> VISOR_CACHE_KEY_OBJECT_DESERIALIZER = new JsonDeserializer<VisorCacheKeyObject>() {
         /**
          * Convert string value to specified object type.
          *
@@ -178,8 +182,22 @@ public class GridJettyObjectMapper extends ObjectMapper {
                 case TIMESTAMP:
                     return new Timestamp(Long.parseLong(o));
 
-                case DATE:
+                case DATE_UTIL:
+                    return new java.util.Date(Long.parseLong(o));
+
+                case DATE_SQL:
                     return new Date(Long.parseLong(o));
+
+                case BIG_DECIMAL:
+                    return new BigDecimal(o);
+
+                case BIG_INTEGER:
+                    return new BigInteger(o);
+
+                case INSTANT:
+                    String[] parts = o.split("\\.");
+
+                    return Instant.ofEpochSecond(Long.parseLong(parts[0]), Integer.parseInt(parts[1]));
 
                 default:
                     throw new IllegalArgumentException("Unsupported type convertation: " + type);
@@ -302,8 +320,41 @@ public class GridJettyObjectMapper extends ObjectMapper {
         }
 
         /** {@inheritDoc} */
-        @Override public BinaryObject deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
-            return parseObject(p, ctxt);
+        @Override public VisorCacheKeyObject deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+            JsonToken jsonToken = null;
+
+            VisorDataType type = null;
+            Object value = null;
+
+            while(!p.isClosed() && JsonToken.END_OBJECT != jsonToken) {
+                jsonToken = p.nextToken();
+
+                if (JsonToken.FIELD_NAME == jsonToken) {
+                    String fieldName = p.getCurrentName();
+
+                    jsonToken = p.nextToken();
+
+                    switch (fieldName) {
+                        case "type":
+                            type = VisorDataType.valueOf(p.getValueAsString());
+
+                            break;
+
+                        case "value":
+                            if (JsonToken.START_OBJECT == jsonToken)
+                                value = parseObject(p, ctxt);
+                            else
+                                value = p.getValueAsString();
+
+                            break;
+                    }
+                }
+            }
+
+            return new VisorCacheKeyObject(
+                type,
+                VisorDataType.BINARY == type ? value : strToObject(type, String.valueOf(value))
+            );
         }
     };
 
