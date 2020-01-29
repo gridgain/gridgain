@@ -29,7 +29,6 @@ import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Before;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -135,13 +134,14 @@ public abstract class AbstractActionControllerTest extends AgentCommonAbstractTe
         assertWithPoll(
             () -> {
                 List<JobResponse> res = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
-                return !F.isEmpty(res) && assertFn.apply(res);
+
+                return res != null && assertFn.apply(res);
             }
         );
     }
 
     /** {@inheritDoc} */
     @Override protected void assertWithPoll(Callable<Boolean> cond) {
-        with().pollInterval(500, MILLISECONDS).await().atMost(10, SECONDS).until(cond);
+        with().pollInterval(500, MILLISECONDS).await().atMost(20, SECONDS).until(cond);
     }
 }

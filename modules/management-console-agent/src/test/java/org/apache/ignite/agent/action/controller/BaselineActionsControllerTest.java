@@ -46,7 +46,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED && cluster.isBaselineAutoAdjustEnabled();
+            return r != null && r.getStatus() == COMPLETED && cluster.isBaselineAutoAdjustEnabled();
         });
     }
 
@@ -64,7 +64,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED && !cluster.isBaselineAutoAdjustEnabled();
+            return r != null && r.getStatus() == COMPLETED && !cluster.isBaselineAutoAdjustEnabled();
         });
     }
 
@@ -82,7 +82,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED && cluster.baselineAutoAdjustTimeout() == 10_000;
+            return r != null && r.getStatus() == COMPLETED && cluster.baselineAutoAdjustTimeout() == 10_000;
         });
     }
 
@@ -112,7 +112,7 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            return r.getStatus() == COMPLETED && cluster.currentBaselineTopology().size() == 3;
+            return r != null && r.getStatus() == COMPLETED && cluster.currentBaselineTopology().size() == 3;
         });
     }
 }
