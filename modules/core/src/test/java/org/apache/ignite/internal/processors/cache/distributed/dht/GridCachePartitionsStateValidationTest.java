@@ -68,7 +68,8 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
     /** */
     private boolean clientMode;
 
-    private ListeningTestLogger testLogger;
+    /** */
+    private ListeningTestLogger testLog;
 
     /** {@inheritDoc */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -86,8 +87,8 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         if (clientMode)
             cfg.setClientMode(true);
 
-        if (testLogger != null)
-            cfg.setGridLogger(testLogger);
+        if (testLog != null)
+            cfg.setGridLogger(testLog);
 
         return cfg;
     }
@@ -339,15 +340,15 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
      *           size - partition size are inconsistent(boolean)
      */
     private void startThreeNodesGrid(boolean cnt, boolean size) throws Exception {
-        testLogger = new ListeningTestLogger();
+        testLog = new ListeningTestLogger();
 
         LogListener lsnrCnt = LogListener.matches("Partitions update counters are inconsistent for ").build();
         LogListener lsnrSize = LogListener.matches("Partitions cache sizes are inconsistent for ").build();
         LogListener lsnrSizeCnt = LogListener.matches("Partitions cache size and update counters are inconsistent for ").build();
 
-        testLogger.registerListener(lsnrSize);
-        testLogger.registerListener(lsnrCnt);
-        testLogger.registerListener(lsnrSizeCnt);
+        testLog.registerListener(lsnrSize);
+        testLog.registerListener(lsnrCnt);
+        testLog.registerListener(lsnrSizeCnt);
 
         IgniteEx ignite = startGrids(3);
             ignite.cluster().active(true);
