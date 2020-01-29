@@ -171,6 +171,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      */
     private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
 
+    /** */
     private final IgnitePredicate<ClusterNode> SRVS_NODES_FILTER = node -> !node.isClient() && !node.isDaemon();
 
     /**
