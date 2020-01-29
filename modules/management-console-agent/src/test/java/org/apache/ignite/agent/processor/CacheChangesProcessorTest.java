@@ -70,7 +70,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
 
         changeManagementConsoleConfig(ignite);
 
-        IgniteCluster cluster = ignite.cluster();
+        IgniteClusterEx cluster = ignite.cluster();
 
         cluster.active(true);
 
