@@ -52,10 +52,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.AreSame(cache.Get(key), cache.Get(key), "key is in near cache on grid1");
 
-            // TODO: Figure out a good way to get NodeLeft callback without subscribing:
-            // GridDiscoveryManager.recordEvent, outside the condition.
-            // grid1.GetEvents().EnableLocal(EventType.NodeLeft);
-            // grid1.GetEvents().LocalListen(this, EventType.NodeLeft);
+            // TODO: Figure out a good way to get NodeLeft callback without subscribing.
+            grid1.GetEvents().EnableLocal(EventType.NodeLeft);
+            grid1.GetEvents().LocalListen(this, EventType.NodeLeft);
             grid2.Dispose();
             Assert.IsTrue(grid1.WaitTopology(1));
 

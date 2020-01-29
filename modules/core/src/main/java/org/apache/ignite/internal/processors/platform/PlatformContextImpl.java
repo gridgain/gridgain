@@ -628,9 +628,4 @@ public class PlatformContextImpl implements PlatformContext {
             gateway().nearCacheEvict(mem0.pointer());
         }
     }
-
-    /** {@inheritDoc} */
-    @Override public void onDiscoveryEvent(int type) {
-        // TODO: Pass specific events to Platform (11)
-    }
 }

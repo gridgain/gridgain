@@ -306,11 +306,4 @@ public interface PlatformContext {
      * @param keyBytes Serialized key.
      */
     public void evictFromNearCache(int cacheId,byte[] keyBytes);
-
-    /**
-     * Handles discovery event.
-     *
-     * @param type Event type, see {@link org.apache.ignite.events.EventType}.
-     */
-    void onDiscoveryEvent(int type);
 }
