@@ -409,19 +409,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             return;
                         }
                     }
-                    else if (exchangeInProgress()) {
-                        GridDhtPartitionsExchangeFuture currentExchange = lastTopologyFuture();
-
-                        currentExchange.listen(fut -> {
-                            preprocessSingleMessage(node, msg);
-                        });
-
-                        if (log.isInfoEnabled())
-                            log.info("Delayed single message without exchange id until to exchange completed " +
-                                "(there is exchange in progress) [nodeId=" + node.id() + "]");
-
-                        return;
-                    }
 
                     preprocessSingleMessage(node, msg);
                 }
@@ -2818,30 +2805,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /** */
     public boolean currentThreadIsExchanger() {
         return exchWorker != null && Thread.currentThread() == exchWorker.runner();
-    }
-
-    /**
-     * @return {@code True} If there is any exchange future in progress.
-     */
-    private boolean exchangeInProgress() {
-        GridDhtPartitionsExchangeFuture current = lastTopologyFuture();
-
-        if (current == null)
-            return false;
-
-        if (exchWorker.hasPendingServerExchange())
-            return true;
-
-        GridDhtTopologyFuture finished = lastFinishedFut.get();
-
-        if (finished == null || finished.result().compareTo(current.initialVersion()) < 0) {
-            ClusterNode triggeredBy = current.firstEvent().eventNode();
-
-            if (current.partitionChangesInProgress() && !triggeredBy.isClient())
-                return true;
-       }
-
-        return false;
     }
 
     /** */
