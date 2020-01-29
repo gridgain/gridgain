@@ -72,11 +72,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// When the use case above is detected, we downgrade near cache map to {object, object}, which will cause
         /// more boxing and casting. 
         /// </summary>
-        public INearCache GetNearCache<TK, TV>(string cacheName,
-            NearCacheConfiguration nearCacheConfiguration)
+        public INearCache GetNearCache<TK, TV>(string cacheName)
         {
             Debug.Assert(!string.IsNullOrEmpty(cacheName));
-            Debug.Assert(nearCacheConfiguration != null);
 
             Initialize();
 

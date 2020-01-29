@@ -101,7 +101,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (configuration.NearConfiguration != null)
             {
-                _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name, configuration.NearConfiguration);
+                _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name);
             }
         }
 

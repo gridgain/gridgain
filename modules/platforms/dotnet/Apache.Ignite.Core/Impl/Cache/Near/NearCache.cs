@@ -38,7 +38,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         
         /** Fallback init lock. */
         private readonly object _fallbackMapLock = new object();
-        
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
+        /// </summary>
+        public NearCache()
+        {
+            // TODO: Enable callbacks in Java.
+            // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
+        }
+
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
