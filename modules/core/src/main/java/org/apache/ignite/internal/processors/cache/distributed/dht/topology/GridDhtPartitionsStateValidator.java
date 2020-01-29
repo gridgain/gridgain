@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.AbstractMap;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.util.function.*;
 
 import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
