@@ -42,7 +42,7 @@
 
     <properties>
         <ignite.update.notifier.product>apache-ignite</ignite.update.notifier.product>
-        <ignite.management.console.uris>http://localhost:3000,https://gmc.gridgain.com</ignite.management.console.uris>
+        <ignite.management.console.uris>http://localhost:3000,https://ggccc.gridgain.com</ignite.management.console.uris>
 
         <!-- Imports:
                 - com.sun.jmx.mbeanserver => only used from TCKMBeanServerBuilder which has no usages within Ignite's
