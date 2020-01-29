@@ -17,9 +17,11 @@ import java.sql.ResultSet;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collections;
 import java.util.List;
 import java.util.TimeZone;
-import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.TestJavaProcess;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -32,7 +34,8 @@ import static org.apache.ignite.jdbc.JdbcTestUtils.sql;
  */
 public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /** Jdbc thin url. */
-    private static final String URL = "jdbc:ignite:thin://127.0.0.1";
+//    private static final String URL = "jdbc:ignite:thin://127.0.0.1";
+    private static final String URL = "jdbc:postgresql://localhost/test?user=test&password=test";
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -45,30 +48,36 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        sql("CREATE TABLE TZ_TEST (" +
+        super.beforeTest();
+
+        sql(URL, "DROP TABLE IF EXISTS TZ_TEST", Collections.emptyList());
+
+        sql(URL, "CREATE TABLE IF NOT EXISTS TZ_TEST (" +
             "tz VARCHAR, " +
             "label VARCHAR, " +
             "dateVal DATE, " +
             "timeVal TIME, " +
             "tsVal TIMESTAMP, " +
-            "PRIMARY KEY (tz, label))");
+            "PRIMARY KEY (tz, label))", Collections.emptyList());
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        for (String cache : grid(0).cacheNames())
-            grid(0).cache(cache).destroy();
 
         super.afterTest();
     }
 
     /**
+     *
      */
     @Test
     public void test() throws Exception {
-        insert(TimeZone.getTimeZone("EST5EDT"));
-        insert(TimeZone.getTimeZone("IST"));
-        insert(TimeZone.getTimeZone("Europe/Moscow"));
+        insertObjectByLegacyApi(TimeZone.getTimeZone("EST5EDT"));
+        insertObjectByLegacyApi(TimeZone.getTimeZone("IST"));
+        insertObjectByLegacyApi(TimeZone.getTimeZone("Europe/Moscow"));
+        insertObjectByModernApi(TimeZone.getTimeZone("EST5EDT"));
+        insertObjectByModernApi(TimeZone.getTimeZone("IST"));
+        insertObjectByModernApi(TimeZone.getTimeZone("Europe/Moscow"));
 
         List<List<?>> res = new ArrayList<>();
 
@@ -103,24 +112,48 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /**
      * @param tz Default timezone for process.
      */
-    private void insert(final TimeZone tz) throws Exception {
+    private void insertObjectByLegacyApi(final TimeZone tz) throws Exception {
         TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
-            sql("INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
-                "VALUES (?, 'legacy', ?, ?, ?)",
-                tz.getID(),
-                new Date(119, 8, 9),
-                new Time(9, 9, 9),
-                new Timestamp(119, 8, 9, 9, 9, 9, 90900000)
+            sql(URL, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
+                    "VALUES (?, 'obj_legacy', ?, ?, ?)",
+                Arrays.asList(
+                    tz.getID(),
+                    new Date(119, 8, 9),
+                    new Time(9, 9, 9),
+                    new Timestamp(119, 8, 9, 9, 9, 9, 909000000)
+                )
             );
         }, "-Duser.timezone=" + tz.getID());
-
     }
 
     /**
+     * @param tz Default timezone for process.
      */
-    private List<List<?>> execSql(TimeZone tz, String sql, Object ... params) throws Exception {
-        return TestJavaProcess.exec((IgniteCallable<List<List<?>>>)() -> {
-            return sql(sql, params);
+    private void insertObjectByModernApi(final TimeZone tz) throws Exception {
+        TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
+            Calendar dateCal = Calendar.getInstance();
+            dateCal.set(2019, 8, 9);
+
+            Calendar timeCal = Calendar.getInstance();
+            timeCal.set(Calendar.HOUR_OF_DAY, 9);
+            timeCal.set(Calendar.MINUTE, 9);
+            timeCal.set(Calendar.SECOND, 9);
+            timeCal.set(Calendar.MILLISECOND, 0);
+
+            Calendar tsCal = Calendar.getInstance();
+            tsCal.set(2019, 8, 9, 9, 9, 9);
+            tsCal.set(Calendar.MILLISECOND, 909);
+
+            sql(URL, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
+                    "VALUES (?, 'obj_modern', ?, ?, ?)",
+                Arrays.asList(
+                    tz.getID(),
+                    new Date(dateCal.getTimeInMillis()),
+                    new Time(timeCal.getTimeInMillis()),
+                    new Timestamp(tsCal.getTimeInMillis())
+                )
+            );
         }, "-Duser.timezone=" + tz.getID());
     }
+
 }
