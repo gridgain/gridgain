@@ -398,6 +398,11 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
 
         notifyListeners(mreg, metricRegRemoveLsnrs, log);
 
+        DistributedMetaStorage metastorage0 = metastorage;
+
+        if (metastorage0 == null)
+            return;
+
         if (isSupported(ctx) && longKeysSupported(ctx) && (metastorage != null)) {
             try {
                 GridCompoundFuture opsFut = new GridCompoundFuture<>();
