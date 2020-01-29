@@ -76,12 +76,14 @@ void TestServerSession::HandleRequestSizeReceived(const boost::system::error_cod
 
     std::vector<int8_t>& newRequest = requests.back();
     impl::interop::InteropUnpooledMemory mem(4);
+    mem.Length(4);
+
     memcpy(mem.Data(), newRequest.data(), newRequest.size());
     int32_t size = impl::binary::BinaryUtils::ReadInt32(mem, 0);
 
     newRequest.resize(4 + size);
 
-    async_read(socket, boost::asio::buffer(newRequest.data(), size),
+    async_read(socket, boost::asio::buffer(newRequest.data() + 4, size),
         boost::bind(&TestServerSession::HandleRequestReceived, this,
             boost::asio::placeholders::error,
             boost::asio::placeholders::bytes_transferred));
@@ -122,9 +124,31 @@ void TestServerSession::HandleResponseSent(const boost::system::error_code& erro
 TestServer::TestServer(uint16_t port) :
     acceptor(service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port))
 {
-    StartAccept();
+    // No-op.
+}
 
-    service.run();
+TestServer::~TestServer()
+{
+    Stop();
+}
+
+void TestServer::Start()
+{
+    if (!serverThread)
+    {
+        StartAccept();
+        serverThread.reset(new boost::thread(boost::bind(&boost::asio::io_service::run, &service)));
+    }
+}
+
+void TestServer::Stop()
+{
+    if (serverThread)
+    {
+        service.stop();
+        serverThread->join();
+        serverThread.reset();
+    }
 }
 
 void TestServer::StartAccept()

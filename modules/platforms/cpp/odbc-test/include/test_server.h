@@ -20,7 +20,13 @@
 #include <stdint.h>
 
 #include <vector>
+
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif // _WIN32_WINNT
+
 #include <boost/asio.hpp>
+#include <boost/thread.hpp>
 
 namespace ignite
 {
@@ -80,7 +86,7 @@ private:
      * @param bytesTransferred Bytes transferred.
      */
     void HandleRequestReceived(const boost::system::error_code& error, size_t bytesTransferred);
-    
+
     /**
      * Handle received request.
      * @param error Error.
@@ -114,6 +120,24 @@ public:
     TestServer(uint16_t port = 11110);
 
     /**
+     * Destructor.
+     */
+    ~TestServer();
+
+    /**
+     * Push new handshake response to send.
+     * @param accept Accept or reject response.
+     */
+    void PushHandshakeResponse(bool accept)
+    {
+        std::vector<int8_t> rsp(4 + 1);
+        rsp[0] = 1;
+        rsp[4] = accept ? 1 : 0;
+
+        PushResponse(rsp);
+    }
+
+    /**
      * Push new response to send.
      * @param resp Response to push.
      */
@@ -131,6 +155,16 @@ public:
     {
         return *sessions.at(idx);
     }
+
+    /**
+     * Start server.
+     */
+    void Start();
+
+    /**
+     * Stop server.
+     */
+    void Stop();
 
 private:
     /**
@@ -156,6 +190,9 @@ private:
 
     // Sessions.
     std::vector<boost::shared_ptr<TestServerSession>> sessions;
+
+    // Server Thread.
+    boost::shared_ptr<boost::thread> serverThread;
 };
 
 } // namespace ignite

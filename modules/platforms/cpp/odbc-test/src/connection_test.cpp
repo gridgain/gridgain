@@ -134,7 +134,15 @@ BOOST_AUTO_TEST_CASE(TestConnectionMemoryLeak)
 {
     TestServer testServer(11100);
 
+    testServer.PushHandshakeResponse(true);
+    testServer.Start();
+
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11100;SCHEMA=cache");
+
+    ExecQuery("Select * from Test");
+
+    Disconnect();
+    Disconnect();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

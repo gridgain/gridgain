@@ -210,7 +210,7 @@ namespace ignite
             {
                 AddStatusRecord(SqlState::S08003_NOT_CONNECTED, "Connection is not open.");
 
-                return SqlResult::AI_ERROR;
+                return SqlResult::AI_SUCCESS_WITH_INFO;
             }
 
             Close();
