@@ -61,6 +61,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
             writer.writeLong(ptr);
 
+            // TODO: Near cache: don't write value, put it to thread local. Maybe client has it anyway.
             writer.writeObject(k);
             writer.writeObject(v);
 
