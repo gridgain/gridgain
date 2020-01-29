@@ -22,6 +22,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -33,38 +34,26 @@ import java.io.InputStreamReader;
  */
 public class IgniteUtilsWorkDirectoryTest {
 
-    /**
-     *
-     */
+    /** */
     private static final String USER_WORK_DIR = String.join(File.separator,
         U.getIgniteHome(), "userWorkDirTest");
 
-    /**
-     *
-     */
+    /** */
     private static final String USER_IGNITE_HOME = String.join(File.separator,
         U.getIgniteHome(), "userIgniteHomeTest");
 
-    /**
-     *
-     */
+    /** */
     private static final String USER_DIR_PROPERTY_VALUE = String.join(File.separator,
         new File(U.getIgniteHome()).getParent(), "userDirPropertyTest");
 
-    /**
-     *
-     */
+    /** */
     private static String dfltIgniteHome;
 
-    /**
-     *
-     */
+    /** */
     private static String dfltUserDir;
 
-    /**
-     *
-     */
-    @After
+    /** */
+    @Before
     public void setup() {
         dfltIgniteHome = System.getProperty(IgniteSystemProperties.IGNITE_HOME);
         dfltUserDir = System.getProperty("user.dir");
@@ -72,9 +61,7 @@ public class IgniteUtilsWorkDirectoryTest {
         System.clearProperty("user.dir");
     }
 
-    /**
-     *
-     */
+    /** */
     @After
     public void tearDown() {
         if (dfltIgniteHome != null)
@@ -119,9 +106,7 @@ public class IgniteUtilsWorkDirectoryTest {
             USER_WORK_DIR);
     }
 
-    /**
-     *
-     */
+    /** */
     private void genericWorkDirectoryTest(boolean userWorkDirFlag, boolean userIgniteHomeFlag,
         boolean userDirPropFlag, String expWorkDir) {
         if (userDirPropFlag)
@@ -151,20 +136,16 @@ public class IgniteUtilsWorkDirectoryTest {
 
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
-    public void nonAbsolutePathTest() {
+    public void testNonAbsolutePathWorkDir() {
         genericPathExceptionTest("nonAbsolutePathTestDirectory",
             "Work directory path must be absolute: nonAbsolutePathTestDirectory");
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
-    public void workDirCannotWriteTest() {
+    public void testDisabledWriteToWorkDir() {
         String strDir = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
         File dir = new File(strDir);
 
@@ -187,11 +168,9 @@ public class IgniteUtilsWorkDirectoryTest {
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
-    public void workDirNotExistAndCannotBeCreatedTest() {
+    public void testDisabledWorkDirCreation() {
         String strDirParent = String.join(File.separator, USER_WORK_DIR, "CannotWriteTestDirectory");
         File dirParent = new File(strDirParent);
 
@@ -215,17 +194,13 @@ public class IgniteUtilsWorkDirectoryTest {
         }
     }
 
-    /**
-     *
-     */
+    /** */
     private static void resetPermission(String dir) {
         executeCommand("chattr -i " + dir);
         executeCommand("chmod 777 " + dir);
     }
 
-    /**
-     *
-     */
+    /** */
     private static void executeCommand(String cmd) {
         X.println("Command to execute: " + cmd);
 
@@ -249,9 +224,7 @@ public class IgniteUtilsWorkDirectoryTest {
         }
     }
 
-    /**
-     *
-     */
+    /** */
     private void genericPathExceptionTest(String userWorkDir, String expMsg) {
         GridTestUtils.assertThrows(null,
             () -> IgniteUtils.workDirectory(userWorkDir, null),
@@ -260,9 +233,7 @@ public class IgniteUtilsWorkDirectoryTest {
         );
     }
 
-    /**
-     *
-     */
+    /** */
     private static boolean deleteDirectory(File dirToBeDeleted) {
         File[] allContents = dirToBeDeleted.listFiles();
         if (allContents != null) {
