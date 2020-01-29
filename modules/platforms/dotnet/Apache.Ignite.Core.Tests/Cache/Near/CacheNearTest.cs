@@ -284,7 +284,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestSameNearCacheWithDifferentGenericTypeParameters()
         {
-            var cfg = new CacheConfiguration( TestContext.CurrentContext.Test.Name)
+            var cfg = new CacheConfiguration(TestContext.CurrentContext.Test.Name)
             {
                 NearConfiguration = new NearCacheConfiguration()
             };
@@ -301,6 +301,27 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(cache4[1], 1);
             Assert.AreEqual(cache4["1"], "1");
             Assert.AreSame(cache4[2], cache3[2]);
+        }
+
+        /// <summary>
+        /// Tests that reference semantics is preserved on repeated get after generic downgrade.
+        /// </summary>
+        [Test]
+        public void TestRepeatedGetReturnsSameInstanceAfterGenericDowngrade()
+        {
+            var cfg = new CacheConfiguration(TestContext.CurrentContext.Test.Name)
+            {
+                NearConfiguration = new NearCacheConfiguration()
+            };
+            
+            var cache1 = _grid.CreateCache<int, Foo>(cfg);
+            cache1[1] = new Foo(42);
+            cache1[2] = new Foo(43);
+            
+            var cache2 = _grid.GetCache<int, string>(cfg.Name);
+            cache2[1] = "x";
+
+            Assert.AreEqual("x", cache1[1]);
         }
 
         /// <summary>
