@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Copyright (C) GridGain Systems. All Rights Reserved.
+    _________        _____ __________________        _____
+    __  ____/___________(_)______  /__  ____/______ ____(_)_______
+    _  / __  __  ___/__  / _  __  / _  / __  _  __ `/__  / __  __ \
+    / /_/ /  _  /    _  /  / /_/ /  / /_/ /  / /_/ / _  /  _  / / /
+    \____/   /_/     /_/   \_,__/   \____/   \__,_/  /_/   /_/ /_/
+-->
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="
+              http://www.springframework.org/schema/beans
+              http://www.springframework.org/schema/beans/spring-beans.xsd">
+    <bean class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="authenticationEnabled" value="false"/>
+
+        <property name="queryThreadPoolSize" value="16"/>
+        <property name="failureDetectionTimeout" value="10000"/>
+        <property name="clientFailureDetectionTimeout" value="10000"/>
+        <property name="networkTimeout" value="10000"/>
+
+        <property name="cacheConfiguration">
+            <bean class="org.apache.ignite.configuration.CacheConfiguration">
+                <property name="name" value="*"/>
+                <property name="cacheMode" value="PARTITIONED"/>
+                <property name="backups" value="1"/>
+
+                <property name="affinity">
+                    <bean class="org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction">
+                        <property name="partitions" value="256"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+
+        <property name="communicationSpi">
+            <bean class="org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi">
+                <property name="socketWriteTimeout" value="10000"/>
+            </bean>
+        </property>
+
+        <property name="clientConnectorConfiguration">
+            <bean class="org.apache.ignite.configuration.ClientConnectorConfiguration">
+                <property name="host" value="0.0.0.0"/>
+                <property name="port" value="45002"/>
+                <property name="maxOpenCursorsPerConnection" value="512"/>
+                <property name="socketSendBufferSize" value="65536"/>
+                <property name="socketReceiveBufferSize" value="131072"/>
+                <property name="threadPoolSize" value="32"/>
+
+                <property name="sslEnabled" value="false"/>
+                <property name="sslClientAuth" value="false"/>
+                <property name="useIgniteSslContextFactory" value="false"/>
+            </bean>
+        </property>
+
+        <!-- Discovery settings. -->
+        <property name="discoverySpi">
+            <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+                <property name="localPort" value="47500"/>
+                <property name="ipFinder">
+                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder">
+                        <property name="addresses">
+                            <list>
+                                <value>127.0.0.1:47500..47504</value>
+                            </list>
+                        </property>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+
+        <property name="transactionConfiguration">
+            <bean class="org.apache.ignite.configuration.TransactionConfiguration">
+                <property name="txTimeoutOnPartitionMapExchange" value="#{60L * 1000L}"/>
+            </bean>
+        </property>
+
+        <property name="dataStorageConfiguration">
+            <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
+                <property name="metricsEnabled" value="true"/>
+
+                <!--property name="walMode" value="${wal_mode}"/-->
+                <property name="walSegmentSize" value="#{512L * 1024 * 1024}"/>
+
+                <!-- Enable write throttling. -->
+                <property name="writeThrottlingEnabled" value="true"/>
+
+                <property name="defaultDataRegionConfiguration">
+                    <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
+                        <property name="initialSize" value="#{1024L * 1024L * 1024L}"/>
+                        <property name="maxSize" value="#{1024L * 1024L * 1024L}"/>
+                        <property name="checkpointPageBufferSize" value="#{128L * 1024L * 1024L}"/>
+                        <property name="metricsEnabled" value="true"/>
+                        <property name="persistenceEnabled" value="true"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+
+        <property name="pluginConfigurations">
+            <bean class="org.gridgain.grid.configuration.GridGainConfiguration">
+                <property name="rollingUpdatesEnabled" value="true"/>
+                <property name="snapshotConfiguration">
+                    <bean class="org.gridgain.grid.configuration.SnapshotConfiguration"/>
+                </property>
+            </bean>
+        </property>
+
+        <property name="eventStorageSpi">
+            <bean class="org.apache.ignite.spi.eventstorage.memory.MemoryEventStorageSpi">
+            </bean>
+        </property>
+    </bean>
+</beans>
