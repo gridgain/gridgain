@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
@@ -169,7 +170,7 @@ public class IgniteUtilsWorkDirectoryTest {
 
         if (dir.exists()) {
             resetPermission(strDir);
-            boolean deleted = deleteDirectory(dir);
+            boolean deleted = U.delete(dir);
             assert deleted : "cannot delete file";
         }
 
@@ -194,7 +195,7 @@ public class IgniteUtilsWorkDirectoryTest {
 
         if (dirParent.exists()) {
             resetPermission(strDirParent);
-            boolean deleted = deleteDirectory(dirParent);
+            boolean deleted = U.delete(dirParent);
             assert deleted : "cannot delete file";
         }
         dirParent.mkdirs();
@@ -249,17 +250,6 @@ public class IgniteUtilsWorkDirectoryTest {
             IgniteCheckedException.class,
             expMsg
         );
-    }
-
-    /** */
-    private static boolean deleteDirectory(File dirToBeDeleted) {
-        File[] allContents = dirToBeDeleted.listFiles();
-        if (allContents != null) {
-            for (File file : allContents) {
-                deleteDirectory(file);
-            }
-        }
-        return dirToBeDeleted.delete();
     }
 
 }
