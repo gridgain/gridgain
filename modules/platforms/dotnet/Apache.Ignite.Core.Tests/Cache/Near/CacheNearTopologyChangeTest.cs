@@ -106,6 +106,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // GridCacheNearEntry does not yet exist on old primary node, so near cache data is removed on .NET side.
             InitGrid(2);
 
+            Foo _;
+            Assert.IsFalse(_cache[0].TryLocalPeek(Key3, out _, CachePeekMode.NativeNear));
+            
+            // Check value on the new node.
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
             Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
             
