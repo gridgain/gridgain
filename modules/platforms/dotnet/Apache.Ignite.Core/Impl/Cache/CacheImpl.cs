@@ -415,11 +415,19 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
+            bool hasNativeNear;
+            var peekModes = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+
+            if (hasNativeNear && _nearCache != null && _nearCache.TryGetValue(key, out value))
+            {
+                return true;
+            }
+
             var res = DoOutInOpX((int)CacheOp.Peek,
                 w =>
                 {
                     w.WriteObjectDetached(key);
-                    w.WriteInt(IgniteUtils.EncodePeekModes(modes));
+                    w.WriteInt(peekModes);
                 },
                 (s, r) => r == True ? new CacheResult<TV>(Unmarshal<TV>(s)) : new CacheResult<TV>(),
                 _readException);
@@ -956,7 +964,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private int Size0(bool loc, params CachePeekMode[] modes)
         {
-            var modes0 = IgniteUtils.EncodePeekModes(modes);
+            // TODO
+            bool hasNativeNear;
+            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
 
             var op = loc ? CacheOp.SizeLoc : CacheOp.Size;
 
@@ -972,7 +982,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private long Size0(bool loc, int? part, params CachePeekMode[] modes)
         {
-            var modes0 = IgniteUtils.EncodePeekModes(modes);
+            // TODO: ???
+            bool hasNativeNear;
+            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
 
             var op = loc ? CacheOp.SizeLongLoc : CacheOp.SizeLong; 
            
@@ -999,7 +1011,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private Task<int> SizeAsync0(params CachePeekMode[] modes)
         {
-            var modes0 = IgniteUtils.EncodePeekModes(modes);
+            // TODO
+            bool hasNativeNear;
+            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
 
             return DoOutOpAsync<int>(CacheOp.SizeAsync, w => w.WriteInt(modes0));
         }
@@ -1012,7 +1026,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private Task<long> SizeAsync0(int? part, params CachePeekMode[] modes)
         {
-            var modes0 = IgniteUtils.EncodePeekModes(modes);
+            // TODO
+            bool hasNativeNear;
+            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
 
             return DoOutOpAsync<long>(CacheOp.SizeLongAsync, writer =>
             {
@@ -1434,7 +1450,11 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** <inheritdoc /> */
         public IEnumerable<ICacheEntry<TK, TV>> GetLocalEntries(CachePeekMode[] peekModes)
         {
-            return new CacheEnumerable<TK, TV>(this, IgniteUtils.EncodePeekModes(peekModes));
+            // TODO: Merge with .NET Near Cache
+            bool hasNativeNear;
+            var encodedPeekModes = IgniteUtils.EncodePeekModes(peekModes, out hasNativeNear);
+            
+            return new CacheEnumerable<TK, TV>(this, encodedPeekModes);
         }
 
         /** <inheritdoc /> */

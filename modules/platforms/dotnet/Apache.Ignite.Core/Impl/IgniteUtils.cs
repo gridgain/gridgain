@@ -208,9 +208,10 @@ namespace Apache.Ignite.Core.Impl
         /// <summary>
         /// Encodes the peek modes into a single int value.
         /// </summary>
-        public static int EncodePeekModes(CachePeekMode[] modes)
+        public static int EncodePeekModes(CachePeekMode[] modes, out bool hasNativeNear)
         {
             var res = 0;
+            hasNativeNear = false;
 
             if (modes == null)
             {
@@ -222,6 +223,7 @@ namespace Apache.Ignite.Core.Impl
                 if (mode == CachePeekMode.NativeNear)
                 {
                     // Skip .NET-only mode.
+                    hasNativeNear = true;
                     continue;
                 }
                 
