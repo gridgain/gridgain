@@ -102,6 +102,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(-1, _cache[1][Key3].Bar);
             
             // New node enters and becomes primary for the key.
+            // GridCacheNearEntry does not yet exist on old primary node, so updates may be missing.
             InitGrid(2);
 
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
