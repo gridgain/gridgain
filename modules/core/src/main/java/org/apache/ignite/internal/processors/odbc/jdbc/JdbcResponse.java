@@ -129,7 +129,7 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
         else
             writer.writeString(error());
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0) {
+        if (protoCtx.isAffinityAwarenessSupported()) {
             writer.writeBoolean(activeTx);
 
             writer.writeBoolean(affinityVer != null);
@@ -153,7 +153,7 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
         else
             error(reader.readString());
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0) {
+        if (protoCtx.isAffinityAwarenessSupported()) {
             activeTx = reader.readBoolean();
 
             boolean affinityVerChanged = reader.readBoolean();

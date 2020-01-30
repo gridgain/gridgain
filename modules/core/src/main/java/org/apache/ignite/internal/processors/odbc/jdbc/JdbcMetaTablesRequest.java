@@ -85,7 +85,7 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
         writer.writeString(schemaName);
         writer.writeString(tblName);
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isTableTypesSupported())
             writer.writeStringArray(tblTypes);
     }
 
@@ -97,7 +97,7 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
         schemaName = reader.readString();
         tblName = reader.readString();
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isTableTypesSupported())
             tblTypes = reader.readStringArray();
     }
 

@@ -100,7 +100,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
         JdbcProtocolContext protoCtx) throws BinaryObjectException {
         writer.writeByte(type);
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isAffinityAwarenessSupported())
             writer.writeLong(reqId);
     }
 
@@ -108,7 +108,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
     @Override public void readBinary(BinaryReaderExImpl reader,
         JdbcProtocolContext protoCtx) throws BinaryObjectException {
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isAffinityAwarenessSupported())
             reqId = reader.readLong();
     }
 

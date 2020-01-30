@@ -149,10 +149,10 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
         else
             writer.writeInt(0);
 
-        if (protoCtx.version().compareTo(VER_2_4_0) >= 0)
+        if (protoCtx.isStreamingSupported())
             writer.writeBoolean(lastStreamBatch);
 
-        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.isAutoCommitSupported())
             writer.writeBoolean(autoCommit);
     }
 
@@ -174,10 +174,10 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
             queries.add(qry);
         }
 
-        if (protoCtx.version().compareTo(VER_2_4_0) >= 0)
+        if (protoCtx.isStreamingSupported())
             lastStreamBatch = reader.readBoolean();
 
-        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.isAutoCommitSupported())
             autoCommit = reader.readBoolean();
     }
 

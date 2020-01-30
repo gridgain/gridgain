@@ -19,6 +19,10 @@ package org.apache.ignite.internal.processors.odbc.jdbc;
 import java.util.EnumSet;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_4_0;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_7_0;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
+
 /**
  * Binary context for JDBC protocol. Holds protocol settings and state.
  */
@@ -40,10 +44,31 @@ public class JdbcProtocolContext {
     }
 
     /**
-     * @return Protocol version.
+     * @return {@code true} if JDBC streaming supported.
      */
-    public ClientListenerProtocolVersion version() {
-        return ver;
+    public boolean isStreamingSupported() {
+        return ver.compareTo(VER_2_4_0) >= 0;
+    }
+
+    /**
+     * @return {@code true} if JDBC streaming supported.
+     */
+    public boolean isAutoCommitSupported() {
+        return ver.compareTo(VER_2_7_0) >= 0;
+    }
+
+    /**
+     * @return {@code true} if JDBC streaming supported.
+     */
+    public boolean isTableTypesSupported() {
+        return ver.compareTo(VER_2_8_0) >= 0;
+    }
+
+    /**
+     * @return {@code true} if JDBC streaming supported.
+     */
+    public boolean isAffinityAwarenessSupported() {
+        return ver.compareTo(VER_2_8_0) >= 0;
     }
 
     /**
@@ -51,5 +76,4 @@ public class JdbcProtocolContext {
      */
     public EnumSet<JdbcThinFeature> features() {
         return features;
-    }
-}
+    }}

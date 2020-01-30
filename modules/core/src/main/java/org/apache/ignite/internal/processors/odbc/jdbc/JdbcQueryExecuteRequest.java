@@ -155,12 +155,12 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
                 SqlListenerUtils.writeObject(writer, arg, false);
         }
 
-        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.isAutoCommitSupported())
             writer.writeBoolean(autoCommit);
 
         writer.writeByte((byte)stmtType.ordinal());
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isAffinityAwarenessSupported())
             writer.writeBoolean(partResReq);
     }
 
@@ -181,7 +181,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         for (int i = 0; i < argsNum; ++i)
             args[i] = SqlListenerUtils.readObject(reader, false);
 
-        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.isAutoCommitSupported())
             autoCommit = reader.readBoolean();
 
         try {
@@ -194,7 +194,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             throw new BinaryObjectException(e);
         }
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isAffinityAwarenessSupported())
             partResReq = reader.readBoolean();
     }
 

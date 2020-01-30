@@ -141,7 +141,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
         writer.writeBoolean(partRes != null);
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0 && partRes != null)
+        if (protoCtx.isAffinityAwarenessSupported() && partRes != null)
             PartitionResultMarshaler.marshal(writer, partRes);
     }
 
@@ -164,7 +164,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
             updateCnt = reader.readLong();
         }
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0 && reader.readBoolean())
+        if (protoCtx.isAffinityAwarenessSupported() && reader.readBoolean())
             partRes = PartitionResultMarshaler.unmarshal(reader);
     }
 

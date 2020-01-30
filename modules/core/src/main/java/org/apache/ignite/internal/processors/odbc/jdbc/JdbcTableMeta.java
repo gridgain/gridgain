@@ -84,7 +84,7 @@ public class JdbcTableMeta implements JdbcRawBinarylizable {
         writer.writeString(schemaName);
         writer.writeString(tblName);
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isTableTypesSupported())
             writer.writeString(tblType);
     }
 
@@ -94,7 +94,7 @@ public class JdbcTableMeta implements JdbcRawBinarylizable {
         schemaName = reader.readString();
         tblName = reader.readString();
 
-        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isTableTypesSupported())
             tblType = reader.readString();
     }
 
