@@ -62,13 +62,16 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
  */
 public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** Nodes count. */
-    private static final int NODES_CNT = 8;
+    private static final int NODES_CNT = 4;
 
     /** Persistence flag. */
     private boolean persistence;
 
     /** Cache name. */
-    private static final String CACHE_NAME = "testCache";
+    private static final String CACHE_NAME = "testCache"; // TODO FIXME DEFAULT_CACHE_NAME
+
+    /** */
+    public static final int PARTS_CNT = 32;
 
     /** Cache configuration closure. */
     private IgniteClosure<String, CacheConfiguration[]> cacheC;
@@ -79,7 +82,10 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
         cfg.setFailureDetectionTimeout(1000000000L);
         cfg.setClientFailureDetectionTimeout(1000000000L);
 
+        cfg.setConsistentId(igniteInstanceName);
+
         cfg.setActiveOnStart(false);
+        cfg.setAutoActivationEnabled(false);
 
         TestRecordingCommunicationSpi commSpi = new TestRecordingCommunicationSpi();
 
@@ -98,8 +104,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
         drCfg.setPersistenceEnabled(persistence);
 
-
-
         dsCfg.setDefaultDataRegionConfiguration(drCfg);
 
         cfg.setDataStorageConfiguration(dsCfg);
@@ -114,7 +118,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
         CacheConfiguration ccfg = new CacheConfiguration();
 
         ccfg.setName(CACHE_NAME);
-        ccfg.setAffinity(affinityFunction(null));
+        ccfg.setAffinity(affinityFunction(PARTS_CNT));
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setBackups(0);
 
@@ -147,20 +151,45 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checks Partition Exchange happen in case of baseline auto-adjust (in-memory cluster). It's not possible to
+     * Checks Partition Exchange happen in case of baseline change (in-memory cluster). It's not possible to
      * perform switch since primaries may change.
      */
     @Test
     public void testNonBaselineNodeLeftOnFullyRebalancedCluster() throws Exception {
+        testNodeLeftOnFullyRebalancedCluster(true);
+    }
+
+    /**
+     * Checks Partition Exchange happen in case of baseline change (persistent cluster). It's not possible to
+     * perform switch since primaries may change.
+     */
+    @Test
+    public void testNonBaselineNodeLeftOnFullyRebalancedClusterPersistence() throws Exception {
+        persistence = true;
+
+        try {
+            testNodeLeftOnFullyRebalancedCluster(true);
+        }
+        finally {
+            persistence = false;
+        }
+    }
+
+    /**
+     * Checks Partition Exchange is absent in case of fixed baseline (in-memory cluster). It's possible to perform
+     * switch since primaries can't change.
+     */
+    @Test
+    public void testBaselineNodeLeftOnFullyRebalancedCluster() throws Exception {
         testNodeLeftOnFullyRebalancedCluster(false);
     }
 
     /**
-     * Checks Partition Exchange is absent in case of fixed baseline. It's possible to perform switch since primaries
-     * can't change.
+     * Checks Partition Exchange is absent in case of fixed baseline (persistent cluster). It's possible to perform
+     * switch since primaries can't change.
      */
     @Test
-    public void testBaselineNodeLeftOnFullyRebalancedCluster() throws Exception {
+    public void testBaselineNodeLeftOnFullyRebalancedClusterPersistence() throws Exception {
         persistence = true;
 
         try {
@@ -174,14 +203,19 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /**
      * Checks node left PME absent/present on fully rebalanced topology (Latest PME == LAA).
      *
-     * @param resetBlt {@code True} to reset baseline preventing the optimization.
+     * @param resetBlt {@code True} to reset baseline. Must trigger normal PME.
      */
     private void testNodeLeftOnFullyRebalancedCluster(boolean resetBlt) throws Exception {
         int nodes = NODES_CNT;
 
-        Ignite ignite = startGridsMultiThreaded(nodes, true);
+        Ignite crd = startGrids(nodes);
 
-        ignite.cluster().active(true);
+        crd.cluster().active(true);
+
+        awaitPartitionMapExchange();
+
+        for (int k = 0; k < PARTS_CNT; k++)
+            crd.cache(CACHE_NAME).put(k, k);
 
         AtomicLong cnt = new AtomicLong();
 
@@ -195,7 +229,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                         ((GridDhtPartitionsAbstractMessage)msg).exchangeId() != null)
                         cnt.incrementAndGet();
 
-                    if (resetBlt)
+                    if (resetBlt) // Allow rebalancing if a baseline is changed (it's expected).
                         return false;
 
                     return msg.getClass().equals(GridDhtPartitionsSingleMessage.class) ||
@@ -206,8 +240,10 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
         Random r = new Random();
 
-        while (nodes > 1) {
-            G.allGrids().get(r.nextInt(nodes--)).close(); // Stopping random node.
+        printPartitionState(CACHE_NAME, 0);
+
+        //while (nodes > 1) {
+            grid(NODES_CNT - 1).close();
 
             if (resetBlt)
                 resetBaselineTopology();
@@ -221,7 +257,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
             assertTrue(alive.context().cache().context().exchange().lastFinishedFuture().rebalanced());
 
             cnt.set(0);
-        }
+        //}
     }
 
     /**
@@ -615,5 +651,9 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
             return res;
         }
+    }
+
+    @Override protected long getPartitionMapExchangeTimeout() {
+        return super.getPartitionMapExchangeTimeout() * 10;
     }
 }
