@@ -91,13 +91,13 @@ public class JdbcResult implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         writer.writeByte(type);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
     }
 
     /**
@@ -107,7 +107,7 @@ public class JdbcResult implements JdbcRawBinarylizable {
      * @throws BinaryObjectException On error.
      */
     public static JdbcResult readResult(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         int resId = reader.readByte();
 
         JdbcResult res;

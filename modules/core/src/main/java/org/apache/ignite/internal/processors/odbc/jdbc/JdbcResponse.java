@@ -117,7 +117,7 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         writer.writeInt(status());
 
         if (status() == STATUS_SUCCESS) {
@@ -143,7 +143,7 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         status(reader.readInt());
 
         if (status() == STATUS_SUCCESS) {

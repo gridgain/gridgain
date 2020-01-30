@@ -54,7 +54,7 @@ public class JdbcColumnMetaV2 extends JdbcColumnMeta{
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) {
+        JdbcProtocolContext binCtx) {
         super.writeBinary(writer, binCtx);
 
         writer.writeBoolean(nullable);
@@ -62,7 +62,7 @@ public class JdbcColumnMetaV2 extends JdbcColumnMeta{
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) {
+        JdbcProtocolContext binCtx) {
         super.readBinary(reader, binCtx);
 
         nullable = reader.readBoolean();

@@ -80,7 +80,7 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         super.writeBinary(writer, binCtx);
 
         if (results != null && !results.isEmpty()) {
@@ -102,7 +102,7 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         super.readBinary(reader, binCtx);
 
         int cnt = reader.readInt();

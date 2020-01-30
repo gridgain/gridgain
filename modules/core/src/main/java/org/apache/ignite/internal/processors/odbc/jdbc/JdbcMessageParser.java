@@ -34,7 +34,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
     private final GridKernalContext ctx;
 
     /** Binary context. */
-    private final JdbcBinaryContext binCtx;
+    private final JdbcProtocolContext binCtx;
 
     /** Initial output stream capacity. */
     protected static final int INIT_CAP = 1024;
@@ -44,7 +44,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
      * @param binCtx Binary context.
      */
     public JdbcMessageParser(GridKernalContext ctx,
-        JdbcBinaryContext binCtx) {
+        JdbcProtocolContext binCtx) {
         this.ctx = ctx;
         this.binCtx = binCtx;
     }

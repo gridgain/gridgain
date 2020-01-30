@@ -89,7 +89,7 @@ public class JdbcPrimaryKeyMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         writer.writeString(schemaName);
         writer.writeString(tblName);
         writer.writeString(name);
@@ -99,7 +99,7 @@ public class JdbcPrimaryKeyMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         schemaName = reader.readString();
         tblName = reader.readString();
         name = reader.readString();

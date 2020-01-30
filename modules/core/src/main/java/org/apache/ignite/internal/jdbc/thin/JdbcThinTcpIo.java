@@ -39,7 +39,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBatchExecuteRequest;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBinaryContext;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcProtocolContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcOrderedBatchExecuteRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQuery;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryCancelRequest;
@@ -145,7 +145,7 @@ public class JdbcThinTcpIo {
     private final ClientListenerProtocolVersion srvProtoVer;
 
     /** Features set are supported by the current protocol. */
-    private JdbcBinaryContext binCtx;
+    private JdbcProtocolContext binCtx;
 
     /**
      * Start connection and perform handshake.
@@ -228,7 +228,7 @@ public class JdbcThinTcpIo {
 
         srvProtoVer = handshakeRes.serverProtocolVersion();
 
-        binCtx = new JdbcBinaryContext(srvProtoVer, handshakeRes.features());
+        binCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features());
     }
 
     /**
@@ -633,15 +633,6 @@ public class JdbcThinTcpIo {
         assert srvProtoVer != null;
 
         return srvProtoVer.compareTo(VER_2_8_0) >= 0;
-    }
-
-    /**
-     * @return True if Partition Awareness supported, false otherwise.
-     */
-    boolean isFeaturesSupported() {
-        assert srvProtoVer != null;
-
-        return srvProtoVer.compareTo(VER_2_8_2) >= 0;
     }
 
     /**

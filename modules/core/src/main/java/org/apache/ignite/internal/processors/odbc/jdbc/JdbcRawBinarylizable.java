@@ -34,7 +34,7 @@ public interface JdbcRawBinarylizable {
      */
     public void writeBinary(
         BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) throws BinaryObjectException;
+        JdbcProtocolContext binCtx) throws BinaryObjectException;
 
     /**
      * Reads fields from provided reader.
@@ -45,5 +45,5 @@ public interface JdbcRawBinarylizable {
      */
     public void readBinary(
         BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException;
+        JdbcProtocolContext binCtx) throws BinaryObjectException;
 }

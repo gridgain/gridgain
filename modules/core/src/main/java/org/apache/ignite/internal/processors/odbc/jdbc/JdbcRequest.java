@@ -97,7 +97,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         writer.writeByte(type);
 
         if (binCtx.version().compareTo(VER_2_8_0) >= 0)
@@ -106,7 +106,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
 
         if (binCtx.version().compareTo(VER_2_8_0) >= 0)
             reqId = reader.readLong();
@@ -131,7 +131,7 @@ public class JdbcRequest extends ClientListenerRequestNoId implements JdbcRawBin
      * @throws BinaryObjectException On error.
      */
     public static JdbcRequest readRequest(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         int reqType = reader.readByte();
 
         JdbcRequest req;

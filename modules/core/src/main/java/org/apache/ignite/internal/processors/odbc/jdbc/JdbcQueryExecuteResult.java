@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
-import java.util.EnumSet;
 import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
@@ -124,7 +123,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         super.writeBinary(writer, binCtx);
 
         writer.writeLong(cursorId);
@@ -148,7 +147,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         super.readBinary(reader, binCtx);
 
         cursorId = reader.readLong();

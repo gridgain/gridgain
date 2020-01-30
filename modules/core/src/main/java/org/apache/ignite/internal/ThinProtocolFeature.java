@@ -34,7 +34,7 @@ public interface ThinProtocolFeature {
 
     /**
      * @param features Features set.
-     * @return Byte array representing all supported features by current node.
+     * @return Byte array representing all supported features.
      * @param <E> Features type (JDBC, thin cli, ODBC)
      */
     static <E extends Enum<E> & ThinProtocolFeature> byte[] featuresAsBytes(Collection<E> features) {
@@ -47,7 +47,10 @@ public interface ThinProtocolFeature {
     }
 
     /**
+     * Create EnumSet of supported features encoded by the bytes array.
+     *
      * @param <E> Features type (JDBC, thin cli, ODBC)
+     * @param in Byte array representing all supported features.
      */
     static <E extends Enum<E> & ThinProtocolFeature> EnumSet<E> enumSet(byte [] in, E[] values) {
         final BitSet bSet = BitSet.valueOf(in);

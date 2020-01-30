@@ -59,7 +59,7 @@ public class JdbcCachePartitionsRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx)
+        JdbcProtocolContext binCtx)
         throws BinaryObjectException {
         super.writeBinary(writer, binCtx);
 
@@ -73,7 +73,7 @@ public class JdbcCachePartitionsRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx)
+        JdbcProtocolContext binCtx)
         throws BinaryObjectException {
         super.readBinary(reader, binCtx);
         int cacheIdsSize = reader.readInt();

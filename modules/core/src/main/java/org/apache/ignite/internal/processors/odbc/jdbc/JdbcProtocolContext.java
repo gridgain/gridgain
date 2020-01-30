@@ -22,7 +22,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 /**
  * Binary context for JDBC protocol. Holds protocol settings and state.
  */
-public class JdbcBinaryContext {
+public class JdbcProtocolContext {
     /** Protocol version. */
     private final ClientListenerProtocolVersion ver;
 
@@ -33,7 +33,7 @@ public class JdbcBinaryContext {
      * @param ver Protocol version.
      * @param features Supported features.
      */
-    public JdbcBinaryContext(ClientListenerProtocolVersion ver,
+    public JdbcProtocolContext(ClientListenerProtocolVersion ver,
         EnumSet<JdbcThinFeature> features) {
         this.ver = ver;
         this.features = features;

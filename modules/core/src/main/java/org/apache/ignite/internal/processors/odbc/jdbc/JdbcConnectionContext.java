@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -96,7 +95,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     private JdbcRequestHandler handler = null;
 
     /** Current protocol features. */
-    private JdbcBinaryContext binCtx;
+    private JdbcProtocolContext binCtx;
 
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
@@ -220,7 +219,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        binCtx = new JdbcBinaryContext(ver, features);
+        binCtx = new JdbcProtocolContext(ver, features);
 
         parser = new JdbcMessageParser(ctx, binCtx);
 
@@ -285,7 +284,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /**
      * @return Binary context.
      */
-    public JdbcBinaryContext binaryContext() {
+    public JdbcProtocolContext binaryContext() {
         return binCtx;
     }
 }

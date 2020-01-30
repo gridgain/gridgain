@@ -25,7 +25,7 @@ import java.util.UUID;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcBinaryContext;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcProtocolContext;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRawBinarylizable;
 import org.jetbrains.annotations.NotNull;
 
@@ -109,7 +109,7 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcBinaryContext binCtx)
+        JdbcProtocolContext binCtx)
         throws BinaryObjectException {
         writer.writeInt(cacheIds.size());
 
@@ -135,7 +135,7 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx)
+        JdbcProtocolContext binCtx)
         throws BinaryObjectException {
         // No-op.
     }
@@ -149,7 +149,7 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
      * @throws BinaryObjectException In case of error.
      */
     public static JdbcThinPartitionAwarenessMappingGroup readGroup(BinaryReaderExImpl reader,
-        JdbcBinaryContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext binCtx) throws BinaryObjectException {
         JdbcThinPartitionAwarenessMappingGroup res = new JdbcThinPartitionAwarenessMappingGroup();
 
         int cacheIdsSize = reader.readInt();
