@@ -22,13 +22,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.sql.SQLException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
-import org.apache.ignite.internal.AbstractThinProtocolFeature;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -49,7 +49,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryFetchRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryMetadataRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
 import org.apache.ignite.internal.util.ipc.loopback.IpcClientTcpEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
@@ -271,7 +271,7 @@ public class JdbcThinTcpIo {
             JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
         if (ver.compareTo(VER_2_8_2) >= 0)
-            writer.writeByteArray(JdbcThinFeature.allFeatures());
+            writer.writeByteArray(JdbcThinFeatures.allFeaturesAsBytes());
 
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
@@ -308,9 +308,11 @@ public class JdbcThinTcpIo {
                 if (ver.compareTo(VER_2_8_2) >= 0) {
                     byte[] srvFeatures = reader.readByteArray();
 
-                    handshakeRes.features(
-                        JdbcThinFeature.enumSet(
-                            AbstractThinProtocolFeature.matchFeatures(srvFeatures, JdbcThinFeature.allFeatures())));
+                    EnumSet<JdbcThinFeatures> features = JdbcThinFeatures.enumSet(srvFeatures);
+
+                    features.retainAll(JdbcThinFeatures.allFeaturesAsEnumSet());
+
+                    handshakeRes.features(features);
                 }
             }
             else {
