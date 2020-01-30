@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System.Collections.Generic;
+    using System.Diagnostics;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -31,6 +32,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         /** Key that is primary on node3 */
         private const int Key3 = 6;
+
+        /** */
+        private const int MaxGrids = 10;
 
         /** */
         private IIgnite[] _ignite;
@@ -95,10 +99,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             InitGrids(2);
             
             _cache[0][Key3] = new Foo(-1);
-            Assert.AreEqual(-1, _cache[1][Key3]);
+            Assert.AreEqual(-1, _cache[1][Key3].Bar);
             
-            // TODO: test that near invalidation still works after primary change
-            // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
+            // New node enters and becomes primary for the key.
+            InitGrid(2);
+
+            Assert.AreEqual(-1, _cache[2][Key3].Bar);
+            Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
+            
+            // TODO
         }
 
         /// <summary>
@@ -106,8 +115,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         private void InitGrids(int count)
         {
-            _ignite = new IIgnite[count];
-            _cache = new ICache<int, Foo>[count];
+            Debug.Assert(count < MaxGrids);
+            
+            _ignite = new IIgnite[MaxGrids];
+            _cache = new ICache<int, Foo>[MaxGrids];
 
             for (var i = 0; i < count; i++)
             {
