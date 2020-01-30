@@ -192,6 +192,23 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 }
             }
         }
+
+        /** <inheritdoc /> */
+        public int GetSize()
+        {
+            var map = _map;
+            if (map != null)
+            {
+                return map.Count;
+            }
+
+            if (_fallbackMap != null)
+            {
+                return _fallbackMap.Count;
+            }
+
+            return 0;
+        }
         
         private void EnsureFallbackMap()
         {
