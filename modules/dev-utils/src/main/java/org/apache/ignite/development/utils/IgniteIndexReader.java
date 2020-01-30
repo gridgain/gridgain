@@ -24,30 +24,28 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.DataRegionMetricsProvider;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.metric.IoStatisticsHolderIndex;
+import org.apache.ignite.internal.mem.unsafe.UnsafeMemoryProvider;
+import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.pagemem.PageMemory;
 import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.store.IgnitePageStoreManager;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.CacheObjectContext;
-import org.apache.ignite.internal.processors.cache.CacheType;
-import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheOffheapManager;
-import org.apache.ignite.internal.processors.cache.persistence.IndexStorage;
+import org.apache.ignite.internal.processors.cache.persistence.CheckpointWriteProgressSupplier;
+import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
-import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreV2;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
@@ -57,11 +55,8 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneGridKernalContext;
 import org.apache.ignite.internal.processors.cache.persistence.wal.reader.StandaloneIgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
-import org.apache.ignite.internal.processors.query.QuerySchema;
-import org.apache.ignite.internal.processors.query.h2.H2Utils;
-import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
-import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndex;
 import org.apache.ignite.internal.processors.query.h2.database.io.AbstractH2ExtrasLeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasLeafIO;
@@ -70,10 +65,9 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2LeafIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccInnerIO;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2MvccLeafIO;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.logger.NullLogger;
 
-import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -83,6 +77,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO.ITEMS_OFF;
+import static org.apache.ignite.internal.util.IgniteUtils.checkpointBufferSize;
 
 public class IgniteIndexReader {
     static {
@@ -100,11 +95,36 @@ public class IgniteIndexReader {
         );
     }
 
+    /** */
+    private long[] calculateFragmentSizes(int concLvl, long cacheSize, long chpBufSize) {
+        if (concLvl < 2)
+            concLvl = Runtime.getRuntime().availableProcessors();
+
+        long fragmentSize = cacheSize / concLvl;
+
+        if (fragmentSize < 1024 * 1024)
+            fragmentSize = 1024 * 1024;
+
+        long[] sizes = new long[concLvl + 1];
+
+        for (int i = 0; i < concLvl; i++)
+            sizes[i] = fragmentSize;
+
+        sizes[concLvl] = chpBufSize;
+
+        return sizes;
+    }
+
     private IgnitePageStoreManager storeManager(GridKernalContext kernalContext) {
         return new FilePageStoreManager(kernalContext);
     }
 
-    public void indexRead(int pageSize) throws IgniteCheckedException {
+    public void indexRead(String cacheWorkDirPath, int grpId, int partCnt, int pageSize, boolean encrypted, int filePageStoreVer) throws IgniteCheckedException {
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration()
+            .setPageSize(pageSize);
+
+        File cacheWorkDir = new File(cacheWorkDirPath);
+
         CacheConfiguration cacheCfg = new CacheConfiguration();
 
         AtomicReference<GridCacheProcessor> cacheProcRef = new AtomicReference<>(null);
@@ -119,7 +139,11 @@ public class IgniteIndexReader {
             }
         };
 
-        IgnitePageStoreManager storeManager = new FilePageStoreManager(ctx);
+        FilePageStoreManager storeManager = new FilePageStoreManager(ctx);
+
+        storeManager.setPageStoreFileIOFactories(new AsyncFileIOFactory(), new AsyncFileIOFactory());
+
+        storeManager.initDir(cacheWorkDir, grpId, partCnt, new LongAdderMetric("n", "d"), encrypted);
 
         StandaloneIgniteCacheDatabaseSharedManager dbMgr = new StandaloneIgniteCacheDatabaseSharedManager();
 
@@ -132,58 +156,75 @@ public class IgniteIndexReader {
             null, null, null, null, null, null
         );
 
-        GridCacheProcessor cacheProcessor = new GridCacheProcessor(ctx) {
-            @Override public void start() {
-                //sharedCtx = cacheSharedContext;
+        DataRegionConfiguration plcCfg = dsCfg.getDefaultDataRegionConfiguration();
+
+        AtomicInteger commonCntr = new AtomicInteger(); // Fake counter.
+
+        PageMemory pageMemory = new PageMemoryImpl(
+            new UnsafeMemoryProvider(new NullLogger()),
+            calculateFragmentSizes(dsCfg.getConcurrencyLevel(), plcCfg.getMaxSize(), checkpointBufferSize(plcCfg)),
+            cacheSharedContext,
+            pageSize,
+            (fullId, pageBuf, tag) -> {
+            },
+            new GridInClosure3X<Long, FullPageId, PageMemoryEx>() {
+                @Override public void applyx(Long aLong, FullPageId id, PageMemoryEx ex) throws IgniteCheckedException {
+
+                }
+            },
+            () -> false,
+            new DataRegionMetricsImpl(
+                plcCfg,
+                new GridMetricManager(ctx),
+                new DataRegionMetricsProvider() {
+                    @Override public long partiallyFilledPagesFreeSpace() {
+                        return 0;
+                    }
+
+                    @Override public long emptyDataPages() {
+                        return 0;
+                    }
+                }
+            ),
+            PageMemoryImpl.ThrottlingPolicy.DISABLED,
+            new CheckpointWriteProgressSupplier() {
+                @Override public AtomicInteger writtenPagesCounter() {
+                    return commonCntr;
+                }
+
+                @Override public AtomicInteger syncedPagesCounter() {
+                    return commonCntr;
+                }
+
+                @Override public AtomicInteger evictedPagesCntr() {
+                    return commonCntr;
+                }
+
+                @Override public int currentCheckpointPagesCount() {
+                    return 0;
+                }
             }
-        };
-
-        cacheProcessor.start();
-
-        cacheProcRef.set(cacheProcessor);
-
-        DynamicCacheDescriptor desc = new DynamicCacheDescriptor(
-            ctx,
-            cacheCfg,
-            CacheType.USER,
-            /*new CacheGroupDescriptor(
-                cacheCfg,
-                cacheCfg.getGroupName(),
-                CU.cacheGroupId(cacheCfg.getName(), cacheCfg.getGroupName()),
-                null,
-                null,
-                null,
-                null,
-                true,
-                true,
-                null,
-                null
-            )*/null,
-            true,
-            null,
-            true,
-            false,
-            null,
-            new QuerySchema(),
-            null
         );
 
-        ctx.cache().preparePageStore(desc, true);
+        /*ReuseList reuseList = new ReuseListImpl(
+            grp.groupId(),
+            grp.cacheOrGroupName(),
+            grp.dataRegion().pageMemory(),
+            ctx.wal(),
+            reuseListRoot.pageId().pageId(),
+            reuseListRoot.isAllocated(),
+            diagnosticMgr.pageLockTracker().createPageLockTracker(reuseListName),
+            ctx.kernalContext(),
+            pageListCacheLimit
+        );
 
-        CacheObjectContext cacheObjCtx = ctx.cacheObjects().contextForCache(cacheCfg);
+        IndexStorage idxStorage = new IndexStorageImpl(
+            pageMemory,
+            new FileWriteAheadLogManager(ctx),
+            new AtomicLong(0),
+            grpId,
 
-        CacheGroupContext grpCtx = null;/* = ctx.cache().getOrCreateCacheGroupContext(
-            desc,
-            AffinityTopologyVersion.NONE,
-            cacheObjCtx,
-            true,
-            cacheCfg.getGroupName(),
-            true
-        )*/;
-
-        PageMemory pageMemory = new PageMemoryImpl();
-
-        IndexStorage idxStorage = ((GridCacheOffheapManager)grpCtx.offheap()).getIndexStorage();
+        );
 
         for (String idxName : idxStorage.getIndexNames()) {
             RootPage rootPage = idxStorage.allocateIndex(idxName);
@@ -232,7 +273,7 @@ public class IgniteIndexReader {
                 null,
                 stats
             );
-        }
+        }*/
     }
 
     private Path getPartitionFilePath(File cacheWorkDir, int partId) {

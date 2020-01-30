@@ -658,7 +658,7 @@ public class FilePageStoreManager extends GridCacheSharedManagerAdapter implemen
      * @return Cache store holder.
      * @throws IgniteCheckedException If failed.
      */
-    private CacheStoreHolder initDir(File cacheWorkDir,
+    public CacheStoreHolder initDir(File cacheWorkDir,
         int grpId,
         int partitions,
         LongAdderMetric allocatedTracker,
