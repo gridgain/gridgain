@@ -133,7 +133,7 @@ public class JdbcParameterMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         writer.writeInt(isNullable);
         writer.writeBoolean(signed);
         writer.writeInt(precision);
@@ -146,7 +146,7 @@ public class JdbcParameterMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         isNullable = reader.readInt();
         signed = reader.readBoolean();
         precision = reader.readInt();

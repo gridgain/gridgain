@@ -123,8 +123,8 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeLong(cursorId);
         writer.writeBoolean(isQuery);
@@ -134,21 +134,21 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
             writer.writeBoolean(last);
 
-            JdbcUtils.writeItems(writer, items, binCtx);
+            JdbcUtils.writeItems(writer, items, protoCtx);
         }
         else
             writer.writeLong(updateCnt);
 
         writer.writeBoolean(partRes != null);
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0 && partRes != null)
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0 && partRes != null)
             PartitionResultMarshaler.marshal(writer, partRes);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         cursorId = reader.readLong();
         isQuery = reader.readBoolean();
@@ -156,7 +156,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
         if (isQuery) {
             last = reader.readBoolean();
 
-            items = JdbcUtils.readItems(reader, binCtx);
+            items = JdbcUtils.readItems(reader, protoCtx);
         }
         else {
             last = true;
@@ -164,7 +164,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
             updateCnt = reader.readLong();
         }
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0 && reader.readBoolean())
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0 && reader.readBoolean())
             partRes = PartitionResultMarshaler.unmarshal(reader);
     }
 

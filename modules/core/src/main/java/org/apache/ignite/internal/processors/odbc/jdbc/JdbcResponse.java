@@ -117,19 +117,19 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         writer.writeInt(status());
 
         if (status() == STATUS_SUCCESS) {
             writer.writeBoolean(res != null);
 
             if (res != null)
-                res.writeBinary(writer,binCtx);
+                res.writeBinary(writer, protoCtx);
         }
         else
             writer.writeString(error());
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0) {
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0) {
             writer.writeBoolean(activeTx);
 
             writer.writeBoolean(affinityVer != null);
@@ -143,17 +143,17 @@ public class JdbcResponse extends ClientListenerResponse implements JdbcRawBinar
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         status(reader.readInt());
 
         if (status() == STATUS_SUCCESS) {
             if (reader.readBoolean())
-                res = JdbcResult.readResult(reader, binCtx);
+                res = JdbcResult.readResult(reader, protoCtx);
         }
         else
             error(reader.readString());
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0) {
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0) {
             activeTx = reader.readBoolean();
 
             boolean affinityVerChanged = reader.readBoolean();

@@ -33,7 +33,7 @@ public class JdbcUtils {
      * @param writer Binary writer.
      * @param items Query results items.
      */
-    public static void writeItems(BinaryWriterExImpl writer, List<List<Object>> items, JdbcProtocolContext binCtx) {
+    public static void writeItems(BinaryWriterExImpl writer, List<List<Object>> items, JdbcProtocolContext protoCtx) {
         writer.writeInt(items.size());
 
         for (List<Object> row : items) {

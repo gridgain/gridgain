@@ -91,23 +91,23 @@ public class JdbcResult implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         writer.writeByte(type);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
     }
 
     /**
      * @param reader Binary reader.
-     * @param binCtx Binary context.
+     * @param protoCtx Binary context.
      * @return Request object.
      * @throws BinaryObjectException On error.
      */
     public static JdbcResult readResult(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         int resId = reader.readByte();
 
         JdbcResult res;
@@ -202,7 +202,7 @@ public class JdbcResult implements JdbcRawBinarylizable {
                 throw new IgniteException("Unknown SQL listener request ID: [request ID=" + resId + ']');
         }
 
-        res.readBinary(reader, binCtx);
+        res.readBinary(reader, protoCtx);
 
         return res;
     }

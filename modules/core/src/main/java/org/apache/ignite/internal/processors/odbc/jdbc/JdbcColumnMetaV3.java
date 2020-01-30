@@ -63,16 +63,16 @@ public class JdbcColumnMetaV3 extends JdbcColumnMetaV2 {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeString(dfltValue);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) {
+        super.readBinary(reader, protoCtx);
 
         dfltValue = reader.readString();
     }

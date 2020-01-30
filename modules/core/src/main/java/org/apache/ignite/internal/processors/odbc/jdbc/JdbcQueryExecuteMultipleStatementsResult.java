@@ -80,19 +80,19 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         if (results != null && !results.isEmpty()) {
             writer.writeInt(results.size());
 
             for (JdbcResultInfo r : results)
-                r.writeBinary(writer, binCtx);
+                r.writeBinary(writer, protoCtx);
 
             if (results.get(0).isQuery()) {
                 writer.writeBoolean(last);
 
-                JdbcUtils.writeItems(writer, items, binCtx);
+                JdbcUtils.writeItems(writer, items, protoCtx);
             }
         }
         else
@@ -102,8 +102,8 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         int cnt = reader.readInt();
 
@@ -115,7 +115,7 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
             for (int i = 0; i < cnt; ++i) {
                 JdbcResultInfo r = new JdbcResultInfo();
 
-                r.readBinary(reader, binCtx);
+                r.readBinary(reader, protoCtx);
 
                 results.add(r);
             }
@@ -123,7 +123,7 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
             if (results.get(0).isQuery()) {
                 last = reader.readBoolean();
 
-                items = JdbcUtils.readItems(reader, binCtx);
+                items = JdbcUtils.readItems(reader, protoCtx);
             }
         }
     }

@@ -80,21 +80,21 @@ public class JdbcTableMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         writer.writeString(schemaName);
         writer.writeString(tblName);
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
             writer.writeString(tblType);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         schemaName = reader.readString();
         tblName = reader.readString();
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
             tblType = reader.readString();
     }
 

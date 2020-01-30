@@ -134,8 +134,8 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
     /** {@inheritDoc} */
     @Override public void writeBinary(
         BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeString(schemaName);
 
@@ -143,22 +143,22 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
             writer.writeInt(queries.size());
 
             for (JdbcQuery q : queries)
-                q.writeBinary(writer, binCtx);
+                q.writeBinary(writer, protoCtx);
 
         }
         else
             writer.writeInt(0);
 
-        if (binCtx.version().compareTo(VER_2_4_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_4_0) >= 0)
             writer.writeBoolean(lastStreamBatch);
 
-        if (binCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
             writer.writeBoolean(autoCommit);
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+    @Override public void readBinary(BinaryReaderExImpl reader, JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         schemaName = reader.readString();
 
@@ -169,15 +169,15 @@ public class JdbcBatchExecuteRequest extends JdbcRequest {
         for (int i = 0; i < n; ++i) {
             JdbcQuery qry = new JdbcQuery();
 
-            qry.readBinary(reader, binCtx);
+            qry.readBinary(reader, protoCtx);
 
             queries.add(qry);
         }
 
-        if (binCtx.version().compareTo(VER_2_4_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_4_0) >= 0)
             lastStreamBatch = reader.readBoolean();
 
-        if (binCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
             autoCommit = reader.readBoolean();
     }
 

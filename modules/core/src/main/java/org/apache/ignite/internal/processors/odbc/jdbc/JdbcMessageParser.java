@@ -34,19 +34,19 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
     private final GridKernalContext ctx;
 
     /** Binary context. */
-    private final JdbcProtocolContext binCtx;
+    private final JdbcProtocolContext protoCtx;
 
     /** Initial output stream capacity. */
     protected static final int INIT_CAP = 1024;
 
     /**
      * @param ctx Context.
-     * @param binCtx Binary context.
+     * @param protoCtx Binary context.
      */
     public JdbcMessageParser(GridKernalContext ctx,
-        JdbcProtocolContext binCtx) {
+        JdbcProtocolContext protoCtx) {
         this.ctx = ctx;
-        this.binCtx = binCtx;
+        this.protoCtx = protoCtx;
     }
 
     /**
@@ -73,7 +73,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryReaderExImpl reader = createReader(msg);
 
-        return JdbcRequest.readRequest(reader, binCtx);
+        return JdbcRequest.readRequest(reader, protoCtx);
     }
 
     /** {@inheritDoc} */
@@ -86,7 +86,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
         BinaryWriterExImpl writer = createWriter(INIT_CAP);
 
-        res.writeBinary(writer, binCtx);
+        res.writeBinary(writer, protoCtx);
 
         return writer.array();
     }

@@ -66,22 +66,22 @@ public class JdbcQueryFetchResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeBoolean(last);
 
-        JdbcUtils.writeItems(writer, items, binCtx);
+        JdbcUtils.writeItems(writer, items, protoCtx);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         last = reader.readBoolean();
 
-        items = JdbcUtils.readItems(reader, binCtx);
+        items = JdbcUtils.readItems(reader, protoCtx);
     }
 
     /** {@inheritDoc} */

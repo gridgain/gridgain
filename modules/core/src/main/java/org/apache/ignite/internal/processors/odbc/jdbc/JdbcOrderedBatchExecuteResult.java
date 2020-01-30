@@ -54,8 +54,8 @@ public class JdbcOrderedBatchExecuteResult extends JdbcBatchExecuteResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeLong(order);
     }
@@ -63,8 +63,8 @@ public class JdbcOrderedBatchExecuteResult extends JdbcBatchExecuteResult {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         order = reader.readLong();
     }

@@ -141,8 +141,8 @@ public class JdbcBulkLoadBatchRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeLong(cursorId);
         writer.writeInt(batchIdx);
@@ -152,8 +152,8 @@ public class JdbcBulkLoadBatchRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         cursorId = reader.readLong();
         batchIdx = reader.readInt();

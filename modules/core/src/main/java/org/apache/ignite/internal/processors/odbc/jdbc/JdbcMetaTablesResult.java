@@ -49,8 +49,8 @@ public class JdbcMetaTablesResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         if (F.isEmpty(meta))
             writer.writeInt(0);
@@ -58,14 +58,14 @@ public class JdbcMetaTablesResult extends JdbcResult {
             writer.writeInt(meta.size());
 
             for(JdbcTableMeta m : meta)
-                m.writeBinary(writer, binCtx);
+                m.writeBinary(writer, protoCtx);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         int size = reader.readInt();
 
@@ -77,7 +77,7 @@ public class JdbcMetaTablesResult extends JdbcResult {
             for (int i = 0; i < size; ++i) {
                 JdbcTableMeta m = new JdbcTableMeta();
 
-                m.readBinary(reader, binCtx);
+                m.readBinary(reader, protoCtx);
 
                 meta.add(m);
             }

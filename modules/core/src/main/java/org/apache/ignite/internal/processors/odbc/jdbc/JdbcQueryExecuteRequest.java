@@ -140,8 +140,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeString(schemaName);
         writer.writeInt(pageSize);
@@ -155,19 +155,19 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
                 SqlListenerUtils.writeObject(writer, arg, false);
         }
 
-        if (binCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
             writer.writeBoolean(autoCommit);
 
         writer.writeByte((byte)stmtType.ordinal());
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
             writer.writeBoolean(partResReq);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         schemaName = reader.readString();
         pageSize = reader.readInt();
@@ -181,7 +181,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         for (int i = 0; i < argsNum; ++i)
             args[i] = SqlListenerUtils.readObject(reader, false);
 
-        if (binCtx.version().compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_7_0) >= 0)
             autoCommit = reader.readBoolean();
 
         try {
@@ -194,7 +194,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             throw new BinaryObjectException(e);
         }
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
             partResReq = reader.readBoolean();
     }
 

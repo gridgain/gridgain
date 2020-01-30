@@ -94,8 +94,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Request handler. */
     private JdbcRequestHandler handler = null;
 
-    /** Current protocol features. */
-    private JdbcProtocolContext binCtx;
+    /** Current protocol context. */
+    private JdbcProtocolContext protoCtx;
 
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
@@ -219,9 +219,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        binCtx = new JdbcProtocolContext(ver, features);
+        protoCtx = new JdbcProtocolContext(ver, features);
 
-        parser = new JdbcMessageParser(ctx, binCtx);
+        parser = new JdbcMessageParser(ctx, protoCtx);
 
         ClientListenerResponseSender sender = new ClientListenerResponseSender() {
             @Override public void send(ClientListenerResponse resp) {
@@ -284,7 +284,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /**
      * @return Binary context.
      */
-    public JdbcProtocolContext binaryContext() {
-        return binCtx;
+    public JdbcProtocolContext protocolContext() {
+        return protoCtx;
     }
 }

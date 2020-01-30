@@ -109,7 +109,7 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx)
+        JdbcProtocolContext protoCtx)
         throws BinaryObjectException {
         writer.writeInt(cacheIds.size());
 
@@ -135,7 +135,7 @@ public class JdbcThinPartitionAwarenessMappingGroup implements JdbcRawBinaryliza
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx)
+        JdbcProtocolContext protoCtx)
         throws BinaryObjectException {
         // No-op.
     }

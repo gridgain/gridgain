@@ -75,7 +75,7 @@ public class JdbcResultInfo implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) {
+        JdbcProtocolContext protoCtx) {
         writer.writeBoolean(isQuery);
         writer.writeLong(updCnt);
         writer.writeLong(cursorId);
@@ -83,7 +83,7 @@ public class JdbcResultInfo implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) {
+        JdbcProtocolContext protoCtx) {
         isQuery = reader.readBoolean();
         updCnt = reader.readLong();
         cursorId = reader.readLong();

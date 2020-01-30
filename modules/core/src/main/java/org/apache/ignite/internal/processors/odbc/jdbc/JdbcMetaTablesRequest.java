@@ -79,25 +79,25 @@ public class JdbcMetaTablesRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.writeBinary(writer, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeString(schemaName);
         writer.writeString(tblName);
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
             writer.writeStringArray(tblTypes);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        JdbcProtocolContext binCtx) throws BinaryObjectException {
-        super.readBinary(reader, binCtx);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         schemaName = reader.readString();
         tblName = reader.readString();
 
-        if (binCtx.version().compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.version().compareTo(VER_2_8_0) >= 0)
             tblTypes = reader.readStringArray();
     }
 

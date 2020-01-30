@@ -511,7 +511,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
         // Write all features supported by the node.
         if (protocolVer.compareTo(VER_2_8_2) >= 0)
-            writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(connCtx.binaryContext().features()));
+            writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(connCtx.protocolContext().features()));
     }
 
     /**
