@@ -136,7 +136,7 @@ public class OutOfMemoryVolatileRegionTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < attempts; ++i) {
             for (int key = 0; key < 5_000; ++key)
-                cache.put(key, new byte[4000]);
+                cache.put(key, new byte[40]);
 
             cache.clear();
         }
@@ -163,7 +163,7 @@ public class OutOfMemoryVolatileRegionTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < attempts; ++i) {
             for (int key = 0; key < 5_000; ++key)
-                cache.put(key, new byte[4000]);
+                cache.put(key, new byte[40]);
 
             cache.clear();
         }
