@@ -580,21 +580,26 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 cache[item.Bar] = item;
                 cachedItems.Add(cache[item.Bar]);
             }
-
+            
             // Recent items are in near cache:
+            Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear));
             foreach (var item in cachedItems.Skip(items.Length - NearCacheMaxSize))
             {
                 Assert.AreSame(item, cache[item.Bar]);
             }
 
-            // First item is deserialized on get:
+            // First item is not in near cache and is deserialized on get:
             var localItem = items[0];
             var key = localItem.Bar;
+
+            Foo _;
+            Assert.IsFalse(cache.TryLocalPeek(key, out _, CachePeekMode.NativeNear));
 
             var fromCache = cache[key];
             Assert.AreNotSame(localItem, fromCache);
 
             // And now it is near again:
+            Assert.IsTrue(cache.TryLocalPeek(key, out _, CachePeekMode.NativeNear));
             Assert.AreSame(fromCache, cache[key]);
         }
 
