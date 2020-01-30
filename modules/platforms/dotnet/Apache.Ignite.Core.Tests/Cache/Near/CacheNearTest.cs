@@ -541,6 +541,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             // TODO
         }
+
+        [Test]
+        public void TestGetLocalEntries()
+        {
+            // TODO
+        }
         
         /// <summary>
         /// Gets the cache instance.
