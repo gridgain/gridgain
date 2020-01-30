@@ -681,6 +681,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
             // Give to GC.
             update(null, 0L, 0L, ver, true);
 
+            evictFromPlatformNearCache();
+
             rmv = true;
 
             return true;
