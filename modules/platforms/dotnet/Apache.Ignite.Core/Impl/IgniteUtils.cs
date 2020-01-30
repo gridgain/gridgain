@@ -219,6 +219,12 @@ namespace Apache.Ignite.Core.Impl
 
             foreach (var mode in modes)
             {
+                if (mode == CachePeekMode.NativeNear)
+                {
+                    // Skip .NET-only mode.
+                    continue;
+                }
+                
                 res |= (int)mode;
             }
 
