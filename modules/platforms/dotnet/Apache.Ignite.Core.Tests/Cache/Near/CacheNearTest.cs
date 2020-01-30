@@ -529,6 +529,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // - check update from local (reference equality)
             // - check update from remote
         }
+
+        [Test]
+        public void TestLocalPeek()
+        {
+            // TODO: Test in combination with other modes.
+        }
+
+        [Test]
+        public void TestLocalSize()
+        {
+            // TODO
+        }
         
         /// <summary>
         /// Gets the cache instance.
