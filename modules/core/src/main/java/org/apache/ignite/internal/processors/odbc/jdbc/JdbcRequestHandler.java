@@ -38,6 +38,7 @@ import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteVersionUtils;
+import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.jdbc.thin.JdbcThinPartitionAwarenessMappingGroup;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
@@ -510,7 +511,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
         // Write all features supported by the node.
         if (protocolVer.compareTo(VER_2_8_2) >= 0)
-            writer.writeByteArray(JdbcThinFeature.allFeatures());
+            writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(connCtx.binaryContext().features()));
     }
 
     /**

@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.AbstractThinProtocolFeature;
+import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -198,8 +198,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         if (ver.compareTo(VER_2_8_2) >= 0) {
             byte [] cliFeatures = reader.readByteArray();
 
-            features = JdbcThinFeature.enumSet(
-                AbstractThinProtocolFeature.matchFeatures(cliFeatures, JdbcThinFeature.allFeatures()));
+            features = JdbcThinFeature.enumSet(cliFeatures);
+
+            features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
@@ -279,5 +280,12 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             return changed ? newVer : null;
         }
+    }
+
+    /**
+     * @return Binary context.
+     */
+    public JdbcBinaryContext binaryContext() {
+        return binCtx;
     }
 }

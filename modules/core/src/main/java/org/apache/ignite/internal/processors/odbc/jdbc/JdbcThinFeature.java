@@ -16,14 +16,26 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.util.Arrays;
 import java.util.EnumSet;
-import org.apache.ignite.internal.AbstractThinProtocolFeature;
+import org.apache.ignite.internal.ThinProtocolFeature;
 
 /**
  * Defines supported features for JDBC thin client.
  */
-public enum JdbcThinFeature implements AbstractThinProtocolFeature {
+public enum JdbcThinFeature implements ThinProtocolFeature {
     RESERVED(0);
+
+    /** */
+    private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(
+        JdbcThinFeature.values()[0].getDeclaringClass());
+
+    /** */
+    private static final byte[] ALL_FEATURES_AS_BYTES;
+
+    static {
+        ALL_FEATURES_AS_BYTES = ThinProtocolFeature.featuresAsBytes(JdbcThinFeature.values());
+    }
 
     /** Feature id. */
     private final int featureId;
@@ -45,13 +57,18 @@ public enum JdbcThinFeature implements AbstractThinProtocolFeature {
      * @return Set of supported features.
      */
     public static EnumSet<JdbcThinFeature> enumSet(byte[] bytes) {
-        return AbstractThinProtocolFeature.enumSet(bytes, values());
+        return ThinProtocolFeature.enumSet(bytes, values());
     }
 
     /**
      * @return Byte array representing all supported features by current node.
      */
-    public static byte[] allFeatures() {
-        return AbstractThinProtocolFeature.features(values());
+    public static byte[] allFeaturesAsBytes() {
+        return Arrays.copyOf(ALL_FEATURES_AS_BYTES, ALL_FEATURES_AS_BYTES.length);
+    }
+
+    /** */
+    public static EnumSet<JdbcThinFeature> allFeaturesAsEnumSet() {
+        return ALL_FEATURES_AS_ENUM_SET.clone();
     }
 }
