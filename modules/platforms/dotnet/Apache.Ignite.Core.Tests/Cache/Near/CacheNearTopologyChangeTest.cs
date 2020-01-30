@@ -16,7 +16,10 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
+    using System;
     using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Events;
     using NUnit.Framework;
@@ -66,13 +69,48 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestServerNodeBecomesPrimaryKeepsNearCacheData()
         {
-            // TODO: test that near invalidation still works after primary change
-            // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
+            var grid1 = Ignition.Start(TestUtils.GetTestConfiguration("node1"));
+            var grid2 = Ignition.Start(TestUtils.GetTestConfiguration(name: "node2"));
+            
+            var cacheConfiguration = new CacheConfiguration("c") {NearConfiguration = new NearCacheConfiguration()};
+            var cache = grid1.CreateCache<int, Foo>(cacheConfiguration);
+            
+            Thread.Sleep(300);
+
+            // Grid1: 2, 3, 9, 10, 11, 13, 18, 19, 20, 22
+            // Grid2: 1, 4, 5, 6, 7, 8, 12, 14, 15, 16
+            Console.WriteLine("Grid1:" + TestUtils.GetPrimaryKeys(grid1, cache.Name)
+                .Select(x => x.ToString()).Take(10).Aggregate((a, b) => a + ", " + b));
+            
+            Console.WriteLine("Grid2:" + TestUtils.GetPrimaryKeys(grid2, cache.Name)
+                .Select(x => x.ToString()).Take(10).Aggregate((a, b) => a + ", " + b));
+            
+            
+            var grid3 = Ignition.Start(TestUtils.GetTestConfiguration(name: "node3"));
+
+            cache[1] = new Foo(111);
+            Thread.Sleep(3000);
+            
+            // Grid1: 2, 3, 9, 10, 11, 13, 19, 20, 25, 29
+            // Grid2: 1, 4, 5, 7, 8, 12, 15, 16, 21, 24
+            // Grid3: 6, 14, 17, 18, 22, 23, 26, 27, 30, 36
+
+            Console.WriteLine("Grid1:" + TestUtils.GetPrimaryKeys(grid1, cache.Name)
+                                  .Select(x => x.ToString()).Take(10).Aggregate((a, b) => a + ", " + b));
+            
+            Console.WriteLine("Grid2:" + TestUtils.GetPrimaryKeys(grid2, cache.Name)
+                                  .Select(x => x.ToString()).Take(10).Aggregate((a, b) => a + ", " + b));
+            
+            Console.WriteLine("Grid3:" + TestUtils.GetPrimaryKeys(grid3, cache.Name)
+                                  .Select(x => x.ToString()).Take(10).Aggregate((a, b) => a + ", " + b));
         }
         
         [Test]
         public void TestServerNodeNoLongerPrimaryKeepsNearCacheData()
         {
+            // Key that becomes primary on node3 when it enters topology. 
+            const int key = 6;
+
             // TODO: test that near invalidation still works after primary change
             // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
         }
