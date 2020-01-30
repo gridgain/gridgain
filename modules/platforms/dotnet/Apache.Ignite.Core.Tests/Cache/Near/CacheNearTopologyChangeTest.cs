@@ -98,6 +98,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             InitGrids(2);
             
+            // TODO: Test that same instance is kept in near cache after new node join.
             _cache[0][Key3] = new Foo(-1);
             Assert.AreEqual(-1, _cache[1][Key3].Bar);
             
