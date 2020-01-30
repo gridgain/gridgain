@@ -964,9 +964,25 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private int Size0(bool loc, params CachePeekMode[] modes)
         {
-            // TODO
             bool hasNativeNear;
             var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+
+            if (hasNativeNear)
+            {
+                if (!loc)
+                {
+                    throw new InvalidOperationException(
+                        string.Format("{0} can only be used to get local size", CachePeekMode.NativeNear));
+                }
+                
+                if (modes.Length == 1 && _nearCache != null)
+                {
+                    return _nearCache.GetSize();
+                }
+
+                // TODO
+                throw new NotImplementedException();
+            }
 
             var op = loc ? CacheOp.SizeLoc : CacheOp.Size;
 
@@ -985,6 +1001,29 @@ namespace Apache.Ignite.Core.Impl.Cache
             // TODO: ???
             bool hasNativeNear;
             var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+
+            if (hasNativeNear)
+            {
+                if (!loc)
+                {
+                    throw new InvalidOperationException(
+                        string.Format("{0} can only be used to get local size", CachePeekMode.NativeNear));
+                }
+
+                if (part != null)
+                {
+                    throw new InvalidOperationException(
+                        string.Format("{0} can not be used with `partition` argument", CachePeekMode.NativeNear));
+                }
+                
+                if (modes.Length == 1 && _nearCache != null)
+                {
+                    return _nearCache.GetSize();
+                }
+
+                // TODO
+                throw new NotImplementedException();
+            }
 
             var op = loc ? CacheOp.SizeLongLoc : CacheOp.SizeLong; 
            
