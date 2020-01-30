@@ -18,11 +18,15 @@ package org.apache.ignite.events;
 
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgnitePredicate;
 
+import static org.apache.ignite.events.EventType.EVT_CLUSTER_STATE_CHANGE_STARTED;
+
 /**
- * Cluster activation/deactivation started event.
+ * Cluster state change started event.
  * <p>
  * Grid events are used for notification about what happens within the grid. Note that by
  * design Ignite keeps all events generated on the local node locally and it provides
@@ -52,21 +56,50 @@ import org.apache.ignite.lang.IgnitePredicate;
  * by using {@link IgniteConfiguration#getIncludeEventTypes()} method in Ignite configuration. Note that certain
  * events are required for Ignite's internal operations and such events will still be generated but not stored by
  * event storage SPI if they are disabled in Ignite configuration.
- * @see EventType#EVT_CLUSTER_ACTIVATION_STARTED
- * @see EventType#EVT_CLUSTER_DEACTIVATION_STARTED
+ * @see EventType#EVT_CLUSTER_STATE_CHANGE_STARTED
  */
-public class ClusterActivationStartedEvent extends EventAdapter {
+public class ClusterStateChangeStartedEvent extends EventAdapter {
     /** */
     private static final long serialVersionUID = 0L;
 
+    /** Previous cluster state. */
+    private final ClusterState prevState;
+
+    /** New cluster state. */
+    private final ClusterState state;
+
     /**
-     * Creates activation/deactivation started event with given parameters.
-     *
+     * @param prevState Previous cluster state.
+     * @param state New cluster state.
      * @param node Node.
      * @param msg Optional event message.
-     * @param type Event type.
      */
-    public ClusterActivationStartedEvent(ClusterNode node, String msg, int type) {
-        super(node, msg, type);
+    public ClusterStateChangeStartedEvent(
+        ClusterState prevState,
+        ClusterState state,
+        ClusterNode node,
+        String msg
+    ) {
+        super(node, msg, EVT_CLUSTER_STATE_CHANGE_STARTED);
+
+        A.notNull(prevState, "prevState");
+        A.notNull(state, "state");
+
+        this.state = state;
+        this.prevState = prevState;
+    }
+
+    /**
+     * @return Previous cluster state.
+     */
+    public ClusterState previousState() {
+        return prevState;
+    }
+
+    /**
+     * @return New cluster state.
+     */
+    public ClusterState state() {
+        return state;
     }
 }

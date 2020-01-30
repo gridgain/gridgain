@@ -18,6 +18,7 @@ package org.apache.ignite.events;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -79,8 +80,7 @@ public class ClusterActivationStartedEventTest extends GridCommonAbstractTest {
 
                 return true;
             },
-            EventType.EVT_CLUSTER_ACTIVATION_STARTED,
-            EventType.EVT_CLUSTER_DEACTIVATION_STARTED
+            EventType.EVT_CLUSTER_STATE_CHANGE_STARTED
         );
 
         ignite.cluster().active(false);
@@ -103,11 +103,16 @@ public class ClusterActivationStartedEventTest extends GridCommonAbstractTest {
 
         ignite.events().localListen(
             event -> {
-                activationStarted.set(true);
+                ClusterStateChangeStartedEvent changeStartedEvt = (ClusterStateChangeStartedEvent)event;
+
+                if (changeStartedEvt.state() == ClusterState.ACTIVE)
+                    activationStarted.set(true);
+                else
+                    deactivationStarted.set(true);
 
                 return true;
             },
-            EventType.EVT_CLUSTER_ACTIVATION_STARTED
+            EventType.EVT_CLUSTER_STATE_CHANGE_STARTED
         );
 
         ignite.events().localListen(
@@ -119,15 +124,6 @@ public class ClusterActivationStartedEventTest extends GridCommonAbstractTest {
                 return true;
             },
             EventType.EVT_CLUSTER_ACTIVATED
-        );
-
-        ignite.events().localListen(
-            event -> {
-                deactivationStarted.set(true);
-
-                return true;
-            },
-            EventType.EVT_CLUSTER_DEACTIVATION_STARTED
         );
 
         ignite.events().localListen(
@@ -173,12 +169,17 @@ public class ClusterActivationStartedEventTest extends GridCommonAbstractTest {
 
         ignite.events(ignite.cluster().forRemotes()).remoteListen(
             (id, event) -> {
-                activationStarted.set(true);
+                ClusterStateChangeStartedEvent changeStartedEvt = (ClusterStateChangeStartedEvent)event;
+
+                if (changeStartedEvt.state() == ClusterState.ACTIVE)
+                    activationStarted.set(true);
+                else
+                    deactivationStarted.set(true);
 
                 return true;
             },
             type -> true,
-            EventType.EVT_CLUSTER_ACTIVATION_STARTED
+            EventType.EVT_CLUSTER_STATE_CHANGE_STARTED
         );
 
         ignite.events(ignite.cluster().forRemotes()).remoteListen(
@@ -189,16 +190,6 @@ public class ClusterActivationStartedEventTest extends GridCommonAbstractTest {
             },
             type -> true,
             EventType.EVT_CLUSTER_ACTIVATED
-        );
-
-        ignite.events(ignite.cluster().forRemotes()).remoteListen(
-            (id, event) -> {
-                deactivationStarted.set(true);
-
-                return true;
-            },
-            type -> true,
-            EventType.EVT_CLUSTER_DEACTIVATION_STARTED
         );
 
         ignite.events(ignite.cluster().forRemotes()).remoteListen(
