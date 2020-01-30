@@ -21,12 +21,16 @@ import java.util.Set;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteFeatures.PME_FREE_SWITCH;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager.exchangeProtocolVersion;
 
@@ -55,6 +59,9 @@ public class ExchangeContext {
     /** */
     private final boolean compatibilityNode = getBoolean(IGNITE_EXCHANGE_COMPATIBILITY_VER_1, false);
 
+    /** */
+    private final boolean bltForInMemoryCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+
     /**
      * @param crd Coordinator flag.
      * @param fut Exchange future.
@@ -65,6 +72,11 @@ public class ExchangeContext {
         if (!compatibilityNode &&
             fut.wasRebalanced() &&
             fut.isBaselineNodeFailed() &&
+            (!CU.isInMemoryCluster(
+                fut.sharedContext().kernalContext().discovery().allNodes(),
+                fut.sharedContext().kernalContext().marshallerContext().jdkMarshaller(),
+                U.resolveClassLoader(fut.sharedContext().kernalContext().config())
+            ) || bltForInMemoryCachesSupport ) &&
             allNodesSupports(fut.sharedContext().kernalContext(), fut.firstEventCache().allNodes(), PME_FREE_SWITCH)) {
             exchangeFreeSwitch = true;
             merge = false;
