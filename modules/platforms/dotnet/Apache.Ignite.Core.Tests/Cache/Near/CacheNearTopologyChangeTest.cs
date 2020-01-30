@@ -58,9 +58,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
-        
+
+        /// <summary>
+        /// Tests that near cache data is retained and keeps updating properly when current server node becomes primary
+        /// for a given key after being non-primary (GridNearCacheEntry -> GridDhtCacheEntry). 
+        /// </summary>
         [Test]
         public void TestServerNodeBecomesPrimaryKeepsNearCacheData()
+        {
+            // TODO: test that near invalidation still works after primary change
+            // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
+        }
+        
+        [Test]
+        public void TestServerNodeNoLongerPrimaryKeepsNearCacheData()
         {
             // TODO: test that near invalidation still works after primary change
             // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
