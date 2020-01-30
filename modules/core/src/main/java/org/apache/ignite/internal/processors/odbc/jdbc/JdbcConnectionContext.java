@@ -192,14 +192,14 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         }
 
-        EnumSet<JdbcThinFeatures> features = null;
+        EnumSet<JdbcThinFeature> features = null;
 
         if (ver.compareTo(VER_2_8_2) >= 0) {
             byte [] cliFeatures = reader.readByteArray();
 
-            features = JdbcThinFeatures.enumSet(cliFeatures);
+            features = JdbcThinFeature.enumSet(cliFeatures);
 
-            features.retainAll(JdbcThinFeatures.allFeaturesAsEnumSet());
+            features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {

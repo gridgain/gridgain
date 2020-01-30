@@ -27,14 +27,14 @@ public class JdbcBinaryContext {
     private final ClientListenerProtocolVersion ver;
 
     /** Features. */
-    private final EnumSet<JdbcThinFeatures> features;
+    private final EnumSet<JdbcThinFeature> features;
 
     /**
      * @param ver Protocol version.
      * @param features Supported features.
      */
     public JdbcBinaryContext(ClientListenerProtocolVersion ver,
-        EnumSet<JdbcThinFeatures> features) {
+        EnumSet<JdbcThinFeature> features) {
         this.ver = ver;
         this.features = features;
     }
@@ -49,7 +49,7 @@ public class JdbcBinaryContext {
     /**
      * @return Supported features.
      */
-    public EnumSet<JdbcThinFeatures> features() {
+    public EnumSet<JdbcThinFeature> features() {
         return features;
     }
 }
