@@ -224,7 +224,7 @@ public class IndexStorageImpl implements IndexStorage {
     /**
      *
      */
-    private static class MetaTree extends BPlusTree<IndexItem, IndexItem> {
+    public static class MetaTree extends BPlusTree<IndexItem, IndexItem> {
         /** */
         private final int allocPartId;
 
@@ -240,7 +240,7 @@ public class IndexStorageImpl implements IndexStorage {
          * @param failureProcessor if the tree is corrupted.
          * @throws IgniteCheckedException If failed.
          */
-        private MetaTree(
+        public MetaTree(
             final int cacheId,
             final int allocPartId,
             final byte allocSpace,
@@ -313,7 +313,7 @@ public class IndexStorageImpl implements IndexStorage {
     /**
      *
      */
-    private static class IndexItem {
+    public static class IndexItem {
         /** */
         private byte[] idxName;
 
@@ -327,6 +327,11 @@ public class IndexStorageImpl implements IndexStorage {
         private IndexItem(final byte[] idxName, final long pageId) {
             this.idxName = idxName;
             this.pageId = pageId;
+        }
+
+        /** */
+        public long pageId() {
+            return pageId;
         }
 
         /** {@inheritDoc} */
