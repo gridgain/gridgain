@@ -1661,7 +1661,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.INT, "1"));
+            .addArguments(DEFAULT_CACHE_NAME, "{\"type\":\"" + VisorDataType.INT + "\",\"value\":\"1\"}"));
 
         info("VisorCacheGetValueTask result for Integer key: " + ret);
 
@@ -1683,7 +1683,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.UUID, uuidKey.toString()));
+            .addArguments(DEFAULT_CACHE_NAME, "{\"type\":\"" + VisorDataType.UUID + "\",\"value\":\"" + uuidKey.toString() + "\"}"));
 
         info("VisorCacheGetValueTask result for UUID key: " + ret);
 
@@ -1701,7 +1701,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.TIMESTAMP, timestamp));
+            .addArguments(DEFAULT_CACHE_NAME, "{\"type\":\"" + VisorDataType.TIMESTAMP + "\",\"value\":\"" + timestamp + "\"}"));
 
         info("VisorCacheGetValueTask result for Timestamp key: " + ret);
 
@@ -1713,11 +1713,11 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
 
         // Check Date key.
         //jcache().put(new Date(timestamp), 4);
-        //
+
         //ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
         //    .setNode(locNode)
         //    .setTaskArgument(VisorCacheGetValueTaskArg.class)
-        //    .addArguments(DEFAULT_CACHE_NAME, VisorDataType.DATE, timestamp));
+        //    .addArguments(DEFAULT_CACHE_NAME, "{\"type\":\"" + VisorDataType.DATE_SQL + "\",\"value\":\"" + timestamp + "\"}"));
         //
         //info("VisorCacheGetValueTask result for Date key: " + ret);
         //
@@ -1733,17 +1733,20 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.BINARY,
+            .addArguments(DEFAULT_CACHE_NAME,
                 "{" +
-                    "\"className\":\"" + Person.class.getName() + "\"," +
-                    "\"fields\":[" +
-                    "{\"type\":\"INT\",\"name\":\"id\",\"value\":" + p.getId() + "}," +
-                    "{\"type\":\"INT\",\"name\":\"orgId\",\"value\":" + p.getOrganizationId() + "}," +
-                    "{\"type\":\"STRING\",\"name\":\"firstName\",\"value\":\"" + p.getFirstName() + "\"}," +
-                    "{\"type\":\"STRING\",\"name\":\"lastName\",\"value\":\"" + p.getLastName() + "\"}," +
-                    "{\"type\":\"DOUBLE\",\"name\":\"salary\",\"value\":" + p.getSalary() + "}" +
-                    "]" +
-                    "}"));
+                    "\"type\":\"" + VisorDataType.BINARY + "\"," +
+                    "\"value\":{" +
+                        "\"className\":\"" + Person.class.getName() + "\"," +
+                        "\"fields\":[" +
+                        "{\"type\":\"INT\",\"name\":\"id\",\"value\":" + p.getId() + "}," +
+                        "{\"type\":\"INT\",\"name\":\"orgId\",\"value\":" + p.getOrganizationId() + "}," +
+                        "{\"type\":\"STRING\",\"name\":\"firstName\",\"value\":\"" + p.getFirstName() + "\"}," +
+                        "{\"type\":\"STRING\",\"name\":\"lastName\",\"value\":\"" + p.getLastName() + "\"}," +
+                        "{\"type\":\"DOUBLE\",\"name\":\"salary\",\"value\":" + p.getSalary() + "}" +
+                        "]" +
+                    "}" +
+                "}"));
 
         info("VisorCacheGetValueTask result for binary key: " + ret);
 
@@ -1759,16 +1762,19 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.BINARY,
+            .addArguments(DEFAULT_CACHE_NAME,
                 "{" +
-                    "\"className\":\"" + CompositeKeyExternal.class.getName() + "\"," +
-                    "\"fields\":[" +
-                        "{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getId() + "}," +
-                        "{\"type\":\"BINARY\",\"name\":\"internal\",\"value\":{" +
-                            "\"className\":\"" + CompositeKeyInternal.class.getName() + "\"," +
-                            "\"fields\":[{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getInternal().getId() + "}]" +
-                        "}}" +
-                    "]" +
+                    "\"type\":\"" + VisorDataType.BINARY + "\"," +
+                    "\"value\":{" +
+                        "\"className\":\"" + CompositeKeyExternal.class.getName() + "\"," +
+                        "\"fields\":[" +
+                            "{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getId() + "}," +
+                            "{\"type\":\"BINARY\",\"name\":\"internal\",\"value\":{" +
+                                "\"className\":\"" + CompositeKeyInternal.class.getName() + "\"," +
+                                "\"fields\":[{\"type\":\"INT\",\"name\":\"id\",\"value\":" + key.getInternal().getId() + "}]" +
+                            "}}" +
+                        "]" +
+                    "}" +
                 "}"));
 
         info("VisorCacheGetValueTask result for binary key: " + ret);
