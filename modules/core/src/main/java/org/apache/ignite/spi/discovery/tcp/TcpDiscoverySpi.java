@@ -69,6 +69,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
@@ -2045,7 +2046,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             dataPacket.marshalJoiningNodeData(
                 dataBag,
                 marshaller(),
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION),
+                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES),
                 ignite.configuration().getNetworkCompressionLevel(),
                 log);
         else
@@ -2053,7 +2054,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
                 dataBag,
                 locNode.id(),
                 marshaller(),
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION),
+                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES),
                 ignite.configuration().getNetworkCompressionLevel(),
                 log);
 
@@ -2092,7 +2093,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
             //Marshal unzipped joining node data if it was zipped but not whole cluster supports that.
             //It can be happened due to several nodes, including node without compression support, are trying to join cluster concurrently.
-            if (!allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION) && dataPacket.hasZippedJoiningData())
+            if (!allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES) && dataPacket.hasZippedJoiningData())
                 dataPacket.unzipZippedData(log);
         }
 
@@ -2304,11 +2305,11 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     }
 
     /** {@inheritDoc} */
-    @Override public boolean allNodesSupport(IgniteFeatures feature) {
+    @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
         if (impl == null)
             return false;
 
-        return impl.allNodesSupport(feature);
+        return impl.allNodesSupport(feature, nodesPred);
     }
 
     /** {@inheritDoc} */

@@ -75,6 +75,7 @@ import org.apache.ignite.internal.util.typedef.CX1;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.GPR;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -104,6 +105,9 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  * Manager of data structures.
  */
 public final class DataStructuresProcessor extends GridProcessorAdapter implements IgniteChangeGlobalStateSupport {
+    /** DataRegionConfiguration name reserved for volatile caches. */
+    public static final String VOLATILE_DATA_REGION_NAME = "volatileMemPlc";
+
     /** */
     public static final String DEFAULT_VOLATILE_DS_GROUP_NAME = "default-volatile-ds-group";
 
@@ -510,11 +514,15 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
             cfg = dfltAtomicCfg;
         }
 
+        String dataRegionName = null;
         final String grpName;
 
-        if (type.isVolatile())
+        if (type.isVolatile()) {
+            if (CU.isPersistenceEnabled(ctx.config()))
+                dataRegionName = VOLATILE_DATA_REGION_NAME;
+
             grpName = DEFAULT_VOLATILE_DS_GROUP_NAME;
-        else if (cfg.getGroupName() != null)
+        } else if (cfg.getGroupName() != null)
             grpName = cfg.getGroupName();
         else
             grpName = DEFAULT_DS_GROUP_NAME;
@@ -527,7 +535,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
             if (!create && ctx.cache().cacheDescriptor(cacheName) == null)
                 return null;
 
-            ctx.cache().dynamicStartCache(cacheConfiguration(cfg, cacheName, grpName),
+            ctx.cache().dynamicStartCache(cacheConfiguration(cfg, cacheName, grpName, dataRegionName),
                 cacheName,
                 null,
                 CacheType.DATA_STRUCTURES,
@@ -888,9 +896,12 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
      * @param cfg Atomic configuration.
      * @param name Cache name.
      * @param grpName Group name.
+     * @param dataRegionName Name of data region for this cache.
+     *
      * @return Cache configuration.
      */
-    private CacheConfiguration cacheConfiguration(AtomicConfiguration cfg, String name, String grpName) {
+    private CacheConfiguration cacheConfiguration(AtomicConfiguration cfg, String name, String grpName,
+        String dataRegionName) {
         CacheConfiguration ccfg = new CacheConfiguration();
 
         ccfg.setName(name);
@@ -901,6 +912,7 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         ccfg.setCacheMode(cfg.getCacheMode());
         ccfg.setNodeFilter(CacheConfiguration.ALL_NODES);
         ccfg.setAffinity(cfg.getAffinity());
+        ccfg.setDataRegionName(dataRegionName);
 
         if (cfg.getCacheMode() == PARTITIONED)
             ccfg.setBackups(cfg.getBackups());

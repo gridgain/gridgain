@@ -20,11 +20,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.CacheException;
-import org.apache.ignite.cache.query.Query;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -32,7 +34,7 @@ import org.jetbrains.annotations.Nullable;
  */
 public class ReduceQueryRun {
     /** */
-    private final List<ReduceIndex> idxs;
+    private final List<Reducer> idxs;
 
     /** */
     private CountDownLatch latch;
@@ -57,9 +59,11 @@ public class ReduceQueryRun {
         int pageSize,
         Boolean dataPageScanEnabled
     ) {
+        assert pageSize > 0;
+
         idxs = new ArrayList<>(idxsCnt);
 
-        this.pageSize = pageSize > 0 ? pageSize : Query.DFLT_PAGE_SIZE;
+        this.pageSize = pageSize;
         this.dataPageScanEnabled  = dataPageScanEnabled;
     }
 
@@ -115,8 +119,8 @@ public class ReduceQueryRun {
         while (latch.getCount() != 0) // We don't need to wait for all nodes to reply.
             latch.countDown();
 
-        for (ReduceIndex idx : idxs) // Fail all merge indexes.
-            idx.fail(state.nodeId, state.ex);
+        for (Reducer idx : idxs) // Fail all merge indexes.
+            idx.onFailure(state.nodeId, state.ex);
     }
 
     /**
@@ -177,22 +181,47 @@ public class ReduceQueryRun {
     /**
      * @return Indexes.
      */
-    List<ReduceIndex> indexes() {
+    List<Reducer> reducers() {
         return idxs;
     }
 
     /**
-     * @return Latch.
+     * Initialize.
+     *
+     * @param srcSegmentCnt Total number of source segments.
      */
-    CountDownLatch latch() {
-        return latch;
+    void init(int srcSegmentCnt) {
+        assert latch == null;
+
+        latch = new CountDownLatch(srcSegmentCnt);
     }
 
     /**
-     * @param latch Latch.
+     * First page callback.
      */
-    void latch(CountDownLatch latch) {
-        this.latch = latch;
+    void onFirstPage() {
+        latch.countDown();
+    }
+
+    /**
+     * Try map query to sources.
+     *
+     * @param time Timeout.
+     * @param timeUnit Timeunit.
+     * @return {@code True} if first pages are received from all sources, {@code False} otherwise.
+     * @throws IgniteInterruptedCheckedException If interrupted.
+     */
+    boolean tryMapToSources(long time, TimeUnit timeUnit) throws IgniteInterruptedCheckedException {
+        assert latch != null;
+
+        return U.await(latch, time, timeUnit);
+    }
+
+    /**
+     * @return {@code True} if first pages are received from all sources, {@code False} otherwise.
+     */
+    boolean mapped() {
+        return latch != null && latch.getCount() == 0;
     }
 
     /**
