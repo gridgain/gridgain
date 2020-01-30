@@ -49,7 +49,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryFetchRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcQueryMetadataRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
 import org.apache.ignite.internal.util.ipc.loopback.IpcClientTcpEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
@@ -271,7 +271,7 @@ public class JdbcThinTcpIo {
             JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
         if (ver.compareTo(VER_2_8_2) >= 0)
-            writer.writeByteArray(JdbcThinFeature.allFeaturesAsBytes());
+            writer.writeByteArray(JdbcThinFeatures.allFeaturesAsBytes());
 
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
@@ -308,9 +308,9 @@ public class JdbcThinTcpIo {
                 if (ver.compareTo(VER_2_8_2) >= 0) {
                     byte[] srvFeatures = reader.readByteArray();
 
-                    EnumSet<JdbcThinFeature> features = JdbcThinFeature.enumSet(srvFeatures);
+                    EnumSet<JdbcThinFeatures> features = JdbcThinFeatures.enumSet(srvFeatures);
 
-                    features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
+                    features.retainAll(JdbcThinFeatures.allFeaturesAsEnumSet());
 
                     handshakeRes.features(features);
                 }

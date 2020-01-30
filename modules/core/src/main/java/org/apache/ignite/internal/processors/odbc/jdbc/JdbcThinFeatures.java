@@ -26,18 +26,18 @@ import org.apache.ignite.internal.util.typedef.F;
 /**
  * Defines supported features for JDBC thin client.
  */
-public enum JdbcThinFeature implements ThinProtocolFeature {
+public enum JdbcThinFeatures implements ThinProtocolFeature {
     /** */
     RESERVED(0);
 
     /** */
-    private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.values()[0].getDeclaringClass());
+    private static final EnumSet<JdbcThinFeatures> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeatures.values()[0].getDeclaringClass());
 
     /** */
     private static final byte[] ALL_FEATURES_AS_BYTES;
 
     static {
-        List<JdbcThinFeature> values = Arrays.stream(JdbcThinFeature.values())
+        List<JdbcThinFeatures> values = Arrays.stream(JdbcThinFeatures.values())
             .sorted((f1, f2) -> Integer.compare(f2.featureId(), f1.featureId()))
             .collect(Collectors.toList());
 
@@ -45,7 +45,7 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
 
         ALL_FEATURES_AS_BYTES = new byte[maxBytesNo + 1];
 
-        for (JdbcThinFeature f : values) {
+        for (JdbcThinFeatures f : values) {
             int byteNo = f.featureId() >>> 3;
             int bitNo = f.featureId() & 0x7;
 
@@ -59,7 +59,7 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
     /**
      * @param id Feature ID.
      */
-    JdbcThinFeature(int id) {
+    JdbcThinFeatures(int id) {
         featureId = id;
     }
 
@@ -80,13 +80,13 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
     }
 
     /** */
-    public static EnumSet<JdbcThinFeature> enumSet(byte[] bytes) {
-        EnumSet<JdbcThinFeature> set = EnumSet.noneOf(JdbcThinFeature.values()[0].getDeclaringClass());
+    public static EnumSet<JdbcThinFeatures> enumSet(byte[] bytes) {
+        EnumSet<JdbcThinFeatures> set = EnumSet.noneOf(JdbcThinFeatures.values()[0].getDeclaringClass());
 
         if (F.isEmpty(bytes))
             return set;
 
-        for (JdbcThinFeature f : JdbcThinFeature.values()) {
+        for (JdbcThinFeatures f : JdbcThinFeatures.values()) {
             if (f.isFeatureSet(bytes))
                 set.add(f);
         }
@@ -95,7 +95,7 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
     }
 
     /** */
-    public static EnumSet<JdbcThinFeature> allFeaturesAsEnumSet() {
+    public static EnumSet<JdbcThinFeatures> allFeaturesAsEnumSet() {
         return ALL_FEATURES_AS_ENUM_SET.clone();
     }
 
