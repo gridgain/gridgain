@@ -54,42 +54,48 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestServerNodeLeaveClearsNearCache()
         {
             InitGrids(3);
-            var key = Key3;
 
-            _cache[0][key] = new Foo(key);
+            _cache[0][Key3] = new Foo(Key3);
 
-            Assert.AreSame(_cache[0].Get(key), _cache[0].Get(key));
-            Assert.AreSame(_cache[1].Get(key), _cache[1].Get(key));
-            Assert.AreEqual(key, _cache[0][key].Bar);
-            Assert.AreEqual(key, _cache[1][key].Bar);
+            Assert.AreSame(_cache[0].Get(Key3), _cache[0].Get(Key3));
+            Assert.AreSame(_cache[1].Get(Key3), _cache[1].Get(Key3));
+            Assert.AreEqual(Key3, _cache[0][Key3].Bar);
+            Assert.AreEqual(Key3, _cache[1][Key3].Bar);
 
             _ignite[2].Dispose();
             Assert.IsTrue(_ignite[0].WaitTopology(2));
 
             // Check that key is not stuck in near cache.
-            Assert.IsEmpty(_cache[0].GetAll(new[] {key}));
-            Assert.IsEmpty(_cache[1].GetAll(new[] {key}));
-            Assert.Throws<KeyNotFoundException>(() => _cache[0].Get(key));
-            Assert.Throws<KeyNotFoundException>(() => _cache[1].Get(key));
+            Assert.IsEmpty(_cache[0].GetAll(new[] {Key3}));
+            Assert.IsEmpty(_cache[1].GetAll(new[] {Key3}));
+            Assert.Throws<KeyNotFoundException>(() => _cache[0].Get(Key3));
+            Assert.Throws<KeyNotFoundException>(() => _cache[1].Get(Key3));
             
             // Check that updates for that key work on both nodes.
-            _cache[0][key] = new Foo(1);
-            Assert.AreEqual(1, _cache[0][key].Bar);
-            Assert.AreEqual(1, _cache[1][key].Bar);
-            Assert.AreSame(_cache[0][key], _cache[0][key]);
-            Assert.AreSame(_cache[1][key], _cache[1][key]);
+            _cache[0][Key3] = new Foo(1);
+            Assert.AreEqual(1, _cache[0][Key3].Bar);
+            Assert.AreEqual(1, _cache[1][Key3].Bar);
+            Assert.AreSame(_cache[0][Key3], _cache[0][Key3]);
+            Assert.AreSame(_cache[1][Key3], _cache[1][Key3]);
             
-            _cache[1][key] = new Foo(2);
-            Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[0][key].Bar == 2, 500));
-            Assert.AreEqual(2, _cache[0][key].Bar);
-            Assert.AreEqual(2, _cache[1][key].Bar);
-            Assert.AreSame(_cache[0][key], _cache[0][key]);
-            Assert.AreSame(_cache[1][key], _cache[1][key]);
+            _cache[1][Key3] = new Foo(2);
+            Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[0][Key3].Bar == 2, 500));
+            Assert.AreEqual(2, _cache[0][Key3].Bar);
+            Assert.AreEqual(2, _cache[1][Key3].Bar);
+            Assert.AreSame(_cache[0][Key3], _cache[0][Key3]);
+            Assert.AreSame(_cache[1][Key3], _cache[1][Key3]);
         }
 
+        /// <summary>
+        /// Tests that near cache works correctly after primary node changes for a given key.
+        /// </summary>
         [Test]
-        public void TestServerNodeBecomesNoLongerPrimaryKeepsNearCacheData()
+        public void TestPrimaryNodeChangeKeepsNearCacheData()
         {
+            InitGrids(2);
+            
+            _cache[0][Key3] = new Foo(-1);
+            Assert.AreEqual(-1, _cache[1][Key3]);
             
             // TODO: test that near invalidation still works after primary change
             // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
