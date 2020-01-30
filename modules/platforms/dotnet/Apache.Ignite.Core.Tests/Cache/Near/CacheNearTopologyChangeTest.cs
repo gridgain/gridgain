@@ -90,6 +90,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestServerNodeBecomesNoLongerPrimaryKeepsNearCacheData()
         {
+            
             // TODO: test that near invalidation still works after primary change
             // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
         }
@@ -99,21 +100,29 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         private void InitGrids(int count)
         {
-            var cacheConfiguration = new CacheConfiguration(CacheName)
-            {
-                NearConfiguration = new NearCacheConfiguration()
-            };
-            
             _ignite = new IIgnite[count];
             _cache = new ICache<int, Foo>[count];
 
             for (var i = 0; i < count; i++)
             {
-                _ignite[i] = Ignition.Start(TestUtils.GetTestConfiguration("node" + i));
-                _cache[i] = _ignite[i].GetOrCreateCache<int, Foo>(cacheConfiguration);
+                InitGrid(i);
             }
+        }
 
-            if (count == 3)
+        /// <summary>
+        /// Inits a grid.
+        /// </summary>
+        private void InitGrid(int i)
+        {
+            var cacheConfiguration = new CacheConfiguration(CacheName)
+            {
+                NearConfiguration = new NearCacheConfiguration()
+            };
+            
+            _ignite[i] = Ignition.Start(TestUtils.GetTestConfiguration("node" + i));
+            _cache[i] = _ignite[i].GetOrCreateCache<int, Foo>(cacheConfiguration);
+            
+            if (i == 2)
             {
                 // ReSharper disable once AccessToDisposedClosure
                 Assert.IsTrue(
