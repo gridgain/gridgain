@@ -44,20 +44,25 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestServerNodeLeaveClearsNearCache()
         {
+            const int key = 6;
+            
             var grid1 = Ignition.Start(TestUtils.GetTestConfiguration());
             var grid2 = Ignition.Start(TestUtils.GetTestConfiguration(name: "node2"));
+            var grid3 = Ignition.Start(TestUtils.GetTestConfiguration(name: "node3"));
 
             var cacheConfiguration = new CacheConfiguration("c") {NearConfiguration = new NearCacheConfiguration()};
             var cache1 = grid1.CreateCache<int, Foo>(cacheConfiguration);
             var cache2 = grid2.GetCache<int, Foo>(cache1.Name);
+
+            // ReSharper disable once AccessToDisposedClosure
+            Assert.IsTrue(TestUtils.WaitForCondition(() => TestUtils.GetPrimaryKey(grid3, cache1.Name) == key, 3000));
             
-            var key = TestUtils.GetPrimaryKey(grid2, cache1.Name);
             cache1[key] = new Foo(key);
 
-            Assert.AreSame(cache1.Get(key), cache1.Get(key), "key is in near cache on grid1");
+            Assert.AreSame(cache1.Get(key), cache1.Get(key));
 
-            grid2.Dispose();
-            Assert.IsTrue(grid1.WaitTopology(1));
+            grid3.Dispose();
+            Assert.IsTrue(grid1.WaitTopology(2));
 
             // Check that key is not stuck in near cache.
             Assert.IsEmpty(cache1.GetAll(new[] {key}));
@@ -67,12 +72,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // Check that updates for that key work on both nodes.
             cache1[key] = new Foo(1);
+            Assert.AreEqual(1, cache1[key].Bar);
             Assert.AreEqual(1, cache2[key].Bar);
+            Assert.AreSame(cache1[key], cache1[key]);
             Assert.AreSame(cache2[key], cache2[key]);
             
             cache2[key] = new Foo(2);
             Assert.AreEqual(2, cache1[key].Bar);
+            Assert.AreEqual(2, cache2[key].Bar);
             Assert.AreSame(cache1[key], cache1[key]);
+            Assert.AreSame(cache2[key], cache2[key]);
         }
 
         /// <summary>
