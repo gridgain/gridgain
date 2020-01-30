@@ -24,7 +24,7 @@ import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionCont
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
 
 /**
- * Binary context for JDBC protocol. Holds protocol settings and state.
+ * Protocol context for JDBC protocol. Holds protocol version and supported features.
  */
 public class JdbcProtocolContext {
     /** Protocol version. */

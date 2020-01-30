@@ -24,7 +24,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static org.apache.ignite.internal.jdbc2.JdbcUtils.TYPE_TABLE;
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
 
 /**
  * JDBC table metadata.

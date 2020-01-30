@@ -26,8 +26,6 @@ import org.apache.ignite.internal.binary.streams.BinaryInputStream;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequestNoId;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
-
 /**
  * JDBC request.
  */

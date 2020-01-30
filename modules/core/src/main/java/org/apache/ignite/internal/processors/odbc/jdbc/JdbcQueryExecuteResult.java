@@ -24,8 +24,6 @@ import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResultMarshaler;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
-
 /**
  * JDBC query execute result.
  */
