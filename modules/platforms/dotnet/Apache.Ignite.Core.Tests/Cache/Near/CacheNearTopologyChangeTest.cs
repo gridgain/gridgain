@@ -99,13 +99,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             InitGrids(2);
             
-            // TODO: Test that same instance is kept in near cache after new node join.
             _cache[0][Key3] = new Foo(-1);
             Assert.AreEqual(-1, _cache[1][Key3].Bar);
             
             // New node enters and becomes primary for the key.
-            // GridCacheNearEntry does not yet exist on old primary node, so updates may become missing.
-            // TODO: Is there some code point where GridDhtCacheEntry gets deactivated?
+            // GridCacheNearEntry does not yet exist on old primary node, so near cache data is removed on .NET side.
             InitGrid(2);
 
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
@@ -124,6 +122,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestPrimaryNodeChangeKeepsNearCacheDataOnClient()
         {
             // TODO
+            
         }
 
         /// <summary>
