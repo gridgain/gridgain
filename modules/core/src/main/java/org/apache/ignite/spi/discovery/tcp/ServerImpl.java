@@ -105,6 +105,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.util.worker.GridWorkerListener;
 import org.apache.ignite.internal.worker.WorkersRegistry;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -159,6 +160,7 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheck
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryServerOnlyCustomEventMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusCheckMessage;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
@@ -1882,6 +1884,80 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     /**
+     * Checks that client node with given ID supports features required to handle given discovery custom message.
+     *
+     * @param msg Custom message that may require support of particular Ignite Feature.
+     * @param clientNodeId UUID of client node that should support required feature.
+     * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
+     */
+    private boolean clientSupportsRequiredFeatures(TcpDiscoveryAbstractMessage msg, @NotNull UUID clientNodeId) {
+        if (!(msg instanceof TcpDiscoveryCustomEventMessage))
+            return true;
+
+        TcpDiscoveryNode node = ring.node(clientNodeId);
+
+        if (node == null)
+            return true;
+
+        return clientSupportsRequiredFeatures(msg, node);
+    }
+
+    /**
+     * Checks that client node with given ID supports features required to handle given discovery custom message.
+     *
+     * @param msg Custom message that may require support of particular Ignite Feature.
+     * @param node Client node that should support required feature (used if node is null).
+     * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
+     */
+    private boolean clientSupportsRequiredFeatures(TcpDiscoveryAbstractMessage msg,
+        @NotNull ClusterNode node) {
+        if (!(msg instanceof TcpDiscoveryCustomEventMessage))
+            return true;
+
+        TcpDiscoveryCustomEventMessage msg0 = (TcpDiscoveryCustomEventMessage)msg;
+
+        DiscoverySpiCustomMessage customMsg;
+
+        try {
+            customMsg = msg0.message(
+                spi.marshaller(),
+                U.resolveClassLoader(spi.ignite().configuration()));
+        }
+        catch (Throwable t) {
+            log.warning("Failed to unmarshal message when checking client features support: " + msg, t);
+
+            return true;
+        }
+
+        DiscoveryCustomMessage delegateMsg = ((CustomMessageWrapper)customMsg).delegate();
+
+        TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
+            delegateMsg.getClass(),
+            TcpDiscoveryRequiredFeatureSupport.class
+        );
+
+        if (featAnnot != null) {
+            IgniteFeatures reqFeature = featAnnot.feature();
+
+            if (node != null) {
+                byte[] featuresBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
+
+                if (!IgniteFeatures.nodeSupports(featuresBytes, reqFeature)) {
+                    if (log.isDebugEnabled())
+                        log.debug("Client node " + node.id() +
+                            " doesn't support feature " + reqFeature +
+                            ", sending message " + delegateMsg.getClass() +
+                            " to the client is skipped.");
+
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @param msg Message to clear.
      */
     private void clearNodeAddedMessage(TcpDiscoveryAbstractMessage msg) {
@@ -2503,10 +2579,11 @@ class ServerImpl extends TcpDiscoveryImpl {
          *
          * @param lastMsgId Last message ID received on client. {@code Null} if client did not finish connect procedure.
          * @param node Client node.
+         * @param filterPred Predicate for additional filtering of messages.
          * @return Collection of messages.
          */
         @Nullable Collection<TcpDiscoveryAbstractMessage> messages(@Nullable IgniteUuid lastMsgId,
-            TcpDiscoveryNode node)
+            TcpDiscoveryNode node, @Nullable IgniteBiPredicate<TcpDiscoveryAbstractMessage, ClusterNode> filterPred)
         {
             assert node != null && node.clientRouterNodeId() != null : node;
 
@@ -2521,8 +2598,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 res = new ArrayList<>(msgs.size());
                         }
 
-                        if (res != null)
+                        if (res != null) {
+                            if (filterPred != null && !filterPred.apply(msg, node))
+                                continue;
+
                             res.add(prepare(msg, node.id()));
+                        }
                     }
                 }
 
@@ -2553,8 +2634,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                             if (msg.id().equals(lastMsgId))
                                 skip = false;
                         }
-                        else
+                        else {
+                            if (filterPred != null && !filterPred.apply(msg, node))
+                                continue;
+
                             cp.add(prepare(msg, node.id()));
+                        }
                     }
                 }
 
@@ -3371,48 +3456,6 @@ class ServerImpl extends TcpDiscoveryImpl {
         }
 
         /**
-         * Checks that client node with given ID supports features required to handle given discovery custom message.
-         *
-         * @param msg Custom message that may require support of particular Ignite Feature.
-         * @param clientNodeId UUID of client node that should support required feature.
-         * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
-         * @throws Throwable If deserialization of the message has failed.
-         */
-        private boolean clientSupportsRequiredFeatures(TcpDiscoveryCustomEventMessage msg, UUID clientNodeId) throws Throwable {
-            DiscoverySpiCustomMessage customMsg = msg.message(
-                spi.marshaller(),
-                U.resolveClassLoader(spi.ignite().configuration()));
-
-            DiscoveryCustomMessage delegateMsg = ((CustomMessageWrapper)customMsg).delegate();
-
-            TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
-                delegateMsg.getClass(),
-                TcpDiscoveryRequiredFeatureSupport.class
-            );
-
-            if (featAnnot != null) {
-                IgniteFeatures reqFeature = featAnnot.feature();
-                ClusterNode node = ring.node(clientNodeId);
-
-                if (node != null) {
-                    byte[] featuresBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
-
-                    if (!IgniteFeatures.nodeSupports(featuresBytes, reqFeature)) {
-                        if (log.isDebugEnabled())
-                            log.debug("Client node " + node.id() +
-                                " doesn't support feature " + reqFeature +
-                                ", sending message " + delegateMsg.getClass() +
-                                " to the client is skipped.");
-
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        /**
          * Sends message across the ring.
          *
          * @param msg Message to send
@@ -4225,7 +4268,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                         reconMsg.verify(getLocalNodeId());
 
-                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node);
+                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node, null);
 
                         if (msgs != null) {
                             reconMsg.pendingMessages(msgs);
@@ -7482,7 +7525,11 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (!msg.verified()) {
                 if (isLocNodeRouter || isLocalNodeCoordinator()) {
                     if (node != null) {
-                        Collection<TcpDiscoveryAbstractMessage> pending = msgHist.messages(msg.lastMessageId(), node);
+                        Collection<TcpDiscoveryAbstractMessage> pending = msgHist.messages(
+                            msg.lastMessageId(),
+                            node,
+                            ServerImpl.this::clientSupportsRequiredFeatures
+                        );
 
                         if (pending != null) {
                             msg.verify(locNodeId);
