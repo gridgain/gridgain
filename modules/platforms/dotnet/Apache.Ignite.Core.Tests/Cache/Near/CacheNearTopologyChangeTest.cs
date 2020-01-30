@@ -107,7 +107,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
             Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
             
-            // TODO
+            _cache[2][Key3] = new Foo(3);
+            
+            for (var i = 0; i < 3; i++)
+            {
+                Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == 3, 1000));
+                Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
+            }
         }
 
         /// <summary>
