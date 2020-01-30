@@ -3,7 +3,7 @@ package org.apache.ignite.internal;
 /**
  * The base feature class.
  */
-public interface ThinProtocolFeature {
+public interface JdbcThinFeature {
     /**
      * @return Feature ID.
      */
@@ -13,4 +13,6 @@ public interface ThinProtocolFeature {
      * @return Feature's name.
      */
     String name();
+
+    boolean isFeatureSet(byte[] bytes);
 }

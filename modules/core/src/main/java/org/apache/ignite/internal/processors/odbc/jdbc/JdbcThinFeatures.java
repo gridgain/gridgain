@@ -20,15 +20,14 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.ignite.internal.ThinProtocolFeature;
+import org.apache.ignite.internal.JdbcThinFeature;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
  * Defines supported features for JDBC thin client.
  */
-public enum JdbcThinFeatures implements ThinProtocolFeature {
-    /** */
-    RESERVED(0);
+public enum JdbcThinFeatures implements JdbcThinFeature {
+    /** */ RESERVED(0);
 
     /** */
     private static final EnumSet<JdbcThinFeatures> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeatures.values()[0].getDeclaringClass());
@@ -68,11 +67,8 @@ public enum JdbcThinFeatures implements ThinProtocolFeature {
         return featureId;
     }
 
-    /**
-     * @param bytes Byte array representing supported features.
-     * @return {@code true} if the feature is enabled at the set specified by bytes array.
-     */
-    private boolean isFeatureSet(byte[] bytes) {
+    /** {@inheritDoc} */
+    @Override public boolean isFeatureSet(byte[] bytes) {
         int byteNo = featureId >>> 3;
         int bitNo = featureId & 0x7;
 
@@ -100,7 +96,7 @@ public enum JdbcThinFeatures implements ThinProtocolFeature {
     }
 
     /**
-     * @return Byte array representing all supported features.
+     * @return Byte array representing all supported features by current node.
      */
     public static byte[] allFeaturesAsBytes() {
         return Arrays.copyOf(ALL_FEATURES_AS_BYTES, ALL_FEATURES_AS_BYTES.length);
