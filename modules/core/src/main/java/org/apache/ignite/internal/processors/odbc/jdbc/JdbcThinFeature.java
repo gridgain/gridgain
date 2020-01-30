@@ -17,39 +17,41 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.util.EnumSet;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
+import org.apache.ignite.internal.AbstractThinProtocolFeature;
 
 /**
- * Binary context for JDBC protocol. Holds protocol settings and state.
+ * Defines supported features for JDBC thin client.
  */
-public class JdbcBinaryContext {
-    /** Protocol version. */
-    private final ClientListenerProtocolVersion ver;
+public enum JdbcThinFeature implements AbstractThinProtocolFeature {
+    RESERVED(0);
 
-    /** Features. */
-    private final EnumSet<JdbcThinFeature> features;
+    /** Feature id. */
+    private final int featureId;
 
     /**
-     * @param ver Protocol version.
-     * @param features Supported features.
+     * @param id Feature ID.
      */
-    public JdbcBinaryContext(ClientListenerProtocolVersion ver,
-        EnumSet<JdbcThinFeature> features) {
-        this.ver = ver;
-        this.features = features;
+    JdbcThinFeature(int id) {
+        featureId = id;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int featureId() {
+        return featureId;
     }
 
     /**
-     * @return Protocol version.
+     * @param bytes Feature byte array.
+     * @return Set of supported features.
      */
-    public ClientListenerProtocolVersion version() {
-        return ver;
+    public static EnumSet<JdbcThinFeature> enumSet(byte[] bytes) {
+        return AbstractThinProtocolFeature.enumSet(bytes, values());
     }
 
     /**
-     * @return Supported features.
+     * @return Byte array representing all supported features by current node.
      */
-    public EnumSet<JdbcThinFeature> features() {
-        return features;
+    public static byte[] allFeatures() {
+        return AbstractThinProtocolFeature.features(values());
     }
 }

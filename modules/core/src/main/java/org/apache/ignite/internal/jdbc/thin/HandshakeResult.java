@@ -19,7 +19,7 @@ package org.apache.ignite.internal.jdbc.thin;
 import java.util.EnumSet;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
-import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeatures;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.lang.IgniteProductVersion;
 
 /**
@@ -37,7 +37,7 @@ class HandshakeResult {
     private ClientListenerProtocolVersion srvProtoVer;
 
     /** Features. */
-    private EnumSet<JdbcThinFeatures> features;
+    private EnumSet<JdbcThinFeature> features;
 
     /**
      * @return Ignite server version.
@@ -84,14 +84,14 @@ class HandshakeResult {
     /**
      * @param features Supported features.
      */
-    public void features(EnumSet<JdbcThinFeatures> features) {
+    public void features(EnumSet<JdbcThinFeature> features) {
         this.features = features;
     }
 
     /**
      * @return Supported features.
      */
-    public EnumSet<JdbcThinFeatures> features() {
+    public EnumSet<JdbcThinFeature> features() {
         return features;
     }
 }
