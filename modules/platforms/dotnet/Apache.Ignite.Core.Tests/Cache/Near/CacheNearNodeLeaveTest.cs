@@ -22,9 +22,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using NUnit.Framework;
 
     /// <summary>
-    /// Tests Near Cache behavior when primary node leaves.
+    /// Tests Near Cache behavior when cluster topology changes.
     /// </summary>
-    public class CacheNearNodeLeaveTest : IEventListener<IEvent>
+    public class CacheNearTopologyChangeTest
     {
         /// <summary>
         /// Tears down the test.
@@ -36,10 +36,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
         
         /// <summary>
-        /// Tests that near cache is cleared when primary node for a given key leaves and there are no backups.
+        /// Tests that near cache is cleared when any server node leaves.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeLeaveNoBackupClearsNearCache()
+        public void TestServerNodeLeaveClearsNearCache()
         {
             var grid1 = Ignition.Start(TestUtils.GetTestConfiguration());
             var grid2 = Ignition.Start(TestUtils.GetTestConfiguration(name: "node2"));
@@ -52,37 +52,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.AreSame(cache.Get(key), cache.Get(key), "key is in near cache on grid1");
 
-            // TODO: Figure out a good way to get NodeLeft callback without subscribing.
-            grid1.GetEvents().EnableLocal(EventType.NodeLeft);
-            grid1.GetEvents().LocalListen(this, EventType.NodeLeft);
             grid2.Dispose();
             Assert.IsTrue(grid1.WaitTopology(1));
 
-            // TODO: See GridNearCacheEntry.valid()
-            // * callback when invalid entry is detected - but this won't happen unless we try to read it
-            // * call Java before returning any near entry - wasteful
-            // * callback on topology change: remove all near entries (simple; potentially breaks subscription)
-            
-            // TODO:
-            // We care only for NodeLeft event - in this case all keys for that node must be removed from Near Cache.
-            // - simply iterate over all NearCacheEntry instances, call isValid, pass invalid keys to .NET. Then pass value to .NET again when entry becomes valid (if it does). 
-            // - OR See ICache.GetLostPartitions - can we determine exact keys, or should we just remove all?
             Assert.IsEmpty(cache.GetAll(new[] {key}), "key is removed from near cache");
             Assert.Throws<KeyNotFoundException>(() => cache.Get(key), "key is removed from near cache");
         }
         
-        /// <summary>
-        /// Tests that near cache is not cleared when primary node for a given key leaves but there are backups.
-        /// </summary>
         [Test]
-        public void TestPrimaryNodeLeaveWithBackupKeepsNearCache()
+        public void TestServerNodeBecomesPrimaryKeepsNearCacheData()
         {
-            
-        }
-
-        public bool Invoke(IEvent evt)
-        {
-            return true;
+            // TODO: test that near invalidation still works after primary change
+            // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
         }
     }
 }

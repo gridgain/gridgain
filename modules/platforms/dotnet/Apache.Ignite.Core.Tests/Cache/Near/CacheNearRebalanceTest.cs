@@ -21,7 +21,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     /// </summary>
     public class CacheNearTestRebalance
     {
-        // TODO: test that near invalidation still works after primary change
-        // Especially when on Server node we had NearCacheEntry and then it changes to normal entry, and vice versa
+        // Delete me
     }
 }
