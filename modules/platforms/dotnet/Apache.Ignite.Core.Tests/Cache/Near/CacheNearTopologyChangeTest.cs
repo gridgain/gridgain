@@ -109,6 +109,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
             Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
             
+            // Check that updates are propagated to all nodes.
             _cache[2][Key3] = new Foo(3);
             
             for (var i = 0; i < 3; i++)
