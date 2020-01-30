@@ -21,7 +21,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System.Linq;
     using System.Threading;
     using Apache.Ignite.Core.Cache.Configuration;
-    using Apache.Ignite.Core.Events;
     using NUnit.Framework;
 
     /// <summary>
@@ -78,6 +77,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreSame(cache2[key], cache2[key]);
             
             cache2[key] = new Foo(2);
+            Assert.IsTrue(TestUtils.WaitForCondition(() => cache1[key].Bar == 2, 500));
             Assert.AreEqual(2, cache1[key].Bar);
             Assert.AreEqual(2, cache2[key].Bar);
             Assert.AreSame(cache1[key], cache1[key]);
