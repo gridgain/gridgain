@@ -92,9 +92,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         /// <summary>
         /// Tests that near cache works correctly after primary node changes for a given key.
+        /// GridNearCacheEntry -> GridDhtCacheEntry.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeChangeKeepsNearCacheData()
+        public void TestPrimaryNodeChangeKeepsNearCacheDataOnServer()
         {
             InitGrids(2);
             
@@ -117,6 +118,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == 3, 1000));
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
+        }
+
+        [Test]
+        public void TestPrimaryNodeChangeKeepsNearCacheDataOnClient()
+        {
+            // TODO
         }
 
         /// <summary>
