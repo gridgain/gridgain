@@ -59,6 +59,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache1[key] = new Foo(key);
 
             Assert.AreSame(cache1.Get(key), cache1.Get(key));
+            Assert.AreSame(cache2.Get(key), cache2.Get(key));
+            Assert.AreEqual(key, cache1[key].Bar);
+            Assert.AreEqual(key, cache2[key].Bar);
 
             grid3.Dispose();
             Assert.IsTrue(grid1.WaitTopology(2));
