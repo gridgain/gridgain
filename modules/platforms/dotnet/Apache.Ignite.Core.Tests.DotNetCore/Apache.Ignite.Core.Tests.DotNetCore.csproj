@@ -88,12 +88,6 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearCreateDestroy.cs">
       <Link>Cache\Near\CacheNearCreateDestroy.cs</Link>
     </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearNodeLeaveTest.cs">
-      <Link>Cache\Near\CacheNearNodeLeaveTest.cs</Link>
-    </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearRebalanceTest.cs">
-      <Link>Cache\Near\CacheNearRebalanceTest.cs</Link>
-    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearReconnectTest.cs">
       <Link>Cache\Near\CacheNearReconnectTest.cs</Link>
     </Compile>
@@ -102,6 +96,9 @@
     </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearTestGenericDowngrade.cs">
       <Link>Cache\Near\CacheNearTestGenericDowngrade.cs</Link>
+    </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearTopologyChangeTest.cs">
+      <Link>Cache\Near\CacheNearTopologyChangeTest.cs</Link>
     </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\Foo.cs">
       <Link>Cache\Near\Foo.cs</Link>
