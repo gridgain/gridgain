@@ -149,7 +149,7 @@ public class IgniteCacheLocalQueryCancelOrTimeoutSelfTest extends GridCommonAbst
 
         IgniteCache<Integer, String> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
-        SqlFieldsQuery qry = new SqlFieldsQueryEx("SELECT * FROM String AS A where A._key = 1", true).setMaxMemory(-1);
+        SqlFieldsQuery qry = new SqlFieldsQueryEx("SELECT * FROM String AS A where A._key = 1", true);
 
         final QueryCursor<List<?>> cursor = cache.query(qry);
 
@@ -175,7 +175,7 @@ public class IgniteCacheLocalQueryCancelOrTimeoutSelfTest extends GridCommonAbst
 
         IgniteCache<Integer, String> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
-        SqlFieldsQuery qry = new SqlFieldsQueryEx(QUERY, true).setMaxMemory(-1);
+        SqlFieldsQuery qry = new SqlFieldsQueryEx(QUERY, true);
 
         final QueryCursor<List<?>> cursor;
 

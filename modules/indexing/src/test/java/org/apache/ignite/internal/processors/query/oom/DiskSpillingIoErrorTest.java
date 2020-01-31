@@ -47,13 +47,17 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {super.beforeTest();
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         initGrid();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         destroyGrid();
+
+        super.afterTest();
     }
 
     /**

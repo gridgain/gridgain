@@ -166,10 +166,7 @@ public class QueryMemoryManager implements H2MemoryTracker {
 
         long globalQuota0 = globalQuota;
 
-        if (maxQueryMemory == 0)
-            maxQueryMemory = globalQuota0;
-
-        if (maxQueryMemory == 0)
+        if (maxQueryMemory == 0 && globalQuota0 == 0)
             return null; // No memory tracking configured.
 
         if (globalQuota0 > 0 && globalQuota0 < maxQueryMemory) {
@@ -178,8 +175,10 @@ public class QueryMemoryManager implements H2MemoryTracker {
             maxQueryMemory = globalQuota0;
         }
 
-        return new QueryMemoryTracker(globalQuota0 == 0 ? null : this, maxQueryMemory,
-            Math.min(maxQueryMemory, blockSize), offloadingEnabled);
+        H2MemoryTracker parent = globalQuota0 == 0 ? null : this;
+        maxQueryMemory = maxQueryMemory == 0 ? Long.MAX_VALUE : maxQueryMemory;
+
+        return new QueryMemoryTracker(parent, maxQueryMemory, Math.min(maxQueryMemory, blockSize), offloadingEnabled);
     }
 
     /**

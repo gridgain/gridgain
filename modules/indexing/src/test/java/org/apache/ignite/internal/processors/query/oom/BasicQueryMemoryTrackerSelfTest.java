@@ -172,6 +172,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
     /** Check simple Joins. */
     @Test
     public void testSimpleJoins() throws Exception {
+        checkQueryExpectOOM("select * from K ORDER BY K.grp", true);
         execQuery("select * from T as T0, T as T1 where T0.id < 2", false);
         execQuery("select * from T as T0, T as T1 where T0.id >= 2 AND T0.id < 4", false);
         execQuery("select * from T as T0, T as T1", true);

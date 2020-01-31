@@ -70,6 +70,8 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         this.blockSize = blockSize;
     }
 
+    int cntr = 0;
+
     /** {@inheritDoc} */
     @Override public boolean reserved(long size) {
         assert size >= 0;
@@ -79,6 +81,16 @@ public class QueryMemoryTracker implements H2MemoryTracker {
                 throw new IllegalStateException("Memory tracker has been closed concurrently.");
 
             reserved += size;
+
+            if (cntr++ % 1000 == 0) {
+                System.out.println("reserved=" + reserved * 1.0 / (1024 * 1024) + "MB");
+//                try {
+//                    Thread.sleep(50);
+//                }
+//                catch (InterruptedException e) {
+//                    e.printStackTrace(); // TODO implement.
+//                }
+            }
 
             if (reserved >= quota) {
                 if (!offloadingEnabled)
@@ -95,9 +107,9 @@ public class QueryMemoryTracker implements H2MemoryTracker {
                     // If we are too close to limit.
                     blockSize = Math.min(blockSize, quota - reservedFromParent);
 
-                    parent.reserved(blockSize);
-
                     reservedFromParent += blockSize;
+
+                    return parent.reserved(blockSize);
                 }
                 catch (Throwable e) {
                     // Fallback if failed to reserve.
@@ -109,6 +121,8 @@ public class QueryMemoryTracker implements H2MemoryTracker {
                             "reserved=" + reserved + ", toFree=" + size + ']');
 
                     reserved = res1;
+
+                    parent.released(reservedFromParent - blockSize);
 
                     throw e;
                 }

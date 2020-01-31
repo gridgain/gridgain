@@ -132,9 +132,15 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         orgCache.setBackups(1);
         grid(0).addCacheConfiguration(orgCache);
 
-        startGrid(getConfiguration("client").setClientMode(true));
+        if (startClient())
+            startGrid(getConfiguration("client").setClientMode(true));
 
         populateData();
+    }
+
+    /** */
+    protected boolean startClient() {
+        return true;
     }
 
     /**
