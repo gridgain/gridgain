@@ -109,6 +109,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
             
             // TODO: Investigate - are there any redundant callbacks?
+            // Right now we don't need the one in clearInternal
             nearCache.Evict(stream, marshaller);
         }
 
@@ -157,7 +158,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             {
                 // Clear all caches on node enter/leave: data may have been lost, and primaries change.
                 // We could refine this by checking every key (GridNearCacheEntry.valid()),
-                // but the complexity does not seem to be worth it.
+                // but the complexity and upfront performance cost are not worth it.
                 ClearAll();
             }
 
