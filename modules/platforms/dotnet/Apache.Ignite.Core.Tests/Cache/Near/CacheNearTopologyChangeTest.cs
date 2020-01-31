@@ -102,7 +102,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             _cache[0][Key3] = new Foo(-1);
             for (var i = 0; i < 2; i++)
             {
-                Assert.AreEqual(-1, _cache[i][Key3].Bar);
+                // ReSharper disable once AccessToModifiedClosure
+                Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == -1, 1000));
             }
 
             // New node enters and becomes primary for the key.
@@ -148,17 +149,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // New node enters and becomes primary for the key.
             InitGrid(2);
             
-            // Client node still has near cache data.
+            // Client node cache is cleared.
             Foo foo;
-            Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
-            Assert.AreSame(clientInstance, foo);
+            Assert.IsFalse(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             
             // Updates are propagated to client near cache.
             _cache[2][Key3] = new Foo(3);
-            
-            // TODO: This fixes the test: GetAll reinits near subscription.
-            // Simple fix is to clear EVERYTHING on node enter as well.
-            // clientCache.GetAll(new[] {Key3});
             
             Assert.IsTrue(TestUtils.WaitForCondition(() => clientCache[Key3].Bar == 3, 1000));
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));

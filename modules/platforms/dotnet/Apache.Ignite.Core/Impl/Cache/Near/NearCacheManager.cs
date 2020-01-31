@@ -143,17 +143,19 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             if (Interlocked.CompareExchange(ref _initialized, 1, 0) == 0)
             {
-                _ignite.GetEvents()
-                    .LocalListen(this, EventType.NodeFailed, EventType.NodeLeft, EventType.NodeSegmented);
+                var eventTypes = new[]
+                    {EventType.NodeFailed, EventType.NodeLeft, EventType.NodeSegmented, EventType.NodeJoined};
+                
+                _ignite.GetEvents().LocalListen(this, eventTypes);
             }
         }
         
         /** <inheritdoc /> */
         bool IEventListener<DiscoveryEvent>.Invoke(DiscoveryEvent evt)
         {
-            if (!evt.Node.IsClient)
+            if (!evt.EventNode.IsClient)
             {
-                // Clear all caches on node leave: data may have been lost.
+                // Clear all caches on node enter/leave: data may have been lost, and primaries change.
                 // We could refine this by checking every key (GridNearCacheEntry.valid()),
                 // but the complexity does not seem to be worth it.
                 ClearAll();
