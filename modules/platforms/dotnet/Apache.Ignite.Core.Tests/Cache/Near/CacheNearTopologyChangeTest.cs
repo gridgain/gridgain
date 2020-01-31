@@ -95,30 +95,19 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// GridNearCacheEntry -> GridDhtCacheEntry.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeChangeKeepsNearCacheDataOnServerAndClient()
+        public void TestPrimaryNodeChangeKeepsNearCacheDataOnServer()
         {
             InitGrids(2);
-            
-            var client = Ignition.Start(
-                new IgniteConfiguration(TestUtils.GetTestConfiguration("client")) {ClientMode = true});
-            var clientCache = client.CreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
             
             _cache[0][Key3] = new Foo(-1);
             Assert.AreEqual(-1, _cache[1][Key3].Bar);
 
-            var clientInstance = clientCache[Key3];
-            Assert.AreEqual(-1, clientInstance.Bar);
-            
             // New node enters and becomes primary for the key.
             InitGrid(2);
             
             // GridCacheNearEntry does not yet exist on old primary node, so near cache data is removed on .NET side.
             Foo foo;
             Assert.IsFalse(_cache[0].TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
-            
-            // Client node still has near cache data.
-            Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
-            Assert.AreSame(clientInstance, foo);
             
             // Check value on the new node.
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
@@ -133,8 +122,36 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == 3, 1000));
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
+        }        
+        
+        /// <summary>
+        /// Tests that near cache works correctly on client node after primary node changes for a given key.
+        /// </summary>
+        [Test]
+        public void TestPrimaryNodeChangeKeepsNearCacheDataOnClient()
+        {
+            InitGrids(2, serverNear: false);
+            
+            var client = Ignition.Start(
+                new IgniteConfiguration(TestUtils.GetTestConfiguration("client")) {ClientMode = true});
+            var clientCache = client.CreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
+            
+            _cache[0][Key3] = new Foo(-1);
 
-            // Check client node.
+            var clientInstance = clientCache[Key3];
+            Assert.AreEqual(-1, clientInstance.Bar);
+            
+            // New node enters and becomes primary for the key.
+            InitGrid(2);
+            
+            // Client node still has near cache data.
+            Foo foo;
+            Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
+            Assert.AreSame(clientInstance, foo);
+            
+            // Check that updates are propagated to client near cache.
+            _cache[2][Key3] = new Foo(3);
+            
             Assert.IsTrue(TestUtils.WaitForCondition(() => clientCache[Key3].Bar == 3, 1000));
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.AreNotSame(clientInstance, foo);
@@ -142,9 +159,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Test multiple topology changes.
+        /// </summary>
+        [Test]
+        public void TestContinuousTopologyChangeMaintainsCorrectNearCacheData()
+        {
+            // TODO:
+        }
+
+        /// <summary>
         /// Inits a number of grids.
         /// </summary>
-        private void InitGrids(int count)
+        private void InitGrids(int count, bool serverNear = true)
         {
             Debug.Assert(count < MaxGrids);
             
@@ -153,18 +179,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             for (var i = 0; i < count; i++)
             {
-                InitGrid(i);
+                InitGrid(i, serverNear);
             }
         }
 
         /// <summary>
         /// Inits a grid.
         /// </summary>
-        private void InitGrid(int i)
+        private void InitGrid(int i, bool serverNear = true)
         {
             var cacheConfiguration = new CacheConfiguration(CacheName)
             {
-                NearConfiguration = new NearCacheConfiguration()
+                NearConfiguration = serverNear ? new NearCacheConfiguration() : null
             };
             
             _ignite[i] = Ignition.Start(TestUtils.GetTestConfiguration("node" + i));
