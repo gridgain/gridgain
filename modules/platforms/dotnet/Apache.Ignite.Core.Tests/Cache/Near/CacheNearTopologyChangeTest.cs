@@ -101,7 +101,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             var client = Ignition.Start(
                 new IgniteConfiguration(TestUtils.GetTestConfiguration("client")) {ClientMode = true});
-            var clientCache = client.GetCache<int, Foo>(CacheName);
+            var clientCache = client.CreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
             
             _cache[0][Key3] = new Foo(-1);
             Assert.AreEqual(-1, _cache[1][Key3].Bar);
@@ -117,13 +117,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsFalse(_cache[0].TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             
             // Client node still has near cache data.
-            Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo));
+            Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
+            Assert.AreSame(clientInstance, foo);
             
             // Check value on the new node.
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
             Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
             
-            // Check that updates are propagated to all nodes.
+            // Check that updates are propagated to all server nodes.
             _cache[2][Key3] = new Foo(3);
             
             for (var i = 0; i < 3; i++)
@@ -131,7 +132,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == 3, 1000));
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
-            
+
+            // Check client node.
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.AreNotSame(clientInstance, foo);
             Assert.AreEqual(3, foo.Bar);
