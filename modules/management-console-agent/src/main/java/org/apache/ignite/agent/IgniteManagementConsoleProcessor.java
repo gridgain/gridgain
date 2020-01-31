@@ -44,8 +44,9 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -70,9 +71,9 @@ import static org.apache.ignite.internal.IgniteFeatures.TRACING;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
- * Management console agent.
+ * Ignite management console processor.
  */
-public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
+public class IgniteManagementConsoleProcessor extends GridProcessorAdapter implements ManagementConsoleProcessor {
     /** Management Console configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
@@ -81,6 +82,9 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
+
+    /** Management configuration instance. */
+    private ManagementConfiguration cfg = new ManagementConfiguration();
 
     /** Websocket manager. */
     private WebSocketManager mgr;
@@ -133,20 +137,20 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /**
      * @param ctx Kernal context.
      */
-    public ManagementConsoleProcessor(GridKernalContext ctx) {
+    public IgniteManagementConsoleProcessor(GridKernalContext ctx) {
         super(ctx);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
-        this.metaStorage = ctx.distributedMetastorage();
-        this.evtsExporter = new EventsExporter(ctx);
-        this.spanExporter = new SpanExporter(ctx);
-        this.metricExporter = new MetricsExporter(ctx);
-        this.actDispatcher = new ActionDispatcher(ctx);
+        metaStorage = ctx.distributedMetastorage();
+        evtsExporter = new EventsExporter(ctx);
+        spanExporter = new SpanExporter(ctx);
+        metricExporter = new MetricsExporter(ctx);
+        actDispatcher = new ActionDispatcher(ctx);
 
         if (isTracingEnabled())
-            this.spanExporter = new SpanExporter(ctx);
+            spanExporter = new SpanExporter(ctx);
         else
             U.quietAndWarn(log, "Current Ignite configuration does not support tracing functionality" +
                 " and management console agent will not collect traces" +
@@ -205,13 +209,18 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /** {@inheritDoc} */
+    @Override public ManagementConfiguration configuration() {
+        return cfg;
+    }
+
+    /** {@inheritDoc} */
     @Override public void configuration(ManagementConfiguration cfg) {
         ManagementConfiguration oldCfg = configuration();
 
         if (oldCfg.isEnabled() != cfg.isEnabled())
             cfg = oldCfg.setEnabled(cfg.isEnabled());
 
-        super.configuration(cfg);
+        this.cfg = cfg;
 
         writeToMetaStorage(cfg);
 
@@ -334,12 +343,12 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         log.info("Starting Management Console agent on coordinator");
 
-        this.mgr = new WebSocketManager(ctx);
-        this.sesRegistry = new SessionRegistry(ctx);
-        this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
-        this.metricProc = new MetricsProcessor(ctx, mgr);
-        this.distributedActProc = new DistributedActionProcessor(ctx);
-        this.cacheProc = new CacheChangesProcessor(ctx, mgr);
+        mgr = new WebSocketManager(ctx);
+        sesRegistry = new SessionRegistry(ctx);
+        clusterProc = new ClusterInfoProcessor(ctx, mgr);
+        metricProc = new MetricsProcessor(ctx, mgr);
+        distributedActProc = new DistributedActionProcessor(ctx);
+        cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
 

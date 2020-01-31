@@ -66,7 +66,7 @@ import org.apache.ignite.internal.processors.datastructures.DataStructuresProces
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
@@ -328,7 +328,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
-    private ManagementConsoleProcessorAdapter mgmtConsoleProc;
+    private ManagementConsoleProcessor mgmtConsoleProc;
 
     /** */
     @GridToStringExclude
@@ -688,8 +688,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             diagnosticProcessor = (DiagnosticProcessor)comp;
         else if (comp instanceof RollingUpgradeProcessor)
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
-        else if (comp instanceof ManagementConsoleProcessorAdapter)
-            mgmtConsoleProc = (ManagementConsoleProcessorAdapter)comp;
+        else if (comp instanceof ManagementConsoleProcessor)
+            mgmtConsoleProc = (ManagementConsoleProcessor)comp;
         else if (comp instanceof DurableBackgroundTasksProcessor)
             durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
@@ -1267,7 +1267,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
-    @Override public ManagementConsoleProcessorAdapter managementConsole() {
+    @Override public ManagementConsoleProcessor managementConsole() {
         return mgmtConsoleProc;
     }
 

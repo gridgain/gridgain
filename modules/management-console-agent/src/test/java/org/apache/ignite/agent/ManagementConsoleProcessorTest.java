@@ -84,13 +84,13 @@ public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
 
             when(ctx.io()).thenReturn(ioMgr);
 
-            ManagementConsoleProcessor proc = spy(new ManagementConsoleProcessor(ctx));
+            IgniteManagementConsoleProcessor proc = spy(new IgniteManagementConsoleProcessor(ctx));
 
             doReturn(false).when(proc).isTracingEnabled();
 
             proc.onKernalStart(true);
 
-            IgniteLogger log = ctx.log(ManagementConsoleProcessor.class);
+            IgniteLogger log = ctx.log(IgniteManagementConsoleProcessor.class);
 
             verify(log).warning("Current Ignite configuration does not support tracing functionality and management" +
                 " console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);

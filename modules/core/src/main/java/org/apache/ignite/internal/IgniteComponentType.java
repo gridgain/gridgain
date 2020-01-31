@@ -110,10 +110,10 @@ public enum IgniteComponentType {
         "ignite-opencensus"
     ),
 
-    /** Management console. */
+    /** Management console processor. */
     MANAGEMENT_CONSOLE(
         NoopManagementConsoleProcessor.class.getName(),
-        "org.apache.ignite.agent.ManagementConsoleProcessor",
+        "org.apache.ignite.agent.IgniteManagementConsoleProcessor",
         "ignite-management-console-agent",
         "org.apache.ignite.agent.processor.metrics.MetricsExporterMessageFactory"
     );

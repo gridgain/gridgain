@@ -16,38 +16,23 @@
 
 package org.apache.ignite.internal.processors.management;
 
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.GridProcessor;
 
 /**
- * No-op implementation of Management Console Agent, throws exception on usage attempt.
+ * Management console processor.
  */
-public abstract class ManagementConsoleProcessorAdapter extends GridProcessorAdapter {
-    /** Management configuration instance. */
-    protected ManagementConfiguration cfg = new ManagementConfiguration();
-
-    /**
-     * @param ctx Kernal context.
-     */
-    protected ManagementConsoleProcessorAdapter(GridKernalContext ctx) {
-        super(ctx);
-    }
-
+public interface ManagementConsoleProcessor extends GridProcessor {
     /**
      * Sets the configuration.
      *
      * @param cfg Management configuration instance.
      */
-    public void configuration(ManagementConfiguration cfg) {
-        this.cfg = cfg;
-    }
+    public void configuration(ManagementConfiguration cfg);
 
     /**
      * Gets the configuration.
      *
      * @return Management configuration instance.
      */
-    public ManagementConfiguration configuration() {
-        return cfg;
-    }
+    public ManagementConfiguration configuration();
 }

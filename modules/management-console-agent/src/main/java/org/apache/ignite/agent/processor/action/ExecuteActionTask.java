@@ -22,7 +22,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.agent.ManagementConsoleProcessor;
+import org.apache.ignite.agent.IgniteManagementConsoleProcessor;
 import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.TaskResponse;
@@ -78,7 +78,7 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
     @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) throws IgniteException {
         JobResponse jobRes = res.getData();
         DistributedActionProcessor proc =
-            ((ManagementConsoleProcessor)ignite.context().managementConsole()).distributedActionProcessor();
+            ((IgniteManagementConsoleProcessor)ignite.context().managementConsole()).distributedActionProcessor();
 
         if (res.getException() != null || jobRes.getStatus() == FAILED)
             hasFailedJobs = true;
@@ -103,7 +103,7 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
         jobCnt = subgrid.size();
         consistentId = String.valueOf(ignite.localNode().consistentId());
         DistributedActionProcessor proc =
-            ((ManagementConsoleProcessor)ignite.context().managementConsole()).distributedActionProcessor();
+            ((IgniteManagementConsoleProcessor)ignite.context().managementConsole()).distributedActionProcessor();
 
         Map<ExecuteActionJob, ClusterNode> map = subgrid.stream()
             .collect(Collectors.toMap(n -> new ExecuteActionJob(arg), identity()));
@@ -160,7 +160,7 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
 
             jobCtx.holdcc();
 
-            ManagementConsoleProcessor agent = (ManagementConsoleProcessor)ignite.context().managementConsole();
+            IgniteManagementConsoleProcessor agent = (IgniteManagementConsoleProcessor)ignite.context().managementConsole();
 
             agent.actionDispatcher().dispatch(req)
                 .thenApply(IgniteFuture::get)

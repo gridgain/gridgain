@@ -40,7 +40,7 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.IgniteManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
 
 /**
  * Span exporter which send spans to coordinator.
