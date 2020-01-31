@@ -2305,6 +2305,14 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     }
 
     /** {@inheritDoc} */
+    @Override public boolean allNodesSupport(IgniteFeatures feature) {
+        if (impl == null)
+            return false;
+
+        return impl.allNodesSupport(feature, ALL_NODES);
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
         if (impl == null)
             return false;

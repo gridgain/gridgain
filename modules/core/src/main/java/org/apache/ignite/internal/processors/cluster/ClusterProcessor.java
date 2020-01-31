@@ -332,12 +332,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-            if (!ctx.discovery().localNode().isClient()) {
-                cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+        if (!ctx.discovery().localNode().isClient()) {
+            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
 
-                cluster.setTag(locClusterTag != null ? locClusterTag :
-                    ClusterTagGenerator.generateTag());
-            }
+            cluster.setTag(locClusterTag != null ? locClusterTag :
+                ClusterTagGenerator.generateTag());
+        }
     }
 
     /** {@inheritDoc} */
