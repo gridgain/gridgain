@@ -51,5 +51,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Gets the size.
         /// </summary>
         int GetSize();
+
+        bool ContainsKey<TK>(TK key);
     }
 }

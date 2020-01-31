@@ -70,8 +70,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsTrue(_ignite[0].WaitTopology(2));
 
             // Check that key is not stuck in near cache.
-            Assert.IsEmpty(_cache[0].GetAll(new[] {Key3}));
-            Assert.IsEmpty(_cache[1].GetAll(new[] {Key3}));
+            TestUtils.WaitForCondition(() => !_cache[0].ContainsKey(Key3), 1000);
             Assert.Throws<KeyNotFoundException>(() => _cache[0].Get(Key3));
             Assert.Throws<KeyNotFoundException>(() => _cache[1].Get(Key3));
             

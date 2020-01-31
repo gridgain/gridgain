@@ -370,6 +370,11 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
+            if (CanUseNear && _nearCache.ContainsKey(key))
+            {
+                return true;
+            }
+
             return DoOutOp(CacheOp.ContainsKey, key);
         }
 
@@ -377,6 +382,11 @@ namespace Apache.Ignite.Core.Impl.Cache
         public Task<bool> ContainsKeyAsync(TK key)
         {
             IgniteArgumentCheck.NotNull(key, "key");
+
+            if (CanUseNear && _nearCache.ContainsKey(key))
+            {
+                return TaskRunner.FromResult(true);
+            }
 
             return DoOutOpAsync<TK, bool>(CacheOp.ContainsKeyAsync, key);
         }

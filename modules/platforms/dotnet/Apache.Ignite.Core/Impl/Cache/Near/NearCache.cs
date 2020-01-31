@@ -211,7 +211,23 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             return 0;
         }
-        
+
+        public bool ContainsKey<TKey>(TKey key)
+        {
+            var map = _map as ConcurrentDictionary<TKey, TV>;
+            if (map != null)
+            {
+                return map.ContainsKey(key);
+            }
+
+            if (_fallbackMap != null)
+            {
+                return _fallbackMap.ContainsKey(key);
+            }
+
+            return false;
+        }
+
         private void EnsureFallbackMap()
         {
             if (_fallbackMap != null)
