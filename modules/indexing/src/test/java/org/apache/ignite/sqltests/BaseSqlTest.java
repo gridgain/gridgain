@@ -57,6 +57,7 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.jetbrains.annotations.Nullable;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -1255,6 +1256,29 @@ public class BaseSqlTest extends AbstractIndexingCommonTest {
             GridTestUtils.assertThrows(log,
                 () -> executeFrom(distributedJoinQry(false, qry), node),
                 IgniteSQLException.class, "Failed to parse query.");
+        });
+    }
+
+    /**
+     * Check sql function base64.
+     */
+    @Test
+    public void testBase64() {
+        testAllNodes(node -> {
+            SqlFieldsQuery query = new SqlFieldsQuery("select base64_encode(?)");
+            query.setArgs("my string".getBytes());
+            Result result = executeFrom(query, node);
+            Assert.assertArrayEquals("bXkgc3RyaW5n".getBytes(), (byte[])result.values().get(0).get(0));
+
+            query = new SqlFieldsQuery("select base64_decode(?)");
+            query.setArgs("bXkgc3RyaW5n".getBytes());
+            result = executeFrom(query, node);
+            Assert.assertArrayEquals("my string".getBytes(), (byte[])result.values().get(0).get(0));
+
+            query = new SqlFieldsQuery("select utf8tostring(base64_decode(base64_encode(stringtoutf8(?))))");
+            query.setArgs("The quick brown fox jumps over the lazy dog");
+            result = executeFrom(query, node);
+            Assert.assertEquals("The quick brown fox jumps over the lazy dog", result.values().get(0).get(0));
         });
     }
 

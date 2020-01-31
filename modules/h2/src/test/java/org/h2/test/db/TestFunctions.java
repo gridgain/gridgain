@@ -103,6 +103,7 @@ public class TestFunctions extends TestDb implements AggregateFunction {
         testSource();
         testDynamicArgumentAndReturn();
         testUUID();
+        testBase64();
         testWhiteSpacesInParameters();
         testSchemaSearchPath();
         testDeterministic();
@@ -450,6 +451,40 @@ public class TestFunctions extends TestDb implements AggregateFunction {
         stat.execute("drop alias xorUUID");
 
         conn.close();
+    }
+
+    private void testBase64() throws SQLException {
+        Connection conn = getConnection("functions");
+
+        base64encode(conn, "", "");
+        base64encode(conn, "A", "QQ==");
+        base64encode(conn, "AB", "QUI=");
+        base64encode(conn, "ABC", "QUJD");
+        base64encode(conn, "ABCD", "QUJDRA==");
+        base64decode(conn, "", "");
+        base64decode(conn, "QQ==", "A");
+        base64decode(conn, "QUI=", "AB");
+        base64decode(conn, "QUJD", "ABC");
+        base64decode(conn, "QUJDRA==", "ABCD");
+
+        conn.close();
+    }
+
+    private void base64encode(Connection conn, String source, String expected) throws SQLException {
+        base64(conn, source, expected, false);
+    }
+
+    private void base64decode(Connection conn, String source, String expected) throws SQLException {
+        base64(conn, source, expected, true);
+    }
+
+    private void base64(Connection conn, String source, String expected, boolean decode) throws SQLException {
+        PreparedStatement stat = conn.prepareStatement("call base64_"+(decode?"decode":"encode")+"(?)");
+        stat.setBytes(1, source.getBytes());
+        ResultSet rs = stat.executeQuery();
+        rs.next();
+        byte[] bytes = rs.getBytes(1);
+        assertEquals(expected.getBytes(), bytes);
     }
 
     private void testDeterministic() throws SQLException {

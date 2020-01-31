@@ -19,6 +19,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -95,7 +96,7 @@ public class Function extends Expression implements FunctionCall {
             TRUNCATE = 27, SECURE_RAND = 28, HASH = 29, ENCRYPT = 30,
             DECRYPT = 31, COMPRESS = 32, EXPAND = 33, ZERO = 34,
             RANDOM_UUID = 35, COSH = 36, SINH = 37, TANH = 38, LN = 39,
-            BITGET = 40, ORA_HASH = 41;
+            BITGET = 40, ORA_HASH = 41, BASE64_ENCODE = 42, BASE64_DECODE = 43;
 
     public static final int ASCII = 50, BIT_LENGTH = 51, CHAR = 52,
             CHAR_LENGTH = 53, CONCAT = 54, DIFFERENCE = 55, HEXTORAW = 56,
@@ -161,6 +162,8 @@ public class Function extends Expression implements FunctionCall {
 
     private static final HashMap<String, FunctionInfo> FUNCTIONS = new HashMap<>(256);
     private static final char[] SOUNDEX_INDEX = new char[128];
+    private static final Base64.Encoder BASE64_ENCODER = Base64.getEncoder();
+    private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
     protected Expression[] args;
 
@@ -235,6 +238,8 @@ public class Function extends Expression implements FunctionCall {
         addFunctionNotDeterministic("SYS_GUID", RANDOM_UUID, 0, Value.UUID);
         addFunctionNotDeterministic("UUID", RANDOM_UUID, 0, Value.UUID);
         addFunction("ORA_HASH", ORA_HASH, VAR_ARGS, Value.LONG);
+        addFunction("BASE64_ENCODE", BASE64_ENCODE, 1, Value.BYTES);
+        addFunction("BASE64_DECODE", BASE64_DECODE, 1, Value.BYTES);
         // string
         addFunction("ASCII", ASCII, 1, Value.INT);
         addFunction("BIT_LENGTH", BIT_LENGTH, 1, Value.LONG);
@@ -1276,6 +1281,12 @@ public class Function extends Expression implements FunctionCall {
                     v1 == null ? 0xffff_ffffL : v1.getLong(),
                     v2 == null ? 0L : v2.getLong());
             break;
+        case BASE64_ENCODE:
+                result = ValueBytes.getNoCopy(BASE64_ENCODER.encode(v0.getBytesNoCopy()));
+                break;
+        case BASE64_DECODE:
+                result = ValueBytes.getNoCopy(BASE64_DECODER.decode(v0.getBytesNoCopy()));
+                break;
         case DIFFERENCE:
             result = ValueInt.get(getDifference(
                     v0.getString(), v1.getString()));
