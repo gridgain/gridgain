@@ -23,7 +23,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -36,12 +35,11 @@ import static org.apache.ignite.internal.util.IgniteUtils.workDirectory;
 import static org.apache.ignite.internal.util.typedef.internal.U.getIgniteHome;
 import static org.apache.ignite.internal.util.typedef.internal.U.nullifyHomeDirectory;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-/**
- * Notes:
- * 1. The test is intentionally made  independent from {@link GridCommonAbstractTest} stuff.
- * 2. Do not replace native Java asserts with JUnit ones - test won't fall on TeamCity.
- */
+/** */
 public class IgniteUtilsWorkDirectoryTest {
 
     /** */
@@ -148,10 +146,10 @@ public class IgniteUtilsWorkDirectoryTest {
             actualWorkDir = workDirectory(userWorkDir, userIgniteHome);
         }
         catch (Throwable e) {
-            e.printStackTrace();
+            fail();
         }
 
-        assert expWorkDir.equals(actualWorkDir) : "actualWorkDir: " + actualWorkDir + ", expectedWorkDir: " + expWorkDir;
+        assertEquals(expWorkDir, actualWorkDir);
 
     }
 
@@ -171,7 +169,7 @@ public class IgniteUtilsWorkDirectoryTest {
         if (dir.exists()) {
             resetPermission(strDir);
             boolean deleted = U.delete(dir);
-            assert deleted : "cannot delete file";
+            assertTrue("cannot delete file", deleted);
         }
 
         dir.mkdirs();
@@ -196,7 +194,7 @@ public class IgniteUtilsWorkDirectoryTest {
         if (dirParent.exists()) {
             resetPermission(strDirParent);
             boolean deleted = U.delete(dirParent);
-            assert deleted : "cannot delete file";
+            assertTrue("cannot delete file", deleted);
         }
         dirParent.mkdirs();
 
@@ -239,7 +237,7 @@ public class IgniteUtilsWorkDirectoryTest {
                 X.println("stdError:" + s);
         }
         catch (Exception e) {
-            e.printStackTrace();
+            fail();
         }
     }
 
