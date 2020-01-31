@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -39,8 +40,10 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
@@ -304,8 +307,6 @@ public class ConsistencyCheckUtils {
 
             Map<UUID, PartitionReconciliationValueMeta> valMap = new HashMap<>();
 
-            Object keyVal = key.value(ctx, false);
-
             for (Map.Entry<UUID, GridCacheVersion> versionEntry : entry.getValue().entrySet()) {
                 UUID nodeId = versionEntry.getKey();
 
@@ -318,7 +319,7 @@ public class ConsistencyCheckUtils {
                     cacheObjOpt.isPresent() ?
                         new PartitionReconciliationValueMeta(
                             cacheObjOpt.get().valueBytes(ctx),
-                            Optional.ofNullable(cacheObjOpt.get().value(ctx, false)).map(Object::toString).orElse(null),
+                            cacheObjOpt.map(o -> objectStringView(ctx, o)).orElse(null),
                             versionEntry.getValue())
                         :
                         null);
@@ -328,7 +329,7 @@ public class ConsistencyCheckUtils {
                 new PartitionReconciliationDataRowMeta(
                     new PartitionReconciliationKeyMeta(
                         key.valueBytes(ctx),
-                        keyVal != null ? keyVal.toString() : null),
+                        objectStringView(ctx, key)),
                     valMap
                 ));
         }
@@ -376,5 +377,18 @@ public class ConsistencyCheckUtils {
         int cpus = Math.max(4, getInteger(AVAILABLE_PROCESSORS_RECONCILIATION, Runtime.getRuntime().availableProcessors()));
 
         return Math.max(1, (int)((loadFactor * cpus) / ((double)totalBackupCnt / (caches.isEmpty() ? 1 : caches.size()))));
+    }
+
+    /**
+     * Builds text view for the object: regular view for simple objects and BinaryObject's toString otherwise.
+     *
+     * @param ctx Context.
+     * @param obj Object.
+     */
+    public static String objectStringView(CacheObjectContext ctx, CacheObject obj) {
+        if (obj instanceof KeyCacheObjectImpl || obj instanceof CacheObjectImpl)
+            return Objects.toString(obj.value(ctx, false));
+
+        return Objects.toString(obj);
     }
 }
