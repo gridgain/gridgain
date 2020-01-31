@@ -149,8 +149,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.AreSame(clientInstance, foo);
             
-            // Check that updates are propagated to client near cache.
+            // Updates are propagated to client near cache.
             _cache[2][Key3] = new Foo(3);
+            
+            // TODO: This fixes the test: GetAll reinits near subscription.
+            // Simple fix is to clear EVERYTHING on node enter as well.
+            // clientCache.GetAll(new[] {Key3});
             
             Assert.IsTrue(TestUtils.WaitForCondition(() => clientCache[Key3].Bar == 3, 1000));
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
