@@ -14,26 +14,22 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache;
+package org.apache.ignite.internal.processors.cache.query.continuous;
+
+import org.apache.ignite.cache.query.AbstractContinuousQuery;
+import org.apache.ignite.cache.query.ContinuousQuery;
 
 /**
- * Update counter implementation for MVCC mode.
+ * Test for continuous query buffer cleanup.
  */
-public class PartitionMvccTxUpdateCounterImpl extends PartitionTxUpdateCounterImpl {
-    /**
-     * @param grp Group.
-     */
-    public PartitionMvccTxUpdateCounterImpl(CacheGroupContext grp) {
-        super(grp);
-    }
-
+public class ContinuousQueryBufferCleanupTest extends ContinuousQueryBufferCleanupAbstractTest {
     /** {@inheritDoc} */
-    @Override public long reserve(long delta) {
-        return next(delta);
-    }
+    @Override
+    protected AbstractContinuousQuery<Integer, String> getContinuousQuery() {
+        ContinuousQuery<Integer, String> qry = new ContinuousQuery<>();
 
-    /** {@inheritDoc} */
-    @Override public long reserved() {
-        return get();
+        qry.setLocalListener((evts) -> evts.forEach(e -> System.out.println("key=" + e.getKey() + ", val=" + e.getValue())));
+
+        return qry;
     }
 }
