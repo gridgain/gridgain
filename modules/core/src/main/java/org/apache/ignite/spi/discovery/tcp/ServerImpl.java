@@ -77,7 +77,6 @@ import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.events.DiscoveryCustomEvent;
 import org.apache.ignite.internal.managers.discovery.CustomMessageWrapper;
-import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.DiscoveryServerOnlyCustomMessage;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.security.SecurityContext;
@@ -1920,25 +1919,19 @@ class ServerImpl extends TcpDiscoveryImpl {
         if (msg instanceof TcpDiscoveryServerOnlyCustomEventMessage)
             return false;
 
-        TcpDiscoveryCustomEventMessage msg0 = (TcpDiscoveryCustomEventMessage)msg;
-
-        DiscoverySpiCustomMessage customMsg;
+        Class msgClass;
 
         try {
-            customMsg = msg0.message(
-                spi.marshaller(),
-                U.resolveClassLoader(spi.ignite().configuration()));
+            msgClass = ((TcpDiscoveryCustomEventMessage)msg).messageClass();
         }
-        catch (Throwable t) {
-            log.warning("Failed to unmarshal message when checking client features support: " + msg, t);
+        catch (IgniteCheckedException e) {
+            log.warning("Failed to detect class of DiscoveryCustomMessage: " + e.getMessage());
 
             return true;
         }
 
-        DiscoveryCustomMessage delegateMsg = ((CustomMessageWrapper)customMsg).delegate();
-
         TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
-            delegateMsg.getClass(),
+            msgClass,
             TcpDiscoveryRequiredFeatureSupport.class
         );
 
@@ -1952,7 +1945,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     if (log.isDebugEnabled())
                         log.debug("Client node " + node.id() +
                             " doesn't support feature " + reqFeature +
-                            ", sending message " + delegateMsg.getClass() +
+                            ", sending message " + msgClass +
                             " to the client is skipped.");
 
                     return false;
