@@ -64,13 +64,11 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.mxbean.IgniteClusterMXBean;
@@ -157,9 +155,6 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
 
     /** */
     private volatile DistributedMetaStorage metastorage;
-
-    /** */
-    private final IgnitePredicate<ClusterNode> SRVS_NODES_FILTER = node -> !node.isClient() && !node.isDaemon();
 
     /** */
     private ObjectName mBean;
@@ -283,6 +278,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             }
 
             return;
+        }
 
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
         ctx.closure().runLocalSafe(
