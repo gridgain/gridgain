@@ -129,11 +129,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             for (var i = 0; i < 3; i++)
             {
+                // ReSharper disable once AccessToModifiedClosure
                 Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == 3, 1000));
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
 
             // Check client node.
+            Assert.IsTrue(TestUtils.WaitForCondition(() => clientCache[Key3].Bar == 3, 1000));
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.AreNotSame(clientInstance, foo);
             Assert.AreEqual(3, foo.Bar);
