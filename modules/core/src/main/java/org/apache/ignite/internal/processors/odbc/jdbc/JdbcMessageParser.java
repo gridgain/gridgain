@@ -33,7 +33,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
     /** Kernal context. */
     private final GridKernalContext ctx;
 
-    /** Binary context. */
+    /** Protocol context. */
     private final JdbcProtocolContext protoCtx;
 
     /** Initial output stream capacity. */
@@ -41,7 +41,7 @@ public class JdbcMessageParser implements ClientListenerMessageParser {
 
     /**
      * @param ctx Context.
-     * @param protoCtx Binary context.
+     * @param protoCtx Protocol context.
      */
     public JdbcMessageParser(GridKernalContext ctx,
         JdbcProtocolContext protoCtx) {

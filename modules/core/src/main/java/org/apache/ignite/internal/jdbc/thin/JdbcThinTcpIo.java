@@ -144,8 +144,8 @@ public class JdbcThinTcpIo {
     /** Current protocol version used to connection to Ignite. */
     private final ClientListenerProtocolVersion srvProtoVer;
 
-    /** Features set are supported by the current protocol. */
-    private JdbcProtocolContext binCtx;
+    /** Protocol context (version, supported features, etc). */
+    private JdbcProtocolContext protoCtx;
 
     /**
      * Start connection and perform handshake.
@@ -228,7 +228,7 @@ public class JdbcThinTcpIo {
 
         srvProtoVer = handshakeRes.serverProtocolVersion();
 
-        binCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features());
+        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features());
     }
 
     /**
@@ -474,7 +474,7 @@ public class JdbcThinTcpIo {
 
         JdbcResponse res = new JdbcResponse();
 
-        res.readBinary(reader, binCtx);
+        res.readBinary(reader, protoCtx);
 
         return res;
     }
@@ -518,7 +518,7 @@ public class JdbcThinTcpIo {
         BinaryWriterExImpl writer = new BinaryWriterExImpl(null, new BinaryHeapOutputStream(cap),
             null, null);
 
-        req.writeBinary(writer, binCtx);
+        req.writeBinary(writer, protoCtx);
 
         synchronized (connMux) {
             send(writer.array());

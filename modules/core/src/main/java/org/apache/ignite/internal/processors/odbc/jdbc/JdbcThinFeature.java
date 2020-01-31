@@ -57,7 +57,7 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
      * @return Set of supported features.
      */
     public static EnumSet<JdbcThinFeature> enumSet(byte[] bytes) {
-        return ThinProtocolFeature.enumSet(bytes, values());
+        return ThinProtocolFeature.enumSet(bytes, JdbcThinFeature.class);
     }
 
     /**

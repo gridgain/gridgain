@@ -68,15 +68,15 @@ public interface ThinProtocolFeature {
      * @param <E> Features type (JDBC, thin cli, ODBC)
      * @param in Byte array representing all supported features.
      */
-    static <E extends Enum<E> & ThinProtocolFeature> EnumSet<E> enumSet(byte [] in, E[] values) {
+    static <E extends Enum<E> & ThinProtocolFeature> EnumSet<E> enumSet(byte [] in, Class<E> enumCls) {
         final BitSet bSet = BitSet.valueOf(in);
 
-        EnumSet<E> set = EnumSet.noneOf(values[0].getDeclaringClass());
+        EnumSet<E> set = EnumSet.noneOf(enumCls);
 
         if (in == null)
             return set;
 
-        for (E e : values) {
+        for (E e : enumCls.getEnumConstants()) {
             if (bSet.get(e.featureId()))
                 set.add(e);
         }

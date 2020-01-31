@@ -76,4 +76,5 @@ public class JdbcProtocolContext {
      */
     public EnumSet<JdbcThinFeature> features() {
         return features;
-    }}
+    }
+}
