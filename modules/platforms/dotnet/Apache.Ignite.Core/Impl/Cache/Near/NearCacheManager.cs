@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System.Diagnostics;
     using System.Threading;
-    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -30,6 +29,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// Multiple <see cref="CacheImpl{TK,TV}"/> instances can exist for a given cache, and all of them share the same
     /// <see cref="NearCache{TK,TV}"/> instance.
     /// </summary>
+    [DebuggerDisplay("NearCacheManager [IgniteInstanceName={_ignite.Name}]")]
     internal class NearCacheManager : IEventListener<DiscoveryEvent>
     {
         /// <summary>
