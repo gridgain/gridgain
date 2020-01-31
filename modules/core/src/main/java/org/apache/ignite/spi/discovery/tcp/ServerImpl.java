@@ -1890,16 +1890,19 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param clientNodeId UUID of client node that should support required feature.
      * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
      */
-    private boolean clientSupportsRequiredFeatures(TcpDiscoveryAbstractMessage msg, @NotNull UUID clientNodeId) {
+    private boolean clientSupportsDiscoveryMessage(TcpDiscoveryAbstractMessage msg, @NotNull UUID clientNodeId) {
         if (!(msg instanceof TcpDiscoveryCustomEventMessage))
             return true;
+
+        if (msg instanceof TcpDiscoveryServerOnlyCustomEventMessage)
+            return false;
 
         TcpDiscoveryNode node = ring.node(clientNodeId);
 
         if (node == null)
             return true;
 
-        return clientSupportsRequiredFeatures(msg, node);
+        return clientSupportsDiscoveryMessage(msg, node);
     }
 
     /**
@@ -1909,10 +1912,13 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param node Client node that should support required feature (used if node is null).
      * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
      */
-    private boolean clientSupportsRequiredFeatures(TcpDiscoveryAbstractMessage msg,
+    private boolean clientSupportsDiscoveryMessage(TcpDiscoveryAbstractMessage msg,
         @NotNull ClusterNode node) {
         if (!(msg instanceof TcpDiscoveryCustomEventMessage))
             return true;
+
+        if (msg instanceof TcpDiscoveryServerOnlyCustomEventMessage)
+            return false;
 
         TcpDiscoveryCustomEventMessage msg0 = (TcpDiscoveryCustomEventMessage)msg;
 
@@ -3405,7 +3411,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 for (ClientMessageWorker clientMsgWorker : clientMsgWorkers.values()) {
                     if (msg instanceof TcpDiscoveryCustomEventMessage) {
                         try {
-                            if (!clientSupportsRequiredFeatures((TcpDiscoveryCustomEventMessage)msg,
+                            if (!clientSupportsDiscoveryMessage((TcpDiscoveryCustomEventMessage)msg,
                                 clientMsgWorker.clientNodeId))
                                 continue;
                         }
@@ -4268,7 +4274,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                         reconMsg.verify(getLocalNodeId());
 
-                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node, null);
+                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node, ServerImpl.this::clientSupportsDiscoveryMessage);
 
                         if (msgs != null) {
                             reconMsg.pendingMessages(msgs);
@@ -7528,7 +7534,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         Collection<TcpDiscoveryAbstractMessage> pending = msgHist.messages(
                             msg.lastMessageId(),
                             node,
-                            ServerImpl.this::clientSupportsRequiredFeatures
+                            ServerImpl.this::clientSupportsDiscoveryMessage
                         );
 
                         if (pending != null) {
