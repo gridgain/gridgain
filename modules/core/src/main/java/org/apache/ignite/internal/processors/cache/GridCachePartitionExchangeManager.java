@@ -386,6 +386,21 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         }
                     }
 
+                    GridDhtPartitionsExchangeFuture lastExchnageFut = lastTopologyFuture();
+
+                    if (lastExchnageFut != null && !lastExchnageFut.isDone()) {
+                        lastExchnageFut.listen(fut -> {
+                            preprocessSingleMessage(node, msg);
+                        });
+
+                        if (log.isInfoEnabled()) {
+                            log.info("Delayed single message without exchange id until to exchange completed " +
+                                "(there is exchange in progress) [nodeId=" + node.id() + "]");
+                        }
+
+                        return;
+                    }
+
                     preprocessSingleMessage(node, msg);
                 }
             });
