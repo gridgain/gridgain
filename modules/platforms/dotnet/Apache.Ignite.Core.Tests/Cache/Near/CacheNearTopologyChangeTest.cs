@@ -16,8 +16,10 @@
 
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
+    using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -135,11 +137,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestPrimaryNodeChangeClearsNearCacheDataOnClient()
         {
             InitGrids(2, serverNear: false);
-            
-            var client = Ignition.Start(
-                new IgniteConfiguration(TestUtils.GetTestConfiguration("client")) {ClientMode = true});
-            var clientCache = client.CreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
-            
+            var clientCache = InitClientAndCache();
+
             _cache[0][Key3] = new Foo(-1);
 
             var clientInstance = clientCache[Key3];
@@ -159,6 +158,52 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.AreNotSame(clientInstance, foo);
             Assert.AreEqual(3, foo.Bar);
+        }
+
+        /// <summary>
+        /// Tests that client node entering topology does not cause any near caches invalidation.
+        /// </summary>
+        [Test]
+        public void TestClientNodeJoinOrLeaveDoesNotAffectNearCacheDataOnOtherNodes()
+        {
+            InitGrids(2);
+            _cache[2] = InitClientAndCache();
+
+            Action<Action<ICache<int, Foo>, int>> forEachCacheAndKey = (act) =>
+            {
+                for (var gridIdx = 0; gridIdx < 3; gridIdx++)
+                {
+                    var cache = _cache[gridIdx];
+
+                    for (var key = 0; key < 100; key++)
+                    {
+                        act(cache, key);
+                    }
+                }
+            };
+
+            Action<int> putData = offset => forEachCacheAndKey((cache, key) => cache[key] = new Foo(key + offset));
+            
+            Action<int> checkNearData = offset => forEachCacheAndKey((cache, key) => 
+                Assert.AreEqual(key + offset, cache.LocalPeek(key, CachePeekMode.NativeNear).Bar));
+
+            // Put data and verify near cache.
+            putData(0);
+            checkNearData(0);
+
+            // Start new client node, check near data, stop client node, check near data.
+            using (InitClient())
+            {
+                checkNearData(0);
+                putData(1);
+                checkNearData(1);
+            }
+
+            checkNearData(1);
+            putData(2);
+            checkNearData(2);
+            
+            Assert.AreEqual(3, _cache[0][1].Bar);
         }
 
         /// <summary>
@@ -205,6 +250,29 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Assert.IsTrue(
                     TestUtils.WaitForCondition(() => TestUtils.GetPrimaryKey(_ignite[2], CacheName) == Key3, 3000));
             }
+        }
+        
+        /// <summary>
+        /// Inits a client node and a near cache on it.
+        /// </summary>
+        private static ICache<int, Foo> InitClientAndCache()
+        {
+            var client = InitClient();
+
+            return client.CreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
+        }
+
+        /// <summary>
+        /// Inits a client node.
+        /// </summary>
+        private static IIgnite InitClient()
+        {
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration("client" + Guid.NewGuid()))
+            {
+                ClientMode = true
+            };
+
+            return Ignition.Start(cfg);
         }
     }
 }
