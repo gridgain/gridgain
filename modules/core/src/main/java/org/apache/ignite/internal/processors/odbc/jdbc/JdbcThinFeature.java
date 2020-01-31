@@ -27,15 +27,10 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
     RESERVED(0);
 
     /** */
-    private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(
-        JdbcThinFeature.values()[0].getDeclaringClass());
+    private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.class);
 
     /** */
-    private static final byte[] ALL_FEATURES_AS_BYTES;
-
-    static {
-        ALL_FEATURES_AS_BYTES = ThinProtocolFeature.featuresAsBytes(JdbcThinFeature.values());
-    }
+    private static final byte[] ALL_FEATURES_AS_BYTES = ThinProtocolFeature.featuresAsBytes(JdbcThinFeature.values());
 
     /** Feature id. */
     private final int featureId;

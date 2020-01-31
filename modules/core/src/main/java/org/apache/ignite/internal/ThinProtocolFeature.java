@@ -30,14 +30,13 @@ public interface ThinProtocolFeature {
     int featureId();
 
     /**
-     * @return Feature's name.
+     * @return Feature name.
      */
     String name();
 
     /**
-     * @param features Features set.
+     * @param features Feature set.
      * @return Byte array representing all supported features by current node.
-     * @param <E> Features type (JDBC, thin cli, ODBC)
      */
     static <E extends Enum<E> & ThinProtocolFeature> byte[] featuresAsBytes(E[] features) {
         final BitSet set = new BitSet();
@@ -49,9 +48,8 @@ public interface ThinProtocolFeature {
     }
 
     /**
-     * @param features Features set.
+     * @param features Feature set.
      * @return Byte array representing all supported features.
-     * @param <E> Features type (JDBC, thin cli, ODBC)
      */
     static <E extends Enum<E> & ThinProtocolFeature> byte[] featuresAsBytes(Collection<E> features) {
         final BitSet set = new BitSet();
@@ -65,16 +63,16 @@ public interface ThinProtocolFeature {
     /**
      * Create EnumSet of supported features encoded by the bytes array.
      *
-     * @param <E> Features type (JDBC, thin cli, ODBC)
      * @param in Byte array representing all supported features.
+     * @param enumCls Type of the enum encoded by the bits at the byte array.
      */
     static <E extends Enum<E> & ThinProtocolFeature> EnumSet<E> enumSet(byte [] in, Class<E> enumCls) {
-        final BitSet bSet = BitSet.valueOf(in);
-
         EnumSet<E> set = EnumSet.noneOf(enumCls);
 
         if (in == null)
             return set;
+
+        final BitSet bSet = BitSet.valueOf(in);
 
         for (E e : enumCls.getEnumConstants()) {
             if (bSet.get(e.featureId()))
