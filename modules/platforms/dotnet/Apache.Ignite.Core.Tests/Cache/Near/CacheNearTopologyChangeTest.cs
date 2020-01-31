@@ -94,7 +94,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// GridNearCacheEntry -> GridDhtCacheEntry.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeChangeKeepsNearCacheDataOnServer()
+        public void TestPrimaryNodeChangeClearsNearCacheDataOnServer()
         {
             InitGrids(2);
             
@@ -132,7 +132,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests that near cache works correctly on client node after primary node changes for a given key.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeChangeKeepsNearCacheDataOnClient()
+        public void TestPrimaryNodeChangeClearsNearCacheDataOnClient()
         {
             InitGrids(2, serverNear: false);
             
