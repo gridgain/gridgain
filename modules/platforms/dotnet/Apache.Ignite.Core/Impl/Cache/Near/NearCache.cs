@@ -156,6 +156,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // + Client node (all keys)
             // + Server node (non-primary keys)
             // - Server node (primary keys) - because there is no need to store primary keys in near cache
+            // Primary keys on server nodes are never evicted from .NET Near Cache. This ensures best performance
+            // for co-located operations, scan query filters, and so on.
 
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
