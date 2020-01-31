@@ -212,7 +212,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestContinuousTopologyChangeMaintainsCorrectNearCacheData()
         {
-            // TODO:
+            // TODO: stop/start random nodes, put/get random keys, verify on all caches
         }
 
         /// <summary>
