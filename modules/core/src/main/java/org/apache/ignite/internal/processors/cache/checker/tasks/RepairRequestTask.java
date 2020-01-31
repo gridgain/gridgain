@@ -21,13 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
@@ -54,7 +50,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
@@ -286,7 +281,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                     RepairAlgorithm usedRepairAlg = repairAlg;
 
                     // Are there any nodes with missing key?
-                    if (dataEntry.getValue().size() != ownersNodesSize) {
+                    if (dataEntry.getValue().size() != ownersNodesSize && repairAttempt != MAX_REPAIR_ATTEMPTS) {
                         if (repairAlg == RepairAlgorithm.PRINT_ONLY)
                             keyWasSuccessfullyFixed = true;
                         else {
@@ -303,10 +298,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     valToFixWith,
                                     nodeToVersionedValues,
                                     rmvQueueMaxSize,
-                                    true,
+                                    false,
                                     startTopVer));
-
-                            assert keyWasSuccessfullyFixed;
                         }
                     }
                     else {

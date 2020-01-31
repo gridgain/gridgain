@@ -16,13 +16,20 @@
 
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
+import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -74,6 +81,7 @@ public class RepairEntryProcessor implements EntryProcessor {
     @SuppressWarnings("unchecked")
     @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
         GridCacheContext cctx = cacheContext(entry);
+        CacheObjectContext oCtx = cctx.cacheObjectContext();
         GridCacheVersion currKeyGridCacheVer = keyVersion(entry);
 
         if (topologyChanged(cctx, startTopVer))
@@ -81,6 +89,19 @@ public class RepairEntryProcessor implements EntryProcessor {
 
         UUID locNodeId = cctx.localNodeId();
         VersionedValue versionedVal = data.get(locNodeId);
+
+        CacheObject expectVal = Optional.ofNullable(data.get(locNodeId)).map(VersionedValue::value).orElse(null);
+        CacheObject currVal = (CacheObject)entry.getValue(); //TODO if it primitive type return primitive type;
+
+        try {
+            if (expectVal == null && currVal != null
+                || expectVal != null && currVal == null
+                || expectVal != null && !Arrays.equals(expectVal.valueBytes(oCtx), currVal.valueBytes(oCtx)))
+                return false;
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
 
         if (forceRepair) {
             if (val == null)
@@ -105,14 +126,17 @@ public class RepairEntryProcessor implements EntryProcessor {
         }
         else {
             if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
-                boolean inEntryTTLBounds =
-                    (System.currentTimeMillis() - versionedVal.recheckStartTime()) <
-                        Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
+                long recheckStartTime = minValue(VersionedValue::recheckStartTime);
 
+                boolean inEntryTTLBounds =
+                    (System.currentTimeMillis() - recheckStartTime) < Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
+
+                // Min available update counter for the key at all nodes.
+                // It just fast solution for null value problem. We should use other way to fix it (versionedVal.updateCounter()).
+                long minUpdateCntr = minValue(VersionedValue::updateCounter);
                 long currUpdateCntr = updateCounter(cctx, entry.getKey());
 
-                boolean inDeferredDelQueueBounds = ((currUpdateCntr - versionedVal.updateCounter()) <
-                    rmvQueueMaxSize);
+                boolean inDeferredDelQueueBounds = ((currUpdateCntr - minUpdateCntr) < rmvQueueMaxSize);
 
                 if ((inEntryTTLBounds && inDeferredDelQueueBounds)) {
                     if (val == null)
@@ -158,5 +182,15 @@ public class RepairEntryProcessor implements EntryProcessor {
      */
     protected long updateCounter(GridCacheContext cctx, Object affKey) {
         return cctx.topology().localPartition(cctx.cache().affinity().partition(affKey)).updateCounter();
+    }
+
+    /**
+     * @return target min long value
+     */
+    private long minValue(Function<VersionedValue, Long> mapper) {
+        return data.values().stream()
+            .mapToLong(mapper::apply)
+            .min()
+            .orElseThrow(() -> new IllegalStateException("Unreachable state [mapper = " + mapper.getClass().getName() + ", data=" + data + "]."));
     }
 }
