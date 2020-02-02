@@ -99,8 +99,8 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
 
-            // TODO: How does this work on Client node?
-            // For ScanQuery we need to differentiate between server Near Cache and client Near Cache.
+            // On Client nodes, even if servers have NearConfiguration, clients don't have it by default.
+            // Users have to call CreateNearCache/GetOrCreateNearCache to enable near caching on Client nodes.
             if (configuration.NearConfiguration != null)
             {
                 _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name);
