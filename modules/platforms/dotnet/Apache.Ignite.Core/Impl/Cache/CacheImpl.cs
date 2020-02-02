@@ -539,6 +539,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
+            // TODO: Return what we can from Near Cache.
             return DoOutInOpX((int) CacheOp.GetAll,
                 writer => writer.WriteEnumerable(keys),
                 (s, r) => r == True ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary)) : null,
@@ -561,8 +562,6 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             StartTxIfNeeded();
 
-            // TODO: Near cache: For primary keys on server nodes we can put key/val to ThreadLocal
-            // and avoid deserialization costs.
             DoOutOp(CacheOp.Put, key, val);
         }
 
