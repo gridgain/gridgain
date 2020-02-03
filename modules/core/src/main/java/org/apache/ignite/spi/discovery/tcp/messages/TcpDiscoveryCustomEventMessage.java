@@ -43,6 +43,9 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
     private transient volatile DiscoverySpiCustomMessage msg;
 
     /** */
+    private transient volatile Class<?> msgClass;
+
+    /** */
     private byte[] msgBytes;
 
     /** Span container. */
@@ -88,6 +91,17 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
     }
 
     /**
+     * @return Class of DiscoveryCustomMessage enclosed in this discovery custom event.
+     * @throws IgniteCheckedException If message was not deserialized from byte array.
+     */
+    public Class<?> messageClass() throws IgniteCheckedException {
+        if (msgClass == null)
+            throw new IgniteCheckedException("Message has not been deserialized yet: " + this);
+
+        return msgClass;
+    }
+
+    /**
      * @param msg Message.
      * @param msgBytes Serialized message.
      */
@@ -117,6 +131,9 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
 
             assert msg != null;
         }
+
+        if (msg instanceof CustomMessageWrapper)
+            msgClass = ((CustomMessageWrapper)msg).delegate().getClass();
 
         return msg;
     }
