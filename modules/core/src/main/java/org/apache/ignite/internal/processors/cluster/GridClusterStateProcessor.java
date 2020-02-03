@@ -46,6 +46,9 @@ import org.apache.ignite.events.ClusterStateChangeStartedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -1263,10 +1266,24 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (globalState == null || globalState.baselineTopology() == null) {
             if (joiningNodeState.baselineTopology() != null) {
-                String msg = "Node with set up BaselineTopology is not allowed to join cluster without one: " +
+                Object consistentId = ctx.discovery().localNode().consistentId();
+
+                boolean canBeAccepted = joiningNodeState.baselineTopology().consistentIds().contains(consistentId);
+
+                if (canBeAccepted) {
+                    // It seems that this node was cleaned up and was started first.
+                    // Let's try to stop this node and give a try to a new one
+                    // that is currently joining the cluster and has info about baseline, caches, etc.
+                    ctx.failure().process(
+                        new FailureContext(FailureType.CRITICAL_ERROR, new IgniteException("Stopping empty node.")),
+                        new StopNodeOrHaltFailureHandler());
+                }
+                else {
+                    String msg = "Node with set up BaselineTopology is not allowed to join cluster without one: " +
                         node.consistentId();
 
-                return new IgniteNodeValidationResult(node.id(), msg);
+                    return new IgniteNodeValidationResult(node.id(), msg);
+                }
             }
         }
 
