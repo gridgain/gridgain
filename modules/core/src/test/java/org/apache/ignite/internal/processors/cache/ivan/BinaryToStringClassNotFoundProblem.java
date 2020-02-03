@@ -69,7 +69,7 @@ public class BinaryToStringClassNotFoundProblem extends GridCommonAbstractTest {
         cache.put(1, new TestContainer(ext));
 
         assertTrue(cache.withKeepBinary().get(1).toString()
-            .matches("org.apache.ignite.internal.processors.cache.ivan.BinaryToStringClassCastProblem\\$TestContainer " +
+            .matches("org.apache.ignite.internal.processors.cache.ivan.BinaryToStringClassNotFoundProblem\\$TestContainer " +
                 "\\[idHash=-?\\d+, hash=-?\\d+, x=Problematic\\(Class not found\\)]"));
     }
 
