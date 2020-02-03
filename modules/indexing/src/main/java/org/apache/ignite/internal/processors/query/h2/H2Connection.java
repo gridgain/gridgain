@@ -22,7 +22,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -178,20 +177,7 @@ public class H2Connection implements AutoCloseable {
      * @throws SQLException If failed.
      */
     PreparedStatement prepareStatementNoCache(String sql) throws SQLException {
-        boolean insertHack = GridH2Table.insertHackRequired(sql);
-
-        if (insertHack) {
-            GridH2Table.insertHack(true);
-
-            try {
-                return conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-            }
-            finally {
-                GridH2Table.insertHack(false);
-            }
-        }
-        else
-            return conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        return conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
     }
 
     /** {@inheritDoc} */
