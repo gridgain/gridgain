@@ -120,22 +120,14 @@ public class QueryMemoryManager implements H2MemoryTracker {
 
         long reserved0 = reserved.addAndGet(size);
 
-        if (reserved0 >= globalQuota) {
-            reserved.addAndGet(-size);
-
-            if (!offloadingEnabled) {
-                throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
-                    IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
-            }
-            else {
-                return false;
-            }
-        }
+        if (reserved0 >= globalQuota)
+            return onQuotaExceeded(size);
 
         metrics.trackReserve(size);
 
         return true;
     }
+
 
     /** {@inheritDoc} */
     @Override public void released(long size) {
@@ -176,9 +168,21 @@ public class QueryMemoryManager implements H2MemoryTracker {
         }
 
         H2MemoryTracker parent = globalQuota0 == 0 ? null : this;
-        maxQueryMemory = maxQueryMemory == 0 ? Long.MAX_VALUE : maxQueryMemory;
+        //maxQueryMemory = maxQueryMemory == 0 ? Long.MAX_VALUE : maxQueryMemory;
 
-        return new QueryMemoryTracker(parent, maxQueryMemory, Math.min(maxQueryMemory, blockSize), offloadingEnabled);
+        return new QueryMemoryTracker(parent, maxQueryMemory, blockSize, offloadingEnabled);
+    }
+
+
+    public boolean onQuotaExceeded(long size) {
+        reserved.addAndGet(-size);
+
+        if (offloadingEnabled)
+            return false;
+        else {
+            throw new IgniteSQLException("SQL query run out of memory: Global quota exceeded.",
+                IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+        }
     }
 
     /**

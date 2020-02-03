@@ -121,6 +121,8 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
 
         // Check spill files were deleted.
         assertWorkDirClean();
+
+        checkMemoryManagerState();
     }
 
     /**

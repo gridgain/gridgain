@@ -76,5 +76,7 @@ public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
         assertFalse(dirEvts.isEmpty());
 
         assertWorkDirClean();
+
+        checkMemoryManagerState();
     }
 }

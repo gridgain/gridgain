@@ -25,8 +25,6 @@ import javax.cache.CacheException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
@@ -339,8 +337,6 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
     }
 
     private void checkQuery(Result res, String sql, int threadNum) {
-        checkMemoryManagerState();
-
         WatchService watchSvc = null;
         WatchKey watchKey = null;
 
@@ -383,6 +379,8 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
                 }
 
                 assertWorkDirClean();
+
+                checkMemoryManagerState();
             }
             finally {
                 U.closeQuiet(watchSvc);
@@ -403,16 +401,5 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
 
         final boolean offload;
         final boolean success;
-    }
-
-    /**
-     *
-     */
-    private void checkMemoryManagerState() {
-        IgniteH2Indexing h2 = (IgniteH2Indexing)grid(0).context().query().getIndexing();
-
-        QueryMemoryManager memoryManager =  h2.memoryManager();
-
-        assertEquals(memoryManager.memoryReserved(), 0);
     }
 }

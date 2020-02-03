@@ -34,7 +34,11 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -225,6 +229,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             assertFalse("In-memory result is empty.", inMemRes.isEmpty());
 
             assertWorkDirClean();
+            checkMemoryManagerState();
 
             List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
 
@@ -252,6 +257,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
 
             assertWorkDirClean();
+            checkMemoryManagerState();
 
             if (log.isInfoEnabled()) {
                 log.info("Spill files events (created + deleted): " + dirEvts.size());
@@ -274,6 +280,8 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                 log.debug("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
 
             assertEqualsCollections(inMemRes, onDiskRes);
+
+            checkMemoryManagerState();
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -442,5 +450,18 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         assertTrue(workDir.toFile().isDirectory());
 
         return Arrays.asList(workDir.toFile().list());
+    }
+
+    /**
+     *
+     */
+    protected void checkMemoryManagerState() {
+        for (Ignite node : G.allGrids()) {
+            IgniteH2Indexing h2 = (IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing();
+
+            QueryMemoryManager memoryManager = h2.memoryManager();
+
+            assertEquals(memoryManager.memoryReserved(), 0);
+        }
     }
 }

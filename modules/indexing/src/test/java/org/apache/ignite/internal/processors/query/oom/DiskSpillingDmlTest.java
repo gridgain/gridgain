@@ -155,6 +155,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
         // We had X total sum age in the beginning. Then we updated Y rows and set age = age + 1.
         // So, we should expect that new total age sum is X + Y.
         assertEquals(sumAgesBefore + affectedRows, sumAgesAfter);
+        checkMemoryManagerState();
     }
 
     /**
@@ -224,6 +225,8 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
 
         // X rows was in the beginning. We deleted Y rows and Z rows is left. Expect X = Y + Z.
         assertEquals((long)cntBefore, cntAfter + affectedRows);
+
+        checkMemoryManagerState();
     }
 
     /**
@@ -285,6 +288,8 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
         List<List<?>> oldTblCopiedContent = runSql("SELECT * FROM person WHERE id IN (SELECT id FROM new_table) ORDER BY id");
 
         assertEqualsCollections(newTblContent, oldTblCopiedContent);
+
+        checkMemoryManagerState();
     }
 
     /**

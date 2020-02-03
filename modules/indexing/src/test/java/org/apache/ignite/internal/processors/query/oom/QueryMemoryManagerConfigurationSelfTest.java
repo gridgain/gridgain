@@ -63,7 +63,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
 
         // Check defaults for tracker
         assertTrackerState(tracker,
-            DFLT_GLOBAL_QUOTA,
+            0,
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
     }

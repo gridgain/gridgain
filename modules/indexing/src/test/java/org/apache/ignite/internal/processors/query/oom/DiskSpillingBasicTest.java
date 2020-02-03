@@ -159,6 +159,7 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
             assertTrue("Thread with not executed queries found.", cntrs.get(i) > 0);
 
         assertWorkDirClean();
+        checkMemoryManagerState();
     }
 
     /** */
@@ -196,6 +197,7 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         assertFalse(dirEvts.isEmpty());
 
         assertWorkDirClean();
+        checkMemoryManagerState();
     }
 
     /** */
@@ -232,5 +234,6 @@ public class DiskSpillingBasicTest extends DiskSpillingAbstractTest {
         assertFalse(dirEvts.isEmpty());
 
         assertWorkDirClean();
+        checkMemoryManagerState();
     }
 }
