@@ -25,7 +25,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
-import static org.apache.ignite.agent.IgniteManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;

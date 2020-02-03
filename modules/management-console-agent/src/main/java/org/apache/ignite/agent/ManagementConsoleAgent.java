@@ -71,9 +71,9 @@ import static org.apache.ignite.internal.IgniteFeatures.TRACING;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
- * Ignite management console processor.
+ * Ignite management console agent.
  */
-public class IgniteManagementConsoleProcessor extends GridProcessorAdapter implements ManagementConsoleProcessor {
+public class ManagementConsoleAgent extends GridProcessorAdapter implements ManagementConsoleProcessor {
     /** Management Console configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
@@ -137,7 +137,7 @@ public class IgniteManagementConsoleProcessor extends GridProcessorAdapter imple
     /**
      * @param ctx Kernal context.
      */
-    public IgniteManagementConsoleProcessor(GridKernalContext ctx) {
+    public ManagementConsoleAgent(GridKernalContext ctx) {
         super(ctx);
     }
 

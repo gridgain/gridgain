@@ -23,7 +23,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.agent.AgentCommonAbstractTest;
-import org.apache.ignite.agent.IgniteManagementConsoleProcessor;
+import org.apache.ignite.agent.ManagementConsoleAgent;
 import org.apache.ignite.agent.config.WebSocketConfig;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
@@ -50,7 +50,7 @@ public class WebSocketManagerTest extends AgentCommonAbstractTest {
         IgniteEx ignite = startGrid(0);
         changeManagementConsoleConfig(ignite);
 
-        WebSocketManager mgr = ((IgniteManagementConsoleProcessor)ignite.context().managementConsole()).webSocketManager();
+        WebSocketManager mgr = ((ManagementConsoleAgent)ignite.context().managementConsole()).webSocketManager();
         ExecutorService srv = Executors.newFixedThreadPool(2);
 
         List<CompletableFuture> list = new ArrayList<>();

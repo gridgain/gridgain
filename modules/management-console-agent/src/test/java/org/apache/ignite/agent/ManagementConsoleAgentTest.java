@@ -32,9 +32,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Management console processor test.
+ * Management console agent test.
  */
-public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
+public class ManagementConsoleAgentTest extends AgentCommonAbstractTest {
     /**
      * The onKernalStop method should correct close all agent threads.
      */
@@ -54,9 +54,9 @@ public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Management console processor with mock context test.
+     * Management console agent with mock context test.
      */
-    public static class ManagementConsoleProcessorWithMockContextTest extends AbstractServiceTest {
+    public static class ManagementConsoleAgentWithMockContextTest extends AbstractServiceTest {
         /**
          * GG-26201 - Testcase 5:
          *
@@ -84,13 +84,13 @@ public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
 
             when(ctx.io()).thenReturn(ioMgr);
 
-            IgniteManagementConsoleProcessor proc = spy(new IgniteManagementConsoleProcessor(ctx));
+            ManagementConsoleAgent proc = spy(new ManagementConsoleAgent(ctx));
 
             doReturn(false).when(proc).isTracingEnabled();
 
             proc.onKernalStart(true);
 
-            IgniteLogger log = ctx.log(IgniteManagementConsoleProcessor.class);
+            IgniteLogger log = ctx.log(ManagementConsoleAgent.class);
 
             verify(log).warning("Current Ignite configuration does not support tracing functionality and management" +
                 " console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);

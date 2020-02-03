@@ -16,8 +16,8 @@
 
 package org.apache.ignite.agent.testsuites;
 
-import org.apache.ignite.agent.ManagementConsoleProcessorTest;
-import org.apache.ignite.agent.ManagementConsoleProcessorTest.ManagementConsoleProcessorWithMockContextTest;
+import org.apache.ignite.agent.ManagementConsoleAgentTest;
+import org.apache.ignite.agent.ManagementConsoleAgentTest.ManagementConsoleAgentWithMockContextTest;
 import org.apache.ignite.agent.action.SessionRegistryTest;
 import org.apache.ignite.agent.action.annotation.ActionControllerAnnotationReaderTest;
 import org.apache.ignite.agent.action.controller.ActionControllerBaseTest;
@@ -53,8 +53,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    ManagementConsoleProcessorTest.class,
-    ManagementConsoleProcessorWithMockContextTest.class,
+    ManagementConsoleAgentTest.class,
+    ManagementConsoleAgentWithMockContextTest.class,
     SessionRegistryTest.class,
     ActionControllerAnnotationReaderTest.class,
     ActionControllerBaseTest.class,

@@ -18,7 +18,7 @@ package org.apache.ignite.agent.processor.action;
 
 import java.util.UUID;
 import org.apache.ignite.IgniteAuthenticationException;
-import org.apache.ignite.agent.IgniteManagementConsoleProcessor;
+import org.apache.ignite.agent.ManagementConsoleAgent;
 import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.InvalidRequest;
@@ -61,8 +61,8 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public DistributedActionProcessor(GridKernalContext ctx) {
         super(ctx);
 
-        mgr = ((IgniteManagementConsoleProcessor)ctx.managementConsole()).webSocketManager();
-        sesRegistry = ((IgniteManagementConsoleProcessor)ctx.managementConsole()).sessionRegistry();
+        mgr = ((ManagementConsoleAgent)ctx.managementConsole()).webSocketManager();
+        sesRegistry = ((ManagementConsoleAgent)ctx.managementConsole()).sessionRegistry();
         locNodeConsistentId = String.valueOf(ctx.grid().localNode().consistentId());
     }
 
