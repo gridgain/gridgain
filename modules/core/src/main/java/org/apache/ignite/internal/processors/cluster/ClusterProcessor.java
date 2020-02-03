@@ -345,8 +345,24 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         this.metastorage = metastorage;
 
         // Fast and dirty workaround for tests.
-        if (ctx.clientNode())
+        if (ctx.clientNode()) {
+            try {
+                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+                if (idAndTag != null) {
+                    locClusterId = idAndTag.id();
+                    locClusterTag = idAndTag.tag();
+
+                    cluster.setId(locClusterId);
+                    cluster.setTag(locClusterTag);
+                }
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, e);
+            }
+
             return;
+        }
 
         if (!clusterIdAndTagSupport)
             return;
@@ -424,10 +440,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             return;
         }
 
-        cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+        if (!ctx.discovery().localNode().isClient()) {
+            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
 
-        cluster.setTag(locClusterTag != null ? locClusterTag :
-            ClusterTagGenerator.generateTag());
+            cluster.setTag(locClusterTag != null ? locClusterTag :
+                ClusterTagGenerator.generateTag());
+        }
     }
 
     /** {@inheritDoc} */
@@ -621,7 +639,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
-        if (!compatibilityMode)
+        if (!compatibilityMode && !dataBag.isJoiningNodeClient())
             dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
 
