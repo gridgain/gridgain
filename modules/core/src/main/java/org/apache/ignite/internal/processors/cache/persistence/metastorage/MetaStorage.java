@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
@@ -48,7 +49,6 @@ import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.MetaPageInitRecord;
 import org.apache.ignite.internal.processors.cache.CacheDiagnosticManager;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
@@ -166,14 +166,12 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
         initInternal(db);
 
         if (!PRESERVE_LEGACY_METASTORAGE_PARTITION_ID) {
-            GridCacheProcessor gcProcessor = cctx.kernalContext().cache();
-
             if (partId == OLD_METASTORE_PARTITION)
-                gcProcessor.setTmpStorage(copyDataToTmpStorage());
-            else if (gcProcessor.getTmpStorage() != null) {
-                restoreDataFromTmpStorage(gcProcessor.getTmpStorage());
+                db.temporaryMetaStorage(copyDataToTmpStorage());
+            else if (db.temporaryMetaStorage() != null) {
+                restoreDataFromTmpStorage(db.temporaryMetaStorage());
 
-                gcProcessor.setTmpStorage(null);
+                db.temporaryMetaStorage(null);
 
                 // remove old partitions
                 CacheGroupContext cgc = cctx.cache().cacheGroup(METASTORAGE_CACHE_ID);
@@ -244,7 +242,10 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
             partStorage = new PartitionMetaStorageImpl<MetastorageDataRow>(METASTORAGE_CACHE_ID, freeListName,
                 regionMetrics, dataRegion, null, wal, reuseListRoot.pageId().pageId(),
                 reuseListRoot.isAllocated(),
-                diagnosticMgr.pageLockTracker().createPageLockTracker(freeListName)) {
+                diagnosticMgr.pageLockTracker().createPageLockTracker(freeListName),
+                cctx.kernalContext(),
+                null
+            ) {
                 @Override protected long allocatePageNoReuse() throws IgniteCheckedException {
                     return pageMem.allocatePage(grpId, partId, FLAG_DATA);
                 }
@@ -380,9 +381,8 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
     @Override public void write(@NotNull String key, @NotNull Serializable val) throws IgniteCheckedException {
         assert val != null;
 
-        byte[] data = marshaller.marshal(val);
-
-        writeRaw(key, data);
+        if (!readOnly)
+            writeRaw(key, marshaller.marshal(val));
     }
 
     /** {@inheritDoc} */
@@ -393,11 +393,11 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
     /** {@inheritDoc} */
     @Override public void writeRaw(String key, byte[] data) throws IgniteCheckedException {
         if (!readOnly) {
-            WALPointer ptr = wal.log(new MetastoreDataRecord(key, data));
-
-            wal.flush(ptr, false);
+            WALPointer ptr;
 
             synchronized (this) {
+                ptr = wal.log(new MetastoreDataRecord(key, data));
+
                 MetastorageDataRow oldRow = tree.findOne(new MetastorageDataRow(key, null));
 
                 if (oldRow != null) {
@@ -409,6 +409,8 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
                 tree.rowStore().addRow(row);
                 tree.put(row);
             }
+
+            wal.flush(ptr, false);
         }
     }
 
@@ -580,14 +582,14 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
         Executor executor = ctx.executor();
 
         if (executor == null) {
-            partStorage.saveMetadata();
+            partStorage.saveMetadata(IoStatisticsHolderNoOp.INSTANCE);
 
             saveStoreMetadata();
         }
         else {
             executor.execute(() -> {
                 try {
-                    partStorage.saveMetadata();
+                    partStorage.saveMetadata(IoStatisticsHolderNoOp.INSTANCE);
                 }
                 catch (IgniteCheckedException e) {
                     throw new IgniteException(e);
@@ -607,7 +609,7 @@ public class MetaStorage implements DbCheckpointListener, ReadWriteMetastorage {
 
     /** {@inheritDoc} */
     @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
-        partStorage.saveMetadata();
+        partStorage.saveMetadata(IoStatisticsHolderNoOp.INSTANCE);
     }
 
     /** {@inheritDoc} */

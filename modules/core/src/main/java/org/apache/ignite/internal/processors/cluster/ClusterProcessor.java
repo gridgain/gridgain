@@ -79,6 +79,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.GRIDGAIN_UPDATE_URL;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DIAGNOSTIC_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
@@ -260,8 +261,24 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         this.metastorage = metastorage;
 
         // Fast and dirty workaround for tests.
-        if (ctx.clientNode())
+        if (ctx.clientNode()) {
+            try {
+                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+                if (idAndTag != null) {
+                    locClusterId = idAndTag.id();
+                    locClusterTag = idAndTag.tag();
+
+                    cluster.setId(locClusterId);
+                    cluster.setTag(locClusterTag);
+                }
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, e);
+            }
+
             return;
+        }
 
         //TODO GG-21718 - implement optimization so only coordinator makes a write to metastorage.
         ctx.closure().runLocalSafe(
@@ -315,10 +332,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      * </ul>
      */
     public void onLocalJoin() {
-        cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+        if (!ctx.discovery().localNode().isClient()) {
+            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
 
-        cluster.setTag(locClusterTag != null ? locClusterTag :
-            ClusterTagGenerator.generateTag());
+            cluster.setTag(locClusterTag != null ? locClusterTag :
+                ClusterTagGenerator.generateTag());
+        }
     }
 
     /** {@inheritDoc} */
@@ -503,7 +522,8 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
         dataBag.addNodeSpecificData(CLUSTER_PROC.ordinal(), getDiscoveryData());
 
-        dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
+        if (!dataBag.isJoiningNodeClient())
+            dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
 
     /**
@@ -827,6 +847,18 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      */
     public String latestVersion() {
         return verChecker != null ? verChecker.latestVersion() : null;
+    }
+
+    /**
+     * Get cluster name.
+     *
+     * @return Cluster name.
+     * */
+    public String clusterName() {
+        return IgniteSystemProperties.getString(
+            IGNITE_CLUSTER_NAME,
+            ctx.cache().utilityCache().context().dynamicDeploymentId().toString()
+        );
     }
 
     /**

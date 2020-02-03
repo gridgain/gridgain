@@ -217,6 +217,13 @@
             <version>${javassist.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>${commons.lang3.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -341,11 +348,6 @@
                                         </tstamp>
 
                                         <property name="props.file" value="../../modules/core/target/classes/ignite.properties" />
-
-                                        <replaceregexp file="${props.file}" byline="true">
-                                            <regexp pattern="ignite.update.notifier.enabled.by.default=.*" />
-                                            <substitution expression="ignite.update.notifier.enabled.by.default=${update.notifier.enabled.by.default}" />
-                                        </replaceregexp>
 
                                         <replaceregexp file="${props.file}" byline="true">
                                             <regexp pattern="ignite.rel.date=.*" />

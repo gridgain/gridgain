@@ -99,13 +99,13 @@ fi
 #
 # Save terminal setting. Used to restore terminal on finish.
 #
-SAVED_STTY=`stty -g 2>/dev/null`
+SAVED_STTY=$(stty -g 2>/dev/null || true)
 
 #
 # Restores terminal.
 #
 function restoreSttySettings() {
-    stty ${SAVED_STTY}
+    stty ${SAVED_STTY} || true
 }
 
 #
@@ -116,8 +116,6 @@ trap restoreSttySettings INT
 #
 # Final JVM_OPTS for Java 9+ compatibility
 #
-javaMajorVersion "${JAVA_HOME}/bin/java"
-
 if [ $version -eq 8 ] ; then
     JVM_OPTS="\
         -XX:+AggressiveOpts \

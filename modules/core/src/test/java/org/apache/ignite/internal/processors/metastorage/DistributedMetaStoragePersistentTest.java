@@ -35,7 +35,6 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.META_STORAGE;
 import static org.hamcrest.CoreMatchers.instanceOf;
@@ -300,6 +299,38 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
     }
 
     /**
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testComplexObjectWrite() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
+
+        ComponentConfig compCfg = new ComponentConfig(101, "comp: config");
+        AppConfig appCfg = new AppConfig(102, compCfg);
+
+        metastorage.write("appConf", appCfg);
+
+        stopGrid(0);
+
+        ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        AppConfig readAppCfg = ignite.context().distributedMetastorage().read("appConf");
+
+        assertNotNull(readAppCfg);
+
+        assertEquals(appCfg.appId, readAppCfg.appId);
+        assertEquals(appCfg.compConf.compId, readAppCfg.compConf.compId);
+        assertEquals(appCfg.compConf.config, readAppCfg.compConf.config);
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
@@ -332,7 +363,6 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         metastorage(5).write("key5", "value5");
 
         stopGrid(5);
-
 
         startGrid(1);
 
@@ -487,9 +517,10 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
      * @throws Exception If failed.
      */
     @Test @SuppressWarnings("ThrowableNotThrown")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_ENABLED, value = "false")
     public void testConflictingData() throws Exception {
-        startGrid(0);
+        IgniteEx igniteEx = startGrid(0);
+
+        igniteEx.cluster().baselineAutoAdjustEnabled(false);
 
         startGrid(1);
 
@@ -567,5 +598,40 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         Object[] hist = GridTestUtils.getFieldValue(joiningNodeData, "hist");
 
         assertEquals(1, hist.length);
+    }
+
+    /**
+     * Class to test complex objects put to metastorage.
+     */
+    private static class AppConfig implements Serializable {
+        /** */
+        private final long appId;
+
+        /** */
+        private final ComponentConfig compConf;
+
+        /** */
+        private AppConfig(long id,
+            ComponentConfig conf) {
+            appId = id;
+            compConf = conf;
+        }
+    }
+
+    /**
+     * Class to test complex objects put to metastorage.
+     */
+    private static class ComponentConfig implements Serializable {
+        /** */
+        private final long compId;
+
+        /** */
+        private final String config;
+
+        /** */
+        private ComponentConfig(long compId, String config) {
+            this.compId = compId;
+            this.config = config;
+        }
     }
 }

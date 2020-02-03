@@ -19,6 +19,8 @@ package org.apache.ignite.util;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.failure.FailureHandler;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -54,6 +56,11 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
         super.beforeTest();
 
         createAndFillCache(client, CACHE_NAME, GROUP_NAME);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
+        return new StopNodeFailureHandler();
     }
 
     /**
@@ -102,6 +109,25 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
         assertContains(log, out, "issues found (listed above)");
 
         assertContains(log, out, "Key is present in SQL index, but is missing in corresponding data page.");
+    }
+
+    /**
+     * Checks that missing lines were detected in CacheDataTree with the output
+     * of cache group name and id.
+     */
+    @Test
+    public void testBrokenCacheDataTreeShouldFailValidationWithCacheGroupInfo() {
+        breakCacheDataTree(crd, CACHE_NAME, 1);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", CACHE_NAME));
+
+        assertContains(
+            log,
+            testOut.toString(),
+            "[cacheGroup=group1, cacheGroupId=-1237460590, cache=persons-cache-vi, cacheId=-528791027, idx=_key_PK]"
+        );
     }
 
     /**

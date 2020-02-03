@@ -112,7 +112,7 @@ public interface GridCachePreloader {
     public IgniteInternalFuture<Object> startFuture();
 
     /**
-     * @return Future which will complete when preloading is finished.
+     * @return Future which will complete when initial preloading is finished.
      */
     public IgniteInternalFuture<?> syncFuture();
 
@@ -162,18 +162,12 @@ public interface GridCachePreloader {
     public IgniteInternalFuture<Boolean> forceRebalance();
 
     /**
-     * Unwinds undeploys.
-     */
-    public void unwindUndeploys();
-
-    /**
      * Handles Supply message.
      *
-     * @param idx Index.
      * @param id Node Id.
      * @param s Supply message.
      */
-    public void handleSupplyMessage(int idx, UUID id, final GridDhtPartitionSupplyMessage s);
+    public void handleSupplyMessage(UUID id, final GridDhtPartitionSupplyMessage s);
 
     /**
      * Handles Demand message.

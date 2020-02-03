@@ -584,7 +584,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         // Version for all loaded entries.
         final AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
 
-        final GridCacheVersion ver0 = ctx.shared().versions().nextForLoad(topVer);
+        final GridCacheVersion ver0 = ctx.shared().versions().nextForLoad(topVer.topologyVersion());
 
         final boolean replicate = ctx.isDrEnabled();
 
@@ -607,7 +607,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         final AffinityTopologyVersion topVer = ctx.affinity().affinityTopologyVersion();
 
         // Version for all loaded entries.
-        final GridCacheVersion ver0 = ctx.shared().versions().nextForLoad(topVer);
+        final GridCacheVersion ver0 = ctx.shared().versions().nextForLoad(topVer.topologyVersion());
 
         final boolean replicate = ctx.isDrEnabled();
 
@@ -1014,7 +1014,7 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
 
                                             entry.unswap();
 
-                                            GridCacheVersion newVer = ctx.versions().next();
+                                            GridCacheVersion newVer = nextVersion();
 
                                             EntryGetResult verVal = entry.versionedValue(
                                                 cacheVal,
@@ -1697,30 +1697,29 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
     }
 
     /**
-     * @param expVer Expected topology version.
+     * @param mapVer Mapped topology version.
      * @param curVer Current topology version.
      * @return {@code True} if cache affinity changed and operation should be remapped.
      */
-    protected final boolean needRemap(AffinityTopologyVersion expVer, AffinityTopologyVersion curVer,
-        Collection<KeyCacheObject> keys) {
-        if (curVer.equals(expVer))
+    protected final boolean needRemap(AffinityTopologyVersion mapVer, AffinityTopologyVersion curVer) {
+        if (curVer.equals(mapVer))
             return false;
 
-        AffinityTopologyVersion lastAffChangedTopVer = ctx.shared().exchange().lastAffinityChangedTopologyVersion(expVer);
+        AffinityTopologyVersion lastAffChangedTopVer = ctx.shared().exchange().lastAffinityChangedTopologyVersion(mapVer);
 
-        if (curVer.compareTo(lastAffChangedTopVer) >= 0 && curVer.compareTo(expVer) <= 0)
+        if (curVer.isBetween(lastAffChangedTopVer, mapVer))
             return false;
 
         // TODO IGNITE-7164 check mvcc crd for mvcc enabled txs.
 
-        Collection<ClusterNode> cacheNodes0 = ctx.discovery().cacheGroupAffinityNodes(ctx.groupId(), expVer);
+        Collection<ClusterNode> cacheNodes0 = ctx.discovery().cacheGroupAffinityNodes(ctx.groupId(), mapVer);
         Collection<ClusterNode> cacheNodes1 = ctx.discovery().cacheGroupAffinityNodes(ctx.groupId(), curVer);
 
-        if (!cacheNodes0.equals(cacheNodes1) || ctx.affinity().affinityTopologyVersion().compareTo(curVer) < 0)
+        if (!cacheNodes0.equals(cacheNodes1) || ctx.affinity().affinityTopologyVersion().before(curVer))
             return true;
 
         try {
-            List<List<ClusterNode>> aff1 = ctx.affinity().assignments(expVer);
+            List<List<ClusterNode>> aff1 = ctx.affinity().assignments(mapVer);
             List<List<ClusterNode>> aff2 = ctx.affinity().assignments(curVer);
 
             return !aff1.equals(aff2);

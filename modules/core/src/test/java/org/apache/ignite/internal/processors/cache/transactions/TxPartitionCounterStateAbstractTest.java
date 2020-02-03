@@ -44,6 +44,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.GridCacheTxRecoveryRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxPrepareRequest;
@@ -59,6 +60,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -77,7 +79,6 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toCollection;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_ENABLED;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
@@ -117,6 +118,8 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setActiveOnStart(false);
+
         cfg.setConsistentId("node" + igniteInstanceName);
         cfg.setFailureHandler(new StopNodeFailureHandler());
         cfg.setRebalanceThreadPoolSize(4); // Necessary to reproduce some issues.
@@ -134,7 +137,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
             setWalHistorySize(1000).
             setWalSegmentSize(8 * MB).setWalMode(LOG_ONLY).setPageSize(1024).
             setCheckpointFrequency(MILLISECONDS.convert(365, DAYS)).
-            setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true).
+            setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(persistenceEnabled()).
                 setInitialSize(100 * MB).setMaxSize(100 * MB)));
 
         if (!client)
@@ -143,18 +146,26 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
         return cfg;
     }
 
+    /**
+     * @return Partitions count.
+     */
+    protected int partitions() {
+        return PARTS_CNT;
+    }
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        System.setProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED, "false");
-
         super.beforeTestsStarted();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         super.afterTestsStopped();
+    }
 
-        System.clearProperty(IGNITE_BASELINE_AUTO_ADJUST_ENABLED);
+    /** */
+    protected boolean persistenceEnabled() {
+        return true;
     }
 
     /**
@@ -167,7 +178,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
         ccfg.setBackups(backups);
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setOnheapCacheEnabled(false);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, partitions()));
 
         return ccfg;
     }
@@ -704,7 +715,7 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     protected void stopGrid(boolean skipCheckpointOnStop, String name) {
         IgniteEx grid = grid(name);
 
-        if (skipCheckpointOnStop) {
+        if (skipCheckpointOnStop && persistenceEnabled()) {
             GridCacheDatabaseSharedManager db =
                 (GridCacheDatabaseSharedManager)grid.context().cache().context().database();
 
@@ -1083,6 +1094,22 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
             });
 
             return false;
+        }
+    }
+
+    /**
+     * Blocks tx recovery between all nodes.
+     */
+    protected void blockRecovery() {
+        for (Ignite grid : G.allGrids()) {
+            if (grid.configuration().isClientMode())
+                continue;
+
+            TestRecordingCommunicationSpi.spi(grid).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                    return msg instanceof GridCacheTxRecoveryRequest;
+                }
+            });
         }
     }
 

@@ -26,6 +26,7 @@ import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDi
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructureUniqueNameTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructureWithJobTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteSequenceInternalCleanupTest;
+import org.apache.ignite.internal.processors.cache.datastructures.OutOfMemoryVolatileRegionTest;
 import org.apache.ignite.internal.processors.cache.datastructures.SemaphoreFailoverNoWaitingAcquirerTest;
 import org.apache.ignite.internal.processors.cache.datastructures.SemaphoreFailoverSafeReleasePermitsTest;
 import org.apache.ignite.internal.processors.cache.datastructures.local.GridCacheLocalAtomicQueueApiSelfTest;
@@ -84,6 +85,7 @@ import org.apache.ignite.internal.processors.cache.datastructures.replicated.Ign
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedLockSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.IgniteReplicatedSemaphoreSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheAtomicReplicatedNodeRestartSelfTest;
+import org.apache.ignite.internal.processors.datastructures.GridCacheReplicatedQueueRemoveSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -117,6 +119,8 @@ import org.junit.runners.Suite;
     IgniteReplicatedSemaphoreSelfTest.class,
     IgniteReplicatedLockSelfTest.class,
     IgniteCacheAtomicReplicatedNodeRestartSelfTest.class,
+    GridCacheReplicatedQueueRemoveSelfTest.class,
+    OutOfMemoryVolatileRegionTest.class,
 
     GridCachePartitionedSequenceApiSelfTest.class,
     GridCachePartitionedSequenceMultiNodeSelfTest.class,

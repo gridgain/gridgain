@@ -66,7 +66,6 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
@@ -84,7 +83,7 @@ import static org.apache.ignite.internal.metric.IoStatisticsType.HASH_INDEX;
 public class CacheGroupContext {
     /**
      * Unique group ID. Currently for shared group it is generated as group name hash,
-     * for non-shared as cache name hash (see {@link ClusterCachesInfo#checkCacheConflict}).
+     * for non-shared as cache name hash (see {@code ClusterCachesInfo#checkCacheConflict(CacheConfiguration)}).
      */
     private final int grpId;
 
@@ -182,9 +181,6 @@ public class CacheGroupContext {
     /** Statistics holder to track IO operations for data pages. */
     private final IoStatisticsHolder statHolderData;
 
-    /** */
-    private volatile boolean hasAtomicCaches;
-
     /** Cache group metrics. */
     private final CacheGroupMetricsImpl metrics;
 
@@ -258,8 +254,15 @@ public class CacheGroupContext {
         else {
             GridMetricManager mmgr = ctx.kernalContext().metric();
 
-            statHolderIdx = new IoStatisticsHolderIndex(HASH_INDEX, cacheOrGroupName(), HASH_PK_IDX_NAME, mmgr);
             statHolderData = new IoStatisticsHolderCache(cacheOrGroupName(), grpId, mmgr);
+
+            statHolderIdx = new IoStatisticsHolderIndex(
+                HASH_INDEX,
+                cacheOrGroupName(),
+                HASH_PK_IDX_NAME,
+                mmgr,
+                statHolderData
+            );
         }
     }
 
@@ -362,9 +365,6 @@ public class CacheGroupContext {
 
         if (!drEnabled && cctx.isDrEnabled())
             drEnabled = true;
-
-        if (!hasAtomicCaches)
-            hasAtomicCaches = cctx.config().getAtomicityMode() == ATOMIC;
     }
 
     /**
@@ -1084,8 +1084,11 @@ public class CacheGroupContext {
                 ccfg.getCacheMode() == LOCAL
             );
 
-        if (ccfg.getCacheMode() != LOCAL)
+        if (ccfg.getCacheMode() != LOCAL) {
             top = new GridDhtPartitionTopologyImpl(ctx, this);
+
+            metrics.onTopologyInitialized();
+        }
 
         try {
             offheapMgr = persistenceEnabled
@@ -1283,13 +1286,6 @@ public class CacheGroupContext {
      */
     public IoStatisticsHolder statisticsHolderData() {
         return statHolderData;
-    }
-
-    /**
-     * @return {@code True} if group has atomic caches.
-     */
-    public boolean hasAtomicCaches() {
-        return hasAtomicCaches;
     }
 
     /**

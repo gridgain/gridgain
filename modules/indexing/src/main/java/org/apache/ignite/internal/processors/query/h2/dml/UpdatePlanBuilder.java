@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.h2.dml;
 
 import java.lang.reflect.Constructor;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -27,6 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessor;
+import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryDescriptor;
@@ -103,12 +104,13 @@ public final class UpdatePlanBuilder {
         QueryDescriptor planKey,
         GridSqlStatement stmt,
         boolean mvccEnabled,
-        IgniteH2Indexing idx
+        IgniteH2Indexing idx,
+        IgniteLogger log
     ) throws IgniteCheckedException {
         if (stmt instanceof GridSqlMerge || stmt instanceof GridSqlInsert)
-            return planForInsert(planKey, stmt, idx, mvccEnabled);
+            return planForInsert(planKey, stmt, idx, mvccEnabled, log);
         else if (stmt instanceof GridSqlUpdate || stmt instanceof GridSqlDelete)
-            return planForUpdate(planKey, stmt, idx, mvccEnabled);
+            return planForUpdate(planKey, stmt, idx, mvccEnabled, log);
         else
             throw new IgniteSQLException("Unsupported operation: " + stmt.getSQL(),
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
@@ -129,7 +131,8 @@ public final class UpdatePlanBuilder {
         QueryDescriptor planKey,
         GridSqlStatement stmt,
         IgniteH2Indexing idx,
-        boolean mvccEnabled
+        boolean mvccEnabled,
+        IgniteLogger log
     ) throws IgniteCheckedException {
         GridSqlQuery sel = null;
 
@@ -147,8 +150,13 @@ public final class UpdatePlanBuilder {
 
         List<GridSqlElement[]> elRows = null;
 
+        UpdateMode mode;
+
         if (stmt instanceof GridSqlInsert) {
+            mode = UpdateMode.INSERT;
+
             GridSqlInsert ins = (GridSqlInsert) stmt;
+
             target = ins.into();
 
             tbl = DmlAstUtils.gridTableForElement(target);
@@ -170,6 +178,8 @@ public final class UpdatePlanBuilder {
             rowsNum = isTwoStepSubqry ? 0 : ins.rows().size();
         }
         else if (stmt instanceof GridSqlMerge) {
+            mode = UpdateMode.MERGE;
+
             GridSqlMerge merge = (GridSqlMerge) stmt;
 
             target = merge.into();
@@ -260,11 +270,10 @@ public final class UpdatePlanBuilder {
                 mvccEnabled,
                 planKey,
                 selectSql,
-                tbl.dataTable().cacheName()
+                tbl.dataTable().cacheName(),
+                log
             );
         }
-
-        UpdateMode mode = stmt instanceof GridSqlMerge ? UpdateMode.MERGE : UpdateMode.INSERT;
 
         List<List<DmlArgument>> rows = null;
 
@@ -343,7 +352,8 @@ public final class UpdatePlanBuilder {
         QueryDescriptor planKey,
         GridSqlStatement stmt,
         IgniteH2Indexing idx,
-        boolean mvccEnabled
+        boolean mvccEnabled,
+        IgniteLogger log
     ) throws IgniteCheckedException {
         GridSqlElement target;
 
@@ -441,7 +451,8 @@ public final class UpdatePlanBuilder {
                         mvccEnabled,
                         planKey,
                         selectSql,
-                        tbl.dataTable().cacheName()
+                        tbl.dataTable().cacheName(),
+                        log
                     );
                 }
 
@@ -475,7 +486,8 @@ public final class UpdatePlanBuilder {
                         mvccEnabled,
                         planKey,
                         selectSql,
-                        tbl.dataTable().cacheName()
+                        tbl.dataTable().cacheName(),
+                        log
                     );
                 }
 
@@ -690,7 +702,7 @@ public final class UpdatePlanBuilder {
                             return ctor0.newInstance();
                         }
                         catch (Exception e) {
-                            if (S.INCLUDE_SENSITIVE)
+                            if (S.includeSensitive())
                                 throw new IgniteCheckedException("Failed to instantiate " +
                                     (key ? "key" : "value") + " [type=" + typeName + ']', e);
                             else
@@ -709,7 +721,7 @@ public final class UpdatePlanBuilder {
                             return GridUnsafe.allocateInstance(cls);
                         }
                         catch (InstantiationException e) {
-                            if (S.INCLUDE_SENSITIVE)
+                            if (S.includeSensitive())
                                 throw new IgniteCheckedException("Failed to instantiate " +
                                     (key ? "key" : "value") + " [type=" + typeName + ']', e);
                             else
@@ -884,13 +896,14 @@ public final class UpdatePlanBuilder {
         boolean mvccEnabled,
         QueryDescriptor planKey,
         String selectQry,
-        String cacheName
+        String cacheName,
+        IgniteLogger log
     )
         throws IgniteCheckedException {
         if ((!mvccEnabled && !planKey.skipReducerOnUpdate()) || planKey.batched())
             return null;
 
-        try (Connection conn = idx.connections().connectionNoCache(planKey.schemaName())) {
+        try (H2PooledConnection conn = idx.connections().connection(planKey.schemaName())) {
             H2Utils.setupConnection(conn,
                 QueryContext.parseContext(idx.backupFilter(null, null), planKey.local()),
                 planKey.distributedJoins(),
@@ -899,7 +912,7 @@ public final class UpdatePlanBuilder {
             // Get a new prepared statement for derived select query.
             try (PreparedStatement stmt = conn.prepareStatement(selectQry)) {
                 Prepared prep = GridSqlQueryParser.prepared(stmt);
-                GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false).parse(prep);
+                GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false, log).parse(prep);
 
                 GridCacheTwoStepQuery qry = GridSqlQuerySplitter.split(
                     conn,
@@ -910,7 +923,8 @@ public final class UpdatePlanBuilder {
                     planKey.enforceJoinOrder(),
                     false,
                     idx,
-                    prep.getParameters().size()
+                    prep.getParameters().size(),
+                    log
                 );
 
                 boolean distributed =

@@ -69,6 +69,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
@@ -2308,7 +2309,15 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
         if (impl == null)
             return false;
 
-        return impl.allNodesSupport(feature);
+        return impl.allNodesSupport(feature, ALL_NODES);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
+        if (impl == null)
+            return false;
+
+        return impl.allNodesSupport(feature, nodesPred);
     }
 
     /** {@inheritDoc} */

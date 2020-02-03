@@ -113,6 +113,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_COMM_USER;
 import static org.apache.ignite.internal.GridTopic.TOPIC_IO_TEST;
+import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSOR;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.AFFINITY_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.DATA_STREAMER_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.IDX_POOL;
@@ -120,6 +121,7 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.MAN
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.P2P_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.PUBLIC_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.QUERY_POOL;
+import static org.apache.ignite.internal.managers.communication.GridIoPolicy.REBALANCE_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SERVICE_POOL;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
@@ -1018,7 +1020,11 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             // If message is P2P, then process in P2P service.
             // This is done to avoid extra waiting and potential deadlocks
             // as thread pool may not have any available threads to give.
-            byte plc = msg.policy();
+            byte plc = msg.message().policy();
+
+            // If override policy is not defined use sender defined policy.
+            if (plc == GridIoPolicy.UNDEFINED)
+                plc = msg.policy();
 
             switch (plc) {
                 case P2P_POOL: {
@@ -1037,6 +1043,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 case QUERY_POOL:
                 case SCHEMA_POOL:
                 case SERVICE_POOL:
+                case REBALANCE_POOL:
                 {
                     if (msg.isOrdered())
                         processOrderedMessage(nodeId, msg, plc, msgC);
@@ -1176,14 +1183,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             return;
         }
 
-        if (plc == GridIoPolicy.SYSTEM_POOL && msg.partition() != GridIoMessage.STRIPE_DISABLED_PART) {
-            ctx.getStripedExecutorService().execute(msg.partition(), c);
+        final int part = msg.partition(); // Store partition to avoid possible recalculation.
+
+        if (plc == GridIoPolicy.SYSTEM_POOL && part != GridIoMessage.STRIPE_DISABLED_PART) {
+            ctx.getStripedExecutorService().execute(part, c);
 
             return;
         }
 
-        if (plc == GridIoPolicy.DATA_STREAMER_POOL && msg.partition() != GridIoMessage.STRIPE_DISABLED_PART) {
-            ctx.getDataStreamerExecutorService().execute(msg.partition(), c);
+        if (plc == GridIoPolicy.DATA_STREAMER_POOL && part != GridIoMessage.STRIPE_DISABLED_PART) {
+            ctx.getDataStreamerExecutorService().execute(part, c);
 
             return;
         }
@@ -1744,9 +1753,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         boolean ordered,
         long timeout,
         boolean skipOnTimeout) throws IgniteCheckedException {
-        boolean securityMsgSupported = IgniteFeatures.allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IgniteFeatures.IGNITE_SECURITY_PROCESSOR);
-
-        if (ctx.security().enabled() && securityMsgSupported) {
+        if (ctx.security().enabled() &&
+            IgniteFeatures.allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IGNITE_SECURITY_PROCESSOR)) {
             UUID secSubjId = null;
 
             SecurityContext secCtx = ctx.security().securityContext();
@@ -1938,9 +1946,6 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         Message msg,
         byte plc
     ) throws IgniteCheckedException {
-        assert F.find(nodes, null, F.localNode(locNodeId)) == null :
-            "Internal Ignite code should never call the method with local node in a node list.";
-
         IgniteCheckedException err = null;
 
         for (ClusterNode node : nodes) {
@@ -2088,7 +2093,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
      * @param p Message predicate.
      */
     public void addUserMessageListener(final @Nullable Object topic, final @Nullable IgniteBiPredicate<UUID, ?> p) {
-        addUserMessageListener(topic, p, null);
+        addUserMessageListener(topic, p, ctx.localNodeId());
     }
 
     /**
@@ -2098,7 +2103,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     public void addUserMessageListener(
         final @Nullable Object topic,
         final @Nullable IgniteBiPredicate<UUID, ?> p,
-        final @Nullable UUID nodeId
+        final UUID nodeId
     ) {
         if (p != null) {
             try {

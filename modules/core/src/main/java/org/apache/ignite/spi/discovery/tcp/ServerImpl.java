@@ -104,9 +104,11 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.util.worker.GridWorkerListener;
 import org.apache.ignite.internal.worker.WorkersRegistry;
+import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -152,10 +154,12 @@ import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeLeftMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingRequest;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryPingResponse;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRedirectToClient;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRequiredFeatureSupport;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRingLatencyCheckMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryServerOnlyCustomEventMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryStatusCheckMessage;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BINARY_MARSHALLER_USE_STRING_SERIALIZATION_VER_2;
@@ -179,6 +183,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_COMPACT_FOOTER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_BINARY_STRING_SER_VER_2;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MARSHALLER_USE_DFLT_SUID;
+import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 import static org.apache.ignite.spi.IgnitePortProtocol.TCP;
 import static org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoverySpiState.AUTH_FAILED;
@@ -354,9 +359,9 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean allNodesSupport(IgniteFeatures feature) {
+    @Override public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
         // It is ok to see visible node without order here because attributes are available when node is created.
-        return IgniteFeatures.allNodesSupports(gridKernalContext(), upcast(ring.allNodes()), feature);
+        return IgniteFeatures.allNodesSupports(gridKernalContext(), F.view(upcast(ring.allNodes()), nodesPred), feature);
     }
 
     /** {@inheritDoc} */
@@ -1878,6 +1883,80 @@ class ServerImpl extends TcpDiscoveryImpl {
     }
 
     /**
+     * Checks that client node with given ID supports features required to handle given discovery custom message.
+     *
+     * @param msg Custom message that may require support of particular Ignite Feature.
+     * @param clientNodeId UUID of client node that should support required feature.
+     * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
+     */
+    private boolean clientSupportsDiscoveryMessage(TcpDiscoveryAbstractMessage msg, @NotNull UUID clientNodeId) {
+        if (!(msg instanceof TcpDiscoveryCustomEventMessage))
+            return true;
+
+        if (msg instanceof TcpDiscoveryServerOnlyCustomEventMessage)
+            return false;
+
+        TcpDiscoveryNode node = ring.node(clientNodeId);
+
+        if (node == null)
+            return true;
+
+        return clientSupportsDiscoveryMessage(msg, node);
+    }
+
+    /**
+     * Checks that client node with given ID supports features required to handle given discovery custom message.
+     *
+     * @param msg Custom message that may require support of particular Ignite Feature.
+     * @param node Client node that should support required feature (used if node is null).
+     * @return {@code True} if client node supports necessary feature, {@code false} otherwise.
+     */
+    private boolean clientSupportsDiscoveryMessage(TcpDiscoveryAbstractMessage msg,
+        @NotNull ClusterNode node) {
+        if (!(msg instanceof TcpDiscoveryCustomEventMessage))
+            return true;
+
+        if (msg instanceof TcpDiscoveryServerOnlyCustomEventMessage)
+            return false;
+
+        Class msgClass;
+
+        try {
+            msgClass = ((TcpDiscoveryCustomEventMessage)msg).messageClass();
+        }
+        catch (IgniteCheckedException e) {
+            log.warning("Failed to detect class of DiscoveryCustomMessage: " + e.getMessage());
+
+            return true;
+        }
+
+        TcpDiscoveryRequiredFeatureSupport featAnnot = U.getDeclaredAnnotation(
+            msgClass,
+            TcpDiscoveryRequiredFeatureSupport.class
+        );
+
+        if (featAnnot != null) {
+            IgniteFeatures reqFeature = featAnnot.feature();
+
+            if (node != null) {
+                byte[] featuresBytes = node.attribute(IgniteNodeAttributes.ATTR_IGNITE_FEATURES);
+
+                if (!IgniteFeatures.nodeSupports(featuresBytes, reqFeature)) {
+                    if (log.isDebugEnabled())
+                        log.debug("Client node " + node.id() +
+                            " doesn't support feature " + reqFeature +
+                            ", sending message " + msgClass +
+                            " to the client is skipped.");
+
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @param msg Message to clear.
      */
     private void clearNodeAddedMessage(TcpDiscoveryAbstractMessage msg) {
@@ -2125,7 +2204,11 @@ class ServerImpl extends TcpDiscoveryImpl {
      * @param rmtPerms The second set of permissions.
      * @return {@code True} if given parameters contain the same permissions, {@code False} otherwise.
      */
-    private boolean permissionsEqual(SecurityPermissionSet locPerms, SecurityPermissionSet rmtPerms) {
+    private boolean permissionsEqual(@Nullable SecurityPermissionSet locPerms,
+        @Nullable SecurityPermissionSet rmtPerms) {
+        if (locPerms == null || rmtPerms == null)
+            return false;
+
         boolean dfltAllowMatch = locPerms.defaultAllowAll() == rmtPerms.defaultAllowAll();
 
         boolean bothHaveSamePerms = F.eqNotOrdered(rmtPerms.systemPermissions(), locPerms.systemPermissions()) &&
@@ -2495,10 +2578,11 @@ class ServerImpl extends TcpDiscoveryImpl {
          *
          * @param lastMsgId Last message ID received on client. {@code Null} if client did not finish connect procedure.
          * @param node Client node.
+         * @param filterPred Predicate for additional filtering of messages.
          * @return Collection of messages.
          */
         @Nullable Collection<TcpDiscoveryAbstractMessage> messages(@Nullable IgniteUuid lastMsgId,
-            TcpDiscoveryNode node)
+            TcpDiscoveryNode node, @Nullable IgniteBiPredicate<TcpDiscoveryAbstractMessage, ClusterNode> filterPred)
         {
             assert node != null && node.clientRouterNodeId() != null : node;
 
@@ -2513,8 +2597,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 res = new ArrayList<>(msgs.size());
                         }
 
-                        if (res != null)
+                        if (res != null) {
+                            if (filterPred != null && !filterPred.apply(msg, node))
+                                continue;
+
                             res.add(prepare(msg, node.id()));
+                        }
                     }
                 }
 
@@ -2545,8 +2633,12 @@ class ServerImpl extends TcpDiscoveryImpl {
                             if (msg.id().equals(lastMsgId))
                                 skip = false;
                         }
-                        else
+                        else {
+                            if (filterPred != null && !filterPred.apply(msg, node))
+                                continue;
+
                             cp.add(prepare(msg, node.id()));
+                        }
                     }
                 }
 
@@ -3310,6 +3402,19 @@ class ServerImpl extends TcpDiscoveryImpl {
                 byte[] msgBytes = null;
 
                 for (ClientMessageWorker clientMsgWorker : clientMsgWorkers.values()) {
+                    if (msg instanceof TcpDiscoveryCustomEventMessage) {
+                        try {
+                            if (!clientSupportsDiscoveryMessage((TcpDiscoveryCustomEventMessage)msg,
+                                clientMsgWorker.clientNodeId))
+                                continue;
+                        }
+                        catch (Throwable e) {
+                            U.error(log, "Failed when unmarshalling a message: " + msg, e);
+
+                            break;
+                        }
+                    }
+
                     if (msgBytes == null) {
                         try {
                             msgBytes = U.marshal(spi.marshaller(), msg);
@@ -4162,7 +4267,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                         reconMsg.verify(getLocalNodeId());
 
-                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node);
+                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node, ServerImpl.this::clientSupportsDiscoveryMessage);
 
                         if (msgs != null) {
                             reconMsg.pendingMessages(msgs);
@@ -5005,7 +5110,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 spi.marshaller(), U.resolveClassLoader(spi.ignite().configuration()), node
                             );
 
-                            if (!permissionsEqual(coordSubj.subject().permissions(), subj.subject().permissions())) {
+                            if (!permissionsEqual(getPermissions(coordSubj), getPermissions(subj))) {
                                 // Node has not pass authentication.
                                 LT.warn(log, "Authentication failed [nodeId=" + node.id() +
                                     ", addrs=" + U.addressesAsString(node) + ']');
@@ -5106,8 +5211,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                                         spi.marshaller(), ldr, locNode
                                     );
 
-                                    if (!permissionsEqual(locCrd.subject().permissions(),
-                                        rmCrd.subject().permissions())) {
+                                    if (!permissionsEqual(getPermissions(locCrd), getPermissions(rmCrd))) {
                                         // Node has not pass authentication.
                                         LT.warn(log,
                                             "Failed to authenticate local node " +
@@ -5214,6 +5318,17 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             if (sendMessageToRemotes(msg))
                 sendMessageAcrossRing(msg);
+        }
+
+        /**
+         * @param secCtx Security context.
+         * @return Security permission set.
+         */
+        private @Nullable SecurityPermissionSet getPermissions(SecurityContext secCtx) {
+            if (secCtx == null || secCtx.subject() == null)
+                return null;
+
+            return secCtx.subject().permissions();
         }
 
         /**
@@ -5512,7 +5627,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 //we will need to recalculate this value since the topology changed
                 if (!nodeCompactRepresentationSupported) {
                     nodeCompactRepresentationSupported =
-                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION, ALL_NODES);
                 }
 
                 TcpDiscoveryNode leftNode = ring.removeNode(leavingNodeId);
@@ -5727,7 +5842,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                 //we will need to recalculate this value since the topology changed
                 if (!nodeCompactRepresentationSupported) {
                     nodeCompactRepresentationSupported =
-                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION);
+                        allNodesSupport(TCP_DISCOVERY_MESSAGE_NODE_COMPACT_REPRESENTATION, ALL_NODES);
                 }
 
                 failedNode = ring.removeNode(failedNodeId);
@@ -5976,7 +6091,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
             assert !msg.client();
 
-            int laps = metricsMsgFilter.passedLaps(msg);
+            int laps = msg.passedLaps(getLocalNodeId());
 
             msg = metricsMsgFilter.pollActualMessage(laps, msg);
 
@@ -6864,7 +6979,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                     TcpDiscoveryHandshakeResponse res =
                         new TcpDiscoveryHandshakeResponse(locNodeId, locNode.internalOrder());
 
-                    res.setDiscoveryDataPacketCompression(allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION));
+                    res.setDiscoveryDataPacketCompression(allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES));
 
                     if (req.client())
                         res.clientAck(true);
@@ -7409,7 +7524,11 @@ class ServerImpl extends TcpDiscoveryImpl {
             if (!msg.verified()) {
                 if (isLocNodeRouter || isLocalNodeCoordinator()) {
                     if (node != null) {
-                        Collection<TcpDiscoveryAbstractMessage> pending = msgHist.messages(msg.lastMessageId(), node);
+                        Collection<TcpDiscoveryAbstractMessage> pending = msgHist.messages(
+                            msg.lastMessageId(),
+                            node,
+                            ServerImpl.this::clientSupportsDiscoveryMessage
+                        );
 
                         if (pending != null) {
                             msg.verify(locNodeId);
@@ -8263,7 +8382,7 @@ class ServerImpl extends TcpDiscoveryImpl {
          * {@code False} if another message of the same kind is already in the queue.
          */
         private boolean addMessage(TcpDiscoveryMetricsUpdateMessage msg) {
-            int laps = passedLaps(msg);
+            int laps = msg.passedLaps(getLocalNodeId());
 
             if (laps == 2)
                 return true;
@@ -8308,33 +8427,6 @@ class ServerImpl extends TcpDiscoveryImpl {
             }
 
             return msg;
-        }
-
-        /**
-         * @param msg Metrics update message.
-         * @return Number of laps, that the provided message passed.
-         */
-        private int passedLaps(TcpDiscoveryMetricsUpdateMessage msg) {
-            UUID locNodeId = getLocalNodeId();
-
-            boolean hasLocMetrics = hasMetrics(msg, locNodeId);
-
-            if (locNodeId.equals(msg.creatorNodeId()) && !hasLocMetrics && msg.senderNodeId() != null)
-                return 2;
-            else if (msg.senderNodeId() == null || !hasLocMetrics)
-                return 0;
-            else
-                return 1;
-        }
-
-        /**
-         * @param msg Metrics update message to check.
-         * @param nodeId Node ID for which the check should be performed.
-         * @return {@code True} is the message contains metrics of the node with the provided ID.
-         * {@code False} otherwise.
-         */
-        private boolean hasMetrics(TcpDiscoveryMetricsUpdateMessage msg, UUID nodeId) {
-            return msg.hasMetrics(nodeId) || msg.hasCacheMetrics(nodeId);
         }
     }
 }

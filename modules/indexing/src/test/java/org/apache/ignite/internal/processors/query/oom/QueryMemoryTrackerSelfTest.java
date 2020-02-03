@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.oom;
 
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -34,6 +35,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager test for distributed queries.
  */
+@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
 public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
@@ -221,14 +223,14 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
             assertEquals(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY, sqlEx.statusCode());
             assertEquals(IgniteQueryErrorCode.codeToSqlState(IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY), sqlEx.sqlState());
 
-            assertEquals(61, localResults.size());
+            assertEquals(42, localResults.size());
             assertEquals(21, cursors.size());
 
             IgniteH2Indexing h2 = (IgniteH2Indexing)grid(1).context().query().getIndexing();
 
             long globalAllocated = h2.memoryManager().memoryReserved();
 
-            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
+            assertTrue(h2.memoryManager().memoryLimit() < globalAllocated + MB);
         }
         finally {
             for (QueryCursor c : cursors)

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "ignite/cluster/cluster_group.h"
+
 #include "ignite/impl/cluster/ignite_cluster_impl.h"
 
 using namespace ignite::jni::java;
@@ -62,12 +64,22 @@ namespace ignite
                 return impl.Get()->IsWalEnabled(cacheName);
             }
 
-            void IgniteClusterImpl::SetBaselineTopologyVersion(long topVer)
+            ClusterGroup IgniteClusterImpl::ForLocal()
+            {
+                return impl.Get()->ForLocal();
+            }
+
+            ClusterNode IgniteClusterImpl::GetLocalNode()
+            {
+                return impl.Get()->GetLocalNode();
+            }
+
+            void IgniteClusterImpl::SetBaselineTopologyVersion(int64_t topVer)
             {
                 impl.Get()->SetBaselineTopologyVersion(topVer);
             }
 
-            void IgniteClusterImpl::SetTxTimeoutOnPartitionMapExchange(long timeout)
+            void IgniteClusterImpl::SetTxTimeoutOnPartitionMapExchange(int64_t timeout)
             {
                 impl.Get()->SetTxTimeoutOnPartitionMapExchange(timeout);
             }
@@ -77,12 +89,12 @@ namespace ignite
                 return impl.Get()->PingNode(nid);
             }
 
-            std::vector<ClusterNode> IgniteClusterImpl::GetTopology(long version)
+            std::vector<ClusterNode> IgniteClusterImpl::GetTopology(int64_t version)
             {
                 return impl.Get()->GetTopology(version);
             }
 
-            long IgniteClusterImpl::GetTopologyVersion()
+            int64_t IgniteClusterImpl::GetTopologyVersion()
             {
                 return impl.Get()->GetTopologyVersion();
             }
@@ -94,4 +106,3 @@ namespace ignite
         }
     }
 }
-

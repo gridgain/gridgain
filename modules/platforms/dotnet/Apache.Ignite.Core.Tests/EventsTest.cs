@@ -114,13 +114,9 @@ namespace Apache.Ignite.Core.Tests
         {
             var events = _grid1.GetEvents();
 
-            Assert.AreEqual(0, events.GetEnabledEvents().Count);
-            
             Assert.IsFalse(EventType.CacheAll.Any(events.IsEnabled));
 
             events.EnableLocal(EventType.CacheAll);
-
-            Assert.AreEqual(EventType.CacheAll, events.GetEnabledEvents());
 
             Assert.IsTrue(EventType.CacheAll.All(events.IsEnabled));
 
@@ -128,7 +124,9 @@ namespace Apache.Ignite.Core.Tests
 
             events.DisableLocal(EventType.CacheAll);
 
-            Assert.AreEqual(EventType.TaskExecutionAll, events.GetEnabledEvents());
+            Assert.IsFalse(EventType.CacheAll.Any(events.IsEnabled));
+            
+            Assert.IsTrue(EventType.TaskExecutionAll.All(events.IsEnabled));
         }
 
         /// <summary>
@@ -945,7 +943,9 @@ namespace Apache.Ignite.Core.Tests
             return _invoke(evt);
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Invalid Invoke method for tests.
+        /// </summary>
         // ReSharper disable once UnusedMember.Global
         public bool Invoke(T evt)
         {

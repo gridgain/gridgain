@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +38,8 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -56,12 +59,12 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Cac
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridClientPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.tracing.Span;
+import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridPartitionStateMap;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
@@ -109,6 +112,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
     /** Affinity information for all started caches (initialized on coordinator). */
     private ConcurrentMap<Integer, CacheGroupHolder> grpHolders = new ConcurrentHashMap<>();
+
+    /** */
+    private CacheMemoryOverheadValidator validator = new CacheMemoryOverheadValidator();
 
     /** Topology version which requires affinity re-calculation (set from discovery thread). */
     private AffinityTopologyVersion lastAffVer;
@@ -755,17 +761,15 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
     /**
      * @param fut Exchange future.
-     * @param crd Coordinator flag.
      * @param exchActions Exchange actions.
      */
     public void onCustomMessageNoAffinityChange(
         GridDhtPartitionsExchangeFuture fut,
-        boolean crd,
         @Nullable final ExchangeActions exchActions
     ) {
         final ExchangeDiscoveryEvents evts = fut.context().events();
 
-        forAllCacheGroups(crd, new IgniteInClosureX<GridAffinityAssignmentCache>() {
+        forAllCacheGroups(new IgniteInClosureX<GridAffinityAssignmentCache>() {
             @Override public void applyx(GridAffinityAssignmentCache aff) {
                 if (exchActions != null && exchActions.cacheGroupStopping(aff.groupId()))
                     return;
@@ -850,7 +854,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         IgniteInternalFuture<?> res = cachesRegistry.update(exchActions);
 
         // Affinity did not change for existing caches.
-        onCustomMessageNoAffinityChange(fut, crd, exchActions);
+        onCustomMessageNoAffinityChange(fut, exchActions);
 
         fut.timeBag().finishGlobalStage("Update caches registry");
 
@@ -965,7 +969,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 );
             }
             else
-                cctx.kernalContext().cache().initQueryStructuresForNotStartedCache(cacheDesc);
+                cctx.kernalContext().query().initQueryStructuresForNotStartedCache(cacheDesc);
         }
 
         Map<StartCacheInfo, IgniteCheckedException> failedCaches = cctx.cache().prepareStartCachesIfPossible(startCacheInfos.keySet());
@@ -1028,6 +1032,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 fut.timeBag().finishLocalStage("Affinity initialization on cache group start " +
                     "[grp=" + grpDesc.cacheOrGroupName() + "]");
+
+                validator.validateCacheGroup(grpDesc);
 
                 return null;
             }
@@ -1092,12 +1098,10 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * Called when received {@link CacheAffinityChangeMessage} which should complete exchange.
      *
      * @param exchFut Exchange future.
-     * @param crd Coordinator flag.
      * @param msg Affinity change message.
      */
     public void onExchangeChangeAffinityMessage(
         GridDhtPartitionsExchangeFuture exchFut,
-        boolean crd,
         CacheAffinityChangeMessage msg
     ) {
         if (log.isDebugEnabled()) {
@@ -1113,8 +1117,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         assert assignment != null;
 
-        forAllCacheGroups(crd, new IgniteInClosureX<GridAffinityAssignmentCache>() {
-            @Override public void applyx(GridAffinityAssignmentCache aff) throws IgniteCheckedException {
+        forAllCacheGroups(new IgniteInClosureX<GridAffinityAssignmentCache>() {
+            @Override public void applyx(GridAffinityAssignmentCache aff) {
                 List<List<ClusterNode>> idealAssignment = aff.idealAssignmentRaw();
 
                 assert idealAssignment != null;
@@ -1144,13 +1148,10 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * Called on exchange initiated by {@link CacheAffinityChangeMessage} which sent after rebalance finished.
      *
      * @param exchFut Exchange future.
-     * @param crd Coordinator flag.
      * @param msg Message.
-     * @throws IgniteCheckedException If failed.
      */
     public void onChangeAffinityMessage(
         final GridDhtPartitionsExchangeFuture exchFut,
-        boolean crd,
         final CacheAffinityChangeMessage msg
     ) {
         assert msg.topologyVersion() != null && msg.exchangeId() == null : msg;
@@ -1168,10 +1169,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         final Map<Integer, IgniteUuid> deploymentIds = msg.cacheDeploymentIds();
 
-        final Map<Object, List<List<ClusterNode>>> affCache = new ConcurrentHashMap<>();
-
-        forAllCacheGroups(crd, new IgniteInClosureX<GridAffinityAssignmentCache>() {
-            @Override public void applyx(GridAffinityAssignmentCache aff) throws IgniteCheckedException {
+        forAllCacheGroups(new IgniteInClosureX<GridAffinityAssignmentCache>() {
+            @Override public void applyx(GridAffinityAssignmentCache aff) {
                 AffinityTopologyVersion affTopVer = aff.lastVersion();
 
                 assert affTopVer.topologyVersion() > 0 : affTopVer;
@@ -1231,14 +1230,13 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * Called on exchange initiated by client node join/fail.
      *
      * @param fut Exchange future.
-     * @param crd Coordinator flag.
      * @throws IgniteCheckedException If failed.
      */
-    public void onClientEvent(final GridDhtPartitionsExchangeFuture fut, boolean crd) throws IgniteCheckedException {
+    public void onClientEvent(final GridDhtPartitionsExchangeFuture fut) throws IgniteCheckedException {
         boolean locJoin = fut.firstEvent().eventNode().isLocal();
 
         if (!locJoin) {
-            forAllCacheGroups(crd, new IgniteInClosureX<GridAffinityAssignmentCache>() {
+            forAllCacheGroups(new IgniteInClosureX<GridAffinityAssignmentCache>() {
                 @Override public void applyx(GridAffinityAssignmentCache aff) throws IgniteCheckedException {
                     AffinityTopologyVersion topVer = fut.initialVersion();
 
@@ -1306,26 +1304,12 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
-     * @param crd Coordinator flag.
      * @param c Closure.
      */
-    private void forAllCacheGroups(boolean crd, IgniteInClosureX<GridAffinityAssignmentCache> c) {
-        Collection<GridAffinityAssignmentCache> affinityCaches;
-
-        Collection<GridAffinityAssignmentCache> affinityCaches1 = grpHolders.values().stream()
+    private void forAllCacheGroups(IgniteInClosureX<GridAffinityAssignmentCache> c) {
+        Collection<GridAffinityAssignmentCache> affinityCaches = grpHolders.values().stream()
             .map(CacheGroupHolder::affinity)
             .collect(Collectors.toList());
-
-        Collection<GridAffinityAssignmentCache> affinityCaches2 = cctx.kernalContext().cache().cacheGroups().stream()
-            .filter(grp -> !grp.isLocal())
-            .filter(grp -> !grp.isRecoveryMode())
-            .map(CacheGroupContext::affinity)
-            .collect(Collectors.toList());
-
-        if (!cctx.localNode().isClient())
-            affinityCaches = affinityCaches1;
-        else
-            affinityCaches = affinityCaches2;
 
         try {
             U.doInParallel(cctx.kernalContext().getSystemExecutorService(), affinityCaches, t -> {
@@ -1480,20 +1464,18 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * Applies affinity diff from the received full message.
      *
      * @param fut Current exchange future.
-     * @param msg Finish exchange message.
+     * @param idealAffDiff Map [Cache group id - Affinity distribution] which contains difference with ideal affinity.
      */
     public void applyAffinityFromFullMessage(
         final GridDhtPartitionsExchangeFuture fut,
-        final GridDhtPartitionsFullMessage msg
+        final Map<Integer, CacheGroupAffinityMessage> idealAffDiff
     ) {
         // Please do not use following pattern of code (nodesByOrder, affCache). NEVER.
         final Map<Long, ClusterNode> nodesByOrder = new ConcurrentHashMap<>();
 
-        forAllCacheGroups(false, new IgniteInClosureX<GridAffinityAssignmentCache>() {
-            @Override public void applyx(GridAffinityAssignmentCache aff) throws IgniteCheckedException {
+        forAllCacheGroups(new IgniteInClosureX<GridAffinityAssignmentCache>() {
+            @Override public void applyx(GridAffinityAssignmentCache aff) {
                 ExchangeDiscoveryEvents evts = fut.context().events();
-
-                Map<Integer, CacheGroupAffinityMessage> idealAffDiff = msg.idealAffinityDiff();
 
                 List<List<ClusterNode>> idealAssignment = aff.calculate(evts.topologyVersion(), evts, evts.discoveryCache()).assignment();
 
@@ -1529,25 +1511,22 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
     /**
      * @param fut Current exchange future.
-     * @param msg Message finish message.
+     * @param receivedAff Map [Cache group id - Affinity distribution] received from coordinator to apply.
      * @param resTopVer Result topology version.
+     * @return Set of cache groups with no affinity localed in given {@code receivedAff}.
      */
-    public void onLocalJoin(
+    public Set<Integer> onLocalJoin(
         final GridDhtPartitionsExchangeFuture fut,
-        GridDhtPartitionsFullMessage msg,
+        final Map<Integer, CacheGroupAffinityMessage> receivedAff,
         final AffinityTopologyVersion resTopVer
     ) {
         final Set<Integer> affReq = fut.context().groupsAffinityRequestOnJoin();
 
-        final Map<Integer, CacheGroupAffinityMessage> receivedAff = msg.joinedNodeAffinity();
-
-        assert F.isEmpty(affReq) || (!F.isEmpty(receivedAff) && receivedAff.size() >= affReq.size())
-            : ("Requested and received affinity are different " +
-            "[requestedCnt=" + (affReq != null ? affReq.size() : "none") +
-            ", receivedCnt=" + (receivedAff != null ? receivedAff.size() : "none") +
-            ", msg=" + msg + "]");
-
         final Map<Long, ClusterNode> nodesByOrder = new ConcurrentHashMap<>();
+
+        // Such cache group may exist if cache is already destroyed on server nodes
+        // and coordinator have no affinity for that group.
+        final Set<Integer> noAffinityGroups = new GridConcurrentHashSet<>();
 
         forAllRegisteredCacheGroups(new IgniteInClosureX<CacheGroupDescriptor>() {
             @Override public void applyx(CacheGroupDescriptor desc) throws IgniteCheckedException {
@@ -1564,7 +1543,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                     CacheGroupAffinityMessage affMsg = receivedAff.get(aff.groupId());
 
-                    assert affMsg != null;
+                    if (affMsg == null) {
+                        noAffinityGroups.add(aff.groupId());
+
+                        // Use ideal affinity to resume cache initialize process.
+                        calculateAndInit(evts, aff, evts.topologyVersion());
+
+                        return;
+                    }
 
                     List<List<ClusterNode>> assignments = affMsg.createAssignments(nodesByOrder, evts.discoveryCache());
 
@@ -1595,15 +1581,15 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     "[grp=" + aff.cacheOrGroupName() + "]");
             }
         });
+
+        return noAffinityGroups;
     }
 
     /**
      * @param fut Current exchange future.
      * @param crd Coordinator flag.
-     * @throws IgniteCheckedException If failed.
      */
-    public void onServerJoinWithExchangeMergeProtocol(GridDhtPartitionsExchangeFuture fut, boolean crd)
-        throws IgniteCheckedException {
+    public void onServerJoinWithExchangeMergeProtocol(GridDhtPartitionsExchangeFuture fut, boolean crd) {
         final ExchangeDiscoveryEvents evts = fut.context().events();
 
         assert fut.context().mergeExchanges();
@@ -1626,18 +1612,16 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     /**
      * @param fut Current exchange future.
      * @return Computed difference with ideal affinity.
-     * @throws IgniteCheckedException If failed.
      */
     public Map<Integer, CacheGroupAffinityMessage> onServerLeftWithExchangeMergeProtocol(
-        final GridDhtPartitionsExchangeFuture fut) throws IgniteCheckedException {
+        final GridDhtPartitionsExchangeFuture fut
+    ) {
         final ExchangeDiscoveryEvents evts = fut.context().events();
 
         assert fut.context().mergeExchanges();
         assert evts.hasServerLeft();
 
-        Map<Integer, CacheGroupAffinityMessage> result = onReassignmentEnforced(fut);
-
-        return result;
+        return onReassignmentEnforced(fut);
     }
 
     /**
@@ -1891,9 +1875,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         forAllRegisteredCacheGroups(new IgniteInClosureX<CacheGroupDescriptor>() {
             @Override public void applyx(CacheGroupDescriptor desc) throws IgniteCheckedException {
-                if (cctx.localNode().isClient() && cctx.cache().cacheGroup(desc.groupId()) == null)
-                    return; // Skip non-started caches on client nodes.
-
                 CacheGroupHolder holder = getOrCreateGroupHolder(topVer, desc);
 
                 if (fut.cacheGroupAddedOnExchange(desc.groupId(), desc.receivedFrom())) {
@@ -2008,6 +1989,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 fut.timeBag().finishLocalStage("Affinity centralized initialization (crd) " +
                     "[grp=" + desc.cacheOrGroupName() + ", crd=" + crd + "]");
+
+                validator.validateCacheGroup(desc);
             }
         });
 
@@ -2224,9 +2207,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         forAllRegisteredCacheGroups(new IgniteInClosureX<CacheGroupDescriptor>() {
             @Override public void applyx(CacheGroupDescriptor desc) throws IgniteCheckedException {
-                if (cctx.localNode().isClient() && cctx.cache().cacheGroup(desc.groupId()) == null)
-                    return;
-
                 CacheGroupHolder grpHolder = getOrCreateGroupHolder(evts.topologyVersion(), desc);
 
                 // Already calculated.
@@ -2967,6 +2947,106 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         @Override public String toString() {
             return "WaitRebalanceInfo [topVer=" + topVer +
                 ", grps=" + (waitGrps != null ? waitGrps.keySet() : null) + ']';
+        }
+    }
+
+    /**
+     * Validator for memory overhead of persistent caches.
+     *
+     * Persistent cache requires some overhead in dataregion memory, e.g. a metapage per partition created by the cache.
+     * If this overhead reaches some limit (hardcoded to 15% for now) it may cause critical errors on node during
+     * checkpoint.
+     *
+     * Validator is intended to analyze cache group configuration and print warning to log to inform user about
+     * found problem.
+     */
+    class CacheMemoryOverheadValidator {
+        /** */
+        private static final double MEMORY_OVERHEAD_THRESHOLD = 0.15;
+
+        /**
+         * Validates cache group configuration and prints warning if it violates 15% overhead limit.
+         *
+         * @param grpDesc Descriptor of cache group to validate.
+         */
+        void validateCacheGroup(CacheGroupDescriptor grpDesc) {
+            DataStorageConfiguration dsCfg = cctx.gridConfig().getDataStorageConfiguration();
+            CacheConfiguration<?, ?> grpCfg = grpDesc.config();
+
+            if (!CU.isPersistentCache(grpCfg, dsCfg) || CU.isSystemCache(grpDesc.cacheOrGroupName()))
+                return;
+
+            CacheGroupHolder grpHolder = grpHolders.get(grpDesc.groupId());
+
+            if (grpHolder != null) {
+                int partsNum = 0;
+                UUID locNodeId = cctx.localNodeId();
+
+                List<List<ClusterNode>> assignment = grpHolder.aff.idealAssignment().assignment();
+
+                for (List<ClusterNode> nodes : assignment) {
+                    if (nodes.stream().anyMatch(n -> n.id().equals(locNodeId)))
+                        partsNum++;
+                }
+
+                if (partsNum == 0)
+                    return;
+
+                DataRegionConfiguration drCfg = findDataRegion(dsCfg, grpCfg.getDataRegionName());
+
+                if ((1.0 * partsNum * dsCfg.getPageSize()) / drCfg.getMaxSize() > MEMORY_OVERHEAD_THRESHOLD)
+                    log.warning(buildWarningMessage(grpDesc, drCfg, dsCfg.getPageSize(), partsNum));
+            }
+        }
+
+        /**
+         * Builds explanatory warning message.
+         *
+         * @param grpDesc Configuration of cache group violating memory overhead threshold.
+         * @param drCfg Configuration of data region configuration with not sufficient memory.
+         */
+        private String buildWarningMessage(CacheGroupDescriptor grpDesc,
+            DataRegionConfiguration drCfg,
+            int pageSize,
+            int partsNum
+            ) {
+            String res = "Cache group '%s'" +
+                " brings high overhead for its metainformation in data region '%s'."  +
+                " Metainformation required for its partitions (%d partitions, %d bytes per partition, %d MBs total)" +
+                " will consume more than 15%% of data region memory (%d MBs)." +
+                " It may lead to critical errors on the node and cluster instability." +
+                " Please reduce number of partitions, add more memory to the data region" +
+                " or add more server nodes for this cache group.";
+
+            return String.format(
+                    res,
+                    grpDesc.cacheOrGroupName(),
+                    drCfg.getName(),
+                    partsNum,
+                    pageSize,
+                    U.sizeInMegabytes(partsNum * pageSize),
+                    U.sizeInMegabytes(drCfg.getMaxSize())
+                );
+        }
+
+        /**
+         * Finds data region by name.
+         *
+         * @param dsCfg Data storage configuration.
+         * @param drName Data region name.
+         *
+         * @return Found data region.
+         */
+        private DataRegionConfiguration findDataRegion(DataStorageConfiguration dsCfg, String drName) {
+            if (dsCfg.getDataRegionConfigurations() == null || drName == null)
+                return dsCfg.getDefaultDataRegionConfiguration();
+
+            if (dsCfg.getDefaultDataRegionConfiguration().getName().equals(drName))
+                return dsCfg.getDefaultDataRegionConfiguration();
+
+            return Arrays.stream(dsCfg.getDataRegionConfigurations())
+                .filter(drCfg -> drCfg.getName().equals(drName))
+                .findFirst().get();
         }
     }
 }

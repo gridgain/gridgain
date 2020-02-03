@@ -173,6 +173,8 @@ class DmsDataWriterWorker extends GridWorker {
 
                         metastorage.write(versionKey(), fullNodeData.ver);
 
+                        workerDmsVer = fullNodeData.ver;
+
                         metastorage.remove(cleanupGuardKey());
                     }
                     else if (update instanceof Long) {
@@ -264,6 +266,8 @@ class DmsDataWriterWorker extends GridWorker {
         Set<String> allKeys = new HashSet<>();
 
         metastorage.iterate(COMMON_KEY_PREFIX, (key, val) -> allKeys.add(key), false);
+
+        allKeys.remove(cleanupGuardKey());
 
         for (String key : allKeys)
             metastorage.remove(key);

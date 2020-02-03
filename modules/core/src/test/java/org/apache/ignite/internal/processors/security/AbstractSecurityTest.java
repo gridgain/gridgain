@@ -37,6 +37,9 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
     /** Empty array of permissions. */
     protected static final SecurityPermission[] EMPTY_PERMS = new SecurityPermission[0];
 
+    /** Global authentication flag. */
+    protected boolean globalAuth;
+
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         stopAllGrids();
@@ -72,7 +75,9 @@ public class AbstractSecurityTest extends GridCommonAbstractTest {
         TestSecurityData... clientData) {
         return ctx -> new TestSecurityProcessor(ctx,
             new TestSecurityData(login, pwd, prmSet),
-            Arrays.asList(clientData));
+            Arrays.asList(clientData),
+            globalAuth
+        );
     }
 
     /** */

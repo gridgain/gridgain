@@ -41,9 +41,11 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
+import org.apache.ignite.internal.processors.security.IgniteSecurity;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObjectAdapter;
@@ -363,14 +365,16 @@ public class VisorQueryUtils {
         final VisorQueryTaskArg arg,
         final GridQueryCancel cancel
     ) {
-        SecurityContext initCtx = ignite.context().security().securityContext();
+        IgniteSecurity security = ignite.context().security();
+
+        SecurityContext initCtx = security.securityContext();
 
         ignite.context().closure().runLocalSafe(() -> {
             IgniteLogger log = ignite.log();
 
-            try(OperationSecurityContext ctx = ignite.context().security().withContext(initCtx)) {
-                if (log.isDebugEnabled())
-                    log.debug("Operation started with subject: " + ignite.context().security().securityContext().subject());
+            try(OperationSecurityContext ignored = security.withContext(initCtx)) {
+                if (log.isDebugEnabled() && security.enabled())
+                    log.debug("Operation started with subject: " + security.securityContext().subject());
 
                 SqlFieldsQuery qry = new SqlFieldsQuery(arg.getQueryText());
 
@@ -388,7 +392,13 @@ public class VisorQueryUtils {
 
                 if (!F.isEmpty(cacheName)) {
                     qry.setSchema(cacheName);
-                    cctx = ignite.context().cache().cache(cacheName).context();
+
+                    IgniteInternalCache<Object, Object> cache = ignite.cachex(cacheName);
+
+                    if (cache == null)
+                        throw new IgniteException("Failed to find a cache with the specified name to use as the default schema.");
+
+                    cctx = cache.context();
                 }
 
                 long start = U.currentTimeMillis();

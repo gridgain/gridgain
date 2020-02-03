@@ -65,6 +65,8 @@ import org.apache.ignite.internal.processors.datastreamer.DataStreamProcessor;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
@@ -326,6 +328,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
+    private ManagementConsoleProcessorAdapter mgmtConsoleProc;
+
+    /** */
+    @GridToStringExclude
     private List<GridComponent> comps = new LinkedList<>();
 
     /** */
@@ -382,6 +388,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** */
     @GridToStringExclude
+    protected ExecutorService rebalanceExecSvc;
+
+    /** */
+    @GridToStringExclude
     private Map<String, ? extends ExecutorService> customExecSvcs;
 
     /** */
@@ -395,6 +405,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** */
     @GridToStringExclude
     private LongJVMPauseDetector pauseDetector;
+
+    /** */
+    @GridToStringExclude
+    private DurableBackgroundTasksProcessor durableBackgroundTasksProcessor;
 
     /** */
     private Thread.UncaughtExceptionHandler hnd;
@@ -465,6 +479,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
      * @param callbackExecSvc Callback executor service.
      * @param qryExecSvc Query executor service.
      * @param schemaExecSvc Schema executor service.
+     * @param rebalanceExecSvc Rebalance executor service.
      * @param customExecSvcs Custom named executors.
      * @param plugins Plugin providers.
      * @param workerRegistry Worker registry.
@@ -491,6 +506,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         IgniteStripedThreadPoolExecutor callbackExecSvc,
         ExecutorService qryExecSvc,
         ExecutorService schemaExecSvc,
+        ExecutorService rebalanceExecSvc,
         @Nullable Map<String, ? extends ExecutorService> customExecSvcs,
         List<PluginProvider> plugins,
         IgnitePredicate<String> clsFilter,
@@ -519,6 +535,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
         this.callbackExecSvc = callbackExecSvc;
         this.qryExecSvc = qryExecSvc;
         this.schemaExecSvc = schemaExecSvc;
+        this.rebalanceExecSvc = rebalanceExecSvc;
         this.customExecSvcs = customExecSvcs;
         this.workersRegistry = workerRegistry;
         this.hnd = hnd;
@@ -671,6 +688,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             diagnosticProcessor = (DiagnosticProcessor)comp;
         else if (comp instanceof RollingUpgradeProcessor)
             rollingUpgradeProc = (RollingUpgradeProcessor)comp;
+        else if (comp instanceof ManagementConsoleProcessorAdapter)
+            mgmtConsoleProc = (ManagementConsoleProcessorAdapter)comp;
+        else if (comp instanceof DurableBackgroundTasksProcessor)
+            durableBackgroundTasksProcessor = (DurableBackgroundTasksProcessor)comp;
         else if (!(comp instanceof DiscoveryNodeValidationProcessor
             || comp instanceof PlatformPluginProcessor))
             assert (comp instanceof GridPluginComponent) : "Unknown manager class: " + comp.getClass();
@@ -1117,6 +1138,11 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     }
 
     /** {@inheritDoc} */
+    @Override public ExecutorService getRebalanceExecutorService() {
+        return rebalanceExecSvc;
+    }
+
+    /** {@inheritDoc} */
     @Override public Map<String, ? extends ExecutorService> customExecutors() {
         return customExecSvcs;
     }
@@ -1238,6 +1264,16 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** {@inheritDoc} */
     @Override public RollingUpgradeProcessor rollingUpgrade() {
         return rollingUpgradeProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ManagementConsoleProcessorAdapter managementConsole() {
+        return mgmtConsoleProc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public DurableBackgroundTasksProcessor durableBackgroundTasksProcessor() {
+        return durableBackgroundTasksProcessor;
     }
 
     /** {@inheritDoc} */
