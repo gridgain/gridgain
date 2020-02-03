@@ -28,8 +28,13 @@ import org.apache.ignite.events.ClusterTagUpdatedEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.processors.cluster.IgniteClusterMXBeanImpl;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.mxbean.IgniteClusterMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -88,6 +93,76 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /**
+     * Verifies that Cluster ID and tag are not available on client that hasn't connected to any server yet.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClusterIdAndTagOnClient() throws Exception {
+        String clientName = "client0";
+
+        IgniteInternalFuture<IgniteEx> clFut = GridTestUtils.runAsync(() -> startGrid(clientName));
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                IgniteKernal clientGrid = IgnitionEx.gridx(clientName);
+
+                return clientGrid != null && clientGrid.cluster() != null;
+            }
+            catch (Exception ignored) {
+                return false;
+            }
+        }, 20_000);
+
+        IgniteKernal cl0 = IgnitionEx.gridx("client0");
+
+        assertNull(cl0.cluster().id());
+        assertNull(cl0.cluster().tag());
+
+        IgniteEx srv0 = startGrid(0);
+
+        clFut.get();
+
+        awaitPartitionMapExchange();
+
+        assertNotNull(cl0.cluster().id());
+        assertNotNull(cl0.cluster().tag());
+
+        assertEquals(cl0.cluster().id(), srv0.cluster().id());
+        assertEquals(cl0.cluster().tag(), srv0.cluster().tag());
+    }
+
+    /**
+     * Verifies that Cluster ID and tag are available through JMX interface both for read and write.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testChangeClusterTagWithJMX() throws Exception {
+        String srvName = "srv0";
+        String newTag = "newTag0";
+
+        IgniteEx srv0 = startGrid(srvName);
+
+        IgniteClusterMXBean clustMxBean = getMxBean(
+            srvName,
+            "IgniteCluster",
+            IgniteClusterMXBean.class,
+            IgniteClusterMXBeanImpl.class
+        );
+
+        assertNotNull(clustMxBean.getId());
+        assertNotNull(clustMxBean.getTag());
+
+        assertEquals(srv0.cluster().id(), clustMxBean.getId());
+        assertEquals(srv0.cluster().tag(), clustMxBean.getTag());
+
+        clustMxBean.tag(newTag);
+
+        assertEquals(newTag, srv0.cluster().tag());
     }
 
     /**
