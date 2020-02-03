@@ -31,7 +31,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /** */
-public class BinaryToStringClassCastProblem extends GridCommonAbstractTest {
+public class BinaryToStringClassNotFoundProblem extends GridCommonAbstractTest {
     /** */
     @Test
     public void testToStringInaccessibleOptimizedMarshallerClass() throws Exception {
