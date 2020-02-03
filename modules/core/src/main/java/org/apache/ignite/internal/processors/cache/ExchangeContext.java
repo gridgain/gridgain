@@ -62,12 +62,18 @@ public class ExchangeContext {
     /** */
     private final boolean bltForInMemoryCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
+    /** */
+    private final boolean supportFreeSwitch;
+
     /**
      * @param crd Coordinator flag.
      * @param fut Exchange future.
      */
     public ExchangeContext(boolean crd, GridDhtPartitionsExchangeFuture fut) {
         int protocolVer = exchangeProtocolVersion(fut.firstEventCache().minimumNodeVersion());
+
+        supportFreeSwitch =
+            allNodesSupports(fut.sharedContext().kernalContext(), fut.firstEventCache().allNodes(), PME_FREE_SWITCH);
 
         if (!compatibilityNode &&
             fut.wasRebalanced() &&
@@ -77,7 +83,7 @@ public class ExchangeContext {
                 fut.sharedContext().kernalContext().marshallerContext().jdkMarshaller(),
                 U.resolveClassLoader(fut.sharedContext().kernalContext().config())
             ) || bltForInMemoryCachesSupport ) &&
-            allNodesSupports(fut.sharedContext().kernalContext(), fut.firstEventCache().allNodes(), PME_FREE_SWITCH)) {
+            supportFreeSwitch) {
             exchangeFreeSwitch = true;
             merge = false;
         }
@@ -105,6 +111,13 @@ public class ExchangeContext {
      */
     boolean supportsMergeExchanges(ClusterNode node) {
         return !compatibilityNode && exchangeProtocolVersion(node.version()) > 1;
+    }
+
+    /**
+     * @return {@code True} if all nodes support free switch optimization on stable topology before node left.
+     */
+    public boolean supportsFreeSwitch() {
+        return supportFreeSwitch;
     }
 
     /**

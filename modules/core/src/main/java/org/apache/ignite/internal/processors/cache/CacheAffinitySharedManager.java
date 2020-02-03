@@ -1149,7 +1149,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     ) {
         assert msg.topologyVersion() != null && msg.exchangeId() == null : msg;
         assert msg.partitionsMessage() == null : msg;
-        assert msg.assignmentChange() == null : msg;
 
         final AffinityTopologyVersion topVer = exchFut.initialVersion();
 
@@ -1157,6 +1156,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             log.debug("Process affinity change message [exchVer=" + topVer +
                 ", msgVer=" + msg.topologyVersion() + ']');
         }
+
+        // Affinity change is not null in compatibility node.
+        final @Nullable Map<Integer, Map<Integer, List<UUID>>> affChange = msg.assignmentChange();
 
         final Map<Integer, IgniteUuid> deploymentIds = msg.cacheDeploymentIds();
 
@@ -1178,14 +1180,46 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     return;
                 }
 
-                if (!aff.partitionPrimariesDifferentToIdeal(affTopVer).isEmpty())
+                Map<Integer, List<UUID>> change;
+
+                if (!exchFut.context().supportsFreeSwitch() && affChange != null && (change = affChange.get(aff.groupId())) != null) {
+                    assert !F.isEmpty(affChange) : msg;
+
+                    assert !change.isEmpty() : msg;
+
+                    List<List<ClusterNode>> curAff = aff.assignments(affTopVer);
+
+                    List<List<ClusterNode>> assignment = new ArrayList<>(curAff);
+
+                    for (Map.Entry<Integer, List<UUID>> e : change.entrySet()) {
+                        Integer part = e.getKey();
+
+                        List<ClusterNode> nodes = toNodes(topVer, e.getValue());
+
+                        assert !nodes.equals(assignment.get(part)) : "Assignment did not change " +
+                            "[cacheGrp=" + aff.cacheOrGroupName() +
+                            ", part=" + part +
+                            ", cur=" + F.nodeIds(assignment.get(part)) +
+                            ", new=" + F.nodeIds(nodes) +
+                            ", exchVer=" + exchFut.initialVersion() +
+                            ", msgVer=" + msg.topologyVersion() +
+                            ']';
+
+                        assignment.set(part, nodes);
+                    }
+
+                    aff.initialize(topVer, assignment);
+                }
+                else if (!aff.partitionPrimariesDifferentToIdeal(affTopVer).isEmpty())
                     aff.initialize(topVer, aff.idealAssignmentRaw());
                 else {
-                    if (!aff.assignments(aff.lastVersion()).equals(aff.idealAssignmentRaw()))
+                    if (exchFut.context().supportsFreeSwitch() &&
+                        !aff.assignments(aff.lastVersion()).equals(aff.idealAssignmentRaw())) {
                         // This should never happen on Late Affinity Assignment switch and must trigger Failure Handler.
                         throw new AssertionError("Not an ideal distribution duplication attempt on LAA " +
                             "[grp=" + aff.cacheOrGroupName() + ", lastAffinity=" + aff.lastVersion() +
                             ", cacheAffinity=" + aff.cachedVersions() + "]");
+                    }
 
                     aff.clientEventTopologyChange(exchFut.firstEvent(), topVer);
                 }
