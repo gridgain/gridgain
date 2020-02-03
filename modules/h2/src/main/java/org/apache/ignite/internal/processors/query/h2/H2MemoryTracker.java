@@ -21,65 +21,71 @@ package org.apache.ignite.internal.processors.query.h2;
  */
 public interface H2MemoryTracker extends AutoCloseable {
     /**
-     * Check allocated size is less than query memory pool threshold.
+     * Tracks reservation of new chunk of bytes.
      *
      * @param size Allocated size in bytes.
-     * @return {@code True} if memory limit is not exceeded. {@code False} otherwise.
+     * @return {@code true} if memory limit is not exceeded. {@code false} otherwise.
      */
-    public boolean reserved(long size);
+    public boolean reserve(long size);
 
     /**
-     * Memory release callback.
+     * Tracks memory releasing.
      *
      * @param size Released memory size in bytes.
      */
-    public void released(long size);
+    public void release(long size);
 
     /**
      * Reserved memory.
      *
-     * @return  Reserved memory in bytes.
+     * @return Reserved memory in bytes.
      */
-    public long memoryReserved();
+    public long reserved();
 
     /**
-     * @return Max memory limit.
+     * Tracks swapping on disk.
+     *
+     * @param size Amount of bytes written on disk.
      */
-    public long memoryLimit();
+    public void swap(long size);
+
+    /**
+     * Tracks unswapping from disk.
+     *
+     * @param size Amount of bytes deleted from disk.
+     */
+    public void unswap(long size);
 
     /**
      * Increments the counter of created offloading files.
      */
     public void incrementFilesCreated();
 
-    /**
-     * Updates the counter of bytes written to disk.
-     *
-     * @param written Number of bytes.
-     */
-    public void addTotalWrittenOnDisk(long written);
-
     /** {@inheritDoc} */
     @Override public void close();
 
+    /** */
     H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
         /** {@inheritDoc} */
-        @Override public boolean reserved(long size) {
-            return false; 
+        @Override public boolean reserve(long size) {
+            return false;
         }
 
         /** {@inheritDoc} */
-        @Override public void released(long size) {
+        @Override public void release(long size) {
         }
 
         /** {@inheritDoc} */
-        @Override public long memoryReserved() {
+        @Override public long reserved() {
             return -1;
         }
 
         /** {@inheritDoc} */
-        @Override public long memoryLimit() {
-            return -1;
+        @Override public void swap(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void unswap(long size) {
         }
 
         /** {@inheritDoc} */
@@ -88,10 +94,6 @@ public interface H2MemoryTracker extends AutoCloseable {
 
         /** {@inheritDoc} */
         @Override public void incrementFilesCreated() {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void addTotalWrittenOnDisk(long written) {
         }
     };
 }

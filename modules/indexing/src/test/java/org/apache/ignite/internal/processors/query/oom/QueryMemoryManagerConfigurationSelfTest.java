@@ -17,8 +17,8 @@ package org.apache.ignite.internal.processors.query.oom;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -62,7 +62,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         // Check defaults for tracker
         assertTrackerState(tracker,
@@ -91,7 +91,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             5_000);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertTrackerState(tracker,
             10 * 1024,
@@ -167,7 +167,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertNull(tracker);
 
@@ -197,7 +197,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertNull(tracker);
 
@@ -225,7 +225,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(30, "");
+        GridQueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertTrackerState(tracker,
             30,
@@ -250,7 +250,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
+        GridQueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertTrackerState(tracker,
             33,
@@ -360,11 +360,11 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
      * @param expOffloadingEnabled Expected offloading enabled flag.
      * @param expBlockSize Expected block size.
      */
-    private static void assertTrackerState(QueryMemoryTracker memTracker,
+    private static void assertTrackerState(GridQueryMemoryTracker memTracker,
         long expQuota,
         boolean expOffloadingEnabled,
         long expBlockSize) {
-        assertEquals(expQuota, memTracker.memoryLimit());
+        assertEquals(expQuota, (long) GridTestUtils.getFieldValue(memTracker, "quota"));
         assertEquals(expOffloadingEnabled, (boolean) GridTestUtils.getFieldValue(memTracker, "offloadingEnabled"));
         assertEquals(expBlockSize, (long) GridTestUtils.getFieldValue(memTracker, "blockSize"));
     }

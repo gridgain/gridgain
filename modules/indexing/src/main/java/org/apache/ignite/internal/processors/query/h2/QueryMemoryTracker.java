@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -26,7 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
-public class QueryMemoryTracker implements H2MemoryTracker {
+public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTracker {
     /** Logger. */
     private final IgniteLogger log;
 
@@ -52,16 +53,22 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     private long reservedFromParent;
 
     /** Memory reserved by query. */
-    private long reserved;
+    private volatile long reserved;
 
-    /** Close flag to prevent tracker reuse. */
-    private Boolean closed = Boolean.FALSE;
+    /** Maximum number of bytes reserved by query. */
+    private volatile long maxReserved;
+
+    /** Number of bytes written on disk at the current moment. */
+    private volatile long writtenOnDisk;
+
+    /** Maximum number of bytes written on disk at the same time. */
+    private volatile long maxWrittenOnDisk;
 
     /** Total number of bytes written on disk tracked by current tracker. */
     private volatile long totalWrittenOnDisk;
 
-    /** Total number of bytes tracked by current tracker. */
-    private volatile long totalReserved;
+    /** Close flag to prevent tracker reuse. */
+    private Boolean closed = Boolean.FALSE;
 
     /** The number of files created by the query. */
     private volatile int filesCreated;
@@ -77,14 +84,16 @@ public class QueryMemoryTracker implements H2MemoryTracker {
      * @param quota Query memory limit in bytes.
      * @param blockSize Reservation block size.
      * @param offloadingEnabled Flag whether to fail when memory limit is exceeded.
+     * @param qryDesc Descriptor of the racked query.
      */
-    QueryMemoryTracker(
+    public QueryMemoryTracker(
         IgniteLogger log,
         H2MemoryTracker parent,
         long quota,
         long blockSize,
         boolean offloadingEnabled,
-        String qryDesc) {
+        String qryDesc
+    ) {
         assert quota >= 0;
 
         this.log = log;
@@ -96,13 +105,13 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized boolean reserved(long toReserve) {
-        assert toReserve >= 0;
+    @Override public synchronized boolean reserve(long size) {
+        assert size >= 0;
 
         checkClosed();
 
-        reserved += toReserve;
-        totalReserved += toReserve;
+        reserved += size;
+        maxReserved = Math.max(maxReserved, reserved);
 
         if (parent != null && reserved > reservedFromParent) {
             if (!reserveFromParent())
@@ -135,7 +144,7 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         if (quota > 0)
             blockSize = Math.min(blockSize, quota - reservedFromParent);
 
-        if (parent.reserved(blockSize))
+        if (parent.reserve(blockSize))
             reservedFromParent += blockSize;
         else
             return false;
@@ -156,18 +165,18 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized void released(long toRelease) {
-        assert toRelease >= 0;
+    @Override public synchronized void release(long size) {
+        assert size >= 0;
 
-        if (toRelease == 0)
+        if (size == 0)
             return;
 
         checkClosed();
 
-        reserved -= toRelease;
+        reserved -= size;
 
-        assert reserved >= 0 : "Try to free more memory that ever be reserved: [reserved=" + (reserved + toRelease) +
-            ", toFree=" + toRelease + ']';
+        assert reserved >= 0 : "Try to free more memory that ever be reserved: [reserved=" + (reserved + size) +
+            ", toFree=" + size + ']';
 
         if (parent != null && reservedFromParent - reserved > blockSize)
             releaseFromParent();
@@ -179,7 +188,7 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     private void releaseFromParent() {
         long toReleaseFromParent = reservedFromParent - reserved;
 
-        parent.released(toReleaseFromParent);
+        parent.release(toReleaseFromParent);
 
         reservedFromParent -= toReleaseFromParent;
 
@@ -187,13 +196,28 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long memoryReserved() {
+    @Override public synchronized long reserved() {
         return reserved;
     }
 
     /** {@inheritDoc} */
-    @Override public long memoryLimit() {
-        return quota;
+    @Override public synchronized long maxReserved() {
+        return maxReserved;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized long writtenOnDisk() {
+        return writtenOnDisk;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized long maxWrittenOnDisk() {
+        return maxWrittenOnDisk;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized long totalWrittenOnDisk() {
+        return totalWrittenOnDisk;
     }
 
     /**
@@ -201,6 +225,18 @@ public class QueryMemoryTracker implements H2MemoryTracker {
      */
     public boolean isOffloadingEnabled() {
         return offloadingEnabled;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void swap(long size) {
+        writtenOnDisk += size;
+        totalWrittenOnDisk += size;
+        maxWrittenOnDisk = Math.max(maxWrittenOnDisk, writtenOnDisk);
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void unswap(long size) {
+        writtenOnDisk -= size;
     }
 
     /**
@@ -222,44 +258,18 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         reserved = 0;
 
         if (parent != null)
-            parent.released(reservedFromParent);
+            parent.release(reservedFromParent);
 
         if (log.isDebugEnabled()) {
-            log.debug("Query has been completed with memory metrics: [bytesConsumed="  + totalReserved +
+            log.debug("Query has been completed with memory metrics: [bytesAllocatedMax="  + maxReserved +
                 ", bytesOffloaded=" + totalWrittenOnDisk + ", filesCreated=" + filesCreated +
                 ", query=" + qryDesc + ']');
         }
     }
 
-    /**
-     * @return Total number of bytes written on disk.
-     */
-    public long totalWrittenOnDisk() {
-        return totalWrittenOnDisk;
-    }
-
-    /** {@inheritDoc} */
-    @Override public synchronized void addTotalWrittenOnDisk(long written) {
-        this.totalWrittenOnDisk += written;
-    }
-
-    /**
-     * @return Total bytes reserved by current query.
-     */
-    public long totalReserved() {
-        return totalReserved;
-    }
-
-    /**
-     * @return Total files number created by current query.
-     */
-    public int filesCreated() {
-        return filesCreated;
-    }
-
     /** {@inheritDoc} */
     @Override public synchronized void incrementFilesCreated() {
-        this.filesCreated++;
+        filesCreated++;
     }
 
     /**

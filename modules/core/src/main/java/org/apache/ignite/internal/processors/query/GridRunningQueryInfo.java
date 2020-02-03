@@ -48,6 +48,9 @@ public class GridRunningQueryInfo {
     private final boolean loc;
 
     /** */
+    private final GridQueryMemoryTracker memTracker;
+
+    /** */
     private final QueryRunningFuture fut = new QueryRunningFuture();
 
     /**
@@ -70,7 +73,8 @@ public class GridRunningQueryInfo {
         String schemaName,
         long startTime,
         GridQueryCancel cancel,
-        boolean loc
+        boolean loc,
+        GridQueryMemoryTracker memTracker
     ) {
         this.id = id;
         this.nodeId = nodeId;
@@ -80,6 +84,7 @@ public class GridRunningQueryInfo {
         this.startTime = startTime;
         this.cancel = cancel;
         this.loc = loc;
+        this.memTracker = memTracker;
     }
 
     /**
@@ -122,6 +127,11 @@ public class GridRunningQueryInfo {
      */
     public long startTime() {
         return startTime;
+    }
+
+    /** */
+    public GridQueryMemoryTracker memoryTracker() {
+        return memTracker;
     }
 
     /**

@@ -44,6 +44,29 @@ public class RunningQueryManager {
     /** Name of the MetricRegistry which metrics measure stats of queries initiated by user. */
     public static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
 
+    /** Dummy memory tracker that returns only -1's. */
+    private static final GridQueryMemoryTracker DUMMY_TRACKER = new GridQueryMemoryTracker() {
+        @Override public long reserved() {
+            return -1;
+        }
+
+        @Override public long maxReserved() {
+            return -1;
+        }
+
+        @Override public long writtenOnDisk() {
+            return -1;
+        }
+
+        @Override public long maxWrittenOnDisk() {
+            return -1;
+        }
+
+        @Override public long totalWrittenOnDisk() {
+            return -1;
+        }
+    };
+
     /** Keep registered user queries. */
     private final ConcurrentMap<Long, GridRunningQueryInfo> runs = new ConcurrentHashMap<>();
 
@@ -114,7 +137,7 @@ public class RunningQueryManager {
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
-        @Nullable GridQueryCancel cancel) {
+        @Nullable GridQueryMemoryTracker memTracker, @Nullable GridQueryCancel cancel) {
         Long qryId = qryIdGen.incrementAndGet();
 
         GridRunningQueryInfo run = new GridRunningQueryInfo(
@@ -125,7 +148,8 @@ public class RunningQueryManager {
             schemaName,
             System.currentTimeMillis(),
             cancel,
-            loc
+            loc,
+            memTracker == null ? DUMMY_TRACKER : memTracker
         );
 
         GridRunningQueryInfo preRun = runs.putIfAbsent(qryId, run);

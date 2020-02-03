@@ -37,7 +37,7 @@ public class H2ManagedGroupByData extends GroupByData {
     private final int[] grpIdx;
 
     /** External group-by result (offloaded groups). */
-    private GroupedExternalResult sortedExtRes;
+    private GroupedExternalResult groupedExtRes;
 
     /** In-memory buffer for groups. */
     private TreeMap<ValueRow, Object[]> groupByData;
@@ -57,6 +57,9 @@ public class H2ManagedGroupByData extends GroupByData {
     /** */
     private int size;
 
+    /** */
+    private long swapped;
+
     /**
      * @param ses Session.
      * @param grpIdx Indexes of group-by columns.
@@ -73,7 +76,7 @@ public class H2ManagedGroupByData extends GroupByData {
     private void createExtGroupByData() {
         QueryMemoryManager memMgr = (QueryMemoryManager)ses.groupByDataFactory();
 
-        sortedExtRes = memMgr.createGroupedExternalResult(ses, size);
+        groupedExtRes = memMgr.createGroupedExternalResult(ses, size);
     }
 
     /** {@inheritDoc} */
@@ -127,20 +130,24 @@ public class H2ManagedGroupByData extends GroupByData {
 
     /** {@inheritDoc} */
     @Override public void reset() {
-        if (sortedExtRes != null) {
-            sortedExtRes.close();
+        if (groupedExtRes != null) {
+            groupedExtRes.close();
 
-            sortedExtRes = null;
+            groupedExtRes = null;
         }
 
         cursor = null;
-        sortedExtRes = null;
+        groupedExtRes = null;
         groupByData = new TreeMap<>(ses.getDatabase().getCompareMode());
         lastGrpKey = null;
 
         curEntry = null;
-        tracker.released(memReserved);
+
+        tracker.release(memReserved);
         memReserved = 0;
+
+        tracker.unswap(swapped);
+        swapped = 0;
     }
 
     /** {@inheritDoc} */
@@ -154,8 +161,8 @@ public class H2ManagedGroupByData extends GroupByData {
 
         onGroupChanged(lastGrpKey, old, lastGrpData);
 
-        if (!tracker.reserved(0)) {
-            if (sortedExtRes == null)
+        if (!tracker.reserve(0)) {
+            if (groupedExtRes == null)
                 createExtGroupByData();
 
             spillGroupsToDisk();
@@ -166,15 +173,17 @@ public class H2ManagedGroupByData extends GroupByData {
      * Does the actual disk spilling.
      */
     private void spillGroupsToDisk() {
-        sortedExtRes.spillGroupsToDisk(groupByData);
+        long swapped = groupedExtRes.spillGroupsToDisk(groupByData);
+
+        tracker.swap(swapped);
+        this.swapped += swapped;
 
         for (Map.Entry<ValueRow, Object[]> row : groupByData.entrySet())
             cleanupAggregates(row.getValue(), ses);
 
         groupByData.clear();
 
-        tracker.released(memReserved);
-
+        tracker.release(memReserved);
         memReserved = 0;
     }
 
@@ -183,7 +192,7 @@ public class H2ManagedGroupByData extends GroupByData {
         // Looks like group-by data size can be increased only on the very first group update.
         // What is the sense of having groups with the different aggregate arrays sizes?
         assert size == 1 : "size=" + size;
-        assert sortedExtRes == null;
+        assert groupedExtRes == null;
 
         Object[] old = groupByData.put(lastGrpKey, grpByExprData);
 
@@ -192,16 +201,16 @@ public class H2ManagedGroupByData extends GroupByData {
 
     /** {@inheritDoc} */
     @Override public void done(int width) {
-        if (grpIdx == null && sortedExtRes == null && groupByData.isEmpty())
+        if (grpIdx == null && groupedExtRes == null && groupByData.isEmpty())
             groupByData.put(ValueRow.getEmpty(), new Object[width]);
 
-        if (sortedExtRes != null ) {
+        if (groupedExtRes != null) {
             if (!groupByData.isEmpty())
                 spillGroupsToDisk();
 
-            sortedExtRes.reset();
+            groupedExtRes.reset();
 
-            cursor = new ExternalGroupsIterator(sortedExtRes, ses);
+            cursor = new ExternalGroupsIterator(groupedExtRes, ses);
         }
         else
             cursor = groupByData.entrySet().iterator();

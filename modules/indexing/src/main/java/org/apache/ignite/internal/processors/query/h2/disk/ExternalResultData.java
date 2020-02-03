@@ -107,6 +107,8 @@ public class ExternalResultData<T> implements AutoCloseable {
     /** Data buffer. */
     private ByteBuffer readBuff;
 
+    private final H2MemoryTracker tracker;
+
     /** */
     private boolean closed;
 
@@ -136,9 +138,11 @@ public class ExternalResultData<T> implements AutoCloseable {
         this.cls = cls;
         this.cmp = cmp;
         this.fileIOFactory = fileIOFactory;
+        this.tracker = tracker;
+
         String fileName = "spill_" + locNodeId + "_" + idGen.incrementAndGet();
         try {
-            this.file = new File(U.resolveWorkDirectory(
+            file = new File(U.resolveWorkDirectory(
                 workDir,
                 DISK_SPILL_DIR,
                 false
@@ -170,26 +174,25 @@ public class ExternalResultData<T> implements AutoCloseable {
     /**
      * @param parent Parent external data.
      */
-    private ExternalResultData(ExternalResultData parent) {
+    @SuppressWarnings("CopyConstructorMissesField")
+    private ExternalResultData(ExternalResultData<T> parent) {
         try {
             log = parent.log;
             cmp = parent.cmp;
             cls = parent.cls;
             file = parent.file;
             fileIOFactory = parent.fileIOFactory;
+            tracker = parent.tracker;
 
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(file, H2MemoryTracker.NO_OP_TRACKER, READ);
+                fileIo = fileIOFactory.create(file, tracker, READ);
             }
 
             writeBuff = parent.writeBuff;
             hnd = parent.hnd;
-            if (parent.hashIdx != null)
-                hashIdx = parent.hashIdx.createShallowCopy();
-            else
-                hashIdx = null;
+            hashIdx = parent.hashIdx != null ? parent.hashIdx.createShallowCopy() : null;
         }
         catch (IOException e) {
             throw new IgniteException("Failed to create external result data.", e);
@@ -200,8 +203,9 @@ public class ExternalResultData<T> implements AutoCloseable {
      * Stores rows into the file.
      *
      * @param rows Rows to store.
+     * @return The total number of bytes written on disk.
      */
-    public void store(Collection<Map.Entry<ValueRow, T[]>> rows) {
+    public long store(Collection<Map.Entry<ValueRow, T[]>> rows) {
         long initFilePos = lastWrittenPos;
 
         setFilePosition(lastWrittenPos);
@@ -210,6 +214,8 @@ public class ExternalResultData<T> implements AutoCloseable {
             writeToFile(row);
 
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
+
+        return lastWrittenPos - initFilePos;
     }
 
     /**
@@ -529,7 +535,7 @@ public class ExternalResultData<T> implements AutoCloseable {
      * @return Shallow copy.
      */
     ExternalResultData createShallowCopy() {
-        return new ExternalResultData(this);
+        return new ExternalResultData<>(this);
     }
 
     /**

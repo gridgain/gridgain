@@ -128,9 +128,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     private void checkMemoryManagerState(IgniteEx node) throws Exception {
         final QueryMemoryManager memMgr = memoryManager(node);
 
-        GridTestUtils.waitForCondition(() -> memMgr.memoryReserved() == 0, 5_000);
+        GridTestUtils.waitForCondition(() -> memMgr.reserved() == 0, 5_000);
 
-        long memReserved = memMgr.memoryReserved();
+        long memReserved = memMgr.reserved();
 
         assertEquals("Potential memory leak in SQL engine: reserved=" + memReserved, 0, memReserved);
     }
@@ -144,8 +144,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         QueryMemoryManager memoryManager = memoryManager(grid);
 
         // Reset memory manager.
-        if (memoryManager.memoryReserved() > 0)
-            memoryManager.released(memoryManager.memoryReserved());
+        if (memoryManager.reserved() > 0)
+            memoryManager.release(memoryManager.reserved());
     }
 
     /**
@@ -274,7 +274,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
 
-                        memoryTracker().released(memoryReserved());
+                        memoryTracker().release(memoryReserved());
                     }
                 };
 

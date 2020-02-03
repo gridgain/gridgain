@@ -39,7 +39,6 @@ import org.h2.value.ValueRow;
 /**
  * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.
  */
-@SuppressWarnings("MissortedModifiers")
 public class SortedExternalResult extends AbstractExternalResult<Value> implements ResultExternal {
     /** Distinct flag. */
     private final boolean distinct;
@@ -263,7 +262,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             if (reserveMemory) {
                 long delta = H2Utils.calculateMemoryDelta(key, old, row);
 
-                memTracker.reserved(delta);
+                memTracker.reserve(delta);
             }
         }
         else {
@@ -277,7 +276,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             if (reserveMemory) {
                 long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-                memTracker.reserved(delta);
+                memTracker.reserve(delta);
             }
         }
     }
@@ -308,14 +307,17 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (sort != null)
             rows.sort((o1, o2) -> sort.compare(o1.getValue(), o2.getValue()));
 
-        data.store(rows);
+        long swapped = data.store(rows);
+
+        memTracker.swap(swapped);
+        this.swapped += swapped;
 
         long delta = 0;
 
         for (Map.Entry<ValueRow, Value[]> row : rows)
-            delta += H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
+            delta += H2Utils.calculateMemoryDelta(row.getKey(), null, row.getValue());
 
-        memTracker.released(-delta);
+        memTracker.release(delta);
     }
 
     /** {@inheritDoc} */
@@ -328,9 +330,8 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             for (ExternalResultData.Chunk chunk : data.chunks())
                 chunk.reset();
         }
-        else {
+        else
             resQueue = sort == null ? new ArrayDeque<>() : new PriorityQueue<>(chunkCmp);
-        }
 
         // Init chunks.
         for (ExternalResultData.Chunk chunk : data.chunks()) {

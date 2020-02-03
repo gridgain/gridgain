@@ -226,7 +226,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
 
             IgniteH2Indexing h2 = (IgniteH2Indexing)grid(1).context().query().getIndexing();
 
-            long globalAllocated = h2.memoryManager().memoryReserved();
+            long globalAllocated = h2.memoryManager().reserved();
 
             assertTrue(h2.memoryManager().memoryLimit() < globalAllocated + MB);
         }

@@ -107,9 +107,9 @@ public class H2ManagedLocalResult implements LocalResult {
         boolean hasMemory = true;
 
         if (memory < 0)
-            memTracker.released(-memory);
+            memTracker.release(-memory);
         else
-            hasMemory = memTracker.reserved(memory);
+            hasMemory = memTracker.reserve(memory);
 
         memReserved += memory;
 
@@ -634,6 +634,6 @@ public class H2ManagedLocalResult implements LocalResult {
         rows = null;
 
         if (memTracker != null)
-            memTracker.released(memReserved);
+            memTracker.release(memReserved);
     }
 }

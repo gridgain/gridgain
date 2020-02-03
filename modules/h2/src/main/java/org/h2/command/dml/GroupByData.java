@@ -131,9 +131,9 @@ public abstract class GroupByData {
         }
 
         if (size > 0)
-            tracker.reserved(size);
+            tracker.reserve(size);
         else
-            tracker.released(-size);
+            tracker.release(-size);
 
         memReserved += size;
     }

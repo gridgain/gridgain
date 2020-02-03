@@ -369,7 +369,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
 
             assertEquals(18, cursors.size());
 
-            long globallyReserved = h2.memoryManager().memoryReserved();
+            long globallyReserved = h2.memoryManager().reserved();
 
             assertTrue(h2.memoryManager().memoryLimit() < globallyReserved + MB);
         }

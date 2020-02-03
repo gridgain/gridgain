@@ -47,6 +47,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -213,7 +214,8 @@ public class GridMapQueryExecutor {
             ctx.closure().callLocal(
                 new GridPlainCallable<Void>() {
                     @Override public Void call() {
-                        onQueryRequest0(node,
+                        onQueryRequest0(
+                            node,
                             req.requestId(),
                             segment,
                             req.schemaName(),
@@ -231,7 +233,9 @@ public class GridMapQueryExecutor {
                             lazy,
                             req.mvccSnapshot(),
                             dataPageScanEnabled,
-                            req.maxMemory());
+                            req.maxMemory(),
+                            req.originalQryId()
+                        );
 
                         return null;
                     }
@@ -300,7 +304,9 @@ public class GridMapQueryExecutor {
         boolean lazy,
         @Nullable final MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled,
-        long maxMem) {
+        long maxMem,
+        @Nullable Long originalQryId
+    ) {
         // Prepare to run queries.
         GridCacheContext<?, ?> mainCctx = mainCacheContext(cacheIds);
 
@@ -410,7 +416,7 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId);
+                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, originalQryId);
 
                         ResultSet rs = h2.executeSqlQueryWithTimer(
                             stmt,
@@ -420,8 +426,8 @@ public class GridMapQueryExecutor {
                             timeout,
                             qryResults.queryCancel(qryIdx),
                             dataPageScanEnabled,
-                            qryInfo,
-                            maxMem);
+                            qryInfo
+                        );
 
                         if (evt) {
                             ctx.event().record(new CacheQueryExecutedEvent<>(

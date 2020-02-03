@@ -149,7 +149,7 @@ public class TrackableFileIoFactory {
                 metrics.trackOffloadingWritten(written);
 
             if (tracker != null)
-                tracker.addTotalWrittenOnDisk(written);
+                tracker.swap(written);
         }
     }
 }

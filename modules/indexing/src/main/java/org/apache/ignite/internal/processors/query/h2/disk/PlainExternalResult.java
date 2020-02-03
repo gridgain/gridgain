@@ -102,7 +102,7 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
         if (reserveMemory) {
             long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-            memTracker.reserved(delta);
+            memTracker.reserve(delta);
         }
 
         size++;
@@ -115,16 +115,19 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
         if (F.isEmpty(rowBuff))
             return;
 
-        data.store(rowBuff);
+        long swapped = data.store(rowBuff);
+
+        memTracker.swap(swapped);
+        this.swapped += swapped;
 
         long delta = 0;
 
         for (Map.Entry<ValueRow, Value[]> row : rowBuff)
-            delta += H2Utils.calculateMemoryDelta(null, row.getValue(), null);
-
-        memTracker.released(-delta);
+            delta += H2Utils.calculateMemoryDelta(null, null, row.getValue());
 
         rowBuff.clear();
+
+        memTracker.release(delta);
     }
 
     /** {@inheritDoc} */

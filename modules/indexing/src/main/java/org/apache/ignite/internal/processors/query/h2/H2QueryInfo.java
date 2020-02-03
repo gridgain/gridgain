@@ -31,6 +31,9 @@ import org.h2.engine.Session;
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.
  */
 public class H2QueryInfo {
+    /** Query id. */
+    private final Long originalQryId;
+
     /** Type. */
     private final QueryType type;
 
@@ -60,12 +63,13 @@ public class H2QueryInfo {
      * @param stmt Query statement.
      * @param sql Query statement.
      */
-    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql) {
+    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, Long originalQryId) {
         try {
             assert stmt != null;
 
             this.type = type;
             this.sql = sql;
+            this.originalQryId = originalQryId;
 
             beginTs = U.currentTimeMillis();
 
@@ -108,6 +112,10 @@ public class H2QueryInfo {
         printLogMessage(log, null, msg, additionalInfo);
     }
 
+    public Long originalQueryId() {
+        return originalQryId;
+    }
+
     /**
      * @param log Logger.
      * @param msg Log message
@@ -137,19 +145,6 @@ public class H2QueryInfo {
         msgSb.append(']');
 
         LT.warn(log, msgSb.toString());
-    }
-
-    /**
-     * @return Query description.
-     */
-    public String buildShortQueryInfoString() {
-        return "[type=" + type +
-            ", distributedJoin=" + distributedJoin +
-            ", enforceJoinOrder=" + enforceJoinOrder +
-            ", lazy=" + lazy +
-            ", schema=" + schema +
-            ", sql='" + sql +
-            ']';
     }
 
     /**

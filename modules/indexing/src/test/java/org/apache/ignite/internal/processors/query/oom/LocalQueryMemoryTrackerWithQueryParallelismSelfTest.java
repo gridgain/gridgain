@@ -101,7 +101,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
             assertEquals(18, cursors.size());
 
-            assertTrue(h2.memoryManager().memoryLimit() < h2.memoryManager().memoryReserved() + MB);
+            assertTrue(h2.memoryManager().memoryLimit() < h2.memoryManager().reserved() + MB);
         }
         finally {
             for (QueryCursor c : cursors)

@@ -465,7 +465,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         for (Ignite node : G.allGrids()) {
             QueryMemoryManager memoryManager = memoryManager((IgniteEx)node);
 
-            assertEquals(0, memoryManager.memoryReserved());
+            assertEquals(0, memoryManager.reserved());
         }
     }
 

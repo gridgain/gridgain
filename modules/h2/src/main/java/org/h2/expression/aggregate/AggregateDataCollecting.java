@@ -75,7 +75,7 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
 
             size += v.getMemory();
 
-            memTracker.reserved(size);
+            memTracker.reserve(size);
 
             memReserved += size;
         }
@@ -157,7 +157,7 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
         if (values != null && (memTracker = ses.memoryTracker()) != null) {
             values = null;
 
-            memTracker.released(memReserved);
+            memTracker.release(memReserved);
         }
     }
 
