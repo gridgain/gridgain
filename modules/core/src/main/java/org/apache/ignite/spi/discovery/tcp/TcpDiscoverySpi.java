@@ -2046,7 +2046,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             dataPacket.marshalJoiningNodeData(
                 dataBag,
                 marshaller(),
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES),
+                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION),
                 ignite.configuration().getNetworkCompressionLevel(),
                 log);
         else
@@ -2054,7 +2054,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
                 dataBag,
                 locNode.id(),
                 marshaller(),
-                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES),
+                allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION),
                 ignite.configuration().getNetworkCompressionLevel(),
                 log);
 
@@ -2093,7 +2093,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
             //Marshal unzipped joining node data if it was zipped but not whole cluster supports that.
             //It can be happened due to several nodes, including node without compression support, are trying to join cluster concurrently.
-            if (!allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION, ALL_NODES) && dataPacket.hasZippedJoiningData())
+            if (!allNodesSupport(IgniteFeatures.DATA_PACKET_COMPRESSION) && dataPacket.hasZippedJoiningData())
                 dataPacket.unzipZippedData(log);
         }
 
@@ -2302,6 +2302,14 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     /** {@inheritDoc} */
     @Override public void clientReconnect() throws IgniteSpiException {
         impl.reconnect();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean allNodesSupport(IgniteFeatures feature) {
+        if (impl == null)
+            return false;
+
+        return impl.allNodesSupport(feature, ALL_NODES);
     }
 
     /** {@inheritDoc} */
