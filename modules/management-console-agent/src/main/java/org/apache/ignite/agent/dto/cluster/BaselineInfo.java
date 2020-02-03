@@ -46,7 +46,7 @@ public class BaselineInfo {
     }
 
     /**
-     * @return @{code True} if auto adjust is enabled.
+     * @return {@code true} if auto adjust is enabled.
      */
     public boolean isAutoAdjustEnabled() {
         return isAutoAdjustEnabled;
@@ -54,7 +54,7 @@ public class BaselineInfo {
 
     /**
      * @param autoAdjustEnabled Auto adjust enabled.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public BaselineInfo setAutoAdjustEnabled(boolean autoAdjustEnabled) {
         isAutoAdjustEnabled = autoAdjustEnabled;
@@ -71,7 +71,7 @@ public class BaselineInfo {
 
     /**
      * @param autoAdjustAwaitingTime Auto adjust awaiting time.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public BaselineInfo setAutoAdjustAwaitingTime(long autoAdjustAwaitingTime) {
         this.autoAdjustAwaitingTime = autoAdjustAwaitingTime;

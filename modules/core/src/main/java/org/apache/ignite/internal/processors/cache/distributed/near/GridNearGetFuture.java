@@ -113,7 +113,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
 
         this.tx = tx;
 
-        ver = tx == null ? cctx.versions().next() : tx.xidVersion();
+        ver = tx == null ? cctx.cache().nextVersion(): tx.xidVersion();
 
         initLogger(GridNearGetFuture.class);
     }
@@ -201,7 +201,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
             finally {
                 // Exception has been thrown, must release reserved near entries.
                 if (!success) {
-                    GridCacheVersion obsolete = cctx.versions().next(topVer);
+                    GridCacheVersion obsolete = cctx.versions().next(topVer.topologyVersion());
 
                     if (savedEntries != null) {
                         for (GridNearCacheEntry reserved : savedEntries.values()) {
@@ -482,6 +482,8 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
         assert dht.context().affinityNode() : this;
 
         while (true) {
+            cctx.shared().database().checkpointReadLock();
+
             GridCacheEntryEx dhtEntry = null;
 
             try {
@@ -557,6 +559,8 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
                 return false;
             }
             finally {
+                cctx.shared().database().checkpointReadUnlock();
+
                 if (dhtEntry != null)
                     // Near cache is enabled, so near entry will be enlisted in the transaction.
                     // Always touch DHT entry in this case.
@@ -629,7 +633,7 @@ public final class GridNearGetFuture<K, V> extends CacheDistributedGetFutureAdap
         if (!empty) {
             boolean atomic = cctx.atomic();
 
-            GridCacheVersion ver = atomic ? null : F.isEmpty(infos) ? null : cctx.versions().next();
+            GridCacheVersion ver = atomic ? null : F.isEmpty(infos) ? null : cctx.cache().nextVersion();
 
             for (GridCacheEntryInfo info : infos) {
                 try {

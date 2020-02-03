@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheEntriesExpirationTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTaskCancelingTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsPartitionPreloadTest;
@@ -64,6 +65,9 @@ public class IgnitePdsMvccTestSuite4 {
         ignoredTests.add(HeapArrayLockStackTest.class);
         ignoredTests.add(OffHeapLockLogTest.class);
         ignoredTests.add(OffHeapLockStackTest.class);
+
+        // Skip entry expiration tests as entry expiration isn't compatible with MVCC
+        ignoredTests.add(IgnitePdsCacheEntriesExpirationTest.class);
 
         return IgnitePdsTestSuite4.suite(ignoredTests);
     }

@@ -376,6 +376,8 @@ public class CacheFreeListSelfTest extends GridCommonAbstractTest {
             null,
             metaPageId,
             true,
+            null,
+            new GridTestKernalContext(log),
             null
         );
     }

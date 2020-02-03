@@ -272,6 +272,11 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
+    @Override public void onKernalStart() {
+
+    }
+
+    /** {@inheritDoc} */
     @Override public void onKernalStop() {
 
     }
@@ -299,6 +304,11 @@ public class DummyQueryIndexing implements GridQueryIndexing {
     /** {@inheritDoc} */
     @Override public @Nullable GridCacheContextInfo registeredCacheInfo(String cacheName) {
         return null;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void closeCacheOnClient(String cacheName) {
+        // No-op.
     }
 
     /** {@inheritDoc} */

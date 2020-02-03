@@ -51,6 +51,7 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
     /** {@inheritDoc} */
     @Override public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
         registration.setMessageSizeLimit(128 * 1024);
+        registration.addDecoratorFactory(testWebsocketDecoratedFactory());
     }
 
     /** {@inheritDoc} */
@@ -86,6 +87,14 @@ public class WebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
         msgConverters.add(smileJsonConverter);
 
         return false;
+    }
+
+    /**
+     * Test websocket decorated factory.
+     */
+    @Bean
+    public TestWebsocketDecoratedFactory testWebsocketDecoratedFactory() {
+        return new TestWebsocketDecoratedFactory();
     }
 
     /**

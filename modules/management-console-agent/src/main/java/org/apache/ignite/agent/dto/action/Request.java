@@ -16,6 +16,7 @@
 
 package org.apache.ignite.agent.dto.action;
 
+import java.util.Set;
 import java.util.UUID;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -38,6 +39,9 @@ public class Request {
     /** Session ID. */
     private UUID sesId;
 
+    /** Node ID's. */
+    private Set<UUID> nids;
+
     /**
      * @return Request id.
      */
@@ -47,7 +51,7 @@ public class Request {
 
     /**
      * @param id Request id.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public Request setId(UUID id) {
         this.id = id;
@@ -64,7 +68,7 @@ public class Request {
 
     /**
      * @param act Action name.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public Request setAction(String act) {
         this.act = act;
@@ -81,7 +85,7 @@ public class Request {
 
     /**
      * @param arg Action argument.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public Request setArgument(Object arg) {
         this.arg = arg;
@@ -117,6 +121,23 @@ public class Request {
      */
     public Request setSessionId(UUID sesId) {
         this.sesId = sesId;
+
+        return this;
+    }
+
+    /**
+     * @return Node ID's.
+     */
+    public Set<UUID> getNodeIds() {
+        return nids;
+    }
+
+    /**
+     * @param nids Node ID's.
+     * @return {@code This} for chaining method calls.
+     */
+    public Request setNodeIds(Set<UUID> nids) {
+        this.nids = nids;
 
         return this;
     }

@@ -51,7 +51,7 @@ public class MetricsProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendMetricsOnPull() throws Exception {
         IgniteEx ignite = startGrids(2);
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -65,7 +65,7 @@ public class MetricsProcessorTest extends AgentCommonAbstractTest {
 
         assertWithPoll(
             () -> {
-                List<Object> metrics = interceptor.getAllRawPayloads(buildMetricsDest(cluster.id()));
+                List<Object> metrics = interceptor.getAllRawPayloads(buildMetricsDest());
 
                 return metrics != null && metrics.size() == 2 && metrics.stream().allMatch(m -> new String((byte[]) m).contains(cluster.tag()));
             }

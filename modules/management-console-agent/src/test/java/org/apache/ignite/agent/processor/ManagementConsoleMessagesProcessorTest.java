@@ -43,7 +43,8 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     @Test
     public void shouldSendNodeJoinEvent() throws Exception {
         IgniteEx ignite = startGrid(0);
-        changeManagementConsoleUri(ignite);
+
+        changeManagementConsoleConfig(ignite);
 
         startGrid(1);
 
@@ -69,7 +70,7 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     public void shouldSendActivationEvent() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -95,7 +96,7 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     public void shouldSendInitialSpans() throws Exception {
         IgniteEx ignite = (IgniteEx) startGrid();
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
@@ -105,13 +106,13 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     }
 
     /**
-     * Should send changed baseline topology.
+     * Should send spans.
      */
     @Test
     public void shouldSendSpans() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
 
-        changeManagementConsoleUri(ignite_1);
+        changeManagementConsoleConfig(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
 
@@ -119,7 +120,7 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
 
         assertWithPoll(
             () -> {
-                List<Span> spans = interceptor.getPayload(buildSaveSpanDest(cluster.id()), List.class);
+                List<Span> spans = interceptor.getListPayload(buildSaveSpanDest(cluster.id()), Span.class);
 
                 return spans != null && !spans.isEmpty();
             }
@@ -133,7 +134,7 @@ public class ManagementConsoleMessagesProcessorTest extends AgentCommonAbstractT
     public void shouldSendNodeConfiguration() throws Exception {
         IgniteEx ignite_1 = startGrid(0);
 
-        changeManagementConsoleUri(ignite_1);
+        changeManagementConsoleConfig(ignite_1);
 
         IgniteCluster cluster = ignite_1.cluster();
 
