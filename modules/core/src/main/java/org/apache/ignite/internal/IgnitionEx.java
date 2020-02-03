@@ -1560,8 +1560,8 @@ public class IgnitionEx {
         /** Indexing pool. */
         private ThreadPoolExecutor idxExecSvc;
 
-        /** Thread pool for rebuild indexes. */
-        private ThreadPoolExecutor rebuildIdxExecSvc;
+        /** Thread pool for create/rebuild indexes. */
+        private ThreadPoolExecutor buildIdxExecSvc;
 
         /** Continuous query executor service. */
         private IgniteStripedThreadPoolExecutor callbackExecSvc;
@@ -1933,8 +1933,8 @@ public class IgnitionEx {
                     oomeHnd
                 );
 
-                rebuildIdxExecSvc = new IgniteThreadPoolExecutor(
-                    "rebuild-idx-runner",
+                buildIdxExecSvc = new IgniteThreadPoolExecutor(
+                    "build-idx-runner",
                     cfg.getIgniteInstanceName(),
                     0,
                     QueryUtils.DFLT_BUILD_IDX_PARALLELISM,
@@ -1944,7 +1944,7 @@ public class IgnitionEx {
                     oomeHnd
                 );
 
-                rebuildIdxExecSvc.allowCoreThreadTimeOut(true);
+                buildIdxExecSvc.allowCoreThreadTimeOut(true);
             }
 
             validateThreadPoolSize(cfg.getQueryThreadPoolSize(), "query");
@@ -2031,7 +2031,7 @@ public class IgnitionEx {
                     restExecSvc,
                     affExecSvc,
                     idxExecSvc,
-                    rebuildIdxExecSvc,
+                    buildIdxExecSvc,
                     callbackExecSvc,
                     qryExecSvc,
                     schemaExecSvc,
@@ -2702,9 +2702,9 @@ public class IgnitionEx {
 
             idxExecSvc = null;
 
-            U.shutdownNow(getClass(), rebuildIdxExecSvc, log);
+            U.shutdownNow(getClass(), buildIdxExecSvc, log);
 
-            rebuildIdxExecSvc = null;
+            buildIdxExecSvc = null;
 
             U.shutdownNow(getClass(), callbackExecSvc, log);
 

@@ -722,7 +722,7 @@ public class StandaloneGridKernalContext implements GridKernalContext {
     }
 
     /** {@inheritDoc} */
-    @Override public ExecutorService rebuildIndexExecutorService() {
+    @Override public ExecutorService buildIndexExecutorService() {
         return null;
     }
 }

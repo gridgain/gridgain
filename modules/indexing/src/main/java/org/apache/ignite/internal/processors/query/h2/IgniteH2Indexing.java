@@ -2034,7 +2034,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         SchemaIndexCacheVisitorClosure clo,
         GridCompoundFuture<Void, Void> compoundFut
     ) {
-        new SchemaIndexCacheVisitorImpl(cctx, null, ctx.rebuildIndexExecutorService(), compoundFut).visit(clo);
+        new SchemaIndexCacheVisitorImpl(cctx, null, ctx.buildIndexExecutorService(), compoundFut).visit(clo);
     }
 
     /**
