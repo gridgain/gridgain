@@ -1796,7 +1796,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, "UNSUPPORTED", "2"));
+            .addArguments(DEFAULT_CACHE_NAME, "{\"type\":\"UNSUPPORTED\",\"value\":\"1\"}"));
 
         info("VisorCacheGetValueTask result for unsupported key type: " + ret);
 
@@ -1818,7 +1818,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         String ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)
             .setNode(locNode)
             .setTaskArgument(VisorCacheGetValueTaskArg.class)
-            .addArguments(DEFAULT_CACHE_NAME, VisorDataType.INT, "1"));
+            .addArguments(DEFAULT_CACHE_NAME, "{\"type\":\"" + VisorDataType.INT + "\",\"value\":\"1\"}"));
 
         info("VisorCacheGetValueTask result for integer key type with missed value: " + ret);
 
