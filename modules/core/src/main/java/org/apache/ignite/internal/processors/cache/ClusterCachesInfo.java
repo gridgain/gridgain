@@ -41,6 +41,9 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.NearCacheConfiguration;
+import org.apache.ignite.failure.FailureContext;
+import org.apache.ignite.failure.FailureType;
+import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.GridCachePluginContext;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -77,6 +80,7 @@ import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 
 /**
@@ -1297,20 +1301,45 @@ class ClusterCachesInfo {
         boolean allowSplitCacheConfigurations = spi.allNodesSupport(IgniteFeatures.SPLITTED_CACHE_CONFIGURATIONS, ALL_NODES);
 
         if (!allowSplitCacheConfigurations) {
+            boolean hasNonCompatibleConfigurations = false;
+
             List<String> cachesToDestroy = new ArrayList<>();
 
             for (DynamicCacheDescriptor cacheDescriptor : registeredCaches().values()) {
                 CacheData clusterCacheData = clusterWideCacheData.caches().get(cacheDescriptor.cacheName());
 
                 // Node spawned new cache.
-                if (clusterCacheData.receivedFrom().equals(cacheDescriptor.receivedFrom()))
+                if (clusterCacheData.receivedFrom().equals(cacheDescriptor.receivedFrom())) {
                     cachesToDestroy.add(cacheDescriptor.cacheName());
+
+                    // At this point, the configuration is already enriched
+                    // and thefore it does not make sense to check cacheDescriptor.isConfigurationEnriched().
+                    if (cacheDescriptor.cacheConfigurationEnrichment() != null &&
+                        !cacheDescriptor.cacheConfigurationEnrichment().isEmpty())
+                        hasNonCompatibleConfigurations = true;
+                }
             }
 
-            if (!cachesToDestroy.isEmpty()) {
-                ctx.cache().dynamicDestroyCaches(cachesToDestroy, false);
+            if (hasNonCompatibleConfigurations) {
+                ctx.discovery().setCustomEventListener(DynamicCacheChangeBatch.class, (top, snd, msg) -> {
+                    DynamicCacheChangeBatch stopReq = (DynamicCacheChangeBatch)msg;
 
-                throw new IllegalStateException("Node can't join to cluster in compatibility mode with newly configured caches: " + cachesToDestroy);
+                    Set<String> names =
+                        stopReq.requests().stream().map(req -> req.cacheName()).collect(Collectors.toSet());
+
+                    if (snd.id().equals(ctx.localNodeId()) && !stopReq.startCaches() && names.containsAll(cachesToDestroy)) {
+                        Exception err = new IllegalStateException("Node can't join to cluster in compatibility mode " +
+                            "with newly configured caches: " + cachesToDestroy + ". Please consider setting \"" +
+                            IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER +
+                            "\" environment variable in order to start these cache(s) using backward compatible protocol.");
+
+                        ctx.failure().process(
+                            new FailureContext(FailureType.CRITICAL_ERROR, err),
+                            new StopNodeFailureHandler());
+                    }
+                });
+
+                ctx.cache().dynamicDestroyCaches(cachesToDestroy, false);
             }
         }
     }
@@ -2127,6 +2156,7 @@ class ClusterCachesInfo {
      * @param rcvdFrom Node ID cache was recived from.
      * @param deploymentId Deployment ID.
      * @param encKey Encryption key.
+     * @param cacheCfgEnrichment Cache configuration enrichment.
      * @return Group descriptor.
      */
     private CacheGroupDescriptor registerCacheGroup(

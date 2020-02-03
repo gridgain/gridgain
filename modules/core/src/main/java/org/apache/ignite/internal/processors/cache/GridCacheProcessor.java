@@ -57,6 +57,7 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteTransactionsEx;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
@@ -176,6 +177,7 @@ import static org.apache.ignite.configuration.DeploymentMode.CONTINUOUS;
 import static org.apache.ignite.configuration.DeploymentMode.SHARED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.IgniteComponentType.JTA;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
@@ -198,6 +200,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /** */
     private final boolean keepStaticCacheConfiguration = IgniteSystemProperties.getBoolean(
         IgniteSystemProperties.IGNITE_KEEP_STATIC_CACHE_CONFIGURATION);
+
+    /** Flag indicates that backward compatibility splitter should always be used. */
+    private final boolean useBackwardCompatibleCacheConfigurationSplitter =
+        SupportFeaturesUtils.isFeatureEnabled(IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER);
 
     /** MBean group for cache group metrics */
     private static final String CACHE_GRP_METRICS_MBEAN_GRP = "Cache groups";
@@ -5004,7 +5010,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return By default it returns splitter without old format configuration support.
      */
     public CacheConfigurationSplitter splitter() {
-        return splitter(false);
+        return splitter(useBackwardCompatibleCacheConfigurationSplitter);
     }
 
     /**
