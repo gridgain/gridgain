@@ -92,7 +92,7 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
             if (results.get(0).isQuery()) {
                 writer.writeBoolean(last);
 
-                JdbcUtils.writeItems(writer, items, protoCtx);
+                JdbcUtils.writeItems(writer, items);
             }
         }
         else
@@ -123,7 +123,7 @@ public class JdbcQueryExecuteMultipleStatementsResult extends JdbcResult {
             if (results.get(0).isQuery()) {
                 last = reader.readBoolean();
 
-                items = JdbcUtils.readItems(reader, protoCtx);
+                items = JdbcUtils.readItems(reader);
             }
         }
     }
