@@ -28,17 +28,14 @@ import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cache.eviction.fifo.FifoEvictionPolicy;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
-import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -74,59 +71,40 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setFailureDetectionTimeout(1000000000L);
-
         cfg.setConsistentId(gridName);
         cfg.setGridLogger(log);
-
-        QueryEntity qryEntity = new QueryEntity();
-        qryEntity.setKeyType(UserKey.class.getName());
-        qryEntity.setValueType(UserValue.class.getName());
-        qryEntity.setKeyFields(new HashSet<>(Arrays.asList("account")));
 
         LinkedHashMap<String, String> fields = new LinkedHashMap<>();
         fields.put("account", "java.lang.Integer");
         fields.put("balance", "java.lang.Integer");
-        qryEntity.setFields(fields);
 
-        QueryIndex idx1 = new QueryIndex();
-        idx1.setName("IDX_1");
-        idx1.setIndexType(QueryIndexType.SORTED);
+        QueryEntity qryEntity = new QueryEntity()
+            .setKeyType(UserKey.class.getName())
+            .setValueType(UserValue.class.getName())
+            .setKeyFields(new HashSet<>(Arrays.asList("account")))
+            .setFields(fields);
+
         LinkedHashMap<String, Boolean> idxFields = new LinkedHashMap<>();
         idxFields.put("account", false);
         idxFields.put("balance", false);
-        idx1.setFields(idxFields);
 
-        QueryIndex idx2 = new QueryIndex();
-        idx2.setName("IDX_2");
-        idx2.setIndexType(QueryIndexType.SORTED);
-        idxFields = new LinkedHashMap<>();
-        idxFields.put("balance", false);
-        idx2.setFields(idxFields);
+        QueryIndex idx1 = new QueryIndex(idxFields, QueryIndexType.SORTED).setName("IDX_1");
+        QueryIndex idx2 = new QueryIndex("balance", QueryIndexType.SORTED, false, "IDX_2");
 
         qryEntity.setIndexes(Arrays.asList(idx1, idx2));
 
         cfg.setCacheConfiguration(new CacheConfiguration<UserKey, UserValue>()
             .setName(CACHE_NAME)
-            .setBackups(2)
             .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             .setCacheMode(REPLICATED)
             .setWriteSynchronizationMode(FULL_SYNC)
-            .setOnheapCacheEnabled(true)
-            .setEvictionPolicy(new FifoEvictionPolicy(1000))
             .setAffinity(new RendezvousAffinityFunction(false, 1))
             .setQueryEntities(Collections.singleton(qryEntity)));
 
         cfg.setDataStorageConfiguration(
             new DataStorageConfiguration()
                 .setCheckpointFrequency(10000000)
-                .setWalSegmentSize(4 * 1024 * 1024)
-                .setDefaultDataRegionConfiguration(
-                    new DataRegionConfiguration()
-                        .setPersistenceEnabled(true)
-                        .setInitialSize(50L * 1024 * 1024)
-                        .setMaxSize(50L * 1024 * 1024)
-                )
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
         );
 
         if (srvLog != null)
@@ -159,14 +137,7 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, value = "true")
     public void testRebuildIndexWithLogging() throws Exception {
-        srvLog = new ListeningTestLogger(false, log);
-
-        LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
-        srvLog.registerListener(idxRebuildLsnr);
-
-        triggerIndexRebuild();
-
-        assertTrue(idxRebuildLsnr.check());
+        check(true);
     }
 
     /**
@@ -175,26 +146,23 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, value = "false")
     public void testRebuildIndexWithoutLogging() throws Exception {
-        srvLog = new ListeningTestLogger(false, log);
-
-        LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
-        srvLog.registerListener(idxRebuildLsnr);
-
-        triggerIndexRebuild();
-
-        assertFalse(idxRebuildLsnr.check());
+        check(false);
     }
 
     /**
      * @throws Exception if failed.
      */
-    private void triggerIndexRebuild() throws Exception {
-        IgniteEx node1 = startGrid(0);
-        startGrid(1);
+    private void check(boolean msgFound) throws Exception {
+        srvLog = new ListeningTestLogger(false, log);
 
-        node1.cluster().active(true);
+        LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
+        srvLog.registerListener(idxRebuildLsnr);
 
-        IgniteCache<UserKey, UserValue> cache = node1.getOrCreateCache(CACHE_NAME);
+        IgniteEx node = startGrids(2);
+
+        node.cluster().active(true);
+
+        IgniteCache<UserKey, UserValue> cache = node.getOrCreateCache(CACHE_NAME);
 
         cache.put(new UserKey(1), new UserValue(333));
         cache.put(new UserKey(2), new UserValue(555));
@@ -203,21 +171,21 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
 
         removeIndexBin(0);
 
-        IgniteEx node2 = startGrid(0);
+        node = startGrid(0);
 
         awaitPartitionMapExchange();
 
-        final IgniteCacheDatabaseSharedManager db = node2.context().cache().context().database();
-
-        while (IdleVerifyUtility.isCheckpointNow(db))
+        while (IdleVerifyUtility.isCheckpointNow(node.context().cache().context().database()))
             doSleep(500);
 
         // Validate indexes on start.
         ValidateIndexesClosure clo = new ValidateIndexesClosure(Collections.singleton(CACHE_NAME), 0, 0);
-        node2.context().resource().injectGeneric(clo);
-        VisorValidateIndexesJobResult res = clo.call();
 
-        assertFalse(res.hasIssues());
+        node.context().resource().injectGeneric(clo);
+
+        assertFalse(clo.call().hasIssues());
+
+        assertEquals(msgFound, idxRebuildLsnr.check());
     }
 
 
@@ -237,7 +205,7 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
      * User key.
      */
     private static class UserKey {
-        /** A. */
+        /** Account. */
         private int account;
 
         /**
@@ -246,20 +214,13 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
         public UserKey(int a) {
             this.account = a;
         }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return "UserKey{" +
-                "account=" + account +
-                '}';
-        }
     }
 
     /**
      * User value.
      */
     private static class UserValue {
-        /** balance. */
+        /** Balance. */
         private int balance;
 
         /**
@@ -267,13 +228,6 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
          */
         public UserValue(int balance) {
             this.balance = balance;
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return "UserValue{" +
-                "balance=" + balance +
-                '}';
         }
     }
 }
