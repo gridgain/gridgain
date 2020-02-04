@@ -33,7 +33,6 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
-import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -161,8 +160,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @param stat Index cache stats.
      * @throws IgniteCheckedException if failed to get index size.
      */
-    private void printIndexStats(SchemaIndexCacheStat stat) throws IgniteCheckedException {
-        if (!IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED)
+    private void printIndexStats(@Nullable SchemaIndexCacheStat stat) throws IgniteCheckedException {
+        if (stat == null)
             return;
 
         StringBuilder res = new StringBuilder();
@@ -250,7 +249,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      *
      * @param part Partition.
      * @param clo Index closure.
-     * @param stat Index build statistics accumulator (can be {@code }
+     * @param stat Index build statistics accumulator (can be {@code null}).
      * @throws IgniteCheckedException If failed.
      */
     private void processPartition(
@@ -318,7 +317,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      *
      * @param key Key.
      * @param clo Closure.
-     * @return Type descriptor.
+     * @param stat Index build statistics accumulator (can be {@code null}).
      * @throws IgniteCheckedException If failed.
      */
     private void processKey(
@@ -390,8 +389,12 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
          * @param fut Future.
          */
         @SuppressWarnings("unchecked")
-        public AsyncWorker(List<GridDhtLocalPartition> parts, SchemaIndexCacheVisitorClosure clo, int remainder,
-            GridFutureAdapter<SchemaIndexCacheStat> fut) {
+        public AsyncWorker(
+            List<GridDhtLocalPartition> parts,
+            SchemaIndexCacheVisitorClosure clo,
+            int remainder,
+            GridFutureAdapter<SchemaIndexCacheStat> fut
+        ) {
             super(cctx.igniteInstanceName(), "parallel-idx-worker-" + cctx.cache().name() + "-" + remainder,
                 cctx.logger(AsyncWorker.class));
 
