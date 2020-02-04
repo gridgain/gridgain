@@ -89,7 +89,9 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
                 (P1<CacheInfo>)i -> "test-cache".equals(i.getName()));
 
             return actual != null &&
-                CU.cacheId("test-cache") == actual.getCacheId() && !actual.isCreatedBySql();
+                CU.cacheId("test-cache") == actual.getCacheId() &&
+                !actual.isSystemCache() &&
+                !actual.isCreatedBySql();
         });
 
         ignite.context().query().querySqlFields(
@@ -104,7 +106,9 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
                 (P1<CacheInfo>)i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
 
             return actual != null &&
-                CU.cacheId("SQL_PUBLIC_MC_AGENT_TEST_TABLE_1") == actual.getCacheId() && actual.isCreatedBySql();
+                CU.cacheId("SQL_PUBLIC_MC_AGENT_TEST_TABLE_1") == actual.getCacheId() &&
+                !actual.isSystemCache() &&
+                actual.isCreatedBySql();
         });
     }
 
