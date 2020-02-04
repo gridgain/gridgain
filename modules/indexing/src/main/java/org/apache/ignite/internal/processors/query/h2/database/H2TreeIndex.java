@@ -511,58 +511,55 @@ public class H2TreeIndex extends H2TreeIndexBase {
 
     /** {@inheritDoc} */
     @Override public void destroy(boolean rmvIdx) {
-        try {
-            if (cctx.affinityNode() && rmvIdx) {
-                assert cctx.shared().database().checkpointLockIsHeldByThread();
-
-                for (int i = 0; i < segments.length; i++) {
-                    H2Tree tree = segments[i];
-
-                    tree.destroy();
-
-                    dropMetaPage(i);
-                }
-            }
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
-        finally {
-            if (msgLsnr != null)
-                ctx.io().removeMessageListener(msgTopic, msgLsnr);
-        }
+        destroy0(rmvIdx, false);
     }
 
     /** {@inheritDoc} */
     @Override public void asyncDestroy(boolean rmvIdx) {
-        List<Long> rootPages = new ArrayList<>(segments.length);
-        List<H2Tree> trees = new ArrayList<>(segments.length);
+        destroy0(rmvIdx, true);
+    }
 
+    /**
+     * Internal method for destroying index with async option.
+     *
+     * @param rmvIdx Flag remove.
+     * @param async Destroy asynchronously.
+     */
+    private void destroy0(boolean rmvIdx, boolean async) {
         try {
             if (cctx.affinityNode() && rmvIdx) {
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
 
+                List<Long> rootPages = new ArrayList<>(segments.length);
+                List<H2Tree> trees = new ArrayList<>(segments.length);
+
                 for (int i = 0; i < segments.length; i++) {
                     H2Tree tree = segments[i];
 
-                    tree.markDestroyed();
+                    if (async) {
+                        tree.markDestroyed();
 
-                    rootPages.add(tree.getMetaPageId());
-                    trees.add(tree);
+                        rootPages.add(tree.getMetaPageId());
+                        trees.add(tree);
+                    }
+                    else
+                        tree.destroy();
 
                     dropMetaPage(i);
                 }
 
-                DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
-                    rootPages,
-                    trees,
-                    cctx.group().name(),
-                    cctx.cache().name(),
-                    table.getSchema().getName(),
-                    idxName
-                );
+                if (async) {
+                    DurableBackgroundTask task = new DurableBackgroundCleanupIndexTreeTask(
+                        rootPages,
+                        trees,
+                        cctx.group().name(),
+                        cctx.cache().name(),
+                        table.getSchema().getName(),
+                        idxName
+                    );
 
-                cctx.kernalContext().durableBackgroundTasksProcessor().startDurableBackgroundTask(task, cctx.config());
+                    cctx.kernalContext().durableBackgroundTasksProcessor().startDurableBackgroundTask(task, cctx.config());
+                }
             }
         }
         catch (IgniteCheckedException e) {
