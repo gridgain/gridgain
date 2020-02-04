@@ -42,7 +42,7 @@
 
     <properties>
         <ignite.update.notifier.product>apache-ignite</ignite.update.notifier.product>
-        <ignite.management.console.uris>http://localhost:3000,https://ggcc.gridgain.com</ignite.management.console.uris>
+        <ignite.control.center.uris>http://localhost:3000,https://ggcc.gridgain.com</ignite.control.center.uris>
 
         <!-- Imports:
                 - com.sun.jmx.mbeanserver => only used from TCKMBeanServerBuilder which has no usages within Ignite's
@@ -386,8 +386,8 @@
                                         </replaceregexp>
 
                                         <replaceregexp file="${props.file}" byline="true">
-                                            <regexp pattern="ignite.management.console.uris=.*" />
-                                            <substitution expression="ignite.management.console.uris=${ignite.management.console.uris}" />
+                                            <regexp pattern="ignite.control.center.uris=.*" />
+                                            <substitution expression="ignite.control.center.uris=${ignite.control.center.uris}" />
                                         </replaceregexp>
                                     </target>
                                 </configuration>

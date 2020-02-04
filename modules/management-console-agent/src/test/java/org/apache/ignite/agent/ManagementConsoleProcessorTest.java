@@ -32,7 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Management console processor test.
+ * Control Center processor test.
  */
 public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
     /**
@@ -54,7 +54,7 @@ public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Management console processor with mock context test.
+     * Control Center processor with mock context test.
      */
     public static class ManagementConsoleProcessorWithMockContextTest extends AbstractServiceTest {
         /**

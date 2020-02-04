@@ -71,13 +71,13 @@ import static org.apache.ignite.internal.IgniteFeatures.TRACING;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
- * Management console agent.
+ * Control Center agent.
  */
 public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
-    /** Management Console configuration meta storage prefix. */
+    /** Control Center configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
-    /** Topic management console. */
+    /** Topic of Control Center configuration. */
     public static final String TOPIC_MANAGEMENT_CONSOLE = "mgmt-console-topic";
 
     /** Discovery event on restart agent. */

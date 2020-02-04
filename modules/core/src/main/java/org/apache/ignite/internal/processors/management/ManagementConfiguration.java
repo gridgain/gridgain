@@ -31,15 +31,15 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import static java.util.Arrays.asList;
 
 /**
- * This class defines Management Console Agent configuration.
+ * This class defines Control Center agent configuration.
  */
 public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Default console URI. */
-    private static final String DFLT_CONSOLE_URIS = F.isEmpty(IgniteProperties.get("ignite.management.console.uris"))
-        ? "http://localhost:3000" : IgniteProperties.get("ignite.management.console.uris");
+    private static final String DFLT_CONSOLE_URIS = F.isEmpty(IgniteProperties.get("ignite.control.center.uris"))
+        ? "http://localhost:3000" : IgniteProperties.get("ignite.control.center.uris");
 
     /** */
     private List<String> consoleUris = asList(DFLT_CONSOLE_URIS.split(","));
