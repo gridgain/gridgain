@@ -77,6 +77,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.NonCollocatedRetry
 import org.apache.ignite.internal.processors.query.h2.twostep.NoneOrSinglePartitionsQueryOptimizationsTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.RetryCauseMessageSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.TableViewSubquerySelfTest;
+import org.apache.ignite.internal.processors.query.oom.ClientQueryQuotaTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingBasicTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingDmlTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingGlobalQuotaTest;
@@ -192,6 +193,7 @@ import org.junit.runners.Suite;
     MemoryQuotaDynamicConfigurationTest.class,
     MemoryQuotaStaticConfigurationTest.class,
     QueryMemoryManagerConfigurationSelfTest.class,
+    ClientQueryQuotaTest.class,
 
     // Offloading tests.
     DiskSpillingBasicTest.class,
