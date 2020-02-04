@@ -36,16 +36,16 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility;
-import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
@@ -61,9 +61,6 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     private ListeningTestLogger srvLog;
 
     /** */
-    private boolean initCacheVisitorEnableVal;
-
-    /** */
     private static final Pattern idxRebuildPattert = Pattern.compile(
         "Details for cache rebuilding \\[name=cache_name, grpName=null].*" +
             "Scanned rows 2, visited types \\[UserValue].*" +
@@ -72,50 +69,6 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
             "Index: name=IDX_2, size=2.*" +
             "Index: name=IDX_1, size=2.*",
         Pattern.DOTALL);
-
-    /**
-     * User key.
-     */
-    private static class UserKey {
-        /** A. */
-        private int account;
-
-        /**
-         * @param a A.
-         */
-        public UserKey(int a) {
-            this.account = a;
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return "UserKey{" +
-                "account=" + account +
-                '}';
-        }
-    }
-
-    /**
-     * User value.
-     */
-    private static class UserValue {
-        /** balance. */
-        private int balance;
-
-        /**
-         * @param balance balance.
-         */
-        public UserValue(int balance) {
-            this.balance = balance;
-        }
-
-        /** {@inheritDoc} */
-        @Override public String toString() {
-            return "UserValue{" +
-                "balance=" + balance +
-                '}';
-        }
-    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -183,22 +136,6 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        initCacheVisitorEnableVal = GridTestUtils.getFieldValue(SchemaIndexCacheVisitorImpl.class,
-            "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED");
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED",
-            initCacheVisitorEnableVal);
-
-        super.afterTestsStopped();
-    }
-
-    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
@@ -220,9 +157,8 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, value = "true")
     public void testRebuildIndexWithLogging() throws Exception {
-        GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", true);
-
         srvLog = new ListeningTestLogger(false, log);
 
         LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
@@ -237,9 +173,8 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, value = "false")
     public void testRebuildIndexWithoutLogging() throws Exception {
-        GridTestUtils.setFieldValue(SchemaIndexCacheVisitorImpl.class, "IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED", false);
-
         srvLog = new ListeningTestLogger(false, log);
 
         LogListener idxRebuildLsnr = LogListener.matches(idxRebuildPattert).build();
@@ -285,6 +220,8 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
         assertFalse(res.hasIssues());
     }
 
+
+
     /** */
     private void removeIndexBin(int nodeId) throws IgniteCheckedException {
         U.delete(
@@ -294,5 +231,49 @@ public class RebuildIndexTest extends GridCommonAbstractTest {
                 false
             )
         );
+    }
+
+    /**
+     * User key.
+     */
+    private static class UserKey {
+        /** A. */
+        private int account;
+
+        /**
+         * @param a A.
+         */
+        public UserKey(int a) {
+            this.account = a;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "UserKey{" +
+                "account=" + account +
+                '}';
+        }
+    }
+
+    /**
+     * User value.
+     */
+    private static class UserValue {
+        /** balance. */
+        private int balance;
+
+        /**
+         * @param balance balance.
+         */
+        public UserValue(int balance) {
+            this.balance = balance;
+        }
+
+        /** {@inheritDoc} */
+        @Override public String toString() {
+            return "UserValue{" +
+                "balance=" + balance +
+                '}';
+        }
     }
 }

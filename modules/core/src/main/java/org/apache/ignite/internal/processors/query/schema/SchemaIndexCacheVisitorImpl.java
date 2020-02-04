@@ -46,6 +46,7 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
 import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
@@ -61,10 +62,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     /** Count of rows, being processed within a single checkpoint lock. */
     private static final int BATCH_SIZE = 1000;
 
-    //TODO: field is not final for testability. This should be fixed.
     /** Is extra index rebuild logging enabled. */
-    private static boolean IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED =
-        IgniteSystemProperties.getBoolean(IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, false);
+    private final boolean collectStat = getBoolean(IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, false);
 
     /** Cache context. */
     private final GridCacheContext cctx;
@@ -231,17 +230,17 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         int remainder)
         throws IgniteCheckedException {
 
-        SchemaIndexCacheStat tmp = IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED ? new SchemaIndexCacheStat() : null;
+        SchemaIndexCacheStat stat = collectStat ? new SchemaIndexCacheStat() : null;
 
         for (int i = 0, size = parts.size(); i < size; i++) {
             if (stop)
                 break;
 
             if ((i % parallelism) == remainder)
-                processPartition(parts.get(i), clo, tmp);
+                processPartition(parts.get(i), clo, stat);
         }
 
-        return tmp;
+        return stat;
     }
 
     /**
