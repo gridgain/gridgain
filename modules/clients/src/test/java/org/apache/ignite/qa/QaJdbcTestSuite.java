@@ -17,6 +17,7 @@
 package org.apache.ignite.qa;
 
 import org.apache.ignite.qa.query.JdbcThinSqlMergeTest;
+import org.apache.ignite.qa.query.JdbcThinTimezoneTest;
 import org.apache.ignite.qa.query.WarningOnBigQueryLazyResultsTest;
 import org.apache.ignite.qa.query.WarningOnBigQueryResultsTest;
 import org.junit.runner.RunWith;
@@ -30,6 +31,7 @@ import org.junit.runners.Suite;
     JdbcThinSqlMergeTest.class,
     WarningOnBigQueryResultsTest.class,
     WarningOnBigQueryLazyResultsTest.class,
+    JdbcThinTimezoneTest.class,
 })
 public class QaJdbcTestSuite {
 }
