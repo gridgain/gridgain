@@ -105,10 +105,21 @@ public class ClusterActivationStartedEventTest extends GridCommonAbstractTest {
             event -> {
                 ClusterStateChangeStartedEvent changeStartedEvt = (ClusterStateChangeStartedEvent)event;
 
-                if (changeStartedEvt.state() == ClusterState.ACTIVE)
+                ClusterState clusterState = changeStartedEvt.state();
+                ClusterState prevState = changeStartedEvt.previousState();
+
+                if (clusterState == ClusterState.ACTIVE) {
+                    assertEquals(ClusterState.INACTIVE, prevState);
+
                     activationStarted.set(true);
-                else
+                }
+                else if (clusterState == ClusterState.INACTIVE) {
+                    assertEquals(ClusterState.ACTIVE, prevState);
+
                     deactivationStarted.set(true);
+                }
+                else
+                    fail("Unexpected event state: " + clusterState);
 
                 return true;
             },
@@ -146,11 +157,20 @@ public class ClusterActivationStartedEventTest extends GridCommonAbstractTest {
         activationStarted.set(false);
         activationFinished.set(false);
 
+        ignite.cluster().active(true);
+        assertFalse(activationStarted.get());
+
         ignite.cluster().active(false);
 
         assertTrue(deactivationStarted.get());
         assertTrue(GridTestUtils.waitForCondition(deactivationFinished::get, 5_000));
         assertFalse(activationStarted.get());
+
+        deactivationStarted.set(false);
+        deactivationFinished.set(false);
+
+        ignite.cluster().active(false);
+        assertFalse(deactivationStarted.get());
     }
 
     /** */
