@@ -24,14 +24,16 @@ import org.apache.ignite.configuration.ConnectorConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /** */
-public class BaselineEventsTest extends GridCommonAbstractTest {
+public abstract class BaselineEventsTest extends GridCommonAbstractTest {
     /** */
     private int[] includedEvtTypes = EventType.EVTS_ALL;
 
@@ -67,6 +69,9 @@ public class BaselineEventsTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
     }
+
+    /** */
+    protected abstract void listen(IgniteEx ignite, IgnitePredicate<Event> lsnr, int... types);
 
     /** */
     @Test
