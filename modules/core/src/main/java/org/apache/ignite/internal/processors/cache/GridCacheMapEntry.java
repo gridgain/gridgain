@@ -79,6 +79,8 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
@@ -4465,7 +4467,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo) throws IgniteCheckedException,
+    @Override public GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException,
         GridCacheEntryRemovedException {
         lockEntry();
 
@@ -4480,13 +4482,18 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (row != null) {
                 clo.apply(row);
 
-                return cctx.kernalContext().query().typeByValue(
+                QueryTypeDescriptorImpl type = cctx.kernalContext().query().typeByValue(
                     cctx.cache().name(),
                     cctx.cacheObjectContext(),
                     row.key(),
                     row.value(),
                     true
                 );
+
+                if (type != null)
+                    stat.types.add(type.name());
+
+                return type;
             }
         }
         finally {

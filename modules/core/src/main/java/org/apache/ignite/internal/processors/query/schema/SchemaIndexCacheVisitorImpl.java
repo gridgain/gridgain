@@ -233,16 +233,21 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         throws IgniteCheckedException {
 
         SchemaIndexCacheStat tmp = IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED ? new SchemaIndexCacheStat() : null;
+        SchemaIndexCacheStat tmp2 = IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED ? new SchemaIndexCacheStat() : null;
 
         for (int i = 0, size = parts.size(); i < size; i++) {
             if (stop)
                 break;
 
             if ((i % parallelism) == remainder)
-                processPartition(parts.get(i), clo, tmp);
+                processPartition(parts.get(i), clo, tmp, tmp2);
         }
 
-        return tmp;
+        if (!tmp.equals(tmp2)) {
+            throw new IgniteCheckedException(tmp + " " + tmp2);
+        }
+
+        return tmp2;
     }
 
     /**
@@ -253,7 +258,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @param stat Index build statistics accumulator (can be {@code }
      * @throws IgniteCheckedException If failed.
      */
-    private void processPartition(GridDhtLocalPartition part, SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat)
+    private void processPartition(GridDhtLocalPartition part, SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat, SchemaIndexCacheStat statTmp)
         throws IgniteCheckedException {
         checkCancelled();
 
@@ -283,7 +288,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                         locked = true;
                     }
 
-                    final GridQueryTypeDescriptor type = processKey(key, clo);
+                    final GridQueryTypeDescriptor type = processKey(key, clo, statTmp);
 
                     if (type != null && stat != null)
                         stat.types.add(type.name());
@@ -300,6 +305,9 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
                 if (stat != null)
                     stat.scanned += cntr;
+
+                if (statTmp != null)
+                    statTmp.scanned += cntr;
             }
             finally {
                 if (locked)
@@ -321,7 +329,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @return Type descriptor.
      * @throws IgniteCheckedException If failed.
      */
-    private GridQueryTypeDescriptor processKey(KeyCacheObject key, SchemaIndexCacheVisitorClosure clo) throws IgniteCheckedException {
+    private GridQueryTypeDescriptor processKey(KeyCacheObject key, SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException {
         while (true) {
             try {
                 checkCancelled();
@@ -329,7 +337,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                 GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
                 try {
-                    return entry.updateIndex(clo);
+                    return entry.updateIndex(clo, stat);
                 }
                 finally {
                     entry.touch();

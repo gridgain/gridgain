@@ -40,6 +40,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.lang.IgniteUuid;
@@ -1007,7 +1008,7 @@ public interface GridCacheEntryEx {
      * @throws GridCacheEntryRemovedException If entry was removed.
      * @return Type descriptor.
      */
-    @Nullable public GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo)
+    @Nullable public GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat)
         throws IgniteCheckedException, GridCacheEntryRemovedException;
 
     /**
