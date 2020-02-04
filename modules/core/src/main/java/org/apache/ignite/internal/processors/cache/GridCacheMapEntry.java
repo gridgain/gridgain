@@ -4484,6 +4484,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 clo.apply(row);
 
                 if (stat != null) {
+                    // TODO: Change checkType to false and explain why.
                     QueryTypeDescriptorImpl type = cctx.kernalContext().query().typeByValue(
                         cctx.cache().name(),
                         cctx.cacheObjectContext(),
