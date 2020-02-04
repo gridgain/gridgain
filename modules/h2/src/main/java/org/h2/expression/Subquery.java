@@ -34,7 +34,9 @@ public class Subquery extends Expression {
     @Override
     public Value getValue(Session session) {
         query.setSession(session);
-        try (ResultInterface result = query.query(2)) {
+        ResultInterface lastResult = query.getLastResult();
+        ResultInterface result = query.query(2);
+        try {
             Value v;
             if (!result.next()) {
                 v = ValueNull.INSTANCE;
@@ -50,6 +52,12 @@ public class Subquery extends Expression {
                 }
             }
             return v;
+        }
+        finally {
+            // Do not close the very first lastResult in the case when caching is turned on.
+            // Otherwise close all lastResults.
+            if (lastResult != null || query.ignoreCaching())
+                result.close();
         }
     }
 

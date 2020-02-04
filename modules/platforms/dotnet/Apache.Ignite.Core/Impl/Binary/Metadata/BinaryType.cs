@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
     {
         /** Empty metadata. */
         public static readonly BinaryType Empty =
-            new BinaryType(BinaryTypeId.Object, BinaryTypeNames.TypeNameObject, null, null, false, null, null);
+            new BinaryType(BinaryTypeId.Object, BinaryTypeNames.TypeNameObject, null, null, false, null, null, null);
 
         /** Empty dictionary. */
         private static readonly IDictionary<string, BinaryField> EmptyDict = new Dictionary<string, BinaryField>();
@@ -195,7 +195,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         public BinaryType(IBinaryTypeDescriptor desc, Marshaller marshaller, 
             IDictionary<string, BinaryField> fields = null) 
             : this (desc.TypeId, desc.TypeName, fields, desc.AffinityKeyFieldName, desc.IsEnum, 
-                  GetEnumValues(desc), marshaller)
+                  GetEnumValues(desc), marshaller, null)
         {
             _descriptor = desc;
         }
@@ -210,8 +210,10 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
         /// <param name="isEnum">Enum flag.</param>
         /// <param name="enumValues">Enum values.</param>
         /// <param name="marshaller">Marshaller.</param>
+        /// <param name="schema"></param>
         public BinaryType(int typeId, string typeName, IDictionary<string, BinaryField> fields,
-            string affKeyFieldName, bool isEnum, IDictionary<string, int> enumValues, Marshaller marshaller)
+            string affKeyFieldName, bool isEnum, IDictionary<string, int> enumValues, Marshaller marshaller,
+            BinaryObjectSchema schema)
         {
             _typeId = typeId;
             _typeName = typeName;
@@ -226,6 +228,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Metadata
             }
 
             _marshaller = marshaller;
+            _schema = schema;
         }
 
         /// <summary>

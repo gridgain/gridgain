@@ -136,7 +136,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
 
     /** SSL: Key algorithm name. */
     private StringProperty sslKeyAlgorithm = new StringProperty("sslKeyAlgorithm",
-        "SSL key algorithm name", "SunX509", null, false, null);
+        "SSL key algorithm name", null, null, false, null);
 
     /** SSL: Client certificate key store url. */
     private StringProperty sslClientCertificateKeyStoreUrl =
@@ -625,7 +625,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     }
 
     /** {@inheritDoc} */
-    @Override public void setQueryMaxMemory(@Nullable Integer timeout) throws SQLException {
+    @Override public void setQueryTimeout(@Nullable Integer timeout) throws SQLException {
         qryTimeout.setValue(timeout);
     }
 

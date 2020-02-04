@@ -648,7 +648,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * If partition has reservations, eviction will be delayed and continued after all reservations will be released.
      *
      * @param updateSeq If {@code true} topology update sequence will be updated after eviction is finished.
-     * @return Future to signal that this node is no longer an owner or backup.
+     * @return Future to signal that this node is no longer an owner or backup or null if corresponding partition
+     * state is {@code RENTING} or {@code EVICTED}.
      */
     public IgniteInternalFuture<?> rent(boolean updateSeq) {
         long state0 = this.state.get();
@@ -656,7 +657,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         GridDhtPartitionState partState = getPartState(state0);
 
         if (partState == RENTING || partState == EVICTED)
-            return rent;
+            return null;
 
         delayedRenting = true;
 
@@ -787,54 +788,24 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * @return {@code true} if evicting thread was added.
+     * @return {@code True} if evicting thread was added.
      */
     private boolean addEvicting() {
-        while (true) {
-            int cnt = evictGuard.get();
-
-            if (cnt != 0)
-                return false;
-
-            if (evictGuard.compareAndSet(cnt, cnt + 1))
-                return true;
-        }
+        return evictGuard.compareAndSet(0, 1);
     }
 
     /**
-     * @return {@code true} if no thread evicting partition at the moment.
+     * Clears evicting flag.
      */
-    private boolean clearEvicting() {
-        boolean free;
-
-        while (true) {
-            int cnt = evictGuard.get();
-
-            assert cnt > 0;
-
-            if (evictGuard.compareAndSet(cnt, cnt - 1)) {
-                free = cnt == 1;
-
-                break;
-            }
-        }
-
-        return free;
+    private void clearEvicting() {
+        evictGuard.set(0);
     }
 
     /**
-     * @return {@code True} if partition is safe to destroy.
+     * @return {@code True} if partition is marked for destroy.
      */
     public boolean markForDestroy() {
-        while (true) {
-            int cnt = evictGuard.get();
-
-            if (cnt != 0)
-                return false;
-
-            if (evictGuard.compareAndSet(0, -1))
-                return true;
-        }
+        return evictGuard.compareAndSet(0, -1);
     }
 
     /**
@@ -947,10 +918,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                 throw e;
             }
             finally {
-                boolean free = clearEvicting();
+                clearEvicting();
 
-                if (free)
-                    clearFuture.finish();
+                clearFuture.finish();
             }
         }
 
@@ -1108,9 +1078,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
-     * Reset partition counters.
+     * Reset partition update counter.
      */
-    public void resetCounters() {
+    public void resetUpdateCounter() {
         store.resetUpdateCounter();
     }
 
@@ -1128,7 +1098,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @throws NodeStoppingException If node stopping.
      */
     private long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-        GridCacheVersion clearVer = ctx.versions().next();
+        GridCacheVersion clearVer = group().caches().get(0).cache().nextVersion();
 
         GridCacheObsoleteEntryExtras extras = new GridCacheObsoleteEntryExtras(clearVer);
 

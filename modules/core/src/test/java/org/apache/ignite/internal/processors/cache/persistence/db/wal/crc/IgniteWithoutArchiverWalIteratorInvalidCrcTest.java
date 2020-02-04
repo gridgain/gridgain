@@ -116,7 +116,7 @@ public class IgniteWithoutArchiverWalIteratorInvalidCrcTest extends GridCommonAb
 
         List<FileWALPointer> pointers = WalTestUtils.getPointers(lastWalFile, iterFactory, LOGICAL);
 
-        WalTestUtils.corruptWalSegmentFile(lastWalFile, pointers.get(pointers.size()-1));
+        WalTestUtils.corruptWalRecord(lastWalFile, pointers.get(pointers.size()-1));
 
         IgniteEx ex = startGrid(0);
 
@@ -152,7 +152,7 @@ public class IgniteWithoutArchiverWalIteratorInvalidCrcTest extends GridCommonAb
 
         FileWALPointer pointer = binary.get(binary.size() - 1);
 
-        WalTestUtils.corruptWalSegmentFile(lastWalFile, pointer);
+        WalTestUtils.corruptWalRecord(lastWalFile, pointer);
 
         GridTestUtils.assertThrows(log, () -> startGrid(0), Exception.class, null);
     }
@@ -180,7 +180,7 @@ public class IgniteWithoutArchiverWalIteratorInvalidCrcTest extends GridCommonAb
 
         FileDescriptor lastWalFile = walFiles.get(walFiles.size() - 1);
 
-        WalTestUtils.corruptWalSegmentFile(lastWalFile, iterFactory, corruptLastRecord);
+        WalTestUtils.corruptRandomWalRecord(lastWalFile, iterFactory, corruptLastRecord);
 
         GridTestUtils.assertThrows(log, () -> startGrid(0), Exception.class, null);
     }

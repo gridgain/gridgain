@@ -73,6 +73,9 @@ import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -211,6 +214,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** Cache name - value typeId pairs for which type mismatch message was logged. */
     private final Set<Long> missedCacheTypes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
+    /** Factory to provide I/O interface for data storage files */
+    private FileIOFactory fileIOFactory =
+        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
+            new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
+
     /**
      * @param ctx Kernal context.
      */
@@ -263,6 +271,14 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }, QRY_DETAIL_METRICS_EVICTION_FREQ, QRY_DETAIL_METRICS_EVICTION_FREQ);
 
         registerMetadataForRegisteredCaches();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onKernalStart(boolean active) throws IgniteCheckedException {
+        super.onKernalStart(active);
+
+        if (idx != null)
+            idx.onKernalStart();
     }
 
     /** {@inheritDoc} */
@@ -3144,6 +3160,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public static AffinityTopologyVersion getRequestAffinityTopologyVersion() {
         return requestTopVer.get();
+    }
+
+    /**
+     * @return File IO Factory.
+     */
+    public FileIOFactory fileIOFactory() {
+        return fileIOFactory;
     }
 
     /**
