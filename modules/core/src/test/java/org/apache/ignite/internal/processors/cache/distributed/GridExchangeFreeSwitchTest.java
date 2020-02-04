@@ -63,7 +63,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FO
  */
 public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** Nodes count. */
-    private static final int NODES_CNT = 8;
+    private static final int NODES_CNT = 6;
 
     /** Persistence flag. */
     private boolean persistence;
@@ -169,7 +169,23 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
         persistence = true;
 
         try {
-            testNodeLeftOnFullyRebalancedCluster(true, false);
+            testNodeLeftOnFullyRebalancedCluster(false, false);
+        }
+        finally {
+            persistence = false;
+        }
+    }
+
+    /**
+     * Checks Partition Exchange happen in case of baseline change (persistent cluster). It's not possible to
+     * perform switch since primaries may change.
+     */
+    @Test
+    public void testNonBaselineNodeLeftOnFullyRebalancedClusterPersistence_2() throws Exception {
+        persistence = true;
+
+        try {
+            testNodeLeftOnFullyRebalancedCluster(true, true);
         }
         finally {
             persistence = false;
