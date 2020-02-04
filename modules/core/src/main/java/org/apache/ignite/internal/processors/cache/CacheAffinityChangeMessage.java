@@ -62,10 +62,15 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
      *
      * @param topVer Topology version.
      * @param cacheDeploymentIds Cache deployment ID.
+     * @param assignmentChange Assignment changes for compatibility mode.
      */
-    public CacheAffinityChangeMessage(AffinityTopologyVersion topVer, Map<Integer, IgniteUuid> cacheDeploymentIds) {
+    public CacheAffinityChangeMessage(AffinityTopologyVersion topVer,
+        @Nullable Map<Integer, Map<Integer, List<UUID>>> assignmentChange,
+        Map<Integer, IgniteUuid> cacheDeploymentIds
+    ) {
         this.topVer = topVer;
         this.cacheDeploymentIds = cacheDeploymentIds;
+        this.assignmentChange = assignmentChange;
     }
 
     /**
@@ -77,7 +82,8 @@ public class CacheAffinityChangeMessage implements DiscoveryCustomMessage {
      */
     public CacheAffinityChangeMessage(GridDhtPartitionExchangeId exchId,
         GridDhtPartitionsFullMessage partsMsg,
-        Map<Integer, Map<Integer, List<UUID>>> assignmentChange) {
+        Map<Integer, Map<Integer, List<UUID>>> assignmentChange
+    ) {
         this.exchId = exchId;
         this.partsMsg = partsMsg;
         this.assignmentChange = assignmentChange;

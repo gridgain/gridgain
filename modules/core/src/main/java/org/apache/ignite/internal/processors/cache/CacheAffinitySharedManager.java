@@ -366,7 +366,39 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         if (waitInfo.assignments.isEmpty()) // Possible if all awaited caches were destroyed.
             return null;
 
-        return new CacheAffinityChangeMessage(waitInfo.topVer, waitInfo.deploymentIds);
+        Map<Integer, Map<Integer, List<UUID>>> assignmentsChange = null;
+
+        GridDhtPartitionsExchangeFuture excFut = context().exchange().lastFinishedFuture();
+
+        assert excFut != null : waitInfo;
+
+        // Send change in compatibility mode.
+        if (!excFut.context().supportsFreeSwitch()) {
+            assignmentsChange = U.newHashMap(waitInfo.assignments.size());
+
+            for (Map.Entry<Integer, Map<Integer, List<ClusterNode>>> e : waitInfo.assignments.entrySet()) {
+                Integer grpId = e.getKey();
+
+                final CacheGroupHolder holder = grpHolders.get(grpId);
+
+                final AffinityAssignment a0 = holder.affinity().cachedAffinity(waitInfo.topVer);
+
+                Map<Integer, List<ClusterNode>> assignment = e.getValue();
+
+                Map<Integer, List<UUID>> assignment0 = U.newHashMap(assignment.size());
+
+                for (Map.Entry<Integer, List<ClusterNode>> e0 : assignment.entrySet()) {
+                    // Skip non changed assignments.
+                    if (!a0.assignment().get(e0.getKey()).equals(e0.getValue()))
+                        assignment0.put(e0.getKey(), toIds0(e0.getValue()));
+                }
+
+                if (!assignment0.isEmpty())
+                    assignmentsChange.put(grpId, assignment0);
+            }
+        }
+
+        return new CacheAffinityChangeMessage(waitInfo.topVer, assignmentsChange, waitInfo.deploymentIds);
     }
 
     /**
@@ -2868,7 +2900,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         private final Map<Integer, Set<Integer>> waitGrps = new ConcurrentHashMap<>();
 
         /** */
-        private final Map<Integer, Map<Integer, List<ClusterNode>>> assignments = new ConcurrentHashMap<>();
+        private final Map<Integer /** Group id. */, Map<Integer /** Partition id. */, List<ClusterNode>>> assignments =
+            new ConcurrentHashMap<>();
 
         /** */
         private final Map<Integer, IgniteUuid> deploymentIds = new ConcurrentHashMap<>();
