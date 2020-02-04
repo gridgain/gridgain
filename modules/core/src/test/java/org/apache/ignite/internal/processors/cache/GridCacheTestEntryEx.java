@@ -908,10 +908,7 @@ public class GridCacheTestEntryEx extends GridMetadataAwareAdapter implements Gr
     }
 
     /** {@inheritDoc} */
-    @Override public void updateIndex(
-        SchemaIndexCacheVisitorClosure clo,
-        @Nullable SchemaIndexCacheStat stat
-    ) throws IgniteCheckedException, GridCacheEntryRemovedException {
+    @Override public void updateIndex(SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat) {
         // No-op.
     }
 

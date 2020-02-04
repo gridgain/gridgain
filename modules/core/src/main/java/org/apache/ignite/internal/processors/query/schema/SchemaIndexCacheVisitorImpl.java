@@ -253,8 +253,11 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @param stat Index build statistics accumulator (can be {@code }
      * @throws IgniteCheckedException If failed.
      */
-    private void processPartition(GridDhtLocalPartition part, SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat)
-        throws IgniteCheckedException {
+    private void processPartition(
+        GridDhtLocalPartition part,
+        SchemaIndexCacheVisitorClosure clo,
+        @Nullable SchemaIndexCacheStat stat
+    ) throws IgniteCheckedException {
         checkCancelled();
 
         boolean reserved = false;
@@ -318,7 +321,11 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @return Type descriptor.
      * @throws IgniteCheckedException If failed.
      */
-    private void processKey(KeyCacheObject key, SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException {
+    private void processKey(
+        KeyCacheObject key,
+        SchemaIndexCacheVisitorClosure clo,
+        @Nullable SchemaIndexCacheStat stat
+    ) throws IgniteCheckedException {
         while (true) {
             try {
                 checkCancelled();
