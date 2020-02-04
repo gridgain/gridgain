@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -139,7 +140,7 @@ public class IgniteMarshallerCacheClientRequestsMappingOnMissTest extends GridCo
         boolean orgClsMarshalled = false;
 
         for (File f : files) {
-            if (clsName.equals(new String(Files.readAllBytes(f.toPath())))) {
+            if (clsName.equals(new String(Files.readAllBytes(f.toPath()), StandardCharsets.UTF_8))) {
                 orgClsMarshalled = true;
                 break;
             }

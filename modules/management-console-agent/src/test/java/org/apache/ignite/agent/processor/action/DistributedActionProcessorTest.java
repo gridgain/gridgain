@@ -198,6 +198,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
+
             TaskResponse taskRes =
                 interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
 

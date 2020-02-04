@@ -30,10 +30,18 @@ public class ConditionExists extends Condition {
     @Override
     public Value getValue(Session session) {
         query.setSession(session);
+        ResultInterface lastResult = query.getLastResult();
         ResultInterface result = query.query(1);
-        session.addTemporaryResult(result);
-        boolean r = result.hasNext();
-        return ValueBoolean.get(r);
+        try {
+            session.addTemporaryResult(result);
+            boolean r = result.hasNext();
+            return ValueBoolean.get(r);
+        }
+        finally {
+            // Do not close the very first lastResult in the case when caching is turned on. Otherwise close all results.
+            if (lastResult != null || query.ignoreCaching())
+                result.close();
+        }
     }
 
     @Override

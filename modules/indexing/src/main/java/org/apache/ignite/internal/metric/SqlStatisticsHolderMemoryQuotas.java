@@ -50,7 +50,7 @@ public class SqlStatisticsHolderMemoryQuotas {
         quotasMetrics.register("maxMem",
             new LongSupplier() {
                 @Override public long getAsLong() {
-                    return memMgr.maxMemory();
+                    return memMgr.memoryLimit();
                 }
             },
             "How much memory in bytes it is possible to reserve by all the queries in total on this node. " +
@@ -61,7 +61,7 @@ public class SqlStatisticsHolderMemoryQuotas {
         quotasMetrics.register("freeMem",
             new LongSupplier() {
                 @Override public long getAsLong() {
-                    return memMgr.maxMemory() - memMgr.memoryReserved();
+                    return memMgr.memoryLimit() - memMgr.memoryReserved();
                 }
             },
             "How much memory in bytes currently left available for the queries on this node. " +

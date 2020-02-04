@@ -22,7 +22,6 @@ import java.util.Set;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -59,9 +58,10 @@ public class JdbcCachePartitionsRequest extends JdbcRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public void writeBinary(BinaryWriterExImpl writer, ClientListenerProtocolVersion ver)
+    @Override public void writeBinary(BinaryWriterExImpl writer,
+        JdbcProtocolContext protoCtx)
         throws BinaryObjectException {
-        super.writeBinary(writer, ver);
+        super.writeBinary(writer, protoCtx);
 
         assert cacheIds != null;
         assert !cacheIds.isEmpty();
@@ -72,9 +72,10 @@ public class JdbcCachePartitionsRequest extends JdbcRequest {
     }
 
     /** {@inheritDoc} */
-    @Override public void readBinary(BinaryReaderExImpl reader, ClientListenerProtocolVersion ver)
+    @Override public void readBinary(BinaryReaderExImpl reader,
+        JdbcProtocolContext protoCtx)
         throws BinaryObjectException {
-        super.readBinary(reader, ver);
+        super.readBinary(reader, protoCtx);
         int cacheIdsSize = reader.readInt();
 
         cacheIds = new HashSet<>();
