@@ -68,7 +68,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
             .setSessionId(sesId);
 
         executeAction(req, jobRes -> {
-            List<TaskResponse> taskRes =taskResults(req.getId());
+            List<TaskResponse> taskRes = taskResults(req.getId());
 
             Optional<TaskResponse> runningTask = taskRes.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskRes.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
