@@ -18,6 +18,7 @@ package org.apache.ignite.internal.commandline.cache;
 
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
+import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
 import org.apache.ignite.internal.commandline.cache.argument.DistributionCommandArg;
 import org.apache.ignite.internal.commandline.cache.argument.FindAndDeleteGarbageArg;
 import org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg;
@@ -38,6 +39,11 @@ public enum CacheSubcommands {
      * Checks consistency of primary and backup partitions assuming no concurrent updates are happening in the cluster.
      */
     IDLE_VERIFY("idle_verify", IdleVerifyCommandArg.class, new IdleVerify()),
+
+    /**
+     * Check consistency of primary and backup partitions assuming that there might be concurrent updated.
+     */
+    PARTITION_RECONCILIATION("partition_reconciliation", PartitionReconciliationCommandArg.class, new PartitionReconciliation()),
 
     /**
      * Prints info regarding caches, groups or sequences.
