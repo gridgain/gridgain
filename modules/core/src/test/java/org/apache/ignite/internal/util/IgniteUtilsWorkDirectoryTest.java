@@ -41,7 +41,6 @@ import static org.junit.Assert.fail;
 
 /** */
 public class IgniteUtilsWorkDirectoryTest {
-
     /** */
     private static final String USER_WORK_DIR = join(File.separator,
         getIgniteHome(), "userWorkDirTest");
