@@ -87,7 +87,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     private ManagementConfiguration cfg = new ManagementConfiguration();
 
     /** Websocket manager. */
-    private WebSocketManager mgr;
+    protected WebSocketManager mgr;
 
     /** Cluster processor. */
     private ClusterInfoProcessor clusterProc;
@@ -125,7 +125,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     /** Session registry. */
     private SessionRegistry sesRegistry;
 
-    /** Active server uri. */
+    /** Active server URI. */
     private String curSrvUri;
 
     /** If first connection error after successful connection. */
@@ -265,7 +265,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     }
 
     /**
-     * Start agent on local node if this is coordinator node.
+     * Start agent on a local node if it is a coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
         if (isLocalNodeCoordinator(ctx.discovery()) && agentStarted.compareAndSet(false, true)) {
@@ -345,7 +345,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
 
         mgr = new WebSocketManager(ctx);
         sesRegistry = new SessionRegistry(ctx);
-        clusterProc = new ClusterInfoProcessor(ctx, mgr);
+        clusterProc =  createClusterInfoProcessor();
         metricProc = new MetricsProcessor(ctx, mgr);
         distributedActProc = new DistributedActionProcessor(ctx);
         cacheProc = new CacheChangesProcessor(ctx, mgr);
@@ -403,6 +403,13 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     }
 
     /**
+     * @return Cluster info processor.
+     */
+    protected ClusterInfoProcessor createClusterInfoProcessor() {
+        return new ClusterInfoProcessor(ctx, mgr);
+    }
+
+    /**
      * Session handler for sending cluster info to backend.
      */
     private class AfterConnectedSessionHandler extends StompSessionHandlerAdapter {
@@ -419,8 +426,8 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
-            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: "
-                + cluster.id());
+            U.quietAndInfo(log, "If you are already using Management Console, you can add the cluster manually" +
+                " by its ID: " + cluster.id());
 
             clusterProc.sendInitialState();
 

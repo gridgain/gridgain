@@ -61,7 +61,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     private volatile BaselineInfo curBaselineParameters;
 
     /** Cluster. */
-    private IgniteClusterEx cluster;
+    protected IgniteClusterEx cluster;
 
     /** Manager. */
     private WebSocketManager mgr;
@@ -153,7 +153,25 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
         if (log.isDebugEnabled())
             log.debug("Sending cluster info to Management Console");
 
-        ClusterInfo clusterInfo = new ClusterInfo(cluster.id(), cluster.tag())
+        ClusterInfo clusterInfo = createClusterInfo();
+
+        populateClusterInfo(clusterInfo);
+
+        mgr.send(buildClusterDest(cluster.id()), clusterInfo);
+    }
+
+    /**
+     * @return Create cluster info.
+     */
+    protected ClusterInfo createClusterInfo() {
+        return new ClusterInfo(cluster.id(), cluster.tag());
+    }
+
+    /**
+     * @param clusterInfo Cluster info to populate with data.
+     */
+    protected void populateClusterInfo(ClusterInfo clusterInfo) {
+        clusterInfo
             .setActive(cluster.active())
             .setPersistenceEnabled(CU.isPersistenceEnabled(ctx.config()))
             .setBaselineParameters(
@@ -164,7 +182,6 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
             )
             .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
 
-        mgr.send(buildClusterDest(cluster.id()), clusterInfo);
     }
 
     /** {@inheritDoc} */
