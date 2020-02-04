@@ -3153,13 +3153,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tbl == null)
             return 0;
 
-        final int idx = tbl.containsUserIndex(idxName);
+        H2TreeIndex idx = (H2TreeIndex)tbl.userIndex(idxName);
 
-        if (idx < 0)
-            return 0;
-
-        final H2TreeIndex index = (H2TreeIndex)tbl.index(idx);
-
-        return index.size();
+        return idx == null ? 0 : idx.size();
     }
 }
