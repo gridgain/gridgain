@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
-import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.lang.GridTuple3;
@@ -1000,13 +999,13 @@ public interface GridCacheEntryEx {
         throws IgniteCheckedException, GridCacheEntryRemovedException;
 
     /**
-     * Update index from within entry lock, passing key, value, and expiration time to provided closure.
+     * Update index from within entry lock, passing key, value, and expiration time to provided closure and collect
+     * statistics about index update to {@code stat}, if it is present.
      *
      * @param clo Closure to apply to key, value, and expiration time.
-     * @return Type descriptor (can be {@code null}).
+     * @param stat Object for collecting statistics about index update (can be {@code null}).
      * @throws IgniteCheckedException If failed.
      * @throws GridCacheEntryRemovedException If entry was removed.
-     * @return Type descriptor.
      */
     public void updateIndex(SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat)
         throws IgniteCheckedException, GridCacheEntryRemovedException;
