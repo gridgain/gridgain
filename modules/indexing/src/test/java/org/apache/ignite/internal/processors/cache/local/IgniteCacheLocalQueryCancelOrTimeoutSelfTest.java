@@ -58,6 +58,7 @@ public class IgniteCacheLocalQueryCancelOrTimeoutSelfTest extends GridCommonAbst
         ccfg.setCacheMode(LOCAL);
 
         cfg.setCacheConfiguration(ccfg);
+        cfg.setSqlGlobalMemoryQuota("0");
 
         return cfg;
     }

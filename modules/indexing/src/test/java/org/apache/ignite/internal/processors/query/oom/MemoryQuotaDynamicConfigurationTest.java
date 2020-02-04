@@ -39,12 +39,12 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
     }
 
     /** {@inheritDoc} */
-    protected long globalQuotaSize() {
+    @Override protected long globalQuotaSize() {
         return GLOBAL_QUOTA;
     }
 
     /** {@inheritDoc} */
-    protected boolean startClient() {
+    @Override protected boolean startClient() {
         return true;
     }
 
