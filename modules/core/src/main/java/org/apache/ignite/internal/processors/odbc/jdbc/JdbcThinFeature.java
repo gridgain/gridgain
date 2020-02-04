@@ -24,7 +24,12 @@ import org.apache.ignite.internal.ThinProtocolFeature;
  * Defines supported features for JDBC thin client.
  */
 public enum JdbcThinFeature implements ThinProtocolFeature {
-    RESERVED(0);
+    RESERVED(0),
+
+    /** Server sends its time zone to client on handshake. This TZ is used to convert date / time / timestamp object to server
+     * timezone before sent data, and convert from this timezone after receive results. */
+    TIME_ZONE(1)
+    ;
 
     /** */
     private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.class);

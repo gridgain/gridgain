@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.query;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TimeZone;
 import javax.cache.configuration.Factory;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
@@ -97,9 +96,6 @@ public class SqlClientContext implements AutoCloseable {
     /** Count of the processed ordered batch requests. Used to wait end of processing all request before starts
      * the processing the last request. */
     private long totalProcessedOrderedReqs;
-
-    /** Tz. */
-    private TimeZone tz;
 
     /** Logger. */
     private final IgniteLogger log;
@@ -332,20 +328,6 @@ public class SqlClientContext implements AutoCloseable {
 
             muxStreamer.notifyAll();
         }
-    }
-
-    /**
-     * @param tz Client time zone.
-     */
-    public void timeZone(TimeZone tz) {
-        this.tz = tz;
-    }
-
-    /**
-     * @return Client time zone.
-     */
-    public TimeZone timeZone() {
-        return tz ;
     }
 
     /** {@inheritDoc} */

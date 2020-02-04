@@ -118,12 +118,6 @@ public class DateTimeUtils {
      */
     private static int zoneOffsetMillis = createGregorianCalendar().get(Calendar.ZONE_OFFSET);
 
-    /**
-     * Cached local time zone.
-     */
-    private static ThreadLocal<TimeZone> cliTimeZone = new ThreadLocal<>();
-
-
     private DateTimeUtils() {
         // utility class
     }
@@ -1589,19 +1583,10 @@ public class DateTimeUtils {
     }
 
     private static TimeZone getTimeZone() {
-        System.out.println(Thread.currentThread().getName() + " +++ cli=" + cliTimeZone.get() + ", srv=" + timeZone);
-
-        TimeZone cli = cliTimeZone.get();
-
-        return cli != null ? cli : timeZone;
-//        return null;
+        return timeZone;
     }
 
-    public static void setClientTimeZone(TimeZone tz) {
-        cliTimeZone.set(tz);
-    }
-
-    public static void resetClientTimeZone() {
-        cliTimeZone.remove();
+    private static void setTimeZone(TimeZone tz) {
+        timeZone = tz;
     }
 }

@@ -25,6 +25,7 @@ import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
@@ -228,7 +229,7 @@ public class JdbcThinTcpIo {
 
         srvProtoVer = handshakeRes.serverProtocolVersion();
 
-        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features());
+        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features(), handshakeRes.serverTimezone(), true);
     }
 
     /**
@@ -319,6 +320,12 @@ public class JdbcThinTcpIo {
             }
 
             handshakeRes.serverProtocolVersion(ver);
+
+            if (handshakeRes.features().contains(JdbcThinFeature.TIME_ZONE)) {
+                String srvTzId = reader.readString();
+
+                handshakeRes.serverTimezone(TimeZone.getTimeZone(srvTzId));
+            }
 
             return handshakeRes;
         }

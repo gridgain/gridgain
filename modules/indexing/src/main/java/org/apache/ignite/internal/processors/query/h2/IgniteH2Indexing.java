@@ -186,7 +186,6 @@ import org.h2.store.DataHandler;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableType;
-import org.h2.util.DateTimeUtils;
 import org.h2.util.JdbcUtils;
 import org.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
@@ -1056,8 +1055,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         GridQueryCancel cancel
     ) {
         try {
-            DateTimeUtils.setClientTimeZone(cliCtx.timeZone());
-
             List<FieldsQueryCursor<List<?>>> res = new ArrayList<>(1);
 
             SqlFieldsQuery remainingQry = qry;
