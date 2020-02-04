@@ -34,8 +34,8 @@ import static org.apache.ignite.jdbc.JdbcTestUtils.sql;
  */
 public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /** Jdbc thin url. */
-//    private static final String URL = "jdbc:ignite:thin://127.0.0.1";
-    private static final String URL = "jdbc:postgresql://localhost/test?user=test&password=test";
+    private static final String URL = "jdbc:ignite:thin://127.0.0.1";
+//    private static final String URL = "jdbc:postgresql://localhost/test?user=test&password=test";
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -67,9 +67,57 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-    /**
-     *
-     */
+    @Test
+    public void testDbg() throws Exception {
+//        TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
+//            sql(URL, "INSERT INTO TZ_TEST (tz, label, tsVal) " +
+//                    "VALUES (?, 'obj_legacy', ?)",
+//                Arrays.asList(
+//                    "IST",
+//                    new Timestamp(119, 8, 9, 9, 9, 9, 909000000)
+//                )
+//            );
+//        }, "-Duser.timezone=IST");
+        TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
+            sql(URL, "INSERT INTO TZ_TEST (tz, label, tsVal) " +
+                    "VALUES (?, 'literal', ?)",
+                Arrays.asList(
+                    "IST",
+                    "2019-09-09 09:09:09.909"
+                )
+            );
+        }, "-Duser.timezone=IST");
+
+        TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
+        try (Connection conn = DriverManager.getConnection(URL)) {
+            try (PreparedStatement pstmt = conn.prepareStatement(
+                "SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST")) {
+                pstmt.execute();
+
+                ResultSet rs = pstmt.getResultSet();
+
+                while (rs.next()) {
+                    List<Object> row = new ArrayList<>();
+
+                    row.add(rs.getString(1));
+                    row.add(rs.getString(2));
+                    row.add(rs.getDate(3));
+                    row.add(rs.getObject(3));
+                    row.add(rs.getTime(4));
+                    row.add(rs.getObject(4));
+                    row.add(rs.getTimestamp(5));
+                    row.add(rs.getObject(5));
+
+                    System.out.println("+++ " + row);
+                }
+
+            }
+        }
+        }, "-Duser.timezone=IST");
+    }
+        /**
+         *
+         */
     @Test
     public void test() throws Exception {
         insertObjectByLegacyApi(TimeZone.getTimeZone("EST5EDT"));

@@ -21,6 +21,7 @@ import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -162,6 +163,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** Memory available for query. */
     private long maxMem;
 
+    /** Client time zone. */
+    private String tzId;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -189,6 +193,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         mvccSnapshot = req.mvccSnapshot;
         txReq = req.txReq;
         maxMem = req.maxMem;
+        tzId = req.tzId;
     }
 
     /**
@@ -510,6 +515,15 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public Boolean isDataPageScanEnabled() {
         return isDataPageScanEnabled(flags);
+    }
+
+    /**
+     * Used to calculate time offset on node.
+     *
+     * @return Client time zone.
+     */
+    public String timeZoneId() {
+        return tzId;
     }
 
     /**

@@ -575,6 +575,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             String sql = req.sqlQuery();
 
+            cliCtx.timeZone(req.timeZone());
+
             SqlFieldsQueryEx qry;
 
             switch (req.expectedStatementType()) {

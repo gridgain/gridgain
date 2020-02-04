@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.io.IOException;
+import java.util.TimeZone;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
@@ -60,6 +61,9 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
     /** Flag, that signals, that query expects partition response in response. */
     private boolean partResReq;
 
+    /** Client time zone ID. */
+    private String tzId;
+
     /**
      */
     JdbcQueryExecuteRequest() {
@@ -88,6 +92,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         this.args = args;
         this.stmtType = stmtType;
         this.autoCommit = autoCommit;
+        this.tzId = TimeZone.getDefault().getID();
     }
 
     /**
@@ -163,6 +168,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
         if (ver.compareTo(VER_2_8_0) >= 0)
             writer.writeBoolean(partResReq);
+
+        writer.writeString(tzId);
     }
 
     /** {@inheritDoc} */
@@ -197,6 +204,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
         if (ver.compareTo(VER_2_8_0) >= 0)
             partResReq = reader.readBoolean();
+
+        tzId = reader.readString();
     }
 
     /**
@@ -211,6 +220,13 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
      */
     public void partitionResponseRequest(boolean partResReq) {
         this.partResReq = partResReq;
+    }
+
+    /**
+     * @return Client time zone.
+     */
+    public TimeZone timeZone() {
+        return TimeZone.getTimeZone(tzId);
     }
 
     /** {@inheritDoc} */

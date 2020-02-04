@@ -118,6 +118,12 @@ public class DateTimeUtils {
      */
     private static int zoneOffsetMillis = createGregorianCalendar().get(Calendar.ZONE_OFFSET);
 
+    /**
+     * Cached local time zone.
+     */
+    private static ThreadLocal<TimeZone> cliTimeZone = new ThreadLocal<>();
+
+
     private DateTimeUtils() {
         // utility class
     }
@@ -980,7 +986,7 @@ public class DateTimeUtils {
      * @return the date
      */
     public static Date convertDateValueToDate(long dateValue) {
-        long millis = getMillis(null, yearFromDateValue(dateValue),
+        long millis = getMillis(getTimeZone(), yearFromDateValue(dateValue),
                 monthFromDateValue(dateValue), dayFromDateValue(dateValue), 0,
                 0, 0, 0);
         return new Date(millis);
@@ -1015,7 +1021,7 @@ public class DateTimeUtils {
      */
     public static Timestamp convertDateValueToTimestamp(long dateValue,
             long timeNanos) {
-        Timestamp ts = new Timestamp(convertDateTimeValueToMillis(null, dateValue, timeNanos / 1_000_000));
+        Timestamp ts = new Timestamp(convertDateTimeValueToMillis(getTimeZone(), dateValue, timeNanos / 1_000_000));
         // This method expects the complete nanoseconds value including milliseconds
         ts.setNanos((int) (timeNanos % NANOS_PER_SECOND));
         return ts;
@@ -1050,7 +1056,7 @@ public class DateTimeUtils {
         s -= m * 60;
         long h = m / 60;
         m -= h * 60;
-        long ms = getMillis(null, 1970, 1, 1, (int) (h % 24), (int) m, (int) s,
+        long ms = getMillis(getTimeZone(), 1970, 1, 1, (int) (h % 24), (int) m, (int) s,
                 (int) millis);
         return new Time(ms);
     }
@@ -1582,4 +1588,20 @@ public class DateTimeUtils {
         return nanosOfDay - mod;
     }
 
+    private static TimeZone getTimeZone() {
+        System.out.println(Thread.currentThread().getName() + " +++ cli=" + cliTimeZone.get() + ", srv=" + timeZone);
+
+        TimeZone cli = cliTimeZone.get();
+
+        return cli != null ? cli : timeZone;
+//        return null;
+    }
+
+    public static void setClientTimeZone(TimeZone tz) {
+        cliTimeZone.set(tz);
+    }
+
+    public static void resetClientTimeZone() {
+        cliTimeZone.remove();
+    }
 }
