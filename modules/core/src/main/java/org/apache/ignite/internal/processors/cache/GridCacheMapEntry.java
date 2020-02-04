@@ -4467,13 +4467,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public GridQueryTypeDescriptor updateIndex(SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException,
+    @Override public void updateIndex(SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException,
         GridCacheEntryRemovedException {
         lockEntry();
 
         try {
             if (isInternal())
-                return null;
+                return;
 
             checkObsolete();
 
@@ -4493,13 +4493,13 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 if (type != null)
                     stat.types.add(type.name());
 
-                return type;
+                return;
             }
         }
         finally {
             unlockEntry();
         }
-        return null;
+        return;
     }
 
     /** {@inheritDoc} */
