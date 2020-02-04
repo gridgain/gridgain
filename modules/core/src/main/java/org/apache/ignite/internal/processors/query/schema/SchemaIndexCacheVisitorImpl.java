@@ -318,7 +318,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @return Type descriptor.
      * @throws IgniteCheckedException If failed.
      */
-    private GridQueryTypeDescriptor processKey(KeyCacheObject key, SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException {
+    private void processKey(KeyCacheObject key, SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException {
         while (true) {
             try {
                 checkCancelled();
@@ -326,11 +326,13 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                 GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
                 try {
-                    return entry.updateIndex(clo, stat);
+                    entry.updateIndex(clo, stat);
                 }
                 finally {
                     entry.touch();
                 }
+
+                break;
             }
             catch (GridDhtInvalidPartitionException ignore) {
                 break;
@@ -339,8 +341,6 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                 // No-op.
             }
         }
-
-        return null;
     }
 
     /**
