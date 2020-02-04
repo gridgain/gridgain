@@ -4467,8 +4467,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void updateIndex(SchemaIndexCacheVisitorClosure clo, SchemaIndexCacheStat stat) throws IgniteCheckedException,
-        GridCacheEntryRemovedException {
+    @Override public void updateIndex(
+        SchemaIndexCacheVisitorClosure clo,
+        @Nullable SchemaIndexCacheStat stat
+    ) throws IgniteCheckedException, GridCacheEntryRemovedException {
         lockEntry();
 
         try {
@@ -4482,24 +4484,23 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             if (row != null) {
                 clo.apply(row);
 
-                QueryTypeDescriptorImpl type = cctx.kernalContext().query().typeByValue(
-                    cctx.cache().name(),
-                    cctx.cacheObjectContext(),
-                    row.key(),
-                    row.value(),
-                    true
-                );
+                if (stat != null) {
+                    QueryTypeDescriptorImpl type = cctx.kernalContext().query().typeByValue(
+                        cctx.cache().name(),
+                        cctx.cacheObjectContext(),
+                        row.key(),
+                        row.value(),
+                        true
+                    );
 
-                if (type != null)
-                    stat.types.add(type.name());
-
-                return;
+                    if (type != null)
+                        stat.types.add(type.name());
+                }
             }
         }
         finally {
             unlockEntry();
         }
-        return;
     }
 
     /** {@inheritDoc} */
