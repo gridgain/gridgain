@@ -49,7 +49,7 @@ public class TestProcessClosureLauncher {
             try (ObjectOutput oos = new ObjectOutputStream(Files.newOutputStream(FS.getPath(params.outFileName)))) {
                 Object c = ois.readObject();
 
-                X.println("Starting closure: "+ c.getClass().getName());
+                X.println("Starting closure: " + c.getClass().getSimpleName());
 
                 try {
                     if (c instanceof GridTestUtils.IgniteRunnableX || c instanceof GridTestUtils.RunnableX)
