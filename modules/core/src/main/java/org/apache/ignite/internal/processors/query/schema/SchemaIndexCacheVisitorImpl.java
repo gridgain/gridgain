@@ -233,21 +233,16 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         throws IgniteCheckedException {
 
         SchemaIndexCacheStat tmp = IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED ? new SchemaIndexCacheStat() : null;
-        SchemaIndexCacheStat tmp2 = IS_EXTRA_INDEX_REBUILD_LOGGING_ENABLED ? new SchemaIndexCacheStat() : null;
 
         for (int i = 0, size = parts.size(); i < size; i++) {
             if (stop)
                 break;
 
             if ((i % parallelism) == remainder)
-                processPartition(parts.get(i), clo, tmp, tmp2);
+                processPartition(parts.get(i), clo, tmp);
         }
 
-        if (!tmp.equals(tmp2)) {
-            throw new IgniteCheckedException(tmp + " " + tmp2);
-        }
-
-        return tmp2;
+        return tmp;
     }
 
     /**
@@ -258,7 +253,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @param stat Index build statistics accumulator (can be {@code }
      * @throws IgniteCheckedException If failed.
      */
-    private void processPartition(GridDhtLocalPartition part, SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat, SchemaIndexCacheStat statTmp)
+    private void processPartition(GridDhtLocalPartition part, SchemaIndexCacheVisitorClosure clo, @Nullable SchemaIndexCacheStat stat)
         throws IgniteCheckedException {
         checkCancelled();
 
@@ -288,10 +283,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                         locked = true;
                     }
 
-                    final GridQueryTypeDescriptor type = processKey(key, clo, statTmp);
-
-                    if (type != null && stat != null)
-                        stat.types.add(type.name());
+                    processKey(key, clo, stat);
 
                     if (++cntr % BATCH_SIZE == 0) {
                         cctx.shared().database().checkpointReadUnlock();
@@ -305,9 +297,6 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
                 if (stat != null)
                     stat.scanned += cntr;
-
-                if (statTmp != null)
-                    statTmp.scanned += cntr;
             }
             finally {
                 if (locked)
