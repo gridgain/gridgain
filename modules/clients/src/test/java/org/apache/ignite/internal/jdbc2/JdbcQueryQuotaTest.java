@@ -67,7 +67,6 @@ public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
      */
     @Test
     public void testClientQueryQuota() throws Exception {
-
         try (Connection conn512 = createConnection("jdbc-config-query-mem-limit-512.xml");
              Connection conn2048 = createConnection("jdbc-config-query-mem-limit-2048.xml")) {
 

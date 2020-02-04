@@ -378,5 +378,4 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
                 IgniteUtils.closeQuiet(c);
         }
     }
-
 }

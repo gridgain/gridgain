@@ -31,7 +31,7 @@
         <property name="igniteInstanceName" value="sqlGrid2"/>
         <property name="localHost" value="127.0.0.1"/>
 
-        <!-- Set query quota to 2kb. -->
+        <!-- Set query quota to 512b. -->
         <property name="sqlQueryMemoryQuota" value="512"/>
 
         <property name="discoverySpi">

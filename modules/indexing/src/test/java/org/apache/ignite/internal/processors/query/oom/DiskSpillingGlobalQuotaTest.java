@@ -58,7 +58,7 @@ public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
         checkGlobalQuota(qry);
     }
 
-
+    /** */
     private void checkGlobalQuota(String qry) throws IOException {
         Path workDir = getWorkDir();
 

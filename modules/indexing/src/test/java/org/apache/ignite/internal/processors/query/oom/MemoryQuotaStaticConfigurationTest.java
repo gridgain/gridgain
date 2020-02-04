@@ -33,18 +33,28 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 
 /**
- * TODO: Add leaks tests
+ * Test cases for memory quota static configuration.
  */
 public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTest {
+    /** */
     private Boolean offloadingEnabled;
 
+    /** */
     private String globalQuota;
 
-    private String queryQuota;
+    /** */
+    private String qryQuota;
 
+    /** */
     private static String qry50Percent;
+
+    /** */
     private static String qryMore60Percent;
+
+    /** */
     private static String qry25Percent;
+
+    /** */
     private static String qry10Percent;
 
     /** {@inheritDoc} */
@@ -59,8 +69,6 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
-        // No-op.
-
         initGrid("0", "50%", false);
 
         String qry = "SELECT * FROM person p1 JOIN person p2 WHERE p1.id < ";
@@ -110,7 +118,7 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
         super.beforeTest();
         offloadingEnabled = null;
         globalQuota = null;
-        queryQuota = null;
+        qryQuota = null;
     }
 
     /** {@inheritDoc} */
@@ -120,10 +128,12 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
         destroyGrid();
     }
 
+    /** */
     protected boolean startClient() {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -137,15 +147,16 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
         if (globalQuota != null)
             cfg.setSqlGlobalMemoryQuota(globalQuota);
 
-        if (queryQuota != null)
-            cfg.setSqlQueryMemoryQuota(queryQuota);
+        if (qryQuota != null)
+            cfg.setSqlQueryMemoryQuota(qryQuota);
 
         return cfg;
     }
 
+    /** */
     private void initGrid(String globalQuota, String queryQuota, Boolean offloadingEnabled) throws Exception {
         this.globalQuota = globalQuota;
-        this.queryQuota = queryQuota;
+        this.qryQuota = queryQuota;
         this.offloadingEnabled = offloadingEnabled;
 
         initGrid();
@@ -351,12 +362,6 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
                 .query(new SqlFieldsQuery(sql)
                     .setLazy(false))
                 .getAll(), threadNum);
-
-//            List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
-//
-//            assertEquals("Disk spilling not happened.", res.offload, !dirEvts.isEmpty());
-
-
         }
         catch (Exception e) {
             assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
@@ -388,18 +393,30 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
         }
     }
 
+    /** */
     enum Result {
+        /** */
         SUCCESS_WITH_OFFLOADING(true, true),
+
+        /** */
         SUCCESS_NO_OFFLOADING(false, true),
+
+        /** */
         ERROR_GLOBAL_QUOTA(false, false),
+
+        /** */
         ERROR_QUERY_QUOTA(false, false);
 
+        /** */
         Result(boolean offload, boolean success) {
             this.offload = offload;
             this.success = success;
         }
 
+        /** */
         final boolean offload;
+
+        /** */
         final boolean success;
     }
 }

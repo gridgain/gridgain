@@ -128,7 +128,6 @@ public class QueryMemoryManager implements H2MemoryTracker {
         return true;
     }
 
-
     /** {@inheritDoc} */
     @Override public void released(long size) {
         assert size >= 0;
@@ -168,7 +167,6 @@ public class QueryMemoryManager implements H2MemoryTracker {
         }
 
         H2MemoryTracker parent = globalQuota0 == 0 ? null : this;
-        //maxQueryMemory = maxQueryMemory == 0 ? Long.MAX_VALUE : maxQueryMemory;
 
         return new QueryMemoryTracker(parent, maxQueryMemory, blockSize, offloadingEnabled);
     }
