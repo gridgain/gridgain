@@ -33,10 +33,12 @@ public class ThinJdbcSqlMergeDateTypeBenchmark extends AbstractJdbcBenchmark {
     /** Types suppliers. */
     private Map<String, Function<Integer, Object>> valCreatorMap = new HashMap<>();
     {
-        valCreatorMap.put("BYTE", Integer::byteValue);
-        valCreatorMap.put("SHORT", Integer::shortValue);
+        valCreatorMap.put("TINYINT", Integer::byteValue);
+        valCreatorMap.put("SMALLINT", Integer::shortValue);
         valCreatorMap.put("INT", (k) -> k);
-        valCreatorMap.put("LONG", Integer::longValue);
+        valCreatorMap.put("NUMBER", Integer::longValue);
+        valCreatorMap.put("DOUBLE", (k) -> k.doubleValue() + k.doubleValue() / 10000);
+        valCreatorMap.put("FLOAT", (k) -> k.floatValue() + k.floatValue() / 10000);
         valCreatorMap.put("DECIMAL", (k) -> BigDecimal.valueOf(k.doubleValue() + k.doubleValue() / 10000));
         valCreatorMap.put("CHAR", (k) -> Integer.toString(k));
         valCreatorMap.put("VARCHAR", (k) -> Integer.toString(k));
