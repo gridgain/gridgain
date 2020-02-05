@@ -143,9 +143,9 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
         final SchemaIndexCacheStat stat = processPartitions(parts, clo, 0);
 
-        if (fut != null) {
+        if (fut != null && stat != null) {
             final SchemaIndexCacheStat st = fut.get();
-
+            
             stat.scanned += st.scanned;
             stat.types.addAll(st.types);
         }
