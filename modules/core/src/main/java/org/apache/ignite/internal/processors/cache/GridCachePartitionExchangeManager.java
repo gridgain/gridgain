@@ -601,7 +601,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                         assert state.transition() : state;
 
-                        baselineChanging = state.baselineChanging();
+                        baselineChanging = state.baselineChanging()
+                            // Or it is the first activation.
+                            || state.active() && !state.previouslyActive() && state.previousBaselineTopology() == null;
                     }
 
                     exchFut.listen(f -> {
