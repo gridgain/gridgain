@@ -328,14 +328,14 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      */
     private void connect() {
         if (!cfg.isEnabled()) {
-            log.info("Skip start Management Console agent on coordinator, because it was disabled in configuration");
-            log.info("You can use control script to enable Management Console agent");
+            log.info("Control Center agent was not started on coordinator, because it was disabled in configuration");
+            log.info("You can use control script to enable Control Center agent");
 
             return;
         }
 
         if (F.isEmpty(cfg.getConsoleUris())) {
-            log.info("Skip start Management Console agent on coordinator, because the server URI is not set");
+            log.info("Control Center agent  was not started on coordinator, because the server URI was not set");
             log.info("You can use control script to setup server URI");
 
             return;
