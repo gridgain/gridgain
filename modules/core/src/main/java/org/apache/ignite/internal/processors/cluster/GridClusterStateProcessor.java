@@ -46,9 +46,6 @@ import org.apache.ignite.events.ClusterStateChangeStartedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
-import org.apache.ignite.failure.FailureContext;
-import org.apache.ignite.failure.FailureType;
-import org.apache.ignite.failure.StopNodeOrHaltFailureHandler;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -105,6 +102,7 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
@@ -123,6 +121,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
     /** */
     private static final String METASTORE_CURR_BLT_KEY = "metastoreBltKey";
+
+    /**
+     * This property allows disabling baseline topology validation on the coordinator node
+     * if the joining node do have baseline history and the coordinator does not.
+     * */
+    private static final String IGNITE_STOP_EMPTY_NODE_ON_JOIN = "IGNITE_STOP_EMPTY_NODE_ON_JOIN";
 
     /** */
     private boolean inMemoryMode;
@@ -1266,23 +1270,20 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (globalState == null || globalState.baselineTopology() == null) {
             if (joiningNodeState.baselineTopology() != null) {
-                Object consistentId = ctx.discovery().localNode().consistentId();
+                boolean validationCanBeIgnored = getBoolean(IGNITE_STOP_EMPTY_NODE_ON_JOIN, false);
 
-                boolean canBeAccepted = joiningNodeState.baselineTopology().consistentIds().contains(consistentId);
-
-                if (canBeAccepted) {
-                    // It seems that this node was cleaned up and was started first.
-                    // Let's try to stop this node and give a try to a new one
-                    // that is currently joining the cluster and has info about baseline, caches, etc.
-                    ctx.failure().process(
-                        new FailureContext(FailureType.CRITICAL_ERROR, new IgniteException("Stopping empty node.")),
-                        new StopNodeOrHaltFailureHandler());
-                }
-                else {
+                if (!validationCanBeIgnored) {
                     String msg = "Node with set up BaselineTopology is not allowed to join cluster without one: " +
                         node.consistentId();
 
                     return new IgniteNodeValidationResult(node.id(), msg);
+                }
+                else {
+                    // It seems that this node was cleaned up and was started first.
+                    // Let's try to stop this node and give a try to a new one
+                    // that is currently joining the cluster and has info about baseline, caches, etc.
+                    throw new IgniteException("Stopping the node due to the fact " +
+                        "the joining one has more actual baseline history.");
                 }
             }
         }
