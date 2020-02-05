@@ -269,7 +269,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
                     UUID primaryUUID = primaryNodeId(ctx, key);
 
-                    Boolean keyWasSuccessfullyFixed;
+                    RepairEntryProcessor.RepairStatus keyWasSuccessfullyFixed;
 
                     CacheObject valToFixWith = null;
 
@@ -278,7 +278,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                     // Are there any nodes with missing key?
                     if (dataEntry.getValue().size() != ownersNodesSize && repairAttempt != MAX_REPAIR_ATTEMPTS) {
                         if (repairAlg == RepairAlgorithm.PRINT_ONLY)
-                            keyWasSuccessfullyFixed = true;
+                            keyWasSuccessfullyFixed = RepairEntryProcessor.RepairStatus.SUCCESS;
                         else {
                             valToFixWith = calculateValueToFixWith(
                                 repairAlg,
@@ -287,7 +287,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = ignite.cache(cacheName).withKeepBinary().<Boolean>invoke(
+                            keyWasSuccessfullyFixed = ignite.cache(cacheName).withKeepBinary().<RepairEntryProcessor.RepairStatus>invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -307,7 +307,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).withKeepBinary().invoke(
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)ignite.cache(cacheName).withKeepBinary().invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -315,8 +315,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     rmvQueueMaxSize,
                                     true,
                                     startTopVer));
-
-                            assert keyWasSuccessfullyFixed;
                         }
                         else {
                             usedRepairAlg = RepairAlgorithm.MAX_GRID_CACHE_VERSION;
@@ -328,7 +326,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).withKeepBinary().invoke(
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)ignite.cache(cacheName).withKeepBinary().invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -339,7 +337,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                         }
                     }
 
-                    if (!keyWasSuccessfullyFixed)
+                    if (keyWasSuccessfullyFixed == RepairEntryProcessor.RepairStatus.FAIL)
                         keysToRepairWithNextAttempt.put(dataEntry.getKey(), dataEntry.getValue());
                     else {
                         repairedKeys.put(

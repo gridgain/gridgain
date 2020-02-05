@@ -19,9 +19,11 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -52,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheck
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationValueMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
@@ -63,6 +66,7 @@ import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.mapPartitionReconciliation;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
+import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.REPAIR_ATTEMPT_WASTED;
 
 /**
  * The base point of partition reconciliation processing.
@@ -109,6 +113,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      *
      */
     private final Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
+
+    /**
+     *
+     */
+    private final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
     /**
      *
@@ -306,8 +315,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             repairRes -> {
                 if (!repairRes.repairedKeys().isEmpty())
                     addToPrintResult(workload.cacheName(), workload.partitionId(), repairRes.repairedKeys());
-                else if (!repairRes.keysToRepair().isEmpty()) {
 
+                if (!repairRes.keysToRepair().isEmpty()) {
                     // Repack recheck keys.
                     Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = new HashMap<>();
 
@@ -344,10 +353,50 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                         return;
                     }
+                    else
+                        addToPrintSkippedEntriesResult(workload.cacheName(), workload.partitionId(), repairRes.keysToRepair());
                 }
 
                 workProgress.completeWork();
             });
+    }
+
+    /**
+     *
+     */
+    private void addToPrintSkippedEntriesResult(
+        String cacheName,
+        int partId,
+        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> skippedKeys
+    ) {
+        CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
+
+        synchronized (skippedEntries) {
+            Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> data = new HashSet<>();
+
+            for (PartitionKeyVersion keyVersion : skippedKeys.keySet()) {
+                try {
+                    byte[] bytes = keyVersion.getKey().valueBytes(ctx);
+                    String strVal = ConsistencyCheckUtils.objectStringView(ctx, keyVersion.getKey().value(ctx, false));
+
+                    PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> holder
+                        = new PartitionReconciliationSkippedEntityHolder<>(
+                        new PartitionReconciliationKeyMeta(bytes, strVal),
+                        REPAIR_ATTEMPT_WASTED
+                    );
+
+                    data.add(holder);
+                }
+                catch (Exception e) {
+                    log.error("Serialization problem.", e);
+                }
+            }
+
+            skippedEntries
+                .computeIfAbsent(cacheName, k -> new HashMap<>())
+                .computeIfAbsent(partId, l -> new HashSet<>())
+                .addAll(data);
+        }
     }
 
     /**
@@ -472,11 +521,15 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private PartitionReconciliationResult prepareResult() {
         synchronized (inconsistentKeys) {
-            return new PartitionReconciliationResult(
-                ignite.cluster().nodes().stream().collect(Collectors.toMap(
-                    ClusterNode::id,
-                    n -> n.consistentId().toString())),
-                inconsistentKeys);
+            synchronized (skippedEntries) {
+                return new PartitionReconciliationResult(
+                    ignite.cluster().nodes().stream().collect(Collectors.toMap(
+                        ClusterNode::id,
+                        n -> n.consistentId().toString())),
+                    inconsistentKeys,
+                    skippedEntries
+                );
+            }
         }
     }
 

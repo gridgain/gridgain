@@ -26,10 +26,12 @@ import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
+import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -54,6 +56,26 @@ public class RepairEntryProcessor implements EntryProcessor {
     private AffinityTopologyVersion startTopVer;
 
     /**
+     * Describe result of reparation.
+     */
+    public enum RepairStatus {
+        /**
+         * Value changed.
+         */
+        SUCCESS,
+
+        /**
+         * Fail, not enough information for modification.
+         */
+        FAIL,
+
+        /**
+         * Value was modified from other thread. Result same the success.
+         */
+        CONCURRENT_MODIFICATION
+    }
+
+    /**
      *
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
@@ -75,7 +97,7 @@ public class RepairEntryProcessor implements EntryProcessor {
      *
      * @param entry Entry to fix.
      * @param arguments Arguments.
-     * @return {@code True} if was successfully repaired, {@code False} otherwise.
+     * @return {@link RepairStatus} looks at description of this class.
      * @throws EntryProcessorException If failed.
      */
     @SuppressWarnings("unchecked")
@@ -91,13 +113,16 @@ public class RepairEntryProcessor implements EntryProcessor {
         VersionedValue versionedVal = data.get(locNodeId);
 
         CacheObject expectVal = Optional.ofNullable(data.get(locNodeId)).map(VersionedValue::value).orElse(null);
-        CacheObject currVal = (CacheObject)entry.getValue(); //TODO if it primitive type return primitive type;
+
+        Object untypedVal = entry.getValue();
+        CacheObject currVal = untypedVal instanceof CacheObject || untypedVal == null ?
+            (CacheObject)entry.getValue() : new CacheObjectImpl(untypedVal, null);
 
         try {
             if (expectVal == null && currVal != null
                 || expectVal != null && currVal == null
                 || expectVal != null && !Arrays.equals(expectVal.valueBytes(oCtx), currVal.valueBytes(oCtx)))
-                return false;
+                return RepairStatus.CONCURRENT_MODIFICATION;
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -109,7 +134,7 @@ public class RepairEntryProcessor implements EntryProcessor {
             else
                 entry.setValue(val);
 
-            return true;
+            return RepairStatus.SUCCESS;
         }
 
         if (versionedVal != null) {
@@ -119,17 +144,27 @@ public class RepairEntryProcessor implements EntryProcessor {
                 else
                     entry.setValue(val);
 
-                return true;
+                return RepairStatus.SUCCESS;
             }
 
             // TODO: 23.12.19 Add optimizations here
         }
         else {
+            // Remove it after fixes: https://ggsystems.atlassian.net/browse/GG-27419
+            if (cctx.config().getAtomicityMode() != CacheAtomicityMode.ATOMIC) {
+                if (val == null)
+                    entry.remove();
+                else
+                    entry.setValue(val);
+
+                return RepairStatus.SUCCESS;
+            }
+
             if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
                 long recheckStartTime = minValue(VersionedValue::recheckStartTime);
 
                 boolean inEntryTTLBounds =
-                    (System.currentTimeMillis() - recheckStartTime) < Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
+                    (System.currentTimeMillis() - recheckStartTime) < Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000);
 
                 // Min available update counter for the key at all nodes.
                 // It just fast solution for null value problem. We should use other way to fix it (versionedVal.updateCounter()).
@@ -144,12 +179,12 @@ public class RepairEntryProcessor implements EntryProcessor {
                     else
                         entry.setValue(val);
 
-                    return true;
+                    return RepairStatus.SUCCESS;
                 }
             }
         }
 
-        return false;
+        return RepairStatus.FAIL;
     }
 
     /**

@@ -302,6 +302,7 @@ public class RepairRequestTaskTest {
         when(igniteMock.cachex(DEFAULT_CACHE_NAME)).thenReturn(internalCacheMock);
         when(internalCacheMock.context()).thenReturn(ccMock);
 
+        when(cacheMock.withKeepBinary()).thenReturn(cacheMock);
         when(cacheMock.invoke(any(), any(EntryProcessor.class))).thenReturn(invokeReturnFixed);
 
         return igniteMock;
