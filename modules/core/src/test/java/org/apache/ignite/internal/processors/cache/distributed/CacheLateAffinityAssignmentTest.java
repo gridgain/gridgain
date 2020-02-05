@@ -28,7 +28,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1216,7 +1215,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             }
         });
 
-        checkAffinity(cnt, topVer(ord - 1, 1), true);
+        AffinityTopologyVersion currentTop = ignite(0).context().cache().context().exchange().readyAffinityVersion();
+
+        checkAffinity(cnt, currentTop, true);
 
         stopNode(stopId, ord);
 
@@ -1393,7 +1394,7 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < NODES; i++) {
             TestRecordingCommunicationSpi spi =
-                    (TestRecordingCommunicationSpi)ignite(i).configuration().getCommunicationSpi();
+                (TestRecordingCommunicationSpi)ignite(i).configuration().getCommunicationSpi();
 
             spi.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
@@ -1403,13 +1404,14 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             });
         }
 
-        final CountDownLatch latch = new CountDownLatch(1);
-
         IgniteInternalFuture<?> stopFut = GridTestUtils.runAsync(new Callable<Void>() {
             @Override public Void call() throws Exception {
-                latch.await();
+                for (int j = 1; j < NODES; j++) {
+                    TestRecordingCommunicationSpi spi =
+                        (TestRecordingCommunicationSpi)ignite(j).configuration().getCommunicationSpi();
 
-                U.sleep(5000);
+                    spi.waitForBlocked();
+                }
 
                 for (int i = 0; i < NODES; i++)
                     stopGrid(getTestIgniteInstanceName(i), false, false);
@@ -1417,8 +1419,6 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
                 return null;
             }
         }, "stop-thread");
-
-        latch.countDown();
 
         Ignite node = startGrid(NODES);
 
@@ -2026,15 +2026,36 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             };
         }
 
-        // Ensure exchanges merge.
-        spiC = igniteInstanceName -> new TestDelayExchangeMessagesSpi();
-
         int ITERATIONS = 3;
 
         int NODES = withClients ? 8 : 5;
 
         for (int i = 0; i < ITERATIONS; i++) {
             log.info("Iteration: " + i);
+
+            TestRecordingCommunicationSpi[] testSpis = new TestRecordingCommunicationSpi[NODES];
+
+            for (int j = 0; j < NODES; j++) {
+                testSpis[j] = new TestRecordingCommunicationSpi();
+
+                testSpis[j].blockMessages((node, msg) -> msg instanceof GridDhtPartitionsSingleMessage);
+            }
+
+            //Ensure exchanges merge.
+            spiC = igniteInstanceName ->  testSpis[getTestIgniteInstanceIndex(igniteInstanceName)];
+
+            GridTestUtils.runAsync(() -> {
+                try {
+                    for (int j = 1; j < NODES; j++)
+                        testSpis[j].waitForBlocked();
+                }
+                catch (InterruptedException e) {
+                    log.error("Thread interrupted.", e);
+                }
+
+                for (TestRecordingCommunicationSpi testSpi : testSpis)
+                    testSpi.stopBlock();
+            });
 
             startGridsMultiThreaded(NODES);
 
