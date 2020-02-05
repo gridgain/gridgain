@@ -336,9 +336,4 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String colNamePtrn) {
         return null;
     }
-
-    /** {@inheritDoc} */
-    @Override public long indexSize(String schemaName, String idxName) throws IgniteCheckedException {
-        return 0;
-    }
 }
