@@ -220,7 +220,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      * @param parts Partitions.
      * @param clo Closure.
      * @param remainder Remainder.
-     * @return Index statistics of {@code null}, if
+     * @return Index rebuild statistics or {@code null}, if
      * {@link IgniteSystemProperties#IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING} is {@code false}.
      * @throws IgniteCheckedException If failed.
      */

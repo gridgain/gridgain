@@ -1372,7 +1372,9 @@ public final class IgniteSystemProperties {
 
     /**
      * Enables extended logging of indexes create/rebuild process. Default {@code false}.
-     * Warning: enabling that option can lead to performance degradation of index creation, rebuilding and  node restart.
+     * <p/>
+     * <b>Warning</b>: enabling that option can lead to performance degradation of index creation, rebuilding and  node
+     * restart.
      */
     public static final String IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING = "IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING";
 
