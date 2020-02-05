@@ -40,7 +40,7 @@ class HandshakeResult {
     private EnumSet<JdbcThinFeature> features = EnumSet.noneOf(JdbcThinFeature.class);
 
     /** Server time zone. */
-    private TimeZone srvTz = TimeZone.getDefault();
+    private TimeZone srvTz;
 
     /**
      * @return Ignite server version.
