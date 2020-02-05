@@ -194,7 +194,6 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         listAggs = null;
     }
 
-
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();

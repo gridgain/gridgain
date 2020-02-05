@@ -15,41 +15,21 @@
  */
 package org.apache.ignite.internal.processors.query.oom;
 
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-import java.util.List;
 import javax.cache.CacheException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-
 /**
- * Test cases for memory quota static configuration.
+ * Test case for static memory configuration.
  */
-public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTest {
+public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStaticConfigurationTest {
     /** */
-    private Boolean offloadingEnabled;
-
-    /** */
-    private String globalQuota;
-
-    /** */
-    private String qryQuota;
+    private static String qryMore60Percent;
 
     /** */
     private static String qry50Percent;
-
-    /** */
-    private static String qryMore60Percent;
 
     /** */
     private static String qry25Percent;
@@ -58,22 +38,13 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
     private static String qry10Percent;
 
     /** {@inheritDoc} */
-    @Override protected boolean persistence() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected int nodeCount() {
-        return 1;
-    }
-
-    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         initGrid("0", "50%", false);
 
         String qry = "SELECT * FROM person p1 JOIN person p2 WHERE p1.id < ";
         int param = 0;
 
+        // Find queries which consume 10%, 25%, 50% and more than 60% of heap.
         for (int i = PERS_CNT; i >= 0; i -= 100) {
             try {
                 grid(0).cache(DEFAULT_CACHE_NAME)
@@ -111,55 +82,6 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
         }
 
         afterTest();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        super.beforeTest();
-        offloadingEnabled = null;
-        globalQuota = null;
-        qryQuota = null;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
-
-        destroyGrid();
-    }
-
-    /** */
-    protected boolean startClient() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        cfg.setSqlOffloadingEnabled(IgniteConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED);
-        cfg.setSqlQueryMemoryQuota(IgniteConfiguration.DFLT_SQL_QUERY_MEMORY_QUOTA);
-        cfg.setSqlGlobalMemoryQuota(IgniteConfiguration.DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA);
-
-        if (offloadingEnabled != null)
-            cfg.setSqlOffloadingEnabled(offloadingEnabled);
-
-        if (globalQuota != null)
-            cfg.setSqlGlobalMemoryQuota(globalQuota);
-
-        if (qryQuota != null)
-            cfg.setSqlQueryMemoryQuota(qryQuota);
-
-        return cfg;
-    }
-
-    /** */
-    private void initGrid(String globalQuota, String queryQuota, Boolean offloadingEnabled) throws Exception {
-        this.globalQuota = globalQuota;
-        this.qryQuota = queryQuota;
-        this.offloadingEnabled = offloadingEnabled;
-
-        initGrid();
     }
 
     /**
@@ -341,82 +263,5 @@ public class MemoryQuotaStaticConfigurationTest  extends DiskSpillingAbstractTes
         finally {
             System.clearProperty("IGNITE_SQL_USE_DISK_OFFLOAD");
         }
-    }
-
-    private void checkQuery(Result res, String sql) {
-        checkQuery(res, sql, 1);
-    }
-
-    private void checkQuery(Result res, String sql, int threadNum) {
-        WatchService watchSvc = null;
-        WatchKey watchKey = null;
-
-        try {
-            watchSvc = FileSystems.getDefault().newWatchService();
-
-            Path workDir = getWorkDir();
-
-            watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
-
-            multithreaded(() -> grid(0).cache(DEFAULT_CACHE_NAME)
-                .query(new SqlFieldsQuery(sql)
-                    .setLazy(false))
-                .getAll(), threadNum);
-        }
-        catch (Exception e) {
-            assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
-
-            IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
-
-            assertNotNull(sqlEx);
-
-            if (res == Result.ERROR_GLOBAL_QUOTA)
-                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Global quota exceeded."));
-            else
-                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Query quota exceeded."));
-        }
-        finally {
-            try {
-                if (watchKey != null) {
-                    List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
-
-                    assertEquals("Disk spilling not happened.", res.offload, !dirEvts.isEmpty());
-                }
-
-                assertWorkDirClean();
-
-                checkMemoryManagerState();
-            }
-            finally {
-                U.closeQuiet(watchSvc);
-            }
-        }
-    }
-
-    /** */
-    enum Result {
-        /** */
-        SUCCESS_WITH_OFFLOADING(true, true),
-
-        /** */
-        SUCCESS_NO_OFFLOADING(false, true),
-
-        /** */
-        ERROR_GLOBAL_QUOTA(false, false),
-
-        /** */
-        ERROR_QUERY_QUOTA(false, false);
-
-        /** */
-        Result(boolean offload, boolean success) {
-            this.offload = offload;
-            this.success = success;
-        }
-
-        /** */
-        final boolean offload;
-
-        /** */
-        final boolean success;
     }
 }

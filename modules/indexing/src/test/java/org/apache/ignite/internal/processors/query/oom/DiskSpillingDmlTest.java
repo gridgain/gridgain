@@ -34,6 +34,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
  * Tests cases for DML queries spilling.
  */
 public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
+    /** */
     private static final String COLS = "id, " +
         "name, " +
         "depId,  " +
@@ -51,6 +52,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
         "uuid, " +
         "nulls ";
 
+    /** */
     private static final String CREATE_NEW_TBL  ="CREATE TABLE new_table (" +
         "id BIGINT PRIMARY KEY, " +
         "name VARCHAR, " +

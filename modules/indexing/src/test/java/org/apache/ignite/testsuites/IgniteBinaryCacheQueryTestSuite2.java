@@ -91,6 +91,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingWithBaselineT
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryQuotaDynamicConfigurationTest;
+import org.apache.ignite.internal.processors.query.oom.MemoryQuotaStaticAndDynamicConfigurationTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryQuotaStaticConfigurationTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerConfigurationSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
@@ -192,6 +193,7 @@ import org.junit.runners.Suite;
     QueryMemoryTrackerSelfTest.class,
     MemoryQuotaDynamicConfigurationTest.class,
     MemoryQuotaStaticConfigurationTest.class,
+    MemoryQuotaStaticAndDynamicConfigurationTest.class,
     QueryMemoryManagerConfigurationSelfTest.class,
     ClientQueryQuotaTest.class,
 

@@ -31,7 +31,8 @@ import static org.apache.ignite.internal.util.IgniteUtils.KB;
  * Test cases for dynamic query quota.
  */
 public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrackerSelfTest {
-    private static long GLOBAL_QUOTA = 50L * KB;
+    /** */
+    private static final long GLOBAL_QUOTA = 50L * KB;
 
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
@@ -107,7 +108,7 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
     }
 
     /** */
-    public void setGlobalQuota(long newQuota) {
+    private void setGlobalQuota(long newQuota) {
         for (Ignite node : G.allGrids()) {
             QueryMemoryManager memMgr = memoryManager((IgniteEx)node);
 
@@ -116,7 +117,7 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
     }
 
     /** */
-    public void setDefaultQueryQuota(long newQuota) {
+    private void setDefaultQueryQuota(long newQuota) {
         for (Ignite node : G.allGrids()) {
             QueryMemoryManager memMgr = memoryManager((IgniteEx)node);
 
@@ -125,7 +126,7 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
     }
 
     /** */
-    public void setOffloadingEnabled(boolean enabled) {
+    private void setOffloadingEnabled(boolean enabled) {
         for (Ignite node : G.allGrids()) {
             QueryMemoryManager memMgr = memoryManager((IgniteEx)node);
 
@@ -134,7 +135,7 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
     }
 
     /** */
-    public static QueryMemoryManager memoryManager(IgniteEx node) {
+    private static QueryMemoryManager memoryManager(IgniteEx node) {
         return ((IgniteH2Indexing)node.context()
                     .query()
                     .getIndexing())
