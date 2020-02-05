@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import javax.cache.processor.MutableEntry;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
@@ -31,8 +33,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -88,6 +89,8 @@ public class RepairEntryProcessorTest {
 
         when(cctx.localNodeId()).thenReturn(LOCAL_NODE_ID);
 
+        when(cctx.config()).thenReturn(new CacheConfiguration().setAtomicityMode(CacheAtomicityMode.ATOMIC));
+
         System.setProperty(IGNITE_CACHE_REMOVED_ENTRIES_TTL, "10000");
     }
 
@@ -117,7 +120,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertTrue((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.SUCCESS);
 
         verify(entry, times(1)).remove();
     }
@@ -139,7 +142,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertTrue((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.SUCCESS);
 
         verify(entry, times(1)).setValue(NEW_VALUE);
     }
@@ -168,7 +171,7 @@ public class RepairEntryProcessorTest {
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(OLD_CACHE_VALUE);
 
-        assertTrue((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.SUCCESS);
 
         verify(entry, times(1)).setValue(NEW_VALUE);
     }
@@ -197,7 +200,7 @@ public class RepairEntryProcessorTest {
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(OLD_CACHE_VALUE);
 
-        assertTrue((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.SUCCESS);
 
         verify(entry, times(1)).remove();
     }
@@ -226,7 +229,7 @@ public class RepairEntryProcessorTest {
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(OLD_CACHE_VALUE);
 
-        assertFalse((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.FAIL);
     }
 
     /**
@@ -244,7 +247,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertFalse((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.FAIL);
     }
 
     /**
@@ -270,7 +273,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertTrue((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.SUCCESS);
 
         verify(entry, times(1)).remove();
     }
@@ -298,7 +301,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertTrue((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.SUCCESS);
 
         verify(entry, times(1)).setValue(RECHECK_VALUE);
     }
@@ -327,7 +330,7 @@ public class RepairEntryProcessorTest {
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(RECHECK_CACHE_VALUE);
 
-        assertFalse((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION);
     }
 
     /**
@@ -354,7 +357,7 @@ public class RepairEntryProcessorTest {
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(null);
 
-        assertFalse((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION);
     }
 
     /**
@@ -373,7 +376,7 @@ public class RepairEntryProcessorTest {
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(new CacheObjectImpl(RECHECK_VALUE, RECHECK_VALUE.getBytes()));
 
-        assertFalse((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION);
     }
 
     /**
@@ -399,7 +402,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertFalse((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.FAIL);
     }
 
     /**
@@ -427,7 +430,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertFalse((Boolean)repairProcessor.process(entry));
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.FAIL);
     }
 
     /**

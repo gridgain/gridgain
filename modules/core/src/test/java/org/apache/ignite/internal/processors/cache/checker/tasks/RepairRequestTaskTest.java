@@ -303,7 +303,8 @@ public class RepairRequestTaskTest {
         when(internalCacheMock.context()).thenReturn(ccMock);
 
         when(cacheMock.withKeepBinary()).thenReturn(cacheMock);
-        when(cacheMock.invoke(any(), any(EntryProcessor.class))).thenReturn(invokeReturnFixed);
+        when(cacheMock.invoke(any(), any(EntryProcessor.class))).thenReturn(invokeReturnFixed ?
+            RepairEntryProcessor.RepairStatus.SUCCESS : RepairEntryProcessor.RepairStatus.FAIL);
 
         return igniteMock;
     }
