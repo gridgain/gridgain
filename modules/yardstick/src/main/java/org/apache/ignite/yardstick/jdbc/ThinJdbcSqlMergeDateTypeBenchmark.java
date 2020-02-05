@@ -16,39 +16,117 @@
 
 package org.apache.ignite.yardstick.jdbc;
 
+import java.math.BigDecimal;
+import java.sql.PreparedStatement;
 import java.sql.Statement;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.yardstickframework.BenchmarkConfiguration;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.function.Function;
+import org.yardstickframework.BenchmarkUtils;
 
 /**
  * Ignite benchmark that performs SQL MERGE operations.
  */
 public class ThinJdbcSqlMergeDateTypeBenchmark extends AbstractJdbcBenchmark {
-    /** {@inheritDoc} */
-    @Override protected void setupData() throws Exception {
-        String dataTypes = args.getStringParameter("types", "DATE");
-
-        System.out.println("+++ dataTypes=" + dataTypes);
-
-        try (Statement stmt =  conn.get().createStatement()) {
-            stmt.execute("");
-        }
+    /** Types suppliers. */
+    private Map<String, Function<Integer, Object>> valCreatorMap = new HashMap<>();
+    {
+        valCreatorMap.put("BYTE", Integer::byteValue);
+        valCreatorMap.put("SHORT", Integer::shortValue);
+        valCreatorMap.put("INT", (k) -> k);
+        valCreatorMap.put("LONG", Integer::longValue);
+        valCreatorMap.put("DECIMAL", (k) -> BigDecimal.valueOf(k.doubleValue() + k.doubleValue() / 10000));
+        valCreatorMap.put("CHAR", (k) -> Integer.toString(k));
+        valCreatorMap.put("VARCHAR", (k) -> Integer.toString(k));
+        valCreatorMap.put("DATE", (k) -> new java.sql.Date(k.longValue()));
+        valCreatorMap.put("TIME", (k) -> new java.sql.Time(k.longValue()));
+        valCreatorMap.put("TIMESTAMP", (k) -> new java.sql.Timestamp(k.longValue()));
+        valCreatorMap.put("UUID", (k) -> UUID.randomUUID());
     }
 
-    /**
-     * @param sql SQL query.
-     * @param args Query parameters.
-     * @return Results cursor.
-     */
-    private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
-        return null;
+    /** Statement that merge one row. */
+    private ThreadLocal<PreparedStatement> pstmtThreaded;
+
+    /** Value suppliers configured by -types option. */
+    private Function<Integer, Object>[] valCreators;
+
+    /** {@inheritDoc} */
+    @Override protected void setupData() throws Exception {
+        String[] dataTypes = args.getStringParameter("types", "DATE").split(";");
+
+        try (Statement stmt = conn.get().createStatement()) {
+            stmt.execute(createTableSql(dataTypes));
+        }
+
+        pstmtThreaded = newStatement(mergeSql(dataTypes));
+
+        valCreators = valueCreators(dataTypes);
+    }
+
+    /** */
+    private String createTableSql(String[] dataTypes) {
+        StringBuilder sb = new StringBuilder("CREATE TABLE IF NOT EXISTS TEST (ID INT PRIMARY KEY");
+
+        for (String t : dataTypes)
+            sb.append(", val").append(t).append(" ").append(t);
+
+        sb.append(")");
+
+        BenchmarkUtils.println("+++ " + sb.toString());
+
+        return sb.toString();
+    }
+
+    /** */
+    private String mergeSql(String[] dataTypes) {
+        StringBuilder sb = new StringBuilder("MERGE INTO TEST (ID");
+
+        for (String t : dataTypes)
+            sb.append(", val").append(t);
+
+        sb.append(") VALUES (?");
+
+        for (String t : dataTypes)
+            sb.append(", ?");
+
+        sb.append(")");
+
+        BenchmarkUtils.println("+++ " + sb.toString());
+
+        return sb.toString();
+    }
+
+    /** */
+    private Function<Integer, Object>[] valueCreators(String[] dataTypes) throws Exception {
+        Function<Integer, Object>[] sups = new Function[dataTypes.length];
+
+        for (int i = 0; i < dataTypes.length; ++i) {
+            sups[i] = valCreatorMap.get(dataTypes[i].toUpperCase());
+
+            if (Objects.isNull(sups[i]))
+                throw new Exception("Unknown type: " + dataTypes[i]);
+        }
+
+        return sups;
     }
 
     /** {@inheritDoc} */
     @Override public boolean test(Map<Object, Object> ctx) throws Exception {
         int key = nextRandom(args.range());
+
+        PreparedStatement pstmt = pstmtThreaded.get();
+
+        pstmt.setInt(1, key);
+
+        for (int i = 0; i < valCreators.length; ++i)
+            pstmt.setObject(i + 2, valCreators[i].apply(key));
+
+        pstmt.execute();
+
+        if (pstmt.getUpdateCount() != 1)
+            throw new Exception("Unexpected update count");
 
         return true;
     }
