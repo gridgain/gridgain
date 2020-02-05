@@ -16,10 +16,9 @@
 
 package org.apache.ignite.internal.processors.query.schema;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
-import org.apache.ignite.internal.util.typedef.internal.S;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 
 /**
  * Class for accumulation of record types and number of indexed records in index tree.
@@ -28,28 +27,10 @@ public class SchemaIndexCacheStat {
     /**
      * Indexed types.
      */
-    public Set<String> types = new HashSet<>();
+    public Map<String, QueryTypeDescriptorImpl> types = new HashMap<>();
 
     /**
      * Indexed keys.
      */
     public int scanned;
-
-    @Override public String toString() {
-        return S.toString(SchemaIndexCacheStat.class, this);
-    }
-
-    @Override public boolean equals(Object o) {
-        if (this == o)
-            return true;
-        if (o == null || getClass() != o.getClass())
-            return false;
-        SchemaIndexCacheStat stat = (SchemaIndexCacheStat)o;
-        return scanned == stat.scanned &&
-            types.equals(stat.types);
-    }
-
-    @Override public int hashCode() {
-        return Objects.hash(types, scanned);
-    }
 }

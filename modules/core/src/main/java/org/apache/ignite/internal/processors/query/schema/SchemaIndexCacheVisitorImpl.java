@@ -38,6 +38,7 @@ import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteReducer;
@@ -147,7 +148,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             final SchemaIndexCacheStat st = fut.get();
             
             stat.scanned += st.scanned;
-            stat.types.addAll(st.types);
+            stat.types.putAll(st.types);
         }
 
         printIndexStats(stat);
@@ -163,34 +164,31 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         if (stat == null)
             return;
 
-        StringBuilder res = new StringBuilder();
+        SB res = new SB();
 
-        res.append("Details for cache rebuilding [name=" + cctx.cache().name()
-            + ", grpName=" + cctx.group().name() + ']');
-        res.append(U.nl());
-        res.append("   Scanned rows " + stat.scanned + ", visited types " + stat.types);
-        res.append(U.nl());
+        res.a("Details for cache rebuilding [name=" + cctx.cache().name() + ", grpName=" + cctx.group().name() + ']');
+        res.a(U.nl());
+        res.a("   Scanned rows " + stat.scanned + ", visited types " + stat.types.keySet());
+        res.a(U.nl());
 
         final GridQueryIndexing idx = cctx.kernalContext().query().getIndexing();
 
-        for (String type0 : stat.types) {
-            final QueryTypeDescriptorImpl type = cctx.kernalContext().query().typeByName(type0);
-
-            res.append("        Type name=" + type.name());
-            res.append(U.nl());
+        for (QueryTypeDescriptorImpl type : stat.types.values()) {
+            res.a("        Type name=" + type.name());
+            res.a(U.nl());
 
             final String pk = "_key_PK";
 
-            res.append("            Index: name=" + pk + ", size=" + idx.indexSize(type.schemaName(), pk));
-            res.append(U.nl());
+            res.a("            Index: name=" + pk + ", size=" + idx.indexSize(type.schemaName(), pk));
+            res.a(U.nl());
 
             final Map<String, GridQueryIndexDescriptor> indexes = type.indexes();
 
             for (GridQueryIndexDescriptor descriptor : indexes.values()) {
                 final long size = idx.indexSize(type.schemaName(), descriptor.name());
 
-                res.append("            Index: name=" + descriptor.name() + ", size=" + size);
-                res.append(U.nl());
+                res.a("            Index: name=" + descriptor.name() + ", size=" + size);
+                res.a(U.nl());
             }
         }
 
@@ -440,7 +438,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             if (stat != null) {
                 synchronized (res) {
                     res.scanned += stat.scanned;
-                    res.types.addAll(stat.types);
+                    res.types.putAll(stat.types);
                 }
             }
 
