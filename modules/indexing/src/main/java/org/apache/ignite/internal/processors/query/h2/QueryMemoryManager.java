@@ -171,7 +171,10 @@ public class QueryMemoryManager implements H2MemoryTracker {
         return new QueryMemoryTracker(parent, maxQueryMemory, blockSize, offloadingEnabled);
     }
 
-
+    /**
+     * Action when quota is exceeded.
+     * @return {@code false} if it is needed to offload data.
+     */
     public boolean onQuotaExceeded(long size) {
         reserved.addAndGet(-size);
 

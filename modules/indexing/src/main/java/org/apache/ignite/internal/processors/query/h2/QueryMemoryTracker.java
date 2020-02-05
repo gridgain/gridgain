@@ -89,11 +89,18 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         return true;
     }
 
+    /**
+     * Checks whether tracker was closed.
+     */
     private void checkClosed() {
         if (closed)
             throw new IllegalStateException("Memory tracker has been closed concurrently.");
     }
 
+    /**
+     * Reserves memory from parent tracker.
+     * @return {@code false} if offloading is needed.
+     */
     private boolean reserveFromParent() {
         // If single block size is too small.
         long blockSize = Math.max(reserved - reservedFromParent, this.blockSize);
@@ -110,6 +117,10 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         return true;
     }
 
+    /**
+     * Action on quota exceeded.
+     * @return {@code false} if offloading is needed.
+     */
     private boolean onQuotaExceeded() {
         if (offloadingEnabled)
             return false;
@@ -136,6 +147,9 @@ public class QueryMemoryTracker implements H2MemoryTracker {
             releaseFromParent();
     }
 
+    /**
+     * Releases memory from parent.
+     */
     private void releaseFromParent() {
         long toReleaseFromParent = reservedFromParent - reserved;
 
