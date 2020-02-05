@@ -264,7 +264,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
-                    Object key = keyValue(ctx, dataEntry.getKey().getKey());
+                    Object key = unmarshalKey(dataEntry.getKey().getKey(), ctx);
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
                     UUID primaryUUID = primaryNodeId(ctx, key);
@@ -372,13 +372,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
          */
         protected int owners(GridCacheContext ctx) {
             return ctx.topology().owners(partId, startTopVer).size();
-        }
-
-        /**
-         *
-         */
-        protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) throws IgniteCheckedException {
-            return unmarshalKey(key, ctx).value(ctx.cacheObjectContext(), false);
         }
     }
 }
