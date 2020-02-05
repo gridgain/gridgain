@@ -44,7 +44,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.file.FileP
 import static org.apache.ignite.internal.processors.cache.persistence.wal.record.RecordTypes.DELTA_TYPE_SET;
 
 /**
+ * Tests of serialization and deserialization of all WAL record types {@link org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType}.
  *
+ * It checks that all records can be successfully deserialized from early serialized record included serialization via compaction.
  */
 public class WALRecordSerializationTest extends GridCommonAbstractTest {
     /** Wal segment size. */

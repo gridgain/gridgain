@@ -390,7 +390,7 @@ public class RecordV1Serializer implements RecordSerializer {
             }
 
             throw new IgniteCheckedException(
-                "Failed to read WAL record at position: " + startPos + " size: " + size + "  expectedPtr=" + expPtr, e
+                "Failed to read WAL record at position: " + startPos + ", size: " + size + ", expectedPtr: " + expPtr, e
             );
         }
     }
