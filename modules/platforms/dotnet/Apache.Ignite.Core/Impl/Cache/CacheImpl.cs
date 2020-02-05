@@ -128,6 +128,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             get
             {
+                // TODO: Add cache-wide or global setting to disable .NET Near Cache.
+                
                 // Near caching within transaction is not supported for now.
                 // Commit/rollback logic requires additional implementation.
                 return IsNear && (_txManager == null || !_txManager.IsInTx());
