@@ -222,7 +222,7 @@ public enum IgniteFeatures {
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
                 continue;
 
-            // Add only when management console is enabled.
+            // Add only when Control Center is enabled.
             if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 
