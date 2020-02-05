@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
@@ -264,7 +265,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
-                    Object key = unmarshalKey(dataEntry.getKey().getKey(), ctx);
+                    Object key = keyValue(ctx, dataEntry.getKey().getKey());
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
                     UUID primaryUUID = primaryNodeId(ctx, key);
@@ -372,6 +373,18 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
          */
         protected int owners(GridCacheContext ctx) {
             return ctx.topology().owners(partId, startTopVer).size();
+        }
+
+        /**
+         *
+         */
+        protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) throws IgniteCheckedException {
+            KeyCacheObject unmarshalledKey = unmarshalKey(key, ctx);
+
+            if (unmarshalledKey instanceof KeyCacheObjectImpl)
+                return unmarshalledKey.value(ctx.cacheObjectContext(), false);
+
+            return key;
         }
     }
 }
