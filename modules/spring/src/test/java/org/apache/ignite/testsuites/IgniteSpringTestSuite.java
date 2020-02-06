@@ -94,7 +94,7 @@ import org.junit.runners.Suite;
     //GridSpringCacheManagerMultiJvmSelfTest.class,
     GridSpringCacheManagerMultiJvmSelfTest.class,
 
-    GridCommandLineLoaderTest.class,
+    GridCommandLineLoaderTest.class
 })
 public class IgniteSpringTestSuite {
 }

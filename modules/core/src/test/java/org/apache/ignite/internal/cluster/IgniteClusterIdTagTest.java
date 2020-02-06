@@ -27,10 +27,14 @@ import org.apache.ignite.events.ClusterTagUpdatedEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.processors.cluster.IgniteClusterMXBeanImpl;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.mxbean.IgniteClusterMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -38,14 +42,10 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
  * Tests for ID and tag features of IgniteCluster.
  */
-@SystemPropertiesList({
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
-})
 public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     /** */
     private static final String CUSTOM_TAG_0 = "my_super_cluster";
@@ -106,14 +106,82 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Verifies that Cluster ID and tag are not available on client that hasn't connected to any server yet.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testClusterIdAndTagOnClient() throws Exception {
+        String clientName = "client0";
+
+        IgniteInternalFuture<IgniteEx> clFut = GridTestUtils.runAsync(() -> startGrid(clientName));
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                IgniteKernal clientGrid = IgnitionEx.gridx(clientName);
+
+                return clientGrid != null && clientGrid.cluster() != null;
+            }
+            catch (Exception ignored) {
+                return false;
+            }
+        }, 20_000);
+
+        IgniteKernal cl0 = IgnitionEx.gridx("client0");
+
+        assertNull(cl0.cluster().id());
+        assertNull(cl0.cluster().tag());
+
+        IgniteEx srv0 = startGrid(0);
+
+        clFut.get();
+
+        awaitPartitionMapExchange();
+
+        assertNotNull(cl0.cluster().id());
+        assertNotNull(cl0.cluster().tag());
+
+        assertEquals(cl0.cluster().id(), srv0.cluster().id());
+        assertEquals(cl0.cluster().tag(), srv0.cluster().tag());
+    }
+
+    /**
+     * Verifies that Cluster ID and tag are available through JMX interface both for read and write.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testChangeClusterTagWithJMX() throws Exception {
+        String srvName = "srv0";
+        String newTag = "newTag0";
+
+        IgniteEx srv0 = startGrid(srvName);
+
+        IgniteClusterMXBean clustMxBean = getMxBean(
+            srvName,
+            "IgniteCluster",
+            IgniteClusterMXBean.class,
+            IgniteClusterMXBeanImpl.class
+        );
+
+        assertNotNull(clustMxBean.getId());
+        assertNotNull(clustMxBean.getTag());
+
+        assertEquals(srv0.cluster().id(), clustMxBean.getId());
+        assertEquals(srv0.cluster().tag(), clustMxBean.getTag());
+
+        clustMxBean.tag(newTag);
+
+        assertEquals(newTag, srv0.cluster().tag());
+    }
+
+    /**
      * Test verifies that cluster ID is generated upon cluster start
      * and correctly spread across all nodes joining later.
      *
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testInMemoryClusterId() throws Exception {
         Ignite ig0 = startGrid(0);
 
@@ -144,7 +212,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "false")
     public void testNoLoggingForClusterIdTag() throws Exception {
         LogListener lsnr = LogListener.matches("Cluster ID and tag has been read from metastorage:").build();
         logger = new ListeningTestLogger();
@@ -162,6 +230,7 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "false")
     public void testClusterIdAndTagAreNullWhenFeatureIsDisabled() throws Exception {
         IgniteEx ex = startGrid(0);
 
@@ -182,8 +251,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testInMemoryClusterIdWithClientReconnect() throws Exception {
         IgniteClusterEx cluster0 = startGrid(0).cluster();
 
@@ -222,8 +289,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testPersistentClusterId() throws Exception {
         isPersistenceEnabled = true;
 
@@ -251,8 +316,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testInMemoryClusterTag() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
@@ -309,8 +372,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testChangeTagExceptions() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
@@ -350,8 +411,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testPersistentClusterTag() throws Exception {
         isPersistenceEnabled = true;
 
@@ -403,8 +462,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testTagChangedEvent() throws Exception {
         IgniteEx ig = startGrid(0);
 
@@ -446,8 +503,6 @@ public class IgniteClusterIdTagTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testTagChangedEventMultinodeWithRemoteFilter() throws Exception {
         IgniteEx ig0 = startGrid(0);
 

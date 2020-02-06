@@ -17,7 +17,7 @@
 
 #include "ignite/cluster/cluster_group.h"
 
-#include "ignite/impl/cluster/cluster_node_impl.h"
+#include "ignite/cluster/cluster_node.h"
 
 using namespace ignite::common::concurrent;
 using namespace ignite::impl::cluster;
@@ -92,7 +92,7 @@ namespace ignite
             return ClusterGroup(impl.Get()->ForNodeIds(ids));
         }
 
-        ClusterGroup ClusterGroup::ForNodes(std::vector<ClusterNode> nodes)
+        ClusterGroup ClusterGroup::ForNodes(std::vector<ClusterNode> nodes) 
         {
             return ClusterGroup(impl.Get()->ForNodes(nodes));
         }

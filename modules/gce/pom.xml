@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>ignite-gce</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <url>http://ignite.apache.org</url>
 
     <dependencies>
@@ -43,7 +43,7 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>1.22.0</version>
+            <version>1.30.7</version>
             <exclusions>
                 <exclusion>
                     <groupId>commons-codec</groupId>

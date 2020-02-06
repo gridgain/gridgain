@@ -31,6 +31,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.affinity.Affinity;
+import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.TextQuery;
@@ -42,6 +43,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -85,6 +87,35 @@ public class GridCacheFullTextQuerySelfTest extends GridCommonAbstractTest {
         super.beforeTestsStarted();
 
         startGrids(2);
+    }
+
+    /**
+     * @throws Exception On error.
+     */
+    @Test
+    public void testContinuousQueryWithInvalidInitialQuery() throws Exception {
+        IgniteCache<Integer, Person> cache = grid(0).cache(PERSON_CACHE);
+
+        Set<Integer> exp = populateCache(grid(0), true, MAX_ITEM_COUNT,
+            (IgnitePredicate<Integer>)x -> String.valueOf(x).startsWith("1"));
+
+        ContinuousQuery<Integer, Person> qry = new ContinuousQuery<>();
+
+        qry.setInitialQuery(new TextQuery<>(Person.class, "*"));
+
+        qry.setLocalListener(evts -> {
+            // No-op.
+        });
+
+        QueryCursor<Cache.Entry<Integer, Person>> cur = cache.query(qry);
+
+        GridTestUtils.assertThrows(log, () -> {
+            cur.iterator().next();
+
+            return null;
+        }, IgniteCheckedException.class, "Cannot parse '*': '*' or '?' not allowed as first character in WildcardQuery");
+
+        cur.close();
     }
 
     /**

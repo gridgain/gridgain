@@ -64,6 +64,7 @@ public class Variable extends Expression {
         case ExpressionVisitor.GET_DEPENDENCIES:
         case ExpressionVisitor.GET_COLUMNS1:
         case ExpressionVisitor.GET_COLUMNS2:
+        case ExpressionVisitor.CLEANUP:
             return true;
         case ExpressionVisitor.DETERMINISTIC:
             return false;

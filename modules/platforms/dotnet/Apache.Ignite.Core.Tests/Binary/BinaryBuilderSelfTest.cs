@@ -616,7 +616,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(-88648479, obj1.GetHashCode());
             Assert.AreEqual(obj1.GetHashCode(), obj2.GetHashCode());
 
-            Assert.AreEqual("myType [, int=1, str=foo]", Regex.Replace(obj1.ToString(), "idHash=\\d+", ""));
+            Assert.AreEqual("myType [, int=1, str=foo]", Regex.Replace(obj1.ToString(), "idHash=[+-]?\\d+", ""));
         }
 
         /// <summary>
@@ -1824,7 +1824,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(obj1, obj2);
             Assert.AreEqual(obj1.GetHashCode(), obj2.GetHashCode());
 
-            Assert.AreEqual("sortTest [, a=2, b=1, c=3]", Regex.Replace(obj1.ToString(), "idHash=\\d+", ""));
+            Assert.AreEqual("sortTest [, a=2, b=1, c=3]", Regex.Replace(obj1.ToString(), "idHash=[+-]?\\d+", ""));
 
             // Skip header, take 3 fields (type code + value).
             var bytes1 = obj1.Data.Skip(24).Take(6).ToArray();
@@ -2285,7 +2285,9 @@ namespace Apache.Ignite.Core.Tests.Binary
     /// </summary>
     public class BaseSamePropertyClass
     {
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public int Property { get; private set; }
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public string BaseName { get; private set; }
     }
 
@@ -2294,6 +2296,7 @@ namespace Apache.Ignite.Core.Tests.Binary
     /// </summary>
     public class DerivedSamePropertyClass : BaseSamePropertyClass
     {
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
         public new int Property { get; private set; }
     }
 }

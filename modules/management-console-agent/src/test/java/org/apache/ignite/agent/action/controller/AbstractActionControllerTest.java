@@ -16,59 +16,125 @@
 
 package org.apache.ignite.agent.action.controller;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.agent.AgentCommonAbstractTest;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.dto.action.Response;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.junit.Before;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionResponseDest;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 import static org.awaitility.Awaitility.with;
 
 /**
  * Abstract test for action controllers.
  */
-abstract class AbstractActionControllerTest extends AgentCommonAbstractTest {
+public abstract class AbstractActionControllerTest extends AgentCommonAbstractTest {
     /** Mapper. */
     protected final ObjectMapper mapper = jsonMapper();
 
+    /** All node ids. */
+    protected Set<UUID> allNodeIds = new HashSet<>();
+
+    /** All node consistent ids. */
+    protected Set<String> allNodeConsistentIds = new HashSet<>();
+
+    /** Non coordinator node ids. */
+    protected Set<UUID> nonCrdNodeIds = new HashSet<>();
+
+    /** Non coordinator node consistent ids. */
+    protected Set<String> nonCrdNodeConsistentIds = new HashSet<>();
+
     /**
-     * Start grid.
+     * Start one grid instance.
      */
     @Before
     public void startup() throws Exception {
-        IgniteEx ignite = (IgniteEx) startGrid();
+        startup0(1);
+    }
+
+    /**
+     * Start grid instances.
+     */
+    protected void startup0(int instancesCnt) throws Exception {
+        IgniteEx ignite = startGrids(instancesCnt);
 
         changeManagementConsoleConfig(ignite);
 
         cluster = ignite.cluster();
-
         cluster.active(true);
+
+        allNodeIds = cluster.forServers().nodes().stream()
+            .map(ClusterNode::id)
+            .collect(Collectors.toSet());
+
+        allNodeConsistentIds = cluster.forServers().nodes().stream()
+            .map(ClusterNode::consistentId)
+            .map(String::valueOf)
+            .collect(Collectors.toSet());
+
+        nonCrdNodeIds = cluster.forServers().nodes().stream()
+            .map(ClusterNode::id)
+            .filter(id -> !id.equals(cluster.localNode().id()))
+            .collect(Collectors.toSet());
+
+        nonCrdNodeConsistentIds = cluster.forServers().nodes().stream()
+            .map(ClusterNode::consistentId)
+            .map(String::valueOf)
+            .filter(id -> !id.equals(String.valueOf(cluster.localNode().consistentId())))
+            .collect(Collectors.toSet());
     }
 
     /**
-     * Send action request and check execution result with assert function and specific grid instances count.
+     * Send action request and check execution result with assert function.
      *
-     * @param req      Request.
+     * @param req Request.
      * @param assertFn Assert fn.
      */
-    protected void executeAction(Request req, Function<Response, Boolean> assertFn) {
+    protected void executeAction(Request req, Function<List<JobResponse>, Boolean> assertFn) {
+        executeActionAndStopNode(req, 0, 0, assertFn);
+    }
+
+    /**
+     * Send action request and check execution result with assert function and stop non coordinator node after specific timeout in ms.
+     *
+     * @param req Request.
+     * @param timeout Timeout.
+     * @param gridIdx Grid instance index.
+     * @param assertFn Assert fn.
+     */
+    protected void executeActionAndStopNode(Request req, long timeout, int gridIdx, Function<List<JobResponse>, Boolean> assertFn) {
         assertWithPoll(
             () -> interceptor.isSubscribedOn(buildActionRequestTopic(cluster.id()))
         );
 
         template.convertAndSend(buildActionRequestTopic(cluster.id()), req);
 
+        if (timeout > 0) {
+            try {
+                Thread.sleep(timeout);
+                stopAndCancelGrid(gridIdx);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         assertWithPoll(
             () -> {
-                Response res = interceptor.getPayload(buildActionResponseDest(cluster.id(), req.getId()), Response.class);
+                List<JobResponse> res = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+
                 return res != null && assertFn.apply(res);
             }
         );
@@ -76,6 +142,6 @@ abstract class AbstractActionControllerTest extends AgentCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void assertWithPoll(Callable<Boolean> cond) {
-        with().pollInterval(500, MILLISECONDS).await().atMost(10, SECONDS).until(cond);
+        with().pollInterval(500, MILLISECONDS).await().atMost(20, SECONDS).until(cond);
     }
 }

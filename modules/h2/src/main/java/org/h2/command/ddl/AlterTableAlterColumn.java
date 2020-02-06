@@ -483,6 +483,15 @@ public class AlterTableAlterColumn extends CommandWithColumns {
         StringBuilder buff = new StringBuilder();
         buff.append("INSERT INTO ");
         newTable.getSQL(buff, true);
+
+        buff.append(" (");
+        for (int i = 0; i < newTable.getColumns().length; ++i) {
+            if (i != 0)
+                buff.append(", ");
+            buff.append(newTable.getColumn(i).getName());
+        }
+        buff.append(")");
+
         buff.append(" SELECT ");
         if (columnList.length() == 0) {
             // special case: insert into test select * from

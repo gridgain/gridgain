@@ -33,6 +33,10 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2DefaultTableEngi
 import org.apache.ignite.internal.processors.query.h2.opt.H2PlainRowFactory;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.h2.api.JavaObjectSerializer;
+import org.h2.engine.Database;
+import org.h2.jdbc.JdbcConnection;
+import org.h2.store.DataHandler;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_CLEANUP_PERIOD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_H2_INDEXING_CACHE_THREAD_USAGE_TIMEOUT;
@@ -44,6 +48,7 @@ public class ConnectionManager {
     /** Default DB options. */
     private static final String DEFAULT_DB_OPTIONS = ";LOCK_MODE=3;MULTI_THREADED=1;DB_CLOSE_ON_EXIT=FALSE" +
         ";DEFAULT_LOCK_TIMEOUT=10000;FUNCTIONS_IN_SCHEMA=true;OPTIMIZE_REUSE_RESULTS=0;QUERY_CACHE_SIZE=0" +
+        ";MV_STORE=false" +
         ";MAX_OPERATION_MEMORY=0;BATCH_JOINS=1" +
         ";ROW_FACTORY=\"" + H2PlainRowFactory.class.getName() + "\"" +
         ";DEFAULT_TABLE_ENGINE=" + GridH2DefaultTableEngine.class.getName();
@@ -82,10 +87,13 @@ public class ConnectionManager {
     private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
-    private ConcurrentStripedPool<H2Connection> connPool;
+    private final ConcurrentStripedPool<H2Connection> connPool;
 
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
     private volatile Connection sysConn;
+
+    /** H2 data handler. Primarily used for serialization. */
+    private final DataHandler dataNhd;
 
     /**
      * Constructor.
@@ -109,6 +117,12 @@ public class ConnectionManager {
             sysConn = DriverManager.getConnection(dbUrl);
 
             sysConn.setSchema(QueryUtils.SCHEMA_INFORMATION);
+
+            assert sysConn instanceof JdbcConnection : sysConn;
+
+            JdbcConnection conn = (JdbcConnection)sysConn;
+
+            dataNhd = conn.getSession().getDataHandler();
         }
         catch (SQLException e) {
             throw new IgniteSQLException("Failed to initialize DB connection: " + dbUrl, e);
@@ -298,5 +312,22 @@ public class ConnectionManager {
 
         if (!connPool.recycle(conn))
             conn.close();
+    }
+
+    /**
+     * @return Data handler.
+     */
+    public DataHandler dataHandler() {
+        return dataNhd;
+    }
+
+    /**
+     * Sets internal H2 serializer.
+     *
+     * @param serializer Serializer.
+     */
+    void setH2Serializer(JavaObjectSerializer serializer) {
+        if (dataNhd != null && dataNhd instanceof Database)
+            ((Database)dataNhd).setJavaObjectSerializer(serializer);
     }
 }

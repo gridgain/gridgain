@@ -138,10 +138,8 @@ import org.junit.rules.TestName;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.FileSystemXmlApplicationContext;
 
+import static java.util.Collections.newSetFromMap;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ALLOW_ATOMIC_OPS_IN_TX;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANGE_MESSAGE_TIMEOUT;
@@ -156,6 +154,8 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.testframework.config.GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER;
 import static org.apache.ignite.testframework.config.GridTestProperties.IGNITE_CFG_PREPROCESSOR_CLS;
 
@@ -206,6 +206,9 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         }
     };
 
+    /** Classes for which you want to clear the static log. */
+    private static final Collection<Class<?>> clearStaticLogClasses = newSetFromMap(new ConcurrentHashMap<>());
+
     /** Allows easy repeating for test. */
     @Rule public transient RepeatRule repeatRule = new RepeatRule();
 
@@ -252,7 +255,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     private volatile Method currTestMtd;
 
     /**
-     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overrided for test purposes,
+     * Page handler wrapper for {@link BPlusTree}, it can be saved here and overridden for test purposes,
      * then it must be restored using value of this field.
      */
     private transient PageHandlerWrapper<BPlusTree.Result> regularPageHndWrapper;
@@ -336,7 +339,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTestsStopped()} will be called in this case.
      */
     protected void beforeTestsStarted() throws Exception {
-        regularPageHndWrapper = BPlusTree.pageHndWrapper == null ? ((tree, hnd) -> hnd) : BPlusTree.pageHndWrapper;
+        // Checking that no test wrapper is set before test execution.
+        assert BPlusTree.testHndWrapper == null;
     }
 
     /**
@@ -348,8 +352,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTestsStopped() throws Exception {
-        //restoring page handler wrapper
-        BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
+        // No-op.
     }
 
     /**
@@ -1154,13 +1157,21 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @return Additional JVM args for remote instances.
      */
     protected List<String> additionalRemoteJvmArgs() {
+        List<String> jvmArgs = ManagementFactory.getRuntimeMXBean().getInputArguments();
+
+        List<String> res = new ArrayList<>();
+
+        for (String arg : jvmArgs) {
+            if (arg.startsWith("-DIGNITE_") || arg.startsWith("-DGG_"))
+                res.add(arg);
+        }
+
         String srvcGridProp = System.getProperty(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED);
 
-        // Preserve service grid mode on remote nodes if it's enforced via property.
-        return srvcGridProp == null ?
-            Collections.emptyList() :
-            Collections.singletonList(
-                "-D" + IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED + '=' + srvcGridProp);
+        if (srvcGridProp != null)
+            res.add("-D" + IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED + '=' + srvcGridProp);
+
+        return res;
     }
 
     /**
@@ -1186,7 +1197,28 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         if (cfg.getIncludeProperties() == null)
             cfg.setIncludeProperties();
 
+        DataStorageConfiguration dsCfg = cfg.getDataStorageConfiguration();
+
+        if (dsCfg != null) {
+            capDefaultMaxSize(dsCfg.getDefaultDataRegionConfiguration());
+
+            if (dsCfg.getDataRegionConfigurations() != null) {
+                for (DataRegionConfiguration region : dsCfg.getDataRegionConfigurations())
+                    capDefaultMaxSize(region);
+            }
+        }
+
         return cfg;
+    }
+
+    /** */
+    private void capDefaultMaxSize(DataRegionConfiguration dataRegionCfg) {
+        if (dataRegionCfg == null)
+            return;
+
+        // Tests are prone to over-commit memory by starting multiple nodes with default 20% dataRegionCfg.
+        if (dataRegionCfg.getMaxSize() == DataStorageConfiguration.DFLT_DATA_REGION_MAX_SIZE)
+            dataRegionCfg.setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE);
     }
 
     /**
@@ -1407,26 +1439,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     }
 
     /**
-     * Starts grid using provided Ignite instance name and spring config location.
-     * <p>
-     * Note that grids started this way should be stopped with {@code G.stop(..)} methods.
-     *
-     * @param igniteInstanceName Ignite instance name.
-     * @param springCfgPath Path to config file.
-     * @return Grid Started grid.
-     * @throws Exception If failed.
-     */
-    protected Ignite startGrid(String igniteInstanceName, String springCfgPath) throws Exception {
-        IgniteConfiguration cfg = loadConfiguration(springCfgPath);
-
-        cfg.setFailureHandler(getFailureHandler(igniteInstanceName));
-
-        cfg.setGridLogger(getTestResources().getLogger());
-
-        return startGrid(igniteInstanceName, cfg);
-    }
-
-    /**
      * Starts grid using provided Ignite instance name and config.
      * <p>
      * Note that grids started this way should be stopped with {@code G.stop(..)} methods.
@@ -1443,57 +1455,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             return G.start(cfg);
         else
             return startRemoteGrid(igniteInstanceName, cfg, null);
-    }
-
-    /**
-     * Loads configuration from the given Spring XML file.
-     *
-     * @param springCfgPath Path to file.
-     * @return Grid configuration.
-     * @throws IgniteCheckedException If load failed.
-     */
-    @SuppressWarnings("deprecation")
-    protected IgniteConfiguration loadConfiguration(String springCfgPath) throws IgniteCheckedException {
-        URL cfgLocation = U.resolveIgniteUrl(springCfgPath);
-
-        if (cfgLocation == null)
-            cfgLocation = U.resolveIgniteUrl(springCfgPath, false);
-
-        assert cfgLocation != null;
-
-        ApplicationContext springCtx;
-
-        try {
-            springCtx = new FileSystemXmlApplicationContext(cfgLocation.toString());
-        }
-        catch (BeansException e) {
-            throw new IgniteCheckedException("Failed to instantiate Spring XML application context.", e);
-        }
-
-        Map cfgMap;
-
-        try {
-            // Note: Spring is not generics-friendly.
-            cfgMap = springCtx.getBeansOfType(IgniteConfiguration.class);
-        }
-        catch (BeansException e) {
-            throw new IgniteCheckedException("Failed to instantiate bean [type=" + IgniteConfiguration.class + ", err=" +
-                e.getMessage() + ']', e);
-        }
-
-        if (cfgMap == null)
-            throw new IgniteCheckedException("Failed to find a single grid factory configuration in: " + springCfgPath);
-
-        if (cfgMap.isEmpty())
-            throw new IgniteCheckedException("Can't find grid factory configuration in: " + springCfgPath);
-        else if (cfgMap.size() > 1)
-            throw new IgniteCheckedException("More than one configuration provided for cache load test: " + cfgMap.values());
-
-        IgniteConfiguration cfg = (IgniteConfiguration)cfgMap.values().iterator().next();
-
-        cfg.setNodeId(UUID.randomUUID());
-
-        return cfg;
     }
 
     /**
@@ -2676,6 +2637,35 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         }
     }
 
+    /**
+     * Clearing the static log for the class. <br/>
+     * There is a situation when class logs cannot be listened to although they
+     * are visible, for example, in a file. This happens when the test is in
+     * one of the suites and the static log was installed earlier and is not
+     * reset when the next test class is launched. To prevent this from
+     * happening, before starting all the tests in the test class, you need to
+     * reset the static class log.
+     *
+     * @param cls Class.
+     */
+    protected void clearStaticLog(Class<?> cls) {
+        assertNotNull(cls);
+
+        clearStaticLogClasses.add(cls);
+        clearStaticClassLog(cls);
+    }
+
+    /**
+     * Clearing the static log for the class.
+     *
+     * @param cls Class.
+     */
+    private void clearStaticClassLog(Class<?> cls) {
+        assertNotNull(cls);
+
+        ((AtomicReference<IgniteLogger>)getFieldValue(cls, "logRef")).set(null);
+        setFieldValue(cls, "log", null);
+    }
 
     /**
      * Returns metric set.
