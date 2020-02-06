@@ -77,12 +77,13 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
      *
      */
     private void fillInRepository() {
-        for (int i = 0; i < CACHE_SIZE - 5; i++) {
+        for (int i = 0; i < CACHE_SIZE - 6; i++) {
             repo.save(i, new Person("person" + Integer.toHexString(i),
                 "lastName" + Integer.toHexString((i + 16) % 256)));
         }
 
         repo.save((int) repo.count(), new Person("uniquePerson", "uniqueLastName"));
+        repo.save((int) repo.count(), new Person("uniqueLowerCasePerson", "uniqueLowerCaseLastName"));
         repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
         repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
         repo.save((int) repo.count(), new Person("nonUniquePerson", "nonUniqueLastName"));
@@ -299,6 +300,17 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Delete unique record using lower case key word
+     */
+    public void testDeleteQueryLowerCase() {
+        repo.deleteBySecondNameLowerCase("uniqueLowerCaseLastName");
+
+        long countAfter = repo.count();
+        assertEquals(CACHE_SIZE - 1, countAfter);
+    }
+
+
+    /**
      * Try to delete with a wrong @Query
      */
     @Test
@@ -328,6 +340,19 @@ public class IgniteSpringDataCrudSelfTest extends GridCommonAbstractTest {
 
         List<Person> person = repo.findByFirstName("uniquePerson");
         assertEquals(person.get(0).getSecondName(), "updatedUniqueSecondName");
+    }
+
+    /**
+     * Update with a @Query a record using lower case key word
+     */
+    public void testUpdateQueryLowerCase() {
+        final String newSecondName = "updatedUniqueLowerCaseSecondName";
+        int cnt = repo.setFixedSecondNameLowerCase(newSecondName, "uniqueLowerCasePerson");
+
+        assertEquals(1, cnt);
+
+        List<Person> person = repo.findByFirstName("uniqueLowerCasePerson");
+        assertEquals(person.get(0).getSecondName(), "updatedUniqueLowerCaseSecondName");
     }
 
     /**

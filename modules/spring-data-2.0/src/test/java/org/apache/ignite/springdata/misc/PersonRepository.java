@@ -104,6 +104,10 @@ public interface PersonRepository extends IgniteRepository<Person, Integer> {
     @Query("DELETE FROM Person WHERE secondName = ?")
     public void deleteBySecondNameQuery(String secondName);
 
+    /** Delete using @Query */
+    @Query("delete FROM Person WHERE secondName = ?")
+    public void deleteBySecondNameLowerCase(String secondName);
+
     /** Delete using @Query but with errors on the query */
     @Query("DELETE FROM Person WHERE firstName = ? AND ERRORS = 'ERRORS'")
     public void deleteWrongByFirstNameQuery(String firstName);
@@ -111,6 +115,10 @@ public interface PersonRepository extends IgniteRepository<Person, Integer> {
     /** Update using @Query */
     @Query("UPDATE Person SET secondName = ? WHERE firstName = ?")
     public int setFixedSecondNameFor(String secondName, String firstName);
+
+    /** Update using @Query */
+    @Query("update Person SET secondName = ? WHERE firstName = ?")
+    public int setFixedSecondNameLowerCase(String secondName, String firstName);
 
     /** Update using @Query but with errors on the query */
     @Query("UPDATE Person SET secondName = ? WHERE firstName = ? AND ERRORS = 'ERRORS'")

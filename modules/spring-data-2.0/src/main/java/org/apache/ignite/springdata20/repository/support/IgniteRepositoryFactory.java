@@ -150,18 +150,19 @@ public class IgniteRepositoryFactory extends RepositoryFactorySupport {
      * @return {@code true} if query is SqlFieldsQuery.
      */
     private boolean isFieldQuery(String qry) {
-        return isStatement(qry) && !qry.matches("^SELECT\\s+(?:\\w+\\.)?+\\*.*");
+        String qryUC = qry.toUpperCase();
+        return isStatement(qryUC) && !qryUC.matches("^SELECT\\s+(?:\\w+\\.)?+\\*.*");
     }
 
     /**
      * Evaluates if the query starts with a clause.<br>
      * <code>SELECT, INSERT, UPDATE, MERGE, DELETE</code>
      *
-     * @param qry Query string.
+     * @param qryUC Query string in upper case.
      * @return {@code true} if query is full SQL statement.
      */
-    private boolean isStatement(String qry) {
-        return qry.matches("^SELECT.*") || qry.matches("^UPDATE.*") || qry.matches("^DELETE.*") ||
-            qry.matches("^MERGE.*") || qry.matches("^INSERT.*");
+    private boolean isStatement(String qryUC) {
+        return qryUC.matches("^SELECT.*") || qryUC.matches("^UPDATE.*") || qryUC.matches("^DELETE.*") ||
+            qryUC.matches("^MERGE.*") || qryUC.matches("^INSERT.*");
     }
 }
