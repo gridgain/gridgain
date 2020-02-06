@@ -35,8 +35,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
@@ -179,7 +177,6 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
-import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 import org.h2.api.ErrorCode;
 import org.h2.api.JavaObjectSerializer;
 import org.h2.engine.Session;
@@ -198,7 +195,6 @@ import static java.util.Collections.singletonList;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_THREAD_KEEP_ALIVE_TIME;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.mvccEnabled;
@@ -2034,7 +2030,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         SchemaIndexCacheVisitorClosure clo,
         GridCompoundFuture<Void, Void> compoundFut
     ) {
-        new SchemaIndexCacheVisitorImpl(cctx, null, ctx.buildIndexExecutorService(), compoundFut).visit(clo);
+        new SchemaIndexCacheVisitorImpl(cctx, null, compoundFut).visit(clo);
     }
 
     /**
@@ -3157,22 +3153,5 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      */
     public LongRunningQueryManager longRunningQueries() {
         return longRunningQryMgr;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService rebuildIndexExecutorService(int parallelism) {
-        if (parallelism > 0)
-            parallelism = min(Runtime.getRuntime().availableProcessors(), parallelism);
-        else
-            parallelism = QueryUtils.DFLT_BUILD_IDX_PARALLELISM;
-
-        return new IgniteThreadPoolExecutor(
-            "build-idx",
-            ctx.igniteInstanceName(),
-            parallelism,
-            parallelism,
-            DFLT_THREAD_KEEP_ALIVE_TIME,
-            new LinkedBlockingQueue<>()
-        );
     }
 }

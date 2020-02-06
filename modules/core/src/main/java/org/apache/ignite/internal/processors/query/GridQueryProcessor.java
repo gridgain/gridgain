@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.cache.Cache;
 import javax.cache.CacheException;
@@ -125,12 +124,14 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
+import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_SCHEMA;
 import static org.apache.ignite.internal.IgniteComponentType.INDEXING;
 import static org.apache.ignite.internal.binary.BinaryUtils.fieldTypeName;
 import static org.apache.ignite.internal.binary.BinaryUtils.typeByClass;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
+import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_BUILD_IDX_PARALLELISM;
 import static org.apache.ignite.internal.processors.query.schema.SchemaOperationException.CODE_COLUMN_EXISTS;
 
 /**
@@ -1608,18 +1609,23 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
                 if (cacheInfo.isCacheContextInited()) {
                     GridCompoundFuture<Void, Void> createIdxCompoundFut = new GridCompoundFuture<>();
-                    ExecutorService createIdxExecSvc = idx.rebuildIndexExecutorService(op0.parallel());
+
+                    if (op0.parallel() > DFLT_BUILD_IDX_PARALLELISM) {
+                        log.warning("Passed concurrency level " + op0.parallel() + " for building the index is " +
+                            "greater than the default concurrency level " + DFLT_BUILD_IDX_PARALLELISM + ", the " +
+                            "default concurrency level will be used.to change it, you need to change the system " +
+                            "property " + INDEX_REBUILDING_PARALLELISM + " when starting the node.");
+                    }
 
                     visitor = new SchemaIndexCacheVisitorImpl(
                         cacheInfo.cacheContext(),
                         cancelTok,
-                        createIdxExecSvc,
                         createIdxCompoundFut
                     ) {
+                        /** {@inheritDoc} */
                         @Override public void visit(SchemaIndexCacheVisitorClosure clo) {
                             super.visit(clo);
 
-                            compoundFut.listen(fut -> createIdxExecSvc.shutdown());
                             compoundFut.markInitialized();
 
                             try {

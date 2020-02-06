@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.query;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -335,11 +334,6 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String schemaNamePtrn,
         String tblNamePtrn,
         String colNamePtrn) {
-        return null;
-    }
-
-    /** {@inheritDoc} */
-    @Override public ExecutorService rebuildIndexExecutorService(int parallelism) {
         return null;
     }
 }

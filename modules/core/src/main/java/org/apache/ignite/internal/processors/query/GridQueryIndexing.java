@@ -20,10 +20,8 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cache.query.SqlQuery;
@@ -468,17 +466,4 @@ public interface GridQueryIndexing {
      * @return Column information filtered by given patterns.
      */
     Collection<ColumnInformation> columnsInformation(String schemaNamePtrn, String tblNamePtrn, String colNamePtrn);
-
-    /**
-     * Returns a new instance of {@link ExecutorService} for create/rebuild
-     * indexes. If value of {@code parallelism} parameter is less than or equal
-     * to {@code 0}, then value of
-     * {@link IgniteSystemProperties#INDEX_REBUILDING_PARALLELISM
-     * INDEX_REBUILDING_PARALLELISM} property will be used. Also, parameter
-     * value will not exceed the number of available processors.
-     *
-     * @param parallelism Index creating/rebuilding parallelism level.
-     * @return Thread pool for create/rebuild index.
-     */
-    ExecutorService rebuildIndexExecutorService(int parallelism);
 }

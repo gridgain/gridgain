@@ -145,7 +145,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
      * @throws IgniteCheckedException If failed.
      */
     private void processPartition() throws IgniteCheckedException {
-        if (stop.get())
+        if (stop.get() || stopNode())
             return;
 
         checkCancelled();
@@ -172,7 +172,7 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
             try {
                 int cntr = 0;
 
-                while (cursor.next() && !stop.get()) {
+                while (cursor.next() && !stop.get() && !stopNode()) {
                     KeyCacheObject key = cursor.get().key();
 
                     if (!locked) {
@@ -246,6 +246,15 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
     private void checkCancelled() throws IgniteCheckedException {
         if (nonNull(cancel) && cancel.isCancelled())
             throw new IgniteCheckedException("Index creation was cancelled.");
+    }
+
+    /**
+     * Returns node in the process of stopping or not.
+     *
+     * @return {@code True} if node is in the process of stopping.
+     */
+    private boolean stopNode() {
+        return cctx.kernalContext().isStopping();
     }
 
     /** {@inheritDoc} */

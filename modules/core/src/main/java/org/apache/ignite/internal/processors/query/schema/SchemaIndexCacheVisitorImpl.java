@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -39,9 +38,6 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     /** Cancellation token. */
     private final SchemaIndexOperationCancellationToken cancel;
 
-    /** Thread pool for create/rebuild index. */
-    private final ExecutorService execSvc;
-
     /** Future for create/rebuild index. */
     protected final GridCompoundFuture<Void, Void> compoundFut;
 
@@ -50,24 +46,20 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
      *
      * @param cctx Cache context.
      * @param cancel Cancellation token.
-     * @param execSvc Thread pool for create/rebuild index.
      * @param compoundFut Future for create/rebuild index.
      */
     public SchemaIndexCacheVisitorImpl(
         GridCacheContext cctx,
         SchemaIndexOperationCancellationToken cancel,
-        ExecutorService execSvc,
         GridCompoundFuture<Void, Void> compoundFut
     ) {
         assert nonNull(cctx);
-        assert nonNull(execSvc);
         assert nonNull(compoundFut);
 
         if (cctx.isNear())
             cctx = ((GridNearCacheAdapter)cctx.cache()).dht().context();
 
         this.cctx = cctx;
-        this.execSvc = execSvc;
         this.compoundFut = compoundFut;
 
         this.cancel = cancel;
@@ -97,7 +89,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
             workerFut.setWorker(worker);
             compoundFut.add(workerFut);
 
-            execSvc.execute(worker);
+            cctx.kernalContext().buildIndexExecutorService().execute(worker);
         }
     }
 
