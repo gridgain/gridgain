@@ -421,7 +421,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (TryLocalPeek(key, out res))
                 return res;
 
-            throw GetKeyNotFoundException();
+            throw GetKeyNotFoundException(key);
         }
 
         /** <inheritDoc /> */
@@ -481,7 +481,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 (stream, res) =>
                 {
                     if (res != True)
-                        throw GetKeyNotFoundException();
+                        throw GetKeyNotFoundException(key);
 
                     return Unmarshal<TV>(stream);
                 }, _readException);
@@ -1643,9 +1643,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Throws the key not found exception.
         /// </summary>
-        private static KeyNotFoundException GetKeyNotFoundException()
+        private static KeyNotFoundException GetKeyNotFoundException(TK key)
         {
-            return new KeyNotFoundException("The given key was not present in the cache.");
+            return new KeyNotFoundException("The given key was not present in the cache: " + key);
         }
 
         /// <summary>
@@ -1810,7 +1810,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (reader != null)
                     return reader.ReadObject<TV>();
 
-                throw GetKeyNotFoundException();
+                throw GetKeyNotFoundException(key);
             });
         }
     }
