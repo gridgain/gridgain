@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.yardstickframework.BenchmarkUtils;
 
 /**
@@ -51,7 +52,7 @@ public class ThinJdbcSqlMergeDateTypeBenchmark extends AbstractJdbcBenchmark {
     /** Statement that merge one row. */
     private ThreadLocal<PreparedStatement> pstmtThreaded;
 
-    /** Value suppliers configured by -types option. */
+    /** Value creators configured by -types option. */
     private Function<Integer, Object>[] valCreators;
 
     /** {@inheritDoc} */
@@ -65,6 +66,9 @@ public class ThinJdbcSqlMergeDateTypeBenchmark extends AbstractJdbcBenchmark {
         pstmtThreaded = newStatement(mergeSql(dataTypes));
 
         valCreators = valueCreators(dataTypes);
+
+        // Hack delay for the  benchmark running framework (tiden).
+        U.sleep(5000);
     }
 
     /** */
