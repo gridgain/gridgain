@@ -27,12 +27,21 @@ import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
  *
  * @see QueryMemoryManager
  */
-public class SqlStatisticsHolderMemoryQuotas {
+public class SqlMemoryStatisticsHolder {
     /** Name of MetricRegistry that contains for sql purposes. */
     public static final String SQL_QUOTAS_REG_NAME = "sql.memory.quotas";
 
     /** Measures number of sql memory allocations on this node. */
     private final LongAdderMetric quotaRequestedCnt;
+
+    /** Measures the number kilobytes written to disk during offloading. */
+    private final LongAdderMetric offloadingWrittenKb;
+
+    /** Measures the number bytes read from disk during offloading. */
+    private final LongAdderMetric offloadingReadKb;
+
+    /** Measures the number of files created during offloading. */
+    private final LongAdderMetric filesNumber;
 
     /**
      * Creates this mertrics holder.
@@ -40,12 +49,18 @@ public class SqlStatisticsHolderMemoryQuotas {
      * @param memMgr Memory manager which tracks sql memory.
      * @param metricMgr registers and exports outside this class metrics.
      */
-    public SqlStatisticsHolderMemoryQuotas(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
+    public SqlMemoryStatisticsHolder(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
         
         quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
             "How many times memory quota have been requested on this node by all the queries in total. " +
                 "Always 0 if sql memory quotas are disabled.");
+
+        offloadingWrittenKb = quotasMetrics.longAdderMetric("SqlOffloadingWrittenKb", "TODO"); //TODO
+        offloadingReadKb = quotasMetrics.longAdderMetric("SqlOffloadingReadKb", "TODO"); //TODO
+        filesNumber = quotasMetrics.longAdderMetric("SqlOffloadingFilesNumber", "TODO"); //TODO
+
+
 
         quotasMetrics.register("maxMem",
             new LongSupplier() {
@@ -71,10 +86,20 @@ public class SqlStatisticsHolderMemoryQuotas {
 
     /**
      * Updates statistics when memory is reserved for any query. Thread safe.
-     *
-     * @param size size of reserved memory in bytes.
      */
-    public void trackReserve(long size) {
+    public void trackReserve() {
         quotaRequestedCnt.increment();
+    }
+
+    public void trackOffloadingWrittenKb(long writtenKb) {
+        offloadingWrittenKb.add(writtenKb);
+    }
+
+    public void trackOffloadingReadKb(long readKb) { // TODO bytes?
+        offloadingReadKb.add(readKb);
+    }
+
+    public void trackFileCreated() {
+        filesNumber.increment();
     }
 }

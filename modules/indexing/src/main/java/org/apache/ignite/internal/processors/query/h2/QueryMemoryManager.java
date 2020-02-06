@@ -17,6 +17,9 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.file.OpenOption;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -24,8 +27,10 @@ import java.util.function.LongBinaryOperator;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.metric.SqlStatisticsHolderMemoryQuotas;
+import org.apache.ignite.internal.metric.SqlMemoryStatisticsHolder;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
@@ -64,7 +69,7 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
     public static final long DFLT_MEMORY_RESERVATION_BLOCK_SIZE = 512 * KB;
 
     /** Set of metrics that collect info about memory this memory manager tracks. */
-    private final SqlStatisticsHolderMemoryQuotas metrics;
+    private final SqlMemoryStatisticsHolder metrics;
 
     /** */
     static final LongBinaryOperator RELEASE_OP = new LongBinaryOperator() {
@@ -115,9 +120,7 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
     private final AtomicLong reserved = new AtomicLong();
 
     /** Factory to provide I/O interface for data storage files */
-    private FileIOFactory fileIOFactory =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
-            new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
+    private final FileIOFactory fileIOFactory;
 
     /**
      * Constructor.
@@ -133,10 +136,19 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
         setGlobalQuota(ctx.config().getSqlGlobalMemoryQuota());
         setQueryQuota(ctx.config().getSqlQueryMemoryQuota());
         this.offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
-        this.metrics = new SqlStatisticsHolderMemoryQuotas(this, ctx.metric());
+        this.metrics = new SqlMemoryStatisticsHolder(this, ctx.metric());
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
+        FileIOFactory factory =
+        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
+            new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
+
+        fileIOFactory = new FileIOFactory() {
+            @Override public FileIO create(File file, OpenOption... modes) throws IOException {
+                return new TrackableFileIO(factory.create(file, modes), metrics);
+            }
+        };
 
         A.ensure(globalQuota >= 0, "Sql global memory quota must be >= 0. But was " + globalQuota);
         A.ensure(qryQuota >= 0, "Sql query memory quota must be >= 0. But was " + qryQuota);
@@ -153,7 +165,7 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
         if (reserved0 >= globalQuota)
             return onQuotaExceeded(size);
 
-        metrics.trackReserve(size);
+        metrics.trackReserve();
 
         return true;
     }
@@ -355,6 +367,8 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
     }
 
     public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
+        metrics.trackFileCreated(); // TODO Hash index tracking.
+
         return new ExternalResultData<>(log,
             ctx.config().getWorkDirectory(),
             fileIOFactory,
@@ -364,5 +378,47 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
             cls,
             ses.getDatabase().getCompareMode(),
             ses.getDatabase());
+    }
+
+    private static class TrackableFileIO extends FileIODecorator {
+        private final SqlMemoryStatisticsHolder metrics;
+        /**
+         * @param delegate File I/O delegate
+         */
+        public TrackableFileIO(FileIO delegate, SqlMemoryStatisticsHolder metrics) {
+            super(delegate);
+
+            this.metrics = metrics;
+        }
+
+        @Override public int read(ByteBuffer destBuf) throws IOException {
+            int bytesRead = delegate.read(destBuf);
+
+            if (bytesRead > 0)
+                metrics.trackOffloadingReadKb(bytesRead);
+
+            return bytesRead;
+        }
+
+        @Override public int read(ByteBuffer destBuf, long position) throws IOException {
+
+            return super.read(destBuf, position);
+        }
+
+        @Override public int read(byte[] buf, int off, int len) throws IOException {
+            return super.read(buf, off, len);
+        }
+
+        @Override public int write(ByteBuffer srcBuf) throws IOException {
+            return super.write(srcBuf);
+        }
+
+        @Override public int write(ByteBuffer srcBuf, long position) throws IOException {
+            return super.write(srcBuf, position);
+        }
+
+        @Override public int write(byte[] buf, int off, int len) throws IOException {
+            return super.write(buf, off, len);
+        }
     }
 }
