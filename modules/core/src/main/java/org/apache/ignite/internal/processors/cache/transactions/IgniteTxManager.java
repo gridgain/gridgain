@@ -2597,6 +2597,11 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         clearThreadMap(tx);
     }
 
+    /**
+     * @param ctx Kernal context.
+     * @param node Node to check.
+     * @throws IgniteException If the remote node does not support {@code SUSPEND_RESUME_PESSIMISTIC_TX}.
+     */
     private void checkPessimisticSuspendSupported(GridKernalContext ctx, ClusterNode node) throws IgniteException {
         if (!IgniteFeatures.nodeSupports(ctx, node, IgniteFeatures.SUSPEND_RESUME_PESSIMISTIC_TX))
             throw new IgniteException("Failed to suspend PESSIMISTIC transaction (the transaction touches a node " +
