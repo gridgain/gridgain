@@ -88,7 +88,7 @@ namespace Apache.Ignite.Core.Tests.Client
             
             using (var client = GetClient(version))
             {
-                Assert.AreEqual(ClientSocket.CurrentProtocolVersion, client.ServerVersion);
+                Assert.AreEqual(ClientSocket.CurrentProtocolVersion, client.Socket.CurrentProtocolVersion);
 
                 var logs = GetLogs(client);
                 
@@ -113,7 +113,7 @@ namespace Apache.Ignite.Core.Tests.Client
 
             using (var client = GetClient(version))
             {
-                Assert.AreEqual(version, client.ServerVersion);
+                Assert.AreEqual(version, client.Socket.CurrentProtocolVersion);
 
                 var lastLog = GetLogs(client).Last();
                 var expectedLog = string.Format(

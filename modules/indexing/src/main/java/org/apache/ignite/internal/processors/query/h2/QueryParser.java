@@ -351,7 +351,7 @@ public class QueryParser {
 
                 // Do actual parsing.
                 if (CommandProcessor.isCommand(prepared)) {
-                    GridSqlStatement cmdH2 = new GridSqlQueryParser(false).parse(prepared);
+                    GridSqlStatement cmdH2 = new GridSqlQueryParser(false, log).parse(prepared);
 
                     QueryParserResultCommand cmd = new QueryParserResultCommand(null, cmdH2, false);
 
@@ -397,7 +397,7 @@ public class QueryParser {
                 }
 
                 // Parse SELECT.
-                GridSqlQueryParser parser = new GridSqlQueryParser(false);
+                GridSqlQueryParser parser = new GridSqlQueryParser(false, log);
 
                 GridSqlQuery selectStmt = (GridSqlQuery)parser.parse(prepared);
 
@@ -478,7 +478,8 @@ public class QueryParser {
                             newQry.isEnforceJoinOrder(),
                             locSplit,
                             idx,
-                            paramsCnt
+                            paramsCnt,
+                            log
                         );
                     }
                 }
@@ -497,7 +498,8 @@ public class QueryParser {
                         newQry.isEnforceJoinOrder(),
                         locSplit,
                         idx,
-                        paramsCnt
+                        paramsCnt,
+                        log
                     );
                 }
 
@@ -601,7 +603,7 @@ public class QueryParser {
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
 
         // Prepare AST.
-        GridSqlQueryParser parser = new GridSqlQueryParser(false);
+        GridSqlQueryParser parser = new GridSqlQueryParser(false, log);
 
         GridSqlStatement stmt = parser.parse(prepared);
 
@@ -647,7 +649,8 @@ public class QueryParser {
                 planKey,
                 stmt,
                 mvccEnabled,
-                idx
+                idx,
+                log
             );
         }
         catch (Exception e) {

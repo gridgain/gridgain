@@ -21,11 +21,13 @@
 #include <ignite/common/utils.h>
 #include <ignite/common/concurrent.h>
 #include <ignite/common/lazy.h>
-#include <ignite/cluster/cluster_group.h>
 
 #include <ignite/impl/ignite_environment.h>
 #include <ignite/impl/cache/cache_impl.h>
 #include <ignite/impl/transactions/transactions_impl.h>
+#include <ignite/impl/cluster/cluster_group_impl.h>
+#include <ignite/impl/cluster/ignite_cluster_impl.h>
+#include <ignite/impl/cache/cache_affinity_impl.h>
 #include <ignite/impl/compute/compute_impl.h>
 #include <ignite/impl/cluster/cluster_group_impl.h>
 

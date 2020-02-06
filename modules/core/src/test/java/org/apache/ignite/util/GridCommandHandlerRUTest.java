@@ -57,6 +57,8 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
     }
 
@@ -165,6 +167,5 @@ public class GridCommandHandlerRUTest extends GridCommandHandlerAbstractTest {
         assertEquals(
             "The cause of the failure should be " + eCls.getName() + " [cause=" + res.getCause() + ']',
             res.getCause().getClassName(), eCls.getName());
-
     }
 }

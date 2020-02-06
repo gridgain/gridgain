@@ -19,11 +19,14 @@ package org.apache.ignite.agent.action.controller;
 import java.util.List;
 import java.util.UUID;
 import com.google.common.collect.Lists;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
-import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
+import static java.util.Collections.singleton;
+import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 
 /**
  * Baseline actions controller test.
@@ -37,9 +40,14 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("BaselineActions.updateAutoAdjustEnabled")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setArgument(true);
 
-        executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.isBaselineAutoAdjustEnabled());
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == COMPLETED && cluster.isBaselineAutoAdjustEnabled();
+        });
     }
 
     /**
@@ -50,9 +58,14 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("BaselineActions.updateAutoAdjustEnabled")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setArgument(false);
 
-        executeAction(req, (r) -> r.getStatus() == COMPLETED && !cluster.isBaselineAutoAdjustEnabled());
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == COMPLETED && !cluster.isBaselineAutoAdjustEnabled();
+        });
     }
 
     /**
@@ -63,9 +76,14 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setArgument(10_000);
 
-        executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.baselineAutoAdjustTimeout() == 10_000);
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == COMPLETED && cluster.baselineAutoAdjustTimeout() == 10_000;
+        });
     }
 
     /**
@@ -88,8 +106,13 @@ public class BaselineActionsControllerTest extends AbstractActionControllerTest 
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("BaselineActions.setBaselineTopology")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setArgument(ids);
 
-        executeAction(req, (r) -> r.getStatus() == COMPLETED && cluster.currentBaselineTopology().size() == 3);
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == COMPLETED && cluster.currentBaselineTopology().size() == 3;
+        });
     }
 }

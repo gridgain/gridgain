@@ -32,8 +32,6 @@ import org.h2.result.LocalResult;
 import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-import static org.apache.ignite.internal.util.IgniteUtils.MB;
-
 public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     /** Node client mode flag. */
     protected boolean client;
@@ -140,7 +138,6 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     FieldsQueryCursor<List<?>> query(String sql, boolean lazy) {
         return grid(1).context().query().querySqlFields(
             new SqlFieldsQueryEx(sql, null)
-                .setMaxMemory(MB)
                 .setLazy(lazy)
                 .setEnforceJoinOrder(true)
                 .setPageSize(100), false);
@@ -151,10 +148,10 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
      */
     public static class TestH2LocalResultFactory extends H2LocalResultFactory {
         /** {@inheritDoc} */
-        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt) {
+        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
             assertNull(ses.queryMemoryTracker());
 
-            return super.create(ses, expressions, visibleColCnt);
+            return super.create(ses, expressions, visibleColCnt, system);
         }
 
         /** {@inheritDoc} */

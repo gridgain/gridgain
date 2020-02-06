@@ -17,6 +17,7 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.security.IgniteSecurityProcessorTest;
+import org.apache.ignite.internal.processors.security.InvalidServerTest;
 import org.apache.ignite.internal.processors.security.cache.CacheOperationPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.cache.EntryProcessorPermissionCheckTest;
 import org.apache.ignite.internal.processors.security.cache.ScanQueryPermissionCheckTest;
@@ -61,7 +62,9 @@ import static org.apache.ignite.internal.IgniteFeatures.IGNITE_SECURITY_PROCESSO
     ThinClientPermissionCheckTest.class,
     IgniteSecurityProcessorTest.class,
 
-    MultipleSSLContextsTest.class
+    MultipleSSLContextsTest.class,
+
+    InvalidServerTest.class
 })
 public class SecurityTestSuite {
     /**

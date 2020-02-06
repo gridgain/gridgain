@@ -1502,8 +1502,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         timeBag.finishGlobalStage("WAL history reservation");
 
         // Skipping wait on local join is available when all cluster nodes have the same protocol.
-        boolean skipWaitOnLocalJoin = cctx.exchange().latch().canSkipJoiningNodes(initialVersion())
-            && localJoinExchange();
+        boolean skipWaitOnLocalJoin = localJoinExchange()
+            && cctx.exchange().latch().canSkipJoiningNodes(initialVersion());
 
         // Skip partition release if node has locally joined (it doesn't have any updates to be finished).
         if (!skipWaitOnLocalJoin) {
@@ -2307,7 +2307,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             for (PartitionsExchangeAware comp : cctx.exchange().exchangeAwareComponents())
                 comp.onDoneBeforeTopologyUnlock(this);
 
-            // Create and destory caches and cache proxies.
+            // Create and destroy caches and cache proxies.
             cctx.cache().onExchangeDone(initialVersion(), exchActions, err);
 
             cctx.kernalContext().authentication().onActivate();
