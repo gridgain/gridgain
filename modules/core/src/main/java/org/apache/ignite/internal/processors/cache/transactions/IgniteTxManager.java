@@ -140,7 +140,6 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearE
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.RECOVERY_FINISH;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.USER_FINISH;
 import static org.apache.ignite.internal.util.GridConcurrentFactory.newMap;
-import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionState.ACTIVE;
 import static org.apache.ignite.transactions.TransactionState.COMMITTED;
 import static org.apache.ignite.transactions.TransactionState.COMMITTING;
@@ -279,12 +278,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     private ConcurrentMap<UUID, TxTimeoutOnPartitionMapExchangeChangeFuture> txTimeoutOnPartitionMapExchangeFuts =
         new ConcurrentHashMap<>();
 
-    /**
-     * Indicates whether {@code suspend()} and {@code resume()} operations are supported for pessimistic transactions
-     * cluster wide.
-     */
-    private volatile boolean suspendResumeForPessimisticSupported;
-
     /** {@inheritDoc} */
     @Override protected void onKernalStop0(boolean cancel) {
         cctx.gridIO().removeMessageListener(TOPIC_TX);
@@ -350,11 +343,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                                 removeTxReturn(entry.getKey());
                         }
                     }
-
-                    suspendResumeForPessimisticSupported = IgniteFeatures.allNodesSupports(
-                        cctx.kernalContext(),
-                        cctx.discovery().remoteNodes(),
-                        IgniteFeatures.SUSPEND_RESUME_PESSIMISTIC_TX);
                 }
             },
             EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_JOINED);
@@ -369,14 +357,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         this.logTxRecords = IgniteSystemProperties.getBoolean(IGNITE_WAL_LOG_TX_RECORDS, false);
 
         cctx.txMetrics().onTxManagerStarted();
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void onKernalStart0(boolean active) {
-        suspendResumeForPessimisticSupported = IgniteFeatures.allNodesSupports(
-            cctx.kernalContext(),
-            cctx.discovery().remoteNodes(),
-            IgniteFeatures.SUSPEND_RESUME_PESSIMISTIC_TX);
     }
 
     /**
@@ -2601,11 +2581,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      */
     public void suspendTx(final GridNearTxLocal tx) throws IgniteCheckedException {
         assert tx != null && !tx.system() : tx;
-
-        if (tx.concurrency == PESSIMISTIC && !suspendResumeForPessimisticSupported) {
-            throw new IgniteCheckedException("Suspend operation cannot be called " +
-                "because some nodes in the cluster don't support this feature.");
-        }
 
         if (!tx.state(SUSPENDED)) {
             throw new IgniteCheckedException("Trying to suspend transaction with incorrect state "
