@@ -66,11 +66,13 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.mxbean.IgniteClusterMXBean;
@@ -169,6 +171,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
      */
     private final boolean clusterIdAndTagSupport = isFeatureEnabled(IGNITE_CLUSTER_ID_AND_TAG_FEATURE);
 
+    /** */
+    private final IgnitePredicate<ClusterNode> SRVS_NODES_FILTER = node -> !node.isClient() && !node.isDaemon();
+
     /**
      * Listener for LEFT and FAILED events intended to catch the moment when all nodes in topology support ID and tag.
      */
@@ -177,7 +182,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             if (!compatibilityMode)
                 return;
 
-            if (IgniteFeatures.allNodesSupports(ctx, discoCache.remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+            if (IgniteFeatures.allNodesSupports(ctx, F.view(discoCache.remoteNodes(), SRVS_NODES_FILTER),
+                IgniteFeatures.CLUSTER_ID_AND_TAG)
+            ) {
                 // Only coordinator initializes ID and tag.
                 if (U.isLocalNodeCoordinator(ctx.discovery())) {
                     locClusterId = locClusterId == null ? UUID.randomUUID() : locClusterId;
@@ -345,8 +352,24 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         this.metastorage = metastorage;
 
         // Fast and dirty workaround for tests.
-        if (ctx.clientNode())
+        if (ctx.clientNode()) {
+            try {
+                ClusterIdAndTag idAndTag = metastorage.read(CLUSTER_ID_TAG_KEY);
+
+                if (idAndTag != null) {
+                    locClusterId = idAndTag.id();
+                    locClusterTag = idAndTag.tag();
+
+                    cluster.setId(locClusterId);
+                    cluster.setTag(locClusterTag);
+                }
+            }
+            catch (IgniteCheckedException e) {
+                U.warn(log, e);
+            }
+
             return;
+        }
 
         if (!clusterIdAndTagSupport)
             return;
@@ -416,7 +439,9 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
-        if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().remoteNodes(), IgniteFeatures.CLUSTER_ID_AND_TAG)) {
+        if (!IgniteFeatures.allNodesSupports(ctx, F.view(ctx.discovery().remoteNodes(), SRVS_NODES_FILTER),
+            IgniteFeatures.CLUSTER_ID_AND_TAG)
+        ) {
             compatibilityMode = true;
 
             ctx.event().addDiscoveryEventListener(discoLsnr, EVT_NODE_LEFT, EVT_NODE_FAILED);
@@ -424,10 +449,12 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
             return;
         }
 
-        cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
+        if (!ctx.discovery().localNode().isClient()) {
+            cluster.setId(locClusterId != null ? locClusterId : UUID.randomUUID());
 
-        cluster.setTag(locClusterTag != null ? locClusterTag :
-            ClusterTagGenerator.generateTag());
+            cluster.setTag(locClusterTag != null ? locClusterTag :
+                ClusterTagGenerator.generateTag());
+        }
     }
 
     /** {@inheritDoc} */
@@ -621,7 +648,7 @@ public class ClusterProcessor extends GridProcessorAdapter implements Distribute
         if (!clusterIdAndTagSupport)
             return;
 
-        if (!compatibilityMode)
+        if (!compatibilityMode && !dataBag.isJoiningNodeClient())
             dataBag.addGridCommonData(CLUSTER_PROC.ordinal(), new ClusterIdAndTag(cluster.id(), cluster.tag()));
     }
 

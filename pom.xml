@@ -30,7 +30,7 @@
     </parent>
 
     <artifactId>apache-ignite</artifactId>
-    <version>8.8.0-SNAPSHOT</version>
+    <version>8.7.127-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <scm>
@@ -113,7 +113,6 @@
                 <module>modules/hibernate-5.1</module>
                 <module>modules/hibernate-5.3</module>
                 <module>modules/schedule</module>
-                <module>modules/web-console</module>
                 <module>modules/yardstick</module>
             </modules>
         </profile>
@@ -128,13 +127,6 @@
                 <module>modules/visor-console-2.10</module>
                 <module>modules/visor-console</module>
                 <module>modules/visor-plugins</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>all-other</id> <!-- used to update project versions and check all modules compilation -->
-            <modules> <!-- sorted alphabetically -->
-                <module>modules/web-console</module>
             </modules>
         </profile>
 
@@ -656,13 +648,6 @@
             <id>examples</id>
             <modules>
                 <module>examples</module>
-            </modules>
-        </profile>
-
-        <profile>
-            <id>web-console</id>
-            <modules>
-                <module>modules/web-console</module>
             </modules>
         </profile>
 

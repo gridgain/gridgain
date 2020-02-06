@@ -30,7 +30,7 @@ import org.h2.value.ValueNull;
  * class instead.
  * </p>
  */
-class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
+public class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
 
     private final boolean distinct;
 
@@ -49,6 +49,17 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
         this.distinct = distinct;
     }
 
+    /**
+     * @param distinct if distinct is used
+     * @param values Collected values.
+     * @param shared Shared value.
+     */
+    private AggregateDataCollecting(boolean distinct, Collection<Value> values, Value shared) {
+        this.distinct = distinct;
+        this.values = values;
+        this.shared = shared;
+    }
+
     @Override
     void add(Session ses, Value v) {
         if (v == ValueNull.INSTANCE) {
@@ -64,10 +75,25 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
 
             size += v.getMemory();
 
-            memTracker.reserve(size);
+            memTracker.reserved(size);
 
             memReserved += size;
         }
+    }
+
+    @Override
+    public void mergeAggregate(Session ses, AggregateData agg) {
+        assert agg != null;
+        assert agg instanceof AggregateDataCollecting : agg.getClass();
+
+        AggregateDataCollecting a = (AggregateDataCollecting)agg;
+        assert distinct == a.distinct;
+        assert shared == a.shared;
+
+        if (values == null)
+            values = a.values;
+        else if (a.values != null)
+            values.addAll(a.values);
     }
 
     @Override
@@ -121,7 +147,7 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
      *
      * @return value of a shared argument
      */
-    Value getSharedArgument() {
+    public Value getSharedArgument() {
         return shared;
     }
 
@@ -131,7 +157,27 @@ class AggregateDataCollecting extends AggregateData implements Iterable<Value> {
         if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
             values = null;
 
-            memTracker.release(memReserved);
+            memTracker.released(memReserved);
         }
+    }
+
+    /** */
+    @Override public long getMemory() {
+        return memReserved;
+    }
+
+    /** */
+    public boolean isDistinct() {
+        return distinct;
+    }
+
+    /** */
+    public Collection<Value> values() {
+        return values;
+    }
+
+    /** */
+    public static AggregateDataCollecting from(boolean distinct, Collection<Value> values, Value shared) {
+        return new AggregateDataCollecting(distinct, values, shared);
     }
 }

@@ -1253,7 +1253,7 @@ public class Recover extends Tool implements DataHandler {
                 data = ValueLong.get(key);
             } else {
                 try {
-                    data = s.readValue();
+                    data = (Value)s.readValue();
                 } catch (Throwable e) {
                     writeDataError(writer, "exception " + e, s.getBytes());
                     continue;
@@ -1314,7 +1314,7 @@ public class Recover extends Tool implements DataHandler {
                 data = ValueLong.get(key);
             } else {
                 try {
-                    data = s.readValue();
+                    data = (Value)s.readValue();
                 } catch (Throwable e) {
                     writeDataError(writer, "exception " + e, s.getBytes());
                     continue;
@@ -1496,7 +1496,7 @@ public class Recover extends Tool implements DataHandler {
         sb.append("INSERT INTO ").append(storageName).append(" VALUES(");
         for (valueId = 0; valueId < recordLength; valueId++) {
             try {
-                Value v = s.readValue();
+                Value v = (Value)s.readValue();
                 data[valueId] = v;
                 if (valueId > 0) {
                     sb.append(", ");

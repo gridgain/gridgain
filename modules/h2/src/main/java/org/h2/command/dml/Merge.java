@@ -249,7 +249,7 @@ public class Merge extends CommandWithValues {
                 // special case where table is used as a sequence
                 columns = new Column[0];
             } else {
-                columns = targetTable.getColumns();
+                columns = targetTable.getVisibleColums();
             }
         }
         if (!valuesExpressionList.isEmpty()) {

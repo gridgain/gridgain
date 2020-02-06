@@ -26,7 +26,7 @@
     <!-- Imports default Ignite configuration -->
     <import resource="example-default.xml"/>
 
-    <bean parent="ignite.cfg">
+    <bean name="ignite.cfg" parent="default.cfg">
         <property name="pluginConfigurations">
             <bean class="org.apache.ignite.ml.util.plugin.MLPluginConfiguration">
                 <property name="withMdlStorage" value="#{true}" />

@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -206,6 +207,32 @@ public class CacheSqlMetadata {
         this.indexes = indexes;
 
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        CacheSqlMetadata that = (CacheSqlMetadata) o;
+
+        return cacheName.equals(that.cacheName) &&
+            schemaName.equals(that.schemaName) &&
+            tblName.equals(that.tblName) &&
+            typeName.equals(that.typeName) &&
+            Objects.equals(keyCls, that.keyCls) &&
+            Objects.equals(valCls, that.valCls) &&
+            Objects.equals(fields, that.fields) &&
+            Objects.equals(notNullFields, that.notNullFields) &&
+            Objects.equals(indexes, that.indexes);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(cacheName, schemaName, tblName, typeName, keyCls, valCls, fields, notNullFields, indexes);
     }
 
     /** {@inheritDoc} */

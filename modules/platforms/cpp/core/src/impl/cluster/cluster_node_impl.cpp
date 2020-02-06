@@ -15,7 +15,9 @@
  */
 
 #ifdef GRIDGAIN_ENABLE_CLUSTER_API
+
 #include "ignite/impl/cluster/cluster_node_impl.h"
+#include "ignite/jni/java.h"
 
 using namespace ignite::jni::java;
 using namespace ignite::common::concurrent;

@@ -213,7 +213,9 @@ namespace Apache.Ignite.Linq.Impl
             };
         }
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Generates <see cref="QueryData"/> from specified <see cref="QueryModel"/>.
+        /// </summary>
         public static QueryData GetQueryData(QueryModel queryModel)
         {
             Debug.Assert(queryModel != null);

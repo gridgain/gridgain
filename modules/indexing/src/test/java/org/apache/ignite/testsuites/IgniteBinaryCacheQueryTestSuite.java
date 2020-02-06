@@ -232,7 +232,6 @@ import org.apache.ignite.internal.processors.query.h2.IgniteSqlQueryMinMaxTest;
 import org.apache.ignite.internal.processors.query.h2.QueryDataPageScanTest;
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsSurvivesNodeRestartTest;
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsUsageTest;
-import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPoolSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.BaseH2CompareQueryTest;
 import org.apache.ignite.internal.processors.query.h2.sql.ExplainSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.GridQueryParsingTest;
@@ -561,8 +560,6 @@ import org.junit.runners.Suite;
     SqlParserUserSelfTest.class,
     SqlUserCommandSelfTest.class,
     EncryptedSqlTableTest.class,
-
-    ThreadLocalObjectPoolSelfTest.class,
 
     // Partition loss.
     IndexingCachePartitionLossPolicySelfTest.class,

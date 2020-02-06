@@ -18,6 +18,7 @@ package org.apache.ignite.agent.action.controller;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import org.apache.ignite.IgniteCache;
@@ -29,6 +30,7 @@ import org.apache.ignite.agent.action.query.QueryHolderRegistry;
 import org.apache.ignite.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryResult;
+import org.apache.ignite.agent.dto.action.query.RunningQuery;
 import org.apache.ignite.agent.dto.action.query.ScanQueryArgument;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.ScanQuery;
@@ -39,9 +41,11 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.agent.utils.QueryUtils.fetchResult;
 import static org.apache.ignite.agent.utils.QueryUtils.fetchScanQueryResult;
 import static org.apache.ignite.agent.utils.QueryUtils.fetchSqlQueryResult;
@@ -195,5 +199,27 @@ public class QueryActionsController {
                 throw e;
             }
         });
+    }
+
+    /**
+     * @param duration Duration in milliseconds.
+     * @return List of running queries.
+     */
+    public Collection<RunningQuery> runningQueries(long duration) {
+        long curTime = U.currentTimeMillis();
+
+        return ctx.query().runningQueries(duration)
+            .stream()
+            .map(q -> new RunningQuery()
+                .setId(q.id())
+                .setQuery(q.query())
+                .setQryType(q.queryType())
+                .setSchemaName(q.schemaName())
+                .setStartTime(q.startTime())
+                .setDuration(curTime - q.startTime())
+                .setCancellable(q.cancelable())
+                .setLocal(q.local())
+            )
+            .collect(toList());
     }
 }
