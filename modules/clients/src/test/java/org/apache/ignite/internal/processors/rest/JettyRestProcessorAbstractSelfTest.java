@@ -1719,6 +1719,7 @@ public abstract class JettyRestProcessorAbstractSelfTest extends JettyRestProces
         assertTrue("3".equals(resStr));
 
         //Check Date key.
+        // TODO GG-27443 Sometime cache.put freezes.
         //jcache().put(new Date(timestamp), 4);
         //
         //ret = content(new VisorGatewayArgument(VisorCacheGetValueTask.class)

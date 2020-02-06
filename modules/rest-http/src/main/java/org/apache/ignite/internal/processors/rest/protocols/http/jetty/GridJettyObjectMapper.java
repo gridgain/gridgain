@@ -16,6 +16,18 @@
 
 package org.apache.ignite.internal.processors.rest.protocols.http.jetty;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.sql.Date;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.text.DateFormat;
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.UUID;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -32,18 +44,6 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.DefaultSerializerProvider;
 import com.fasterxml.jackson.databind.ser.SerializerFactory;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.sql.Date;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.text.DateFormat;
-import java.time.Instant;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
-import java.util.UUID;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
@@ -138,7 +138,7 @@ public class GridJettyObjectMapper extends ObjectMapper {
         }
     }
 
-    /** Custom deserializer for {@link BinaryObjectImpl} */
+    /** Custom deserializer for {@link VisorCacheKeyObject} */
     private static final JsonDeserializer<VisorCacheKeyObject> VISOR_CACHE_KEY_OBJECT_DESERIALIZER = new JsonDeserializer<VisorCacheKeyObject>() {
         /**
          * Convert string value to specified object type.
@@ -155,17 +155,17 @@ public class GridJettyObjectMapper extends ObjectMapper {
                 case CHARACTER:
                     return o.charAt(0);
 
+                case BYTE:
+                    return Byte.valueOf(o);
+
+                case SHORT:
+                    return Short.valueOf(o);
+
                 case INT:
                     return Integer.valueOf(o);
 
                 case LONG:
                     return Long.valueOf(o);
-
-                case SHORT:
-                    return Short.valueOf(o);
-
-                case BYTE:
-                    return Byte.valueOf(o);
 
                 case FLOAT:
                     return Float.valueOf(o);
@@ -188,16 +188,16 @@ public class GridJettyObjectMapper extends ObjectMapper {
                 case DATE_SQL:
                     return new Date(Long.parseLong(o));
 
-                case BIG_DECIMAL:
-                    return new BigDecimal(o);
-
-                case BIG_INTEGER:
-                    return new BigInteger(o);
-
                 case INSTANT:
                     String[] parts = o.split("\\.");
 
                     return Instant.ofEpochSecond(Long.parseLong(parts[0]), Integer.parseInt(parts[1]));
+
+                case BIG_INTEGER:
+                    return new BigInteger(o);
+
+                case BIG_DECIMAL:
+                    return new BigDecimal(o);
 
                 default:
                     throw new IllegalArgumentException("Unsupported type convertation: " + type);

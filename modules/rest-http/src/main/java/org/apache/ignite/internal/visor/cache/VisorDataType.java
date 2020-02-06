@@ -29,16 +29,16 @@ public enum VisorDataType {
     CHARACTER,
 
     /**  */
-    INT,
-
-    /**  */
-    LONG,
+    BYTE,
 
     /**  */
     SHORT,
 
     /**  */
-    BYTE,
+    INT,
+
+    /**  */
+    LONG,
 
     /**  */
     FLOAT,
@@ -50,13 +50,16 @@ public enum VisorDataType {
     BOOLEAN,
 
     /**  */
+    TIMESTAMP,
+
+    /**  */
     DATE_UTIL,
 
     /**  */
     DATE_SQL,
 
     /**  */
-    TIMESTAMP,
+    INSTANT,
 
     /**  */
     UUID,
@@ -65,13 +68,10 @@ public enum VisorDataType {
     BINARY,
 
     /**  */
-    INSTANT,
+    BIG_INTEGER,
 
     /**  */
-    BIG_DECIMAL,
-
-    /**  */
-    BIG_INTEGER;
+    BIG_DECIMAL;
 
     /** Enumerated values. */
     private static final VisorDataType[] VALS = values();

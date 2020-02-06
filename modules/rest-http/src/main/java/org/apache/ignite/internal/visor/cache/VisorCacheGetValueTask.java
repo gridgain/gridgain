@@ -27,7 +27,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.apache.ignite.internal.visor.util.VisorTaskUtils;
-import org.jetbrains.annotations.Nullable;
 
 /**
  * Task that get value in specified cache for specified key value.
@@ -67,7 +66,7 @@ public class VisorCacheGetValueTask extends VisorOneNodeTask<VisorCacheGetValueT
             String cacheName = arg.getCacheName();
             assert cacheName != null;
 
-            @Nullable IgniteCache<Object, Object> cache = ignite.cache(cacheName);
+            IgniteCache<Object, Object> cache = ignite.cache(cacheName);
 
             if (cache == null)
                 throw new IllegalArgumentException("Failed to find cache with specified name: " + arg.getCacheName());
