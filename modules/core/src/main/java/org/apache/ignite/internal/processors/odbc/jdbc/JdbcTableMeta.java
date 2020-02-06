@@ -20,12 +20,10 @@ import java.util.Objects;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 import static org.apache.ignite.internal.jdbc2.JdbcUtils.TYPE_TABLE;
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
 
 /**
  * JDBC table metadata.
@@ -81,21 +79,21 @@ public class JdbcTableMeta implements JdbcRawBinarylizable {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         writer.writeString(schemaName);
         writer.writeString(tblName);
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isTableTypesSupported())
             writer.writeString(tblType);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
         schemaName = reader.readString();
         tblName = reader.readString();
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isTableTypesSupported())
             tblType = reader.readString();
     }
 

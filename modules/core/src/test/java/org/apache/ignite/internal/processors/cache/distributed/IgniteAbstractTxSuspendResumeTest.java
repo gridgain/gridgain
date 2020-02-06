@@ -451,6 +451,7 @@ public abstract class IgniteAbstractTxSuspendResumeTest extends GridCommonAbstra
                     // Here we check that we can start any transactional operation in the same thread after a suspended
                     // transaction is timed-out.
                     assertFalse(cache.containsKey(1));
+                    cache.put(2, 2);
 
                     tx.close();
 
