@@ -76,7 +76,6 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
-import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -1933,11 +1932,15 @@ public class IgnitionEx {
                     oomeHnd
                 );
 
+                int buildIdxThreadPoolSize = cfg.getBuildIndexThreadPoolSize();
+
+                validateThreadPoolSize(buildIdxThreadPoolSize, "build-idx");
+
                 buildIdxExecSvc = new IgniteThreadPoolExecutor(
                     "build-idx-runner",
                     cfg.getIgniteInstanceName(),
                     0,
-                    QueryUtils.DFLT_BUILD_IDX_PARALLELISM,
+                    buildIdxThreadPoolSize,
                     DFLT_THREAD_KEEP_ALIVE_TIME,
                     new LinkedBlockingQueue<>(),
                     GridIoPolicy.UNDEFINED,

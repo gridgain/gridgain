@@ -74,11 +74,8 @@ import org.apache.ignite.transactions.TransactionSerializationException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_INDEXING_DISCOVERY_HISTORY_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE;
-import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.TOO_LONG_VALUE;
@@ -102,11 +99,6 @@ public class QueryUtils {
 
     /** Schema for system view. */
     public static final String SCHEMA_SYS = getBoolean(IGNITE_SQL_SYSTEM_SCHEMA_NAME_IGNITE, false) ? "IGNITE" : "SYS";
-
-    /** Default index creating/rebuilding parallelism level. */
-    public static final int DFLT_BUILD_IDX_PARALLELISM = getInteger(INDEX_REBUILDING_PARALLELISM, 0) > 0 ?
-        min(getInteger(INDEX_REBUILDING_PARALLELISM, 0), Runtime.getRuntime().availableProcessors()) :
-        min(4, max(1, Runtime.getRuntime().availableProcessors() / 4));
 
     /** Schema for monitoring views. */
     public static final String SCHEMA_MONITORING = "MONITORING";

@@ -124,14 +124,12 @@ import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.apache.ignite.IgniteSystemProperties.INDEX_REBUILDING_PARALLELISM;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_SCHEMA;
 import static org.apache.ignite.internal.IgniteComponentType.INDEXING;
 import static org.apache.ignite.internal.binary.BinaryUtils.fieldTypeName;
 import static org.apache.ignite.internal.binary.BinaryUtils.typeByClass;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
-import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_BUILD_IDX_PARALLELISM;
 import static org.apache.ignite.internal.processors.query.schema.SchemaOperationException.CODE_COLUMN_EXISTS;
 
 /**
@@ -1610,11 +1608,18 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 if (cacheInfo.isCacheContextInited()) {
                     GridCompoundFuture<Void, Void> createIdxCompoundFut = new GridCompoundFuture<>();
 
-                    if (op0.parallel() > DFLT_BUILD_IDX_PARALLELISM) {
-                        log.warning("Passed concurrency level " + op0.parallel() + " for building the index is " +
-                            "greater than the default concurrency level " + DFLT_BUILD_IDX_PARALLELISM + ", the " +
-                            "default concurrency level will be used.to change it, you need to change the system " +
-                            "property " + INDEX_REBUILDING_PARALLELISM + " when starting the node.");
+                    int buildIdxPoolSize = ctx.config().getBuildIndexThreadPoolSize();
+                    int parallel = op0.parallel();
+
+                    if (parallel > buildIdxPoolSize) {
+                        String idxName = op0.indexName();
+
+                        log.warning("Provided parallelism " + parallel + " for creation of index " + idxName +
+                            " is greater than the number of index building threads. Will use " + buildIdxPoolSize +
+                            " threads to build index. Increase by IgniteConfiguration.setBuildIndexThreadPoolSize" +
+                            " and restart the node if you want to use more threads. [tableName=" + op0.tableName() +
+                            ", indexName=" + idxName + ", requestedParallelism=" + parallel + ", buildIndexPoolSize=" +
+                            buildIdxPoolSize + "]");
                     }
 
                     visitor = new SchemaIndexCacheVisitorImpl(
