@@ -113,8 +113,6 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
         IgniteCluster cluster = grid(1).cluster();
 
         ClusterGroup oldest = cluster.forOldest();
-        //noinspection JavaAbbreviationUsage
-        IgnitePredicate<ClusterNode> predicate = oldest.predicate();
 
         ClusterNode oldestNode = cluster.nodes().stream().min(comparing(ClusterNode::order)).get();
 
@@ -122,7 +120,7 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
 
         assertEqualsCollections(
             singleton(cluster.forNode(oldestNode).node()),
-            cluster.nodes().stream().filter(predicate::apply).collect(Collectors.toSet())
+            cluster.nodes().stream().filter(oldest.predicate()::apply).collect(Collectors.toSet())
         );
 
         stopGrid(0);
@@ -134,7 +132,7 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
 
             assertEqualsCollections(
                 singleton(cluster.forNode(newOldestNode).node()),
-                cluster.nodes().stream().filter(predicate::apply).collect(Collectors.toSet())
+                cluster.nodes().stream().filter(oldest.predicate()::apply).collect(Collectors.toSet())
             );
 
             ClusterGroup emptyGrp = cluster.forAttribute("nonExistent", "val");
@@ -157,8 +155,6 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
         IgniteCluster cluster = ignite.cluster();
 
         ClusterGroup youngest = cluster.forYoungest();
-        //noinspection JavaAbbreviationUsage
-        IgnitePredicate<ClusterNode> predicate = youngest.predicate();
 
         ClusterNode youngestNode = cluster.nodes().stream().max(comparing(ClusterNode::order)).get();
 
@@ -166,7 +162,7 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
 
         assertEqualsCollections(
             singleton(cluster.forNode(youngestNode).node()),
-            cluster.nodes().stream().filter(predicate::apply).collect(Collectors.toSet())
+            cluster.nodes().stream().filter(youngest.predicate()::apply).collect(Collectors.toSet())
         );
 
         stopGrid(NODES_CNT - 1);
@@ -178,7 +174,7 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
 
             assertEqualsCollections(
                 singleton(cluster.forNode(newYoungestNode).node()),
-                cluster.nodes().stream().filter(predicate::apply).collect(Collectors.toSet())
+                cluster.nodes().stream().filter(youngest.predicate()::apply).collect(Collectors.toSet())
             );
 
             ClusterGroup emptyGrp = cluster.forAttribute("nonExistent", "val");

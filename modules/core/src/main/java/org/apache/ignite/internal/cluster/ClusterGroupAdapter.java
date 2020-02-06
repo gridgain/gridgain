@@ -738,8 +738,6 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
                 nodeIds = ids;
             else if (nodes.isEmpty())
                 nodeIds = emptySet();
-            else if (nodes.size() == 1)
-                nodeIds = singleton(F.first(nodes).id());
             else
                 nodeIds = nodes.stream().map(ClusterNode::id).collect(Collectors.toSet());
 
@@ -981,14 +979,13 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         private boolean isOldest;
 
         /** State. */
-        private final AgeClusterGroupPredicate ageP;
+        private volatile IgnitePredicate<ClusterNode> ageP;
 
         /**
          * Required for {@link Externalizable}.
          */
         public AgeClusterGroup() {
             // No-op.
-            ageP = null; // Won't cause any troubles because of readResolve.
         }
 
         /**
@@ -999,8 +996,6 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             super(parent.ctx, parent.subjId, parent.p, parent.ids);
 
             this.isOldest = isOldest;
-
-            ageP = new AgeClusterGroupPredicate(this);
         }
 
         /** {@inheritDoc} */
@@ -1009,7 +1004,16 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
 
             ClusterNode node = isOldest ? U.oldest(nodes, null) : U.youngest(nodes, null);
 
-            return node == null ? emptySet() : singleton(node);
+            if (node == null) {
+                ageP = F.alwaysFalse();
+
+                return emptySet();
+            }
+            else {
+                ageP = F.nodeForNodes(node);
+
+                return singleton(node);
+            }
         }
 
         /** {@inheritDoc} */
@@ -1079,65 +1083,6 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             ClusterGroupAdapter parent = (ClusterGroupAdapter)super.readResolve();
 
             return new AgeClusterGroup(parent, isOldest);
-        }
-    }
-
-    /**
-     * Predicate for youngest/oldest cluster groups.
-     */
-    private static class AgeClusterGroupPredicate implements IgnitePredicate<ClusterNode>, Externalizable {
-        /** */
-        private static final long serialVersionUID = 0L;
-
-        /** Target cluster group. */
-        private ClusterGroupAdapter grp;
-
-        /** Default constructor for serialization. */
-        public AgeClusterGroupPredicate() {
-            this(null);
-        }
-
-        /**
-         * @param grp Cluster group.
-         */
-        public AgeClusterGroupPredicate(ClusterGroupAdapter grp) {
-            this.grp = grp;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean apply(ClusterNode node) {
-            return grp.ensureLastTopologyState().nodeIds.contains(node.id());
-        }
-
-        /** {@inheritDoc} */
-        @Override public void writeExternal(ObjectOutput out) throws IOException {
-            out.writeObject(grp);
-
-            ClusterGroupState state = grp.state;
-            if (state == null)
-                out.writeBoolean(false);
-            else {
-                out.writeBoolean(true);
-
-                out.writeLong(state.lastTopVer);
-                out.writeLong(state.startTime);
-
-                out.writeObject(F.first(state.nodeIds));
-            }
-        }
-
-        /** {@inheritDoc} */
-        @Override public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-            grp = (ClusterGroupAdapter)in.readObject();
-
-            if (in.readBoolean()) {
-                long lastTopVer = in.readLong();
-                long startTime = in.readLong();
-
-                UUID nodeId = (UUID)in.readObject();
-
-                grp.state = new ClusterGroupState(singleton(nodeId), emptySet(), lastTopVer, startTime);
-            }
         }
     }
 
