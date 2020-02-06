@@ -17,7 +17,6 @@
 package org.apache.ignite.agent.dto.cache;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.lang.IgniteUuid;
 
 /**
  * DTO for cache info.
@@ -26,8 +25,11 @@ public class CacheInfo {
     /** Cache name. */
     private String name;
 
-    /** Deployment id. */
-    private IgniteUuid deploymentId;
+    /** Cache ID. */
+    private int cacheId;
+
+    /** Created by sql. */
+    private boolean createdBySql;
 
     /** Cache group. */
     private String grp;
@@ -41,7 +43,7 @@ public class CacheInfo {
 
     /**
      * @param name Name.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheInfo setName(String name) {
         this.name = name;
@@ -50,18 +52,18 @@ public class CacheInfo {
     }
 
     /**
-     * @return Deployment id.
+     * @return Cache ID.
      */
-    public IgniteUuid getDeploymentId() {
-        return deploymentId;
+    public int getCacheId() {
+        return cacheId;
     }
 
     /**
-     * @param deploymentId Deployment id.
-     * @return @{code This} for chaining method calls.
+     * @param cacheId Cache ID.
+     * @return {@code This} for chaining method calls.
      */
-    public CacheInfo setDeploymentId(IgniteUuid deploymentId) {
-        this.deploymentId = deploymentId;
+    public CacheInfo setCacheId(int cacheId) {
+        this.cacheId = cacheId;
 
         return this;
     }
@@ -74,8 +76,25 @@ public class CacheInfo {
     }
 
     /**
+     * @return {@code True} if cache was create by SQL query.
+     */
+    public boolean isCreatedBySql() {
+        return createdBySql;
+    }
+
+    /**
+     * @param createdBySql Created by sql.
+     * @return {@code This} for chaining method calls.
+     */
+    public CacheInfo setCreatedBySql(boolean createdBySql) {
+        this.createdBySql = createdBySql;
+
+        return this;
+    }
+
+    /**
      * @param grp Group.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheInfo setGroup(String grp) {
         this.grp = grp;

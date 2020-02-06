@@ -1231,7 +1231,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
 
             assert key != null : entry.key();
 
-            if (S.INCLUDE_SENSITIVE)
+            if (S.includeSensitive())
                 msg.append("key=").append(key.toString()).append(", keyCls=").append(key.getClass().getName());
         }
         catch (Exception e) {
@@ -1246,7 +1246,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             Object val = cacheVal != null ? cctx.unwrapBinaryIfNeeded(cacheVal, entry.keepBinary(), false) : null;
 
             if (val != null) {
-                if (S.INCLUDE_SENSITIVE)
+                if (S.includeSensitive())
                     msg.append(", val=").append(val.toString()).append(", valCls=").append(val.getClass().getName());
             }
             else
@@ -1304,7 +1304,7 @@ public final class GridDhtTxPrepareFuture extends GridCacheCompoundFuture<Ignite
             onEntriesLocked();
 
             // We are holding transaction-level locks for entries here, so we can get next write version.
-            tx.writeVersion(cctx.versions().next(tx.topologyVersion()));
+            tx.writeVersion(cctx.cacheContext(tx.txState().firstCacheId()).cache().nextVersion());
 
             TxCounters counters = tx.txCounters(true);
 

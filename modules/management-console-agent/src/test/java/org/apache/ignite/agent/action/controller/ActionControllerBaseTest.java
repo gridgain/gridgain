@@ -17,10 +17,12 @@
 package org.apache.ignite.agent.action.controller;
 
 import java.util.UUID;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
-import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
+import static org.apache.ignite.agent.dto.action.Status.FAILED;
 import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
 
 /**
@@ -37,7 +39,11 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
             .setAction("BaselineActions.updateAutoAdjustAwaitingTime")
             .setArgument("value");
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
+        });
     }
 
     /**
@@ -50,6 +56,10 @@ public class ActionControllerBaseTest extends AbstractActionControllerTest {
             .setAction("InvalidAction.updateAutoAdjustEnabled")
             .setArgument(true);
 
-        executeAction(req, (r) -> r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE);
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            return r != null && r.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
+        });
     }
 }

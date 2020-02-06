@@ -38,8 +38,9 @@ import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.IgniteVersionUtils;
+import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.jdbc.thin.JdbcThinAffinityAwarenessMappingGroup;
+import org.apache.ignite.internal.jdbc.thin.JdbcThinPartitionAwarenessMappingGroup;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -84,6 +85,7 @@ import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionCont
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_4_0;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_7_0;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_2;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest.BATCH_EXEC;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest.BATCH_EXEC_ORDERED;
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest.BULK_LOAD_BATCH;
@@ -506,6 +508,10 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         // Write node id.
         if (protocolVer.compareTo(VER_2_8_0) >= 0)
             writer.writeUuid(connCtx.kernalContext().localNodeId());
+
+        // Write all features supported by the node.
+        if (protocolVer.compareTo(VER_2_8_2) >= 0)
+            writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(connCtx.protocolContext().features()));
     }
 
     /**
@@ -647,7 +653,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
                 if (cur.isQuery())
                     res = new JdbcQueryExecuteResult(cur.cursorId(), cur.fetchRows(), !cur.hasNext(),
-                        isClientAffinityAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
+                        isClientPartitionAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
                             partRes :
                             null);
                 else {
@@ -659,7 +665,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                             ", res=" + S.toString(List.class, items) + ']';
 
                     res = new JdbcQueryExecuteResult(cur.cursorId(), (Long)items.get(0).get(0),
-                        isClientAffinityAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
+                        isClientPartitionAwarenessApplicable(req.partitionResponseRequest(), partRes) ?
                             partRes :
                             null);
                 }
@@ -1316,7 +1322,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @return Partitions distributions.
      */
     private JdbcResponse getCachePartitions(JdbcCachePartitionsRequest req) {
-        List<JdbcThinAffinityAwarenessMappingGroup> mappings = new ArrayList<>();
+        List<JdbcThinPartitionAwarenessMappingGroup> mappings = new ArrayList<>();
 
         AffinityTopologyVersion topVer = connCtx.kernalContext().cache().context().exchange().readyAffinityVersion();
 
@@ -1325,7 +1331,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                 connCtx.kernalContext().cache().cacheDescriptor(cacheId),
                 topVer);
 
-            mappings.add(new JdbcThinAffinityAwarenessMappingGroup(cacheId, partitionsMap));
+            mappings.add(new JdbcThinPartitionAwarenessMappingGroup(cacheId, partitionsMap));
         }
 
         return new JdbcResponse(new JdbcCachePartitionsResult(mappings), topVer);
@@ -1482,13 +1488,13 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     /**
      * @param partResRequested Boolean flag that signals whether client requested partiton result.
      * @param partRes Direved partition result.
-     * @return True if applicable to jdbc thin client side affinity awareness:
+     * @return True if applicable to jdbc thin client side Partition Awareness:
      *   1. Partitoin result was requested;
      *   2. Partition result either null or
      *     a. Rendezvous affinity function without map filters was used;
      *     b. Partition result tree neither PartitoinAllNode nor PartitionNoneNode;
      */
-    private static boolean isClientAffinityAwarenessApplicable(boolean partResRequested, PartitionResult partRes) {
-        return partResRequested && (partRes == null || partRes.isClientAffinityAwarenessApplicable());
+    private static boolean isClientPartitionAwarenessApplicable(boolean partResRequested, PartitionResult partRes) {
+        return partResRequested && (partRes == null || partRes.isClientPartitionAwarenessApplicable());
     }
 }

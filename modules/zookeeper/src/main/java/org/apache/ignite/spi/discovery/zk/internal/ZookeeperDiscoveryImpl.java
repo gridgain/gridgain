@@ -75,6 +75,7 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.MarshallerUtils;
@@ -575,14 +576,16 @@ public class ZookeeperDiscoveryImpl {
 
     /**
      * @param feature Feature to check.
+     * @param nodesPred  Predicate to filter cluster nodes.
      * @return {@code true} if all nodes support the given feature, {@code false} otherwise.
      */
-    public boolean allNodesSupport(IgniteFeatures feature) {
+    public boolean allNodesSupport(IgniteFeatures feature, IgnitePredicate<ClusterNode> nodesPred) {
         checkState();
 
         GridKernalContext ctx = (spi.ignite() instanceof IgniteEx) ? ((IgniteEx)spi.ignite()).context() : null;
 
-        return rtState != null && rtState.top.isAllNodes(n -> IgniteFeatures.nodeSupports(ctx, n, feature));
+        return rtState != null
+            && rtState.top.isAllNodes(n -> !nodesPred.apply(n) || IgniteFeatures.nodeSupports(ctx, n, feature));
     }
 
     /**

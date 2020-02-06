@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ Copyright 2019 GridGain Systems, Inc. and Contributors.
+
+ Licensed under the GridGain Community Edition License (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>foo-bar</groupId>
+    <artifactId>ignite-maven-server</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>1.7</maven.compiler.source>
+        <maven.compiler.target>1.7</maven.compiler.target>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>GridGain External Repository</id>
+            <url>http://www.gridgainsystems.com/nexus/content/repositories/external</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.ignite</groupId>
+            <artifactId>ignite-core</artifactId>
+            <version>2.7.6</version>
+        </dependency>
+    </dependencies>
+
+</project>

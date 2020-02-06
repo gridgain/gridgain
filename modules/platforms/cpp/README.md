@@ -1,12 +1,6 @@
-# Apache Ignite.NET SDK
+# GridGain C++
 
-<a href="https://www.gridgain.com/"><img src="https://www.gridgain.com/themes/gridgain1185/images/svg/gridgain-logo.svg?20180912" hspace="10"  width="300px"/></a><br/><br/>
-
-<a href="https://www.nuget.org/packages?q=Apache.Ignite"><img src="https://img.shields.io/nuget/v/Apache.Ignite.svg" /></a>
-
-<a href="https://www.myget.org/gallery/apache-ignite-net-nightly"><img src="https://img.shields.io/myget/apache-ignite-net-nightly/vpre/Apache.Ignite.svg" /></a>
-
-<a href="https://ci.ignite.apache.org/viewType.html?buildTypeId=IgniteTests24Java8_IgnitePlatformNet&branch_IgniteTests24Java8=<default>"><img src="http://ci.ignite.apache.org/app/rest/builds/buildType:(id:IgniteTests24Java8_IgnitePlatformNet)/statusIcon" /></a>
+<a href="https://ci.ignite.apache.org/buildConfiguration/IgniteTests24Java8_PlatformCLinux&branch=<default>"><img src="http://ci.ignite.apache.org/app/rest/builds/buildType:(id:IgniteTests24Java8_PlatformCLinux)/statusIcon" /></a>
 
 ## Getting Started
 
@@ -87,9 +81,9 @@ GridGain is an elastic, horizontally scalable distributed system that supports a
 * Ignite C++ starts the JVM in the same process and communicates with it via JNI.
 * .NET, C++ and Java nodes can join the same cluster, use the same caches, and interoperate using common binary protocol.
 * Java compute jobs can execute on any node (Java, .NET, C++).
-* .NET compute jobs can only execute on .NET nodes.
+* C++ compute jobs can only execute on C++ nodes.
 
-GridGain.NET also has Thin Client mode (see `Ignition.StartClient()`), which does not start JVM and does not require Java on machine.
+There is also C++ Thin Client (see `IgniteClient`), which does not start JVM and does not require Java on machine.
 
 ## GridGain Components
 
@@ -97,30 +91,15 @@ You can view GridGain as a collection of independent, well-integrated components
  scalability of your application.
 
 Some of these components include:
-* [Advanced Clustering](#advanced-clustering)
 * [Data Grid](##data-grid-jcache)
 * [SQL Database](#sql-database)
 * [Compute Grid](#compute-grid)
-* [Service Grid](#service-grid)
 
 Below you’ll find a brief explanation for each of them:
 
-## Advanced Clustering
-
-GridGain nodes can [automatically discover](https://apacheignite-net.readme.io/docs/cluster) each other. This helps to scale the cluster when needed, without having to restart the whole cluster.
-Developers can also leverage GridGain’s hybrid cloud support that allows establishing connection between private cloud and public clouds
-such as Amazon Web Services, providing them with best of both worlds.
-
-<p align="center">
-    <a href="https://apacheignite-net.readme.io/docs/cluster">
-        <img src="https://ignite.apache.org/images/advanced-clustering.png" />
-    </a>
-</p>
-
-
 ## Data Grid (Cache)
 
-[GridGain data grid](https://apacheignite-net.readme.io/docs/data-grid) is an in-memory distributed key-value store which can be viewed as a distributed partitioned `Dictionary`, with every cluster node
+[GridGain data grid](https://www.gridgain.com/docs/latest/developers-guide/key-value-api/basic-cache-operations) is an in-memory distributed key-value store which can be viewed as a distributed partitioned `map`, with every cluster node
 owning a portion of the overall data. This way the more cluster nodes we add, the more data we can cache.
 
 Unlike other key-value stores, GridGain determines data locality using a pluggable hashing algorithm. Every client can determine which node a key
@@ -130,14 +109,14 @@ GridGain data grid supports local, replicated, and partitioned data sets and all
 GridGain supports standard SQL and LINQ for querying in-memory data including support for distributed joins.
 
 <p align="center">
-    <a href="https://apacheignite-net.readme.io/docs/data-grid">
+    <a href="https://www.gridgain.com/docs/latest/developers-guide/key-value-api/basic-cache-operations">
         <img src="https://ignite.apache.org/images/data_grid.png" vspace="15" width="450px"/>
     </a>
 </p>
 
 ## SQL Database
 
-GridGain incorporates [distributed SQL database](https://apacheignite-net.readme.io/docs/sql-database) capabilities as a part of its platform. The database is horizontally
+GridGain incorporates [distributed SQL database](https://www.gridgain.com/docs/latest/developers-guide/SQL/sql-introduction) capabilities as a part of its platform. The database is horizontally
  scalable, fault tolerant and SQL ANSI-99 compliant. It supports all SQL, DDL, and DML commands including SELECT, UPDATE,
   INSERT, MERGE, and DELETE queries. It also provides support for a subset of DDL commands relevant for distributed
   databases.
@@ -150,67 +129,22 @@ the GridGain JDBC or ODBC drivers. This provides a true cross-platform connectiv
 
 
 <p align="center">
-    <a href="https://apacheignite-net.readme.io/docs/sql-database">
+    <a href="https://www.gridgain.com/docs/latest/developers-guide/SQL/sql-introduction">
         <img src="https://ignite.apache.org/images/sql_database.png" vspace="15" width="400px"/>
     </a>
 </p>
 
 ## Compute Grid
 
-[Distributed computations](https://apacheignite-net.readme.io/docs/compute-grid) are performed in parallel fashion to gain high performance, low latency, and linear scalability.
+[Distributed computations](https://www.gridgain.com/docs/latest/developers-guide/distributed-computing/distributed-computing) are performed in parallel fashion to gain high performance, low latency, and linear scalability.
 GridGain compute grid provides a set of simple APIs that allow users distribute computations and data processing across multiple computers in the cluster.
 Distributed parallel processing is based on the ability to take any computation and execute it on any set of cluster nodes and return the results back.
 
 <p align="center">
-    <a href="https://apacheignite-net.readme.io/docs/compute-grid">
+    <a href="https://www.gridgain.com/docs/latest/developers-guide/distributed-computing/distributed-computing">
         <img src="https://ignite.apache.org/images/collocated_processing.png" vspace="15" width="400px"/>
     </a>
 </p>
-
-We support these features, amongst others:
-
-* [Distributed Closure Execution](https://apacheignite-net.readme.io/docs/distributed-closures)
-* [MapReduce & ForkJoin Processing](https://apacheignite-net.readme.io/docs/mapreduce-forkjoin)
-* [Collocation of Compute and Data](https://apacheignite-net.readme.io/docs/colocate-compute-and-data)
-* [Fault Tolerance](https://apacheignite-net.readme.io/docs/fault-tolerance)
-
-## Service Grid
-
-[Service Grid](https://apacheignite-net.readme.io/docs/service-grid) allows for deployments of arbitrary user-defined services on the cluster. You can implement and deploy any service, such as custom counters, ID generators, hierarchical maps, etc.
-
-GridGain allows you to control how many instances of your service should be deployed on each cluster node and will automatically ensure proper deployment and fault tolerance of all the services.
-
-<p align="center">
-    <a href="https://apacheignite-net.readme.io/docs/service-grid">
-        <img src="https://ignite.apache.org/images/service_grid.png" vspace="15" width="400px"/>
-    </a>
-</p>
-
-## Distributed Data Structures
-
-GridGain.NET supports complex [data structures](https://apacheignite-net.readme.io/docs/atomic-types) in a distributed fashion: `AtomicLong`, `AtomicReference`, `AtomicSequence`.
-
-## Distributed Messaging
-
-[Distributed messaging](https://apacheignite-net.readme.io/docs/topic-based) allows for topic based cluster-wide communication between all nodes. Messages with a specified message topic can be distributed to
-all or sub-group of nodes that have subscribed to that topic.
-
-GridGain messaging is based on publish-subscribe paradigm where publishers and subscribers are connected together by a common topic.
-When one of the nodes sends a message A for topic T, it is published on all nodes that have subscribed to T.
-
-## Distributed Events
-
-[Distributed events](https://apacheignite-net.readme.io/docs/local-and-remote-events) allow applications to receive notifications when a variety of events occur in the distributed grid environment.
-You can automatically get notified for task executions, read, write or query operations occurring on local or remote nodes within the cluster.
-
-## ASP.NET Integration
-
-GridGain.NET provides [Output Cache](https://apacheignite-net.readme.io/docs/aspnet-output-caching) and [Session State](https://apacheignite-net.readme.io/docs/aspnet-session-state-caching) clustering: boost performance by storing cache and session data in GridGain distributed cache.
-
-## Entity Framework Integration
-
-GridGain.NET [Entity Framework Second Level Cache](https://apacheignite-net.readme.io/docs/entity-framework-second-level-cache) improves Entity Framework performance by storing query results in GridGain caches.
-
 
 
 [apache-ignite-homepage]: https://ignite.apache.org/

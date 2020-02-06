@@ -93,7 +93,7 @@ public class QueryHolder implements AutoCloseable {
     }
 
     /**
-     * @return @{code true} if holder was accessed.
+     * @return {@code true} if holder was accessed.
      */
     public boolean accessed() {
         return isAccessed;

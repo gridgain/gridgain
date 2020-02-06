@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,14 +61,17 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.7.0: adds maximum length for columns feature.*/
     static final ClientListenerProtocolVersion VER_2_7_0 = ClientListenerProtocolVersion.create(2, 7, 0);
 
-    /** Version 2.8.0: adds query id in order to implement cancel feature, affinity awareness support: IEP-23.*/
+    /** Version 2.8.0: adds query id in order to implement cancel feature, Partition Awareness support: IEP-23.*/
     static final ClientListenerProtocolVersion VER_2_8_0 = ClientListenerProtocolVersion.create(2, 8, 0);
 
     /** Version 2.8.1: adds query memory quotas.*/
     static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
 
+    /** Version 2.8.2: adds features flags support.*/
+    static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_2;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
@@ -90,11 +94,15 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Request handler. */
     private JdbcRequestHandler handler = null;
 
+    /** Current protocol context. */
+    private JdbcProtocolContext protoCtx;
+
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
 
     static {
         SUPPORTED_VERS.add(CURRENT_VER);
+        SUPPORTED_VERS.add(VER_2_8_1);
         SUPPORTED_VERS.add(VER_2_8_0);
         SUPPORTED_VERS.add(VER_2_7_0);
         SUPPORTED_VERS.add(VER_2_5_0);
@@ -178,10 +186,20 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             updateBatchSize = JdbcUtils.readNullableInteger(reader);
 
-            if (ver.compareTo(VER_2_8_1) >= 0){
+            if (ver.compareTo(VER_2_8_1) >= 0) {
                 if (reader.readBoolean())
                     maxMemory = reader.readLong();
             }
+        }
+
+        EnumSet<JdbcThinFeature> features = null;
+
+        if (ver.compareTo(VER_2_8_2) >= 0) {
+            byte [] cliFeatures = reader.readByteArray();
+
+            features = JdbcThinFeature.enumSet(cliFeatures);
+
+            features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
@@ -201,7 +219,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        parser = new JdbcMessageParser(ctx, ver);
+        protoCtx = new JdbcProtocolContext(ver, features);
+
+        parser = new JdbcMessageParser(ctx, protoCtx);
 
         ClientListenerResponseSender sender = new ClientListenerResponseSender() {
             @Override public void send(ClientListenerResponse resp) {
@@ -259,5 +279,12 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             return changed ? newVer : null;
         }
+    }
+
+    /**
+     * @return Binary context.
+     */
+    public JdbcProtocolContext protocolContext() {
+        return protoCtx;
     }
 }

@@ -24,13 +24,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.websocket.DeploymentException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.agent.action.ActionDispatcher;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.processor.ActionsProcessor;
 import org.apache.ignite.agent.processor.CacheChangesProcessor;
 import org.apache.ignite.agent.processor.ClusterInfoProcessor;
 import org.apache.ignite.agent.processor.ManagementConsoleMessagesProcessor;
+import org.apache.ignite.agent.processor.action.DistributedActionProcessor;
 import org.apache.ignite.agent.processor.export.EventsExporter;
 import org.apache.ignite.agent.processor.export.MetricsExporter;
 import org.apache.ignite.agent.processor.export.NodesConfigurationExporter;
@@ -39,14 +41,15 @@ import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
 import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
@@ -64,16 +67,17 @@ import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
+import static org.apache.ignite.internal.IgniteFeatures.TRACING;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
- * Management console agent.
+ * Control Center agent.
  */
 public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
-    /** Management Console configuration meta storage prefix. */
+    /** Control Center configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
-    /** Topic management console. */
+    /** Topic of Control Center configuration. */
     public static final String TOPIC_MANAGEMENT_CONSOLE = "mgmt-console-topic";
 
     /** Discovery event on restart agent. */
@@ -97,8 +101,11 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** Metric processor. */
     private MetricsProcessor metricProc;
 
-    /** Actions processor. */
-    private ActionsProcessor actProc;
+    /** Actions dispatcher. */
+    private ActionDispatcher actDispatcher;
+
+    /** Distributed action processor. */
+    private DistributedActionProcessor distributedActProc;
 
     /** Topic processor. */
     private ManagementConsoleMessagesProcessor messagesProc;
@@ -121,6 +128,9 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** If first connection error after successful connection. */
     private AtomicBoolean disconnected = new AtomicBoolean();
 
+    /** Agent started. */
+    private final AtomicBoolean agentStarted = new AtomicBoolean();
+
     /**
      * @param ctx Kernal context.
      */
@@ -134,6 +144,14 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         this.evtsExporter = new EventsExporter(ctx);
         this.spanExporter = new SpanExporter(ctx);
         this.metricExporter = new MetricsExporter(ctx);
+        this.actDispatcher = new ActionDispatcher(ctx);
+
+        if (isTracingEnabled())
+            this.spanExporter = new SpanExporter(ctx);
+        else
+            U.quietAndWarn(log, "Current Ignite configuration does not support tracing functionality" +
+                " and management console agent will not collect traces" +
+                " (consider adding ignite-opencensus module to classpath).");
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
         if (isLocalNodeCoordinator(ctx.discovery())) {
@@ -159,6 +177,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     @Override public void onKernalStop(boolean cancel) {
         ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
+        quiteStop(actDispatcher);
         quiteStop(messagesProc);
         quiteStop(metricExporter);
         quiteStop(evtsExporter);
@@ -176,7 +195,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         U.shutdownNow(getClass(), connectPool, log);
 
         quiteStop(cacheProc);
-        quiteStop(actProc);
+        quiteStop(distributedActProc);
         quiteStop(metricProc);
         quiteStop(clusterProc);
         quiteStop(mgr);
@@ -199,7 +218,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         disconnect();
 
-        launchAgentListener(null, null);
+        connect();
     }
 
     /**
@@ -217,10 +236,33 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /**
+     * @return Action dispatcher.
+     */
+    public ActionDispatcher actionDispatcher() {
+        return actDispatcher;
+    }
+
+    /**
+     * @return Destributed actions processor.
+     */
+    public DistributedActionProcessor distributedActionProcessor() {
+        return distributedActProc;
+    }
+
+    /**
+     * @return {@code True} if tracing is enable.
+     */
+    boolean isTracingEnabled() {
+        return IgniteFeatures.nodeSupports(ctx, ctx.grid().localNode(), TRACING);
+    }
+
+    /**
      * Start agent on local node if this is coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
-        if (isLocalNodeCoordinator(ctx.discovery())) {
+        if (isLocalNodeCoordinator(ctx.discovery()) && agentStarted.compareAndSet(false, true)) {
+            ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
+
             cfg = readFromMetaStorage();
 
             connect();
@@ -262,8 +304,16 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
                     break;
                 }
-                else if (X.hasCause(e, TimeoutException.class, ConnectException.class, UpgradeException.class,
-                    EOFException.class, ConnectionLostException.class)) {
+                else if (
+                    X.hasCause(
+                        e,
+                        TimeoutException.class,
+                        ConnectException.class,
+                        EOFException.class,
+                        ConnectionLostException.class,
+                        DeploymentException.class
+                    )
+                ) {
                     if (disconnected.compareAndSet(false, true))
                         log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
                 }
@@ -278,7 +328,15 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      */
     private void connect() {
         if (!cfg.isEnabled()) {
-            log.info("Skip start Management Console agent on coordinator, because it was disabled in configuration");
+            log.info("Control Center agent was not started on coordinator, because it was disabled in configuration");
+            log.info("You can use control script to enable Control Center agent");
+
+            return;
+        }
+
+        if (F.isEmpty(cfg.getConsoleUris())) {
+            log.info("Control Center agent  was not started on coordinator, because the server URI was not set");
+            log.info("You can use control script to setup server URI");
 
             return;
         }
@@ -289,7 +347,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         this.sesRegistry = new SessionRegistry(ctx);
         this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
         this.metricProc = new MetricsProcessor(ctx, mgr);
-        this.actProc = new ActionsProcessor(ctx, mgr);
+        this.distributedActProc = new DistributedActionProcessor(ctx);
         this.cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
@@ -361,7 +419,8 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
-            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: " + cluster.id());
+            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: "
+                + cluster.id());
 
             clusterProc.sendInitialState();
 
@@ -387,7 +446,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
                 /** {@inheritDoc} */
                 @Override public void handleFrame(StompHeaders headers, Object payload) {
-                    actProc.onActionRequest((Request)payload);
+                    distributedActProc.onActionRequest((Request)payload);
                 }
             });
 
@@ -397,7 +456,13 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         }
 
         /** {@inheritDoc} */
-        @Override public void handleException(StompSession ses, StompCommand cmd, StompHeaders headers, byte[] payload, Throwable e) {
+        @Override public void handleException(
+            StompSession ses,
+            StompCommand cmd,
+            StompHeaders headers,
+            byte[] payload,
+            Throwable e
+        ) {
             log.warning("Failed to process a STOMP frame", e);
         }
 

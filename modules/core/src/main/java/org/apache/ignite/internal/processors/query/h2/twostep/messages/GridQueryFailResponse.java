@@ -154,10 +154,11 @@ public class GridQueryFailResponse implements Message {
                 writer.incrementState();
 
             case 3:
-                if (!writer.writeLong("sqlErrCode", sqlErrCode))
+                if (!writer.writeInt("sqlErrCode", sqlErrCode))
                     return false;
 
                 writer.incrementState();
+
         }
 
         return true;
@@ -202,6 +203,7 @@ public class GridQueryFailResponse implements Message {
                     return false;
 
                 reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridQueryFailResponse.class);

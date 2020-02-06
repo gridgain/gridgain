@@ -16,6 +16,12 @@
 
 package org.apache.ignite.testframework;
 
+import javax.cache.CacheException;
+import javax.cache.configuration.Factory;
+import javax.management.Attribute;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -66,12 +72,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
-import javax.cache.CacheException;
-import javax.cache.configuration.Factory;
-import javax.management.Attribute;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -120,6 +120,9 @@ import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_SSL_PROTOCOL;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -1927,13 +1930,13 @@ public final class GridTestUtils {
      * @throws IOException If keystore cannot be accessed.
      */
     public static SSLContext sslContext() throws GeneralSecurityException, IOException {
-        SSLContext ctx = SSLContext.getInstance("TLS");
+        SSLContext ctx = SSLContext.getInstance(DFLT_SSL_PROTOCOL);
 
         char[] storePass = keyStorePassword().toCharArray();
 
-        KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance("SunX509");
+        KeyManagerFactory keyMgrFactory = KeyManagerFactory.getInstance(DFLT_KEY_ALGORITHM);
 
-        KeyStore keyStore = KeyStore.getInstance("JKS");
+        KeyStore keyStore = KeyStore.getInstance(DFLT_STORE_TYPE);
 
         keyStore.load(new FileInputStream(U.resolveIgnitePath(GridTestProperties.getProperty("ssl.keystore.path"))),
             storePass);
@@ -2432,6 +2435,9 @@ public final class GridTestUtils {
             try {
                 runx();
             }
+            catch (RuntimeException e) {
+                throw e;
+            }
             catch (Exception e) {
                 throw new IgniteException(e);
             }
@@ -2455,9 +2461,19 @@ public final class GridTestUtils {
             try {
                 runx();
             }
+            catch (RuntimeException e) {
+                throw e;
+            }
             catch (Exception e) {
                 throw new IgniteException(e);
             }
         }
+    }
+
+    /**
+     * @param runnableX Runnable with exception.
+     */
+    public static void suppressException(RunnableX runnableX) {
+        runnableX.run();
     }
 }

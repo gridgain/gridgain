@@ -109,7 +109,10 @@ public enum IgniteFeatures {
     TRACING(26),
 
     /***/
-    MANAGEMENT_CONSOLE(28);
+    MANAGEMENT_CONSOLE(28),
+
+    /** Distributed change timeout for dump long operations. */
+    DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30);
 
     /**
      * Unique feature identifier.
@@ -219,7 +222,7 @@ public enum IgniteFeatures {
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
                 continue;
 
-            // Add only when management console is enabled.
+            // Add only when Control Center is enabled.
             if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 

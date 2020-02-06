@@ -1,6 +1,6 @@
-Apache Ignite C++ Build Instructions
+GridGain C++ Build Instructions
 ====================================
-Here you can find instruction on how to build Apache Ignite C++ core library and
+Here you can find instruction on how to build GridGain C++ core library and
 stand-alone node binary. To build examples you need to build and install core Apache
 Ignite library then refer to $IGNITE_HOME/platforms/cpp/example/README.txt for
 further instructions.
@@ -18,11 +18,11 @@ Common Requirements:
  * JAVA_HOME environment variable must be set pointing to Java installation directory.
  * IGNITE_HOME environment variable must be set to Ignite installation directory.
  * To build ODBC driver you need to install ODBC Driver Manager on you system.
-   Apache Ignite has been tested with UnixODBC. Make sure that you install development
+   GridGain has been tested with UnixODBC. Make sure that you install development
    version of the driver manager which contains header files that are necessary for
    building a driver.
 
-Building the Apache Ignite C++ components:
+Building the GridGain C++ components:
 
  * Navigate to the directory $IGNITE_HOME/platforms/cpp
  * Execute the following commands one by one to build the project:

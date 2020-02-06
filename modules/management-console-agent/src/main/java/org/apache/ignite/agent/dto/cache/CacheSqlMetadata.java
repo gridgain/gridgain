@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
@@ -64,7 +65,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param typeName Type name.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setTypeName(String typeName) {
         this.typeName = typeName;
@@ -81,7 +82,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param cacheName Cache name.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setCacheName(String cacheName) {
         this.cacheName = cacheName;
@@ -98,7 +99,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param schemaName Schema name.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setSchemaName(String schemaName) {
         this.schemaName = schemaName;
@@ -115,7 +116,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param tblName Table name.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setTableName(String tblName) {
         this.tblName = tblName;
@@ -132,7 +133,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param keyCls Key class.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setKeyClass(String keyCls) {
         this.keyCls = keyCls;
@@ -149,7 +150,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param valCls Value class.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setValueClass(String valCls) {
         this.valCls = valCls;
@@ -166,7 +167,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param fields Fields.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setFields(Map<String, String> fields) {
         this.fields = fields;
@@ -183,7 +184,7 @@ public class CacheSqlMetadata {
 
     /**
      * @param notNullFields Not null fields.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setNotNullFields(Set<String> notNullFields) {
         this.notNullFields = notNullFields;
@@ -200,12 +201,38 @@ public class CacheSqlMetadata {
 
     /**
      * @param indexes Indexes.
-     * @return @{code This} for chaining method calls.
+     * @return {@code This} for chaining method calls.
      */
     public CacheSqlMetadata setIndexes(List<CacheSqlIndexMetadata> indexes) {
         this.indexes = indexes;
 
         return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean equals(Object o) {
+        if (this == o)
+            return true;
+
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        CacheSqlMetadata that = (CacheSqlMetadata) o;
+
+        return cacheName.equals(that.cacheName) &&
+            schemaName.equals(that.schemaName) &&
+            tblName.equals(that.tblName) &&
+            typeName.equals(that.typeName) &&
+            Objects.equals(keyCls, that.keyCls) &&
+            Objects.equals(valCls, that.valCls) &&
+            Objects.equals(fields, that.fields) &&
+            Objects.equals(notNullFields, that.notNullFields) &&
+            Objects.equals(indexes, that.indexes);
+    }
+
+    /** {@inheritDoc} */
+    @Override public int hashCode() {
+        return Objects.hash(cacheName, schemaName, tblName, typeName, keyCls, valCls, fields, notNullFields, indexes);
     }
 
     /** {@inheritDoc} */

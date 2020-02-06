@@ -63,18 +63,18 @@ public class MetricsProcessor extends GridProcessorAdapter {
      * @param msg Message received.
      * @param plc Message policy (pool).
      */
-     void processMetricResponse(UUID nodeId, Object msg, byte plc) {
+    private void processMetricResponse(UUID nodeId, Object msg, byte plc) {
         if (msg instanceof MetricResponse) {
             MetricResponse res = (MetricResponse)msg;
 
             if (log.isDebugEnabled())
-                log.debug("Send message to Management Console: " + msg);
+                log.debug("Send message to Control Center: " + msg);
 
             try {
-                mgr.send(buildMetricsDest(res.clusterId()), res.body());
+                mgr.send(buildMetricsDest(), res.body());
             }
             catch (Throwable e) {
-                log.error("Failed to send metrics to Management Console", e);
+                log.error("Failed to send metrics to Control Center", e);
             }
         }
     }

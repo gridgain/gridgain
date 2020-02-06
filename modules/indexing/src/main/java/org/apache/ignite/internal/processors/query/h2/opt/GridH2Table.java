@@ -30,13 +30,12 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteInterruptedException;
-import org.apache.ignite.cache.query.QueryRetryException;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.query.QueryRetryException;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -58,7 +57,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.indexing.IndexingQueryCacheFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.h2.command.ddl.CreateTableData;
-import org.h2.command.dml.Insert;
 import org.h2.engine.DbObject;
 import org.h2.engine.Session;
 import org.h2.engine.SysProperties;
@@ -84,9 +82,6 @@ import static org.apache.ignite.internal.processors.query.h2.opt.H2TableScanInde
  * H2 Table implementation.
  */
 public class GridH2Table extends TableBase {
-    /** Insert hack flag. */
-    private static final ThreadLocal<Boolean> INSERT_HACK = new ThreadLocal<>();
-
     /** Exclusive lock constant. */
     private static final long EXCLUSIVE_LOCK = -1;
 
@@ -521,7 +516,7 @@ public class GridH2Table extends TableBase {
         SessionLock sesLock = sessions.get(ses);
 
         assert sesLock != null && !sesLock.isExclusive()
-            : "Invalid table lock [name=" + getName() + ", lock=" + sesLock.ver + ']';
+            : "Invalid table lock [name=" + getName() + ", lock=" + sesLock == null ? "null" : sesLock.ver + ']';
 
         if (!sesLock.locked) {
             lock(false);
@@ -539,7 +534,7 @@ public class GridH2Table extends TableBase {
         SessionLock sesLock = sessions.get(ses);
 
         assert sesLock != null && !sesLock.isExclusive()
-            : "Invalid table unlock [name=" + getName() + ", lock=" + sesLock.ver + ']';
+            : "Invalid table unlock [name=" + getName() + ", lock=" + sesLock == null ? "null" : sesLock.ver + ']';
 
         if (sesLock.locked) {
             sesLock.locked = false;
@@ -1044,20 +1039,20 @@ public class GridH2Table extends TableBase {
     }
 
     /**
-     * Check whether user index with provided name exists.
+     * Get user index with provided name.
      *
      * @param idxName Index name.
-     * @return {@code True} if exists.
+     * @return User index if exists and {@code null} othwerwise.
      */
-    public boolean containsUserIndex(String idxName) {
+    @Nullable public Index userIndex(String idxName) {
         for (int i = 2; i < idxs.size(); i++) {
             Index idx = idxs.get(i);
 
             if (idx.getName().equalsIgnoreCase(idxName))
-                return true;
+                return idx;
         }
 
-        return false;
+        return null;
     }
 
     /** {@inheritDoc} */
@@ -1099,7 +1094,7 @@ public class GridH2Table extends TableBase {
                         cctx0.shared().database().checkpointReadLock();
 
                         try {
-                            ((GridH2IndexBase)idx0).destroy(rmIndex);
+                            ((GridH2IndexBase)idx0).asyncDestroy(rmIndex);
                         }
                         finally {
                             cctx0.shared().database().checkpointReadUnlock();
@@ -1111,6 +1106,7 @@ public class GridH2Table extends TableBase {
 
                 i++;
             }
+
             this.idxs = idxs;
         }
         finally {
@@ -1481,25 +1477,7 @@ public class GridH2Table extends TableBase {
 
     /** {@inheritDoc} */
     @Override public Column[] getColumns() {
-        Column[] safeColumns0 = safeColumns;
-
-        Boolean insertHack = INSERT_HACK.get();
-
-        if (insertHack != null && insertHack) {
-            StackTraceElement[] elems = Thread.currentThread().getStackTrace();
-
-            StackTraceElement elem = elems[2];
-
-            if (F.eq(elem.getClassName(), Insert.class.getName()) && F.eq(elem.getMethodName(), "prepare")) {
-                Column[] columns0 = new Column[safeColumns0.length - QueryUtils.DEFAULT_COLUMNS_COUNT];
-
-                System.arraycopy(safeColumns0, QueryUtils.DEFAULT_COLUMNS_COUNT, columns0, 0, columns0.length);
-
-                return columns0;
-            }
-        }
-
-        return safeColumns0;
+        return safeColumns;
     }
 
     /**
@@ -1509,41 +1487,6 @@ public class GridH2Table extends TableBase {
         assert lock.isWriteLockedByCurrentThread();
 
         setModified();
-    }
-
-    /**
-     * Set insert hack flag.
-     *
-     * @param val Value.
-     */
-    public static void insertHack(boolean val) {
-        INSERT_HACK.set(val);
-    }
-
-    /**
-     * Check whether insert hack is required. This is true in case statement contains "INSERT INTO ... VALUES".
-     *
-     * @param sql SQL statement.
-     * @return {@code True} if target combination is found.
-     */
-    @SuppressWarnings("RedundantIfStatement")
-    public static boolean insertHackRequired(String sql) {
-        if (F.isEmpty(sql))
-            return false;
-
-        sql = sql.toLowerCase();
-
-        int idxInsert = sql.indexOf("insert");
-
-        if (idxInsert < 0)
-            return false;
-
-        int idxInto = sql.indexOf("into", idxInsert);
-
-        if (idxInto < 0)
-            return false;
-
-        return true;
     }
 
     /**

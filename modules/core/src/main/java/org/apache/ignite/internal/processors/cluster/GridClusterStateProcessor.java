@@ -39,9 +39,12 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.events.ClusterStateChangeStartedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -108,6 +111,9 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extract
  *
  */
 public class GridClusterStateProcessor extends GridProcessorAdapter implements IGridClusterStateProcessor, MetastorageLifecycleListener {
+    /** Stripe id for cluster activation event. */
+    public static final int CLUSTER_ACTIVATION_EVT_STRIPE_ID = Integer.MAX_VALUE;
+
     /** */
     private static final String METASTORE_CURR_BLT_KEY = "metastoreBltKey";
 
@@ -398,7 +404,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         // Start first node as inactive if persistence is enabled.
         boolean activeOnStart = inMemoryMode && ctx.config().isActiveOnStart();
 
-        globalState = DiscoveryDataClusterState.createState(activeOnStart, false, null);
+        globalState = DiscoveryDataClusterState.createState(activeOnStart, false, null, 0);
 
         ctx.event().addLocalEventListener(lsr, EVT_NODE_LEFT, EVT_NODE_FAILED);
     }
@@ -508,6 +514,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             afterStateChangeFinished(msg.id(), msg.success());
 
             ctx.cache().onStateChangeFinish(msg);
+
+            ctx.durableBackgroundTasksProcessor().onStateChangeFinish(msg);
 
             boolean prev = ctx.cache().context().readOnlyMode();
 
@@ -626,24 +634,23 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     log.info("Started state transition: " + msg.activate());
 
                 BaselineTopologyHistoryItem bltHistItem = BaselineTopologyHistoryItem.fromBaseline(
-                    globalState.baselineTopology());
+                    state.baselineTopology());
 
                 transitionFuts.put(msg.requestId(), new GridFutureAdapter<>());
 
-                DiscoveryDataClusterState prevState = globalState;
-
-                globalState = DiscoveryDataClusterState.createTransitionState(
-                    prevState,
+                DiscoveryDataClusterState newState = globalState = DiscoveryDataClusterState.createTransitionState(
+                    state,
                     msg.activate(),
                     msg.readOnly(),
-                    msg.activate() ? msg.baselineTopology() : prevState.baselineTopology(),
+                    msg.activate() ? msg.baselineTopology() : state.baselineTopology(),
                     msg.requestId(),
                     topVer,
+                    !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
                     nodeIds
                 );
 
                 if (msg.forceChangeBaselineTopology())
-                    globalState.setTransitionResult(msg.requestId(), msg.activate());
+                    newState.setTransitionResult(msg.requestId(), msg.activate());
 
                 AffinityTopologyVersion stateChangeTopVer = topVer.nextMinorVersion();
 
@@ -652,6 +659,32 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 exchangeActions.stateChangeRequest(req);
 
                 msg.exchangeActions(exchangeActions);
+
+                ClusterState prevClusterState = state.active()
+                    ? state.readOnly()
+                        ? ClusterState.ACTIVE_READ_ONLY
+                        : ClusterState.ACTIVE
+                    : ClusterState.INACTIVE;
+
+                ClusterState newClusterState = newState.active()
+                    ? newState.readOnly()
+                        ? ClusterState.ACTIVE_READ_ONLY
+                        : ClusterState.ACTIVE
+                    : ClusterState.INACTIVE;
+
+                if (newClusterState != prevClusterState) {
+                    if (ctx.event().isRecordable(EventType.EVT_CLUSTER_STATE_CHANGE_STARTED)) {
+                        ctx.getStripedExecutorService().execute(
+                            CLUSTER_ACTIVATION_EVT_STRIPE_ID,
+                            () -> ctx.event().record(new ClusterStateChangeStartedEvent(
+                                prevClusterState,
+                                newClusterState,
+                                ctx.discovery().localNode(),
+                                "Cluster state change started."
+                            ))
+                        );
+                    }
+                }
 
                 return true;
             }
@@ -697,7 +730,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         return DiscoveryDataClusterState.createState(
             stateMsg.activate() || stateMsg.forceChangeBaselineTopology(),
             stateMsg.readOnly(),
-            stateMsg.baselineTopology()
+            stateMsg.baselineTopology(),
+            stateMsg.timestamp()
         );
     }
 
@@ -1638,7 +1672,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         DiscoveryDataClusterState state = globalState;
 
         if (!state.active() && !state.transition() && state.baselineTopology() == null)
-            globalState = DiscoveryDataClusterState.createState(false, false, blt);
+            globalState = DiscoveryDataClusterState.createState(false, false, blt, 0);
     }
 
     /**

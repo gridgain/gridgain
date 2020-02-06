@@ -445,7 +445,7 @@ public class HashJoinIndex extends BaseIndex {
 
                     size += Constants.MEMORY_POINTER + r.getMemory();
 
-                    memTracker.reserve(size);
+                    memTracker.reserved(size);
                     memoryReserved += size;
                 }
 
@@ -511,7 +511,7 @@ public class HashJoinIndex extends BaseIndex {
         if (memoryReserved > 0) {
             assert session.queryMemoryTracker() != null;
 
-            session.queryMemoryTracker().release(memoryReserved);
+            session.queryMemoryTracker().released(memoryReserved);
 
             memoryReserved = 0;
         }
