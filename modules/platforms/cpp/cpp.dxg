@@ -1719,4 +1719,4 @@ DOT_CLEANUP            = YES
 ;EXCLUDE=core/include/ignite/impl core/os/linux/include/ignite/impl core/os/linux/src/impl core/os/win/include/ignite/impl core/os/win/src/impl core/src/impl binary/include/ignite/impl binary/src/impl common/include/ignite/common common/os thin-client/include/ignite/impl thin-client/src
 ;STRIP_FROM_PATH=core/include/ignite core/src binary/include/ignite binary/src thin-client/src
 ;OUTPUT_DIRECTORY=../../clients/target/cppdoc
-;PROJECT_LOGO=../dotnet/logo_gg_64x64.png
+;PROJECT_LOGO=logo_gg_80x80.png
