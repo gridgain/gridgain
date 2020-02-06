@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.io.IOException;
-import java.util.TimeZone;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
