@@ -241,7 +241,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 NearConfiguration = serverNear ? new NearCacheConfiguration() : null
             };
             
-            _ignite[i] = Ignition.Start(TestUtils.GetTestConfiguration("node" + i));
+            _ignite[i] = Ignition.Start(TestUtils.GetTestConfiguration(name: "node" + i));
             _cache[i] = _ignite[i].GetOrCreateCache<int, Foo>(cacheConfiguration);
             
             if (i == 2)
@@ -267,7 +267,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         private static IIgnite InitClient()
         {
-            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration("client" + Guid.NewGuid()))
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration(name: "client" + Guid.NewGuid()))
             {
                 ClientMode = true
             };
