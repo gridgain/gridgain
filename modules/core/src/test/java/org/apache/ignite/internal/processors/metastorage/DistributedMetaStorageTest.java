@@ -24,6 +24,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -36,9 +37,13 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
+import org.apache.ignite.internal.util.lang.GridAbsPredicateX;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryCustomEventMessage;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -61,6 +66,9 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
     /** String exceeding max length of metastorage key. */
     private static final String LONG_KEY;
+
+    /** **/
+    private TcpDiscoverySpi customTcpDiscoverySpi = null;
 
     static {
         String template = "012345678901234567890123456789";
@@ -85,8 +93,15 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DiscoverySpi discoSpi = cfg.getDiscoverySpi();
 
-        if (discoSpi instanceof TcpDiscoverySpi)
+        if (discoSpi instanceof TcpDiscoverySpi) {
+            if (customTcpDiscoverySpi != null)
+                cfg.setDiscoverySpi(
+                    customTcpDiscoverySpi
+                        .setIpFinder(((TcpDiscoverySpi)cfg.getDiscoverySpi()).getIpFinder())
+                );
+
             ((TcpDiscoverySpi)discoSpi).setNetworkTimeout(1000);
+        }
 
         if (igniteInstanceName.contains("client"))
             cfg.setClientMode(true);
@@ -141,9 +156,9 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     }
 
     /**
-     *  Test verifies that Distributed Metastorage on client is not operational until client connects to some cluster.
+     * Test verifies that Distributed Metastorage on client is not operational until client connects to some cluster.
      *
-     *  After successful join DMS on client becomes operational.
+     * After successful join DMS on client becomes operational.
      *
      * @throws Exception If failed.
      */
@@ -589,6 +604,41 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
+    public void testNodeStopBeforeRecordStored() throws Exception {
+        ConditionExecutionTcpDiscoverySpi discoverySpi = new ConditionExecutionTcpDiscoverySpi();
+
+        customTcpDiscoverySpi = discoverySpi;
+
+        IgniteEx ignite0 = startGrid(0);
+
+        customTcpDiscoverySpi = null;
+
+        IgniteEx ignite1 = startGrid(1);
+
+        ignite0.cluster().active(true);
+
+        discoverySpi.predicate(TcpDiscoveryCustomEventMessage.class::isInstance, ignite1::close);
+
+        try {
+            metastorage(1).write("key0", "value0");
+
+            fail("Write should fail cause node should be stopped");
+        }
+        catch (IgniteCheckedException expected) {
+            //Expected that write would be failed because node should be stopped before this message reached the node.
+        }
+
+        GridTestUtils.waitForCondition(new GridAbsPredicateX() {
+            @Override public boolean applyx() throws IgniteCheckedException {
+                return "value0".equals(metastorage(0).read("key0"));
+            }
+        }, 10_000);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testUnstableTopology() throws Exception {
         int cnt = 8;
 
@@ -692,5 +742,35 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         Arrays.sort(fullData1, Comparator.comparing(o -> U.field(o, "key")));
 
         assertEqualsCollections(Arrays.asList(fullData1), Arrays.asList(fullData2));
+    }
+
+    /**
+     * Tcp discovery which execute some code by configured condition.
+     */
+    private static class ConditionExecutionTcpDiscoverySpi extends TestTcpDiscoverySpi {
+        /** **/
+        private volatile Predicate<TcpDiscoveryAbstractMessage> cond;
+
+        /** **/
+        private volatile Runnable runnable;
+
+        /** {@inheritDoc} **/
+        @Override protected void startMessageProcess(TcpDiscoveryAbstractMessage msg) {
+            if (cond != null && cond.test(msg))
+                runnable.run();
+
+            super.startMessageProcess(msg);
+        }
+
+        /**
+         * Condition by which runnable should be executed.
+         *
+         * @param cond Triggered condition.
+         * @param runnable Code for execution.
+         */
+        public void predicate(Predicate<TcpDiscoveryAbstractMessage> cond, Runnable runnable) {
+            this.runnable = runnable;
+            this.cond = cond;
+        }
     }
 }
