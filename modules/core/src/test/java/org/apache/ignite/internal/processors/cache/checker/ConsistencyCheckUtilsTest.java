@@ -38,8 +38,9 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAX_GRID_CACHE_VERSION;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -339,7 +340,7 @@ public class ConsistencyCheckUtilsTest {
      */
     @Test
     public void testCalcValueMaxGridVersionNodeDoesNotHaveValue() throws IgniteCheckedException {
-        CacheObject val = calculateValueToFixWith(MAX_GRID_CACHE_VERSION, new HashMap<>(), NODE_1, null, 4);
+        CacheObject val = calculateValueToFixWith(LATEST, new HashMap<>(), NODE_1, null, 4);
 
         assertNull(val);
     }
@@ -359,7 +360,7 @@ public class ConsistencyCheckUtilsTest {
         nodeToVersionedValues.put(NODE_3, maxVerVal);
         nodeToVersionedValues.put(NODE_4, ver4);
 
-        CacheObject val = calculateValueToFixWith(MAX_GRID_CACHE_VERSION, nodeToVersionedValues, NODE_1, null, 4);
+        CacheObject val = calculateValueToFixWith(LATEST, nodeToVersionedValues, NODE_1, null, 4);
 
         assertEquals(maxVerVal.value().valueBytes(cacheObjectContext()), val.valueBytes(cacheObjectContext()));
     }
@@ -434,6 +435,14 @@ public class ConsistencyCheckUtilsTest {
         CacheObject val = calculateValueToFixWith(MAJORITY, nodeToVersionedValues, NODE_1, cacheObjectContext(), 8);
 
         assertEquals(ver4.value().valueBytes(cacheObjectContext()), val.valueBytes(cacheObjectContext()));
+    }
+
+    /**
+     * For all input must return null.
+     */
+    @Test
+    public void testCalcValueRemoveByValue() throws IgniteCheckedException {
+        assertNull(calculateValueToFixWith(REMOVE, new HashMap<>(), UUID.randomUUID(), null, 8));
     }
 
     /**

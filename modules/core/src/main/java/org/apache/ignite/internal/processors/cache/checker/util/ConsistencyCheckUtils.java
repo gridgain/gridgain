@@ -205,6 +205,9 @@ public class ConsistencyCheckUtils {
 
                 return versionedVal != null ? versionedVal.value() : null;
 
+            case REMOVE:
+                return null;
+
             case MAJORITY:
                 if (affinityNodesCnt > nodeToVersionedValues.size() * 2)
                     return null;
@@ -237,7 +240,7 @@ public class ConsistencyCheckUtils {
 
                 return valToFixWith;
 
-            case MAX_GRID_CACHE_VERSION:
+            case LATEST:
                 GridCacheVersion maxVer = new GridCacheVersion(0, 0, 0);
 
                 for (VersionedValue versionedValue : nodeToVersionedValues.values()) {

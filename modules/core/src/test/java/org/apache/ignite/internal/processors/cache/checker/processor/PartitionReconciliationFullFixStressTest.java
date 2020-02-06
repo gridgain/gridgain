@@ -33,8 +33,9 @@ import org.junit.Test;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAX_GRID_CACHE_VERSION;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 
 /**
  *
@@ -51,7 +52,7 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
             CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
 
         int[] partitions = {1, 32};
-        RepairAlgorithm[] repairAlgorithms = {MAX_GRID_CACHE_VERSION, PRIMARY, MAJORITY};
+        RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)

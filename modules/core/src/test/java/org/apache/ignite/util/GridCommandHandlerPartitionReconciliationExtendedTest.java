@@ -111,12 +111,12 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         assertEquals(0, reconciliationSessionId());
 
-        GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
+        GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
             "MAJORITY", "--recheck-attempts", "5")));
 
         assertTrue(GridTestUtils.waitForCondition(() -> reconciliationSessionId() != 0, 10_000));
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation_cancel"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation-cancel"));
 
         assertEquals(0, reconciliationSessionId());
 
@@ -137,7 +137,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         IgniteEx ignite = grid(0);
         ignite.cluster().active(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--fix-mode", "--fix-alg", "MAJORITY", "--recheck-attempts", "1"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--fix-mode", "--fix-alg", "MAJORITY", "--recheck-attempts", "1"));
 
         assertTrue(lsnr.check(10_000));
     }
@@ -162,21 +162,21 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         ignite.getOrCreateCache(new CacheConfiguration<>("100_backups").setBackups(100));
 
         System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "4");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups", "--load-factor", "0.0001"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups", "--load-factor", "0.0001"));
         assertTrue(lsnrOneLevel.check(10_000));
 
         System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "220");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups", "--load-factor", "1"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups", "--load-factor", "1"));
         assertTrue(lsnrTwoLevel.check(10_000));
 
         ignite.getOrCreateCache(new CacheConfiguration<>("100_backups_replicated").setCacheMode(CacheMode.REPLICATED).setBackups(100));
 
         System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "4");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups_replicated", "--load-factor", "0.0001"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups_replicated", "--load-factor", "0.0001"));
         assertTrue(lsnrOneLevel.check(10_000));
 
         System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "120");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "100_backups_replicated", "--load-factor", "1"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups_replicated", "--load-factor", "1"));
         assertTrue(lsnrTwoLevel.check(10_000));
 
         System.clearProperty(AVAILABLE_PROCESSORS_RECONCILIATION);
@@ -199,7 +199,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         for (int i = 1; i <= 3; i++)
             ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "default, default3"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "default, default3"));
 
         assertTrue(lsnr.check(10_000));
 
@@ -224,7 +224,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         for (int i = 1; i <= 3; i++)
             ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "default.*"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "default.*"));
 
         assertTrue(lsnr.check(10_000));
 
@@ -252,7 +252,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         for (int i = 1; i <= 3; i++)
             setOfCaches.add(ignite.getOrCreateCache(DEFAULT_CACHE_NAME + i).getName());
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation"));
 
         assertTrue(lsnr.check(10_000));
 
@@ -285,7 +285,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
             }
         }));
 
-        assertEquals(EXIT_CODE_OK, execute(new CommandHandler(logger), "--cache", "partition_reconciliation", wrongCacheName));
+        assertEquals(EXIT_CODE_OK, execute(new CommandHandler(logger), "--cache", "partition-reconciliation", wrongCacheName));
 
         assertTrue(errorMsg.check(10_000));
     }

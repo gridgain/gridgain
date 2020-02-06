@@ -24,13 +24,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public enum RepairAlgorithm {
     /** Value from entry with max grid cache version will be used.*/
-    MAX_GRID_CACHE_VERSION,
+    LATEST,
 
     /** Value from entry from primary node will be used. */
     PRIMARY,
 
     /** Most common value will be used. */
     MAJORITY,
+
+    /** Does remove a key form all partitions. */
+    REMOVE,
 
     /** Nicht repair, only printing. */
     PRINT_ONLY;

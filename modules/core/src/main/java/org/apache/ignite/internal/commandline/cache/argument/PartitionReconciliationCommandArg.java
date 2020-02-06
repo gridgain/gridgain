@@ -34,7 +34,7 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     FIX_ALG("--fix-alg", RepairAlgorithm.defaultValue()),
 
     /** If {@code true} - print data to result with sensitive information: keys and values. */
-    VERBOSE("--verbose", Boolean.FALSE),
+    INCLUDE_SENSITIVE("--include-sensitive", Boolean.FALSE),
 
     /** Percent of system loading between 0 and 1. */
     LOAD_FACTOR("--load-factor", 1d),
@@ -45,8 +45,8 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** Amount of potentially inconsistent keys recheck attempts. */
     RECHECK_ATTEMPTS("--recheck-attempts", 2),
 
-    /** Print result to console. */
-    CONSOLE("--console", Boolean.FALSE),
+    /** Print result to console. Specifies whether to print result to console or file. Hide parameter. */
+    LOCAL_OUTPUT("--local-output", Boolean.FALSE),
 
     /** Recheck delay seconds. */
     RECHECK_DELAY("--recheck-delay", 10);

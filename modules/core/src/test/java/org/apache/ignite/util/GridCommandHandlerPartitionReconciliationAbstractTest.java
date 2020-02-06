@@ -175,7 +175,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode.</li>
+     * <li>Run partition-reconciliation command in fix mode.</li>
      * <p>
      * <b>Expected result:</b>
      * <ul>
@@ -201,8 +201,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testRemovedEntryOnPrimaryWithDefaultRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode",
-            "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode",
+            "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(), VALUE_PREFIX + INVALID_KEY,
@@ -224,7 +224,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>MAJORITY</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>MAJORITY</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * <ul>
@@ -250,8 +250,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testRemovedEntryOnPrimaryWithMajorityRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAJORITY", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "MAJORITY", "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(), VALUE_PREFIX + INVALID_KEY,
@@ -273,7 +273,53 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>PRIMARY</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>REMOVE</b>.</li>
+     * <p>
+     * <b>Expected result:</b>
+     * <ul>
+     * <li>Parse output and ensure that one key was added to 'inconsistent keys section' with corresponding
+     * versions and values:
+     * <ul>
+     * <li>Primary: key is missing</li>
+     * <li>Backup 1: key has ver1  and val1</li>
+     * <li>Backup 2: key has ver1  and val1 (same as backup 1)</li>
+     * <li>Backup 3: key has ver2 > ver1  and val3</li>
+     * </ul>
+     * </li>
+     * <li>Also ensure that key has repair meta info, doesn't contain with key.</li>
+     * </ul>
+     * </or>
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRemovedEntryOnPrimaryWithRemoveRepairAlg() throws IgniteCheckedException {
+        PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
+
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "REMOVE", "--recheck-delay", "0",  "--local-output"));
+
+        // Validate partition reconciliation result and enusre that invalid key was removed.
+        validateFix(invalidDataRowMeta, hnd.getLastOperationResult(), null,
+            RepairAlgorithm.REMOVE);
+    }
+
+    /**
+     * <b>Prerequisites:</b>
+     * Start cluster with 4 nodes and create <b>atomic/transactional non-persistent/persistent</b> cache with 3 backups.
+     * Populate cache with some data.
+     * <p>
+     * <b>Steps:</b>
+     * <or>
+     * <li>Add one more entry with inconsistent data:
+     * <ul>
+     * <li>Primary: key is missing</li>
+     * <li>Backup 1: key has ver1  and val1</li>
+     * <li>Backup 2: key has ver1  and val1 (same as backup 1)</li>
+     * <li>Backup 3: key has ver2 > ver1  and val3</li>
+     * </ul>
+     * </li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>PRIMARY</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * <ul>
@@ -298,8 +344,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testRemovedEntryOnPrimaryWithPrimaryRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRIMARY", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "PRIMARY", "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result.
         validateResult(
@@ -333,7 +379,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>MAX_GRID_CACHE_VERSION</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>LATEST</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * <ul>
@@ -347,7 +393,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * </ul>
      * </li>
      * <li>Also ensure that key has repair meta info, that reflects that keys were fixed using expected algorithm
-     * (MAX_GRID_CACHE_VERSION in given case) and also contains the value that was used for fix (val3 in given
+     * (LATEST in given case) and also contains the value that was used for fix (val3 in given
      * case).</li>
      * <li>Ensure that previously inconsistent key on all 4 nodes has same value that is equal to val3
      * in given case.</li>
@@ -360,13 +406,13 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testRemovedEntryOnPrimaryWithMaxGridCacheVersionRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAX_GRID_CACHE_VERSION", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "LATEST", "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(),
             VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
-            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
+            RepairAlgorithm.LATEST);
     }
 
     /**
@@ -384,7 +430,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>PRINT_ONLY</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>PRINT_ONLY</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * <ul>
@@ -409,8 +455,8 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testRemovedEntryOnPrimaryWithPrintOnlyRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(true);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRINT_ONLY", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "PRINT_ONLY", "--recheck-delay", "0",  "--local-output"));
 
         List<ClusterNode> nodes = ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().affinity().
             nodesByKey(
@@ -454,11 +500,11 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode.</li>
+     * <li>Run partition-reconciliation command in fix mode.</li>
      * <p>
      * <b>Expected result:</b>
      * Cause there are no missing keys: neither totally missing, nor available only in deferred delete queue, default
-     * MAJORITY algorithm won't be used, MAX_GRID_CACHE_VERSION will be used instead.
+     * MAJORITY algorithm won't be used, LATEST will be used instead.
      * <ul>
      * <li>Parse output and ensure that one key was added to 'inconsistent keys section' with corresponding
      * versions and values:
@@ -470,7 +516,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * </ul>
      * </li>
      * <li>Also ensure that key has repair meta info, that reflects that keys were fixed using expected algorithm
-     * MAX_GRID_CACHE_VERSION in given case algorithm and also contains the value that was used for fix (val3 in given
+     * LATEST in given case algorithm and also contains the value that was used for fix (val3 in given
      * case).</li>
      * <li>Ensure that previously inconsistent key on all 4 nodes  has same value that is equal to val3.</li>
      * </ul>
@@ -482,13 +528,13 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testMissedUpdateWithDefaultRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode",
-            "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode",
+            "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(),
             VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
-            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
+            RepairAlgorithm.LATEST);
     }
 
     /**
@@ -506,11 +552,11 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>MAJORITY</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>MAJORITY</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * Cause there are no missing keys: neither totally missing, nor available only in deferred delete queue, MAJORITY
-     * algorithm won't be used, MAX_GRID_CACHE_VERSION will be used instead.
+     * algorithm won't be used, LATEST will be used instead.
      * <ul>
      * <li>Parse output and ensure that one key was added to 'inconsistent keys section' with corresponding
      * versions and values:
@@ -522,7 +568,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * </ul>
      * </li>
      * <li>Also ensure that key has repair meta info, that reflects that keys were fixed using expected algorithm
-     * MAX_GRID_CACHE_VERSION in given case algorithm and also contains the value that was used for fix (val3 in given
+     * LATEST in given case algorithm and also contains the value that was used for fix (val3 in given
      * case).</li>
      * <li>Ensure that previously inconsistent key on all 4 nodes  has same value that is equal to val3.</li>
      * </ul>
@@ -534,13 +580,13 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testMissedUpdateOnPrimaryWithMajorityRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAJORITY", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "MAJORITY", "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(),
             VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
-            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
+            RepairAlgorithm.LATEST);
     }
 
     /**
@@ -558,11 +604,11 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>PRIMARY</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>PRIMARY</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * Cause there are no missing keys neither totally missing, nor available only in deferred delete queue, PRIMARY
-     * algorithm won't be used, MAX_GRID_CACHE_VERSION will be used instead.
+     * algorithm won't be used, LATEST will be used instead.
      * <ul>
      * <li>Parse output and ensure that one key was added to 'inconsistent keys section' with corresponding
      * versions and values:
@@ -574,7 +620,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * </ul>
      * </li>
      * <li>Also ensure that key has repair meta info, that reflects that keys were fixed using expected algorithm
-     * MAX_GRID_CACHE_VERSION in given case algorithm and also contains the value that was used for fix (val3 in given
+     * LATEST in given case algorithm and also contains the value that was used for fix (val3 in given
      * case).</li>
      * <li>Ensure that previously inconsistent key on all 4 nodes  has same value that is equal to val3.</li>
      * </ul>
@@ -586,13 +632,13 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testMissedUpdateOnPrimaryWithPrimaryRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRIMARY", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "PRIMARY", "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(),
             VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
-            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
+            RepairAlgorithm.LATEST);
     }
 
     /**
@@ -610,7 +656,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>MAX_GRID_CACHE_VERSION</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>LATEST</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * <ul>
@@ -624,7 +670,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * </ul>
      * </li>
      * <li>Also ensure that key has repair meta info, that reflects that keys were fixed using expected algorithm
-     * MAX_GRID_CACHE_VERSION in given case algorithm and also contains the value that was used for fix (val3 in given
+     * LATEST in given case algorithm and also contains the value that was used for fix (val3 in given
      * case).</li>
      * <li>Ensure that previously inconsistent key on all 4 nodes  has same value that is equal to val3.</li>
      * </ul>
@@ -636,13 +682,13 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testMissedUpdateOnPrimaryWithMaxGridCacheVersionRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "MAX_GRID_CACHE_VERSION", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "LATEST", "--recheck-delay", "0",  "--local-output"));
 
         // Validate partition reconciliation result and enusre that invalid key was successfully fixed.
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(),
             VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
-            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
+            RepairAlgorithm.LATEST);
     }
 
     /**
@@ -660,11 +706,11 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * <li>Backup 3: key has ver2 > ver1  and val3</li>
      * </ul>
      * </li>
-     * <li>Run partition_reconciliation command in fix mode with fix-alg <b>PRINT_ONLY</b>.</li>
+     * <li>Run partition-reconciliation command in fix mode with fix-alg <b>PRINT_ONLY</b>.</li>
      * <p>
      * <b>Expected result:</b>
      * Cause there are no missing keys neither totally missing, nor available only in deferred delete queue, PRINT_ONLY
-     * algorithm won't be used, MAX_GRID_CACHE_VERSION will be used instead.
+     * algorithm won't be used, LATEST will be used instead.
      * <ul>
      * <li>Parse output and ensure that one key was added to 'inconsistent keys section' with corresponding
      * versions and values:
@@ -676,7 +722,7 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
      * </ul>
      * </li>
      * <li>Also ensure that key has repair meta info, that reflects that keys were fixed using expected algorithm
-     * MAX_GRID_CACHE_VERSION in given case algorithm and also contains the value that was used for fix (val3 in given
+     * LATEST in given case algorithm and also contains the value that was used for fix (val3 in given
      * case).</li>
      * <li>Ensure that previously inconsistent key on all 4 nodes  has same value that is equal to val3.</li>
      * </ul>
@@ -688,12 +734,12 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
     public void testMissedUpdateOnPrimaryWithPrintOnlyRepairAlg() throws Exception {
         PartitionReconciliationDataRowMeta invalidDataRowMeta = populateCacheWithInconsistentEntry(false);
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--fix-mode", "--fix-alg",
-            "PRINT_ONLY", "--recheck-delay", "0",  "--console"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+            "PRINT_ONLY", "--recheck-delay", "0",  "--local-output"));
 
         validateFix(invalidDataRowMeta, hnd.getLastOperationResult(),
             VALUE_PREFIX + INVALID_KEY + BROKEN_POSTFIX_2,
-            RepairAlgorithm.MAX_GRID_CACHE_VERSION);
+            RepairAlgorithm.LATEST);
 
     }
 
@@ -718,12 +764,12 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
             res,
             new PartitionReconciliationRepairMeta(
                 true,
-                new PartitionReconciliationValueMeta(
+                invalidVal != null ? new PartitionReconciliationValueMeta(
                     grid(0).context().cacheObjects().marshal(
                         ignite(0).cachex(DEFAULT_CACHE_NAME).cache().context().cacheObjectContext(),
                         invalidVal),
                     invalidVal,
-                    null),
+                    null) : null,
                 repairAlg));
 
         for (int i = 0; i < 4; i++) {

@@ -48,13 +48,13 @@ import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PARTITION_RECONCILIATION;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.CONSOLE;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.INCLUDE_SENSITIVE;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_ALG;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_MODE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOAD_FACTOR;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.VERBOSE;
 
 /**
  * Partition reconciliation command.
@@ -90,16 +90,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             "Amount of potentially inconsistent keys recheck attempts. Value between 1 and 5 should be used." +
                 " Default value is " + RECHECK_ATTEMPTS.defaultValue() + '.');
 
-        paramsDesc.put(VERBOSE.toString(),
+        paramsDesc.put(INCLUDE_SENSITIVE.toString(),
             "Print data to result with sensitive information: keys and values." +
-                " Default value is " + VERBOSE.defaultValue() + '.');
+                " Default value is " + INCLUDE_SENSITIVE.defaultValue() + '.');
 
         paramsDesc.put(FIX_ALG.toString(),
             "Specifies which repair algorithm to use for doubtful keys. The following values can be used: "
                 + Arrays.toString(RepairAlgorithm.values()) +  " Default value is " + FIX_ALG.defaultValue() + '.');
-
-        paramsDesc.put(CONSOLE.toString(),
-            "Specifies whether to print result to console or file. Default value is " + CONSOLE.defaultValue() + '.');
 
         // RECHECK_DELAY arg intentionally skipped.
 
@@ -109,7 +106,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             desc,
             paramsDesc,
             optional(FIX_MODE), optional(LOAD_FACTOR), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
-            optional(VERBOSE), optional(FIX_ALG), optional(CONSOLE), optional(CACHES));
+            optional(INCLUDE_SENSITIVE), optional(FIX_ALG), optional(LOCAL_OUTPUT), optional(CACHES));
     }
 
     /** {@inheritDoc} */
@@ -172,8 +169,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
         boolean fixMode = (boolean) FIX_MODE.defaultValue();
-        boolean verbose = (boolean) VERBOSE.defaultValue();
-        boolean console = (boolean) CONSOLE.defaultValue();
+        boolean verbose = (boolean) INCLUDE_SENSITIVE.defaultValue();
+        boolean console = (boolean) LOCAL_OUTPUT.defaultValue();
         double loadFactor = (double) LOAD_FACTOR.defaultValue();
         int batchSize = (int) BATCH_SIZE.defaultValue();
         int recheckAttempts = (int) RECHECK_ATTEMPTS.defaultValue();
@@ -218,12 +215,12 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
                         break;
 
-                    case VERBOSE:
+                    case INCLUDE_SENSITIVE:
                         verbose = true;
 
                         break;
 
-                    case CONSOLE:
+                    case LOCAL_OUTPUT:
                         console = true;
 
                         break;
@@ -322,10 +319,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     }
 
     /**
-     * @return String with meta information about current run of partition_reconciliation: used arguments, params, etc.
+     * @return String with meta information about current run of partition-reconciliation: used arguments, params, etc.
      */
     private String prepareHeaderMeta() {
-        SB options = new SB("partition_reconciliation task was executed with the following args: ");
+        SB options = new SB("partition-reconciliation task was executed with the following args: ");
 
         options
             .a("caches=[")
@@ -357,7 +354,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         Map<UUID, String> nodeIdsToFolders,
         Map<UUID, String> nodesIdsToConsistenceIdsMap
     ) {
-        SB out = new SB("partition_reconciliation task prepared result where line is " +
+        SB out = new SB("partition-reconciliation task prepared result where line is " +
             "- <nodeConsistentId>, <nodeId> : <folder> \n");
 
         for (Map.Entry<UUID, String> entry : nodeIdsToFolders.entrySet()) {
