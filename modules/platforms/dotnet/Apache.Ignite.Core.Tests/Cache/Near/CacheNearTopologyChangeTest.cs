@@ -215,7 +215,30 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestContinuousTopologyChangeMaintainsCorrectNearCacheData()
         {
-            // TODO: stop/start random nodes, put/get random keys, verify on all caches
+            // Start 5 servers and 1 client.
+            // Server 0 and client node always run
+            // Other servers start and stop periodically.
+            InitGrids(5);
+            var clientCache = InitClientAndCache();
+            var serverCache = _cache[0];
+
+            Action changeTopology = () =>
+            {
+                
+            };
+
+            Action verifyCaches = () =>
+            {
+                // TODO: Check current value. Change value with SQL, check propagation.
+            };
+
+            var start = DateTime.Now;
+            while (DateTime.Now - start < TimeSpan.FromSeconds(10))
+            {
+                changeTopology();
+
+                verifyCaches();
+            }
         }
 
         /// <summary>
