@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -31,6 +30,7 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.marshaller.Marshaller;
@@ -59,25 +59,14 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
     @Override protected void beforeTestsStarted() throws Exception {
         assert NODES_CNT > 2;
 
-        ids = new LinkedList<>();
-
-        try {
-            for (int i = 0; i < NODES_CNT; i++) {
-                Ignition.setClientMode(i > 1);
-
-                Ignite g = startGrid(i);
-
-                ids.add(g.cluster().localNode().id());
-
-                if (i == 0)
-                    ignite = g;
-            }
-
-            waitForTopology(NODES_CNT);
+        for (int i = 0; i < NODES_CNT; i++) {
+            if (i > 1)
+                startClientGrid(i);
+            else
+                startGrid(i);
         }
-        finally {
-            Ignition.setClientMode(false);
-        }
+
+        waitForTopology(NODES_CNT);
     }
 
     /** {@inheritDoc} */
@@ -85,6 +74,19 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
         super.afterTestsStopped();
 
         ignite = null;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        ignite = grid(0);
+
+        ids = G.allGrids().stream()
+            .map(Ignite::cluster)
+            .map(IgniteCluster::localNode)
+            .map(ClusterNode::id)
+            .collect(Collectors.toList());
     }
 
     /** {@inheritDoc} */
@@ -140,9 +142,7 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
             assertEquals(0, emptyGrp.forOldest().nodes().size());
         }
         finally {
-            ignite = startGrid(0);
-
-            ids.set(0, ignite.cluster().localNode().id());
+            startGrid(0);
         }
     }
 
@@ -182,16 +182,7 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
             assertEquals(0, emptyGrp.forYoungest().nodes().size());
         }
         finally {
-            Ignition.setClientMode(true);
-
-            try {
-                IgniteEx node = startGrid(NODES_CNT - 1);
-
-                ids.set(NODES_CNT - 1, node.cluster().localNode().id());
-            }
-            finally {
-                Ignition.setClientMode(true);
-            }
+            startClientGrid(NODES_CNT - 1);
         }
     }
 
