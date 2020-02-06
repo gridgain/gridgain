@@ -9,9 +9,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import org.h2.api.ErrorCode;
 import org.h2.command.Prepared;
 import org.h2.command.dml.AllColumnsForPlan;
@@ -1341,5 +1341,16 @@ public abstract class Table extends SchemaObjectBase {
             return a;
 
         return (comp > 0) == bigger ? a : b;
+    }
+
+    public Column[] getVisibleColums() {
+        List<Column> visibleCols = new ArrayList<>(columns.length);
+
+        for (Column c : columns) {
+            if (c.getVisible())
+                visibleCols.add(c);
+        }
+
+        return visibleCols.toArray(new Column[visibleCols.size()]);
     }
 }

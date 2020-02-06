@@ -41,6 +41,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
 
+import static java.lang.String.format;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 
 /** */
@@ -62,12 +63,17 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
 
     /** */
     private final LogListener logListener = new MessageOrderLogListener(
-        String.format(".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, groupName=%s.*%s.*",
-            IDX_NAME, GRP_NAME, IGNITE_TO_STRING_INCLUDE_SENSITIVE)
+        format(
+                ".*?Tree is corrupted.*?cacheId=65, cacheName=A, indexName=%s, groupName=%s" +
+                    ", msg=Runtime failure on row: Row@.*?key: 1, val: .*?%s.*",
+                IDX_NAME,
+                GRP_NAME,
+                IGNITE_TO_STRING_INCLUDE_SENSITIVE
+        )
     );
 
     /** */
-    private final LogListener logSensListener = new MessageOrderLogListener(String.format(".*%s.*", VERY_SENS_STR_DATA));
+    private final LogListener logSensListener = new MessageOrderLogListener(format(".*%s.*", VERY_SENS_STR_DATA));
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
@@ -100,7 +106,7 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
 
         cleanPersistenceDir();
 
-        BPlusTree.pageHndWrapper = (tree, hnd) -> {
+        BPlusTree.testHndWrapper = (tree, hnd) -> {
             if (hnd instanceof BPlusTree.Insert) {
                 PageHandler<Object, BPlusTree.Result> delegate = (PageHandler<Object, BPlusTree.Result>)hnd;
 
@@ -136,6 +142,10 @@ public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        clearGridToStringClassCache();
+
+        BPlusTree.testHndWrapper = null;
 
         super.afterTest();
     }

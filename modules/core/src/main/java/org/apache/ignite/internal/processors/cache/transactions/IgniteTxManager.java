@@ -130,7 +130,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_TX_STARTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_CACHE_COORDINATOR;
 import static org.apache.ignite.internal.GridTopic.TOPIC_TX;
-import static org.apache.ignite.internal.IgniteFeatures.LONG_OPERATIONS_DUMP_TIMEOUT;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.internal.IgniteFeatures.LRT_SYSTEM_USER_TIME_DUMP_SETTINGS;
 import static org.apache.ignite.internal.IgniteFeatures.TRANSACTION_OWNER_THREAD_DUMP_PROVIDING;
 import static org.apache.ignite.internal.IgniteKernal.DFLT_LONG_OPERATIONS_DUMP_TIMEOUT;
@@ -1526,7 +1526,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             removeObsolete(tx);
 
             // 7. Assign transaction number at the end of transaction.
-            tx.endVersion(cctx.versions().next(tx.topologyVersion()));
+            tx.endVersion(cctx.versions().next(tx.topologyVersion().topologyVersion()));
 
             // 8. Remove from per-thread storage.
             clearThreadMap(tx);
@@ -2656,8 +2656,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
 
         clearThreadMap(tx);
-
-        transactionMap(tx).remove(tx.xidVersion(), tx);
     }
 
     /**
@@ -2681,13 +2679,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
 
         assert !threadMap.containsValue(tx) : tx;
-        assert !transactionMap(tx).containsValue(tx) : tx;
         assert !haveSystemTxForThread(Thread.currentThread().getId());
 
         if (threadMap.putIfAbsent(threadId, tx) != null)
-            throw new IgniteCheckedException("Thread already has started a transaction.");
-
-        if (transactionMap(tx).putIfAbsent(tx.xidVersion(), tx) != null)
             throw new IgniteCheckedException("Thread already has started a transaction.");
 
         tx.threadId(threadId);
@@ -2965,7 +2959,7 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     public void longOperationsDumpTimeoutDistributed(long longOpsDumpTimeout) {
         broadcastToNodesSupportingFeature(
             new LongOperationsDumpSettingsClosure(longOpsDumpTimeout),
-            LONG_OPERATIONS_DUMP_TIMEOUT
+            DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT
         );
     }
 

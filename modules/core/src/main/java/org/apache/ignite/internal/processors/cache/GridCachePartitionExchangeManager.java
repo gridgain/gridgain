@@ -57,6 +57,7 @@ import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.BaselineChangedEvent;
 import org.apache.ignite.events.ClusterActivationEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
@@ -78,7 +79,6 @@ import org.apache.ignite.internal.managers.discovery.DiscoveryLocalJoinData;
 import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
-import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionFullCountersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ForceRebalanceExchangeTask;
@@ -109,6 +109,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
+import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchangeWorkerTask;
@@ -165,6 +166,7 @@ import static org.apache.ignite.internal.processors.affinity.AffinityTopologyVer
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap.PARTIAL_COUNTERS_MAP_SINCE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture.nextDumpTimeout;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.DFLT_PRELOAD_RESEND_TIMEOUT;
+import static org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor.CLUSTER_ACTIVATION_EVT_STRIPE_ID;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION_HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_METRICS;
@@ -188,9 +190,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
     /** */
     private static final IgniteProductVersion EXCHANGE_PROTOCOL_2_SINCE = IgniteProductVersion.fromString("2.1.4");
-
-    /** Stripe id for cluster activation event. */
-    private static final int CLUSTER_ACTIVATION_EVT_STRIPE_ID = Integer.MAX_VALUE;
 
     /** */
     private static final String EXCHANGE_WORKER_THREAD_NAME = "exchange-worker";
@@ -409,32 +408,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             return;
                         }
                     }
-                    else if (exchangeInProgress()) {
-                        if (log.isInfoEnabled())
-                            log.info("Ignore single message without exchange id (there is exchange in progress) [nodeId=" + node.id() + "]");
 
-                        return;
-                    }
-
-                    if (!crdInitFut.isDone() && !msg.restoreState()) {
-                        GridDhtPartitionExchangeId exchId = msg.exchangeId();
-
-                        if (log.isInfoEnabled()) {
-                            log.info("Waiting for coordinator initialization [node=" + node.id() +
-                                ", nodeOrder=" + node.order() +
-                                ", ver=" + (exchId != null ? exchId.topologyVersion() : null) + ']');
-                        }
-
-                        crdInitFut.listen(new CI1<IgniteInternalFuture>() {
-                            @Override public void apply(IgniteInternalFuture fut) {
-                                processSinglePartitionUpdate(node, msg);
-                            }
-                        });
-
-                        return;
-                    }
-
-                    processSinglePartitionUpdate(node, msg);
+                    preprocessSingleMessage(node, msg);
                 }
             });
 
@@ -521,6 +496,34 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     }
 
     /**
+     * Preprocess {@code msg} which was sended by {@code node}.
+     *
+     * @param node Cluster node.
+     * @param msg Message.
+     */
+    private void preprocessSingleMessage(ClusterNode node, GridDhtPartitionsSingleMessage msg) {
+        if (!crdInitFut.isDone() && !msg.restoreState()) {
+            GridDhtPartitionExchangeId exchId = msg.exchangeId();
+
+            if (log.isInfoEnabled()) {
+                log.info("Waiting for coordinator initialization [node=" + node.id() +
+                    ", nodeOrder=" + node.order() +
+                    ", ver=" + (exchId != null ? exchId.topologyVersion() : null) + ']');
+            }
+
+            crdInitFut.listen(new CI1<IgniteInternalFuture>() {
+                @Override public void apply(IgniteInternalFuture fut) {
+                    processSinglePartitionUpdate(node, msg);
+                }
+            });
+
+            return;
+        }
+
+        processSinglePartitionUpdate(node, msg);
+    }
+
+    /**
      *
      */
     public void onCoordinatorInitialized() {
@@ -591,11 +594,41 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                     exchFut = exchangeFuture(exchId, evt, cache, exchActions, null);
 
+                    GridKernalContext ctx = cctx.kernalContext();
+                    boolean baselineChanging;
+
+                    if (stateChangeMsg.forceChangeBaselineTopology())
+                        baselineChanging = true;
+                    else {
+                        DiscoveryDataClusterState state = ctx.state().clusterState();
+
+                        assert state.transition() : state;
+
+                        baselineChanging = state.baselineChanging()
+                            // Or it is the first activation.
+                            || state.active() && !state.previouslyActive() && state.previousBaselineTopology() == null;
+                    }
+
                     exchFut.listen(f -> {
                         if (exchActions.activate())
                             recordEvent("Cluster activated.", EventType.EVT_CLUSTER_ACTIVATED);
                         else if (exchActions.deactivate())
                             recordEvent("Cluster deactivated.", EventType.EVT_CLUSTER_DEACTIVATED);
+
+                        if (baselineChanging) {
+                            ctx.getStripedExecutorService().execute(CLUSTER_ACTIVATION_EVT_STRIPE_ID, new Runnable() {
+                                @Override public void run() {
+                                    if (ctx.event().isRecordable(EventType.EVT_BASELINE_CHANGED)) {
+                                        ctx.event().record(new BaselineChangedEvent(
+                                            ctx.discovery().localNode(),
+                                            "Baseline changed.",
+                                            EventType.EVT_BASELINE_CHANGED,
+                                            ctx.cluster().get().currentBaselineTopology()
+                                        ));
+                                    }
+                                }
+                            });
+                        }
                     });
                 }
             }
@@ -2801,30 +2834,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
     /** */
     public boolean currentThreadIsExchanger() {
         return exchWorker != null && Thread.currentThread() == exchWorker.runner();
-    }
-
-    /**
-     * @return {@code True} If there is any exchange future in progress.
-     */
-    private boolean exchangeInProgress() {
-        if (exchWorker.hasPendingServerExchange())
-            return true;
-
-        GridDhtPartitionsExchangeFuture current = lastTopologyFuture();
-
-        if (current == null)
-            return false;
-
-        GridDhtTopologyFuture finished = lastFinishedFut.get();
-
-        if (finished == null || finished.result().compareTo(current.initialVersion()) < 0) {
-            ClusterNode triggeredBy = current.firstEvent().eventNode();
-
-            if (current.partitionChangesInProgress() && !triggeredBy.isClient())
-                return true;
-       }
-
-        return false;
     }
 
     /** */

@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.query;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
@@ -49,6 +48,9 @@ public class GridCacheTwoStepQuery {
     private final boolean distributedJoins;
 
     /** */
+    private final boolean replicatedOnly;
+
+    /** */
     private final boolean skipMergeTbl;
 
     /** */
@@ -76,6 +78,7 @@ public class GridCacheTwoStepQuery {
      * @param skipMergeTbl Skip merge table flag.
      * @param explain Explain flag.
      * @param distributedJoins Distributed joins flag.
+     * @param replicatedOnly Replicated only flag.
      * @param derivedPartitions Derived partitions.
      * @param cacheIds Cache ids.
      * @param mvccEnabled Mvcc flag.
@@ -90,16 +93,18 @@ public class GridCacheTwoStepQuery {
         boolean skipMergeTbl,
         boolean explain,
         boolean distributedJoins,
+        boolean replicatedOnly,
         PartitionResult derivedPartitions,
         List<Integer> cacheIds,
         boolean mvccEnabled,
         boolean locSplit
     ) {
+        assert !F.isEmpty(mapQrys);
+
         this.originalSql = originalSql;
         this.paramsCnt = paramsCnt;
         this.tbls = tbls;
         this.rdc = rdc;
-        this.mapQrys = F.isEmpty(mapQrys) ? Collections.emptyList() : mapQrys;
         this.skipMergeTbl = skipMergeTbl;
         this.explain = explain;
         this.distributedJoins = distributedJoins;
@@ -107,6 +112,8 @@ public class GridCacheTwoStepQuery {
         this.cacheIds = cacheIds;
         this.mvccEnabled = mvccEnabled;
         this.locSplit = locSplit;
+        this.mapQrys = mapQrys;
+        this.replicatedOnly = replicatedOnly;
     }
 
     /**
@@ -138,12 +145,7 @@ public class GridCacheTwoStepQuery {
     public boolean isReplicatedOnly() {
         assert !mapQrys.isEmpty();
 
-        for (GridCacheSqlQuery mapQry : mapQrys) {
-            if (mapQry.isPartitioned())
-                return false;
-        }
-
-        return true;
+        return replicatedOnly;
     }
 
     /**

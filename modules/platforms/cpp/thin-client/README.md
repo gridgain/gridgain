@@ -1,4 +1,2 @@
-Apache Ignite Thin C++ client
+GridGain Thin C++ client
 =======================================
-
-TBD

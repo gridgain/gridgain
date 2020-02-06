@@ -103,7 +103,7 @@ public class RetryableSender extends GridProcessorAdapter implements Runnable {
             retryCnt++;
 
             if (retryCnt == 1)
-                log.warning("Failed to send message to Management Console, will retry in " + retryCnt * 1000 + " ms");
+                log.warning("Failed to send message to Control Center, will retry in " + retryCnt * 1000 + " ms");
 
             return false;
         }
