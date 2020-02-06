@@ -14,20 +14,32 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent;
+package org.apache.ignite.testframework.wal.record;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * This is Spring Boot application which emulate Control Center backend.
+ * The wrapper of record type which isn't supported anymore.
  */
-@SpringBootApplication
-public class WebsocketServerApplication {
+public class UnsupportedWalRecord extends WALRecord {
+    /** **/
+    private final RecordType recordType;
+
     /**
-     * @param args Args.
+     * @param type Record type.
      */
-    public static void main(String[] args) {
-        SpringApplication.run(WebsocketServerApplication.class, args);
+    public UnsupportedWalRecord(RecordType type) {
+        recordType = type;
+    }
+
+    /** {@inheritDoc} */
+    @Override public RecordType type() {
+        return recordType;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(UnsupportedWalRecord.class, this, "super", super.toString());
     }
 }

@@ -73,6 +73,7 @@ public class TcpDiscoveryCustomEventMessage extends TcpDiscoveryAbstractMessage 
 
         this.msgBytes = msg.msgBytes;
         this.msg = msg.msg;
+        this.msgClass = msg.msgClass;
         this.spanContainer = msg.spanContainer;
     }
 

@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+package org.apache.ignite.cluster;
 
 /**
- * This is Spring Boot application which emulate Control Center backend.
+ * Cluster states.
+ * Partial copy from IGNITE-12576. Please replace it with a full class later.
  */
-@SpringBootApplication
-public class WebsocketServerApplication {
-    /**
-     * @param args Args.
-     */
-    public static void main(String[] args) {
-        SpringApplication.run(WebsocketServerApplication.class, args);
-    }
+public enum ClusterState {
+    /** Cluster deactivated. Cache operations aren't allowed. */
+    INACTIVE,
+
+    /** Cluster activated. All cache operations are allowed. */
+    ACTIVE,
+
+    /** Cluster activated. Cache read operation allowed, Cache data change operation aren't allowed. */
+    ACTIVE_READ_ONLY;
 }
