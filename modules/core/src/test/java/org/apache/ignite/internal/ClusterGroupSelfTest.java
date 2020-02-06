@@ -182,9 +182,7 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
 
         assertEquals(0, emptyGrp.forYoungest().nodes().size());
 
-        startGrid(NODES_CNT);
-
-        try {
+        try (Ignite ignore = startGrid(NODES_CNT)) {
             ClusterNode newYoungestNode = grid(NODES_CNT).localNode();
 
             assertEquals(cluster.forNode(newYoungestNode).node(), youngest.node());
@@ -193,9 +191,6 @@ public class ClusterGroupSelfTest extends ClusterGroupAbstractTest {
                 singleton(cluster.forNode(newYoungestNode).node()),
                 cluster.nodes().stream().filter(youngest.predicate()::apply).collect(Collectors.toSet())
             );
-        }
-        finally {
-            stopGrid(NODES_CNT);
         }
     }
 
