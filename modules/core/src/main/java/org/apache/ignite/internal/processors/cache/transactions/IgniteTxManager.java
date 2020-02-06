@@ -39,6 +39,7 @@ import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.TransactionConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -2584,17 +2585,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert tx != null && !tx.system() : tx;
 
         if (tx.concurrency() == TransactionConcurrency.PESSIMISTIC) {
-            for (GridDistributedTxMapping m : tx.mappings().mappings()) {
-                if (!IgniteFeatures.nodeSupports(cctx.kernalContext(), m.primary(), IgniteFeatures.SUSPEND_RESUME_PESSIMISTIC_TX))
-                    throw new IgniteCheckedException();
-
-                for (UUID backup : m.backups()) {
-                    ClusterNode node = cctx.node(backup);
-
-                    if (node != null && !IgniteFeatures.nodeSupports(cctx.kernalContext(), m.primary(), IgniteFeatures.SUSPEND_RESUME_PESSIMISTIC_TX))
-                        throw new IgniteCheckedException();
-                }
-            }
+            for (GridDistributedTxMapping m : tx.mappings().mappings())
+                checkPessimisticSuspendSupported(cctx.kernalContext(), m.primary());
         }
 
         if (!tx.state(SUSPENDED)) {
@@ -2603,6 +2595,12 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         }
 
         clearThreadMap(tx);
+    }
+
+    private void checkPessimisticSuspendSupported(GridKernalContext ctx, ClusterNode node) throws IgniteException {
+        if (!IgniteFeatures.nodeSupports(ctx, node, IgniteFeatures.SUSPEND_RESUME_PESSIMISTIC_TX))
+            throw new IgniteException("Failed to suspend PESSIMISTIC transaction (the transaction touches a node " +
+                "which does not support suspend()): " + node);
     }
 
     /**
