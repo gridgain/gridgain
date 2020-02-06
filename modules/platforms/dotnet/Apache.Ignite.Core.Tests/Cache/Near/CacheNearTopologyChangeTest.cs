@@ -172,7 +172,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsTrue(
                 TestUtils.WaitForCondition(() => TestUtils.GetPrimaryKey(_ignite[1], CacheName) == 1, 3000));
 
-            Action<Action<ICache<int, Foo>, int>> forEachCacheAndKey = (act) =>
+            Action<Action<ICache<int, Foo>, int>> forEachCacheAndKey = act =>
             {
                 for (var gridIdx = 0; gridIdx < 3; gridIdx++)
                 {
