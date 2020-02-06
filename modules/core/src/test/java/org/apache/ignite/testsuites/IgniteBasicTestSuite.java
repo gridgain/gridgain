@@ -18,6 +18,8 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.ClassPathContentLoggingTest;
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
+import org.apache.ignite.events.BaselineEventsLocalTest;
+import org.apache.ignite.events.BaselineEventsRemoteTest;
 import org.apache.ignite.events.ClusterActivationStartedEventTest;
 import org.apache.ignite.failure.FailureHandlerTriggeredTest;
 import org.apache.ignite.failure.OomFailureHandlerTest;
@@ -291,7 +293,9 @@ import org.junit.runners.Suite;
 
     IncompleteDeserializationExceptionTest.class,
 
-    ClusterActivationStartedEventTest.class
+    ClusterActivationStartedEventTest.class,
+    BaselineEventsLocalTest.class,
+    BaselineEventsRemoteTest.class
 })
 public class IgniteBasicTestSuite {
 }
