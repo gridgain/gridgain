@@ -66,7 +66,7 @@ import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.checkConflicts;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.mapPartitionReconciliation;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
-import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.REPAIR_ATTEMPT_WASTED;
+import static org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationSkippedEntityHolder.SkippingReason.KEY_WAS_NOT_REPAIRED;
 
 /**
  * The base point of partition reconciliation processing.
@@ -353,8 +353,6 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                         return;
                     }
-                    else
-                        addToPrintSkippedEntriesResult(workload.cacheName(), workload.partitionId(), repairRes.keysToRepair());
                 }
 
                 workProgress.completeWork();
@@ -382,7 +380,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> holder
                         = new PartitionReconciliationSkippedEntityHolder<>(
                         new PartitionReconciliationKeyMeta(bytes, strVal),
-                        REPAIR_ATTEMPT_WASTED
+                        KEY_WAS_NOT_REPAIRED
                     );
 
                     data.add(holder);

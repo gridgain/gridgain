@@ -87,7 +87,7 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
         ENTITY_WITH_TTL("Given entity has ttl enabled."),
 
         /** */
-        REPAIR_ATTEMPT_WASTED("Repair attempt wasted.");
+        KEY_WAS_NOT_REPAIRED("Key was not repaired. Repair attempts were over.");
 
         private String reason;
 
