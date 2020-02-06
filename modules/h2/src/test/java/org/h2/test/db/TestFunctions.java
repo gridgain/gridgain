@@ -31,6 +31,7 @@ import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Currency;
@@ -39,6 +40,7 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Random;
 import java.util.TimeZone;
 import java.util.UUID;
 
@@ -467,6 +469,18 @@ public class TestFunctions extends TestDb implements AggregateFunction {
         base64decode(conn, "QUJD", "ABC");
         base64decode(conn, "QUJDRA==", "ABCD");
 
+        Random rand = new Random();
+        Base64.Encoder enc = Base64.getEncoder();
+
+        for (int sizeOfArr : new int[] {1024, 2048, 4096, 8192, 1025, 2049, 4097, 8193}) {
+            byte[] sourceArray = new byte[sizeOfArr];
+
+            rand.nextBytes(sourceArray);
+
+            base64encode(conn, sourceArray, enc.encode(sourceArray));
+            base64decode(conn, enc.encode(sourceArray), sourceArray);
+        }
+
         conn.close();
     }
 
@@ -479,12 +493,24 @@ public class TestFunctions extends TestDb implements AggregateFunction {
     }
 
     private void base64(Connection conn, String source, String expected, boolean decode) throws SQLException {
-        PreparedStatement stat = conn.prepareStatement("call base64_"+(decode?"decode":"encode")+"(?)");
-        stat.setBytes(1, source.getBytes());
+        base64(conn, source.getBytes(), expected.getBytes(), decode);
+    }
+
+    private void base64encode(Connection conn, byte[] source, byte[] expected) throws SQLException {
+        base64(conn, source, expected, false);
+    }
+
+    private void base64decode(Connection conn, byte[] source, byte[] expected) throws SQLException {
+        base64(conn, source, expected, true);
+    }
+
+    private void base64(Connection conn, byte[] source, byte[] expected, boolean decode) throws SQLException {
+        PreparedStatement stat = conn.prepareStatement("call base64_" + (decode ? "decode" : "encode") + "(?)");
+        stat.setBytes(1, source);
         ResultSet rs = stat.executeQuery();
         rs.next();
         byte[] bytes = rs.getBytes(1);
-        assertEquals(expected.getBytes(), bytes);
+        assertEquals(expected, bytes);
     }
 
     private void testDeterministic() throws SQLException {
