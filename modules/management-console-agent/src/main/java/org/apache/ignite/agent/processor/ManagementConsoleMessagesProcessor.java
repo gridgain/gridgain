@@ -32,7 +32,7 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
 
 /**
- * Management console messages processor.
+ * Control Center messages processor.
  */
 public class ManagementConsoleMessagesProcessor extends GridProcessorAdapter {
     /** Sender. */

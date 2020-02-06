@@ -23,8 +23,10 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
+import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.junit.Test;
 
+import static java.util.Collections.singleton;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -32,14 +34,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Management console agent test.
+ * Control Center processor test.
  */
 public class ManagementConsoleAgentTest extends AgentCommonAbstractTest {
     /**
-     * The onKernalStop method should correct close all agent threads.
+     * Launch three nodes.
+     * Await agent launch.
+     * Stop coordinator node.
+     * Stop non-coordinator node.
+     * Stop last node.
+     * Check that all threads of agents is stopped.
      */
     @Test
-    public void shouldCorrectStartAgentOnAnotherNode_When_Coordinator_And_AnotherNode_IsStopping() throws Exception {
+    public void shouldStopTheAgentCorrectly() throws Exception {
         IgniteEx ignite = startGrids(3);
 
         changeManagementConsoleConfig(ignite);
@@ -54,7 +61,20 @@ public class ManagementConsoleAgentTest extends AgentCommonAbstractTest {
     }
 
     /**
-     * Management console agent with mock context test.
+     * Launch one node.
+     * Validate default URIs of Control Center.
+     */
+    @Test
+    public void shouldLoadConfigurationProperly() throws Exception {
+        try (IgniteEx ignite = startGrids(1)) {
+            ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
+
+            assertEqualsCollections(singleton("http://localhost:3000"), cfg.getConsoleUris());
+        }
+    }
+
+    /**
+     * Control Center processor with mock context test.
      */
     public static class ManagementConsoleAgentWithMockContextTest extends AbstractServiceTest {
         /**

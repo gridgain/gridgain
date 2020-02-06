@@ -20,7 +20,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 /**
- * No operation {@link ManagementConsoleProcessor}.
+ * No-op Control Center processor.
  */
 public class NoopManagementConsoleProcessor extends GridProcessorAdapter implements ManagementConsoleProcessor {
     /**

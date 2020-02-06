@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.management;
 import org.apache.ignite.internal.processors.GridProcessor;
 
 /**
- * Management console processor.
+ * Control Center processor.
  */
 public interface ManagementConsoleProcessor extends GridProcessor {
     /**

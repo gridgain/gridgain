@@ -49,7 +49,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 /**
- * Management console agent test suite.
+ * Control Center agent test suite.
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
