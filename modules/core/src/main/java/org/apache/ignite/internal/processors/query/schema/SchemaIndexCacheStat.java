@@ -27,7 +27,7 @@ public class SchemaIndexCacheStat {
     /**
      * Indexed types.
      */
-    public Map<String, QueryTypeDescriptorImpl> types = new HashMap<>();
+    public final Map<String, QueryTypeDescriptorImpl> types = new HashMap<>();
 
     /**
      * Indexed keys.
