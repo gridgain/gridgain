@@ -17,11 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.disk;
 
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.h2.engine.Session;
 import org.h2.result.ResultInterface;
-import org.h2.value.CompareMode;
-import org.h2.store.DataHandler;
 
 /**
  * Basic class for external result.
@@ -38,6 +37,9 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     /** Memory tracker. */
     protected final H2MemoryTracker memTracker;
 
+    /** Memory manager. */
+    protected final QueryMemoryManager memMgr;
+
     /** Parent result. */
     protected final AbstractExternalResult parent;
 
@@ -51,28 +53,22 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     protected final ExternalResultData<T> data;
 
     /**
-     * @param ctx Kernal context.
-     * @param memTracker Memory tracker
      * @param useHashIdx Whether to use hash index.
      * @param initSize Initial size.
      * @param cls Class of stored data.
-     * @param cmp Comparator for rows.
      * @param useHashIdx Flag whether to use hash index.
      * @param initSize Initial result set size.
-     * @param hnd H2 data handler.
      */
-    protected AbstractExternalResult(GridKernalContext ctx,
-        H2MemoryTracker memTracker,
+    protected AbstractExternalResult(Session ses,
         boolean useHashIdx,
         long initSize,
-        Class<T> cls,
-        CompareMode cmp,
-        DataHandler hnd) {
-        this.log = ctx.log(AbstractExternalResult.class);
-        this.data = new ExternalResultData<>(log, ctx.config().getWorkDirectory(), ctx.query().fileIOFactory(),
-            ctx.localNodeId(), useHashIdx, initSize, cls, cmp, hnd);
+        Class<T> cls) {
+        memMgr = (QueryMemoryManager)ses.queryMemoryManager();
+        assert memMgr != null;
+        this.log = memMgr.log();
+        this.data = memMgr.createExternalData(ses, useHashIdx, initSize, cls);
         this.parent = null;
-        this.memTracker = memTracker;
+        this.memTracker = ses.queryMemoryTracker();
     }
 
     /**
@@ -80,6 +76,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
      * @param parent Parent result.
      */
     protected AbstractExternalResult(AbstractExternalResult parent) {
+        memMgr = parent.memMgr;
         log = parent.log;
         size = parent.size;
         data = parent.data.createShallowCopy();

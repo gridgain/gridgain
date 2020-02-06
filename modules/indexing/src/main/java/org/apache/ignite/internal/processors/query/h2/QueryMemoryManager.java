@@ -16,23 +16,48 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.LongBinaryOperator;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.metric.SqlStatisticsHolderMemoryQuotas;
+import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.h2.disk.ExternalResultData;
+import org.apache.ignite.internal.processors.query.h2.disk.GroupedExternalResult;
+import org.apache.ignite.internal.processors.query.h2.disk.PlainExternalResult;
+import org.apache.ignite.internal.processors.query.h2.disk.SortedExternalResult;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.h2.command.dml.GroupByData;
+import org.h2.engine.Session;
+import org.h2.expression.Expression;
+import org.h2.result.ResultExternal;
+import org.h2.result.SortOrder;
 
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
 
 /**
  * Query memory manager.
  */
-public class QueryMemoryManager implements H2MemoryTracker {
+public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
+    /**
+     *  Spill directory path. Spill directory is used for the disk offloading
+     *  of intermediate results of the heavy queries.
+     */
+    public static final String DISK_SPILL_DIR = "tmp/spill";
+
+    /** */
+    private final GridKernalContext ctx;
+
     /**
      * Default memory reservation block size.
      */
@@ -89,6 +114,11 @@ public class QueryMemoryManager implements H2MemoryTracker {
     /** Memory reserved by running queries. */
     private final AtomicLong reserved = new AtomicLong();
 
+    /** Factory to provide I/O interface for data storage files */
+    private FileIOFactory fileIOFactory =
+        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
+            new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
+
     /**
      * Constructor.
      *
@@ -96,7 +126,7 @@ public class QueryMemoryManager implements H2MemoryTracker {
      */
     public QueryMemoryManager(GridKernalContext ctx) {
         this.log = ctx.log(QueryMemoryManager.class);
-
+        this.ctx = ctx;
         if (Runtime.getRuntime().maxMemory() <= globalQuota)
             throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
 
@@ -252,5 +282,87 @@ public class QueryMemoryManager implements H2MemoryTracker {
         // For now, it is ok as neither extra memory is actually hold with MemoryManager nor file descriptors are used.
         if (log.isDebugEnabled() && reserved.get() != 0)
             log.debug("Potential memory leak in SQL processor. Some query cursors were not closed or forget to free memory.");
+    }
+
+    /** */
+    public IgniteLogger log() {
+        return log;
+    }
+
+    /**
+     * Cleans spill directory. Spill directory is used for disk
+     * offloading of the intermediate results of heavy queries.
+     */
+    public void cleanSpillDirectory() {
+        try {
+            File spillDir = U.resolveWorkDirectory(
+                ctx.config().getWorkDirectory(),
+                DISK_SPILL_DIR,
+                false);
+
+            File[] spillFiles = spillDir.listFiles();
+
+            if (spillFiles.length == 0)
+                return;
+
+            for (int i = 0; i < spillFiles.length; i++) {
+                try {
+                    File spillFile = spillFiles[i];
+
+                    String nodeId = spillFile.getName().split("_")[1]; // Spill name pattern: spill_nodeId_fileId.
+
+                    UUID nodeUuid = UUID.fromString(nodeId);
+
+                    if (!ctx.discovery().alive(nodeUuid))
+                        spillFile.delete();
+                }
+                catch (Exception e) {
+                    log.debug("Error on cleaning spill directory. " + X.getFullStackTrace(e));
+                }
+            }
+        }
+        catch (Exception e) {
+            log.warning("Failed to cleanup the temporary directory for intermediate " +
+                "SQL query results from the previous node run.", e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions,
+        boolean isGrpQry, int[] grpIdx) {
+
+        boolean spillingEnabled = ctx.config().isSqlOffloadingEnabled();
+
+        if (!spillingEnabled)
+            return null;
+
+        assert isGrpQry; // isGrpQry == false allowed only for window queries which are not supported yet.
+
+        return new H2ManagedGroupByData(ses, grpIdx);
+    }
+
+    @Override public ResultExternal createPlainExternalResult(Session ses) {
+        return new PlainExternalResult(ses);
+    }
+
+    @Override public ResultExternal createSortedExternalResult(Session ses, boolean distinct, int[] distinctIndexes,
+        int visibleColCnt, SortOrder sort, int rowCnt) {
+        return new SortedExternalResult(ses, distinct, distinctIndexes, visibleColCnt, sort, rowCnt);
+    }
+
+    public GroupedExternalResult createGroupedExternalResult(Session ses, int size) {
+        return new GroupedExternalResult(ses, size);
+    }
+
+    public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
+        return new ExternalResultData<>(log,
+            ctx.config().getWorkDirectory(),
+            fileIOFactory,
+            ctx.localNodeId(),
+            useHashIdx,
+            initSize,
+            cls,
+            ses.getDatabase().getCompareMode(),
+            ses.getDatabase());
     }
 }

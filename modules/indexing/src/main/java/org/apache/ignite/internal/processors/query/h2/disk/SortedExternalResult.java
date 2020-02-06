@@ -27,8 +27,6 @@ import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.TreeMap;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -72,7 +70,6 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
     /**
      * @param ses Session.
-     * @param ctx Kernal context.
      * @param distinct Distinct flag.
      * @param distinctIndexes {@code DISTINCT ON(...)} expressions.
      * @param visibleColCnt Visible columns count.
@@ -80,16 +77,13 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
      * @param memTracker MemoryTracker.
      * @param initSize Initial size;
      */
-    public SortedExternalResult(GridKernalContext ctx,
-        Session ses,
+    public SortedExternalResult(Session ses,
         boolean distinct,
         int[] distinctIndexes,
         int visibleColCnt,
         SortOrder sort,
-        H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize, Value.class,
-            ses.getDatabase().getCompareMode(), ses.getDataHandler());
+        super(ses, isDistinct(distinct, distinctIndexes), initSize, Value.class);
 
         this.distinct = isDistinct(distinct, distinctIndexes);
         this.distinctIndexes = distinctIndexes;

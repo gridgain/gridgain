@@ -214,11 +214,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     /** Cache name - value typeId pairs for which type mismatch message was logged. */
     private final Set<Long> missedCacheTypes = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    /** Factory to provide I/O interface for data storage files */
-    private FileIOFactory fileIOFactory =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
-            new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
-
     /**
      * @param ctx Kernal context.
      */
@@ -3160,13 +3155,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public static AffinityTopologyVersion getRequestAffinityTopologyVersion() {
         return requestTopVer.get();
-    }
-
-    /**
-     * @return File IO Factory.
-     */
-    public FileIOFactory fileIOFactory() {
-        return fileIOFactory;
     }
 
     /**

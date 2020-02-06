@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.internal.processors.query.h2.disk;
+package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.TreeMap;
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
+import org.apache.ignite.internal.processors.query.h2.disk.GroupedExternalResult;
 import org.h2.command.dml.GroupByData;
 import org.h2.engine.Session;
 import org.h2.expression.aggregate.AggregateData;
@@ -32,7 +32,7 @@ import static org.h2.command.dml.SelectGroups.cleanupAggregates;
 /**
  * Group by data with disk offload capabilities.
  */
-public class ManagedGroupByData extends GroupByData {
+public class H2ManagedGroupByData extends GroupByData {
     /** Indexes of group-by columns. */
     private final int[] grpIdx;
 
@@ -61,7 +61,7 @@ public class ManagedGroupByData extends GroupByData {
      * @param ses Session.
      * @param grpIdx Indexes of group-by columns.
      */
-    public ManagedGroupByData(Session ses, int[] grpIdx) {
+    public H2ManagedGroupByData(Session ses, int[] grpIdx) {
         super(ses);
 
         this.grpIdx = grpIdx;
@@ -71,8 +71,9 @@ public class ManagedGroupByData extends GroupByData {
 
     /** */
     private void createExtGroupByData() {
-        sortedExtRes = new GroupedExternalResult(((QueryContext)ses.getQueryContext()).context(),
-             tracker, ses.getDatabase().getCompareMode(), groupByData.size(), ses.getDataHandler());
+        sortedExtRes = ((QueryMemoryManager)ses.getQueryContext().queryMemoryManager()).createGroupedExternalResult(ses, size);
+//    new GroupedExternalResult(((QueryContext)ses.getQueryContext()).context(),
+//             tracker, ses.getDatabase().getCompareMode(), groupByData.size(), ses.getDataHandler());
     }
 
     /** {@inheritDoc} */

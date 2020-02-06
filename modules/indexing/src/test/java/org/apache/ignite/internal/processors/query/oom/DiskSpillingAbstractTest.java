@@ -45,7 +45,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DISK_SPILL_DIR;
+import static org.apache.ignite.internal.processors.query.h2.QueryMemoryManager.DISK_SPILL_DIR;
 
 /**
  * Base class for disk spilling tests.

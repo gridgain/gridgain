@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.io.File;
 import java.sql.BatchUpdateException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -225,12 +224,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
     }
-
-    /**
-     *  Spill directory path. Spill directory is used for the disk offloading
-     *  of intermediate results of the heavy queries.
-     */
-    public static final String DISK_SPILL_DIR = "tmp/spill";
 
     /** Default number of attempts to re-run DELETE and UPDATE queries in case of concurrent modifications of values. */
     private static final int DFLT_UPDATE_RERUN_ATTEMPTS = 4;
@@ -552,7 +545,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 true,
                 memoryMgr.createQueryMemoryTracker(maxMem),
-                ctx);
+                memoryMgr);
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
@@ -2148,45 +2141,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart() {
-        cleanSpillDirectory();
-    }
-
-    /**
-     * Cleans spill directory. Spill directory is used for disk
-     * offloading of the intermediate results of heavy queries.
-     */
-    private void cleanSpillDirectory() {
-        try {
-            File spillDir = U.resolveWorkDirectory(
-                ctx.config().getWorkDirectory(),
-                DISK_SPILL_DIR,
-                false);
-
-            File[] spillFiles = spillDir.listFiles();
-
-            if (spillFiles.length == 0)
-                return;
-
-            for (int i = 0; i < spillFiles.length; i++) {
-                try {
-                    File spillFile = spillFiles[i];
-
-                    String nodeId = spillFile.getName().split("_")[1]; // Spill name pattern: spill_nodeId_fileId.
-
-                    UUID nodeUuid = UUID.fromString(nodeId);
-
-                    if (!ctx.discovery().alive(nodeUuid))
-                        spillFile.delete();
-                }
-                catch (Exception e) {
-                    log.debug("Error on cleaning spill directory. " + X.getFullStackTrace(e));
-                }
-            }
-        }
-        catch (Exception e) {
-            log.warning("Failed to cleanup the temporary directory for intermediate " +
-                "SQL query results from the previous node run.", e);
-        }
+        memoryMgr.cleanSpillDirectory();
     }
 
     /**

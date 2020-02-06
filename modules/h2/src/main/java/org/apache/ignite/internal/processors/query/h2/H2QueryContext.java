@@ -16,11 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.ArrayList;
-import org.h2.command.dml.GroupByData;
-import org.h2.engine.Session;
-import org.h2.expression.Expression;
-
 /**
  * H2 query context.
  */
@@ -31,13 +26,7 @@ public interface H2QueryContext {
     H2MemoryTracker queryMemoryTracker();
 
     /**
-     * Group-by data fabric method.
-     *
-     * @param ses Session.
-     * @param expressions Expressions.
-     * @param isGrpQry Group query flag.
-     * @param grpIdx Group-by fields indexes.
-     * @return Group-by data.
+     * @return Query memory manager.
      */
-    GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx);
+    H2MemoryManager queryMemoryManager();
 }

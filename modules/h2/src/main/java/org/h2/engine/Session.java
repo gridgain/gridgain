@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryManager;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
 import org.h2.api.ErrorCode;
@@ -242,19 +243,26 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     }
 
     /**
+     * @return Query memory manager if it is available or 'null' otherwise.
+     */
+    public H2MemoryManager queryMemoryManager() {
+        return qryContext != null ? qryContext.queryMemoryManager() : null;
+    }
+
+    /**
      * @return Creates new data holder for GROUP BY data.
      */
-    public GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions, boolean isGrpQry,
-        int[] grpIdx) {
-        if (qryContext != null) {
-            GroupByData grpByData = qryContext.newGroupByDataInstance(ses, expressions, isGrpQry, grpIdx);
+    public GroupByData newGroupByDataInstance(ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx) {
+        if (qryContext != null && qryContext.queryMemoryTracker() != null) {
+            GroupByData grpByData = qryContext.queryMemoryManager()
+                .newGroupByDataInstance(this, expressions, isGrpQry, grpIdx);
 
             if (grpByData != null)
                 return grpByData;
         }
 
-        return isGrpQry ? new GroupedGroupByData(ses, grpIdx) :
-            new PlainGroupByData(ses);
+        return isGrpQry ? new GroupedGroupByData(this, grpIdx) :
+            new PlainGroupByData(this);
     }
 
     /**
