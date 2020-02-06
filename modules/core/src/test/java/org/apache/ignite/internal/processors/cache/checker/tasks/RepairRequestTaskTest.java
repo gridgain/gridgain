@@ -48,8 +48,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAX_GRID_CACHE_VERSION;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
@@ -99,7 +100,7 @@ public class RepairRequestTaskTest {
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        RepairAlgorithm[] repairAlgorithms = {MAX_GRID_CACHE_VERSION, PRIMARY, MAJORITY};
+        RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
 
         for (RepairAlgorithm algorithm : repairAlgorithms) {
             params.add(new Object[] {algorithm, true});
@@ -139,7 +140,7 @@ public class RepairRequestTaskTest {
         assertEquals(repairAlgorithm, repairMeta.repairAlg());
 
         switch (repairAlgorithm) {
-            case MAX_GRID_CACHE_VERSION:
+            case LATEST:
                 assertCacheObjectEquals(keyVers.get(NODE_4).value(), repairMeta.value());
                 break;
             case PRIMARY:
@@ -147,6 +148,9 @@ public class RepairRequestTaskTest {
                 break;
             case MAJORITY:
                 assertCacheObjectEquals(keyVers.get(NODE_2).value(), repairMeta.value());
+                break;
+            case REMOVE:
+                assertCacheObjectEquals(null, repairMeta.value());
                 break;
         }
     }
@@ -177,7 +181,7 @@ public class RepairRequestTaskTest {
 
             RepairMeta repairMeta = entry.getKey().get2();
             assertTrue(repairMeta.fixed());
-            assertEquals(MAX_GRID_CACHE_VERSION, repairMeta.repairAlg());
+            assertEquals(LATEST, repairMeta.repairAlg());
         }
         else {
             assertTrue(res.getResult().repairedKeys().isEmpty());
@@ -218,7 +222,7 @@ public class RepairRequestTaskTest {
         assertEquals(repairAlgorithm, repairMeta.repairAlg());
 
         switch (repairAlgorithm) {
-            case MAX_GRID_CACHE_VERSION:
+            case LATEST:
                 assertCacheObjectEquals(keyVers.get(NODE_4).value(), repairMeta.value());
                 break;
             case PRIMARY:
@@ -226,6 +230,9 @@ public class RepairRequestTaskTest {
                 break;
             case MAJORITY:
                 assertCacheObjectEquals(keyVers.get(NODE_2).value(), repairMeta.value());
+                break;
+            case REMOVE:
+                assertCacheObjectEquals(null, repairMeta.value());
                 break;
         }
     }
@@ -241,7 +248,7 @@ public class RepairRequestTaskTest {
      *
      */
     private String value(CacheObject cacheObj) {
-        return U.field(cacheObj, "val");
+        return cacheObj != null ? U.field(cacheObj, "val") : null;
     }
 
     /**

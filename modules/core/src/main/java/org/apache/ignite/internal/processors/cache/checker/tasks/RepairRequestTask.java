@@ -318,10 +318,10 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     startTopVer));
                         }
                         else {
-                            usedRepairAlg = RepairAlgorithm.MAX_GRID_CACHE_VERSION;
+                            usedRepairAlg = RepairAlgorithm.LATEST;
 
                             valToFixWith = calculateValueToFixWith(
-                                RepairAlgorithm.MAX_GRID_CACHE_VERSION,
+                                RepairAlgorithm.LATEST,
                                 nodeToVersionedValues,
                                 primaryUUID,
                                 cacheObjCtx,
