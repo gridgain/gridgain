@@ -57,6 +57,7 @@ import org.apache.ignite.cluster.ClusterGroupEmptyException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.BaselineChangedEvent;
 import org.apache.ignite.events.ClusterActivationEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
@@ -108,6 +109,7 @@ import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
+import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.query.schema.SchemaNodeLeaveExchangeWorkerTask;
@@ -599,11 +601,41 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                     exchFut = exchangeFuture(exchId, evt, cache, exchActions, null);
 
+                    GridKernalContext ctx = cctx.kernalContext();
+                    boolean baselineChanging;
+
+                    if (stateChangeMsg.forceChangeBaselineTopology())
+                        baselineChanging = true;
+                    else {
+                        DiscoveryDataClusterState state = ctx.state().clusterState();
+
+                        assert state.transition() : state;
+
+                        baselineChanging = state.baselineChanging()
+                            // Or it is the first activation.
+                            || state.active() && !state.previouslyActive() && state.previousBaselineTopology() == null;
+                    }
+
                     exchFut.listen(f -> {
                         if (exchActions.activate())
                             recordEvent("Cluster activated.", EventType.EVT_CLUSTER_ACTIVATED);
                         else if (exchActions.deactivate())
                             recordEvent("Cluster deactivated.", EventType.EVT_CLUSTER_DEACTIVATED);
+
+                        if (baselineChanging) {
+                            ctx.getStripedExecutorService().execute(CLUSTER_ACTIVATION_EVT_STRIPE_ID, new Runnable() {
+                                @Override public void run() {
+                                    if (ctx.event().isRecordable(EventType.EVT_BASELINE_CHANGED)) {
+                                        ctx.event().record(new BaselineChangedEvent(
+                                            ctx.discovery().localNode(),
+                                            "Baseline changed.",
+                                            EventType.EVT_BASELINE_CHANGED,
+                                            ctx.cluster().get().currentBaselineTopology()
+                                        ));
+                                    }
+                                }
+                            });
+                        }
                     });
                 }
             }

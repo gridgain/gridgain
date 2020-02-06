@@ -78,7 +78,8 @@ public class DistributedBaselineConfiguration {
     public DistributedBaselineConfiguration(
         GridInternalSubscriptionProcessor isp,
         GridKernalContext ctx,
-        IgniteLogger log) {
+        IgniteLogger log
+    ) {
         this.log = log;
 
         if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && (
@@ -113,6 +114,16 @@ public class DistributedBaselineConfiguration {
                 }
             }
         );
+    }
+
+    /** */
+    public void listenAutoAdjustEnabled(DistributePropertyListener<? super Boolean> lsnr) {
+        baselineAutoAdjustEnabled.addListener(lsnr);
+    }
+
+    /** */
+    public void listenAutoAdjustTimeout(DistributePropertyListener<? super Long> lsnr) {
+        baselineAutoAdjustTimeout.addListener(lsnr);
     }
 
     /**
