@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.index.DynamicIndexAbstractSel
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.lang.GridCursor;
@@ -237,7 +238,7 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         @Override protected void rebuildIndexesFromHash0(
             GridCacheContext cctx,
             SchemaIndexCacheVisitorClosure clo,
-            GridCompoundFuture<Void, Void> compoundFut
+            GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut
         ) {
             if (!firstRbld) {
                 try {

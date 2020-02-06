@@ -147,6 +147,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQuery
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2DmlRequest;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2DmlResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
@@ -1991,7 +1992,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Closure prepared, do rebuild.
         markIndexRebuild(cacheName, true);
 
-        GridCompoundFuture<Void, Void> rebuildCacheIdxFut = new GridCompoundFuture<>();
+        GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> rebuildCacheIdxFut = new GridCompoundFuture<>();
 
         rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
 
@@ -2028,7 +2029,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     protected void rebuildIndexesFromHash0(
         GridCacheContext cctx,
         SchemaIndexCacheVisitorClosure clo,
-        GridCompoundFuture<Void, Void> compoundFut
+        GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut
     ) {
         new SchemaIndexCacheVisitorImpl(cctx, null, compoundFut).visit(clo);
     }

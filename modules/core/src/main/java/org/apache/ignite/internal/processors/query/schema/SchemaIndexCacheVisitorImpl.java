@@ -17,12 +17,22 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
+import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.internal.util.worker.GridWorkerFuture;
 
@@ -39,7 +49,10 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     private final SchemaIndexOperationCancellationToken cancel;
 
     /** Future for create/rebuild index. */
-    protected final GridCompoundFuture<Void, Void> compoundFut;
+    protected final GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut;
+
+    /** Logger. */
+    private IgniteLogger log;
 
     /**
      * Constructor.
@@ -51,7 +64,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
     public SchemaIndexCacheVisitorImpl(
         GridCacheContext cctx,
         SchemaIndexOperationCancellationToken cancel,
-        GridCompoundFuture<Void, Void> compoundFut
+        GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut
     ) {
         assert nonNull(cctx);
         assert nonNull(compoundFut);
@@ -63,6 +76,8 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         this.compoundFut = compoundFut;
 
         this.cancel = cancel;
+
+        this.log = cctx.logger(SchemaIndexCacheVisitorImpl.class);
     }
 
     /** {@inheritDoc} */
@@ -82,7 +97,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         AtomicBoolean stop = new AtomicBoolean();
 
         for (GridDhtLocalPartition locPart : locParts) {
-            GridWorkerFuture<Void> workerFut = new GridWorkerFuture<>();
+            GridWorkerFuture<SchemaIndexCacheStat> workerFut = new GridWorkerFuture<>();
 
             GridWorker worker = new SchemaIndexCachePartitionWorker(cctx, locPart, stop, cancel, clo, workerFut);
 
@@ -91,6 +106,70 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
             cctx.kernalContext().buildIndexExecutorService().execute(worker);
         }
+
+        if (SchemaIndexCacheStat.extraIndexBuildLogging()) {
+            compoundFut.listen(fut -> {
+                if (nonNull(fut.error()) || !log.isInfoEnabled())
+                    return;
+
+                try {
+                    GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut =
+                        (GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat>)fut;
+
+                    SchemaIndexCacheStat resStat = new SchemaIndexCacheStat();
+
+                    compoundFut.futures().stream().map(IgniteInternalFuture::result).filter(Objects::nonNull)
+                        .forEach(stat -> {
+                            resStat.scanned += stat.scanned;
+                            resStat.types.putAll(stat.types);
+                        });
+
+                    log.info(indexStatStr(resStat));
+                }
+                catch (Exception e) {
+                    log.error("Error when trying to print index build/rebuild statistics [cacheName=" +
+                        cctx.cache().name() + ", grpName=" + cctx.group().name() + "]", e);
+                }
+            });
+        }
+    }
+
+    /**
+     * Prints index cache stats to log.
+     *
+     * @param stat Index cache stats.
+     * @throws IgniteCheckedException if failed to get index size.
+     */
+    private String indexStatStr(SchemaIndexCacheStat stat) throws IgniteCheckedException {
+        SB res = new SB();
+
+        res.a("Details for cache rebuilding [name=" + cctx.cache().name() + ", grpName=" + cctx.group().name() + ']');
+        res.a(U.nl());
+        res.a("   Scanned rows " + stat.scanned + ", visited types " + stat.types.keySet());
+        res.a(U.nl());
+
+        final GridQueryIndexing idx = cctx.kernalContext().query().getIndexing();
+
+        for (QueryTypeDescriptorImpl type : stat.types.values()) {
+            res.a("        Type name=" + type.name());
+            res.a(U.nl());
+
+            final String pk = "_key_PK";
+
+            res.a("            Index: name=" + pk + ", size=" + idx.indexSize(type.schemaName(), pk));
+            res.a(U.nl());
+
+            final Map<String, GridQueryIndexDescriptor> indexes = type.indexes();
+
+            for (GridQueryIndexDescriptor descriptor : indexes.values()) {
+                final long size = idx.indexSize(type.schemaName(), descriptor.name());
+
+                res.a("            Index: name=" + descriptor.name() + ", size=" + size);
+                res.a(U.nl());
+            }
+        }
+
+        return res.toString();
     }
 
     /** {@inheritDoc} */
