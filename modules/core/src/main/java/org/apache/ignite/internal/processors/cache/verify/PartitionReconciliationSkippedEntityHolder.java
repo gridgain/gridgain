@@ -81,9 +81,13 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
         this.skippingReason = skippingReason;
     }
 
+    /** */
     public enum SkippingReason {
         /** */
-        ENTITY_WITH_TTL("Given entity has ttl enabled.");
+        ENTITY_WITH_TTL("Given entity has ttl enabled."),
+
+        /** */
+        KEY_WAS_NOT_REPAIRED("Key was not repaired. Repair attempts were over.");
 
         private String reason;
 

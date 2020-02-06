@@ -62,14 +62,23 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     public PartitionReconciliationResult() {
     }
 
+    /**
+     *
+     */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public PartitionReconciliationResult(
         Map<UUID, String> nodesIdsToConsistenceIdsMap,
-        Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys) {
+        Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
+        Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
+            skippedEntries) {
         this.nodesIdsToConsistenceIdsMap = nodesIdsToConsistenceIdsMap;
         this.inconsistentKeys = inconsistentKeys;
+        this.skippedEntries = skippedEntries;
     }
 
+    /**
+     *
+     */
     public PartitionReconciliationResult(
         Map<UUID, String> nodesIdsToConsistenceIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,

@@ -266,6 +266,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
      */
     @GridInternal
     public static class ReconciliationSessionId implements IgniteRunnable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Session id. */
         private final long sesId;
 

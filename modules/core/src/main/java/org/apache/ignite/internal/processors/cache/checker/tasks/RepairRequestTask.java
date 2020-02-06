@@ -16,19 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
@@ -41,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
@@ -54,9 +50,8 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
-import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_CACHE_REMOVED_ENTRIES_TTL;
+import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.calculateValueToFixWith;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
 
 /**
@@ -84,7 +79,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
     private RepairRequest repairReq;
 
     /** {@inheritDoc} */
-    @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,  RepairRequest arg)
+    @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid, RepairRequest arg)
         throws IgniteException {
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
@@ -181,12 +176,12 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         RepairResult aggregatedRepairRes = new RepairResult();
 
         for (ComputeJobResult result : results) {
-            if(result.getException() != null)
+            if (result.getException() != null)
                 return new ExecutionResult<>(result.getException().getMessage());
 
             ExecutionResult<RepairResult> excRes = result.getData();
 
-            if(excRes.getErrorMessage() != null)
+            if (excRes.getErrorMessage() != null)
                 return new ExecutionResult<>(excRes.getErrorMessage());
 
             RepairResult repairRes = excRes.getResult();
@@ -261,36 +256,30 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
             Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
                 new HashMap<>();
 
+            GridCacheContext ctx = ignite.cachex(cacheName).context();
+            CacheObjectContext cacheObjCtx = ctx.cacheObjectContext();
+
+            // TODO: 02.12.19
+            final int rmvQueueMaxSize = 32;
+            final int ownersNodesSize = owners(ctx);
+
             for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
-                    GridCacheContext ctx = ignite.cachex(cacheName).context();
-
-                    CacheObjectContext cacheObjCtx = ctx.cacheObjectContext();
-
-                    Object key = unmarshalKey(dataEntry.getKey().getKey(), ctx);
-
+                    Object key = keyValue(ctx, dataEntry.getKey().getKey());
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
-                    int ownersNodesSize = ctx.topology().owners(partId, startTopVer).size();
+                    UUID primaryUUID = primaryNodeId(ctx, key);
 
-                    int part = ctx.affinity().partition(key);
-
-                    UUID primaryUUID = ctx.affinity().nodesByPartition(
-                        part, AffinityTopologyVersion.NONE).get(0).id();
-
-                    Boolean keyWasSuccessfullyFixed;
-
-                    // TODO: 02.12.19
-                    int rmvQueueMaxSize = 32;
+                    RepairEntryProcessor.RepairStatus keyWasSuccessfullyFixed;
 
                     CacheObject valToFixWith = null;
 
                     RepairAlgorithm usedRepairAlg = repairAlg;
 
                     // Are there any nodes with missing key?
-                    if (dataEntry.getValue().size() != ownersNodesSize) {
+                    if (dataEntry.getValue().size() != ownersNodesSize && repairAttempt != MAX_REPAIR_ATTEMPTS) {
                         if (repairAlg == RepairAlgorithm.PRINT_ONLY)
-                            keyWasSuccessfullyFixed = true;
+                            keyWasSuccessfullyFixed = RepairEntryProcessor.RepairStatus.SUCCESS;
                         else {
                             valToFixWith = calculateValueToFixWith(
                                 repairAlg,
@@ -299,16 +288,14 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = ignite.cache(cacheName).withKeepBinary().<Boolean>invoke(
+                            keyWasSuccessfullyFixed = ignite.cache(cacheName).withKeepBinary().<RepairEntryProcessor.RepairStatus>invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
                                     nodeToVersionedValues,
                                     rmvQueueMaxSize,
-                                    true,
+                                    false,
                                     startTopVer));
-
-                            assert keyWasSuccessfullyFixed;
                         }
                     }
                     else {
@@ -321,7 +308,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).withKeepBinary().invoke(
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)ignite.cache(cacheName).withKeepBinary().invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -329,8 +316,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                     rmvQueueMaxSize,
                                     true,
                                     startTopVer));
-
-                            assert keyWasSuccessfullyFixed;
                         }
                         else {
                             usedRepairAlg = RepairAlgorithm.MAX_GRID_CACHE_VERSION;
@@ -342,7 +327,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                                 cacheObjCtx,
                                 ownersNodesSize);
 
-                            keyWasSuccessfullyFixed = (Boolean)ignite.cache(cacheName).withKeepBinary().invoke(
+                            keyWasSuccessfullyFixed = (RepairEntryProcessor.RepairStatus)ignite.cache(cacheName).withKeepBinary().invoke(
                                 key,
                                 new RepairEntryProcessor(
                                     valToFixWith,
@@ -353,7 +338,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                         }
                     }
 
-                    if (!keyWasSuccessfullyFixed)
+                    if (keyWasSuccessfullyFixed == RepairEntryProcessor.RepairStatus.FAIL)
                         keysToRepairWithNextAttempt.put(dataEntry.getKey(), dataEntry.getValue());
                     else {
                         repairedKeys.put(
@@ -377,183 +362,29 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         }
 
         /**
-         * Calculate value
-         * @param repairAlg RepairAlgorithm
-         * @param nodeToVersionedValues Map of nodes to corresponding values with values.
-         * @param primaryNodeID Primary node id.
-         * @param cacheObjCtx Cache object context.
-         * @param affinityNodesCnt nodes count according to affinity.
-         * @return Value to repair with.
-         * @throws IgniteCheckedException If failed to retrieve value from value CacheObject.
+         *
          */
-        @Nullable protected CacheObject calculateValueToFixWith(RepairAlgorithm repairAlg,
-            Map<UUID, VersionedValue> nodeToVersionedValues,
-            UUID primaryNodeID,
-            CacheObjectContext cacheObjCtx,
-            int affinityNodesCnt) throws IgniteCheckedException {
-            CacheObject valToFixWith = null;
-
-            switch (repairAlg) {
-                case PRIMARY:
-                    VersionedValue versionedVal = nodeToVersionedValues.get(primaryNodeID);
-
-                    return versionedVal != null ? versionedVal.value() : null;
-
-                case MAJORITY:
-                    if (affinityNodesCnt > nodeToVersionedValues.size() * 2)
-                        return null;
-
-                    Map<String, T2<Integer, CacheObject>> majorityCntr = new HashMap<>();
-
-                    majorityCntr.put("", new T2<>(affinityNodesCnt - nodeToVersionedValues.size(), null));
-
-                    for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
-                        byte[] valBytes = versionedValue.value().valueBytes(cacheObjCtx);
-
-                        String valBytesStr = Arrays.toString(valBytes);
-
-                        if (majorityCntr.putIfAbsent(valBytesStr, new T2<>(1, versionedValue.value())) == null)
-                            continue;
-
-                        T2<Integer, CacheObject> valTuple = majorityCntr.get(valBytesStr);
-
-                        valTuple.set1(valTuple.getKey() + 1);
-                    }
-
-                    int maxMajority = -1;
-
-                    for (T2<Integer, CacheObject> majorityValues : majorityCntr.values()) {
-                        if (majorityValues.get1() > maxMajority) {
-                            maxMajority = majorityValues.get1();
-                            valToFixWith = majorityValues.get2();
-                        }
-                    }
-
-                    return valToFixWith;
-
-                case MAX_GRID_CACHE_VERSION:
-                    GridCacheVersion maxVer = new GridCacheVersion(0, 0, 0);
-
-                    for (VersionedValue versionedValue : nodeToVersionedValues.values()) {
-                        if (versionedValue.version().compareTo(maxVer) > 0) {
-                            maxVer = versionedValue.version();
-
-                            valToFixWith = versionedValue.value();
-                        }
-                    }
-
-                    return valToFixWith;
-
-                default:
-                    throw new IllegalArgumentException("Unsupported repair algorithm=[" + repairAlg + ']');
-            }
+        protected UUID primaryNodeId(GridCacheContext ctx, Object key) {
+            return ctx.affinity().nodesByKey(key, startTopVer).get(0).id();
         }
 
-        /** Entry processor to repair inconsistent entries. */
-        private static class RepairEntryProcessor implements EntryProcessor {
+        /**
+         *
+         */
+        protected int owners(GridCacheContext ctx) {
+            return ctx.topology().owners(partId, startTopVer).size();
+        }
 
-            /** Value to set. */
-            private Object val;
+        /**
+         *
+         */
+        protected Object keyValue(GridCacheContext ctx, KeyCacheObject key) throws IgniteCheckedException {
+            KeyCacheObject unmarshalledKey = unmarshalKey(key, ctx);
 
-            /** Map of nodes to corresponding versioned values */
-            Map<UUID, VersionedValue> data;
+            if (unmarshalledKey instanceof KeyCacheObjectImpl)
+                return unmarshalledKey.value(ctx.cacheObjectContext(), false);
 
-            /** deferred delete queue max size. */
-            private long rmvQueueMaxSize;
-
-            /** Force repair flag. */
-            private boolean forceRepair;
-
-            /** Start topology version. */
-            private AffinityTopologyVersion startTopVer;
-
-            /** */
-            @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-            public RepairEntryProcessor(
-                Object val,
-                Map<UUID, VersionedValue> data,
-                long rmvQueueMaxSize,
-                boolean forceRepair,
-                AffinityTopologyVersion startTopVer) {
-                this.val = val;
-                this.data = data;
-                this.rmvQueueMaxSize = rmvQueueMaxSize;
-                this.forceRepair = forceRepair;
-                this.startTopVer = startTopVer;
-            }
-
-            /**
-             * Do repair logic.
-             * @param entry Entry to fix.
-             * @param arguments Arguments.
-             * @return {@code True} if was successfully repaired, {@code False} otherwise.
-             * @throws EntryProcessorException If failed.
-             */
-            @SuppressWarnings("unchecked")
-            @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
-                CacheEntry verEntry = (CacheEntry)entry.unwrap(CacheEntry.class);
-
-                Comparable currKeyGridCacheVer = verEntry.version();
-
-                GridCacheContext cctx = (GridCacheContext)entry.unwrap(GridCacheContext.class);
-
-                AffinityTopologyVersion currTopVer = cctx.affinity().affinityTopologyVersion();
-
-                if (!cctx.shared().exchange().lastAffinityChangedTopologyVersion((currTopVer)).equals(startTopVer))
-                    throw new EntryProcessorException("Topology version was changed");
-
-                UUID locNodeId = cctx.localNodeId();
-
-                VersionedValue versionedVal = data.get(locNodeId);
-
-                if (forceRepair) {
-                    if (val == null)
-                        entry.remove();
-                    else
-                        entry.setValue(val);
-
-                    return true;
-                }
-
-                if (versionedVal != null) {
-                    if (currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
-                        if (val == null)
-                            entry.remove();
-                        else
-                            entry.setValue(val);
-
-                        return true;
-                    }
-
-                    // TODO: 23.12.19 Add optimizations here
-                }
-                else {
-                    if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
-                        boolean inEntryTTLBounds =
-                            (System.currentTimeMillis() - versionedVal.recheckStartTime()) <
-                                Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL);
-
-                        long currUpdateCntr = cctx.topology().localPartition(
-                            cctx.cache().affinity().partition(entry.getKey())).updateCounter();
-
-                        boolean inDeferredDelQueueBounds = ((currUpdateCntr - versionedVal.updateCounter()) <
-                            rmvQueueMaxSize);
-
-                        if ((inEntryTTLBounds && inDeferredDelQueueBounds)) {
-                            if (val == null)
-                                entry.remove();
-                            else
-                                entry.setValue(val);
-
-                            return true;
-                        }
-
-                        return false;
-                    }
-                }
-
-                return false;
-            }
+            return key;
         }
     }
 }
