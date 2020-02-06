@@ -56,7 +56,7 @@ public class ThinJdbcSqlMergeDateTypeBenchmark extends AbstractJdbcBenchmark {
 
     /** {@inheritDoc} */
     @Override protected void setupData() throws Exception {
-        String[] dataTypes = args.getStringParameter("types", "DATE").split(";");
+        String[] dataTypes = args.getStringParameter("types", "DATE").split("\\W+");
 
         try (Statement stmt = conn.get().createStatement()) {
             stmt.execute(createTableSql(dataTypes));
