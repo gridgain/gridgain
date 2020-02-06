@@ -36,7 +36,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         private const int Key3 = 6;
 
         /** */
-        private const int MaxGrids = 10;
+        private const int MaxNodes = 10;
 
         /** */
         private IIgnite[] _ignite;
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestServerNodeLeaveClearsNearCache()
         {
-            InitGrids(3);
+            InitNodes(3);
 
             _cache[0][Key3] = new Foo(Key3);
 
@@ -98,7 +98,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestPrimaryNodeChangeClearsNearCacheDataOnServer()
         {
-            InitGrids(2);
+            InitNodes(2);
             
             _cache[0][Key3] = new Foo(-1);
             for (var i = 0; i < 2; i++)
@@ -108,7 +108,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             }
 
             // New node enters and becomes primary for the key.
-            InitGrid(2);
+            InitNode(2);
             
             // GridCacheNearEntry does not yet exist on old primary node, so near cache data is removed on .NET side.
             Foo foo;
@@ -136,7 +136,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestPrimaryNodeChangeClearsNearCacheDataOnClient()
         {
-            InitGrids(2, serverNear: false);
+            InitNodes(2, serverNear: false);
             var clientCache = InitClientAndCache();
 
             _cache[0][Key3] = new Foo(-1);
@@ -145,7 +145,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(-1, clientInstance.Bar);
             
             // New node enters and becomes primary for the key.
-            InitGrid(2);
+            InitNode(2);
             
             // Client node cache is cleared.
             Foo foo;
@@ -166,7 +166,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestClientNodeJoinOrLeaveDoesNotAffectNearCacheDataOnOtherNodes()
         {
-            InitGrids(2);
+            InitNodes(2);
             _cache[2] = InitClientAndCache();
             
             Assert.IsTrue(
@@ -218,18 +218,32 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Start 5 servers and 1 client.
             // Server 0 and client node always run
             // Other servers start and stop periodically.
-            InitGrids(5);
+            InitNodes(5);
             var clientCache = InitClientAndCache();
             var serverCache = _cache[0];
+            var rnd = new Random();
+            var val = 1;
+            var key = 1;
+            serverCache[key] = new Foo(val);
 
             Action changeTopology = () =>
             {
-                
+                var idx = rnd.Next(1, 5);
+
+                if (_ignite[idx] == null)
+                {
+                    InitNode(idx, waitForPrimary: false);
+                }
+                else
+                {
+                    StopNode(idx);
+                }
             };
 
             Action verifyCaches = () =>
             {
-                // TODO: Check current value. Change value with SQL, check propagation.
+                Assert.AreEqual(val, serverCache[key].Bar);
+                Assert.AreEqual(val, clientCache[key].Bar);
             };
 
             var start = DateTime.Now;
@@ -244,23 +258,23 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// <summary>
         /// Inits a number of grids.
         /// </summary>
-        private void InitGrids(int count, bool serverNear = true)
+        private void InitNodes(int count, bool serverNear = true)
         {
-            Debug.Assert(count < MaxGrids);
+            Debug.Assert(count < MaxNodes);
             
-            _ignite = new IIgnite[MaxGrids];
-            _cache = new ICache<int, Foo>[MaxGrids];
+            _ignite = new IIgnite[MaxNodes];
+            _cache = new ICache<int, Foo>[MaxNodes];
 
             for (var i = 0; i < count; i++)
             {
-                InitGrid(i, serverNear);
+                InitNode(i, serverNear);
             }
         }
 
         /// <summary>
         /// Inits a grid.
         /// </summary>
-        private void InitGrid(int i, bool serverNear = true)
+        private void InitNode(int i, bool serverNear = true, bool waitForPrimary = true)
         {
             var cacheConfiguration = new CacheConfiguration(CacheName)
             {
@@ -270,7 +284,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             _ignite[i] = Ignition.Start(TestUtils.GetTestConfiguration(name: "node" + i));
             _cache[i] = _ignite[i].GetOrCreateCache<int, Foo>(cacheConfiguration);
             
-            if (i == 2)
+            if (i == 2 && waitForPrimary)
             {
                 // ReSharper disable once AccessToDisposedClosure
                 Assert.IsTrue(
@@ -299,6 +313,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             };
 
             return Ignition.Start(cfg);
+        }
+        
+        /// <summary>
+        /// Stops node.
+        /// </summary>
+        private void StopNode(int idx)
+        {
+            _ignite[idx].Dispose();
+            _ignite[idx] = null;
         }
     }
 }
