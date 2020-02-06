@@ -69,7 +69,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
     private boolean clientMode;
 
     /** */
-    private ListeningTestLogger testLog;
+    private ListeningTestLogger testLog = new ListeningTestLogger(false, log());
 
     /** {@inheritDoc */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -87,7 +87,7 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         if (clientMode)
             cfg.setClientMode(true);
 
-        if (testLog != null)
+        if (igniteInstanceName.endsWith("0"))
             cfg.setGridLogger(testLog);
 
         return cfg;
@@ -330,100 +330,5 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         public void waitUntilAllSingleMessagesAreSent() throws IgniteCheckedException {
             allSingleMessagesSent.get();
         }
-    }
-
-    /**
-     *  Four tests that partitions state validation works correctly and show partition size always:
-     *
-     * Start three-nodes grid,
-     * arguments: cnt - partition counters are inconsistent(boolean)
-     *           size - partition size are inconsistent(boolean)
-     */
-    private void startThreeNodesGrid(boolean cnt, boolean size) throws Exception {
-        testLog = new ListeningTestLogger();
-
-        LogListener lsnrCnt = LogListener.matches("Partitions update counters are inconsistent for ").build();
-        LogListener lsnrSize = LogListener.matches("Partitions cache sizes are inconsistent for ").build();
-        LogListener lsnrSizeCnt = LogListener.matches("Partitions cache size and update counters are inconsistent for ").build();
-
-        testLog.registerListener(lsnrSize);
-        testLog.registerListener(lsnrCnt);
-        testLog.registerListener(lsnrSizeCnt);
-
-        IgniteEx ignite = startGrids(3);
-            ignite.cluster().active(true);
-            awaitPartitionMapExchange();
-
-        // Populate cache to increment update counters.
-        for (int i = 0; i < 1000; i++)
-            ignite.cache(CACHE_NAME).put(i, i);
-
-        if (cnt)
-            // Modify update counter for some partition.
-            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).updateCounter(100500L);
-
-        if (size)
-            // Modify update size for some partition.
-            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).dataStore().clear(ignite.cachex(CACHE_NAME).context().cacheId());
-
-        // Trigger exchange.
-        startGrid(3);
-
-        awaitPartitionMapExchange();
-
-        // Nothing should happen (just log error message) and we're still able to put data to corrupted cache.
-        ignite.cache(CACHE_NAME).put(0, 0);
-
-        if (cnt && !size)
-            assertTrue("Counters inconsistent message found", lsnrCnt.check() && !lsnrSize.check());
-
-        if (!cnt && size)
-            assertTrue("Size inconsistent message found", lsnrSize.check() && !lsnrCnt.check());
-
-        if (cnt && size)
-            assertTrue("Both counters and sizes message found", lsnrSizeCnt.check());
-
-        if (!cnt && !size)
-            assertFalse("Counters and Size inconsistent message not found", lsnrSize.check() && lsnrCnt.check() && lsnrSizeCnt.check());
-    }
-
-    /**
-     *  1. Only partition counters are inconsistent.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testValidationIfPartitionCountersAreInconsistentWithSize() throws Exception {
-        startThreeNodesGrid(true, false);
-    }
-
-    /**
-     *  2. Only partition size are inconsistent.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testValidationIfPartitionSizesAreInconsistentWithSize() throws Exception {
-        startThreeNodesGrid(false, true);
-    }
-
-    /**
-     *  3. Partition counters and size are inconsistent.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testValidationIfPartitionSizesAndPartitionCountersAreInconsistentWithSize() throws Exception {
-        startThreeNodesGrid(true, true);
-    }
-
-    /**
-     *  4. No one partition counters and size are inconsistent.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testValidationIfPartitionSizesAndPartitionCountersAreNOnconsistentWithSize() throws Exception {
-        startThreeNodesGrid(false, false);
     }
 }

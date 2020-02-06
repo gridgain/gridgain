@@ -363,7 +363,7 @@ public class GridDhtPartitionsStateValidator {
             sb.a("Part ").a(p.getKey()).a(": [");
             for (Map.Entry<UUID, IgnitePair<Long>> e : p.getValue().entrySet()) {
                 Object consistentId = cctx.discovery().node(topVer, e.getKey()).consistentId();
-                sb.a("consistentId=").a(consistentId).a("meta=[updCnt=").a(e.getValue().get1()).a(", size=").a(e.getValue().get2()) .a("] ");
+                sb.a("consistentId=").a(consistentId).a(" meta=[updCnt=").a(e.getValue().get1()).a(", size=").a(e.getValue().get2()) .a("] ");
             }
             sb.a("] ");
         }
