@@ -105,7 +105,7 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Send caches information to Management Console.
+     * Send caches information to Control Center.
      */
     private void sendCacheInfo() {
         if (!ctx.isStopping() && mgr.connected()) {

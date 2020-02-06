@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.management;
 import org.apache.ignite.internal.GridKernalContext;
 
 /**
- * No-op management console processor.
+ * No-op Control Center processor.
  */
 public class NoopManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
     /**
