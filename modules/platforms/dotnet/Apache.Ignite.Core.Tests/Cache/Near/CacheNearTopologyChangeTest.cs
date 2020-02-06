@@ -168,6 +168,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             InitGrids(2);
             _cache[2] = InitClientAndCache();
+            
+            Assert.IsTrue(
+                TestUtils.WaitForCondition(() => TestUtils.GetPrimaryKey(_ignite[1], CacheName) == 1, 3000));
 
             Action<Action<ICache<int, Foo>, int>> forEachCacheAndKey = (act) =>
             {
