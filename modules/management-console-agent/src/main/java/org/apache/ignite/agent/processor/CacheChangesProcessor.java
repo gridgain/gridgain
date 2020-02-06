@@ -105,7 +105,7 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Send caches information to Management Console.
+     * Send caches information to Control Center.
      */
     private void sendCacheInfo() {
         if (!ctx.isStopping() && mgr.connected()) {
@@ -160,7 +160,7 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
                 cachesInfo.add(
                     new CacheInfo()
                         .setName(item.getKey())
-                        .setDeploymentId(cd.deploymentId())
+                        .setCacheId(cd.cacheId())
                         .setCreatedBySql(item.getValue().sql())
                         .setGroup(cd.groupDescriptor().groupName())
                 );

@@ -972,7 +972,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         awaitPartitionMapExchange();
 
-        resetBaselineTopology(); // topVer=5,1
+        if (persistenceEnabled())
+            resetBaselineTopology(); // topVer=5,1
 
         awaitPartitionMapExchange();
 
@@ -982,7 +983,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         awaitPartitionMapExchange();
 
-        resetBaselineTopology(); // topVer=6,1
+        if (persistenceEnabled())
+            resetBaselineTopology(); // topVer=6,1
 
         awaitPartitionMapExchange(true, true, null);
 
@@ -1012,7 +1014,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             prim.cache(DEFAULT_CACHE_NAME),
             stop::get);
 
-        resetBaselineTopology(); // topVer=7,1
+        if (persistenceEnabled())
+            resetBaselineTopology(); // topVer=7,1
 
         awaitPartitionMapExchange();
 

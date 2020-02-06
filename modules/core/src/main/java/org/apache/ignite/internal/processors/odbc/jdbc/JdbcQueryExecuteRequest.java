@@ -20,15 +20,11 @@ import java.io.IOException;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
-
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_7_0;
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
 
 /**
  * JDBC query execute request.
@@ -141,8 +137,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.writeBinary(writer, ver);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeString(schemaName);
         writer.writeInt(pageSize);
@@ -156,19 +152,19 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
                 SqlListenerUtils.writeObject(writer, arg, false);
         }
 
-        if (ver.compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.isAutoCommitSupported())
             writer.writeBoolean(autoCommit);
 
         writer.writeByte((byte)stmtType.ordinal());
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isAffinityAwarenessSupported())
             writer.writeBoolean(partResReq);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.readBinary(reader, ver);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         schemaName = reader.readString();
         pageSize = reader.readInt();
@@ -182,7 +178,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         for (int i = 0; i < argsNum; ++i)
             args[i] = SqlListenerUtils.readObject(reader, false);
 
-        if (ver.compareTo(VER_2_7_0) >= 0)
+        if (protoCtx.isAutoCommitSupported())
             autoCommit = reader.readBoolean();
 
         try {
@@ -195,7 +191,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             throw new BinaryObjectException(e);
         }
 
-        if (ver.compareTo(VER_2_8_0) >= 0)
+        if (protoCtx.isAffinityAwarenessSupported())
             partResReq = reader.readBoolean();
     }
 
