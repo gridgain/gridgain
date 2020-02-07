@@ -50,8 +50,7 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PART
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.INCLUDE_SENSITIVE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_ALG;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_MODE;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.REPAIR;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.PARALLELISM;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
@@ -68,7 +67,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         String CACHES = "cacheName1,...,cacheNameN";
 
         String desc = "Verify whether there are inconsistent entries for the specified caches " +
-            "and print out the differences if any. Fix inconsistency if " + FIX_MODE + "argument is presented. " +
+            "and print out the differences if any. Fix inconsistency if " + REPAIR + "argument is presented. " +
             "When no parameters are specified, " +
             "all user caches are verified. Cache filtering options configure the set of caches that will be " +
             "processed by " + PARTITION_RECONCILIATION + " command. If cache names are specified, in form of regular " +
@@ -76,8 +75,9 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         Map<String, String> paramsDesc = new HashMap<>();
 
-        paramsDesc.put(FIX_MODE.toString(),
-            "If present, fix all inconsistent data. Default value is " + FIX_MODE.defaultValue() + '.');
+        paramsDesc.put(REPAIR.toString(),
+            "If present, fix all inconsistent data. Specifies which repair algorithm to use for doubtful keys. The following values can be used: "
+                + Arrays.toString(RepairAlgorithm.values()) + " Default value is " + REPAIR.defaultValue() + '.');
 
         paramsDesc.put(PARALLELISM.toString(),
             "Maximum number of threads that can be involved in partition reconciliation activities on one node. " +
@@ -95,10 +95,6 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             "Print data to result with sensitive information: keys and values." +
                 " Default value is " + INCLUDE_SENSITIVE.defaultValue() + '.');
 
-        paramsDesc.put(FIX_ALG.toString(),
-            "Specifies which repair algorithm to use for doubtful keys. The following values can be used: "
-                + Arrays.toString(RepairAlgorithm.values()) +  " Default value is " + FIX_ALG.defaultValue() + '.');
-
         // RECHECK_DELAY arg intentionally skipped.
 
         usageCache(
@@ -106,8 +102,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             PARTITION_RECONCILIATION,
             desc,
             paramsDesc,
-            optional(FIX_MODE), optional(PARALLELISM), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
-            optional(INCLUDE_SENSITIVE), optional(FIX_ALG), optional(LOCAL_OUTPUT), optional(CACHES));
+            optional(REPAIR), optional(PARALLELISM), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
+            optional(INCLUDE_SENSITIVE), optional(LOCAL_OUTPUT), optional(CACHES));
     }
 
     /** {@inheritDoc} */
@@ -169,13 +165,13 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
-        boolean fixMode = (boolean) FIX_MODE.defaultValue();
+        boolean fixMode = false;
         boolean verbose = (boolean) INCLUDE_SENSITIVE.defaultValue();
         boolean console = (boolean) LOCAL_OUTPUT.defaultValue();
         int parallelism = (int) PARALLELISM.defaultValue();
         int batchSize = (int) BATCH_SIZE.defaultValue();
         int recheckAttempts = (int) RECHECK_ATTEMPTS.defaultValue();
-        RepairAlgorithm repairAlg = (RepairAlgorithm) FIX_ALG.defaultValue();
+        RepairAlgorithm repairAlg = (RepairAlgorithm) REPAIR.defaultValue();
         int recheckDelay = (int) RECHECK_DELAY.defaultValue();
 
         int partReconciliationArgsCnt = 8;
@@ -195,23 +191,24 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 String strVal;
 
                 switch (arg) {
-                    case FIX_MODE:
+                    case REPAIR:
                         fixMode = true;
 
-                        break;
+                        String peekedNextArg = argIter.peekNextArg();
 
-                    case FIX_ALG:
-                        strVal = argIter.nextArg(
-                            "The repair algorithm should be specified. The following " +
-                                "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
+                        if (!PartitionReconciliationCommandArg.commands().contains(peekedNextArg)) {
+                            strVal = argIter.nextArg(
+                                "The repair algorithm should be specified. The following " +
+                                    "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
 
-                        try {
-                            repairAlg = RepairAlgorithm.valueOf(strVal);
-                        }
-                        catch (IllegalArgumentException e) {
-                            throw new IllegalArgumentException(
-                                "Invalid repair algorithm: " + strVal + ". The following " +
-                                "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
+                            try {
+                                repairAlg = RepairAlgorithm.valueOf(strVal);
+                            }
+                            catch (IllegalArgumentException e) {
+                                throw new IllegalArgumentException(
+                                    "Invalid repair algorithm: " + strVal + ". The following " +
+                                        "values can be used: " + Arrays.toString(RepairAlgorithm.values()) + '.');
+                            }
                         }
 
                         break;
@@ -374,6 +371,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
     /**
      * Print partition reconciliation output.
+     *
      * @param res Partition reconciliation result.
      * @param printer Printer.
      */
@@ -398,7 +396,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     private String prepareErrors(List<String> errors) {
         SB errorMsg = new SB();
 
-        if(!errors.isEmpty()) {
+        if (!errors.isEmpty()) {
             errorMsg
                 .a("The following errors occurred during the execution of partition reconciliation:")
                 .a(System.lineSeparator());

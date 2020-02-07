@@ -111,7 +111,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         assertEquals(0, reconciliationSessionId());
 
-        GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--fix-mode", "--fix-alg",
+        GridTestUtils.runAsync(() -> assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--repair",
             "MAJORITY", "--recheck-attempts", "5")));
 
         assertTrue(GridTestUtils.waitForCondition(() -> reconciliationSessionId() != 0, 10_000));
@@ -137,7 +137,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         IgniteEx ignite = grid(0);
         ignite.cluster().active(true);
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--fix-mode", "--fix-alg", "MAJORITY", "--recheck-attempts", "1"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--repair", "MAJORITY", "--recheck-attempts", "1"));
 
         assertTrue(lsnr.check(10_000));
     }
