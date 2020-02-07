@@ -239,7 +239,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             parallelism = 4;
             batchSize = 100;
             recheckAttempts = 2;
-            recheckDelay = 0;
+            recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
         }
 

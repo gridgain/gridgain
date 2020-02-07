@@ -37,7 +37,7 @@ public class Repair implements PipelineWorkload {
     private int partId;
 
     /** Attempt number. */
-    private int attempt;
+    private int repairAttempt;
 
     private long sessionId;
 
@@ -52,13 +52,13 @@ public class Repair implements PipelineWorkload {
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, VersionedValue>> data,
-        int attempt
+        int repairAttempt
     ) {
         this.sessionId = sessionId;
         this.cacheName = cacheName;
         this.partId = partId;
         this.data = data;
-        this.attempt = attempt;
+        this.repairAttempt = repairAttempt;
     }
 
     /**
@@ -86,8 +86,8 @@ public class Repair implements PipelineWorkload {
     /**
      * @return Attempt number.
      */
-    public int attempt() {
-        return attempt;
+    public int repairAttempt() {
+        return repairAttempt;
     }
 
     /** {@inheritDoc} */

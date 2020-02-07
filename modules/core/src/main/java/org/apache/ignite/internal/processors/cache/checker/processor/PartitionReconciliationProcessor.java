@@ -278,13 +278,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     ignite.cachex(workload.cacheName()).context(), startTopVer);
 
                 if (!notResolvingConflicts.isEmpty()) {
-                    if (workload.attempt() < recheckAttempts) {
+                    if (workload.recheckAttempt() < recheckAttempts) {
                         schedule(new Recheck(
                                 workload.sessionId(),
                                 notResolvingConflicts,
                                 workload.cacheName(),
                                 workload.partitionId(),
-                                workload.attempt() + 1,
+                                workload.recheckAttempt() + 1,
                                 workload.repairAttempt()
                             ),
                             recheckDelay,
@@ -311,7 +311,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         compute(
             RepairRequestTask.class,
             new RepairRequest(workload.sessionId(), workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
-                workload.attempt()),
+                workload.repairAttempt()),
             repairRes -> {
                 if (!repairRes.repairedKeys().isEmpty())
                     addToPrintResult(workload.cacheName(), workload.partitionId(), repairRes.repairedKeys());
@@ -340,7 +340,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                             collect(Collectors.toMap(Map.Entry::getKey, e2 -> e2.getValue().version())));
                     }
 
-                    if (workload.attempt() < RepairRequestTask.MAX_REPAIR_ATTEMPTS) {
+                    if (workload.repairAttempt() < RepairRequestTask.MAX_REPAIR_ATTEMPTS) {
                         schedule(
                             new Recheck(
                                 workload.sessionId(),
@@ -348,7 +348,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 workload.cacheName(),
                                 workload.partitionId(),
                                 recheckAttempts,
-                                workload.attempt() + 1
+                                workload.repairAttempt() + 1
                             ));
 
                         return;

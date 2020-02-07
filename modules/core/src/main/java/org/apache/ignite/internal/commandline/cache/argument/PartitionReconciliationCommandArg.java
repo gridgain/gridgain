@@ -49,7 +49,7 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     LOCAL_OUTPUT("--local-output", Boolean.FALSE),
 
     /** Recheck delay seconds. */
-    RECHECK_DELAY("--recheck-delay", 10);
+    RECHECK_DELAY("--recheck-delay", 5);
 
     /** Option name. */
     private final String name;
