@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
-import java.util.Arrays;
 import java.util.EnumSet;
 import org.apache.ignite.internal.ThinProtocolFeature;
 
@@ -33,9 +32,6 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
 
     /** */
     private static final EnumSet<JdbcThinFeature> ALL_FEATURES_AS_ENUM_SET = EnumSet.allOf(JdbcThinFeature.class);
-
-    /** */
-    private static final byte[] ALL_FEATURES_AS_BYTES = ThinProtocolFeature.featuresAsBytes(JdbcThinFeature.values());
 
     /** Feature id. */
     private final int featureId;
@@ -58,13 +54,6 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
      */
     public static EnumSet<JdbcThinFeature> enumSet(byte[] bytes) {
         return ThinProtocolFeature.enumSet(bytes, JdbcThinFeature.class);
-    }
-
-    /**
-     * @return Byte array representing all supported features by current node.
-     */
-    public static byte[] allFeaturesAsBytes() {
-        return Arrays.copyOf(ALL_FEATURES_AS_BYTES, ALL_FEATURES_AS_BYTES.length);
     }
 
     /** */
