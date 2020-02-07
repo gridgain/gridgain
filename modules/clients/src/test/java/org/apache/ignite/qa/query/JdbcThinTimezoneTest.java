@@ -35,6 +35,7 @@ import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.TestJavaProcess;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
 import static org.apache.ignite.jdbc.JdbcTestUtils.sql;
@@ -45,7 +46,6 @@ import static org.apache.ignite.jdbc.JdbcTestUtils.sql;
 public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /** Jdbc thin url. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1";
-//    private static final String URL = "jdbc:postgresql://localhost/test?user=test&password=test";
 
     /** Time zones to check. */
     private static final String[] TIME_ZONES = {"EST5EDT", "IST", "Europe/Moscow"};
@@ -79,9 +79,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-        /**
-         *
-         */
+    /** */
     @Test
     public void test() throws Exception {
         for (String tz : TIME_ZONES) {
@@ -90,17 +88,33 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
             insertLiteral(TimeZone.getTimeZone(tz));
         }
 
-        // Result map: select time zone -> result set as string.
+        checkResults(selectResultsForAllTimeZones(
+            "SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST", true));
+
+        checkResults(selectResultsForAllTimeZones(
+            "SELECT tz, label, " +
+                "CAST(dateVal AS VARCHAR), " +
+                "CAST(timeVal AS VARCHAR), " +
+                "CAST(tsVal AS VARCHAR) " +
+                "FROM TZ_TEST", false));
+    }
+
+    /** */
+    @NotNull private Map<String, List<String>> selectResultsForAllTimeZones(String sql, boolean fetchDateObjs) throws Exception {
         Map<String, List<String>> resMap = new HashMap<>();
 
         for (String tz : TIME_ZONES) {
-            List<String> res = select(TimeZone.getTimeZone(tz));
+            List<String> res = select(sql, TimeZone.getTimeZone(tz), fetchDateObjs);
 
             res.sort(String::compareTo);
 
             resMap.put(tz, res);
         }
+        return resMap;
+    }
 
+    /** */
+    private void checkResults(Map<String, List<String>> resMap) {
         for (String tz : TIME_ZONES) {
             final List<String> res = resMap.get(tz);
 
@@ -185,13 +199,12 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
     /**
      */
-    private List<String> select(final TimeZone tz) throws Exception {
+    private List<String> select(final String sql,  final TimeZone tz, boolean fetchDateObjs) throws Exception {
         return TestJavaProcess.exec((IgniteCallable<List<String>>)() -> {
             List<String> res = new ArrayList<>();
 
             try (Connection conn = DriverManager.getConnection(URL)) {
-                try (PreparedStatement pstmt = conn.prepareStatement(
-                    "SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST")) {
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                     pstmt.setString(1, tz.getID());
 
                     pstmt.execute();
@@ -203,11 +216,15 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
                         row.add(rs.getString(1));
                         row.add(rs.getString(2));
-                        row.add(rs.getDate(3));
+
+                        if (fetchDateObjs) {
+                            row.add(rs.getDate(3));
+                            row.add(rs.getTime(4));
+                            row.add(rs.getTimestamp(5));
+                        }
+
                         row.add(rs.getObject(3));
-                        row.add(rs.getTime(4));
                         row.add(rs.getObject(4));
-                        row.add(rs.getTimestamp(5));
                         row.add(rs.getObject(5));
 
                         res.add(row.toString());

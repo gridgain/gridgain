@@ -138,9 +138,9 @@ public final class TestJavaProcess {
         res = procCtx.result();
 
         if (res instanceof Exception)
-            throw (Exception)res;
+            throw new Exception("The closure is finished with exception", (Exception)res);
         else if (res instanceof Error)
-            throw (Error)res;
+            throw new Exception("The closure is finished with error", (Error)res);
 
         if (ret != 0)
             throw new Exception("Abnormal exit code [name=" + name +", code=" + ret);
