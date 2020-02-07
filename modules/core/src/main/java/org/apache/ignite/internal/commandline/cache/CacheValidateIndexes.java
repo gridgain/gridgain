@@ -54,6 +54,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCo
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.EXCLUDE_CACHES;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
+import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.NO_CHECK_SIZES;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /**
@@ -75,9 +76,10 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
         map.put(CHECK_FIRST + " N", "validate only the first N keys");
         map.put(CHECK_THROUGH + " K", "validate every Kth key");
+        map.put(NO_CHECK_SIZES.toString(), "no check that index size and cache size are same");
 
         usageCache(logger, VALIDATE_INDEXES, description, map,
-            optional(CACHES), OP_NODE_ID, optional(or(CHECK_FIRST + " N", CHECK_THROUGH + " K")));
+            optional(CACHES), OP_NODE_ID, optional(or(CHECK_FIRST + " N", CHECK_THROUGH + " K", NO_CHECK_SIZES)));
     }
 
     /**
@@ -85,25 +87,35 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
      */
     public class Arguments {
          /** Caches. */
-        private Set<String> caches;
+        private final Set<String> caches;
 
         /** Node id. */
-        private UUID nodeId;
+        private final UUID nodeId;
 
         /** Max number of entries to be checked. */
-        private int checkFirst = -1;
+        private final int checkFirst;
 
         /** Number of entries to check through. */
-        private int checkThrough = -1;
+        private final int checkThrough;
+
+        /** Check that index size and cache size are same. */
+        private final boolean checkSizes;
 
         /**
+         * Constructor.
          *
+         * @param caches Caches.
+         * @param nodeId Node id.
+         * @param checkFirst Max number of entries to be checked.
+         * @param checkThrough Number of entries to check through.
+         * @param checkSizes Check that index size and cache size are same.
          */
-        public Arguments(Set<String> caches, UUID nodeId, int checkFirst, int checkThrough) {
+        public Arguments(Set<String> caches, UUID nodeId, int checkFirst, int checkThrough, boolean checkSizes) {
             this.caches = caches;
             this.nodeId = nodeId;
             this.checkFirst = checkFirst;
             this.checkThrough = checkThrough;
+            this.checkSizes = checkSizes;
         }
 
         /**
@@ -127,12 +139,21 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             return checkThrough;
         }
 
-
         /**
          * @return Node id.
          */
         public UUID nodeId() {
             return nodeId;
+        }
+
+        /**
+         * Returns whether to check that index size and cache size are same.
+         *
+         * @return {@code true} if need check that index size and cache size
+         *      are same.
+         */
+        public boolean checkSizes() {
+            return checkSizes;
         }
 
         /** {@inheritDoc} */
@@ -155,7 +176,8 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             args.caches(),
             args.nodeId() != null ? Collections.singleton(args.nodeId()) : null,
             args.checkFirst(),
-            args.checkThrough()
+            args.checkThrough(),
+            args.checkSizes()
         );
 
         try (GridClient client = Command.startClient(clientCfg)) {
@@ -223,6 +245,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         int checkThrough = -1;
         UUID nodeId = null;
         Set<String> caches = null;
+        boolean checkSizes = true;
 
         int argsCnt = 0;
 
@@ -258,6 +281,8 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
                 continue;
             }
+            else if (NO_CHECK_SIZES == arg)
+                checkSizes = false;
 
             try {
                 nodeId = UUID.fromString(nextArg);
@@ -277,7 +302,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             }
         }
 
-        args = new Arguments(caches, nodeId, checkFirst, checkThrough);
+        args = new Arguments(caches, nodeId, checkFirst, checkThrough, checkSizes);
     }
 
     /** {@inheritDoc} */

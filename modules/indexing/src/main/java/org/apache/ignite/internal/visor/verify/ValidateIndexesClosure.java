@@ -103,13 +103,16 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     private IgniteLogger log;
 
     /** Cache names. */
-    private Set<String> cacheNames;
+    private final Set<String> cacheNames;
 
     /** If provided only first K elements will be validated. */
     private final int checkFirst;
 
     /** If provided only each Kth element will be validated. */
     private final int checkThrough;
+
+    /** Check that index size and cache size are same. */
+    private final boolean checkSizes;
 
     /** Counter of processed partitions. */
     private final AtomicInteger processedPartitions = new AtomicInteger(0);
@@ -140,10 +143,11 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * @param checkFirst If positive only first K elements will be validated.
      * @param checkThrough If positive only each Kth element will be validated.
      */
-    public ValidateIndexesClosure(Set<String> cacheNames, int checkFirst, int checkThrough) {
+    public ValidateIndexesClosure(Set<String> cacheNames, int checkFirst, int checkThrough, boolean checkSizes) {
         this.cacheNames = cacheNames;
         this.checkFirst = checkFirst;
         this.checkThrough = checkThrough;
+        this.checkSizes = checkSizes;
     }
 
     /** {@inheritDoc} */

@@ -25,7 +25,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
 
-
 /**
  *
  */
@@ -37,13 +36,16 @@ public class VisorValidateIndexesTaskArg extends VisorDataTransferObject {
     private Set<String> caches;
 
     /** Check first K elements. */
-    private int checkFirst;
+    private int checkFirst = -1;
 
     /** Check through K element (skip K-1, check Kth). */
-    private int checkThrough;
+    private int checkThrough = -1;
 
     /** Nodes on which task will run. */
     private Set<UUID> nodes;
+
+    /** Check that index size and cache size are same. */
+    private boolean checkSizes = true;
 
     /**
      * Default constructor.
@@ -53,15 +55,27 @@ public class VisorValidateIndexesTaskArg extends VisorDataTransferObject {
     }
 
     /**
+     * Constructor.
+     *
      * @param caches Caches.
+     * @param nodes Nodes on which task will run.
+     * @param checkFirst Check first K elements.
+     * @param checkThrough Check through K element.
+     * @param checkSizes Check that index size and cache size are same.
      */
-    public VisorValidateIndexesTaskArg(Set<String> caches, Set<UUID> nodes, int checkFirst, int checkThrough) {
+    public VisorValidateIndexesTaskArg(
+        Set<String> caches,
+        Set<UUID> nodes,
+        int checkFirst,
+        int checkThrough,
+        boolean checkSizes
+    ) {
         this.caches = caches;
         this.checkFirst = checkFirst;
         this.checkThrough = checkThrough;
         this.nodes = nodes;
+        this.checkSizes = checkSizes;
     }
-
 
     /**
      * @return Caches.
@@ -91,12 +105,23 @@ public class VisorValidateIndexesTaskArg extends VisorDataTransferObject {
         return checkThrough;
     }
 
+    /**
+     * Returns whether to check that index size and cache size are same.
+     *
+     * @return {@code true} if need check that index size and cache size
+     *      are same.
+     */
+    public boolean isCheckSizes() {
+        return checkSizes;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeCollection(out, caches);
         out.writeInt(checkFirst);
         out.writeInt(checkThrough);
         U.writeCollection(out, nodes);
+        out.writeBoolean(checkSizes);
     }
 
     /** {@inheritDoc} */
@@ -107,18 +132,17 @@ public class VisorValidateIndexesTaskArg extends VisorDataTransferObject {
             checkFirst = in.readInt();
             checkThrough = in.readInt();
         }
-        else {
-            checkFirst = -1;
-            checkThrough = -1;
-        }
 
         if (protoVer > V2)
             nodes = U.readSet(in);
+
+        if (protoVer > V3)
+            checkSizes = in.readBoolean();
     }
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V4;
     }
 
     /** {@inheritDoc} */
