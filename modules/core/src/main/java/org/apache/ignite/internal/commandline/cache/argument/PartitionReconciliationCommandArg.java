@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.commandline.cache.argument;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
@@ -24,14 +27,11 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
  * {@link CacheSubcommands#PARTITION_RECONCILIATION} command arguments.
  */
 public enum PartitionReconciliationCommandArg implements CommandArg {
-    /** If {@code true} - Partition Reconciliation&Fix: update from Primary partition. */
-    FIX_MODE("--fix-mode", Boolean.FALSE),
-
     /**
-     * Specifies which fix algorithm to use while repairing doubtful keys: options {@code
-     * PartitionReconciliationRepairMeta.RepairAlg}.
+     * If present - Partition Reconciliation&Fix: update from Primary partition. Specifies which fix algorithm to use
+     * while repairing doubtful keys: options {@code PartitionReconciliationRepairMeta.RepairAlg}.
      */
-    FIX_ALG("--fix-alg", RepairAlgorithm.defaultValue()),
+    REPAIR("--repair", RepairAlgorithm.defaultValue()),
 
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     INCLUDE_SENSITIVE("--include-sensitive", Boolean.FALSE),
@@ -57,10 +57,21 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** Default value. */
     private Object dfltVal;
 
-    /** */
+    /**
+     *
+     */
     PartitionReconciliationCommandArg(String name, Object dfltVal) {
         this.name = name;
         this.dfltVal = dfltVal;
+    }
+
+    /**
+     * @return List of args.
+     */
+    public static List<String> commands() {
+        return Arrays.stream(PartitionReconciliationCommandArg.values())
+            .map(PartitionReconciliationCommandArg::argName)
+            .collect(Collectors.toList());
     }
 
     /** {@inheritDoc} */

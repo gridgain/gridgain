@@ -55,7 +55,7 @@ public enum RepairAlgorithm {
      * @return Default repair algorithm.
      */
     public static RepairAlgorithm defaultValue() {
-        return MAJORITY;
+        return PRINT_ONLY;
     }
 
 }
