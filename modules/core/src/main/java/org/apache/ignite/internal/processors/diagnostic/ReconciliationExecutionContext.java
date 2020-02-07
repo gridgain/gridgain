@@ -25,10 +25,9 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobContinuation;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
-import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
 
 /**
- *
+ * Responsible for storing context of all ongoing reconciliation activities.
  */
 public class ReconciliationExecutionContext {
     /** Session ID for test purposes, permits won't be checked if it's passed. */
@@ -40,14 +39,17 @@ public class ReconciliationExecutionContext {
     /**Kernal context. We need only closure processor from it, but it's not set at the moment of initialization. */
     private final GridKernalContext kernalCtx;
 
-    private final Map<Long, Integer> runningJobsLimit = new LinkedHashMap<>();
+    /** Node local running jobs limit according to the parallelism level. */
+    private final Map<Long/*Session ID*/, Integer> runningJobsLimit = new LinkedHashMap<>();
 
-    private final Map<Long, Integer> runningJobsCnt = new LinkedHashMap<>();;
+    /** Number of currently running reconciliation jobs on the local node. */
+    private final Map<Long/*Session ID*/, Integer> runningJobsCnt = new LinkedHashMap<>();
 
-    private final Map<Long, Queue<ComputeJobContinuation>> pendingJobs = new LinkedHashMap<>();
+    /** Jobs that were enqueued to be executed later due to permits exhaustion. */
+    private final Map<Long/*Session ID*/, Queue<ComputeJobContinuation>> pendingJobs = new LinkedHashMap<>();
 
     /** Id of last or current reconciliation session. */
-    private long sessionId;
+    private long sesId;
 
     /**
      * @param kernalCtx Kernal context.
@@ -60,23 +62,23 @@ public class ReconciliationExecutionContext {
      * @return Id of last or current reconciliation session.
      */
     public synchronized long sessionId() {
-        return sessionId;
+        return sesId;
     }
 
     /**
      * Registers new partitions reconciliation session.
      *
-     * @param sessionId Session ID.
+     * @param sesId Session ID.
      * @param parallelism Parallelism level.
      */
-    public synchronized void registerSession(long sessionId, int parallelism) {
-        this.sessionId = sessionId;
+    public synchronized void registerSession(long sesId, int parallelism) {
+        this.sesId = sesId;
 
-        runningJobsCnt.put(sessionId, 0);
+        runningJobsCnt.put(sesId, 0);
 
-        runningJobsLimit.put(sessionId, parallelism);
+        runningJobsLimit.put(sesId, parallelism);
 
-        pendingJobs.put(sessionId, new LinkedList<>());
+        pendingJobs.put(sesId, new LinkedList<>());
 
         if (runningJobsCnt.size() == MAX_SESSIONS + 1) {
             runningJobsCnt.entrySet().iterator().remove();
@@ -92,28 +94,28 @@ public class ReconciliationExecutionContext {
     /**
      * Acquires permit for the job execution or holds its execution if permit is not available.
      *
-     * @param sessionId Session ID.
+     * @param sesId Session ID.
      * @param jobCont   Job context.
      * @return <code>true</code> if the permit has been granted or
      * <code>false</code> if the job execution should be suspended.
      */
-    public synchronized boolean acquireJobPermitOrHold(long sessionId, ComputeJobContinuation jobCont) {
-        if (sessionId == IGNORE_JOB_PERMITS_SESSION_ID)
+    public synchronized boolean acquireJobPermitOrHold(long sesId, ComputeJobContinuation jobCont) {
+        if (sesId == IGNORE_JOB_PERMITS_SESSION_ID)
             return true;
 
-        int limit = runningJobsLimit.get(sessionId);
+        int limit = runningJobsLimit.get(sesId);
 
-        int running = runningJobsCnt.get(sessionId);
+        int running = runningJobsCnt.get(sesId);
 
         if (running < limit) {
-            runningJobsCnt.put(sessionId, running + 1);
+            runningJobsCnt.put(sesId, running + 1);
 
             return true;
         }
         else {
             jobCont.holdcc();
 
-            Queue<ComputeJobContinuation> jobsQueue = pendingJobs.get(sessionId);
+            Queue<ComputeJobContinuation> jobsQueue = pendingJobs.get(sesId);
 
             jobsQueue.add(jobCont);
 
@@ -124,19 +126,19 @@ public class ReconciliationExecutionContext {
     /**
      * Releases execution permit and triggers continuation of a pending job if there are any.
      *
-     * @param sessionId Session ID.
+     * @param sesId Session ID.
      */
-    public synchronized void releaseJobPermit(long sessionId) {
-        if (sessionId == IGNORE_JOB_PERMITS_SESSION_ID)
+    public synchronized void releaseJobPermit(long sesId) {
+        if (sesId == IGNORE_JOB_PERMITS_SESSION_ID)
             return;
 
-        int running = runningJobsCnt.get(sessionId);
+        int running = runningJobsCnt.get(sesId);
 
-        Queue<ComputeJobContinuation> jobsQueue = pendingJobs.get(sessionId);
+        Queue<ComputeJobContinuation> jobsQueue = pendingJobs.get(sesId);
 
         ComputeJobContinuation pendingJob = jobsQueue.poll();
 
-        runningJobsCnt.put(sessionId, running - 1);
+        runningJobsCnt.put(sesId, running - 1);
 
         if (pendingJob != null) {
             try {
