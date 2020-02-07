@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 
 import java.util.Collections;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -108,14 +109,14 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
      */
     @Test
     public void testBrokenKeysWillFixedDuringRecheck() throws InterruptedException, IgniteInterruptedCheckedException {
-        final ConcurrentMap<Long, AtomicInteger> recheckAttempts = new ConcurrentHashMap<>();
+        final ConcurrentMap<UUID, AtomicInteger> recheckAttempts = new ConcurrentHashMap<>();
 
         CountDownLatch waitToStartFirstLastRecheck = new CountDownLatch(1);
         CountDownLatch waitKeyReporation = new CountDownLatch(1);
 
         ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
             if (stage.equals(STARTING) && workload instanceof RecheckRequest) {
-                int attempt = recheckAttempts.computeIfAbsent(workload.sessionId(), (key) -> new AtomicInteger(0)).incrementAndGet();
+                int attempt = recheckAttempts.computeIfAbsent(workload.workloadChainId(), (key) -> new AtomicInteger(0)).incrementAndGet();
 
                 if (attempt == 2)
                     waitToStartFirstLastRecheck.countDown();
@@ -164,11 +165,11 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
      *
      */
     private void testRecheckCount(int attempts) {
-        final ConcurrentMap<Long, AtomicInteger> recheckAttempts = new ConcurrentHashMap<>();
+        final ConcurrentMap<UUID, AtomicInteger> recheckAttempts = new ConcurrentHashMap<>();
 
         ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
-            if (stage == FINISHING && workload instanceof RecheckRequest)
-                recheckAttempts.computeIfAbsent(workload.sessionId(), (key) -> new AtomicInteger(0)).incrementAndGet();
+            if (stage.equals(FINISHING) && workload instanceof RecheckRequest)
+                recheckAttempts.computeIfAbsent(workload.workloadChainId(), (key) -> new AtomicInteger(0)).incrementAndGet();
         });
 
         for (int i = 0; i < 15; i++) {
@@ -189,7 +190,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
         assertEquals(15, res.partitionReconciliationResult().inconsistentKeysCount());
 
-        for (Map.Entry<Long, AtomicInteger> entry : recheckAttempts.entrySet())
+        for (Map.Entry<UUID, AtomicInteger> entry : recheckAttempts.entrySet())
             assertEquals("Session: " + entry.getKey() + " has wrong value: " + entry.getValue().get(), 1 + attempts, entry.getValue().get());
     }
 }

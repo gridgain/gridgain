@@ -16,12 +16,19 @@
 
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
+import java.util.UUID;
+
 /**
  *
  */
 public interface PipelineWorkload {
     /**
-     * @return Unique id of workload.
+     * @return ID of global workload session.
      */
     long sessionId();
+
+    /**
+     * @return Unique ID of workload chain.
+     */
+    UUID workloadChainId();
 }

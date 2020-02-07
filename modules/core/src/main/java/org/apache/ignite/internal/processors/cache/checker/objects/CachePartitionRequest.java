@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
+import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
 
 import java.io.Serializable;
@@ -27,11 +28,16 @@ public abstract class CachePartitionRequest implements PipelineWorkload, Seriali
     /** Session id. */
     protected final long sessionId;
 
+    /** Workload chain id. */
+    protected final UUID workloadChainId;
+
     /**
-     * @param sessionId sessionId.
+     * @param sessionId Session id.
+     * @param workloadChainId Workload chain id.
      */
-    protected CachePartitionRequest(long sessionId) {
+    protected CachePartitionRequest(long sessionId, UUID workloadChainId) {
         this.sessionId = sessionId;
+        this.workloadChainId = workloadChainId;
     }
 
     /**
@@ -44,7 +50,13 @@ public abstract class CachePartitionRequest implements PipelineWorkload, Seriali
      */
     public abstract String cacheName();
 
+    /** {@inheritDoc} */
     @Override public long sessionId() {
         return sessionId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID workloadChainId() {
+        return workloadChainId;
     }
 }

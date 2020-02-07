@@ -31,6 +31,9 @@ import org.apache.ignite.internal.processors.closure.GridClosureProcessor;
  *
  */
 public class ReconciliationExecutionContext {
+    /** Session ID for test purposes, permits won't be checked if it's passed. */
+    public static final long IGNORE_JOB_PERMITS_SESSION_ID = Long.MIN_VALUE / 7;
+
     /** Maximum number of stored sessions. */
     private static final int MAX_SESSIONS = 10;
 
@@ -95,6 +98,9 @@ public class ReconciliationExecutionContext {
      * <code>false</code> if the job execution should be suspended.
      */
     public synchronized boolean acquireJobPermitOrHold(long sessionId, ComputeJobContinuation jobCont) {
+        if (sessionId == IGNORE_JOB_PERMITS_SESSION_ID)
+            return true;
+
         int limit = runningJobsLimit.get(sessionId);
 
         int running = runningJobsCnt.get(sessionId);
@@ -121,6 +127,9 @@ public class ReconciliationExecutionContext {
      * @param sessionId Session ID.
      */
     public synchronized void releaseJobPermit(long sessionId) {
+        if (sessionId == IGNORE_JOB_PERMITS_SESSION_ID)
+            return;
+
         int running = runningJobsCnt.get(sessionId);
 
         Queue<ComputeJobContinuation> jobsQueue = pendingJobs.get(sessionId);

@@ -48,20 +48,21 @@ public class RepairRequest extends CachePartitionRequest {
     private int repairAttempt;
 
     /**
-     * Constructor.
-     *
-     * @param data Keys to repair with corresponding values and versions per node.
+     * @param sessionId Session id.
+     * @param workloadChainId Workload chain id.
+     * @param data Data.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param startTopVer Start topology version.
-     * @param repairAlg Repair algorithm to use while fixing doubtful keys.
+     * @param repairAlg Repair alg.
      * @param repairAttempt Repair attempt.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public RepairRequest(long sessionId, Map<KeyCacheObject, Map<UUID, VersionedValue>> data, String cacheName, int partId,
+    public RepairRequest(long sessionId, UUID workloadChainId,
+        Map<KeyCacheObject, Map<UUID, VersionedValue>> data, String cacheName, int partId,
         AffinityTopologyVersion startTopVer, RepairAlgorithm repairAlg,
         int repairAttempt) {
-        super(sessionId);
+        super(sessionId, workloadChainId);
         this.data = data;
         this.cacheName = cacheName;
         this.partId = partId;

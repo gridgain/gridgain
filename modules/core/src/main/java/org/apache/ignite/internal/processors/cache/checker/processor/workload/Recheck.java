@@ -33,7 +33,7 @@ public class Recheck implements PipelineWorkload {
     private final String cacheName;
 
     /** Partition id. */
-    private final int partitionId;
+    private final int partId;
 
     /** Attempt number. */
     private final int recheckAttempt;
@@ -41,20 +41,23 @@ public class Recheck implements PipelineWorkload {
     /** Repair attempt. */
     private final int repairAttempt;
 
-    /**
-     *
-     */
+    /** Session id. */
     private final long sessionId;
+
+    /** Workload chain id. */
+    private final UUID workloadChainId;
 
     /**
      *
      */
-    public Recheck(long sessionId, Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
-        int partitionId, int recheckAttempt, int repairAttempt) {
+    public Recheck(long sessionId, UUID workloadChainId,
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
+        int partId, int recheckAttempt, int repairAttempt) {
         this.sessionId = sessionId;
+        this.workloadChainId = workloadChainId;
         this.recheckKeys = recheckKeys;
         this.cacheName = cacheName;
-        this.partitionId = partitionId;
+        this.partId = partId;
         this.recheckAttempt = recheckAttempt;
         this.repairAttempt = repairAttempt;
     }
@@ -77,7 +80,7 @@ public class Recheck implements PipelineWorkload {
      *
      */
     public int partitionId() {
-        return partitionId;
+        return partId;
     }
 
     /**
@@ -97,5 +100,10 @@ public class Recheck implements PipelineWorkload {
     /** {@inheritDoc} */
     @Override public long sessionId() {
         return sessionId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID workloadChainId() {
+        return workloadChainId;
     }
 }
