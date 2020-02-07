@@ -114,7 +114,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
         Map<String, List<String>> resMap = new HashMap<>();
 
         for (String tz : TIME_ZONES) {
-            List<String> res = selectAndPrintWithTimezone("SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST",
+            List<String> res = selectAndPrintMilliseconds("SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST",
                 TimeZone.getTimeZone(tz));
 
             res.sort(String::compareTo);
@@ -262,7 +262,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
     /**
      */
-    private List<String> selectAndPrintWithTimezone(final String sql, final TimeZone tz) throws Exception {
+    private List<String> selectAndPrintMilliseconds(final String sql, final TimeZone tz) throws Exception {
         return TestJavaProcess.exec((IgniteCallable<List<String>>)() -> {
             List<String> res = new ArrayList<>();
 
