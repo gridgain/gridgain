@@ -23,6 +23,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -46,6 +47,9 @@ import static org.apache.ignite.jdbc.JdbcTestUtils.sql;
 public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /** Jdbc thin url. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1";
+
+    /** Jdbc thin url. */
+    private static final String URL_TZ_DISABLE = "jdbc:ignite:thin://127.0.0.1/?disabledFeatures=time_zone";
 
     /** Time zones to check. */
     private static final String[] TIME_ZONES = {"EST5EDT", "IST", "Europe/Moscow"};
@@ -83,9 +87,9 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     @Test
     public void test() throws Exception {
         for (String tz : TIME_ZONES) {
-            insertObjectByLegacyApi(TimeZone.getTimeZone(tz));
-            insertObjectByModernApi(TimeZone.getTimeZone(tz));
-            insertLiteral(TimeZone.getTimeZone(tz));
+            insertObjectByLegacyApi(URL, TimeZone.getTimeZone(tz));
+            insertObjectByModernApi(URL, TimeZone.getTimeZone(tz));
+            insertLiteral(URL, TimeZone.getTimeZone(tz));
         }
 
         checkResults(selectResultsForAllTimeZones(
@@ -97,6 +101,29 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
                 "CAST(timeVal AS VARCHAR), " +
                 "CAST(tsVal AS VARCHAR) " +
                 "FROM TZ_TEST", false));
+    }
+
+    /** */
+    @Test
+    public void testDisableTimezone() throws Exception {
+        for (String tz : TIME_ZONES) {
+            insertObjectByLegacyApi(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
+            insertObjectByModernApi(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
+//            insertLiteral(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
+        }
+
+        Map<String, List<String>> resMap = new HashMap<>();
+
+        for (String tz : TIME_ZONES) {
+            List<String> res = selectAndPrintWithTimezone("SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST",
+                TimeZone.getTimeZone(tz));
+
+            res.sort(String::compareTo);
+
+            resMap.put(tz, res);
+        }
+
+        checkResults(resMap);
     }
 
     /** */
@@ -135,9 +162,9 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /**
      * @param tz Default timezone for process.
      */
-    private void insertObjectByLegacyApi(final TimeZone tz) throws Exception {
+    private void insertObjectByLegacyApi(String url, final TimeZone tz) throws Exception {
         TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
-            sql(URL, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
+            sql(url, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
                     "VALUES (?, 'obj_legacy', ?, ?, ?)",
                 Arrays.asList(
                     tz.getID(),
@@ -152,7 +179,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /**
      * @param tz Default timezone for process.
      */
-    private void insertObjectByModernApi(final TimeZone tz) throws Exception {
+    private void insertObjectByModernApi(String url, final TimeZone tz) throws Exception {
         TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
             Calendar dateCal = Calendar.getInstance();
             dateCal.set(2019, 8, 9);
@@ -167,7 +194,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
             tsCal.set(2019, 8, 9, 9, 9, 9);
             tsCal.set(Calendar.MILLISECOND, 909);
 
-            sql(URL, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
+            sql(url, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
                     "VALUES (?, 'obj_modern', ?, ?, ?)",
                 Arrays.asList(
                     tz.getID(),
@@ -182,10 +209,10 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /**
      * @param tz Default timezone for process.
      */
-    private void insertLiteral(final TimeZone tz) throws Exception {
+    private void insertLiteral(String url, final TimeZone tz) throws Exception {
         TestJavaProcess.exec((GridTestUtils.IgniteRunnableX)() -> {
 
-            sql(URL, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
+            sql(url, "INSERT INTO TZ_TEST (tz, label, dateVal, timeVal, tsVal) " +
                     "VALUES (?, 'literal', CAST(? AS DATE), CAST(? AS TIME), CAST(? AS TIMESTAMP))",
                 Arrays.asList(
                     tz.getID(),
@@ -205,8 +232,6 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
             try (Connection conn = DriverManager.getConnection(URL)) {
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    pstmt.setString(1, tz.getID());
-
                     pstmt.execute();
 
                     ResultSet rs = pstmt.getResultSet();
@@ -235,4 +260,36 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
             }
         }, "-Duser.timezone=" + tz.getID());
     }
+
+    /**
+     */
+    private List<String> selectAndPrintWithTimezone(final String sql, final TimeZone tz) throws Exception {
+        return TestJavaProcess.exec((IgniteCallable<List<String>>)() -> {
+            List<String> res = new ArrayList<>();
+
+            try (Connection conn = DriverManager.getConnection(URL_TZ_DISABLE)) {
+                try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.execute();
+
+                    ResultSet rs = pstmt.getResultSet();
+
+                    while (rs.next()) {
+                        List<Object> row = new ArrayList<>();
+
+                        row.add(rs.getString(1));
+                        row.add(rs.getString(2));
+
+                        row.add(rs.getDate(3).getTime());
+                        row.add(rs.getTime(4).getTime());
+                        row.add(rs.getTimestamp(5).getTime());
+
+                        res.add(row.toString());
+                    }
+
+                    return res;
+                }
+            }
+        }, "-Duser.timezone=" + tz.getID());
+    }
+
 }
