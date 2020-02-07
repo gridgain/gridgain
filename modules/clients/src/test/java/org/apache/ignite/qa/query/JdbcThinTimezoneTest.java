@@ -16,6 +16,7 @@
 
 package org.apache.ignite.qa.query;
 
+import com.sun.source.tree.AssertTree;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
@@ -104,6 +105,35 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
     /** */
     @Test
+    public void testSelectWithConditions() throws Exception {
+        for (String tz : TIME_ZONES) {
+            insertObjectByLegacyApi(URL, TimeZone.getTimeZone(tz));
+            insertObjectByModernApi(URL, TimeZone.getTimeZone(tz));
+            insertLiteral(URL, TimeZone.getTimeZone(tz));
+        }
+
+        checkResults(selectResultsForAllTimeZones(
+            "SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST " +
+                "WHERE " +
+                "dateVal = CAST('2019-09-09' AS DATE) " +
+                "AND timeVal = CAST('09:09:09' AS TIME) " +
+                "AND tsVal = CAST('2019-09-09 09:09:09.909' AS TIMESTAMP)", true));
+
+        Map<String, List<String>> resMap = new HashMap<>();
+
+        for (String tz : TIME_ZONES) {
+            List<String> res = selectWithCondition(TimeZone.getTimeZone(tz));
+
+            res.sort(String::compareTo);
+
+            resMap.put(tz, res);
+        }
+
+        checkResults(resMap);
+    }
+
+    /** */
+    @Test
     public void testDisableTimezone() throws Exception {
         for (String tz : TIME_ZONES) {
             insertObjectByLegacyApi(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
@@ -136,6 +166,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
             resMap.put(tz, res);
         }
+
         return resMap;
     }
 
@@ -143,6 +174,8 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     private void checkResults(Map<String, List<String>> resMap) {
         for (String tz : TIME_ZONES) {
             final List<String> res = resMap.get(tz);
+
+            assertFalse(res.isEmpty());
 
             resMap.forEach((key, value) -> {
                 if (!value.equals(res)) {
@@ -259,6 +292,49 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
             }
         }, "-Duser.timezone=" + tz.getID());
     }
+
+    /**
+     */
+    private List<String> selectWithCondition(final TimeZone tz) throws Exception {
+        return TestJavaProcess.exec((IgniteCallable<List<String>>)() -> {
+            List<String> res = new ArrayList<>();
+
+            try (Connection conn = DriverManager.getConnection(URL)) {
+                try (PreparedStatement pstmt = conn.prepareStatement(
+                    "SELECT tz, label, dateVal, timeVal, tsVal FROM TZ_TEST " +
+                    "WHERE dateVal = ? AND timeVal = ? AND tsVal = ?")) {
+                    pstmt.setObject(1, new Date(119, 8, 9));
+                    pstmt.setObject(2, new Time(9, 9, 9));
+                    pstmt.setObject(3,
+                        new Timestamp(119, 8, 9, 9, 9, 9, 909000000));
+
+                    pstmt.execute();
+
+                    ResultSet rs = pstmt.getResultSet();
+
+                    while (rs.next()) {
+                        List<Object> row = new ArrayList<>();
+
+                        row.add(rs.getString(1));
+                        row.add(rs.getString(2));
+
+                        row.add(rs.getDate(3));
+                        row.add(rs.getTime(4));
+                        row.add(rs.getTimestamp(5));
+
+                        row.add(rs.getObject(3));
+                        row.add(rs.getObject(4));
+                        row.add(rs.getObject(5));
+
+                        res.add(row.toString());
+                    }
+
+                    return res;
+                }
+            }
+        }, "-Duser.timezone=" + tz.getID());
+    }
+
 
     /**
      */
