@@ -388,7 +388,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 Map<Integer, List<UUID>> assignment0 = U.newHashMap(assignment.size());
 
                 for (Map.Entry<Integer, List<ClusterNode>> e0 : assignment.entrySet()) {
-                    // Skip non changed assignments.
+                    // Skip non late assignment changes.
                     if (!a0.assignment().get(e0.getKey()).equals(e0.getValue()))
                         assignment0.put(e0.getKey(), toIds0(e0.getValue()));
                 }
@@ -398,7 +398,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             }
 
             if (assignmentsChange.isEmpty())
-                return null; // Prevent affinity switch if primary have not changed.
+                return null; // Prevent affinity switch if no late affinity assignments.
         }
 
         return new CacheAffinityChangeMessage(waitInfo.topVer, assignmentsChange, waitInfo.deploymentIds);
@@ -1217,7 +1217,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 Map<Integer, List<UUID>> change;
 
-                if (!exchFut.context().supportsFreeSwitch() && affChange != null && (change = affChange.get(aff.groupId())) != null) {
+                boolean supportsFreeSwitch = exchFut.context().supportsFreeSwitch();
+
+                if (!supportsFreeSwitch && affChange != null && (change = affChange.get(aff.groupId())) != null) {
                     assert !F.isEmpty(affChange) : msg;
 
                     assert !change.isEmpty() : msg;
@@ -1245,11 +1247,10 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                     aff.initialize(topVer, assignment);
                 }
-                else if (!aff.partitionPrimariesDifferentToIdeal(affTopVer).isEmpty())
+                else if (supportsFreeSwitch && !aff.partitionPrimariesDifferentToIdeal(affTopVer).isEmpty())
                     aff.initialize(topVer, aff.idealAssignmentRaw());
                 else {
-                    if (exchFut.context().supportsFreeSwitch() &&
-                        !aff.assignments(aff.lastVersion()).equals(aff.idealAssignmentRaw())) {
+                    if (supportsFreeSwitch && !aff.assignments(aff.lastVersion()).equals(aff.idealAssignmentRaw())) {
                         // This should never happen on Late Affinity Assignment switch and must trigger Failure Handler.
                         throw new AssertionError("Not an ideal distribution duplication attempt on LAA " +
                             "[grp=" + aff.cacheOrGroupName() + ", lastAffinity=" + aff.lastVersion() +

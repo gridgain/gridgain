@@ -47,7 +47,6 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccProcessor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -66,16 +65,19 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     private static final int NODES_CNT = 6;
 
     /** Persistence flag. */
-    private boolean persistence;
+    private boolean startPersistentRegion;
 
-    /** Cache name. */
-    private static final String CACHE_NAME = "testCache"; // TODO FIXME DEFAULT_CACHE_NAME
+    /** Start additional cache in volatile region. */
+    private boolean startVolatileRegion;
+
+    /** Persistent region name. */
+    private static final String PERSISTENT = "persistent";
+
+    /** Volatile region name. */
+    private static final String VOLATILE = "volatile";
 
     /** */
     private static final int PARTS_CNT = 64;
-
-    /** Cache configuration closure. */
-    private IgniteClosure<String, CacheConfiguration[]> cacheC;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -90,22 +92,26 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
         cfg.setCommunicationSpi(commSpi);
 
-        cfg.setCacheConfiguration(cacheC != null ?
-            cacheC.apply(igniteInstanceName) : new CacheConfiguration[] {cacheConfiguration()});
+        List<DataRegionConfiguration> cfgs = new ArrayList<>();
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration();
         dsCfg.setWalSegmentSize(4 * 1024 * 1024);
 
-        DataRegionConfiguration drCfg = new DataRegionConfiguration();
-
         final int size = 50 * 1024 * 1024;
 
-        drCfg.setInitialSize(size);
-        drCfg.setMaxSize(size);
+        if (startPersistentRegion) {
+            DataRegionConfiguration regCfg = new DataRegionConfiguration();
+            regCfg.setName(PERSISTENT).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(true);
+            cfgs.add(regCfg);
+        }
 
-        drCfg.setPersistenceEnabled(persistence);
+        if (startVolatileRegion) {
+            DataRegionConfiguration regCfg = new DataRegionConfiguration();
+            regCfg.setName(VOLATILE).setInitialSize(size).setMaxSize(size);
+            cfgs.add(regCfg);
+        }
 
-        dsCfg.setDefaultDataRegionConfiguration(drCfg);
+        dsCfg.setDataRegionConfigurations(cfgs.toArray(new DataRegionConfiguration[cfgs.size()]));
 
         cfg.setDataStorageConfiguration(dsCfg);
 
@@ -113,12 +119,15 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     }
 
     /**
+     * @param cacheName Cache name.
+     *
      * @return Cache configuration.
      */
-    private CacheConfiguration cacheConfiguration() {
+    private CacheConfiguration cacheConfiguration(String cacheName) {
         CacheConfiguration ccfg = new CacheConfiguration();
 
-        ccfg.setName(CACHE_NAME);
+        ccfg.setDataRegionName(cacheName);
+        ccfg.setName(cacheName);
         ccfg.setAffinity(affinityFunction(PARTS_CNT));
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setBackups(0);
@@ -157,7 +166,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNonBaselineNodeLeftOnFullyRebalancedCluster() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(true, false);
+        testNodeLeftOnFullyRebalancedCluster(false, true, true, false);
     }
 
     /**
@@ -166,14 +175,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNonBaselineNodeLeftOnFullyRebalancedClusterPersistence() throws Exception {
-        persistence = true;
-
-        try {
-            testNodeLeftOnFullyRebalancedCluster(false, false);
-        }
-        finally {
-            persistence = false;
-        }
+        testNodeLeftOnFullyRebalancedCluster(true, false, false, false);
     }
 
     /**
@@ -182,14 +184,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNonBaselineNodeLeftOnFullyRebalancedClusterPersistence_2() throws Exception {
-        persistence = true;
-
-        try {
-            testNodeLeftOnFullyRebalancedCluster(true, true);
-        }
-        finally {
-            persistence = false;
-        }
+        testNodeLeftOnFullyRebalancedCluster(true, false, true, true);
     }
 
     /**
@@ -197,7 +192,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testBaselineNodeLeftOnFullyRebalancedCluster() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(true, false);
+        testNodeLeftOnFullyRebalancedCluster(false, true, true, false);
     }
 
     /**
@@ -206,7 +201,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testBaselineNodeLeftOnFullyRebalancedCluster_AutoAdjust() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(false, false);
+        testNodeLeftOnFullyRebalancedCluster(false, true, false, false);
     }
 
     /**
@@ -214,14 +209,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testBaselineNodeLeftOnFullyRebalancedClusterPersistence() throws Exception {
-        persistence = true;
-
-        try {
-            testNodeLeftOnFullyRebalancedCluster(false, false);
-        }
-        finally {
-            persistence = false;
-        }
+        testNodeLeftOnFullyRebalancedCluster(true, false, false, false);
     }
 
     /**
@@ -229,32 +217,36 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testBaselineNodeLeftOnFullyRebalancedClusterPersistence_ChangeBLT() throws Exception {
-        persistence = true;
-
-        try {
-            testNodeLeftOnFullyRebalancedCluster(true, true);
-        }
-        finally {
-            persistence = false;
-        }
+        testNodeLeftOnFullyRebalancedCluster(true, false, true, true);
     }
 
     /**
      * Checks node left PME absent/present on fully rebalanced topology (Latest PME == LAA).
      *
+     * @param persistent {@code True} to use persistent region.
+     * @param inmem {@code True} to use volatile region.
      * @param expectPME {@code True} if PME is expected on node left.
+     * @param resetBlt {@code True} to reset BTL on node left.
      */
-    private void testNodeLeftOnFullyRebalancedCluster(boolean expectPME, boolean resetBlt) throws Exception {
+    private void testNodeLeftOnFullyRebalancedCluster(
+        boolean persistent,
+        boolean inmem,
+        boolean expectPME,
+        boolean resetBlt
+    ) throws Exception {
         int nodes = NODES_CNT;
 
         Ignite crd = startGrids(nodes);
 
         crd.cluster().active(true);
 
-        awaitPartitionMapExchange();
+        if (persistent)
+            crd.createCache(cacheConfiguration(PERSISTENT));
 
-        for (int k = 0; k < PARTS_CNT; k++)
-            crd.cache(CACHE_NAME).put(k, k);
+        if (inmem)
+            crd.createCache(cacheConfiguration(VOLATILE));
+
+        awaitPartitionMapExchange();
 
         AtomicLong cnt = new AtomicLong();
 
@@ -322,33 +314,36 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Checks that transaction can be continued on node left and there is no waiting for it's completion in case
-     * baseline was not changed and cluster was fully rebalanced.
+     * Starts 4(2 with 0 backups) * multiplicator threads each spawning a transaction.
+     * Each tx locks a topology by single put with various key->failing node type.
+     * Single node is failed.
+     * Each tx puts another key.
+     *
+     * Success: all transactions are completed as expected, fast switch happens.
      */
     private void testNoTransactionsWaitAtNodeLeft(int backups, PartitionLossPolicy lossPlc) throws Exception {
-        persistence = true;
+        startPersistentRegion = true;
+        startVolatileRegion = false;
 
         String cacheName = "three-partitioned";
 
         try {
-            cacheC = new IgniteClosure<String, CacheConfiguration[]>() {
-                @Override public CacheConfiguration[] apply(String igniteInstanceName) {
-                    CacheConfiguration ccfg = new CacheConfiguration();
+            CacheConfiguration ccfg = new CacheConfiguration();
 
-                    ccfg.setName(cacheName);
-                    ccfg.setWriteSynchronizationMode(FULL_SYNC);
-                    ccfg.setBackups(backups);
-                    ccfg.setPartitionLossPolicy(lossPlc);
-                    ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-                    ccfg.setAffinity(new Map4PartitionsTo4NodesAffinityFunction());
-
-                    return new CacheConfiguration[] {ccfg};
-                }
-            };
+            ccfg.setDataRegionName(PERSISTENT);
+            ccfg.setName(cacheName);
+            ccfg.setWriteSynchronizationMode(FULL_SYNC);
+            ccfg.setBackups(backups);
+            ccfg.setPartitionLossPolicy(lossPlc);
+            ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+            ccfg.setAffinity(new Map4PartitionsTo4NodesAffinityFunction());
 
             int nodes = 4;
 
-            startGridsMultiThreaded(nodes, true).cluster().active(true);
+            final Ignite crd = startGridsMultiThreaded(nodes, true);
+            crd.cluster().active(true);
+
+            crd.createCache(ccfg);
 
             AtomicLong cnt = new AtomicLong();
 
@@ -550,7 +545,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
             assertEquals(0, cnt.get());
         }
         finally {
-            persistence = false;
+            startPersistentRegion = false;
         }
     }
 
@@ -559,62 +554,54 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
      */
     @Test
     public void testLateAffinityAssignmentOnBackupLeftAndJoin() throws Exception {
-        String cacheName = "single-partitioned";
+        startPersistentRegion = true;
+        startVolatileRegion = false;
 
-        cacheC = new IgniteClosure<String, CacheConfiguration[]>() {
-            @Override public CacheConfiguration[] apply(String igniteInstanceName) {
-                CacheConfiguration ccfg = new CacheConfiguration();
+        final String cacheName = "single-partitioned";
 
-                ccfg.setName(cacheName);
-                ccfg.setAffinity(new Map1PartitionsTo2NodesAffinityFunction());
+        CacheConfiguration ccfg = new CacheConfiguration();
 
-                return new CacheConfiguration[] {ccfg};
+        ccfg.setDataRegionName(PERSISTENT);
+        ccfg.setName(cacheName);
+        ccfg.setAffinity(new Map1PartitionsTo2NodesAffinityFunction());
+
+        startGrid(0); // Primary partition holder.
+        startGrid(1); // Backup partition holder.
+
+        grid(0).cluster().active(true);
+
+        final IgniteCache cache = grid(0).createCache(ccfg);
+
+        grid(1).close(); // Stopping backup partition holder.
+
+        cache.put(1, 1); // Updating primary partition to cause rebalance.
+
+        startGrid(1); // Restarting backup partition holder.
+
+        awaitPartitionMapExchange();
+
+        AffinityTopologyVersion topVer = grid(0).context().discovery().topologyVersionEx();
+
+        assertEquals(topVer.topologyVersion(), 4);
+        assertEquals(topVer.minorTopologyVersion(), 1); // LAA happen on backup partition holder restart.
+
+        GridDhtPartitionsExchangeFuture fut4 = null;
+        GridDhtPartitionsExchangeFuture fut41 = null;
+
+        for (GridDhtPartitionsExchangeFuture fut : grid(0).context().cache().context().exchange().exchangeFutures()) {
+            AffinityTopologyVersion ver = fut.topologyVersion();
+
+            if (ver.topologyVersion() == 4) {
+                if (ver.minorTopologyVersion() == 0)
+                    fut4 = fut;
+                else if (ver.minorTopologyVersion() == 1)
+                    fut41 = fut;
             }
-        };
-
-        persistence = true;
-
-        try {
-            startGrid(0); // Primary partition holder.
-            startGrid(1); // Backup partition holder.
-
-            grid(0).cluster().active(true);
-
-            grid(1).close(); // Stopping backup partition holder.
-
-            grid(0).getOrCreateCache(cacheName).put(1, 1); // Updating primary partition to cause rebalance.
-
-            startGrid(1); // Restarting backup partition holder.
-
-            awaitPartitionMapExchange();
-
-            AffinityTopologyVersion topVer = grid(0).context().discovery().topologyVersionEx();
-
-            assertEquals(topVer.topologyVersion(), 4);
-            assertEquals(topVer.minorTopologyVersion(), 1); // LAA happen on backup partition holder restart.
-
-            GridDhtPartitionsExchangeFuture fut4 = null;
-            GridDhtPartitionsExchangeFuture fut41 = null;
-
-            for (GridDhtPartitionsExchangeFuture fut : grid(0).context().cache().context().exchange().exchangeFutures()) {
-                AffinityTopologyVersion ver = fut.topologyVersion();
-
-                if (ver.topologyVersion() == 4) {
-                    if (ver.minorTopologyVersion() == 0)
-                        fut4 = fut;
-                    else if (ver.minorTopologyVersion() == 1)
-                        fut41 = fut;
-                }
-            }
-
-            assertFalse(fut4.rebalanced()); // Backup partition holder restart cause non-rebalanced state.
-
-            assertTrue(fut41.rebalanced()); // LAA.
-
         }
-        finally {
-            persistence = false;
-        }
+
+        assertFalse(fut4.rebalanced()); // Backup partition holder restart cause non-rebalanced state.
+
+        assertTrue(fut41.rebalanced()); // LAA.
     }
 
     /**

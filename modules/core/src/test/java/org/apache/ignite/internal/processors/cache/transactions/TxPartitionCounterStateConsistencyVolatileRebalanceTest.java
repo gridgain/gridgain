@@ -20,6 +20,7 @@ import java.util.Collection;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.junit.Ignore;
+import org.junit.Test;
 
 /**
  * Test partitions consistency in various scenarios when all rebalance is in-memory.
@@ -43,6 +44,11 @@ public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxP
     }
 
     /** {@inheritDoc} */
+    @Override public void testPrimaryLeftUnderLoadToSwitchingPartitions() throws Exception {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
     @Override protected void forceCheckpoint(Collection<Ignite> nodes) throws IgniteCheckedException {
         // No-op.
     }
@@ -50,5 +56,10 @@ public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxP
     /** {@inheritDoc} */
     @Override protected int partitions() {
         return 1024;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void resetBaselineTopology() {
+        // No-op.
     }
 }

@@ -74,6 +74,7 @@ import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionConcurrency;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.concurrent.TimeUnit.DAYS;
@@ -84,6 +85,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
 import static org.apache.ignite.internal.TestRecordingCommunicationSpi.spi;
 import static org.apache.ignite.testframework.GridTestUtils.runMultiThreadedAsync;
+import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 
 /**
  * Test framework for ordering transaction's prepares and commits by intercepting messages and releasing then
@@ -151,6 +153,13 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
      */
     protected int partitions() {
         return PARTS_CNT;
+    }
+
+    /**
+     * @return Default tx concurrency.
+     */
+    protected TransactionConcurrency concurrency() {
+        return PESSIMISTIC;
     }
 
     /** {@inheritDoc} */

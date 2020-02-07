@@ -42,6 +42,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
@@ -50,11 +51,14 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
+import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.util.typedef.G;
@@ -77,7 +81,6 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.CREATE;
 import static org.apache.ignite.internal.processors.cache.GridCacheOperation.UPDATE;
-import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
@@ -312,8 +315,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 try {
                     waitForTopology(SERVER_NODES);
 
-                    if (persistenceEnabled())
-                        resetBaselineTopology();
+                    resetBaselineTopology();
 
                     awaitPartitionMapExchange();
 
@@ -321,8 +323,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                     startGrid(name);
 
-                    if (persistenceEnabled())
-                        resetBaselineTopology();
+                    resetBaselineTopology();
 
                     awaitPartitionMapExchange();
                 }
@@ -544,7 +545,19 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             }
         });
 
-        fut.get();
+        try {
+            fut.get(10_000);
+        }
+        catch (IgniteFutureTimeoutCheckedException e) {
+            for (Ignite ignite : G.allGrids()) {
+                final PartitionUpdateCounter cntr = counter(primaryParts[0], ignite.name());
+                log.info("Node: " + ignite.name() + ", cntr=" + cntr);
+            }
+
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+            fail("Rebalancing is expected");
+        }
 
         awaitPartitionMapExchange();
 
@@ -811,9 +824,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         rndAddrsField.set(customDiscoSpi, true);
 
         IgniteEx crd = startGrid(0); // Start coordinator with custom discovery SPI.
-
-        crd.cluster().baselineAutoAdjustEnabled(false);
-
         IgniteEx g1 = startGrid(1);
         startGrid(2);
 
@@ -835,7 +845,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
         assertEquals(consistentId, g3.localNode().consistentId());
 
-        crd.cluster().baselineAutoAdjustEnabled(false);
         resetBaselineTopology();
         awaitPartitionMapExchange();
 
@@ -949,6 +958,62 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
     @Test
     public void testConsistencyAfterBaselineNodeStopAndRemoval_WithRestartAndSkipCheckpoint() throws Exception {
         doTestConsistencyAfterBaselineNodeStopAndRemoval(2);
+    }
+
+    /**
+     * The scenario:
+     * <p>
+     * 1. Start updates only to primary partitions what will be switched when this node has left.
+     * 2. Stop primary.
+     * 3. Wait for switch.
+     * 4. Expect no assertions.
+     *
+     * Note: applicable only for BLT compatible caches (currently only persistent mode).
+     * TODO add test for 3 nodes
+     */
+    @Test
+    public void testPrimaryLeftUnderLoadToSwitchingPartitions() throws Exception {
+        assertTrue(persistenceEnabled());
+
+        backups = 1;
+
+        final IgniteEx crd = startGrids(2);
+
+        crd.cluster().active(true);
+
+        List<Integer> primaryKeys = primaryKeys(crd.cache(DEFAULT_CACHE_NAME), 1024);
+
+        Random r = new Random();
+
+        AtomicBoolean stop = new AtomicBoolean();
+
+        final IgniteInternalFuture<?> fut =
+            doRandomUpdates(r, grid(1), primaryKeys, grid(1).cache(DEFAULT_CACHE_NAME), (BooleanSupplier)stop::get);
+
+        doSleep(3_000);
+
+        crd.close();
+
+        doSleep(2_000);
+
+        stop.set(true);
+
+        fut.get();
+
+        awaitPartitionMapExchange();
+
+        checkFutures();
+
+        final GridCachePartitionExchangeManager<Object, Object> exchange = grid(1).context().cache().context().exchange();
+
+        for (GridDhtPartitionsExchangeFuture exchFut : exchange.exchangeFutures()) {
+            assertTrue(exchFut.isDone());
+
+            if (exchFut.topologyVersion().equals(new AffinityTopologyVersion(3, 0))) {
+                assertTrue("Expecting supported free switch " + fut.toString(), exchFut.context().supportsFreeSwitch());
+                assertTrue("Expecting actual free switch " + fut.toString(), exchFut.context().exchangeFreeSwitch());
+            }
+        }
     }
 
     /**
@@ -1092,7 +1157,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
                 List<Integer> keys = primaryKeys.subList(rangeStart, rangeStart + range);
 
-                try (Transaction tx = near.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, 0, 0)) {
+                try (Transaction tx = near.transactions().txStart(concurrency(), REPEATABLE_READ, 0, 0)) {
                     List<Integer> insertedKeys = new ArrayList<>();
 
                     for (Integer key : keys) {
@@ -1113,7 +1178,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                         }
                     }
 
-                    tx.commit();
+                    if (r.nextFloat() < 0.1)
+                        tx.rollback();
+                    else
+                        tx.commit();
                 }
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||
@@ -1213,5 +1281,15 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      */
     @Override protected long getPartitionMapExchangeTimeout() {
         return getTestTimeout();
+    }
+
+    /**
+     * Some tests require determined affinity assignments.
+     * Derived classes can break required order and cause hanging of tests.
+     *
+     * @return Instance name.
+     */
+    @Override public String getTestIgniteInstanceName() {
+        return "transactions.TxPartitionCounterStateConsistencyTest";
     }
 }

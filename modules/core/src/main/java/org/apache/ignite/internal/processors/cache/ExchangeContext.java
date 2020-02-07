@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.util.typedef.internal.CU;
@@ -47,7 +48,7 @@ public class ExchangeContext {
     /** Per-group affinity fetch on join (old protocol). */
     private boolean fetchAffOnJoin;
 
-    /** PME is not required. */
+    /** Wait-free affinity switch was performed for current exchange. */
     private boolean exchangeFreeSwitch;
 
     /** Merges allowed flag. */
@@ -60,10 +61,10 @@ public class ExchangeContext {
     private final boolean compatibilityNode = getBoolean(IGNITE_EXCHANGE_COMPATIBILITY_VER_1, false);
 
     /** */
-    private final boolean bltForInMemoryCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+    private final boolean bltForVolatileCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
-    /** */
-    private final boolean supportFreeSwitch;
+    /** Free switch is supported for current exchange topology. */
+    private final boolean supFreeSwitch;
 
     /**
      * @param crd Coordinator flag.
@@ -72,18 +73,19 @@ public class ExchangeContext {
     public ExchangeContext(boolean crd, GridDhtPartitionsExchangeFuture fut) {
         int protocolVer = exchangeProtocolVersion(fut.firstEventCache().minimumNodeVersion());
 
-        supportFreeSwitch =
+        supFreeSwitch =
             allNodesSupports(fut.sharedContext().kernalContext(), fut.firstEventCache().allNodes(), PME_FREE_SWITCH);
 
+        // Tests if free switch is supported for current exchange.
         if (!compatibilityNode &&
             fut.wasRebalanced() &&
             fut.isBaselineNodeFailed() &&
-            (!CU.isInMemoryCluster(
-                fut.sharedContext().kernalContext().discovery().allNodes(),
-                fut.sharedContext().kernalContext().marshallerContext().jdkMarshaller(),
-                U.resolveClassLoader(fut.sharedContext().kernalContext().config())
-            ) || bltForInMemoryCachesSupport ) &&
-            supportFreeSwitch) {
+            supFreeSwitch &&
+            (bltForVolatileCachesSupport ||
+                CU.dataRegions(fut.firstEventCache().allNodes(),
+                    fut.sharedContext().kernalContext().marshallerContext().jdkMarshaller(),
+                    U.resolveClassLoader(fut.sharedContext().kernalContext().config())).
+                    allMatch(DataRegionConfiguration::isPersistenceEnabled))) {
             exchangeFreeSwitch = true;
             merge = false;
         }
@@ -114,10 +116,10 @@ public class ExchangeContext {
     }
 
     /**
-     * @return {@code True} if all nodes support free switch optimization on stable topology before node left.
+     * @return {@code True} if exchange topology is compatible with free switch optimization.
      */
     public boolean supportsFreeSwitch() {
-        return supportFreeSwitch;
+        return supFreeSwitch;
     }
 
     /**
