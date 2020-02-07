@@ -108,7 +108,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
         for (String tz : TIME_ZONES) {
             insertObjectByLegacyApi(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
             insertObjectByModernApi(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
-//            insertLiteral(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
+            insertLiteral(URL_TZ_DISABLE, TimeZone.getTimeZone(tz));
         }
 
         Map<String, List<String>> resMap = new HashMap<>();
