@@ -132,7 +132,7 @@ public class RepairRequestTaskTest {
 
         Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
             .repairedKeys().entrySet().iterator().next();
-        assertEquals(keyVers, entry.getValue());
+        assertEquals(keyVers, entry.getValue().getPreviousValue());
 
         RepairMeta repairMeta = entry.getValue();
         assertTrue(repairMeta.fixed());
@@ -176,7 +176,7 @@ public class RepairRequestTaskTest {
 
             Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
                 .repairedKeys().entrySet().iterator().next();
-            assertEquals(keyVers, entry.getValue());
+            assertEquals(keyVers, entry.getValue().getPreviousValue());
 
             RepairMeta repairMeta = entry.getValue();
             assertTrue(repairMeta.fixed());
@@ -214,7 +214,7 @@ public class RepairRequestTaskTest {
 
         Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
             .repairedKeys().entrySet().iterator().next();
-        assertEquals(keyVers, entry.getValue());
+        assertEquals(keyVers, entry.getValue().getPreviousValue());
 
         RepairMeta repairMeta = entry.getValue();
         assertTrue(repairMeta.fixed());
