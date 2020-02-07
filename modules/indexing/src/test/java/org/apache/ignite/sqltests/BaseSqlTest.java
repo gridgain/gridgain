@@ -1268,10 +1268,10 @@ public class BaseSqlTest extends AbstractIndexingCommonTest {
             SqlFieldsQuery query = new SqlFieldsQuery("select base64_encode(?)");
             query.setArgs("my string".getBytes());
             Result result = executeFrom(query, node);
-            Assert.assertArrayEquals("bXkgc3RyaW5n".getBytes(), (byte[])result.values().get(0).get(0));
+            Assert.assertEquals("bXkgc3RyaW5n", result.values().get(0).get(0));
 
             query = new SqlFieldsQuery("select base64_decode(?)");
-            query.setArgs("bXkgc3RyaW5n".getBytes());
+            query.setArgs("bXkgc3RyaW5n");
             result = executeFrom(query, node);
             Assert.assertArrayEquals("my string".getBytes(), (byte[])result.values().get(0).get(0));
 

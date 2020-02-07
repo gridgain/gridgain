@@ -238,7 +238,7 @@ public class Function extends Expression implements FunctionCall {
         addFunctionNotDeterministic("SYS_GUID", RANDOM_UUID, 0, Value.UUID);
         addFunctionNotDeterministic("UUID", RANDOM_UUID, 0, Value.UUID);
         addFunction("ORA_HASH", ORA_HASH, VAR_ARGS, Value.LONG);
-        addFunction("BASE64_ENCODE", BASE64_ENCODE, 1, Value.BYTES);
+        addFunction("BASE64_ENCODE", BASE64_ENCODE, 1, Value.STRING);
         addFunction("BASE64_DECODE", BASE64_DECODE, 1, Value.BYTES);
         // string
         addFunction("ASCII", ASCII, 1, Value.INT);
@@ -1282,10 +1282,10 @@ public class Function extends Expression implements FunctionCall {
                     v2 == null ? 0L : v2.getLong());
             break;
         case BASE64_ENCODE:
-                result = ValueBytes.getNoCopy(BASE64_ENCODER.encode(v0.getBytesNoCopy()));
+                result = ValueString.get(BASE64_ENCODER.encodeToString(v0.getBytesNoCopy()));
                 break;
         case BASE64_DECODE:
-                result = ValueBytes.getNoCopy(BASE64_DECODER.decode(v0.getBytesNoCopy()));
+                result = ValueBytes.getNoCopy(BASE64_DECODER.decode(v0.getString()));
                 break;
         case DIFFERENCE:
             result = ValueInt.get(getDifference(

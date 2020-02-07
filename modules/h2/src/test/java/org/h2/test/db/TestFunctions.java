@@ -458,16 +458,16 @@ public class TestFunctions extends TestDb implements AggregateFunction {
     private void testBase64() throws SQLException {
         Connection conn = getConnection("functions");
 
-        base64encode(conn, "", "");
-        base64encode(conn, "A", "QQ==");
-        base64encode(conn, "AB", "QUI=");
-        base64encode(conn, "ABC", "QUJD");
-        base64encode(conn, "ABCD", "QUJDRA==");
-        base64decode(conn, "", "");
-        base64decode(conn, "QQ==", "A");
-        base64decode(conn, "QUI=", "AB");
-        base64decode(conn, "QUJD", "ABC");
-        base64decode(conn, "QUJDRA==", "ABCD");
+        base64encode(conn, "".getBytes(), "");
+        base64encode(conn, "A".getBytes(), "QQ==");
+        base64encode(conn, "AB".getBytes(), "QUI=");
+        base64encode(conn, "ABC".getBytes(), "QUJD");
+        base64encode(conn, "ABCD".getBytes(), "QUJDRA==");
+        base64decode(conn, "", "".getBytes());
+        base64decode(conn, "QQ==", "A".getBytes());
+        base64decode(conn, "QUI=", "AB".getBytes());
+        base64decode(conn, "QUJD", "ABC".getBytes());
+        base64decode(conn, "QUJDRA==", "ABCD".getBytes());
 
         Random rand = new Random();
         Base64.Encoder enc = Base64.getEncoder();
@@ -477,40 +477,29 @@ public class TestFunctions extends TestDb implements AggregateFunction {
 
             rand.nextBytes(sourceArray);
 
-            base64encode(conn, sourceArray, enc.encode(sourceArray));
-            base64decode(conn, enc.encode(sourceArray), sourceArray);
+            base64encode(conn, sourceArray, enc.encodeToString(sourceArray));
+            base64decode(conn, enc.encodeToString(sourceArray), sourceArray);
         }
 
         conn.close();
     }
 
-    private void base64encode(Connection conn, String source, String expected) throws SQLException {
-        base64(conn, source, expected, false);
-    }
-
-    private void base64decode(Connection conn, String source, String expected) throws SQLException {
-        base64(conn, source, expected, true);
-    }
-
-    private void base64(Connection conn, String source, String expected, boolean decode) throws SQLException {
-        base64(conn, source.getBytes(), expected.getBytes(), decode);
-    }
-
-    private void base64encode(Connection conn, byte[] source, byte[] expected) throws SQLException {
-        base64(conn, source, expected, false);
-    }
-
-    private void base64decode(Connection conn, byte[] source, byte[] expected) throws SQLException {
-        base64(conn, source, expected, true);
-    }
-
-    private void base64(Connection conn, byte[] source, byte[] expected, boolean decode) throws SQLException {
-        PreparedStatement stat = conn.prepareStatement("call base64_" + (decode ? "decode" : "encode") + "(?)");
+    private void base64encode(Connection conn, byte[] source, String expected) throws SQLException {
+        PreparedStatement stat = conn.prepareStatement("call base64_encode(?)");
         stat.setBytes(1, source);
         ResultSet rs = stat.executeQuery();
         rs.next();
-        byte[] bytes = rs.getBytes(1);
-        assertEquals(expected, bytes);
+        String actual = rs.getString(1);
+        assertEquals(expected, actual);
+    }
+
+    private void base64decode(Connection conn, String source, byte[] expected) throws SQLException {
+        PreparedStatement stat = conn.prepareStatement("call base64_decode(?)");
+        stat.setString(1, source);
+        ResultSet rs = stat.executeQuery();
+        rs.next();
+        byte[] actual = rs.getBytes(1);
+        assertEquals(expected, actual);
     }
 
     private void testDeterministic() throws SQLException {
