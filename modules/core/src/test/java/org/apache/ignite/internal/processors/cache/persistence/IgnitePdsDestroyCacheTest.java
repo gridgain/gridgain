@@ -19,11 +19,22 @@ package org.apache.ignite.internal.processors.cache.persistence;
 import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
+import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManagerImpl;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -115,6 +126,135 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
     @Test
     public void testDestroyCacheOperationNotBlockingCheckpointTest_LocalCache() throws Exception {
         doTestDestroyCacheOperationNotBlockingCheckpointTest(true);
+    }
+
+    /**
+     * Tests cache destry with hudge dirty pages.
+     */
+    @Test
+    public void testDestroyCache() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        ignite.getOrCreateCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setGroupName("gr1"));
+        ignite.getOrCreateCache(new CacheConfiguration<>("cache2").setGroupName("gr1"));
+
+        try (IgniteDataStreamer<Object, Object> streamer2 = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+            PageMemoryEx pageMemory = (PageMemoryEx)ignite.cachex(DEFAULT_CACHE_NAME).context().dataRegion().pageMemory();
+
+            long totalPages = pageMemory.totalPages();
+
+            for (int i = 0; i <= totalPages; i++)
+                streamer2.addData(i, new byte[pageMemory.pageSize() / 2]);
+        }
+
+        ignite.destroyCache(DEFAULT_CACHE_NAME);
+    }
+
+    /**
+     * Tests partitioned cache destry with hudge dirty pages.
+     */
+    @Test
+    public void testDestroyCacheNotThrowsOOMPartitioned() throws Exception {
+        doTestDestroyCacheNotThrowsOOM(false);
+    }
+
+    /**
+     * Tests local cache destry with hudge dirty pages.
+     */
+    @Test
+    public void testDestroyCacheNotThrowsOOMLocal() throws Exception {
+        doTestDestroyCacheNotThrowsOOM(true);
+    }
+
+    /** */
+    public void doTestDestroyCacheNotThrowsOOM(boolean loc) throws Exception {
+        int batchSize = 1000;
+
+        int pageSize = 1024;
+
+        int partitions = 32;
+
+        DataStorageConfiguration ds = new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                .setMaxSize(batchSize * pageSize * partitions)
+                .setPersistenceEnabled(true))
+            .setPageSize(pageSize);
+
+        int payLoadSize = pageSize / 2;
+
+        IgniteConfiguration cfg = getConfiguration().setDataStorageConfiguration(ds);
+
+        final IgniteEx ignite = startGrid(cfg);
+
+        ignite.cluster().active(true);
+
+        startGroupCachesDynamically(ignite, loc);
+
+        GridCacheDatabaseSharedManager db =
+            (GridCacheDatabaseSharedManager)ignite.context().cache().context().database();
+
+        final CacheGroupContext grp = ignite.cachex(cacheName(0)).context().group();
+
+        final IgniteCacheOffheapManager offheap = grp.offheap();
+
+        Field batchField = U.findField(IgniteCacheOffheapManagerImpl.class, "BATCH_SIZE");
+
+        assertEquals(batchField.getInt(offheap), batchSize);
+
+        final AtomicLong progress = new AtomicLong();
+
+        PageMemoryEx pageMemory = (PageMemoryEx) ignite.cachex(cacheName(0)).context().dataRegion().pageMemory();
+
+        db.enableCheckpoints(false).get();
+
+        runAsync(() -> {
+            IgniteCache<Object, byte[]> c1 = ignite.cache(cacheName(0));
+
+            long totalPages = pageMemory.totalPages();
+
+            for (int i = 0; i <= totalPages; i++) {
+                c1.put(i, new byte[payLoadSize]);
+
+                progress.incrementAndGet();
+            }
+        });
+
+        IgniteInternalFuture<?> f = runAsync(() -> {
+            long processed = progress.get();
+
+            while (true) {
+                try {
+                    U.sleep(500);
+
+                    if (progress.get() != processed)
+                        processed = progress.get();
+                    else {
+                        db.enableCheckpoints(true).get();
+
+                        forceCheckpoint();
+
+                        return;
+                    }
+
+                }
+                catch (IgniteCheckedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        f.get();
+
+        IgniteInternalFuture<?> delFut = runAsync(() -> {
+            if (loc)
+                ignite.cache(cacheName(0)).close();
+            else
+                ignite.destroyCache(cacheName(0));
+        });
+
+        delFut.get(20_000);
     }
 
     /**
