@@ -179,7 +179,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 int[] partitions = ignite.affinity(cache).primaryPartitions(ignite.localNode());
 
                 for (int partId : partitions) {
-                    schedule(new Batch(UUID.randomUUID(), cache, partId, null));
+                    schedule(new Batch(sesId, cache, partId, null));
 
                     workProgress.assignWork();
                 }
@@ -198,7 +198,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     throw new IgniteException(error.get());
 
                 if (isEmpty() && live) {
-                    Thread.sleep(1_000);
+                    Thread.sleep(100);
 
                     continue;
                 }
@@ -243,7 +243,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Batch workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByBatchTask.class,
-            new PartitionBatchRequest(workload.getSessionId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
+            new PartitionBatchRequest(workload.sessionId(), workload.cacheName(), workload.partitionId(), batchSize, workload.lowerKey(), startTopVer),
             res -> {
                 KeyCacheObject nextBatchKey = res.get1();
 
@@ -252,11 +252,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 assert nextBatchKey != null || recheckKeys.isEmpty();
 
                 if (nextBatchKey != null)
-                    schedule(new Batch(workload.getSessionId(), workload.cacheName(), workload.partitionId(), nextBatchKey));
+                    schedule(new Batch(workload.sessionId(), workload.cacheName(), workload.partitionId(), nextBatchKey));
 
                 if (!recheckKeys.isEmpty())
                     schedule(
-                        new Recheck(workload.getSessionId(), recheckKeys, workload.cacheName(), workload.partitionId(), 0, 0),
+                        new Recheck(workload.sessionId(), recheckKeys, workload.cacheName(), workload.partitionId(), 0, 0),
                         recheckDelay,
                         TimeUnit.SECONDS
                     );
@@ -270,7 +270,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Recheck workload) throws InterruptedException {
         compute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(workload.getSessionId(), new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
+            new RecheckRequest(workload.sessionId(), new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
                 workload.partitionId(), startTopVer),
             actualKeys -> {
                 Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
@@ -280,7 +280,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 if (!notResolvingConflicts.isEmpty()) {
                     if (workload.attempt() < recheckAttempts) {
                         schedule(new Recheck(
-                                workload.getSessionId(),
+                                workload.sessionId(),
                                 notResolvingConflicts,
                                 workload.cacheName(),
                                 workload.partitionId(),
@@ -292,7 +292,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         );
                     }
                     else if (fixMode) {
-                        scheduleHighPriority(repair(workload.getSessionId(), workload.cacheName(), workload.partitionId(), notResolvingConflicts,
+                        scheduleHighPriority(repair(workload.sessionId(), workload.cacheName(), workload.partitionId(), notResolvingConflicts,
                             actualKeys, workload.repairAttempt()));
                     }
                     else {
@@ -310,7 +310,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void handle(Repair workload) throws InterruptedException {
         compute(
             RepairRequestTask.class,
-            new RepairRequest(workload.getSessionId(), workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
+            new RepairRequest(workload.sessionId(), workload.data(), workload.cacheName(), workload.partitionId(), startTopVer, repairAlg,
                 workload.attempt()),
             repairRes -> {
                 if (!repairRes.repairedKeys().isEmpty())
@@ -343,7 +343,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     if (workload.attempt() < RepairRequestTask.MAX_REPAIR_ATTEMPTS) {
                         schedule(
                             new Recheck(
-                                workload.getSessionId(),
+                                workload.sessionId(),
                                 recheckKeys,
                                 workload.cacheName(),
                                 workload.partitionId(),
@@ -401,7 +401,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      *
      */
     private Repair repair(
-        UUID sesId,
+        long sesId,
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts,

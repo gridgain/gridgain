@@ -53,7 +53,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_ALG;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.FIX_MODE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOAD_FACTOR;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.PARALLELISM;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 
 /**
@@ -79,9 +79,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         paramsDesc.put(FIX_MODE.toString(),
             "If present, fix all inconsistent data. Default value is " + FIX_MODE.defaultValue() + '.');
 
-        paramsDesc.put(LOAD_FACTOR.toString(),
-            "Percent of system loading between 0 (exclusive) and 1 (inclusive). Default value is " +
-                LOAD_FACTOR.defaultValue() + '.');
+        paramsDesc.put(PARALLELISM.toString(),
+            "Maximum number of threads that can be involved in partition reconciliation activities on one node. " +
+                "Default value is " + PARALLELISM.defaultValue() + ", which means the value will be initialzed with " +
+                "Runtime.getRuntime().availableProcessors() of a server node.");
 
         paramsDesc.put(BATCH_SIZE.toString(),
             "Amount of keys to retrieve within one job. Default value is " + BATCH_SIZE.defaultValue() + '.');
@@ -105,7 +106,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             PARTITION_RECONCILIATION,
             desc,
             paramsDesc,
-            optional(FIX_MODE), optional(LOAD_FACTOR), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
+            optional(FIX_MODE), optional(PARALLELISM), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
             optional(INCLUDE_SENSITIVE), optional(FIX_ALG), optional(LOCAL_OUTPUT), optional(CACHES));
     }
 
@@ -150,7 +151,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             args.fixMode,
             args.verbose,
             args.console,
-            args.loadFactor,
+            args.parallelism,
             args.batchSize,
             args.recheckAttempts,
             args.repairAlg,
@@ -171,7 +172,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         boolean fixMode = (boolean) FIX_MODE.defaultValue();
         boolean verbose = (boolean) INCLUDE_SENSITIVE.defaultValue();
         boolean console = (boolean) LOCAL_OUTPUT.defaultValue();
-        double loadFactor = (double) LOAD_FACTOR.defaultValue();
+        int parallelism = (int) PARALLELISM.defaultValue();
         int batchSize = (int) BATCH_SIZE.defaultValue();
         int recheckAttempts = (int) RECHECK_ATTEMPTS.defaultValue();
         RepairAlgorithm repairAlg = (RepairAlgorithm) FIX_ALG.defaultValue();
@@ -225,20 +226,22 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
                         break;
 
-                    case LOAD_FACTOR:
-                        strVal = argIter.nextArg("The load factor should be specified.");
+                    case PARALLELISM:
+                        strVal = argIter.nextArg("The parallelism level should be specified.");
 
                         try {
-                            loadFactor = Double.parseDouble(strVal);
+                            parallelism = Integer.parseInt(strVal);
                         }
                         catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Invalid load factor: " + strVal +
-                                ". Double value between 0 (exclusive) and 1 (inclusive) should be used.");
+                            throw new IllegalArgumentException("Invalid parallelism: " + strVal +
+                                ". Integer value from 1 to 128 should be specified, " +
+                                "or 0 (Runtime.getRuntime().availableProcessors() will be used in such case).");
                         }
 
-                        if (loadFactor <= 0 || loadFactor > 1) {
-                            throw new IllegalArgumentException("Invalid load factor: " + strVal +
-                                ". Double value between 0 (exclusive) and 1 (inclusive) should be used.");
+                        if (parallelism < 0 || parallelism > 128) {
+                            throw new IllegalArgumentException("Invalid parallelism: " + strVal +
+                                ". Integer value from 1 to 128 should be specified, " +
+                                "or 0 (Runtime.getRuntime().availableProcessors() will be used in such case).");
                         }
 
                         break;
@@ -300,7 +303,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             }
         }
 
-        args = new Arguments(cacheNames, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg,
+        args = new Arguments(cacheNames, fixMode, verbose, console, parallelism, batchSize, recheckAttempts, repairAlg,
             recheckDelay);
     }
 
@@ -329,7 +332,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             .a(args.caches() == null ? "" : String.join(", ", args.caches()))
             .a("], fix-mode=[" + args.fixMode)
             .a("], verbose=[" + args.verbose)
-            .a("], load-factor=[" + args.loadFactor)
+            .a("], parallelism=[" + args.parallelism)
             .a("], batch-size=[" + args.batchSize)
             .a("], recheck-attempts=[" + args.recheckAttempts)
             .a("], fix-alg=[" + args.repairAlg + "]")
@@ -424,8 +427,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         /** Flag indicates that the result is printed to the console. */
         private final boolean console;
 
-        /** Percent of system loading between 0 and 1. */
-        private final double loadFactor;
+        /** Maximum number of threads that can be involved in reconciliation activities. */
+        private final int parallelism;
 
         /** Amount of keys to checked at one time. */
         private final int batchSize;
@@ -445,18 +448,18 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
          * @param caches Caches.
          * @param fixMode Fix inconsistency if {@code True}.
          * @param verbose Print key and value to result log if {@code True}.
-         * @param loadFactor Percent of system loading.
+         * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
          * @param batchSize Batch size.
          * @param recheckAttempts Amount of recheck attempts.
          */
         public Arguments(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
-            double loadFactor,
+            int parallelism,
             int batchSize, int recheckAttempts, RepairAlgorithm repairAlg, int recheckDelay) {
             this.caches = caches;
             this.fixMode = fixMode;
             this.verbose = verbose;
             this.console = console;
-            this.loadFactor = loadFactor;
+            this.parallelism = parallelism;
             this.batchSize = batchSize;
             this.recheckAttempts = recheckAttempts;
             this.repairAlg = repairAlg;
@@ -478,10 +481,10 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         }
 
         /**
-         * @return Percent of system loading.
+         * @return Maximum number of threads that can be involved in reconciliation activities.
          */
-        public double loadFactor() {
-            return loadFactor;
+        public int parallelism() {
+            return parallelism;
         }
 
         /**

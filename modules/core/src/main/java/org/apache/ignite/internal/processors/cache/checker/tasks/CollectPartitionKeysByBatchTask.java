@@ -27,11 +27,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.compute.ComputeJob;
-import org.apache.ignite.compute.ComputeJobAdapter;
-import org.apache.ignite.compute.ComputeJobResult;
-import org.apache.ignite.compute.ComputeJobResultPolicy;
-import org.apache.ignite.compute.ComputeTaskAdapter;
+import org.apache.ignite.compute.*;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -43,11 +39,13 @@ import org.apache.ignite.internal.processors.cache.checker.util.KeyComparator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.resources.JobContextResource;
 import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -189,11 +187,15 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
         @LoggerResource
         private IgniteLogger log;
 
+        /** */
+        @JobContextResource
+        private ComputeJobContext jobCtx;
+
         /** Partition key. */
         private PartitionBatchRequest partBatch;
 
         /**
-         * @param partKey Partition key.
+         * @param partBatch Partition key.
          */
         private CollectPartitionKeysByBatchJob(PartitionBatchRequest partBatch) {
             this.partBatch = partBatch;
@@ -201,6 +203,25 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
         /** {@inheritDoc} */
         @Override public ExecutionResult<List<PartitionKeyVersion>> execute() throws IgniteException {
+            ReconciliationExecutionContext execCtx = ignite.context().diagnostic().reconciliationExecutionContext();
+
+            boolean freeThreadsAvailable = execCtx.acquireJobPermitOrHold(partBatch.sessionId(), jobCtx);
+
+            if (!freeThreadsAvailable)
+                return null;
+
+            try {
+                return execute0();
+            }
+            finally {
+                execCtx.releaseJobPermit(partBatch.sessionId());
+            }
+        }
+
+        /**
+         * @return Execution result.
+         */
+        private ExecutionResult<List<PartitionKeyVersion>> execute0() {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();

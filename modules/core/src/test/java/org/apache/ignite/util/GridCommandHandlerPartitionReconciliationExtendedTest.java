@@ -320,7 +320,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         do {
             collect = srvs.stream()
-                .map(g -> ((IgniteEx)g).context().diagnostic().getReconciliationSessionId())
+                .map(g -> ((IgniteEx)g).context().diagnostic().reconciliationExecutionContext().sessionId())
                 .distinct()
                 .collect(toList());
         }
@@ -336,8 +336,6 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      *
      * @param ctx Context.
      * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
      */
     protected void corruptDataEntry(
         GridCacheContext<Object, Object> ctx,

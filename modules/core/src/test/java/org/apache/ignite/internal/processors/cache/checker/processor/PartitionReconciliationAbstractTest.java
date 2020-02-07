@@ -62,6 +62,8 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
             new VisorPartitionReconciliationTaskArg.Builder()
                 .caches(new HashSet<>(Arrays.asList(caches)))
                 .recheckDelay(1)
+                .parallelism(1)
+                .batchSize(1000000)
                 .fixMode(fixMode)
                 .repairAlg(repairAlgorithm)
         );

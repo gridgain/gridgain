@@ -57,8 +57,8 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
     private final Path diagnosticPath;
     /** */
     private final PageHistoryDiagnoster pageHistoryDiagnoster;
-    /** Id of last or current reconciliation session. */
-    private volatile long reconciliationSessionId;
+    /** */
+    private final ReconciliationExecutionContext reconciliationExecutionContext;
 
     /**
      * @param ctx Kernal context.
@@ -70,6 +70,7 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
 
         pageHistoryDiagnoster = new PageHistoryDiagnoster(ctx, this::diagnosticFile);
 
+        reconciliationExecutionContext = new ReconciliationExecutionContext(ctx);
     }
 
     /** {@inheritDoc} */
@@ -136,17 +137,10 @@ public class DiagnosticProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @return Id of last or current reconciliation session.
+     * @return Reconciliation execution context.
      */
-    public long getReconciliationSessionId() {
-        return reconciliationSessionId;
-    }
-
-    /**
-     *
-     */
-    public void setReconciliationSessionId(long reconciliationSessionId) {
-        this.reconciliationSessionId = reconciliationSessionId;
+    public ReconciliationExecutionContext reconciliationExecutionContext() {
+        return reconciliationExecutionContext;
     }
 
     /**

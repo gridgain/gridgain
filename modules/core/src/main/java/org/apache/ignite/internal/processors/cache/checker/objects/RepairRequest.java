@@ -58,7 +58,7 @@ public class RepairRequest extends CachePartitionRequest {
      * @param repairAttempt Repair attempt.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public RepairRequest(UUID sessionId, Map<KeyCacheObject, Map<UUID, VersionedValue>> data, String cacheName, int partId,
+    public RepairRequest(long sessionId, Map<KeyCacheObject, Map<UUID, VersionedValue>> data, String cacheName, int partId,
         AffinityTopologyVersion startTopVer, RepairAlgorithm repairAlg,
         int repairAttempt) {
         super(sessionId);

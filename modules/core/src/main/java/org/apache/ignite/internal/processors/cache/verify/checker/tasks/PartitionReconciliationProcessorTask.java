@@ -52,7 +52,6 @@ import org.apache.ignite.resources.LoggerResource;
 
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
-import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.parallelismLevel;
 
 /**
  *
@@ -85,7 +84,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         LocalDateTime startTime = LocalDateTime.now();
         long sesId = startTime.toEpochSecond(ZoneOffset.UTC);
 
-        ignite.compute().broadcastAsync(new ReconciliationSessionId(sesId)).get();
+        ignite.compute().broadcastAsync(new ReconciliationSessionId(sesId, arg.parallelism())).get();
 
         for (ClusterNode node : subgrid)
             jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
@@ -201,12 +200,18 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
 
             try {
+                int parallelism = 128;
+//                int parallelism = reconciliationTaskArg.parallelism();
+
+                if (parallelism == 0)
+                    parallelism = Runtime.getRuntime().availableProcessors();
+
                 ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
                     caches,
                     reconciliationTaskArg.fixMode(),
-                    parallelismLevel(reconciliationTaskArg.loadFactor(), caches, ignite),
+                    parallelism,
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
                     reconciliationTaskArg.repairAlg(),
@@ -272,6 +277,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         /** Session id. */
         private final long sesId;
 
+        /** Parallelism level. */
+        private final int parallelism;
+
         /** */
         @IgniteInstanceResource
         private IgniteEx ignite;
@@ -281,13 +289,14 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
          *
          * @param sesId Partition reconsiliation session identifier.
          */
-        public ReconciliationSessionId(long sesId) {
+        public ReconciliationSessionId(long sesId, int parallelism) {
             this.sesId = sesId;
+            this.parallelism = parallelism;
         }
 
         /** {@inheritDoc} */
         @Override public void run() {
-            ignite.context().diagnostic().setReconciliationSessionId(sesId);
+            ignite.context().diagnostic().reconciliationExecutionContext().registerSession(sesId, parallelism);
         }
     }
 }

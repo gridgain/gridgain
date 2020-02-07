@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
-import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 
@@ -53,10 +52,9 @@ public class PartitionBatchRequest extends CachePartitionRequest {
      * @param partId Partition id.
      * @param batchSize Batch size.
      * @param lowerKey Lower key.
-     * @param ver
      */
     public PartitionBatchRequest(
-        UUID sessionId,
+        long sessionId,
         String cacheName,
         int partId,
         int batchSize,
@@ -74,14 +72,14 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     /**
      *
      */
-    public int partitionId() {
+    @Override public int partitionId() {
         return partId;
     }
 
     /**
      *
      */
-    public String cacheName() {
+    @Override public String cacheName() {
         return cacheName;
     }
 

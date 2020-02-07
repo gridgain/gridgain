@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -83,7 +84,8 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(UUID.randomUUID(), recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
+            new RecheckRequest(ThreadLocalRandom.current().nextLong(), recheckKeys, DEFAULT_CACHE_NAME,
+                FIRST_PARTITION, lastTopologyVersion(node))
         ).getResult();
 
         assertEquals(2, res.size());
@@ -106,7 +108,8 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(UUID.randomUUID(), recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
+            new RecheckRequest(ThreadLocalRandom.current().nextLong(), recheckKeys, DEFAULT_CACHE_NAME,
+                FIRST_PARTITION, lastTopologyVersion(node))
         ).getResult();
 
         assertTrue(res.isEmpty());
@@ -133,7 +136,8 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(UUID.randomUUID(), recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
+            new RecheckRequest(ThreadLocalRandom.current().nextLong(), recheckKeys,
+                DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
         ).getResult();
 
         assertTrue(res.isEmpty());

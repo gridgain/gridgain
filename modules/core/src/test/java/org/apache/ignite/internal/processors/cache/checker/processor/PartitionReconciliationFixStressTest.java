@@ -41,7 +41,7 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
         CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[] {
             CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
 
-        int[] partitions = {1, 32};
+        int[] partitions = {1, 256};
         RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
@@ -58,8 +58,8 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
      *
      * @throws Exception If failed.
      */
-    @Test
-    public void testReconciliationOfColdKeysUnderLoad() throws Exception {
+     @Test
+     @Override public void testReconciliationOfColdKeysUnderLoad() throws Exception {
         super.testReconciliationOfColdKeysUnderLoad();
 
         assertFalse(idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts());

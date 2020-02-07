@@ -64,7 +64,11 @@ public class VisorPartitionReconciliationCancelTask extends VisorOneNodeTask<Voi
         @Override protected Void run(@Nullable Void arg) throws IgniteException {
             ignite.compute()
                 .broadcastAsync(
-                    () -> ((IgniteEx)localIgnite()).context().diagnostic().setReconciliationSessionId(STOP_SESSION_ID))
+                    () -> ((IgniteEx)localIgnite())
+                        .context()
+                        .diagnostic()
+                        .reconciliationExecutionContext()
+                        .registerSession(STOP_SESSION_ID, 1))
                 .get();
 
             return null;

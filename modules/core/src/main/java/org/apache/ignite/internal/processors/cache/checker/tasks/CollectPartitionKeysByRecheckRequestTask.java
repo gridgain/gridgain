@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
+import org.apache.ignite.compute.ComputeJobContext;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
@@ -41,9 +42,11 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
+import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.apache.ignite.resources.JobContextResource;
 import org.apache.ignite.resources.LoggerResource;
 
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.unmarshalKey;
@@ -154,6 +157,10 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
         @LoggerResource
         private IgniteLogger log;
 
+        /** */
+        @JobContextResource
+        private ComputeJobContext jobCtx;
+
         /** Partition key. */
         private final RecheckRequest recheckRequest;
 
@@ -166,6 +173,25 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
         /** {@inheritDoc} */
         @Override public ExecutionResult<List<PartitionDataRow>> execute() throws IgniteException {
+            ReconciliationExecutionContext execCtx = ignite.context().diagnostic().reconciliationExecutionContext();
+
+            boolean freeThreadsAvailable = execCtx.acquireJobPermitOrHold(recheckRequest.sessionId(), jobCtx);
+
+            if (!freeThreadsAvailable)
+                return null;
+
+            try {
+                return execute0();
+            }
+            finally {
+                execCtx.releaseJobPermit(recheckRequest.sessionId());
+            }
+        }
+
+        /**
+         * @return Execution result.
+         */
+        private ExecutionResult<List<PartitionDataRow>> execute0() {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(recheckRequest.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();

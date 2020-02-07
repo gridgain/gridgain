@@ -68,7 +68,7 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
      *
      * @throws Exception If failed.
      */
-    @Test
+    @Override @Test
     public void testReconciliationOfColdKeysUnderLoad() throws Exception {
         IgniteCache<Integer, String> clientCache = client.cache(DEFAULT_CACHE_NAME);
 
