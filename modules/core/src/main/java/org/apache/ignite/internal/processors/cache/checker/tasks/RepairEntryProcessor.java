@@ -146,8 +146,6 @@ public class RepairEntryProcessor implements EntryProcessor {
 
                 return RepairStatus.SUCCESS;
             }
-
-            // TODO: 23.12.19 Add optimizations here
         }
         else {
             // Remove it after fixes: https://ggsystems.atlassian.net/browse/GG-27419

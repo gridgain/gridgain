@@ -40,15 +40,14 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.ConsoleTestLogger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.LATEST;
+import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.MAJORITY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.PRIMARY;
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 import static org.junit.Assert.assertEquals;
@@ -131,11 +130,11 @@ public class RepairRequestTaskTest {
         assertTrue(res.getResult().keysToRepair().isEmpty());
         assertEquals(1, res.getResult().repairedKeys().size());
 
-        Map.Entry<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> entry = res.getResult()
+        Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
             .repairedKeys().entrySet().iterator().next();
         assertEquals(keyVers, entry.getValue());
 
-        RepairMeta repairMeta = entry.getKey().get2();
+        RepairMeta repairMeta = entry.getValue();
         assertTrue(repairMeta.fixed());
         assertEquals(repairAlgorithm, repairMeta.repairAlg());
 
@@ -175,11 +174,11 @@ public class RepairRequestTaskTest {
             assertTrue(res.getResult().keysToRepair().isEmpty());
             assertEquals(1, res.getResult().repairedKeys().size());
 
-            Map.Entry<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> entry = res.getResult()
+            Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
                 .repairedKeys().entrySet().iterator().next();
             assertEquals(keyVers, entry.getValue());
 
-            RepairMeta repairMeta = entry.getKey().get2();
+            RepairMeta repairMeta = entry.getValue();
             assertTrue(repairMeta.fixed());
             assertEquals(LATEST, repairMeta.repairAlg());
         }
@@ -213,11 +212,11 @@ public class RepairRequestTaskTest {
         assertTrue(res.getResult().keysToRepair().isEmpty());
         assertEquals(1, res.getResult().repairedKeys().size());
 
-        Map.Entry<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> entry = res.getResult()
+        Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
             .repairedKeys().entrySet().iterator().next();
         assertEquals(keyVers, entry.getValue());
 
-        RepairMeta repairMeta = entry.getKey().get2();
+        RepairMeta repairMeta = entry.getValue();
         assertTrue(repairMeta.fixed());
         assertEquals(repairAlgorithm, repairMeta.repairAlg());
 

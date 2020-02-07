@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.junit.Test;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -30,14 +29,8 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
-import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
-import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
@@ -45,8 +38,10 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.junit.Test;
 
 import static java.io.File.separatorChar;
+import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.diagnostic.DiagnosticProcessor.DEFAULT_TARGET_FOLDER;
 
@@ -915,67 +910,6 @@ public abstract class GridCommandHandlerPartitionReconciliationAbstractTest exte
                 invalidVerNode3));
 
         return res;
-    }
-
-    /**
-     * Corrupts data entry.
-     *
-     * @param ctx Context.
-     * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
-     * @param ver GridCacheVersion to use.
-     * @param brokenValPostfix Postfix to add to value if breakData flag is set to true.
-     */
-    protected void corruptDataEntry(
-        GridCacheContext<Object, Object> ctx,
-        Object key,
-        boolean breakCntr,
-        boolean breakData,
-        GridCacheVersion ver,
-        String brokenValPostfix
-    ) {
-        int partId = ctx.affinity().partition(key);
-
-        try {
-            long updateCntr = ctx.topology().localPartition(partId).updateCounter();
-
-            Object valToPut = ctx.cache().keepBinary().get(key);
-
-            if (breakCntr)
-                updateCntr++;
-
-            if (breakData)
-                valToPut = valToPut.toString() + brokenValPostfix;
-
-            // Create data entry
-            DataEntry dataEntry = new DataEntry(
-                ctx.cacheId(),
-                new KeyCacheObjectImpl(key, null, partId),
-                new CacheObjectImpl(valToPut, null),
-                GridCacheOperation.UPDATE,
-                new GridCacheVersion(),
-                ver,
-                0L,
-                partId,
-                updateCntr
-            );
-
-            IgniteCacheDatabaseSharedManager db = ctx.shared().database();
-
-            db.checkpointReadLock();
-
-            try {
-                U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry,
-                    false);
-            }
-            finally {
-                db.checkpointReadUnlock();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            e.printStackTrace();
-        }
     }
 
     /**

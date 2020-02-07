@@ -22,8 +22,6 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 
-// TODO: 20.11.19 Add to appropriate suites.
-
 /**
  * Tests for checking partition reconciliation control.sh command within context of atomic cache.
  */

@@ -20,18 +20,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
-import org.apache.ignite.internal.util.typedef.T2;
 
 /** Result of {@code RepairResultTask}. */
 public class RepairResult {
-
     /** Keys to repair with corresponding values and versions per nodes. */
     private Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepair = new HashMap<>();
 
     /** Repaired keys. */
-    // TODO: 05.12.19 I don't like idea of tuple here.
-    private Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
-        new HashMap<>();
+    private Map<PartitionKeyVersion, RepairMeta> repairedKeys = new HashMap<>();
 
     /**
      * Default constructor.
@@ -47,7 +43,7 @@ public class RepairResult {
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public RepairResult(
         Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepair,
-        Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys) {
+        Map<PartitionKeyVersion, RepairMeta> repairedKeys) {
         this.keysToRepair = keysToRepair;
         this.repairedKeys = repairedKeys;
     }
@@ -64,7 +60,7 @@ public class RepairResult {
      * @return Repaired keys.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys() {
+    public Map<PartitionKeyVersion, RepairMeta> repairedKeys() {
         return repairedKeys;
     }
 }
