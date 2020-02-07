@@ -150,7 +150,7 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
      * @throws Exception if failed.
      */
     @Test
-    public void shouldNotBeProblemToPutToExpiredCacheConcurrentlyWithCheckpoint() throws Exception {
+    public void testPutOpsIntoCacheWithExpirationConcurrentlyWithCheckpointCompleteSuccessfully() throws Exception {
         IgniteEx ig0 = startGrid(0);
 
         ig0.cluster().active(true);
@@ -210,7 +210,7 @@ public class IgnitePdsWithTtlDeactivateOnHighloadTest extends GridCommonAbstract
      * @throws Exception if failed.
      */
     @Test
-    public void shouldNotBeProblemToPutToExpiredCacheConcurrently() throws Exception {
+    public void testConcurrentPutOpsToCacheWithExpirationCompleteSuccesfully() throws Exception {
         final AtomicBoolean end = new AtomicBoolean();
 
         final IgniteEx srv = startGrid(0);
