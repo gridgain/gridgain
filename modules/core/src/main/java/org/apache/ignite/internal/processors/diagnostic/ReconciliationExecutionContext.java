@@ -129,8 +129,6 @@ public class ReconciliationExecutionContext {
 
         runningJobsCnt.put(sessionId, running - 1);
 
-        assert Thread.currentThread().getStackTrace().length < 100;
-
         if (pendingJob != null) {
             try {
                 kernalCtx.closure().runLocal(pendingJob::callcc, GridIoPolicy.MANAGEMENT_POOL);

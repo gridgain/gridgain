@@ -200,8 +200,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
 
             try {
-                int parallelism = 128;
-//                int parallelism = reconciliationTaskArg.parallelism();
+                int parallelism = reconciliationTaskArg.parallelism();
 
                 if (parallelism == 0)
                     parallelism = Runtime.getRuntime().availableProcessors();

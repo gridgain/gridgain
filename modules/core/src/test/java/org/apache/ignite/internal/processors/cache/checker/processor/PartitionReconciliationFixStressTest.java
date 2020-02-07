@@ -34,21 +34,25 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
     /**
      *
      */
-    @Parameterized.Parameters(name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm={3}")
+    @Parameterized.Parameters(
+        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
         CacheAtomicityMode[] atomicityModes = new CacheAtomicityMode[] {
             CacheAtomicityMode.ATOMIC, CacheAtomicityMode.TRANSACTIONAL};
 
-        int[] partitions = {1, 256};
+        int[] partitions = {1, 32};
         RepairAlgorithm[] repairAlgorithms = {LATEST, PRIMARY, MAJORITY, REMOVE};
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
                 for (RepairAlgorithm repairAlgorithm : repairAlgorithms)
-                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm});
+                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm, 4});
         }
+
+        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, true, LATEST, 1});
+        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, true, PRIMARY, 1});
 
         return params;
     }
