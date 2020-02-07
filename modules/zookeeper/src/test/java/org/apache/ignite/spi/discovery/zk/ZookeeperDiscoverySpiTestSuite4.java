@@ -16,13 +16,6 @@
 
 package org.apache.ignite.spi.discovery.zk;
 
-import org.apache.ignite.internal.ClusterNodeMetricsUpdateTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCachePutRetryAtomicSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.IgniteCachePutRetryTransactionalSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.near.GridCacheAtomicMultiNodeFullApiSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.replicated.GridCacheReplicatedAtomicMultiNodeFullApiSelfTest;
-import org.apache.ignite.internal.processors.cache.distributed.replicated.IgniteCacheReplicatedQuerySelfTest;
-import org.apache.ignite.internal.processors.metastorage.DistributedMetaStoragePersistentTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
@@ -33,15 +26,15 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-    ZookeeperDiscoverySuitePreprocessorTest.class,
-    IgniteCachePutRetryAtomicSelfTest.class,
-    IgniteCachePutRetryTransactionalSelfTest.class,
-    ClusterNodeMetricsUpdateTest.class,
-    GridCacheAtomicMultiNodeFullApiSelfTest.class,
-    GridCacheReplicatedAtomicMultiNodeFullApiSelfTest.class,
-    IgniteCacheReplicatedQuerySelfTest.class,
+//    ZookeeperDiscoverySuitePreprocessorTest.class,
+//    IgniteCachePutRetryAtomicSelfTest.class,
+//    IgniteCachePutRetryTransactionalSelfTest.class,
+//    ClusterNodeMetricsUpdateTest.class,
+//    GridCacheAtomicMultiNodeFullApiSelfTest.class,
+//    GridCacheReplicatedAtomicMultiNodeFullApiSelfTest.class,
+//    IgniteCacheReplicatedQuerySelfTest.class,
     DistributedMetaStorageTest.class,
-    DistributedMetaStoragePersistentTest.class
+//    DistributedMetaStoragePersistentTest.class
 })
 public class ZookeeperDiscoverySpiTestSuite4 {
     /** */

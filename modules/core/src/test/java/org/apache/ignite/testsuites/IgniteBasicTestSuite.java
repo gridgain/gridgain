@@ -93,6 +93,7 @@ import org.apache.ignite.internal.processors.database.IndexStorageSelfTest;
 import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorLoggingTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorThreadDumpThrottlingTest;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageStopTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryCacheTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorkerTest;
@@ -269,6 +270,7 @@ import org.junit.runners.Suite;
 
     // In-memory Distributed MetaStorage.
     DistributedMetaStorageTest.class,
+    DistributedMetaStorageStopTest.class,
     DistributedMetaStorageHistoryCacheTest.class,
     DmsDataWriterWorkerTest.class,
     InMemoryCachedDistributedMetaStorageBridgeTest.class,
