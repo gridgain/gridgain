@@ -16,7 +16,6 @@
 
 package org.apache.ignite.qa.query;
 
-import com.sun.source.tree.AssertTree;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.DriverManager;
