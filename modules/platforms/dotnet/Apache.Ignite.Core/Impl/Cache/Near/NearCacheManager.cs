@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System;
     using System.Diagnostics;
     using System.Threading;
     using Apache.Ignite.Core.Events;
@@ -159,6 +160,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 // Clear all caches on node enter/leave: data may have been lost, and primaries change.
                 // We could refine this by checking every key (GridNearCacheEntry.valid()),
                 // but the complexity and upfront performance cost are not worth it.
+                
+                // TODO: Remove
+                Console.WriteLine("EVT {0} on {1}", evt.Name,_ignite.Name);
+                
                 ClearAll();
             }
 
