@@ -259,6 +259,20 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Waits for condition, polling in a busy wait loop, then asserts that condition is true.
+        /// </summary>
+        /// <param name="cond">Condition.</param>
+        /// <param name="timeout">Timeout, in milliseconds.</param>
+        /// <param name="message">Assertion message.</param>
+        public static void WaitForTrueCondition(Func<bool> cond, int timeout = 1000, string message = null)
+        {
+            var res = WaitForCondition(cond, timeout);
+            message = message ?? string.Format("Condition not reached within {0} ms", timeout);
+
+            Assert.IsTrue(res, message);
+        }
+
+        /// <summary>
         /// Gets the static discovery.
         /// </summary>
         public static TcpDiscoverySpi GetStaticDiscovery()

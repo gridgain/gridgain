@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -224,10 +225,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var rnd = new Random();
             var val = 1;
             var key = 1;
+            var timeout = 1000;
             serverCache[key] = new Foo(val);
 
             var start = DateTime.Now;
-            while (DateTime.Now - start < TimeSpan.FromSeconds(10))
+            while (DateTime.Now - start < TimeSpan.FromSeconds(20))
             {
                 // Change topology randomly.
                 var idx = rnd.Next(1, 5);
@@ -248,8 +250,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 // Verify data.
                 if (dataLost)
                 {
-                    Assert.IsFalse(serverCache.ContainsKey(key), val.ToString());
-                    Assert.IsFalse(clientCache.ContainsKey(key), val.ToString());
+                    TestUtils.WaitForTrueCondition(() => !serverCache.ContainsKey(key), timeout, val.ToString());
+                    TestUtils.WaitForTrueCondition(() => !clientCache.ContainsKey(key), timeout, val.ToString());
                 }
                 else
                 {
@@ -260,9 +262,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 // Update data and verify.
                 val++;
                 (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
-                
-                Assert.AreEqual(val, serverCache[key].Bar, val.ToString());
-                Assert.AreEqual(val, clientCache[key].Bar, val.ToString());
+
+                // ReSharper disable AccessToModifiedClosure
+                TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, val.ToString());
+                TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, val.ToString());
+                // ReSharper restore AccessToModifiedClosure
             }
         }
 
