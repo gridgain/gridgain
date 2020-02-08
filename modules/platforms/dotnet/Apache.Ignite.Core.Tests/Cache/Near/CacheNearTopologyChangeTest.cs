@@ -248,21 +248,21 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 // Verify data.
                 if (dataLost)
                 {
-                    Assert.IsFalse(serverCache.ContainsKey(key));
-                    Assert.IsFalse(clientCache.ContainsKey(key));
+                    Assert.IsFalse(serverCache.ContainsKey(key), val.ToString());
+                    Assert.IsFalse(clientCache.ContainsKey(key), val.ToString());
                 }
                 else
                 {
-                    Assert.AreEqual(val, serverCache[key].Bar);
-                    Assert.AreEqual(val, clientCache[key].Bar);
+                    Assert.AreEqual(val, serverCache[key].Bar, val.ToString());
+                    Assert.AreEqual(val, clientCache[key].Bar, val.ToString());
                 }
                 
                 // Update data and verify.
                 val++;
                 (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
                 
-                Assert.AreEqual(val, serverCache[key].Bar);
-                Assert.AreEqual(val, clientCache[key].Bar);
+                Assert.AreEqual(val, serverCache[key].Bar, val.ToString());
+                Assert.AreEqual(val, clientCache[key].Bar, val.ToString());
             }
         }
 
