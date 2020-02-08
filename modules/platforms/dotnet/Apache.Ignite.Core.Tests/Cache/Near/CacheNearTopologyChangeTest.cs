@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -248,6 +249,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
                 else
                 {
+                    // TODO: This is not stable, we should wait for rebalance to finish
                     dataLost = _ignite[idx].GetAffinity(CacheName)
                         .IsPrimary(_ignite[idx].GetCluster().GetLocalNode(), key);
                     
