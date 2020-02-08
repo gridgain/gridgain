@@ -16,17 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
-import org.apache.ignite.cache.affinity.AffinityFunction;
 import org.apache.ignite.cache.affinity.AffinityFunctionContext;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -51,11 +44,19 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
  *
@@ -99,19 +100,25 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
         final int size = 50 * 1024 * 1024;
 
+        assertTrue(startPersistentRegion || startVolatileRegion);
+
         if (startPersistentRegion) {
-            DataRegionConfiguration regCfg = new DataRegionConfiguration();
-            regCfg.setName(PERSISTENT).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(true);
-            cfgs.add(regCfg);
+            DataRegionConfiguration drCfg = new DataRegionConfiguration();
+            drCfg.setName(PERSISTENT).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(true);
+            cfgs.add(drCfg);
         }
 
         if (startVolatileRegion) {
-            DataRegionConfiguration regCfg = new DataRegionConfiguration();
-            regCfg.setName(VOLATILE).setInitialSize(size).setMaxSize(size);
-            cfgs.add(regCfg);
+            DataRegionConfiguration drCfg = new DataRegionConfiguration();
+            drCfg.setName(VOLATILE).setInitialSize(size).setMaxSize(size);
+            cfgs.add(drCfg);
         }
 
-        dsCfg.setDataRegionConfigurations(cfgs.toArray(new DataRegionConfiguration[cfgs.size()]));
+        dsCfg.setDefaultDataRegionConfiguration(cfgs.get(0));
+        cfgs.remove(0);
+
+        if (!cfgs.isEmpty())
+            dsCfg.setDataRegionConfigurations(cfgs.toArray(new DataRegionConfiguration[cfgs.size()]));
 
         cfg.setDataStorageConfiguration(dsCfg);
 
@@ -128,7 +135,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
         ccfg.setDataRegionName(cacheName);
         ccfg.setName(cacheName);
-        ccfg.setAffinity(affinityFunction(PARTS_CNT));
+        ccfg.setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
         ccfg.setWriteSynchronizationMode(FULL_SYNC);
         ccfg.setBackups(0);
 
@@ -151,89 +158,116 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
         cleanPersistenceDir();
     }
 
-    /**
-     * @param parts Number of partitions.
-     * @return Affinity function.
-     */
-    protected AffinityFunction affinityFunction(@Nullable Integer parts) {
-        return new RendezvousAffinityFunction(false,
-            parts == null ? RendezvousAffinityFunction.DFLT_PARTITION_COUNT : parts);
-    }
-
-    /**
-     * Checks Partition Exchange happen in case of baseline change (in-memory cluster). It's not possible to
-     * perform switch since primaries may change.
-     */
+    /** */
     @Test
-    public void testNonBaselineNodeLeftOnFullyRebalancedCluster() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(false, true, true, false);
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    public void testNodeLeftOnStableTopology_Volatile_1() throws Exception {
+        testNodeLeftOnStableTopology(false, true, false, true);
     }
 
-    /**
-     * Checks Partition Exchange happen in case of baseline change (persistent cluster). It's not possible to
-     * perform switch since primaries may change.
-     */
-    @Test
-    public void testNonBaselineNodeLeftOnFullyRebalancedClusterPersistence() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(true, false, false, false);
-    }
-
-    /**
-     * Checks Partition Exchange happen in case of baseline change (persistent cluster). It's not possible to
-     * perform switch since primaries may change.
-     */
-    @Test
-    public void testNonBaselineNodeLeftOnFullyRebalancedClusterPersistence_2() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(true, false, true, true);
-    }
-
-    /**
-     * Auto-adjust for in-memory caches is deactivated by default. PME is expected.
-     */
-    @Test
-    public void testBaselineNodeLeftOnFullyRebalancedCluster() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(false, true, true, false);
-    }
-
-    /**
-     *
-     */
+    /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    public void testBaselineNodeLeftOnFullyRebalancedCluster_AutoAdjust() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(false, true, false, false);
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Volatile_2() throws Exception {
+        // Baseline auto adjust for volatile caches will prevent the optimization.
+        testNodeLeftOnStableTopology(false, true, false, true);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
-    public void testBaselineNodeLeftOnFullyRebalancedClusterPersistence() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(true, false, false, false);
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Volatile_3() throws Exception {
+        testNodeLeftOnStableTopology(false, true, false, false);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
-    public void testBaselineNodeLeftOnFullyRebalancedClusterPersistence_ChangeBLT() throws Exception {
-        testNodeLeftOnFullyRebalancedCluster(true, false, true, true);
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Volatile_4() throws Exception {
+        testNodeLeftOnStableTopology(false, true, true, true);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Persistent_1() throws Exception {
+        testNodeLeftOnStableTopology(true, false, false, false);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Persistent_2() throws Exception {
+        // Auto adjust for volatile caches shouldn't have any effect for persistent caches.
+        testNodeLeftOnStableTopology(true, false, false, false);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    public void testNodeLeftOnStableTopology_Persistent_3() throws Exception {
+        testNodeLeftOnStableTopology(true, false, false, false);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Persistent_4() throws Exception {
+        testNodeLeftOnStableTopology(true, false, true, true);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Mixed_1() throws Exception {
+        // Auto adjust for volatile caches shouldn't have any effect for mixed caches.
+        testNodeLeftOnStableTopology(true, true, false, false);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Mixed_2() throws Exception {
+        testNodeLeftOnStableTopology(true, true, false, false);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    public void testNodeLeftOnStableTopology_Mixed_3() throws Exception {
+        testNodeLeftOnStableTopology(true, true, false, true);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
+        testNodeLeftOnStableTopology(true, true, true, true);
     }
 
     /**
-     * Checks node left PME absent/present on fully rebalanced topology (Latest PME == LAA).
+     * Checks node left PME absent/present on stable topology.
      *
-     * @param persistent {@code True} to use persistent region.
-     * @param inmem {@code True} to use volatile region.
-     * @param expectPME {@code True} if PME is expected on node left.
+     * @param persistent {@code True} to add persistent region.
+     * @param inmem {@code True} to add volatile region.
      * @param resetBlt {@code True} to reset BTL on node left.
+     * @param expectPME {@code True} if distributed partition states exchange is expected on node left.
      */
-    private void testNodeLeftOnFullyRebalancedCluster(
+    private void testNodeLeftOnStableTopology(
         boolean persistent,
         boolean inmem,
-        boolean expectPME,
-        boolean resetBlt
+        boolean resetBlt,
+        boolean expectPME
     ) throws Exception {
+        startPersistentRegion = persistent;
+        startVolatileRegion = inmem;
+
         int nodes = NODES_CNT;
 
         Ignite crd = startGrids(nodes);
@@ -279,7 +313,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
             awaitPartitionMapExchange(true, true, null, true);
 
-            assertEquals(!expectPME ? 0 : (nodes - 1), cnt.get());
+            assertEquals(expectPME ? (nodes - 1) : 0, cnt.get());
 
             IgniteEx alive = (IgniteEx)G.allGrids().get(0);
 
