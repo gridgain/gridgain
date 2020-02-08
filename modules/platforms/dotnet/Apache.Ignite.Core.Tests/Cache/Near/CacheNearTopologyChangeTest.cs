@@ -258,6 +258,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
                 
                 // Update data and verify.
+                val++;
+                (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
+                
+                Assert.AreEqual(val, serverCache[key].Bar);
+                Assert.AreEqual(val, clientCache[key].Bar);
             }
         }
 
