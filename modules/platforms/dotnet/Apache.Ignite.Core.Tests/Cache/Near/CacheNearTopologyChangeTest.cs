@@ -228,7 +228,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             serverCache[key] = new Foo(val);
 
             var start = DateTime.Now;
-            while (DateTime.Now - start < TimeSpan.FromSeconds(20))
+            while (DateTime.Now - start < TimeSpan.FromSeconds(30))
             {
                 // Change topology randomly.
                 var idx = rnd.Next(1, 5);
