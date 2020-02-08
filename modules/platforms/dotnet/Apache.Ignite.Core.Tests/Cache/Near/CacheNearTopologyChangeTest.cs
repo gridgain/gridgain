@@ -73,7 +73,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsTrue(_ignite[0].WaitTopology(2));
 
             // Check that key is not stuck in near cache.
-            TestUtils.WaitForCondition(() => !_cache[0].ContainsKey(Key3), 1000);
+            TestUtils.WaitForTrueCondition(() => !_cache[0].ContainsKey(Key3));
             Assert.Throws<KeyNotFoundException>(() => _cache[0].Get(Key3));
             Assert.Throws<KeyNotFoundException>(() => _cache[1].Get(Key3));
             
@@ -85,7 +85,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreSame(_cache[1][Key3], _cache[1][Key3]);
             
             _cache[1][Key3] = new Foo(2);
-            Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[0][Key3].Bar == 2, 500));
+            TestUtils.WaitForTrueCondition(() => _cache[0][Key3].Bar == 2, 500);
             Assert.AreEqual(2, _cache[0][Key3].Bar);
             Assert.AreEqual(2, _cache[1][Key3].Bar);
             Assert.AreSame(_cache[0][Key3], _cache[0][Key3]);
@@ -105,7 +105,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             for (var i = 0; i < 2; i++)
             {
                 // ReSharper disable once AccessToModifiedClosure
-                Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == -1, 1000));
+                TestUtils.WaitForTrueCondition(() => _cache[i][Key3].Bar == -1);
             }
 
             // New node enters and becomes primary for the key.
@@ -126,7 +126,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             for (var i = 0; i < 3; i++)
             {
                 // ReSharper disable once AccessToModifiedClosure
-                Assert.IsTrue(TestUtils.WaitForCondition(() => _cache[i][Key3].Bar == 3, 1000));
+                TestUtils.WaitForTrueCondition(() => _cache[i][Key3].Bar == 3);
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
         }        
@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Updates are propagated to client near cache.
             _cache[2][Key3] = new Foo(3);
             
-            Assert.IsTrue(TestUtils.WaitForCondition(() => clientCache[Key3].Bar == 3, 1000));
+            TestUtils.WaitForTrueCondition(() => clientCache[Key3].Bar == 3);
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.AreNotSame(clientInstance, foo);
             Assert.AreEqual(3, foo.Bar);
