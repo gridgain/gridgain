@@ -155,6 +155,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** <inheritdoc /> */
         bool IEventListener<DiscoveryEvent>.Invoke(DiscoveryEvent evt)
         {
+            // TODO: This is not reliable.
+            // We may have cleared the caches below, but PME/rebalance is not yet finished,
+            // So we may be using stale GridNearCacheEntry, and losing updates for it.
+            
+            // Instead, employ our own IsValid, using same mechanism as PartitionAwareness:
+            // Maintain up-to-date partition map for every active cache,
+            // and keep primary node id with every cache entry. Validate on each usage.
+            
+            
             if (!evt.EventNode.IsClient)
             {
                 // Clear all caches on node enter/leave: data may have been lost, and primaries change.
