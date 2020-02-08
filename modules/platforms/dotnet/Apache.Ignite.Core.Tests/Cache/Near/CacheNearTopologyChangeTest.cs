@@ -61,6 +61,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestServerNodeLeaveClearsNearCache()
         {
             InitNodes(3);
+            var clientCache = InitClientAndCache();
 
             _cache[0][Key3] = new Foo(Key3);
 
@@ -68,28 +69,34 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreSame(_cache[1].Get(Key3), _cache[1].Get(Key3));
             Assert.AreEqual(Key3, _cache[0][Key3].Bar);
             Assert.AreEqual(Key3, _cache[1][Key3].Bar);
+            Assert.AreEqual(Key3, clientCache[Key3].Bar);
 
             _ignite[2].Dispose();
-            Assert.IsTrue(_ignite[0].WaitTopology(2));
+            Assert.IsTrue(_ignite[0].WaitTopology(3));
 
             // Check that key is not stuck in near cache.
             TestUtils.WaitForTrueCondition(() => !_cache[0].ContainsKey(Key3));
             Assert.Throws<KeyNotFoundException>(() => _cache[0].Get(Key3));
             Assert.Throws<KeyNotFoundException>(() => _cache[1].Get(Key3));
+            Assert.Throws<KeyNotFoundException>(() => clientCache.Get(Key3));
             
-            // Check that updates for that key work on both nodes.
+            // Check that updates for that key work on all nodes.
             _cache[0][Key3] = new Foo(1);
             Assert.AreEqual(1, _cache[0][Key3].Bar);
             Assert.AreEqual(1, _cache[1][Key3].Bar);
+            Assert.AreEqual(1, clientCache[Key3].Bar);
             Assert.AreSame(_cache[0][Key3], _cache[0][Key3]);
             Assert.AreSame(_cache[1][Key3], _cache[1][Key3]);
+            Assert.AreSame(clientCache[Key3], clientCache[Key3]);
             
             _cache[1][Key3] = new Foo(2);
             TestUtils.WaitForTrueCondition(() => _cache[0][Key3].Bar == 2, 500);
             Assert.AreEqual(2, _cache[0][Key3].Bar);
             Assert.AreEqual(2, _cache[1][Key3].Bar);
+            Assert.AreEqual(2, clientCache[Key3].Bar);
             Assert.AreSame(_cache[0][Key3], _cache[0][Key3]);
             Assert.AreSame(_cache[1][Key3], _cache[1][Key3]);
+            Assert.AreSame(clientCache[Key3], clientCache[Key3]);
         }
 
         /// <summary>
