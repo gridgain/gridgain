@@ -276,6 +276,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
                 // TODO: One of this fails when non-primary node leaves.
                 // Looks like relying on discovery events may introduce some kind of a race?
+                // NearCacheEntry becomes invalid, but we don't track it properly.
+                // We need a way to track primary node change.
                 TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, status);
                 TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, status);
             }
