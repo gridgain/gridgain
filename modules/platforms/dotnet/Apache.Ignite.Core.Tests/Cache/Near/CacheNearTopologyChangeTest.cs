@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
+// ReSharper disable AccessToModifiedClosure
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Linq;
-    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -111,7 +110,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             _cache[0][Key3] = new Foo(-1);
             for (var i = 0; i < 2; i++)
             {
-                // ReSharper disable once AccessToModifiedClosure
                 TestUtils.WaitForTrueCondition(() => _cache[i][Key3].Bar == -1);
             }
 
@@ -132,7 +130,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             for (var i = 0; i < 3; i++)
             {
-                // ReSharper disable once AccessToModifiedClosure
                 TestUtils.WaitForTrueCondition(() => _cache[i][Key3].Bar == 3);
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
@@ -274,10 +271,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 val++;
                 (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
 
-                // ReSharper disable AccessToModifiedClosure
                 TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, status);
                 TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, status);
-                // ReSharper restore AccessToModifiedClosure
             }
         }
 
