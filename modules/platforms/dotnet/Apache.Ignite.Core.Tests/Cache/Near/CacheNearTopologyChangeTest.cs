@@ -170,8 +170,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             InitNodes(2);
             _cache[2] = InitClientAndCache();
             
-            Assert.IsTrue(
-                TestUtils.WaitForCondition(() => TestUtils.GetPrimaryKey(_ignite[1], CacheName) == 1, 3000));
+            TestUtils.WaitForTrueCondition(() => TestUtils.GetPrimaryKey(_ignite[1], CacheName) == 1, 3000);
 
             Action<Action<ICache<int, Foo>, int>> forEachCacheAndKey = act =>
             {
@@ -302,8 +301,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             if (i == 2 && waitForPrimary)
             {
                 // ReSharper disable once AccessToDisposedClosure
-                Assert.IsTrue(
-                    TestUtils.WaitForCondition(() => TestUtils.GetPrimaryKey(_ignite[2], CacheName) == Key3, 3000));
+                TestUtils.WaitForTrueCondition(() => TestUtils.GetPrimaryKey(_ignite[2], CacheName) == Key3, 3000);
             }
         }
         

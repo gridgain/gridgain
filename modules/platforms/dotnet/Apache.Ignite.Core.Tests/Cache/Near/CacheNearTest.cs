@@ -611,9 +611,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         private void WaitForRebalance()
         {
-            Assert.IsTrue(
-                TestUtils.WaitForCondition(
-                    () => _grid2.GetAffinity(CacheName).MapKeyToNode(1).IsLocal, 2000));
+            TestUtils.WaitForTrueCondition(() => _grid2.GetAffinity(CacheName).MapKeyToNode(1).IsLocal, 2000);
         }
 
         /** */
