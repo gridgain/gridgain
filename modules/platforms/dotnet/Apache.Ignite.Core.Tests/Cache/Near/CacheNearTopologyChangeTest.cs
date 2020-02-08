@@ -233,10 +233,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 // Change topology randomly.
                 var idx = rnd.Next(1, 5);
                 var dataLost = false;
+                var status = string.Empty;
 
                 if (_ignite[idx] == null)
                 {
                     InitNode(idx, waitForPrimary: false);
+                    
+                    status = string.Format("Node started: {0}, current val: {1}", idx, val);
                 }
                 else
                 {
@@ -244,18 +247,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         .IsPrimary(_ignite[idx].GetCluster().GetLocalNode(), key);
                     
                     StopNode(idx);
-                }
 
+                    status = string.Format("Node stopped: {0}, data lost: {1}, current val: {2}", idx, dataLost, val);
+                }
+                
                 // Verify data.
                 if (dataLost)
                 {
-                    TestUtils.WaitForTrueCondition(() => !serverCache.ContainsKey(key), timeout, val.ToString());
-                    TestUtils.WaitForTrueCondition(() => !clientCache.ContainsKey(key), timeout, val.ToString());
+                    TestUtils.WaitForTrueCondition(() => !serverCache.ContainsKey(key), timeout, status);
+                    TestUtils.WaitForTrueCondition(() => !clientCache.ContainsKey(key), timeout, status);
                 }
                 else
                 {
-                    Assert.AreEqual(val, serverCache[key].Bar, val.ToString());
-                    Assert.AreEqual(val, clientCache[key].Bar, val.ToString());
+                    Assert.AreEqual(val, serverCache[key].Bar, status);
+                    Assert.AreEqual(val, clientCache[key].Bar, status);
                 }
                 
                 // Update data and verify.
@@ -263,8 +268,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
 
                 // ReSharper disable AccessToModifiedClosure
-                TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, val.ToString());
-                TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, val.ToString());
+                TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, status);
+                TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, status);
                 // ReSharper restore AccessToModifiedClosure
             }
         }

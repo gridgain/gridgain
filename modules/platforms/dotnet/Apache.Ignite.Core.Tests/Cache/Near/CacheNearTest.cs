@@ -210,25 +210,25 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             remoteCache[key] = new Foo();
 
-            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            TestUtils.WaitForTrueCondition(() =>
             {
                 Foo val;
 
                 return localCache.TryGet(key, out val) && 
                        ReferenceEquals(val, localCache.Get(key));
-            }, 300));
+            }, 300);
             
             // Invalidate after get.
             remoteCache[key] = new Foo(1);
             
-            Assert.IsTrue(TestUtils.WaitForCondition(() =>
+            TestUtils.WaitForTrueCondition(() =>
             {
                 Foo val;
 
                 return localCache.TryGet(key, out val) &&
                        val.Bar == 1 &&
                        ReferenceEquals(val, localCache.Get(key));
-            }, 300));
+            }, 300);
         }
         
         /// <summary>
