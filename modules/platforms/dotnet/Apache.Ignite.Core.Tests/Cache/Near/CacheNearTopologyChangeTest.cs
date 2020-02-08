@@ -228,7 +228,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var rnd = new Random();
             var val = 1;
             var key = 1;
-            var timeout = 1000;
+            var timeout = 5000;
             serverCache[key] = new Foo(val);
 
             var start = DateTime.Now;
@@ -239,6 +239,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 var dataLost = false;
                 var status = string.Empty;
 
+                Console.WriteLine(">>> Changing topology...");
                 if (_ignite[idx] == null)
                 {
                     InitNode(idx, waitForPrimary: false);
@@ -271,9 +272,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 val++;
                 (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
 
+                // TODO: One of this fails when non-primary node leaves.
+                // Looks like relying on discovery events may introduce some kind of a race?
                 TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, status);
-                
-                // TODO: This fails when non-primary node leaves, which probably causes primary change.
                 TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, status);
             }
         }

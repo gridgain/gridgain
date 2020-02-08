@@ -162,7 +162,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 // but the complexity and upfront performance cost are not worth it.
                 
                 // TODO: Remove
-                Console.WriteLine("EVT {0} on {1}", evt.Name,_ignite.Name);
+                Console.WriteLine(">>> EVT {0} on {1}", evt.Name,_ignite.Name);
                 
                 ClearAll();
             }
