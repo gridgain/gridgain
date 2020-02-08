@@ -226,9 +226,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var key = 1;
             serverCache[key] = new Foo(val);
 
-            Action changeTopology = () =>
+            var start = DateTime.Now;
+            while (DateTime.Now - start < TimeSpan.FromSeconds(10))
             {
+                // Change topology randomly.
                 var idx = rnd.Next(1, 5);
+                var dataLost = false;
 
                 if (_ignite[idx] == null)
                 {
@@ -236,22 +239,25 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
                 else
                 {
+                    dataLost = _ignite[idx].GetAffinity(CacheName)
+                        .IsPrimary(_ignite[idx].GetCluster().GetLocalNode(), key);
+                    
                     StopNode(idx);
                 }
-            };
 
-            Action verifyCaches = () =>
-            {
-                Assert.AreEqual(val, serverCache[key].Bar);
-                Assert.AreEqual(val, clientCache[key].Bar);
-            };
-
-            var start = DateTime.Now;
-            while (DateTime.Now - start < TimeSpan.FromSeconds(10))
-            {
-                changeTopology();
-
-                verifyCaches();
+                // Verify data.
+                if (dataLost)
+                {
+                    Assert.IsFalse(serverCache.ContainsKey(key));
+                    Assert.IsFalse(clientCache.ContainsKey(key));
+                }
+                else
+                {
+                    Assert.AreEqual(val, serverCache[key].Bar);
+                    Assert.AreEqual(val, clientCache[key].Bar);
+                }
+                
+                // Update data and verify.
             }
         }
 
