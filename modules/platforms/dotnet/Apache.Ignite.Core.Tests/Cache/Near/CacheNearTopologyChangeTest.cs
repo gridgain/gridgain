@@ -272,6 +272,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
 
                 TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, status);
+                
+                // TODO: This fails when non-primary node leaves, which probably causes primary change.
                 TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, status);
             }
         }
