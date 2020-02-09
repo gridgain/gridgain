@@ -318,8 +318,8 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
         GridTestUtils.setFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "mapper",
             new ReducePartitionMapper(ctx, logger) {
                 @Override public ReducePartitionMapResult nodesForPartitions(List<Integer> cacheIds,
-                    AffinityTopologyVersion topVer, int[] parts, boolean isReplicatedOnly, long qryId) {
-                    final ReducePartitionMapResult res = super.nodesForPartitions(cacheIds, topVer, parts, isReplicatedOnly, qryId);
+                    AffinityTopologyVersion topVer, int[] parts, boolean isReplicatedOnly) {
+                    final ReducePartitionMapResult res = super.nodesForPartitions(cacheIds, topVer, parts, isReplicatedOnly);
 
                     return new ReducePartitionMapResult(Collections.emptyList(), res.partitionsMap(), res.queryPartitionsMap());
                 }
@@ -353,8 +353,8 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
         GridTestUtils.setFieldValue(rdcQryExec, GridReduceQueryExecutor.class, "mapper",
             new ReducePartitionMapper(ctx, logger) {
                 @Override public ReducePartitionMapResult nodesForPartitions(List<Integer> cacheIds,
-                    AffinityTopologyVersion topVer, int[] parts, boolean isReplicatedOnly, long qryId) {
-                    final ReducePartitionMapResult res = super.nodesForPartitions(cacheIds, topVer, parts, isReplicatedOnly, qryId);
+                    AffinityTopologyVersion topVer, int[] parts, boolean isReplicatedOnly) {
+                    final ReducePartitionMapResult res = super.nodesForPartitions(cacheIds, topVer, parts, isReplicatedOnly);
 
                     return new ReducePartitionMapResult(Collections.emptyList(), res.partitionsMap(), res.queryPartitionsMap());
                 }

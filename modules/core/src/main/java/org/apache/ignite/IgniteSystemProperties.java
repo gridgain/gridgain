@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
+import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -191,6 +192,15 @@ public final class IgniteSystemProperties {
 
     /** Maximum length for {@code toString()} result. */
     public static final String IGNITE_TO_STRING_MAX_LENGTH = "IGNITE_TO_STRING_MAX_LENGTH";
+
+    /**
+     * Boolean flag indicating whether {@link GridToStringBuilder} should throw {@link RuntimeException}
+     * when building string representation of an object or should just print information about exception into the log
+     * and proceed.
+     *
+     * {@code False} by default.
+     */
+    public static final String IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION = "IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION";
 
     /**
      * Limit collection (map, array) elements number to output.
@@ -1356,11 +1366,27 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DISABLE_SMART_DR_THROTTLING =
         "IGNITE_DISABLE_SMART_DR_THROTTLING";
 
+    /*
+     * Disable onheap caching of pages lists (free lists and reuse lists).
+     * If persistence is enabled changes to page lists are not stored to page memory immediately, they are cached in
+     * onheap buffer and flushes to page memory on a checkpoint. This property allows to disable such onheap caching.
+     * Default value is <code>false</code>.
+     */
+    public static final String IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING = "IGNITE_PAGES_LIST_DISABLE_ONHEAP_CACHING";
+
     /**
      * Disable group state lazy store. It means that group state won't be cached for {@link CheckpointEntry} and will be
      * read from wal every time. Should be used for test purposes only.
      */
     public static final String IGNITE_DISABLE_GRP_STATE_LAZY_STORE = "IGNITE_DISABLE_GRP_STATE_LAZY_STORE";
+
+    /**
+     * Enables extended logging of indexes create/rebuild process. Default {@code false}.
+     * <p/>
+     * <b>Warning</b>: enabling that option can lead to performance degradation of index creation, rebuilding and  node
+     * restart.
+     */
+    public static final String IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING = "IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING";
 
     /**
      * Enforces singleton.

@@ -16,9 +16,6 @@
 
 package org.apache.ignite.util;
 
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -41,6 +38,9 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAtomicSequence;
 import org.apache.ignite.IgniteCache;
@@ -376,6 +376,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_CLUSTER_ID_AND_TAG_FEATURE, value = "false")
     public void testState1() throws Exception {
         Ignite ignite = startGrids(1);
 

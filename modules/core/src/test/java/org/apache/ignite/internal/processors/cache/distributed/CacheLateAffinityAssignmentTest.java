@@ -71,7 +71,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtForceKeysResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
@@ -1333,7 +1332,9 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
             }
         });
 
-        checkAffinity(cnt, topVer(ord - 1, 1), true);
+        AffinityTopologyVersion currentTop = ignite(0).context().cache().context().exchange().readyAffinityVersion();
+
+        checkAffinity(cnt, currentTop, true);
 
         stopNode(stopId, ord);
 
@@ -1508,28 +1509,26 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         checkAffinity(NODES, topVer(topVer, 1), true);
 
-        AtomicBoolean joined = new AtomicBoolean();
-
         for (int i = 0; i < NODES; i++) {
             TestRecordingCommunicationSpi spi =
-                    (TestRecordingCommunicationSpi)ignite(i).configuration().getCommunicationSpi();
+                (TestRecordingCommunicationSpi)ignite(i).configuration().getCommunicationSpi();
 
             spi.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
-                    if (msg.getClass().equals(GridDhtPartitionsSingleMessage.class) &&
-                        ((GridDhtPartitionsAbstractMessage)msg).exchangeId() != null)
-                        joined.set(true); // Join exchange started.
-
                     return msg.getClass().equals(GridDhtPartitionsSingleMessage.class) ||
-                        msg.getClass().equals(GridDhtPartitionsFullMessage.class);
+                            msg.getClass().equals(GridDhtPartitionsFullMessage.class);
                 }
             });
         }
 
         IgniteInternalFuture<?> stopFut = GridTestUtils.runAsync(new Callable<Void>() {
             @Override public Void call() throws Exception {
-                while (!joined.get())
-                    U.sleep(10);
+                for (int j = 1; j < NODES; j++) {
+                    TestRecordingCommunicationSpi spi =
+                            (TestRecordingCommunicationSpi)ignite(j).configuration().getCommunicationSpi();
+
+                    spi.waitForBlocked();
+                }
 
                 for (int i = 0; i < NODES; i++)
                     stopGrid(getTestIgniteInstanceName(i), false, false);
@@ -2150,6 +2149,30 @@ public class CacheLateAffinityAssignmentTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < ITERATIONS; i++) {
             log.info("Iteration: " + i);
+
+            TestRecordingCommunicationSpi[] testSpis = new TestRecordingCommunicationSpi[NODES];
+
+            for (int j = 0; j < NODES; j++) {
+                testSpis[j] = new TestRecordingCommunicationSpi();
+
+                testSpis[j].blockMessages((node, msg) -> msg instanceof GridDhtPartitionsSingleMessage);
+            }
+
+            //Ensure exchanges merge.
+            spiC = igniteInstanceName ->  testSpis[getTestIgniteInstanceIndex(igniteInstanceName)];
+
+            GridTestUtils.runAsync(() -> {
+                try {
+                    for (int j = 1; j < NODES; j++)
+                        testSpis[j].waitForBlocked();
+                }
+                catch (InterruptedException e) {
+                    log.error("Thread interrupted.", e);
+                }
+
+                for (TestRecordingCommunicationSpi testSpi : testSpis)
+                    testSpi.stopBlock();
+            });
 
             startGridsMultiThreaded(NODES);
 

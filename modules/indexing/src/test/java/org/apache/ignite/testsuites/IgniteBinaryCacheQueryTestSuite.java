@@ -123,6 +123,8 @@ import org.apache.ignite.internal.processors.cache.encryption.EncryptedSqlTableT
 import org.apache.ignite.internal.processors.cache.index.ArrayIndexTest;
 import org.apache.ignite.internal.processors.cache.index.BasicIndexMultinodeTest;
 import org.apache.ignite.internal.processors.cache.index.BasicIndexTest;
+import org.apache.ignite.internal.processors.cache.index.BasicJavaTypesIndexTest;
+import org.apache.ignite.internal.processors.cache.index.BasicSqlTypesIndexTest;
 import org.apache.ignite.internal.processors.cache.index.ComplexPrimaryKeyUnwrapSelfTest;
 import org.apache.ignite.internal.processors.cache.index.DuplicateKeyValueClassesSelfTest;
 import org.apache.ignite.internal.processors.cache.index.DynamicIndexClientBasicSelfTest;
@@ -232,7 +234,6 @@ import org.apache.ignite.internal.processors.query.h2.IgniteSqlQueryMinMaxTest;
 import org.apache.ignite.internal.processors.query.h2.QueryDataPageScanTest;
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsSurvivesNodeRestartTest;
 import org.apache.ignite.internal.processors.query.h2.RowCountTableStatisticsUsageTest;
-import org.apache.ignite.internal.processors.query.h2.ThreadLocalObjectPoolSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.BaseH2CompareQueryTest;
 import org.apache.ignite.internal.processors.query.h2.sql.ExplainSelfTest;
 import org.apache.ignite.internal.processors.query.h2.sql.GridQueryParsingTest;
@@ -562,8 +563,6 @@ import org.junit.runners.Suite;
     SqlUserCommandSelfTest.class,
     EncryptedSqlTableTest.class,
 
-    ThreadLocalObjectPoolSelfTest.class,
-
     // Partition loss.
     IndexingCachePartitionLossPolicySelfTest.class,
 
@@ -598,6 +597,9 @@ import org.junit.runners.Suite;
     SqlQueryHistoryFromClientSelfTest.class,
 
     SqlIncompatibleDataTypeExceptionTest.class,
+
+    BasicSqlTypesIndexTest.class,
+    BasicJavaTypesIndexTest.class,
 
     //Cancellation of queries.
     KillQueryTest.class,
