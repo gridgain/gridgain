@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import java.util.*;
 import java.util.regex.*;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -185,62 +186,41 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
 
         // Search specific string pattern and add value of counters and sizes to arrays
         @Override public void accept(String s) {
-            Long[] arrayCnt = new Long[3];
-            Long[] arraySize = new Long[3];
+            HashSet<Long> setCnt = new HashSet<>();
+            HashSet<Long> setSize = new HashSet<>();
+
             int typeInconsistence = 0; //for Cnt 1, for Size 2, for Both 3, no inconsisctence 0.
 
             if (s.contains("Partitions update counters are inconsistent for ")) {
                 typeInconsistence = 1;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf("="));
-                    arrayCnt[i] = Long.parseLong(s.substring(0, s.indexOf(" ") - 1));
+                    setCnt.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
                 }
             }
             else if (s.contains("Partitions cache sizes are inconsistent for ")) {
                 typeInconsistence =2;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf("="));
-                    arraySize[i] = Long.parseLong(s.substring(0, s.indexOf(" ") - 1));
+                    setSize.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
                 }
             }
             else if (s.contains("Partitions cache sizes are inconsistent for ")) {
                 typeInconsistence = 3;
                 for (int i=0; i<3; i++) {
                     s = s.substring(s.indexOf("size="));
-                    arraySize[i] = Long.parseLong(s.substring(0, s.indexOf(",") - 1));
+                    setSize.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
                     s = s.substring(s.indexOf("updCnt="));
-                    arrayCnt[i] = Long.parseLong(s.substring(0, s.indexOf(",") - 1));
+                    setCnt.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
                 }
             }
 
-            if (typeInconsistence == 1 && checkArr(arrayCnt))
+            if (typeInconsistence == 1 && setCnt.size()==2)
                 assertTrue("Counters inconsistent message found", true);
-            else if (typeInconsistence == 2 && checkArr(arraySize))
+            else if (typeInconsistence == 2 && setSize.size()==2)
                 assertTrue("Size inconsistent message found", true);
-            else if (typeInconsistence == 3 && checkArr(arrayCnt, arraySize))
+            else if (typeInconsistence == 3 && setCnt.size()==2 && setSize.size()==2)
                 assertTrue("Size inconsistent message found", true);
-        }
-
-        // Compare three value, if two is the same and one different - return "true"
-        private boolean checkArr(Long[] checkedArr) {
-            if ((checkedArr[0]==checkedArr[1] && checkedArr[0]!=checkedArr[2]) ||
-                (checkedArr[0]!=checkedArr[1] && checkedArr[0]==checkedArr[2]) ||
-                (checkedArr[0]!=checkedArr[1] && checkedArr[1]==checkedArr[2]))
-                return true;
-            else return false;
-
-        }
-
-        // Compare three value, if two is the same and one different for both arrays - return "true"
-        private boolean checkArr(Long[] checkedArr1, Long[] checkedArr2) {
-            if (((checkedArr1[0]==checkedArr1[1] && checkedArr1[0]!=checkedArr1[2]) ||
-                (checkedArr1[0]!=checkedArr1[1] && checkedArr1[0]==checkedArr1[2]) ||
-                (checkedArr1[0]!=checkedArr1[1] && checkedArr1[1]==checkedArr1[2])) &&
-                ((checkedArr2[0]==checkedArr2[1] && checkedArr2[0]!=checkedArr2[2]) ||
-                    (checkedArr2[0]!=checkedArr2[1] && checkedArr2[0]==checkedArr2[2]) ||
-                    (checkedArr2[0]!=checkedArr2[1] && checkedArr2[1]==checkedArr2[2])))
-                return true;
-            else return false;
         }
     }
 }
