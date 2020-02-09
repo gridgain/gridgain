@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Diagnostics;
     using System.Threading;
+    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -179,6 +180,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
 
             return true;
+        }
+
+        public void OnAffinityTopologyVersionChanged(AffinityTopologyVersion affinityTopologyVersion)
+        {
+            // TODO: Store the value and use it to validate cache entries.
         }
     }
 }

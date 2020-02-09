@@ -215,6 +215,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.NearCacheInvalidate, NearCacheUpdate);
             AddHandler(UnmanagedCallbackOp.NearCacheEvict, NearCacheEvict);
             AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
+            AddHandler(UnmanagedCallbackOp.OnAffinityTopologyVersionChanged, OnAffinityTopologyVersionChanged);
         }
 
         /// <summary>
@@ -463,6 +464,19 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         private long OnCacheStopped(long cacheId)
         {
             _ignite.NearCacheManager.Stop((int) cacheId);
+            
+            return 0;
+        }
+        
+        /// <summary>
+        /// Called on affinity topology version change.
+        /// </summary>
+        private long OnAffinityTopologyVersionChanged(
+            long topologyVersion, long minorTopologyVersion, long unused, void* arg)
+        {
+            var affinityTopologyVersion = new AffinityTopologyVersion(topologyVersion, (int) minorTopologyVersion);
+            
+            _ignite.NearCacheManager.OnAffinityTopologyVersionChanged(affinityTopologyVersion);
             
             return 0;
         }

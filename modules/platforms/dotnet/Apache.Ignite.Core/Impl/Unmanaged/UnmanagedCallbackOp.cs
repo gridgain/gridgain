@@ -87,6 +87,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         EventLocalListenerApply = 69,
         NearCacheInvalidate = 70,
         NearCacheEvict = 71,
-        OnCacheStopped = 72
+        OnCacheStopped = 72,
+        OnAffinityTopologyVersionChanged = 73
     }
 }
