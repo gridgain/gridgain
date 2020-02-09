@@ -162,6 +162,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // Instead, employ our own IsValid, using same mechanism as PartitionAwareness:
             // Maintain up-to-date partition map for every active cache (see GridCachePartitionExchangeManager.readyTopVer),
             // and keep primary node id with every cache entry. Validate on each usage.
+            // Add a callback from somewhere in GridDhtPartitionsExchangeFuture.OnDone - all other stuff is notified from there.
             
             
             if (!evt.EventNode.IsClient)
