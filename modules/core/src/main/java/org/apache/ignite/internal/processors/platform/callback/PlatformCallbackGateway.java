@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.platform.callback;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.platform.PlatformTargetProxy;
 import org.apache.ignite.internal.processors.platform.memory.PlatformMemory;
 import org.apache.ignite.internal.util.GridStripedSpinBusyLock;
@@ -1234,6 +1235,26 @@ public class PlatformCallbackGateway {
 
         try {
             PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.OnCacheStopped, cacheId);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
+     * Notifies about topology version update.
+     *
+     * @param version Affinity topology version.
+     */
+    public void onAffinityTopologyVersionChanged(AffinityTopologyVersion version) {
+        // Ignore during grid stop.
+        if (!tryEnter())
+            return;
+
+        try {
+            PlatformCallbackUtils.inLongLongLongObjectOutLong(envPtr,
+                    PlatformCallbackOp.OnAffinityTopologyVersionChanged, version.topologyVersion(),
+                    version.minorTopologyVersion(), 0, null);
         }
         finally {
             leave();

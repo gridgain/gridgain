@@ -235,4 +235,7 @@ class PlatformCallbackOp {
 
     /** */
     public static final int OnCacheStopped = 72;
+
+    /** */
+    public static final int OnAffinityTopologyVersionChanged = 73;
 }

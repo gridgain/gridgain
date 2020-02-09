@@ -638,7 +638,6 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
     @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
         AffinityTopologyVersion ver = fut.topologyVersion();
 
-        // TODO: Invoke callback.
-        // gateway().
+        gateway().onAffinityTopologyVersionChanged(ver);
     }
 }
