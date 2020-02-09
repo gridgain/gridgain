@@ -39,7 +39,10 @@ import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryTypeImpl;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.PartitionsExchangeAware;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilter;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilterImpl;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryProcessor;
@@ -80,7 +83,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Implementation of platform context.
  */
 @SuppressWarnings("TypeMayBeWeakened")
-public class PlatformContextImpl implements PlatformContext {
+public class PlatformContextImpl implements PlatformContext, PartitionsExchangeAware {
     /** Supported event types. */
     private static final Set<Integer> evtTyps;
 
@@ -147,6 +150,8 @@ public class PlatformContextImpl implements PlatformContext {
         cacheObjProc = (CacheObjectBinaryProcessorImpl)ctx.cacheObjects();
 
         marsh = cacheObjProc.marshaller();
+
+        ctx.cache().context().exchange().registerExchangeAwareComponent(this);
     }
 
     /** {@inheritDoc} */
@@ -627,5 +632,13 @@ public class PlatformContextImpl implements PlatformContext {
 
             gateway().nearCacheEvict(mem0.pointer());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
+        AffinityTopologyVersion ver = fut.topologyVersion();
+
+        // TODO: Invoke callback.
+        // gateway().
     }
 }

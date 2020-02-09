@@ -163,6 +163,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // Maintain up-to-date partition map for every active cache (see GridCachePartitionExchangeManager.readyTopVer),
             // and keep primary node id with every cache entry. Validate on each usage.
             // Add a callback from somewhere in GridDhtPartitionsExchangeFuture.OnDone - all other stuff is notified from there.
+            // Or see PartitionsExchangeAware: exactly an interface for our needs.
             
             
             if (!evt.EventNode.IsClient)
