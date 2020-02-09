@@ -1956,9 +1956,10 @@ public class GridCacheUtils {
         ClassLoader clsLdr
     ) {
         return nodes.stream().map(node -> extractDataStorage(node, marshaller, clsLdr)).flatMap(
-                configuration -> concat(of(configuration.getDefaultDataRegionConfiguration()),
-                configuration.getDataRegionConfigurations() == null ?
-                        Stream.empty() : of(configuration.getDataRegionConfigurations())));
+                configuration -> configuration == null ? Stream.empty() :
+                        concat(of(configuration.getDefaultDataRegionConfiguration()),
+                                configuration.getDataRegionConfigurations() == null ?
+                                        Stream.empty() : of(configuration.getDataRegionConfigurations())));
     }
 
     /**

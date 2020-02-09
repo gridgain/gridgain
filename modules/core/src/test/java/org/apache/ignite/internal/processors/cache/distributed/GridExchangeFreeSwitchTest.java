@@ -308,10 +308,13 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
         while (nodes > 1) {
             G.allGrids().get(r.nextInt(nodes--)).close(); // Stopping random node.
 
-            if (resetBlt)
+            awaitPartitionMapExchange(true, true, null, true);
+
+            if (resetBlt) {
                 resetBaselineTopology();
 
-            awaitPartitionMapExchange(true, true, null, true);
+                awaitPartitionMapExchange(true, true, null, true);
+            }
 
             assertEquals(expectPME ? (nodes - 1) : 0, cnt.get());
 
