@@ -18,7 +18,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
@@ -29,10 +31,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
+        /** Maximum size of _partitionNodeIds map.  */
+        private const int PartitionNodeIdsMaxSize = 100;
+        
         /** Partition assignment map: from topology version to array of node id per partition. */
-        // TODO: Size limit (https://github.com/StackExchange/Dapper/blob/master/Dapper/SqlMapper.cs#L62), or use CopyOnWrite?
-        private readonly ConcurrentDictionary<AffinityTopologyVersion, Guid[]> _partitionNodeIds 
-            = new ConcurrentDictionary<AffinityTopologyVersion, Guid[]>();
+        private volatile Dictionary<AffinityTopologyVersion, Guid[]> _partitionNodeIds
+            = new Dictionary<AffinityTopologyVersion, Guid[]>();
+
+        /** Partition node ids lock. */
+        private readonly object _partitionNodeIdsLock = new object();
         
         /** Fallback init lock. */
         private readonly object _fallbackMapLock = new object();
@@ -266,15 +273,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part, bool requestMissingAssignment)
         {
-            Guid[] nodeIdPerPartition;
-            if (!_partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
+            var nodeIdPerPartition = GetNodeIdPerPartition(ver, requestMissingAssignment);
+            if (nodeIdPerPartition == null)
             {
-                if (requestMissingAssignment)
-                {
-                    // TODO: Request new assignment
-                    // Avoid requesting same assignment twice - is that possible with ConcurrentDictionary?
-                }
-
                 return null;
             }
 
@@ -282,6 +283,42 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(part < nodeIdPerPartition.Length);
 
             return nodeIdPerPartition[part];
+        }
+
+        private Guid[] GetNodeIdPerPartition(AffinityTopologyVersion ver, bool requestMissingAssignment)
+        {
+            Guid[] nodeIdPerPartition;
+
+            // ReSharper disable once InconsistentlySynchronizedField
+            if (_partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
+            {
+                return nodeIdPerPartition;
+            }
+
+            if (!requestMissingAssignment)
+            {
+                return null;
+            }
+
+            lock (_partitionNodeIdsLock)
+            {
+                if (_partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
+                {
+                    return nodeIdPerPartition;
+                }
+                
+                // TODO: Request and update map only when successful
+                
+                var partitionNodeIds = new Dictionary<AffinityTopologyVersion, Guid[]>(_partitionNodeIds);
+
+                if (partitionNodeIds.Count > PartitionNodeIdsMaxSize)
+                {
+                    var oldest = partitionNodeIds.Keys.Min();
+                    partitionNodeIds.Remove(oldest);
+                }
+
+                _partitionNodeIds = partitionNodeIds;
+            }
         }
 
         private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
