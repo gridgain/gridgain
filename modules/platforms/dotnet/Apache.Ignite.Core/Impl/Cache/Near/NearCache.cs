@@ -112,15 +112,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 .GetOrAdd(key, k => GetEntry(_ => (object) valueFactory((TKey) k), k)).Val;
         }
 
-        private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
-        {
-            // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
-            return new NearCacheEntry<TVal>(
-                valueFactory(k),
-                _nearCacheManager.AffinityTopologyVersion, 
-                _affinity.GetPartition(k));
-        }
-
         public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
@@ -291,6 +282,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(part < nodeIdPerPartition.Length);
 
             return nodeIdPerPartition[part];
+        }
+
+        private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
+        {
+            // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
+            return new NearCacheEntry<TVal>(
+                valueFactory(k),
+                _nearCacheManager.AffinityTopologyVersion, 
+                GetPartition(k));
+        }
+
+        private int GetPartition<TKey>(TKey k)
+        {
+            // TODO: Calculate locally when possible (rendezvous).
+            return _affinity.GetPartition(k);
         }
     }
 }
