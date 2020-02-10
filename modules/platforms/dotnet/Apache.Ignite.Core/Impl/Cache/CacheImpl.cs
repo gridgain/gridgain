@@ -437,7 +437,8 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return true;
             }
 
-            var res = DoOutInOpX((int)CacheOp.Peek,
+            // TODO: near.GetOrAdd? Is it valid in all modes?
+            var res = DoOutInOpX((int) CacheOp.Peek,
                 w =>
                 {
                     w.WriteObjectDetached(key);

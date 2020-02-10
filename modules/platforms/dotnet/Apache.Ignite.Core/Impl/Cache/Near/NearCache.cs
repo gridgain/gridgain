@@ -110,14 +110,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
-                // TODO: Validate on get.
-                return map.GetOrAdd(key, k => GetEntry(valueFactory, k)).Val;
+                return map.AddOrUpdate(key, k => GetEntry(valueFactory, k),
+                    (k, old) => IsValid(old) ? old : GetEntry(valueFactory, k)).Val;
             }
             
             EnsureFallbackMap();
 
-            return (TVal) _fallbackMap
-                .GetOrAdd(key, k => GetEntry(_ => (object) valueFactory((TKey) k), k)).Val;
+            Func<object, NearCacheEntry<object>> factory = k => GetEntry(_ => (object) valueFactory((TKey) k), k);
+            return (TVal) _fallbackMap.AddOrUpdate(
+                key, 
+                factory,
+                (k, old) => IsValid(old) ? old : factory(k)).Val;
         }
 
         public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
@@ -248,24 +251,24 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         }
         
         
-        private bool IsValid<T>(NearCacheEntry<T> entry)
+        private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
         {
-            var currentVersion = _affinityTopologyVersionFunc();
+            var ver = version ?? _affinityTopologyVersionFunc();
 
-            if (entry.Version >= currentVersion)
+            if (entry.Version >= ver)
             {
                 return true;
             }
 
-            var newPrimary = GetPrimaryNodeId(currentVersion, entry.Partition, true);
-
-            return newPrimary != null && 
-                   newPrimary == GetPrimaryNodeId(entry.Version, entry.Partition, false);
+            var newPrimary = GetPrimaryNodeId(ver, entry.Partition);
+            var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
+            
+            return newPrimary != null && newPrimary == oldPrimary;
         }
 
-        private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part, bool requestMissingAssignment)
+        private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part)
         {
-            var nodeIdPerPartition = GetNodeIdPerPartition(ver, requestMissingAssignment);
+            var nodeIdPerPartition = GetNodeIdPerPartition(ver);
             if (nodeIdPerPartition == null)
             {
                 return null;
@@ -277,18 +280,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return nodeIdPerPartition[part];
         }
 
-        private Guid[] GetNodeIdPerPartition(AffinityTopologyVersion ver, bool requestMissingAssignment)
+        private Guid[] GetNodeIdPerPartition(AffinityTopologyVersion ver)
         {
             Guid[] nodeIdPerPartition;
 
             // ReSharper disable once InconsistentlySynchronizedField
-            if (_partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
+            var partitionNodeIds = _partitionNodeIds;
+            if (partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
             {
                 return nodeIdPerPartition;
             }
 
-            if (!requestMissingAssignment)
+            // TODO: Cache min version when history limit is reached.
+            if (partitionNodeIds.Count == PartitionNodeIdsMaxSize && ver < partitionNodeIds.Keys.Min())
             {
+                // Version is too old, don't request.
                 return null;
             }
 
@@ -303,7 +309,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 
                 if (nodeIdPerPartition != null)
                 {
-                    var partitionNodeIds = new Dictionary<AffinityTopologyVersion, Guid[]>(_partitionNodeIds);
+                    partitionNodeIds = new Dictionary<AffinityTopologyVersion, Guid[]>(_partitionNodeIds);
                     partitionNodeIds[ver] = nodeIdPerPartition;
 
                     if (partitionNodeIds.Count > PartitionNodeIdsMaxSize)
