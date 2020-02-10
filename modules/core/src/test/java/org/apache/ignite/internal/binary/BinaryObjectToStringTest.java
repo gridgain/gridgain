@@ -145,9 +145,7 @@ public class BinaryObjectToStringTest extends GridCommonAbstractTest {
     private static String asBinaryObjectString(IgniteCache<Object, Object> cache, Object obj) {
         cache.put(1, obj);
 
-        String ret = cache.withKeepBinary().get(1).toString();
-        System.err.println(ret);
-        return ret;
+        return cache.withKeepBinary().get(1).toString();
     }
 
     /** */
