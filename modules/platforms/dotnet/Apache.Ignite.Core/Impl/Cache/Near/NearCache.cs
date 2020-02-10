@@ -263,6 +263,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var newPrimary = GetPrimaryNodeId(ver, entry.Partition);
             var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
             
+            // TODO: We should analyse full history of assignments between oldVer and newVer
             return newPrimary != null && newPrimary == oldPrimary;
         }
 
