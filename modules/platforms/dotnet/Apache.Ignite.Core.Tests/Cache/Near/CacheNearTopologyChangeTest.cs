@@ -71,6 +71,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(Key3, _cache[1][Key3].Bar);
             Assert.AreEqual(Key3, clientCache[Key3].Bar);
 
+            // Stop primary node for Key3.
             _ignite[2].Dispose();
             Assert.IsTrue(_ignite[0].WaitTopology(3));
 

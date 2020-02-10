@@ -254,7 +254,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
         {
             // TODO: What is this for? Document which use case is covered by IsValid.
-            // Looks like only primary node leave is related. Can we handle that better?
+            // Looks like only primary node leave is related. Can we handle that better? What happens with NearCacheEntry in that case?
             return true;
             
             /*
