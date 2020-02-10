@@ -219,12 +219,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Test multiple topology changes.
         /// </summary>
         [Test]
-        public void TestContinuousTopologyChangeMaintainsCorrectNearCacheData()
+        public void TestContinuousTopologyChangeMaintainsCorrectNearCacheData([Values(0, 1, 2)] int backups)
         {
             // Start 5 servers and 1 client.
             // Server 0 and client node always run
             // Other servers start and stop periodically.
-            InitNodes(5);
+            InitNodes(5, backups: backups);
             var clientCache = InitClientAndCache();
             var serverCache = _cache[0];
             var rnd = new Random();
@@ -287,7 +287,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// <summary>
         /// Inits a number of grids.
         /// </summary>
-        private void InitNodes(int count, bool serverNear = true)
+        private void InitNodes(int count, bool serverNear = true, int backups = 0)
         {
             Debug.Assert(count < MaxNodes);
             
@@ -296,18 +296,19 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             for (var i = 0; i < count; i++)
             {
-                InitNode(i, serverNear);
+                InitNode(i, serverNear, false, backups);
             }
         }
 
         /// <summary>
         /// Inits a grid.
         /// </summary>
-        private void InitNode(int i, bool serverNear = true, bool waitForPrimary = true)
+        private void InitNode(int i, bool serverNear = true, bool waitForPrimary = true, int backups = 0)
         {
             var cacheConfiguration = new CacheConfiguration(CacheName)
             {
-                NearConfiguration = serverNear ? new NearCacheConfiguration() : null
+                NearConfiguration = serverNear ? new NearCacheConfiguration() : null,
+                Backups = backups
             };
             
             _ignite[i] = Ignition.Start(TestUtils.GetTestConfiguration(name: "node" + i));
