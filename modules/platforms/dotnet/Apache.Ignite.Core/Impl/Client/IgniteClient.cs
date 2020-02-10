@@ -28,6 +28,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Datastream;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Cache;
     using Apache.Ignite.Core.Impl.Cache.Near;
     using Apache.Ignite.Core.Impl.Client.Cache;
     using Apache.Ignite.Core.Impl.Client.Cluster;
@@ -179,6 +180,12 @@ namespace Apache.Ignite.Core.Impl.Client
         public IBinary GetBinary()
         {
             return _binary;
+        }
+
+        /** <inheritDoc /> */
+        public CacheAffinityImpl GetAffinity(string cacheName)
+        {
+            throw GetClientNotSupportedException();
         }
 
         /** <inheritDoc /> */

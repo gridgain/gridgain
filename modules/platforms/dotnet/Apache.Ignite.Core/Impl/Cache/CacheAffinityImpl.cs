@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Cache;
+    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -215,12 +216,22 @@ namespace Apache.Ignite.Core.Impl.Cache
             return DoOutInOp(OpMapPartitionToPrimaryAndBackups, w => w.WriteObject(part), r => ReadNodes(r));
         }
 
+        /// <summary>
+        /// Gets primary nodes for all partitions.
+        /// </summary>
+        /// <returns>List of primary nodes per partition. Size of the list is equal to <see cref="Partitions"/>.
+        /// Primary node for partition N is at index N.</returns>
+        internal Guid[] MapAllPartitionsToNodes(AffinityTopologyVersion ver)
+        {
+            // TODO
+            throw new NotImplementedException();
+        }
+
         /** <inheritDoc /> */
         protected override T Unmarshal<T>(IBinaryStream stream)
         {
             return Marshaller.Unmarshal<T>(stream, _keepBinary);
         }
-
 
         /// <summary>
         /// Gets the node by id.

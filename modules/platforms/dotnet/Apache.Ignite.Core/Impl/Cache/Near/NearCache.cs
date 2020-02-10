@@ -21,7 +21,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
-    using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -55,12 +54,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
-        private readonly ICacheAffinity _affinity;
+        /** Affinity. */
+        private readonly CacheAffinityImpl _affinity;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        public NearCache(NearCacheManager nearCacheManager, ICacheAffinity affinity)
+        public NearCache(NearCacheManager nearCacheManager, CacheAffinityImpl affinity)
         {
             // TODO: Enable callbacks in Java.
             // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
@@ -307,17 +307,23 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                     return nodeIdPerPartition;
                 }
                 
-                // TODO: Request and update map only when successful
+                nodeIdPerPartition = _affinity.MapAllPartitionsToNodes(ver);
                 
-                var partitionNodeIds = new Dictionary<AffinityTopologyVersion, Guid[]>(_partitionNodeIds);
-
-                if (partitionNodeIds.Count > PartitionNodeIdsMaxSize)
+                if (nodeIdPerPartition != null)
                 {
-                    var oldest = partitionNodeIds.Keys.Min();
-                    partitionNodeIds.Remove(oldest);
+                    var partitionNodeIds = new Dictionary<AffinityTopologyVersion, Guid[]>(_partitionNodeIds);
+                    partitionNodeIds[ver] = nodeIdPerPartition;
+
+                    if (partitionNodeIds.Count > PartitionNodeIdsMaxSize)
+                    {
+                        var oldest = partitionNodeIds.Keys.Min();
+                        partitionNodeIds.Remove(oldest);
+                    }
+
+                    _partitionNodeIds = partitionNodeIds;
                 }
 
-                _partitionNodeIds = partitionNodeIds;
+                return nodeIdPerPartition;
             }
         }
 

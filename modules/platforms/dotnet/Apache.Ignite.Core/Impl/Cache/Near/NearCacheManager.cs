@@ -16,23 +16,19 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using System;
     using System.Diagnostics;
-    using System.Threading;
     using Apache.Ignite.Core.Cache.Affinity;
-    using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
-    using Apache.Ignite.Core.Impl.Memory;
 
     /// <summary>
     /// Manages <see cref="NearCache{TK,TV}"/> instances.
     /// Multiple <see cref="CacheImpl{TK,TV}"/> instances can exist for a given cache, and all of them share the same
     /// <see cref="NearCache{TK,TV}"/> instance.
     /// </summary>
-    [DebuggerDisplay("NearCacheManager [IgniteInstanceName={_ignite.Name}]")]
-    internal class NearCacheManager : IEventListener<DiscoveryEvent>
+    [DebuggerDisplay("NearCacheManager [IgniteInstanceName={_ignite.GetIgnite().Name}]")]
+    internal class NearCacheManager
     {
         /// <summary>
         /// Near caches per cache id.
@@ -45,12 +41,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Ignite.
         /// </summary>
-        private readonly IIgnite _ignite;
-
-        /// <summary>
-        /// Initialized flag.
-        /// </summary>
-        private int _initialized;
+        private readonly IIgniteInternal _ignite;
 
         /// <summary>
         /// Current topology version.
@@ -62,7 +53,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Initializes a new instance of the <see cref="NearCacheManager"/> class. 
         /// </summary>
         /// <param name="ignite">Ignite.</param>
-        public NearCacheManager(IIgnite ignite)
+        public NearCacheManager(IIgniteInternal ignite)
         {
             Debug.Assert(ignite != null);
 
@@ -91,8 +82,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public INearCache GetNearCache<TK, TV>(string cacheName)
         {
             Debug.Assert(!string.IsNullOrEmpty(cacheName));
-
-            Initialize();
 
             var cacheId = BinaryUtils.GetCacheId(cacheName);
             
@@ -127,58 +116,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 cache.Clear();
                 _nearCaches.Remove(cacheId);
             }
-        }
-
-        /// <summary>
-        /// Clears all caches.
-        /// </summary>
-        private void ClearAll()
-        {
-            foreach (var nearCache in _nearCaches)
-            {
-                nearCache.Value.Clear();
-            }
-        }
-
-        /// <summary>
-        /// Initializes this instance, if necessary.
-        /// </summary>
-        private void Initialize()
-        {
-            if (Interlocked.CompareExchange(ref _initialized, 1, 0) == 0)
-            {
-                var eventTypes = new[]
-                    {EventType.NodeFailed, EventType.NodeLeft, EventType.NodeSegmented, EventType.NodeJoined};
-                
-                _ignite.GetEvents().LocalListen(this, eventTypes);
-            }
-        }
-        
-        /** <inheritdoc /> */
-        bool IEventListener<DiscoveryEvent>.Invoke(DiscoveryEvent evt)
-        {
-            // TODO: This is not reliable.
-            // We may have cleared the caches below, but PME/rebalance is not yet finished,
-            // So we may be using stale GridNearCacheEntry, and losing updates for it.
-            
-            // Instead, employ our own IsValid, using same mechanism as PartitionAwareness:
-            // - Keep N latest partition assignments
-            // - Either keep partition number along with every cache entry as Java does, or infer it on the fly?
-            
-            
-            if (!evt.EventNode.IsClient)
-            {
-                // Clear all caches on node enter/leave: data may have been lost, and primaries change.
-                // We could refine this by checking every key (GridNearCacheEntry.valid()),
-                // but the complexity and upfront performance cost are not worth it.
-                
-                // TODO: Remove
-                Console.WriteLine(">>> EVT {0} on {1}", evt.Name,_ignite.Name);
-                
-                ClearAll();
-            }
-
-            return true;
         }
 
         /// <summary>

@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Datastream;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Cache;
     using Apache.Ignite.Core.Impl.Cache.Near;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Handle;
@@ -81,5 +82,12 @@ namespace Apache.Ignite.Core.Impl
         /// Gets the binary API.
         /// </summary>
         IBinary GetBinary();
+
+        /// <summary>
+        /// Gets internal affinity service for a given cache.
+        /// </summary>
+        /// <param name="cacheName">Cache name.</param>
+        /// <returns>Cache data affinity service.</returns>
+        CacheAffinityImpl GetAffinity(string cacheName);
     }
 }

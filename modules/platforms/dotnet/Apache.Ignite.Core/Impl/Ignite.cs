@@ -611,13 +611,19 @@ namespace Apache.Ignite.Core.Impl
         }
 
         /** <inheritdoc /> */
-        public ICacheAffinity GetAffinity(string cacheName)
+        CacheAffinityImpl IIgniteInternal.GetAffinity(string cacheName)
         {
             IgniteArgumentCheck.NotNull(cacheName, "cacheName");
 
             var aff = DoOutOpObject((int) Op.GetAffinity, w => w.WriteString(cacheName));
             
             return new CacheAffinityImpl(aff, false);
+        }
+
+        /** <inheritdoc /> */
+        public ICacheAffinity GetAffinity(string cacheName)
+        {
+            return ((IIgniteInternal) this).GetAffinity(cacheName);
         }
 
         /** <inheritdoc /> */
