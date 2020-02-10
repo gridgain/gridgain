@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.platform.cache.affinity;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.IgniteCheckedException;
@@ -26,6 +27,10 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.GridCacheAffinityManager;
+import org.apache.ignite.internal.processors.cache.GridCacheUtils;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractTarget;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
@@ -83,6 +88,9 @@ public class PlatformAffinity extends PlatformAbstractTarget {
     public static final int OP_PARTITIONS = 15;
 
     /** */
+    public static final int OP_MAP_ALL_PARTITIONS_TO_NODES = 16;
+
+    /** */
     private static final C1<ClusterNode, UUID> TO_NODE_ID = new C1<ClusterNode, UUID>() {
         @Nullable @Override public UUID apply(ClusterNode node) {
             return node != null ? node.id() : null;
@@ -94,6 +102,9 @@ public class PlatformAffinity extends PlatformAbstractTarget {
 
     /** Discovery manager */
     private final GridDiscoveryManager discovery;
+
+    /** Affinity manager. */
+    private final GridCacheAffinityManager affMgr;
 
     /**
      * Constructor.
@@ -110,6 +121,9 @@ public class PlatformAffinity extends PlatformAbstractTarget {
 
         if (aff == null)
             throw new IgniteCheckedException("Cache with the given name doesn't exist: " + name);
+
+        this.affMgr = this.platformCtx.kernalContext().cache().context().cacheContext(GridCacheUtils.cacheId(name))
+                .affinity();
 
         discovery = igniteCtx.discovery();
     }
@@ -282,6 +296,20 @@ public class PlatformAffinity extends PlatformAbstractTarget {
                 }
 
                 break;
+            }
+
+            case OP_MAP_ALL_PARTITIONS_TO_NODES: {
+                AffinityTopologyVersion ver = new AffinityTopologyVersion(reader.readLong(), reader.readInt());
+
+                List<List<ClusterNode>> assignment = affMgr.assignment(ver).assignment();
+
+                writer.writeInt(assignment.size());
+
+                for (List<ClusterNode> clusterNodes : assignment) {
+                    UUID nodeId = clusterNodes.get(0).id();
+                    writer.writeLong(nodeId.getMostSignificantBits());
+                    writer.writeLong(nodeId.getLeastSignificantBits());
+                }
             }
 
             default:
