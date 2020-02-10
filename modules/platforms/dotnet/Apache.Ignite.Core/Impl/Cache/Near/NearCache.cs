@@ -319,6 +319,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             lock (_partitionNodeIdsLock)
             {
+                // TODO: Use plain array for _partitionNodeIds AND _affinityTopologyVersions
+                // So they have same index for same version
+                // Since we only append (under lock), and never use `foreach` (only `for`), we should be fine.
                 if (_partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
                 {
                     return nodeIdPerPartition;
