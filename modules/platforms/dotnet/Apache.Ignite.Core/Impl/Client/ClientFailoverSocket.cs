@@ -59,8 +59,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /** Disposed flag. */
         private bool _disposed;
 
-        /** Current affinity topology version. */
-        private AffinityTopologyVersion? _affinityTopologyVersion;
+        /** Current affinity topology version. Store as object to make volatile. */
+        private volatile object _affinityTopologyVersion;
 
         /** Map from node ID to connected socket. */
         private volatile Dictionary<Guid, ClientSocket> _nodeSocketMap;
@@ -397,8 +397,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 return false;
             }
 
-            // TODO: Thread unsafe, AffinityTopologyVersion can't be updated or read atomically.
-            return map.AffinityTopologyVersion >= _affinityTopologyVersion.Value;
+            return map.AffinityTopologyVersion >= (AffinityTopologyVersion) _affinityTopologyVersion;
         }
 
         /// <summary>
