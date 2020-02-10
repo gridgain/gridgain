@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System.Collections.Concurrent;
     using System.Diagnostics;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
@@ -44,10 +45,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private readonly IIgniteInternal _ignite;
 
         /// <summary>
-        /// Current topology version.
-        /// Store as object to use volatile and do atomic read/writes. 
+        /// All known topology versions.
         /// </summary>
-        private volatile object _affinityTopologyVersion;
+        private readonly ConcurrentStack<AffinityTopologyVersion> _affinityTopologyVersions 
+            = new ConcurrentStack<AffinityTopologyVersion>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCacheManager"/> class. 
@@ -115,7 +116,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public void OnAffinityTopologyVersionChanged(AffinityTopologyVersion affinityTopologyVersion)
         {
-            _affinityTopologyVersion = affinityTopologyVersion;
+            _affinityTopologyVersions.Push(affinityTopologyVersion);
         }
         
         /// <summary>
@@ -123,9 +124,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         private NearCache<TK, TV> CreateNearCache<TK, TV>(string cacheName)
         {
-            return new NearCache<TK, TV>(
-                () => (AffinityTopologyVersion) _affinityTopologyVersion, 
-                _ignite.GetAffinity(cacheName));
+            return new NearCache<TK, TV>(_affinityTopologyVersions, _ignite.GetAffinity(cacheName));
         }
     }
 }

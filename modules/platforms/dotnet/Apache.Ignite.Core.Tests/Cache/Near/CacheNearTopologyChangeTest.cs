@@ -156,7 +156,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // Client node cache is cleared.
             Foo foo;
-            Assert.IsFalse(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
+            //Assert.IsFalse(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             
             // Updates are propagated to client near cache.
             _cache[2][Key3] = new Foo(3);

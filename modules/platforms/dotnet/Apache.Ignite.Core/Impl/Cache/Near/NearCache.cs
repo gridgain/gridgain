@@ -43,8 +43,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Fallback init lock. */
         private readonly object _fallbackMapLock = new object();
 
-        /** Topology version func. */
-        private readonly Func<AffinityTopologyVersion> _affinityTopologyVersionFunc;
+        /** Topology versions. */
+        private readonly ConcurrentStack<AffinityTopologyVersion> _affinityTopologyVersions;
 
         /** Affinity. */
         private readonly CacheAffinityImpl _affinity;
@@ -60,12 +60,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        public NearCache(Func<AffinityTopologyVersion> affinityTopologyVersionFunc, CacheAffinityImpl affinity)
+        public NearCache(ConcurrentStack<AffinityTopologyVersion> affinityTopologyVersions, CacheAffinityImpl affinity)
         {
             // TODO: Enable callbacks in Java.
             // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
 
-            _affinityTopologyVersionFunc = affinityTopologyVersionFunc;
+            _affinityTopologyVersions = affinityTopologyVersions;
             _affinity = affinity;
         }
 
@@ -257,7 +257,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // Looks like only primary node leave is related. Can we handle that better? What happens with NearCacheEntry in that case?
             // return true;
             
-            var ver = version ?? _affinityTopologyVersionFunc();
+            var ver = version ?? GetCurrentTopologyVersion();
 
             if (entry.Version >= ver)
             {
@@ -341,7 +341,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
             return new NearCacheEntry<TVal>(
                 valueFactory(k),
-                _affinityTopologyVersionFunc(), 
+                GetCurrentTopologyVersion(), 
                 GetPartition(k));
         }
 
@@ -349,6 +349,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             // TODO: Calculate locally when possible (rendezvous).
             return _affinity.GetPartition(k);
+        }
+
+        private AffinityTopologyVersion GetCurrentTopologyVersion()
+        {
+            AffinityTopologyVersion ver;
+            return _affinityTopologyVersions.TryPeek(out ver) ? ver : default(AffinityTopologyVersion);
         }
     }
 }
