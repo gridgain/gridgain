@@ -110,6 +110,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
+                // TODO: Validate on get.
                 return map.GetOrAdd(key, k => GetEntry(valueFactory, k)).Val;
             }
             
@@ -125,6 +126,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
+                // TODO: Validate on get
                 return map.GetOrAdd(key, k => GetEntry(_ => val, k)).Val;
             }
             
