@@ -238,7 +238,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 // Change topology randomly.
                 var idx = rnd.Next(1, 5);
-                var dataLost = false;
+                var primaryLeft = false;
                 var status = string.Empty;
 
                 Console.WriteLine(">>> Changing topology...");
@@ -251,16 +251,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 else
                 {
                     // TODO: This is not stable, we should wait for rebalance to finish
-                    dataLost = _ignite[idx].GetAffinity(CacheName)
+                    primaryLeft = _ignite[idx].GetAffinity(CacheName)
                         .IsPrimary(_ignite[idx].GetCluster().GetLocalNode(), key);
                     
                     StopNode(idx);
 
-                    status = string.Format("Node stopped: {0}, data lost: {1}, current val: {2}", idx, dataLost, val);
+                    status = string.Format("Node stopped: {0}, data lost: {1}, current val: {2}", idx, primaryLeft, val);
                 }
                 
                 // Verify data.
-                if (dataLost)
+                if (primaryLeft && backups == 0)
                 {
                     TestUtils.WaitForTrueCondition(() => !serverCache.ContainsKey(key), timeout, status);
                     TestUtils.WaitForTrueCondition(() => !clientCache.ContainsKey(key), timeout, status);
@@ -275,10 +275,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 val++;
                 (val % 2 == 0 ? serverCache : clientCache)[key] = new Foo(val);
 
-                // TODO: One of this fails when non-primary node leaves.
-                // Looks like relying on discovery events may introduce some kind of a race?
-                // NearCacheEntry becomes invalid, but we don't track it properly.
-                // We need a way to track primary node change.
                 TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, status);
                 TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, status);
             }
