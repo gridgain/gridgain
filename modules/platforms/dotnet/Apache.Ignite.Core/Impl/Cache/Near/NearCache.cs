@@ -93,7 +93,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (_fallbackMap != null)
             {
                 NearCacheEntry<object> fallbackEntry;
-                if (_fallbackMap.TryGetValue(key, out fallbackEntry))
+                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && IsValid(fallbackEntry))
                 {
                     val = (TVal) fallbackEntry.Val;
                     return true;
@@ -220,20 +220,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return 0;
         }
 
-        public bool ContainsKey<TKey>(TKey key)
+        public bool ContainsKey<TKey, TVal>(TKey key)
         {
-            var map = _map as ConcurrentDictionary<TKey, TV>;
-            if (map != null)
-            {
-                return map.ContainsKey(key);
-            }
-
-            if (_fallbackMap != null)
-            {
-                return _fallbackMap.ContainsKey(key);
-            }
-
-            return false;
+            object _;
+            return TryGetValue(key, out _);
         }
 
         private void EnsureFallbackMap()

@@ -374,7 +374,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (CanUseNear && _nearCache.ContainsKey(key))
+            if (CanUseNear && _nearCache.ContainsKey<TK, TV>(key))
             {
                 return true;
             }
@@ -387,7 +387,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (CanUseNear && _nearCache.ContainsKey(key))
+            if (CanUseNear && _nearCache.ContainsKey<TK, TV>(key))
             {
                 return TaskRunner.FromResult(true);
             }

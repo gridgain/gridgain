@@ -46,6 +46,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         int GetSize();
 
-        bool ContainsKey<TK>(TK key);
+        bool ContainsKey<TKey, TVal>(TKey key);
     }
 }
