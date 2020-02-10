@@ -117,6 +117,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
 
+            // TODO: Pass partition when updating (not removing)
             var reader = marshaller.StartUnmarshal(stream);
 
             var key = reader.ReadObject<object>();
@@ -133,6 +134,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 }
                 else
                 {
+                    // TODO: This duplicates Evict, why?
                     TV unused;
                     map.TryRemove((TK) key, out unused);
                 }
