@@ -348,7 +348,13 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         guard();
 
         try {
-            return ensureLastTopologyState().nodeIds.contains(id) ? ctx.discovery().node(id) : null;
+            if (ids != null)
+                return ids.contains(id) ? ctx.discovery().node(id) : null;
+            else {
+                ClusterNode node = ctx.discovery().node(id);
+
+                return node != null && (p == null || p.apply(node)) ? node : null;
+            }
         }
         finally {
             unguard();
