@@ -57,6 +57,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
 
 /**
  *
@@ -223,6 +224,15 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
+    public void testNodeLeftOnStableTopology_Persistent_5() throws Exception {
+        // Explicitly disabling the optimization, PME is expected.
+        testNodeLeftOnStableTopology(true, false, false, true);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Mixed_1() throws Exception {
@@ -249,6 +259,15 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
         testNodeLeftOnStableTopology(true, true, true, true);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
+    public void testNodeLeftOnStableTopology_Mixed_5() throws Exception {
+        // Explicitly disabling the optimization, PME is expected.
+        testNodeLeftOnStableTopology(true, true, false, true);
     }
 
     /**
