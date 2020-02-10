@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.cache.ivan;
+package org.apache.ignite.internal.binary;
 
 import com.google.common.collect.ImmutableMap;
 import java.io.Externalizable;
@@ -88,7 +88,7 @@ public class BinaryObjectToStringTest extends GridCommonAbstractTest {
 
     /** */
     private String failedStrPattern(String className) {
-        return "org.apache.ignite.internal.processors.cache.ivan.BinaryObjectToStringTest\\$TestContainer " +
+        return "org.apache.ignite.internal.binary.BinaryObjectToStringTest\\$TestContainer " +
             "\\[idHash=-?\\d+, hash=-?\\d+, " +
             "x=\\(Failed to create a string representation: class not found " + className + "\\)]";
     }
