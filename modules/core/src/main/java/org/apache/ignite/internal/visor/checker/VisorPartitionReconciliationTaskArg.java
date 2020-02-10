@@ -244,6 +244,24 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
+         * Copy constructor.
+         *
+         * @param cpFrom Argument to copy from.
+         */
+        public Builder(VisorPartitionReconciliationTaskArg cpFrom) {
+            caches = cpFrom.caches;
+            fixMode = cpFrom.fixMode;
+            console = cpFrom.console;
+            verbose = cpFrom.verbose;
+            parallelism = cpFrom.parallelism;
+            batchSize = cpFrom.batchSize;
+            recheckAttempts = cpFrom.batchSize;
+            recheckAttempts = cpFrom.recheckAttempts;
+            recheckDelay = cpFrom.recheckDelay;
+            repairAlg = cpFrom.repairAlg;
+        }
+
+        /**
          * Build metod.
          */
         public VisorPartitionReconciliationTaskArg build() {

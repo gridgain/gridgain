@@ -45,6 +45,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -83,6 +84,15 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
         LocalDateTime startTime = LocalDateTime.now();
         long sesId = startTime.toEpochSecond(ZoneOffset.UTC);
+
+        if (arg.parallelism() == 0) {
+            int availableProcessors = Runtime.getRuntime().availableProcessors();
+
+            U.warn(log, "Partition reconciliation [session=" + sesId + "] will be executed with " +
+                "[parallelism=" + availableProcessors + "] according to number of CPU cores of the local node" );
+
+            arg = new VisorPartitionReconciliationTaskArg.Builder(arg).parallelism(availableProcessors).build();
+        }
 
         ignite.compute().broadcastAsync(new ReconciliationSessionId(sesId, arg.parallelism())).get();
 
@@ -200,17 +210,12 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             }
 
             try {
-                int parallelism = reconciliationTaskArg.parallelism();
-
-                if (parallelism == 0)
-                    parallelism = Runtime.getRuntime().availableProcessors();
-
                 ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
                     caches,
                     reconciliationTaskArg.fixMode(),
-                    parallelism,
+                    reconciliationTaskArg.parallelism(),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
                     reconciliationTaskArg.repairAlg(),
