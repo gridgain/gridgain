@@ -28,6 +28,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
+        /** Partition assignment map: from topology version to array of node id per partition. */
+        private readonly ConcurrentDictionary<AffinityTopologyVersion, Guid[]> _partitionNodeIds 
+            = new ConcurrentDictionary<AffinityTopologyVersion, Guid[]>();
+        
         /** Fallback init lock. */
         private readonly object _fallbackMapLock = new object();
 
@@ -235,7 +239,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         
         private bool IsValid<TKey>(TKey key)
         {
-            // TODO: Check if affinity topology version has changed, and if that version is still valid
             var keyVer = new AffinityTopologyVersion(); // TODO: Get from the entry
             var currentVer = _nearCacheManager.AffinityTopologyVersion;
 
@@ -244,18 +247,37 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return true;
             }
             
-            var part = 0; // TODO: Get from entry
+            var part = 0; // TODO: Get from entry. If negative, request from Java (Lazy loading for unknowns)
 
-            var currentPrimary = aff.GetPrimary(part, keyVer);
-            var newPrimary = aff.GetPrimary(part, keyVer);
+            var currentPrimary = GetPrimaryNodeId(keyVer, part, false);
+            var newPrimary = GetPrimaryNodeId(currentVer, part, true);
 
-            if (currentPrimary == newPrimary)
+            if (currentPrimary == newPrimary && currentPrimary != null)
             {
                 return true;
             }
             
-            // TODO: Check backup change? Why?
             return false;
+        }
+
+        private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part, bool requestMissingAssignment)
+        {
+            Guid[] nodeIdPerPartition;
+            if (!_partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
+            {
+                if (requestMissingAssignment)
+                {
+                    // TODO: Request new assignment
+                    // Avoid requesting same assignment twice - is that possible with ConcurrentDictionary?
+                }
+
+                return null;
+            }
+
+            Debug.Assert(part >= 0);
+            Debug.Assert(part < nodeIdPerPartition.Length);
+
+            return nodeIdPerPartition[part];
         }
     }
 }
