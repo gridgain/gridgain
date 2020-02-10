@@ -264,17 +264,25 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return true;
             }
 
-            // Make sure old primary node is still alive.
+            // Check that primary has never changed since entry has been cached.
+            // Primary change requires invalidation (see GridNearCacheEntry.valid()).
+            // TODO: Verify change to and from backup node. Hopefully it does not matter for us.
             var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
-            var nodeIdPerPartition = GetNodeIdPerPartition(ver);
-            return oldPrimary != null && nodeIdPerPartition != null && nodeIdPerPartition.Contains(oldPrimary.Value);
 
-            /*
-            var newPrimary = GetPrimaryNodeId(ver, entry.Partition);
-            var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
-            
-            // TODO: We should analyse full history of assignments between oldVer and newVer
-            return newPrimary != null && newPrimary == oldPrimary;*/
+            foreach (var newVer in _affinityTopologyVersions)
+            {
+                if (newVer <= entry.Version)
+                {
+                    continue;
+                }
+                
+                if (GetPrimaryNodeId(newVer, entry.Partition) != oldPrimary)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part)
