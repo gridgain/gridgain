@@ -24,10 +24,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -53,7 +55,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 @RunWith(Parameterized.class)
 public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     /** Keys count. */
-    private static final int KEY_CNT = 100;
+    private static final int KEY_CNT = 1000;
 
     /** Query local results. */
     static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
@@ -126,12 +128,17 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
                 .addQueryField("val", Long.class.getName(), null)
                 .setKeyFieldName("id")
                 .setValueFieldName("val")
+                .setIndexes(Collections.singletonList(
+                    new QueryIndex("val")
+                ))
             ))
             .setBackups(1)
             .setAffinity(new RendezvousAffinityFunction(false, 10)));
 
-        for (long i = 0; i < KEY_CNT; ++i)
-            c.put(i, i);
+        try (IgniteDataStreamer streamer = grid(0).dataStreamer("test")) {
+            for (long i = 0; i < KEY_CNT; ++i)
+                streamer.addData(i, i);
+        }
 
         localResults.clear();
     }
@@ -191,6 +198,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLazy(true)
             .setSchema("TEST")
+            .setPageSize(1)
             .setArgs(args), false);
     }
 
