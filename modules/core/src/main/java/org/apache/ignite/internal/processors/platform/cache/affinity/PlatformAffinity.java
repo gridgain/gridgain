@@ -310,6 +310,8 @@ public class PlatformAffinity extends PlatformAbstractTarget {
                     writer.writeLong(nodeId.getMostSignificantBits());
                     writer.writeLong(nodeId.getLeastSignificantBits());
                 }
+
+                break;
             }
 
             default:

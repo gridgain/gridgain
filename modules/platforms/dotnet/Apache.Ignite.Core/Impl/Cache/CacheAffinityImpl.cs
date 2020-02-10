@@ -226,17 +226,23 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Primary node for partition N is at index N.</returns>
         internal Guid[] MapAllPartitionsToNodes(AffinityTopologyVersion ver)
         {
-            return DoInOp(OpMapAllPartitionsToNodes, s =>
-            {
-                var res = new Guid[s.ReadInt()];
-                
-                for (var i = 0; i < res.Length; i++)
+            return DoOutInOp(OpMapAllPartitionsToNodes,
+                w =>
                 {
-                    res[i] = BinaryUtils.ReadGuid(s);
-                }
+                    w.WriteLong(ver.Version);
+                    w.WriteInt(ver.MinorVersion);
+                },
+                s =>
+                {
+                    var res = new Guid[s.ReadInt()];
 
-                return res;
-            });
+                    for (var i = 0; i < res.Length; i++)
+                    {
+                        res[i] = BinaryUtils.ReadGuid(s);
+                    }
+
+                    return res;
+                });
         }
 
         /** <inheritDoc /> */
