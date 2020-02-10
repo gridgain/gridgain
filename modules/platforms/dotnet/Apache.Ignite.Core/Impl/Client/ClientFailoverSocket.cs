@@ -455,7 +455,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 foreach (var cache in grp.Caches)
                 {
-                    mapping[cache.Key] = new ClientCachePartitionMap(cache.Key, partNodeIds, cache.Value);
+                    mapping[cache.Key] = new ClientCachePartitionMap(partNodeIds, cache.Value);
                 }
             }
 
