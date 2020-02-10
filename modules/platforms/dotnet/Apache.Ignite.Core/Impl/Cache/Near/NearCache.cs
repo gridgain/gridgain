@@ -255,9 +255,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             // TODO: What is this for? Document which use case is covered by IsValid.
             // Looks like only primary node leave is related. Can we handle that better? What happens with NearCacheEntry in that case?
-            return true;
+            // return true;
             
-            /*
             var ver = version ?? _affinityTopologyVersionFunc();
 
             if (entry.Version >= ver)
@@ -265,6 +264,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return true;
             }
 
+            // Make sure old primary node is still alive.
+            var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
+            var nodeIdPerPartition = GetNodeIdPerPartition(ver);
+            return oldPrimary != null && nodeIdPerPartition.Contains(oldPrimary.Value);
+
+            /*
             var newPrimary = GetPrimaryNodeId(ver, entry.Partition);
             var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
             
