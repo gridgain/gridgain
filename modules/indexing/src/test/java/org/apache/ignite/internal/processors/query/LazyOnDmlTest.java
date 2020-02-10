@@ -17,10 +17,16 @@
 package org.apache.ignite.internal.processors.query;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -37,17 +43,55 @@ import org.h2.result.LocalResult;
 import org.h2.result.LocalResultImpl;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  * Tests for lazy mode for DML queries.
  */
+@RunWith(Parameterized.class)
 public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     /** Keys count. */
-    private static final int KEY_CNT = 10;
+    private static final int KEY_CNT = 100;
 
     /** Query local results. */
     static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
+
+    /** */
+    @Parameterized.Parameter
+    public CacheAtomicityMode atomicityMode;
+
+    /** */
+    @Parameterized.Parameter(1)
+    public CacheMode cacheMode;
+
+    /**
+     * @return Test parameters.
+     */
+    @Parameterized.Parameters(name = "atomicityMode={0}, cacheMode={1}")
+    public static Collection parameters() {
+        Set<Object[]> paramsSet = new LinkedHashSet<>();
+
+        Object[] paramTemplate = new Object[2];
+
+        for (CacheAtomicityMode atomicityMode : CacheAtomicityMode.values()) {
+            paramTemplate = Arrays.copyOf(paramTemplate, paramTemplate.length);
+
+            paramTemplate[0] = atomicityMode;
+
+            for (CacheMode cacheMode : new CacheMode[] {CacheMode.PARTITIONED, CacheMode.REPLICATED}) {
+                Object[] params = Arrays.copyOf(paramTemplate, paramTemplate.length);
+
+                params[1] = cacheMode;
+
+                paramsSet.add(params);
+            }
+        }
+
+        return paramsSet;
+    }
+
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
@@ -55,7 +99,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
 
-        startGrid();
+        startGrids(3);
    }
 
     /** {@inheritDoc} */
@@ -71,9 +115,11 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        IgniteCache<Long, Long> c = grid().createCache(new CacheConfiguration<Long, Long>()
+        IgniteCache<Long, Long> c = grid(0).createCache(new CacheConfiguration<Long, Long>()
             .setName("test")
             .setSqlSchema("TEST")
+            .setAtomicityMode(atomicityMode)
+            .setCacheMode(cacheMode)
             .setQueryEntities(Collections.singleton(new QueryEntity(Long.class, Long.class)
                 .setTableName("test")
                 .addQueryField("id", Long.class.getName(), null)
@@ -86,12 +132,14 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
 
         for (long i = 0; i < KEY_CNT; ++i)
             c.put(i, i);
+
+        localResults.clear();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        for (String cache : grid().cacheNames())
-            grid().cache(cache).destroy();
+        for (String cache : grid(0).cacheNames())
+            grid(0).cache(cache).destroy();
 
         super.afterTest();
     }
@@ -130,7 +178,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
      * @return Results cursor.
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object ... args) {
-        return sql(grid(), sql, args);
+        return sql(grid(0), sql, args);
     }
 
     /**
