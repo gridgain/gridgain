@@ -213,7 +213,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PluginProcessorIgniteStop, PluginProcessorIgniteStop);
             AddHandler(UnmanagedCallbackOp.PluginCallbackInLongLongOutLong, PluginCallbackInLongLongOutLong);
             AddHandler(UnmanagedCallbackOp.NearCacheInvalidate, NearCacheUpdate);
-            AddHandler(UnmanagedCallbackOp.NearCacheEvict, NearCacheEvict);
             AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
             AddHandler(UnmanagedCallbackOp.OnAffinityTopologyVersionChanged, OnAffinityTopologyVersionChanged);
         }
@@ -435,23 +434,6 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 var cacheId = stream.ReadInt();
 
                 _ignite.NearCacheManager.Update(cacheId, stream, _ignite.Marshaller);
-            }
-
-            return 0;
-        }
-        
-        /// <summary>
-        /// Evicts near cache entry.
-        /// </summary>
-        /// <param name="memPtr">Memory pointer.</param>
-        /// <returns>Unused.</returns>
-        private long NearCacheEvict(long memPtr)
-        {
-            using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
-            {
-                var cacheId = stream.ReadInt();
-
-                _ignite.NearCacheManager.Evict(cacheId, stream, _ignite.Marshaller);
             }
 
             return 0;

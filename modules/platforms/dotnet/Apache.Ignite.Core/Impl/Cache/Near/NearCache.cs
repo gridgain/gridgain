@@ -22,7 +22,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
-    using Apache.Ignite.Core.Impl.Memory;
 
     /// <summary>
     /// Holds near cache data for a given cache, serves one or more <see cref="CacheImpl{TK,TV}"/> instances.
@@ -156,35 +155,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 _fallbackMap[key] = val;
             }
             else
-            {
-                object unused;
-                _fallbackMap.TryRemove(key, out unused);
-            }
-        }
-
-        public void Evict(PlatformMemoryStream stream, Marshaller marshaller)
-        {
-            // Eviction callbacks from Java work for 2 out of 3 cases:
-            // + Client node (all keys)
-            // + Server node (non-primary keys)
-            // - Server node (primary keys) - because there is no need to store primary keys in near cache
-            // Primary keys on server nodes are never evicted from .NET Near Cache. This ensures best performance
-            // for co-located operations, scan query filters, and so on.
-
-            Debug.Assert(stream != null);
-            Debug.Assert(marshaller != null);
-            
-            var reader = marshaller.StartUnmarshal(stream);
-            var key = reader.ReadObject<object>();
-
-            var map = _map;
-            if (map != null && key is TK)
-            {
-                TV unused;
-                map.TryRemove((TK) key, out unused);
-            }
-
-            if (_fallbackMap != null)
             {
                 object unused;
                 _fallbackMap.TryRemove(key, out unused);

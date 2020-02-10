@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
-    using Apache.Ignite.Core.Impl.Memory;
 
     /// <summary>
     /// Non-generic near cache facade.
@@ -35,11 +34,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Clears the cache.
         /// </summary>
         void Clear();
-
-        /// <summary>
-        /// Reads cache key and evicts corresponding entry.
-        /// </summary>
-        void Evict(PlatformMemoryStream stream, Marshaller marshaller);
 
         bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
         

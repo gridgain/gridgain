@@ -116,19 +116,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             nearCache.Update(stream, marshaller);
         }
 
-        public void Evict(int cacheId, PlatformMemoryStream stream, Marshaller marshaller)
-        {
-            INearCache nearCache;
-            if (!_nearCaches.TryGetValue(cacheId, out nearCache))
-            {
-                return;
-            }
-            
-            // TODO: Investigate - are there any redundant callbacks?
-            // Right now we don't need the one in clearInternal
-            nearCache.Evict(stream, marshaller);
-        }
-
         /// <summary>
         /// Stops near cache.
         /// </summary>
