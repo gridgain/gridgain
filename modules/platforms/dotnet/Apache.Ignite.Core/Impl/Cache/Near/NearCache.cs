@@ -61,11 +61,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             {
                 if (map.TryGetValue(key, out val))
                 {
-                    // TODO: Check if affinity topology version has changed, and if that version is still valid
-                    var keyVer = new AffinityTopologyVersion(); // TODO: Get from the map
-                    var currentVer = _nearCacheManager.AffinityTopologyVersion;
-                    
-                    return true;
+                    if (IsValid(key))
+                    {
+                        return true;
+                    }
+
+                    // TODO: Remove from map atomically, otherwise we risk wasting memory.
+                    val = default(TVal);
+                    return false;
                 }
             }
             
@@ -227,6 +230,32 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 _map = null;
                 _fallbackMap = new ConcurrentDictionary<object, object>();
             }
+        }
+        
+        
+        private bool IsValid<TKey>(TKey key)
+        {
+            // TODO: Check if affinity topology version has changed, and if that version is still valid
+            var keyVer = new AffinityTopologyVersion(); // TODO: Get from the entry
+            var currentVer = _nearCacheManager.AffinityTopologyVersion;
+
+            if (keyVer >= currentVer)
+            {
+                return true;
+            }
+            
+            var part = 0; // TODO: Get from entry
+
+            var currentPrimary = aff.GetPrimary(part, keyVer);
+            var newPrimary = aff.GetPrimary(part, keyVer);
+
+            if (currentPrimary == newPrimary)
+            {
+                return true;
+            }
+            
+            // TODO: Check backup change? Why?
+            return false;
         }
     }
 }
