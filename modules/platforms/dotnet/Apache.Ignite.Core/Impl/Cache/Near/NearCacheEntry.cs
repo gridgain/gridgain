@@ -22,7 +22,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// Near cache entry.
     /// </summary>
     /// <typeparam name="T">Value type.</typeparam>
-    public class NearCacheEntry<T>
+    internal class NearCacheEntry<T>
     {
         private readonly T _val;
 
