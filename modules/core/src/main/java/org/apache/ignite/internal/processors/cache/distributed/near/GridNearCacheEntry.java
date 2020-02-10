@@ -756,7 +756,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
     /** {@inheritDoc} */
     @Override public void onMarkedObsolete() {
         // GridCacheMapEntry.onMarkedObsolete is called immediately after performing operation for any non-primary key.
-        evictFromPlatformNearCache();
+        updatePlatformNearCache(null);
     }
 
     /**

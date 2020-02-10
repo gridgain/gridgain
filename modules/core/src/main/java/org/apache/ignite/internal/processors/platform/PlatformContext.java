@@ -298,12 +298,4 @@ public interface PlatformContext {
      * @param valBytes Serialized value.
      */
     public void updateNearCache(int cacheId, Object key, byte[] keyBytes, byte[] valBytes);
-
-    /**
-     * Evicts near cache entry with specified key.
-     *
-     * @param cacheId Cache id.
-     * @param keyBytes Serialized key.
-     */
-    public void evictFromNearCache(int cacheId,byte[] keyBytes);
 }

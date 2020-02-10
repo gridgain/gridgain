@@ -6972,28 +6972,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * Evicts corresponding platform near cache entry, if applicable.
-     */
-    protected void evictFromPlatformNearCache() {
-        if (!hasPlatformNearCache())
-            return;
-
-        PlatformProcessor proc = this.cctx.kernalContext().platform();
-        if (!proc.hasContext())
-            return;
-
-        try {
-            CacheObjectContext ctx = this.cctx.cacheObjectContext();
-
-            byte[] keyBytes = this.key.valueBytes(ctx);
-
-            proc.context().evictFromNearCache(this.cctx.cacheId(), keyBytes);
-        } catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
-    }
-
-    /**
      * Gets a value indicating whether platform near cache exists for current cache.
      *
      * @return True when Platform Near Cache exists for this cache; false otherwise.

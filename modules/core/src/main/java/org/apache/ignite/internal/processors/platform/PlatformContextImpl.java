@@ -618,23 +618,6 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
     }
 
     /** {@inheritDoc} */
-    @Override public void evictFromNearCache(int cacheId, byte[] keyBytes) {
-        assert keyBytes != null;
-
-        // TODO: Track active caches and avoid unnecessary callbacks?
-        try (PlatformMemory mem0 = mem.allocate()) {
-            PlatformOutputStream out = mem0.output();
-
-            out.writeInt(cacheId);
-            out.writeByteArray(keyBytes);
-
-            out.synchronize();
-
-            gateway().nearCacheEvict(mem0.pointer());
-        }
-    }
-
-    /** {@inheritDoc} */
     @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
         AffinityTopologyVersion ver = fut.topologyVersion();
 
