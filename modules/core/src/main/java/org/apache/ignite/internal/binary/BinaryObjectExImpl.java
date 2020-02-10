@@ -251,9 +251,11 @@ public abstract class BinaryObjectExImpl implements BinaryObjectEx {
             OptimizedMarshallerInaccessibleClassException e1 =
                 X.cause(e, OptimizedMarshallerInaccessibleClassException.class);
 
+            String msg = "Failed to create a string representation";
+
             return e1 != null
-                ? e1.inaccessibleClass() + "(Class not found)"
-                : "(Failed to create string representation of binary object)";
+                ? "(" + msg + ": class not found " + e1.inaccessibleClass() + ")"
+                : "(" + msg + ")";
         }
     }
 
