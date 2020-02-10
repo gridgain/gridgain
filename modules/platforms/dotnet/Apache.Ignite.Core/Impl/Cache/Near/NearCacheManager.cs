@@ -161,10 +161,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // So we may be using stale GridNearCacheEntry, and losing updates for it.
             
             // Instead, employ our own IsValid, using same mechanism as PartitionAwareness:
-            // Maintain up-to-date partition map for every active cache (see GridCachePartitionExchangeManager.readyTopVer),
-            // and keep primary node id with every cache entry. Validate on each usage.
-            // Add a callback from somewhere in GridDhtPartitionsExchangeFuture.OnDone - all other stuff is notified from there.
-            // Or see PartitionsExchangeAware: exactly an interface for our needs.
+            // - Keep N latest partition assignments
+            // - Either keep partition number along with every cache entry as Java does, or infer it on the fly?
             
             
             if (!evt.EventNode.IsClient)
