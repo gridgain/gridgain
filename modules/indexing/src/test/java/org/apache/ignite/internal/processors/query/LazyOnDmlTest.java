@@ -154,6 +154,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-20968")
     public void testUpdateWithoutReduce() {
         sql("UPDATE test SET val = val + 1");
 

@@ -2909,7 +2909,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setPageSize(qryParams.pageSize())
             .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
             .setMaxMemory(qryParams.maxMemory())
-            .setLazy(qryParams.lazy());
+            .setLazy(qryParams.lazy() && plan.mode() == UpdateMode.DELETE);
 
         Iterable<List<?>> cur;
 
@@ -3037,7 +3037,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         .setLocal(qryDesc.local())
                         .setPageSize(qryParams.pageSize())
                         .setTimeout((int)timeout, TimeUnit.MILLISECONDS)
-                        .setLazy(qryParams.lazy());
+                        .setLazy(qryParams.lazy() && plan.mode() == UpdateMode.DELETE);
 
                     FieldsQueryCursor<List<?>> cur = executeSelectForDml(
                         qryDesc.schemaName(),
