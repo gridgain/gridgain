@@ -590,9 +590,10 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
     }
 
     /** {@inheritDoc} */
-    @Override public void updateNearCache(int cacheId, Object key, byte[] keyBytes, byte[] valBytes) {
-        assert key != null;
+    @Override public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes,
+                                          int part, AffinityTopologyVersion ver) {
         assert keyBytes != null;
+        assert part >= 0;
 
         // TODO: Track active caches and avoid unnecessary callbacks?
         // TODO: At least, disable those callbacks for unsupported platforms.
@@ -600,12 +601,17 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
             PlatformOutputStream out = mem0.output();
 
             out.writeInt(cacheId);
-
             out.writeByteArray(keyBytes);
 
             if (valBytes != null) {
                 out.writeBoolean(true);
                 out.writeByteArray(valBytes);
+
+                assert ver != null;
+
+                out.writeInt(part);
+                out.writeLong(ver.topologyVersion());
+                out.writeInt(ver.minorTopologyVersion());
             } else
             {
                 out.writeBoolean(false);

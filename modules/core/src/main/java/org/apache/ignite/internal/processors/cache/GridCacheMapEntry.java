@@ -1618,7 +1618,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (intercept)
             cctx.config().getInterceptor().onAfterPut(new CacheLazyEntry(cctx, key, key0, val, val0, keepBinary, updateCntr0));
 
-        updatePlatformNearCache(val);
+        updatePlatformNearCache(val, topVer);
 
         return valid ? new GridCacheUpdateTxResult(true, updateCntr0, logPtr) :
             new GridCacheUpdateTxResult(false, logPtr);
@@ -2215,7 +2215,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     cctx.config().getInterceptor().onAfterRemove(new CacheLazyEntry(cctx, key, key0, old, old0, keepBinary, 0L));
             }
 
-            updatePlatformNearCache(op == UPDATE ? updated : null);
+            updatePlatformNearCache(op == UPDATE ? updated : null, cctx.affinity().affinityTopologyVersion());
         }
         finally {
             unlockEntry();
@@ -2523,7 +2523,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     cctx.config().getInterceptor().onAfterRemove(entry);
             }
 
-            updatePlatformNearCache(c.op == UPDATE ? updateVal : null);
+            updatePlatformNearCache(c.op == UPDATE ? updateVal : null, topVer);
         }
         finally {
             unlockEntry();
@@ -6948,8 +6948,9 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      * Invokes platform near cache callback, if applicable.
      *
      * @param val Updated value, null on remove.
+     * @param val Topology version, null on remove.
      */
-    protected void updatePlatformNearCache(@Nullable CacheObject val) {
+    protected void updatePlatformNearCache(@Nullable CacheObject val, @Nullable AffinityTopologyVersion ver) {
         if (!hasPlatformNearCache())
             return;
 
@@ -6961,11 +6962,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             CacheObjectContext ctx = this.cctx.cacheObjectContext();
 
             // val is null when entry is removed.
-            Object key = this.key.value(ctx, false);
             byte[] keyBytes = this.key.valueBytes(ctx);
             byte[] valBytes = val == null ? null : val.valueBytes(ctx);
 
-            proc.context().updateNearCache(this.cctx.cacheId(), key, keyBytes, valBytes);
+            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes, partition(), ver);
         } catch (IgniteCheckedException e) {
             throw U.convertException(e);
         }

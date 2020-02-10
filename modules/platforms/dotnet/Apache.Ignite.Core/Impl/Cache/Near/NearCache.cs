@@ -39,12 +39,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private readonly NearCacheManager _nearCacheManager;
 
         /** Generic map, used by default, should fit most use cases. */
-        private volatile ConcurrentDictionary<TK, TV> _map = 
-            new ConcurrentDictionary<TK, TV>();
+        private volatile ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
+            new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
 
         /** Non-generic map. Switched to when same cache is used with different generic arguments.
          * Less efficient because of boxing and casting. */
-        private volatile ConcurrentDictionary<object, object> _fallbackMap;
+        private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
@@ -60,12 +60,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
-            var map = _map as ConcurrentDictionary<TKey, TVal>;
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
-                if (map.TryGetValue(key, out val))
+                NearCacheEntry<TVal> entry;
+                if (map.TryGetValue(key, out entry))
                 {
-                    if (IsValid(key))
+                    if (IsValid(entry))
                     {
                         return true;
                     }
@@ -78,10 +79,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             
             if (_fallbackMap != null)
             {
-                object fallbackEntry;
+                NearCacheEntry<object> fallbackEntry;
                 if (_fallbackMap.TryGetValue(key, out fallbackEntry))
                 {
-                    val = (TVal) fallbackEntry;
+                    val = (TVal) fallbackEntry.Val;
                     return true;
                 }
             }
@@ -127,6 +128,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var reader = marshaller.StartUnmarshal(stream);
 
             var key = reader.ReadObject<object>();
+            var part = reader.ReadInt();
             var hasVal = reader.ReadBoolean();
             var val = hasVal ? reader.ReadObject<object>() : null;
             var typeMatch = key is TK && (!hasVal || val is TV);
@@ -163,7 +165,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
             else
             {
-                object unused;
+                NearCacheEntry<object> unused;
                 _fallbackMap.TryRemove(key, out unused);
             }
         }
@@ -232,32 +234,24 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 }
                 
                 _map = null;
-                _fallbackMap = new ConcurrentDictionary<object, object>();
+                _fallbackMap = new ConcurrentDictionary<object, NearCacheEntry<object>>();
             }
         }
         
         
-        private bool IsValid<TKey>(TKey key)
+        private bool IsValid<T>(NearCacheEntry<T> entry)
         {
-            var keyVer = new AffinityTopologyVersion(); // TODO: Get from the entry
-            var currentVer = _nearCacheManager.AffinityTopologyVersion;
+            var currentVersion = _nearCacheManager.AffinityTopologyVersion;
 
-            if (keyVer >= currentVer)
+            if (entry.Version >= currentVersion)
             {
                 return true;
             }
-            
-            var part = 0; // TODO: Get from entry. If negative, request from Java (Lazy loading for unknowns)
 
-            var currentPrimary = GetPrimaryNodeId(keyVer, part, false);
-            var newPrimary = GetPrimaryNodeId(currentVer, part, true);
+            var newPrimary = GetPrimaryNodeId(currentVersion, entry.Partition, true);
 
-            if (currentPrimary == newPrimary && currentPrimary != null)
-            {
-                return true;
-            }
-            
-            return false;
+            return newPrimary != null && 
+                   newPrimary == GetPrimaryNodeId(entry.Version, entry.Partition, false);
         }
 
         private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part, bool requestMissingAssignment)

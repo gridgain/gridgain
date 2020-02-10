@@ -22,6 +22,7 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryRawReaderEx;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryFilter;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheEntryProcessor;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQuery;
@@ -292,10 +293,11 @@ public interface PlatformContext {
     /**
      * Updates the near cache.
      *
-     *  @param cacheId Cache id.
-     * @param key Key to update.
+     * @param cacheId Cache id.
      * @param keyBytes Serialized key to update.
      * @param valBytes Serialized value.
+     * @param part Key partition.
+     * @param ver Key version.
      */
-    public void updateNearCache(int cacheId, Object key, byte[] keyBytes, byte[] valBytes);
+    public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes, int part, AffinityTopologyVersion ver);
 }

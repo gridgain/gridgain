@@ -86,6 +86,7 @@
     <Compile Include="Impl\Binary\BinaryHashCodeUtils.cs" />
     <Compile Include="Impl\Cache\Near\INearCache.cs" />
     <Compile Include="Impl\Cache\Near\NearCache.cs" />
+    <Compile Include="Impl\Cache\Near\NearCacheEntry.cs" />
     <Compile Include="Impl\Cache\Near\NearCacheManager.cs" />
     <Compile Include="Impl\Cache\QueryMetricsImpl.cs" />
     <Compile Include="Impl\Client\ClientContextBase.cs" />

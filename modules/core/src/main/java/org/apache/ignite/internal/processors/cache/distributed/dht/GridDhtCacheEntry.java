@@ -682,7 +682,7 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
             update(null, 0L, 0L, ver, true);
 
             // TODO: This is not needed after affinity-based validation is ready on .NET side.
-            updatePlatformNearCache(null);
+            updatePlatformNearCache(null, null);
 
             rmv = true;
 
