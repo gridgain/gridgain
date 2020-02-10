@@ -30,6 +30,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     internal sealed class NearCache<TK, TV> : INearCache
     {
         /** Partition assignment map: from topology version to array of node id per partition. */
+        // TODO: Size limit (https://github.com/StackExchange/Dapper/blob/master/Dapper/SqlMapper.cs#L62), or use CopyOnWrite?
         private readonly ConcurrentDictionary<AffinityTopologyVersion, Guid[]> _partitionNodeIds 
             = new ConcurrentDictionary<AffinityTopologyVersion, Guid[]>();
         
