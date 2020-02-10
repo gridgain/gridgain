@@ -43,8 +43,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Fallback init lock. */
         private readonly object _fallbackMapLock = new object();
 
-        /** Near cache manager. */
-        private readonly NearCacheManager _nearCacheManager;
+        /** Topology version func. */
+        private readonly Func<AffinityTopologyVersion> _affinityTopologyVersionFunc;
+
+        /** Affinity. */
+        private readonly CacheAffinityImpl _affinity;
 
         /** Generic map, used by default, should fit most use cases. */
         private volatile ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
@@ -54,18 +57,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
-        /** Affinity. */
-        private readonly CacheAffinityImpl _affinity;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        public NearCache(NearCacheManager nearCacheManager, CacheAffinityImpl affinity)
+        public NearCache(Func<AffinityTopologyVersion> affinityTopologyVersionFunc, CacheAffinityImpl affinity)
         {
             // TODO: Enable callbacks in Java.
             // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
 
-            _nearCacheManager = nearCacheManager;
+            _affinityTopologyVersionFunc = affinityTopologyVersionFunc;
             _affinity = affinity;
         }
 
@@ -258,7 +258,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         
         private bool IsValid<T>(NearCacheEntry<T> entry)
         {
-            var currentVersion = _nearCacheManager.AffinityTopologyVersion;
+            var currentVersion = _affinityTopologyVersionFunc();
 
             if (entry.Version >= currentVersion)
             {
@@ -332,7 +332,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
             return new NearCacheEntry<TVal>(
                 valueFactory(k),
-                _nearCacheManager.AffinityTopologyVersion, 
+                _affinityTopologyVersionFunc(), 
                 GetPartition(k));
         }
 

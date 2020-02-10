@@ -61,14 +61,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         }
         
         /// <summary>
-        /// Gets current topology version.
-        /// </summary>
-        public AffinityTopologyVersion AffinityTopologyVersion
-        {
-            get { return (AffinityTopologyVersion) _affinityTopologyVersion; }
-        }
-
-        /// <summary>
         /// Gets the near cache.
         /// <para />
         /// Same Ignite cache can be retrieved with different generic type parameters, e.g.:
@@ -88,7 +80,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             INearCache nearCache;
             return _nearCaches.TryGetValue(cacheId, out nearCache) 
                 ? nearCache 
-                : _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>(this, _ignite.GetAffinity(cacheName)));
+                : _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache<TK, TV>(cacheName));
         }
 
         /// <summary>
@@ -124,6 +116,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public void OnAffinityTopologyVersionChanged(AffinityTopologyVersion affinityTopologyVersion)
         {
             _affinityTopologyVersion = affinityTopologyVersion;
+        }
+        
+        /// <summary>
+        /// Creates near cache.
+        /// </summary>
+        private NearCache<TK, TV> CreateNearCache<TK, TV>(string cacheName)
+        {
+            return new NearCache<TK, TV>(
+                () => (AffinityTopologyVersion) _affinityTopologyVersion, 
+                _ignite.GetAffinity(cacheName));
         }
     }
 }
