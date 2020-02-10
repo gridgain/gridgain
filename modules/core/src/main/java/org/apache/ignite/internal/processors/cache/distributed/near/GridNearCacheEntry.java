@@ -109,6 +109,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
                 return false;
             }
 
+            // As a result of topology change, this node is now a backup for the key - no more need for a Near entry.
             if (cctx.affinity().backupByPartition(cctx.localNode(), part, topVer)) {
                 this.topVer = AffinityTopologyVersion.NONE;
 
