@@ -253,6 +253,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         
         private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
         {
+            // TODO: What is this for? Document which use case is covered by IsValid.
+            // Looks like only primary node leave is related. Can we handle that better?
+            return true;
+            
+            /*
             var ver = version ?? _affinityTopologyVersionFunc();
 
             if (entry.Version >= ver)
@@ -264,7 +269,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
             
             // TODO: We should analyse full history of assignments between oldVer and newVer
-            return newPrimary != null && newPrimary == oldPrimary;
+            return newPrimary != null && newPrimary == oldPrimary;*/
         }
 
         private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part)
