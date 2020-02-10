@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -239,7 +238,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 // Change topology randomly.
                 var idx = rnd.Next(1, 5);
                 var primaryLeft = false;
-                var status = string.Empty;
+                string status;
 
                 Console.WriteLine(">>> Changing topology...");
                 if (_ignite[idx] == null)
