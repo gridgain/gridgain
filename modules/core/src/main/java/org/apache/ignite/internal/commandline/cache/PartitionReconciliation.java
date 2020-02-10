@@ -50,15 +50,32 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PART
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.BATCH_SIZE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.INCLUDE_SENSITIVE;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.REPAIR;
-import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.PARALLELISM;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_ATTEMPTS;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.REPAIR;
 
 /**
  * Partition reconciliation command.
  */
 public class PartitionReconciliation implements Command<PartitionReconciliation.Arguments> {
+    /** Parallelism format error message. */
+    public static final String PARALLELISM_FORMAT_MESSAGE = "Invalid parallelism: %s. Integer value " +
+        "from 1 to 128 should be specified, or 0 (Runtime.getRuntime().availableProcessors() " +
+        "will be used in such case).";
+
+    /** Batch size format error message. */
+    public static final String BATCH_SIZE_FORMAT_MESSAGE = "Invalid batch size: %s" +
+        ". Int value greater than zero should be used.";
+
+    /** Recheck attempts format error message. */
+    public static final String RECHECK_ATTEMPTS_FORMAT_MESSAGE = "Invalid recheck attempts: %s" +
+        ". Int value between 1 and 5 should be used.";
+
+    /** Recheck delay format error message. */
+    public static final String RECHECK_DELAY_FORMAT_MESSAGE = "Invalid recheck delay: %s" +
+        ". Int value between 0 and 100 should be used.";
+
     /** Command parsed arguments. */
     private Arguments args;
 
@@ -230,16 +247,11 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                             parallelism = Integer.parseInt(strVal);
                         }
                         catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Invalid parallelism: " + strVal +
-                                ". Integer value from 1 to 128 should be specified, " +
-                                "or 0 (Runtime.getRuntime().availableProcessors() will be used in such case).");
+                            throw new IllegalArgumentException(String.format(PARALLELISM_FORMAT_MESSAGE, strVal));
                         }
 
-                        if (parallelism < 0 || parallelism > 128) {
-                            throw new IllegalArgumentException("Invalid parallelism: " + strVal +
-                                ". Integer value from 1 to 128 should be specified, " +
-                                "or 0 (Runtime.getRuntime().availableProcessors() will be used in such case).");
-                        }
+                        if (parallelism < 0 || parallelism > 128)
+                            throw new IllegalArgumentException(String.format(PARALLELISM_FORMAT_MESSAGE, strVal));
 
                         break;
 
@@ -250,14 +262,11 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                             batchSize = Integer.parseInt(strVal);
                         }
                         catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Invalid batch size: " + strVal +
-                                ". Int value greater than zero should be used.");
+                            throw new IllegalArgumentException(String.format(BATCH_SIZE_FORMAT_MESSAGE, strVal));
                         }
 
-                        if (batchSize <= 0) {
-                            throw new IllegalArgumentException("Invalid batch size: " + strVal +
-                                ". Int value greater than zero should be used.");
-                        }
+                        if (batchSize <= 0)
+                            throw new IllegalArgumentException(String.format(BATCH_SIZE_FORMAT_MESSAGE, strVal));
 
                         break;
 
@@ -268,14 +277,11 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                             recheckAttempts = Integer.parseInt(strVal);
                         }
                         catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Invalid recheck attempts: " + strVal +
-                                ". Int value between 1 and 5 should be used.");
+                            throw new IllegalArgumentException(String.format(RECHECK_ATTEMPTS_FORMAT_MESSAGE, strVal));
                         }
 
-                        if (recheckAttempts < 1 || recheckAttempts > 5) {
-                            throw new IllegalArgumentException("Invalid recheck attempts: " + strVal +
-                                ". Int value between 1 and 5 should be used.");
-                        }
+                        if (recheckAttempts < 1 || recheckAttempts > 5)
+                            throw new IllegalArgumentException(String.format(RECHECK_ATTEMPTS_FORMAT_MESSAGE, strVal));
 
                         break;
 
@@ -286,14 +292,11 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                             recheckDelay = Integer.valueOf(strVal);
                         }
                         catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Invalid recheck delay: " + strVal +
-                                ". Int value between 0 and 100 should be used.");
+                            throw new IllegalArgumentException(String.format(RECHECK_DELAY_FORMAT_MESSAGE, strVal));
                         }
 
-                        if (recheckDelay < 0 || recheckDelay > 100) {
-                            throw new IllegalArgumentException("Invalid recheck delay: " + strVal +
-                                ". Int value between 0 and 100 should be used.");
-                        }
+                        if (recheckDelay < 0 || recheckDelay > 100)
+                            throw new IllegalArgumentException(String.format(RECHECK_DELAY_FORMAT_MESSAGE, strVal));
 
                         break;
                 }
