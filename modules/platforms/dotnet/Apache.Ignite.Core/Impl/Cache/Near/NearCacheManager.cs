@@ -99,7 +99,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             INearCache nearCache;
             return _nearCaches.TryGetValue(cacheId, out nearCache) 
                 ? nearCache 
-                : _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>(this));
+                : _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>(this, _ignite.GetAffinity(cacheName)));
         }
 
         /// <summary>

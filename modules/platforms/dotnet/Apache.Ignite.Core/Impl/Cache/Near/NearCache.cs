@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
+    using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -46,15 +47,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
+        private readonly ICacheAffinity _affinity;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        /// <param name="nearCacheManager"></param>
-        public NearCache(NearCacheManager nearCacheManager)
+        public NearCache(NearCacheManager nearCacheManager, ICacheAffinity affinity)
         {
             // TODO: Enable callbacks in Java.
             // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
+
             _nearCacheManager = nearCacheManager;
+            _affinity = affinity;
         }
 
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
@@ -68,6 +72,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     if (IsValid(entry))
                     {
+                        val = entry.Val;
                         return true;
                     }
 
@@ -90,33 +95,43 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             val = default(TVal);
             return false;
         }
-
+        
         public TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
-            var map = _map as ConcurrentDictionary<TKey, TVal>;
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
-                return map.GetOrAdd(key, valueFactory);
+                return map.GetOrAdd(key, k => GetEntry(valueFactory, k)).Val;
             }
             
             EnsureFallbackMap();
-            
-            return (TVal) _fallbackMap.GetOrAdd(key, k => valueFactory((TKey) k));
+
+            return (TVal) _fallbackMap
+                .GetOrAdd(key, k => GetEntry(_ => (object) valueFactory((TKey) k), k)).Val;
+        }
+
+        private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
+        {
+            // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
+            return new NearCacheEntry<TVal>(
+                valueFactory(k),
+                _nearCacheManager.AffinityTopologyVersion, 
+                _affinity.GetPartition(k));
         }
 
         public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
         {
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
-            var map = _map as ConcurrentDictionary<TKey, TVal>;
+            var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
             {
-                return map.GetOrAdd(key, val);
+                return map.GetOrAdd(key, k => GetEntry(_ => val, k)).Val;
             }
             
             EnsureFallbackMap();
-            
-            return (TVal) _fallbackMap.GetOrAdd(key, val);
+
+            return (TVal) _fallbackMap.GetOrAdd(key, k => GetEntry(_ => (object) val, k)).Val;
         }
 
         public void Update(IBinaryStream stream, Marshaller marshaller)
