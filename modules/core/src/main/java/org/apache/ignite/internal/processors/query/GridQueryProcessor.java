@@ -81,7 +81,6 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
-import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
@@ -102,8 +101,8 @@ import org.apache.ignite.internal.processors.query.schema.operation.SchemaIndexD
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
-import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
@@ -1607,8 +1606,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 SchemaIndexCacheVisitor visitor;
 
                 if (cacheInfo.isCacheContextInited()) {
-                    GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> createIdxCompoundFut =
-                        new GridCompoundFuture<>();
+                    GridFutureAdapter<Void> createIdxFut = new GridFutureAdapter<>();
 
                     int buildIdxPoolSize = ctx.config().getBuildIndexThreadPoolSize();
                     int parallel = op0.parallel();
@@ -1627,16 +1625,14 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     visitor = new SchemaIndexCacheVisitorImpl(
                         cacheInfo.cacheContext(),
                         cancelTok,
-                        createIdxCompoundFut
+                        createIdxFut
                     ) {
                         /** {@inheritDoc} */
                         @Override public void visit(SchemaIndexCacheVisitorClosure clo) {
                             super.visit(clo);
 
-                            compoundFut.markInitialized();
-
                             try {
-                                compoundFut.get();
+                                buildIdxFut.get();
                             }
                             catch (Exception e) {
                                 throw new IgniteException(e);

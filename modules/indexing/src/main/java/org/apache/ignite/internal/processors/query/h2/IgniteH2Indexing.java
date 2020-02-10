@@ -147,7 +147,6 @@ import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQuery
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2DmlRequest;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2DmlResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryRequest;
-import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
@@ -159,7 +158,7 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridEmptyCloseableIterator;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
@@ -1992,11 +1991,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // Closure prepared, do rebuild.
         markIndexRebuild(cacheName, true);
 
-        GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> rebuildCacheIdxFut = new GridCompoundFuture<>();
+        GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
 
-        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
-
-        rebuildCacheIdxFut.listen((IgniteInClosure<IgniteInternalFuture<?>>)fut -> {
+        rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
             if (isNull(err)) {
@@ -2014,7 +2011,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
         });
 
-        rebuildCacheIdxFut.markInitialized();
+        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
 
         return rebuildCacheIdxFut;
     }
@@ -2024,14 +2021,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      *
      * @param cctx Cache context.
      * @param clo Closure.
-     * @param compoundFut Future for rebuild indexes.
+     * @param rebuildIdxFut Future for rebuild indexes.
      */
     protected void rebuildIndexesFromHash0(
         GridCacheContext cctx,
         SchemaIndexCacheVisitorClosure clo,
-        GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut
+        GridFutureAdapter<Void> rebuildIdxFut
     ) {
-        new SchemaIndexCacheVisitorImpl(cctx, null, compoundFut).visit(clo);
+        new SchemaIndexCacheVisitorImpl(cctx, null, rebuildIdxFut).visit(clo);
     }
 
     /**

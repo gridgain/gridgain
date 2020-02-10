@@ -32,9 +32,8 @@ import org.apache.ignite.internal.processors.cache.index.DynamicIndexAbstractSel
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
-import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
-import org.apache.ignite.internal.util.future.GridCompoundFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
@@ -238,7 +237,7 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         @Override protected void rebuildIndexesFromHash0(
             GridCacheContext cctx,
             SchemaIndexCacheVisitorClosure clo,
-            GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut
+            GridFutureAdapter<Void> rebuildIdxFut
         ) {
             if (!firstRbld) {
                 try {
@@ -251,7 +250,7 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
             else
                 firstRbld = false;
 
-            super.rebuildIndexesFromHash0(cctx, clo, compoundFut);
+            super.rebuildIndexesFromHash0(cctx, clo, rebuildIdxFut);
         }
     }
 }
