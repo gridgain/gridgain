@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
+    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Memory;
@@ -28,6 +29,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
+        /** Fallback init lock. */
+        private readonly object _fallbackMapLock = new object();
+
+        /** Near cache manager. */
+        private readonly NearCacheManager _nearCacheManager;
+
         /** Generic map, used by default, should fit most use cases. */
         private volatile ConcurrentDictionary<TK, TV> _map = 
             new ConcurrentDictionary<TK, TV>();
@@ -35,17 +42,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Non-generic map. Switched to when same cache is used with different generic arguments.
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, object> _fallbackMap;
-        
-        /** Fallback init lock. */
-        private readonly object _fallbackMapLock = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        public NearCache()
+        /// <param name="nearCacheManager"></param>
+        public NearCache(NearCacheManager nearCacheManager)
         {
             // TODO: Enable callbacks in Java.
             // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
+            _nearCacheManager = nearCacheManager;
         }
 
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
@@ -56,6 +62,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             {
                 if (map.TryGetValue(key, out val))
                 {
+                    // TODO: Check if affinity topology version has changed, and if that version is still valid
+                    var keyVer = new AffinityTopologyVersion(); // TODO: Get from the map
+                    var currentVer = _nearCacheManager.AffinityTopologyVersion;
+                    
                     return true;
                 }
             }

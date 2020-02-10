@@ -43,14 +43,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             = new CopyOnWriteConcurrentDictionary<int, INearCache>();
 
         /// <summary>
+        /// Ignite.
+        /// </summary>
+        private readonly IIgnite _ignite;
+
+        /// <summary>
         /// Initialized flag.
         /// </summary>
         private int _initialized;
 
         /// <summary>
-        /// Ignite.
+        /// Current topology version.
+        /// Store as object to use volatile and do atomic read/writes. 
         /// </summary>
-        private readonly IIgnite _ignite;
+        private volatile object _affinityTopologyVersion;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCacheManager"/> class. 
@@ -61,6 +67,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(ignite != null);
 
             _ignite = ignite;
+        }
+        
+        /// <summary>
+        /// Gets current topology version.
+        /// </summary>
+        public AffinityTopologyVersion AffinityTopologyVersion
+        {
+            get { return (AffinityTopologyVersion) _affinityTopologyVersion; }
         }
 
         /// <summary>
@@ -85,7 +99,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             INearCache nearCache;
             return _nearCaches.TryGetValue(cacheId, out nearCache) 
                 ? nearCache 
-                : _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>());
+                : _nearCaches.GetOrAdd(cacheId, id => new NearCache<TK, TV>(this));
         }
 
         /// <summary>
@@ -180,9 +194,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return true;
         }
 
+        /// <summary>
+        /// Called when topology version changes.
+        /// </summary>
         public void OnAffinityTopologyVersionChanged(AffinityTopologyVersion affinityTopologyVersion)
         {
-            // TODO: Store the value and use it to validate cache entries.
+            _affinityTopologyVersion = affinityTopologyVersion;
         }
     }
 }

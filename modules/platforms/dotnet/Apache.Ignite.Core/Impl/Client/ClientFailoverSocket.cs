@@ -397,6 +397,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 return false;
             }
 
+            // TODO: Thread unsafe, AffinityTopologyVersion can't be updated or read atomically.
             return map.AffinityTopologyVersion >= _affinityTopologyVersion.Value;
         }
 
