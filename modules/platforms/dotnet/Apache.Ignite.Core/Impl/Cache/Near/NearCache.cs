@@ -267,7 +267,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // Make sure old primary node is still alive.
             var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
             var nodeIdPerPartition = GetNodeIdPerPartition(ver);
-            return oldPrimary != null && nodeIdPerPartition.Contains(oldPrimary.Value);
+            return oldPrimary != null && nodeIdPerPartition != null && nodeIdPerPartition.Contains(oldPrimary.Value);
 
             /*
             var newPrimary = GetPrimaryNodeId(ver, entry.Partition);
