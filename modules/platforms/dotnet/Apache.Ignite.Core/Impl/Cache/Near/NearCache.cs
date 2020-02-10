@@ -124,13 +124,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
 
-            // TODO: Pass partition when updating (not removing)
             var reader = marshaller.StartUnmarshal(stream);
 
             var key = reader.ReadObject<object>();
-            var part = reader.ReadInt();
             var hasVal = reader.ReadBoolean();
+            
             var val = hasVal ? reader.ReadObject<object>() : null;
+            var part = hasVal ? reader.ReadInt() : 0;
+            var ver = hasVal
+                    ? new AffinityTopologyVersion(reader.ReadLong(), reader.ReadInt())
+                    : default(AffinityTopologyVersion);
+            
             var typeMatch = key is TK && (!hasVal || val is TV);
 
             var map = _map;
@@ -138,12 +142,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             {
                 if (hasVal)
                 {
-                    map[(TK) key] = (TV) val;
+                    map[(TK) key] = new NearCacheEntry<TV>((TV)val, ver, part);
                 }
                 else
                 {
-                    // TODO: This duplicates Evict, why?
-                    TV unused;
+                    NearCacheEntry<TV> unused;
                     map.TryRemove((TK) key, out unused);
                 }
             }
@@ -161,7 +164,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             
             if (hasVal)
             {
-                _fallbackMap[key] = val;
+                _fallbackMap[key] = new NearCacheEntry<object>(val, ver, part);
             }
             else
             {
