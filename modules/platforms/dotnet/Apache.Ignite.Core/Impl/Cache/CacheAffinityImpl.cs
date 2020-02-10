@@ -76,6 +76,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         private const int OpPartitions = 15;
 
         /** */
+        private const int OpMapAllPartitionsToNodes = 16;
+
+        /** */
         private readonly bool _keepBinary;
         
         /** Grid. */
@@ -223,8 +226,17 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Primary node for partition N is at index N.</returns>
         internal Guid[] MapAllPartitionsToNodes(AffinityTopologyVersion ver)
         {
-            // TODO
-            throw new NotImplementedException();
+            return DoInOp(OpMapAllPartitionsToNodes, s =>
+            {
+                var res = new Guid[s.ReadInt()];
+                
+                for (var i = 0; i < res.Length; i++)
+                {
+                    res[i] = BinaryUtils.ReadGuid(s);
+                }
+
+                return res;
+            });
         }
 
         /** <inheritDoc /> */
