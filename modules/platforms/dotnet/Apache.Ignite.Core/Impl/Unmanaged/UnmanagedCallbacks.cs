@@ -212,7 +212,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PluginProcessorStop, PluginProcessorStop);
             AddHandler(UnmanagedCallbackOp.PluginProcessorIgniteStop, PluginProcessorIgniteStop);
             AddHandler(UnmanagedCallbackOp.PluginCallbackInLongLongOutLong, PluginCallbackInLongLongOutLong);
-            AddHandler(UnmanagedCallbackOp.NearCacheInvalidate, NearCacheUpdate);
+            AddHandler(UnmanagedCallbackOp.NearCacheUpdate, NearCacheUpdate);
             AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
             AddHandler(UnmanagedCallbackOp.OnAffinityTopologyVersionChanged, OnAffinityTopologyVersionChanged);
         }
