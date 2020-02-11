@@ -632,6 +632,50 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
+     */
+    @Test
+    public void testDbg() throws Exception {
+        IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
+
+        GridTestUtils.runAsync(() -> {
+            try {
+                stmt.setFetchSize(1);
+
+                ResultSet rs = stmt.executeQuery("select * from Integer");
+
+                while(true) {
+                    U.sleep(1000);
+
+                    System.out.println("+++ next");
+
+                    rs.next();
+                }
+            }
+            catch (Exception e) {
+                log.error("Exception", e);
+            }
+
+            }
+        );
+
+        U.sleep(2000);
+
+        System.out.println("+++ " + ignite.context().query().runningQueries(-1));
+
+        ignite.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), 1, false), false).getAll();
+
+        while (true) {
+            System.out.println("+++ " + ignite.context().query().runningQueries(-1));
+
+            U.sleep(2000);
+
+            ignite.context().query()
+                .querySqlFields(createKillQuery(ignite.context().localNodeId(), 1, false), false).getAll();
+        }
+    }
+
+    /**
      * Trying to cancel long running query if partition pruning does it job. It's important to set {@link
      * IgniteSystemProperties#IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN} bigger than partitions count {@link
      * #PARTS_CNT}
