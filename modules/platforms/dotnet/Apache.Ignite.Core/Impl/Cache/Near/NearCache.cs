@@ -274,7 +274,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
 
             // TODO: Compare perf with a call to Java version of this:
-            if (entry.Version.Version > 0) // TODO: Condition always true for benchmarking.
+            if (entry.Version.Version < 0) // TODO: Condition always true for benchmarking.
             {
                 return _affinity.IsAssignmentValid(entry.Version, entry.Partition);
             }

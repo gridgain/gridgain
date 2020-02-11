@@ -306,7 +306,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             }
 
             var sw = Stopwatch.StartNew();
-            var count = 100000;
+            var count = 1000000;
             for (var i = 0; i < count; i++)
             {
                 var res = cache.Get(1);
@@ -316,6 +316,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             }
             
+            // Java: 671 ms for 1000000 keys
+            // .NET: 216 ms for 1000000 keys
             Console.WriteLine(">>>>>>>>>>>>>>>> " + sw.ElapsedMilliseconds);
         }
 
