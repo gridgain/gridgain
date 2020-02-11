@@ -59,7 +59,6 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.IgniteSystemProperties.getLong;
@@ -456,7 +455,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void addToPrintResult(
         String cacheName,
         int partId,
-        Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys
+        Map<PartitionKeyVersion, RepairMeta> repairedKeys
     ) {
         CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
 
@@ -464,11 +463,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             try {
                 List<PartitionReconciliationDataRowMeta> res = new ArrayList<>();
 
-                for (Map.Entry<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>>
-                    entry : repairedKeys.entrySet()) {
+                for (Map.Entry<PartitionKeyVersion, RepairMeta> entry : repairedKeys.entrySet()) {
                     Map<UUID, PartitionReconciliationValueMeta> valMap = new HashMap<>();
 
-                    for (Map.Entry<UUID, VersionedValue> uuidBasedEntry : entry.getValue().entrySet()) {
+                    for (Map.Entry<UUID, VersionedValue> uuidBasedEntry : entry.getValue().getPreviousValue().entrySet()) {
                         Optional<CacheObject> cacheObjOpt = Optional.ofNullable(uuidBasedEntry.getValue().value());
 
                         valMap.put(
@@ -482,11 +480,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 null);
                     }
 
-                    KeyCacheObject key = entry.getKey().get1().getKey();
+                    KeyCacheObject key = entry.getKey().getKey();
 
                     key.finishUnmarshal(ctx, null);
 
-                    RepairMeta repairMeta = entry.getKey().get2();
+                    RepairMeta repairMeta = entry.getValue();
 
                     Optional<CacheObject> cacheObjRepairValOpt = Optional.ofNullable(repairMeta.value());
 

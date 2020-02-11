@@ -16,22 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.checker.tasks;
 
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Function;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.EntryProcessorException;
 import javax.cache.processor.MutableEntry;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheObject;
-import org.apache.ignite.internal.processors.cache.CacheObjectContext;
-import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -103,7 +96,6 @@ public class RepairEntryProcessor implements EntryProcessor {
     @SuppressWarnings("unchecked")
     @Override public Object process(MutableEntry entry, Object... arguments) throws EntryProcessorException {
         GridCacheContext cctx = cacheContext(entry);
-        CacheObjectContext oCtx = cctx.cacheObjectContext();
         GridCacheVersion currKeyGridCacheVer = keyVersion(entry);
 
         if (topologyChanged(cctx, startTopVer))
@@ -111,31 +103,6 @@ public class RepairEntryProcessor implements EntryProcessor {
 
         UUID locNodeId = cctx.localNodeId();
         VersionedValue versionedVal = data.get(locNodeId);
-
-        CacheObject expectVal = Optional.ofNullable(data.get(locNodeId)).map(VersionedValue::value).orElse(null);
-
-        Object untypedVal = entry.getValue();
-        CacheObject currVal = untypedVal instanceof CacheObject || untypedVal == null ?
-            (CacheObject)entry.getValue() : new CacheObjectImpl(untypedVal, null);
-
-        try {
-            if (expectVal == null && currVal != null
-                || expectVal != null && currVal == null
-                || expectVal != null && !Arrays.equals(expectVal.valueBytes(oCtx), currVal.valueBytes(oCtx)))
-                return RepairStatus.CONCURRENT_MODIFICATION;
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
-        }
-
-        if (forceRepair) {
-            if (val == null)
-                entry.remove();
-            else
-                entry.setValue(val);
-
-            return RepairStatus.SUCCESS;
-        }
 
         if (versionedVal != null) {
             if (currKeyGridCacheVer.compareTo(versionedVal.version()) == 0) {
@@ -146,20 +113,10 @@ public class RepairEntryProcessor implements EntryProcessor {
 
                 return RepairStatus.SUCCESS;
             }
-
-            // TODO: 23.12.19 Add optimizations here
+            else
+                return RepairStatus.CONCURRENT_MODIFICATION;
         }
         else {
-            // Remove it after fixes: https://ggsystems.atlassian.net/browse/GG-27419
-            if (cctx.config().getAtomicityMode() != CacheAtomicityMode.ATOMIC) {
-                if (val == null)
-                    entry.remove();
-                else
-                    entry.setValue(val);
-
-                return RepairStatus.SUCCESS;
-            }
-
             if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {
                 long recheckStartTime = minValue(VersionedValue::recheckStartTime);
 
@@ -173,7 +130,8 @@ public class RepairEntryProcessor implements EntryProcessor {
 
                 boolean inDeferredDelQueueBounds = ((currUpdateCntr - minUpdateCntr) < rmvQueueMaxSize);
 
-                if ((inEntryTTLBounds && inDeferredDelQueueBounds)) {
+                // Remove it after fixes: https://ggsystems.atlassian.net/browse/GG-27419
+                if (cctx.config().getAtomicityMode() != CacheAtomicityMode.ATOMIC || inEntryTTLBounds && inDeferredDelQueueBounds) {
                     if (val == null)
                         entry.remove();
                     else
@@ -182,9 +140,20 @@ public class RepairEntryProcessor implements EntryProcessor {
                     return RepairStatus.SUCCESS;
                 }
             }
-        }
+            else
+                return RepairStatus.CONCURRENT_MODIFICATION;
 
-        return RepairStatus.FAIL;
+            if (forceRepair) {
+                if (val == null)
+                    entry.remove();
+                else
+                    entry.setValue(val);
+
+                return RepairStatus.SUCCESS;
+            }
+
+            return RepairStatus.FAIL;
+        }
     }
 
     /**

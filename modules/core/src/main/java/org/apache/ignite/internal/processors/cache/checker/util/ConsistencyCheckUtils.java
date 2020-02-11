@@ -77,7 +77,6 @@ public class ConsistencyCheckUtils {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> keysWithConflicts = new HashMap<>();
 
         // Actual keys are a subset of old keys.
-        // TODO: 05.12.19 Seems that it's not correct to use keyCacheObject.equals() here.
         for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> keyEntry : oldKeys.entrySet()) {
             KeyCacheObject key = keyEntry.getKey();
             Map<UUID, GridCacheVersion> oldKeyVers = keyEntry.getValue();
@@ -252,7 +251,6 @@ public class ConsistencyCheckUtils {
      *
      */
     private static Set<UUID> findMaxVersionSet(Map<UUID, GridCacheVersion> verSet) {
-        //TODO Possible you can check it use only one iteration.
         Set<UUID> maxVersions = new HashSet<>();
 
         maxVersions.add(verSet.keySet().iterator().next());

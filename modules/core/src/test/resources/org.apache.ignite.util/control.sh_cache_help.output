@@ -20,15 +20,14 @@ Arguments: --cache help --yes
     Parameters:
       --check-crc  - check the CRC-sum of pages stored on disk before verifying data consistency in partitions between primary and backup nodes.
 
-  --cache partition-reconciliation [--fix-mode] [--load-factor] [--batch-size] [--recheck-attempts] [--include-sensitive] [--fix-alg] [cacheName1,...,cacheNameN]
-    Verify whether there are inconsistent entries for the specified caches and print out the differences if any. Fix inconsistency if --fix-modeargument is presented. When no parameters are specified, all user caches are verified. Cache filtering options configure the set of caches that will be processed by partition-reconciliation command. If cache names are specified, in form of regular expressions, only matching caches will be verified.
+  --cache partition-reconciliation [--repair] [--load-factor] [--batch-size] [--recheck-attempts] [--include-sensitive] [cacheName1,...,cacheNameN]
+    Verify whether there are inconsistent entries for the specified caches. When no parameters are specified, all user caches are verified. Cache filtering options configure the set of caches that will be processed by partition-reconciliation command. If cache names are specified, in form of regular expressions, only matching caches will be verified.
 
     Parameters:
-      --fix-alg           - Specifies which repair algorithm to use for doubtful keys. The following values can be used: [LATEST, PRIMARY, MAJORITY, PRINT_ONLY] Default value is MAJORITY.
-      --fix-mode          - If present, fix all inconsistent data. Default value is false.
+      --repair            - If present, fix all inconsistent data. Default value is absent. Specifies which repair algorithm to use for doubtful keys. The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY] Default value is PRINT_ONLY.
       --load-factor       - Percent of system loading between 0 (exclusive) and 1 (inclusive). Default value is 1.0.
       --batch-size        - Amount of keys to retrieve within one job. Default value is 1000.
-      --include-sensitive           - Print data to result with sensitive information: keys and values. Default value is false.
+      --include-sensitive - Print data to result with sensitive information: keys and values. Default value is false.
       --recheck-attempts  - Amount of potentially inconsistent keys recheck attempts. Value between 1 and 5 should be used. Default value is 2.
 
   --cache partition-reconciliation-cancel
