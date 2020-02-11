@@ -27,7 +27,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -411,21 +410,21 @@ public class ExchangeLatchManager {
      * @param message Ack message.
      */
     private void processAck(UUID from, LatchAckMessage message) {
-        lock.lock();
-
-        try {
-            if (!isLocalLatchCreated(message.latchId(), message.topVer())) {
-                awaitedLatchVersions
-                    .computeIfAbsent(message.latchId(), (k) -> new ConcurrentSkipListMap<>())
-                    .computeIfAbsent(message.topVer(), (k) -> new GridFutureAdapter<>())
-                    .listen((f) -> processAck0(from, message));
-
-                return;
-            }
-        }
-        finally {
-            lock.unlock();
-        }
+//        lock.lock();
+//
+//        try {
+//            if (!isLocalLatchCreated(message.latchId(), message.topVer())) {
+//                awaitedLatchVersions
+//                    .computeIfAbsent(message.latchId(), (k) -> new ConcurrentSkipListMap<>())
+//                    .computeIfAbsent(message.topVer(), (k) -> new GridFutureAdapter<>())
+//                    .listen((f) -> processAck0(from, message));
+//
+//                return;
+//            }
+//        }
+//        finally {
+//            lock.unlock();
+//        }
 
         processAck0(from, message);
     }
@@ -455,12 +454,18 @@ public class ExchangeLatchManager {
         lock.lock();
 
         try {
+            CompletableLatchUid latchUid = new CompletableLatchUid(message.latchId(), message.topVer());
+
+            if(discovery.topologyVersion() < message.topVer().topologyVersion()) {
+                pendingAcks.computeIfAbsent(latchUid, id -> new GridConcurrentHashSet<>()).add(from);
+
+                return;
+            }
+
             ClusterNode coordinator = getLatchCoordinator(message.topVer());
 
             if (coordinator == null)
                 return;
-
-            CompletableLatchUid latchUid = new CompletableLatchUid(message.latchId(), message.topVer());
 
             if (message.isFinal()) {
                 if (log.isDebugEnabled())
