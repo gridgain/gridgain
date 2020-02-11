@@ -250,13 +250,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
         }
         
-        
+
+        /// <summary>
+        /// Checks whether specified cache entry is still valid, based on Affinity Topology Version.
+        /// When primary node changes for a key, GridNearCacheEntry stops receiving updates for that key,
+        /// because reader ("subscription") on new primary is not yet established.
+        /// <para />
+        /// This method is similar to GridNearCacheEntry.valid(). 
+        /// </summary>
+        /// <param name="entry">Entry to validate.</param>
+        /// <param name="version">Topology version to check against.</param>
+        /// <typeparam name="T">Entry type.</typeparam>
+        /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
         private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
         {
-            // TODO: What is this for? Document which use case is covered by IsValid.
-            // Looks like only primary node leave is related. Can we handle that better? What happens with NearCacheEntry in that case?
-            // return true;
-            
             var ver = version ?? GetCurrentTopologyVersion();
 
             if (entry.Version >= ver)
