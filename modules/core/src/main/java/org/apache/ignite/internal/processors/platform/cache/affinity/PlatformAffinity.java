@@ -179,7 +179,7 @@ public class PlatformAffinity extends PlatformAbstractTarget {
             case OP_IS_ASSIGNMENT_VALID: {
                 AffinityTopologyVersion ver = new AffinityTopologyVersion(reader.readLong(), reader.readInt());
                 int part = reader.readInt();
-                boolean res = affMgr.primaryChanged(part, ver, affMgr.affinityTopologyVersion());
+                boolean res = !affMgr.primaryChanged(part, ver, affMgr.affinityTopologyVersion());
 
                 return res ? TRUE : FALSE;
             }
