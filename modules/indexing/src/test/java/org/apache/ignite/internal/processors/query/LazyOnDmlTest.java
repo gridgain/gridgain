@@ -55,7 +55,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 @RunWith(Parameterized.class)
 public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     /** Keys count. */
-    private static final int KEY_CNT = 1000;
+    private static final int KEY_CNT = 10_000;
 
     /** Query local results. */
     static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
@@ -154,9 +154,28 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-20968")
-    public void testUpdateWithoutReduce() {
-        sql("UPDATE test SET val = val + 1");
+    public void testUpdateNotLazy() {
+        List<List<?>> res = sql("UPDATE test SET val = val + 1 WHERE val >= 0").getAll();
+
+        // Check that all rows updates only ones.
+        assertEquals((long)KEY_CNT, res.get(0).get(0));
+
+        if (atomicityMode == CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT)
+            assertEquals(0, localResults.size());
+        else if (cacheMode == CacheMode.REPLICATED)
+            assertEquals(1, localResults.size());
+        else
+            assertEquals(3, localResults.size());
+    }
+
+    /**
+     */
+    @Test
+    public void testUpdateLazy() {
+        List<List<?>> res = sql("UPDATE test SET val = val + 1").getAll();
+
+        // Check that all rows updates only ones.
+        assertEquals((long)KEY_CNT, res.get(0).get(0));
 
         assertEquals(0, localResults.size());
     }

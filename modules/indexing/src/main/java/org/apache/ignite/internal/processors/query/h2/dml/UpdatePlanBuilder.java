@@ -309,7 +309,8 @@ public final class UpdatePlanBuilder {
             rows,
             rowsNum,
             null,
-            distributed
+            distributed,
+            false
         );
     }
 
@@ -470,7 +471,8 @@ public final class UpdatePlanBuilder {
                     null,
                     0,
                     null,
-                    distributed
+                    distributed,
+                    sel.canBeLazy()
                 );
             }
             else {
@@ -588,7 +590,8 @@ public final class UpdatePlanBuilder {
             null,
             0,
             null,
-            null
+            null,
+            true
         );
     }
 

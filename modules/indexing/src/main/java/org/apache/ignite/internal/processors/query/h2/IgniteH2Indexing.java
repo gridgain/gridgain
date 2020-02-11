@@ -2909,7 +2909,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setPageSize(qryParams.pageSize())
             .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
             .setMaxMemory(qryParams.maxMemory())
-            .setLazy(qryParams.lazy() && plan.mode() == UpdateMode.DELETE);
+            // On no MVCC mode we cannot use lazy mode when UPDATE query contains updated columns
+            // in WHERE condition because it may be cause pf update one entry several times
+            // (when index for such columns is selected for scan):
+            // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
+            .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
 
         Iterable<List<?>> cur;
 
@@ -3037,7 +3041,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         .setLocal(qryDesc.local())
                         .setPageSize(qryParams.pageSize())
                         .setTimeout((int)timeout, TimeUnit.MILLISECONDS)
-                        .setLazy(qryParams.lazy() && plan.mode() == UpdateMode.DELETE);
+                        // In MVCC mode we can use lazy mode always (when is is set up) withoyt dependency on
+                        // updated columns and WHERE condition.
+                        .setLazy(qryParams.lazy());
 
                     FieldsQueryCursor<List<?>> cur = executeSelectForDml(
                         qryDesc.schemaName(),
@@ -3080,7 +3086,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (qryParams.lazy())
                 flags |= GridH2QueryRequest.FLAG_LAZY;
-
 
             flags = GridH2QueryRequest.setDataPageScanEnabled(flags,
                 qryParams.dataPageScanEnabled());

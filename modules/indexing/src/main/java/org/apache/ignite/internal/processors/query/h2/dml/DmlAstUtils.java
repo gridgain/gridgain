@@ -358,10 +358,34 @@ public final class DmlAstUtils {
 
         GridSqlElement where = update.where();
 
+        // On no MVCC mode we cannot use lazy mode when UPDATE query contains updated columns
+        // in WHERE condition because it may be cause pf update one entry several times
+        // (when index for such columns is selected for scan):
+        // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
+        mapQry.canBeLazy(!isContainsColumns(where, update.set().keySet()));
+
         mapQry.where(where);
         mapQry.limit(update.limit());
 
         return mapQry;
+    }
+
+    /**
+     * @return {@code true} if the expression contains at least one of the columns from columns set.
+     */
+    private static boolean isContainsColumns(GridSqlElement expr, Set<String> cols) {
+        if (expr == null)
+            return false;
+
+        if (expr instanceof GridSqlColumn && cols.contains(((GridSqlColumn)expr).columnName()))
+            return true;
+
+        for (int i = 0; i < expr.size(); ++i) {
+            if (isContainsColumns(expr.child(i), cols))
+                return true;
+        }
+
+        return false;
     }
 
     /**
