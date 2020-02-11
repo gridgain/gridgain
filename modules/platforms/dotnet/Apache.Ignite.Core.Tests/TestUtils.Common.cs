@@ -63,6 +63,7 @@ namespace Apache.Ignite.Core.Tests
                 "-Xmx4g",
                 "-ea",
                 "-DIGNITE_QUIET=true",
+                "-DIGNITE_MBEANS_DISABLED=true",
                 "-Duser.timezone=UTC"
             }
             : new List<string>
@@ -73,6 +74,7 @@ namespace Apache.Ignite.Core.Tests
                 "-ea",
                 "-DIGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE=1000",
                 "-DIGNITE_QUIET=true",
+                "-DIGNITE_MBEANS_DISABLED=true",
                 "-Duser.timezone=UTC"
             };
 
