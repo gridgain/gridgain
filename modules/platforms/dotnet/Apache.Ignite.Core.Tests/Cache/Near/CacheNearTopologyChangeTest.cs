@@ -294,8 +294,28 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // Change topology, but the key remains in near.
             InitNode(1);
+
+            var foo = cache.LocalPeek(1, CachePeekMode.NativeNear);
+            Assert.AreEqual(1, foo.Bar);
             
-            Assert.AreEqual(1, cache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
+            // Warmup.
+            for (int i = 0; i < 100; i++)
+            {
+                cache.Get(1);
+            }
+
+            var sw = Stopwatch.StartNew();
+            var count = 10000;
+            for (var i = 0; i < count; i++)
+            {
+                var res = cache.Get(1);
+                if (!ReferenceEquals(res, foo))
+                {
+                    throw new Exception();
+                }
+            }
+            
+            Console.WriteLine(sw.ElapsedMilliseconds);
         }
 
         /// <summary>
