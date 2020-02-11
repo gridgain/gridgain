@@ -66,7 +66,7 @@ public abstract class PartitionReconciliationInterruptionTest extends PartitionR
     protected Map<Integer, String> nodeToNodeId = new HashMap<>();
 
     /** Batch size. */
-    protected int batchSize = 50;
+    protected int batchSize = 1;
 
     /**
      *

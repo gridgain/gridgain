@@ -87,8 +87,6 @@ public class ReconciliationExecutionContext {
 
             pendingJobs.entrySet().iterator().remove();
         }
-
-
     }
 
     /**
