@@ -120,6 +120,9 @@ public abstract class TxPartitionCounterStateAbstractTest extends GridCommonAbst
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        // Avoid spurious client disconnect under low resources pressure.
+        cfg.setClientFailureDetectionTimeout(30_000);
+
         cfg.setActiveOnStart(false);
 
         cfg.setConsistentId("node" + igniteInstanceName);

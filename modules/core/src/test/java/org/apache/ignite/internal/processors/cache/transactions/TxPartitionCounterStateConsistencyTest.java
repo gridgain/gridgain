@@ -45,20 +45,18 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockRequest;
 import org.apache.ignite.internal.util.typedef.G;
@@ -880,7 +878,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         // Locks mapped wait.
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
             try {
-                startGrid(SERVER_NODES);
+                startGrid(3);
 
                 awaitPartitionMapExchange();
             }
@@ -960,6 +958,30 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         doTestConsistencyAfterBaselineNodeStopAndRemoval(2);
     }
 
+    /** */
+    @Test
+    public void testPrimaryLeftUnderLoadToSwitchingPartitions_1() throws Exception {
+        doTestPrimaryLeftUnderLoadToSwitchingPartitions(0, 2);
+    }
+
+    /** */
+    @Test
+    public void testPrimaryLeftUnderLoadToSwitchingPartitions_2() throws Exception {
+        doTestPrimaryLeftUnderLoadToSwitchingPartitions(1, 2);
+    }
+
+    /** */
+    @Test
+    public void testPrimaryLeftUnderLoadToSwitchingPartitions_3() throws Exception {
+        doTestPrimaryLeftUnderLoadToSwitchingPartitions(0, 3);
+    }
+
+    /** */
+    @Test
+    public void testPrimaryLeftUnderLoadToSwitchingPartitions_4() throws Exception {
+        doTestPrimaryLeftUnderLoadToSwitchingPartitions(1, 3);
+    }
+
     /**
      * The scenario:
      * <p>
@@ -969,15 +991,14 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
      * 4. Expect no assertions.
      *
      * Note: applicable only for BLT compatible caches (currently only persistent mode).
-     * TODO add test for 3 nodes
+     *
+     * @param backups Backups count.
+     * @param nodes Nodes count.
      */
-    @Test
-    public void testPrimaryLeftUnderLoadToSwitchingPartitions() throws Exception {
-        assertTrue(persistenceEnabled());
+    private void doTestPrimaryLeftUnderLoadToSwitchingPartitions(int backups, int nodes) throws Exception {
+        this.backups = backups;
 
-        backups = 1;
-
-        final IgniteEx crd = startGrids(2);
+        final IgniteEx crd = startGrids(nodes);
 
         crd.cluster().active(true);
 
@@ -988,7 +1009,7 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         AtomicBoolean stop = new AtomicBoolean();
 
         final IgniteInternalFuture<?> fut =
-            doRandomUpdates(r, grid(1), primaryKeys, grid(1).cache(DEFAULT_CACHE_NAME), (BooleanSupplier)stop::get);
+            doRandomUpdates(r, grid(1), primaryKeys, grid(1).cache(DEFAULT_CACHE_NAME), stop::get);
 
         doSleep(3_000);
 
@@ -1003,17 +1024,6 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
         awaitPartitionMapExchange();
 
         checkFutures();
-
-        final GridCachePartitionExchangeManager<Object, Object> exchange = grid(1).context().cache().context().exchange();
-
-        for (GridDhtPartitionsExchangeFuture exchFut : exchange.exchangeFutures()) {
-            assertTrue(exchFut.isDone());
-
-            if (exchFut.topologyVersion().equals(new AffinityTopologyVersion(3, 0))) {
-                assertTrue("Expecting supported free switch " + fut.toString(), exchFut.context().supportsFreeSwitch());
-                assertTrue("Expecting actual free switch " + fut.toString(), exchFut.context().exchangeFreeSwitch());
-            }
-        }
     }
 
     /**
@@ -1185,7 +1195,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 }
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||
-                        X.hasCause(e, TransactionRollbackException.class));
+                            X.hasCause(e, ClusterTopologyCheckedException.class) ||
+                            X.hasCause(e, TransactionRollbackException.class));
                 }
             }
 
