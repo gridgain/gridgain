@@ -718,21 +718,24 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         long startTime = discoMgr.gridStartTime();
 
         if (state == null || state.lastTopVer < lastTopVer || state.startTime != startTime)
-            return reset(state);
+            return resetState();
 
         return state;
     }
 
     /** */
-    protected synchronized ClusterGroupState reset(ClusterGroupState state) {
+    protected synchronized ClusterGroupState resetState() {
         guard();
 
         try {
+            ClusterGroupState state = this.state;
+
             GridDiscoveryManager discoMgr = ctx.discovery();
 
             long lastTopVer = discoMgr.topologyVersion();
             long startTime = discoMgr.gridStartTime();
 
+            // Double check in synchronized context.
             if (state != null && state.lastTopVer == lastTopVer && state.startTime == startTime)
                 return state;
 
