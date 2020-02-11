@@ -293,10 +293,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             cache[1] = new Foo(1);
             
-            // Change topology, but the key remains in near.
-            InitNode(1);
-            
-            Thread.Sleep(2000);
+            // Change topology by starting a new cache.
+            _ignite[0].CreateCache<int, int>("x");
 
             var foo = cache.Get(1);
             Assert.AreEqual(1, foo.Bar);
@@ -308,7 +306,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             }
 
             var sw = Stopwatch.StartNew();
-            var count = 10000;
+            var count = 100000;
             for (var i = 0; i < count; i++)
             {
                 var res = cache.Get(1);
@@ -318,7 +316,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             }
             
-            Console.WriteLine(sw.ElapsedMilliseconds);
+            Console.WriteLine(">>>>>>>>>>>>>>>> " + sw.ElapsedMilliseconds);
         }
 
         /// <summary>
