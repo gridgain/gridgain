@@ -1700,13 +1700,6 @@ public class GridCacheContext<K, V> implements Externalizable {
     }
 
     /**
-     * @return Data center ID.
-     */
-    public byte dataCenterId() {
-        return dr().dataCenterId();
-    }
-
-    /**
      * @param entry Entry.
      * @param ver Version.
      */

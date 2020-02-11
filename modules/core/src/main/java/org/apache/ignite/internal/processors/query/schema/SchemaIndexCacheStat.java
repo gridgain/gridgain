@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.security.impl;
+package org.apache.ignite.internal.processors.query.schema;
 
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.plugin.PluginConfiguration;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 
 /**
- * Grid security configuration for tests.
+ * Class for accumulation of record types and number of indexed records in index tree.
  */
-@FunctionalInterface
-public interface TestSecurityPluginConfiguration extends PluginConfiguration {
+public class SchemaIndexCacheStat {
     /**
-     * @param ctx GridKernalContext.
-     * @return GridSecurityProcessor.
+     * Indexed types.
      */
-    public GridSecurityProcessor build(GridKernalContext ctx);
+    public final Map<String, QueryTypeDescriptorImpl> types = new HashMap<>();
+
+    /**
+     * Indexed keys.
+     */
+    public int scanned;
 }
