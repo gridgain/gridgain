@@ -108,7 +108,14 @@ public class RepairEntryProcessorTest {
     @Test
     public void testForceRepairApplyRemove() {
         final boolean forceRepair = true;
+
         Map<UUID, VersionedValue> data = new HashMap<>();
+        data.put(OTHRER_NODE_ID, new VersionedValue(
+            OLD_CACHE_VALUE,
+            new GridCacheVersion(1, 1, 1),
+            1,
+            1
+        ));
 
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
@@ -116,7 +123,7 @@ public class RepairEntryProcessorTest {
             RMV_QUEUE_MAX_SIZE,
             forceRepair,
             new AffinityTopologyVersion(1)
-        );
+        ).setKeyVersion(new GridCacheVersion(0, 0, 0));
 
         MutableEntry entry = mock(MutableEntry.class);
 
@@ -132,13 +139,21 @@ public class RepairEntryProcessorTest {
     public void testForceRepairApplyValue() {
         final boolean forceRepair = true;
 
+        Map<UUID, VersionedValue> data = new HashMap<>();
+        data.put(OTHRER_NODE_ID, new VersionedValue(
+            OLD_CACHE_VALUE,
+            new GridCacheVersion(1, 1, 1),
+            1,
+            1
+        ));
+
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             NEW_VALUE,
-            new HashMap<>(),
+            data,
             RMV_QUEUE_MAX_SIZE,
             forceRepair,
             new AffinityTopologyVersion(1)
-        );
+        ).setKeyVersion(new GridCacheVersion(0, 0, 0));
 
         MutableEntry entry = mock(MutableEntry.class);
 
@@ -229,7 +244,7 @@ public class RepairEntryProcessorTest {
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(OLD_CACHE_VALUE);
 
-        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.FAIL);
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION);
     }
 
     /**
@@ -247,7 +262,7 @@ public class RepairEntryProcessorTest {
 
         MutableEntry entry = mock(MutableEntry.class);
 
-        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.FAIL);
+        assertEquals(repairProcessor.process(entry), RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION);
     }
 
     /**
@@ -365,13 +380,21 @@ public class RepairEntryProcessorTest {
      */
     @Test
     public void testEntryWasChangedDuringRepairFromNullToValue() {
+        Map<UUID, VersionedValue> data = new HashMap<>();
+        data.put(OTHRER_NODE_ID, new VersionedValue(
+            OLD_CACHE_VALUE,
+            new GridCacheVersion(1, 1, 1),
+            1,
+            1
+        ));
+
         RepairEntryProcessor repairProcessor = new RepairEntryProcessorStub(
             null,
-            new HashMap<>(),
+            data,
             RMV_QUEUE_MAX_SIZE,
             false,
             new AffinityTopologyVersion(1)
-        ).setKeyVersion(new GridCacheVersion(0, 0, 0));
+        ).setKeyVersion(new GridCacheVersion(1, 1, 1));
 
         MutableEntry entry = mock(MutableEntry.class);
         when(entry.getValue()).thenReturn(new CacheObjectImpl(RECHECK_VALUE, RECHECK_VALUE.getBytes()));
