@@ -136,7 +136,7 @@ public class ExternalResultData<T> implements AutoCloseable {
         this.fileIOFactory = fileIOFactory;
         String fileName = "spill_" + locNodeId + "_" + idGen.incrementAndGet();
         try {
-            this.file = new File(U.resolveWorkDirectory( // todo
+            this.file = new File(U.resolveWorkDirectory(
                 workDir,
                 DISK_SPILL_DIR,
                 false

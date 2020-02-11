@@ -30,15 +30,18 @@ import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -462,5 +465,91 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
             assertEquals(memoryManager.memoryReserved(), 0);
         }
+    }
+
+
+    /** */
+    protected void checkQuery(Result res, String sql) {
+        checkQuery(res, sql, 1, 1);
+    }
+
+    /** */
+    protected void checkQuery(Result res, String sql, int threadNum, int iterations) {
+        WatchService watchSvc = null;
+        WatchKey watchKey = null;
+
+        try {
+            watchSvc = FileSystems.getDefault().newWatchService();
+
+            Path workDir = getWorkDir();
+
+            watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
+
+            multithreaded(() -> {
+                for (int i = 0; i < iterations; i++) {
+                    IgniteEx grid = fromClient() ? grid("client") : grid(0);
+                    grid.cache(DEFAULT_CACHE_NAME)
+                        .query(new SqlFieldsQuery(sql)
+                            .setLazy(false))
+                        .getAll();
+                }
+            } , threadNum);
+        }
+        catch (Exception e) {
+            assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
+
+            IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
+
+            assertNotNull(sqlEx);
+
+            if (res == Result.ERROR_GLOBAL_QUOTA)
+                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Global quota exceeded."));
+            else
+                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Query quota exceeded."));
+        }
+        finally {
+            try {
+                if (watchKey != null) {
+                    List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
+
+                    assertEquals("Disk spilling " +  (res.offload ? "not" : "") + " happened.",
+                        res.offload, !dirEvts.isEmpty());
+                }
+
+                assertWorkDirClean();
+
+                checkMemoryManagerState();
+            }
+            finally {
+                U.closeQuiet(watchSvc);
+            }
+        }
+    }
+
+    /** */
+    public enum Result {
+        /** */
+        SUCCESS_WITH_OFFLOADING(true, true),
+
+        /** */
+        SUCCESS_NO_OFFLOADING(false, true),
+
+        /** */
+        ERROR_GLOBAL_QUOTA(false, false),
+
+        /** */
+        ERROR_QUERY_QUOTA(false, false);
+
+        /** */
+        Result(boolean offload, boolean success) {
+            this.offload = offload;
+            this.success = success;
+        }
+
+        /** */
+        final boolean offload;
+
+        /** */
+        final boolean success;
     }
 }

@@ -805,6 +805,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         else
             ses.setQueryTimeout(0);
 
+        ses.setOffloadedToDisk(false);
+
         try {
             return stmt.executeQuery();
         }

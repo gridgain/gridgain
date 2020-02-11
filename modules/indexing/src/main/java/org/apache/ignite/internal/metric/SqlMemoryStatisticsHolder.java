@@ -35,13 +35,13 @@ public class SqlMemoryStatisticsHolder {
     private final LongAdderMetric quotaRequestedCnt;
 
     /** Measures the number kilobytes written to disk during offloading. */
-    private final LongAdderMetric offloadingWrittenKb;
+    private final LongAdderMetric offloadingWritten;
 
     /** Measures the number bytes read from disk during offloading. */
-    private final LongAdderMetric offloadingReadKb;
+    private final LongAdderMetric offloadingRead;
 
     /** Measures the number of files created during offloading. */
-    private final LongAdderMetric filesNumber;
+    private final LongAdderMetric filesNum;
 
     /**
      * Creates this mertrics holder.
@@ -51,16 +51,13 @@ public class SqlMemoryStatisticsHolder {
      */
     public SqlMemoryStatisticsHolder(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
-        
         quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
             "How many times memory quota have been requested on this node by all the queries in total. " +
                 "Always 0 if sql memory quotas are disabled.");
 
-        offloadingWrittenKb = quotasMetrics.longAdderMetric("SqlOffloadingWrittenKb", "TODO"); //TODO
-        offloadingReadKb = quotasMetrics.longAdderMetric("SqlOffloadingReadKb", "TODO"); //TODO
-        filesNumber = quotasMetrics.longAdderMetric("SqlOffloadingFilesNumber", "TODO"); //TODO
-
-
+        offloadingWritten = quotasMetrics.longAdderMetric("SqlOffloadingWritten", "TODO"); //TODO
+        offloadingRead = quotasMetrics.longAdderMetric("SqlOffloadingRead", "TODO"); //TODO
+        filesNum = quotasMetrics.longAdderMetric("SqlOffloadingFilesNumber", "TODO"); //TODO
 
         quotasMetrics.register("maxMem",
             new LongSupplier() {
@@ -91,15 +88,26 @@ public class SqlMemoryStatisticsHolder {
         quotaRequestedCnt.increment();
     }
 
-    public void trackOffloadingWrittenKb(long writtenKb) {
-        offloadingWrittenKb.add(writtenKb);
+    /**
+     * Updates statistics for bytes written to the disk during offloading.
+     * @param written Bytes written.
+     */
+    public void trackOffloadingWritten(long written) {
+        offloadingWritten.add(written);
     }
 
-    public void trackOffloadingReadKb(long readKb) { // TODO bytes?
-        offloadingReadKb.add(readKb);
+    /**
+     * Updates statistics for bytes read from the disk during offloading.
+     * @param read Bytes read.
+     */
+    public void trackOffloadingRead(long read) {
+        offloadingRead.add(read);
     }
 
+    /**
+     * Increments the number of created offloading files.
+     */
     public void trackFileCreated() {
-        filesNumber.increment();
+        filesNum.increment();
     }
 }

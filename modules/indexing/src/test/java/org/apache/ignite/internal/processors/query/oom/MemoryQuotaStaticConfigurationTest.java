@@ -108,9 +108,9 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
         checkQuery(Result.ERROR_GLOBAL_QUOTA, qryMore60Percent);
 
-        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry10Percent, 3);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry10Percent, 3, 1);
 
-        checkQuery(Result.ERROR_GLOBAL_QUOTA, qry25Percent, 3);
+        checkQuery(Result.ERROR_GLOBAL_QUOTA, qry25Percent, 3, 1);
     }
 
     /**
@@ -137,7 +137,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
         checkQuery(Result.SUCCESS_WITH_OFFLOADING, qryMore60Percent);
 
-        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qry50Percent, 2);
+        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qry50Percent, 2, 1);
     }
 
     /**
@@ -155,9 +155,9 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     public void testQueryQuota() throws Exception {
         initGrid("0", "60%", null);
 
-        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 2);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 2, 1);
 
-        checkQuery(Result.ERROR_QUERY_QUOTA, qry50Percent, 2);
+        checkQuery(Result.ERROR_QUERY_QUOTA, qry50Percent, 2, 1);
     }
 
     /**
@@ -174,7 +174,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     public void testGlobalQuotaOverride() throws Exception {
         initGrid(null, "1024", null);
 
-        checkQuery(Result.ERROR_QUERY_QUOTA, qry25Percent, 2);
+        checkQuery(Result.ERROR_QUERY_QUOTA, qry25Percent, 2, 1);
     }
 
     /**
@@ -192,9 +192,9 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     public void testOffloadingWithPerQueryQuota() throws Exception {
         initGrid("0", "60%", true);
 
-        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 1);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 1, 1);
 
-        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qryMore60Percent, 2);
+        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qryMore60Percent, 2, 1);
     }
 
     /**

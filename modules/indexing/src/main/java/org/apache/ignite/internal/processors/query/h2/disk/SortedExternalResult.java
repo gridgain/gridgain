@@ -74,7 +74,6 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
      * @param distinctIndexes {@code DISTINCT ON(...)} expressions.
      * @param visibleColCnt Visible columns count.
      * @param sort Sort order.
-     * @param memTracker MemoryTracker.
      * @param initSize Initial size;
      */
     public SortedExternalResult(Session ses,

@@ -140,13 +140,15 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
         this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        FileIOFactory factory =
+        final FileIOFactory delegateFactory =
         IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
             new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
 
         fileIOFactory = new FileIOFactory() {
             @Override public FileIO create(File file, OpenOption... modes) throws IOException {
-                return new TrackableFileIO(factory.create(file, modes), metrics);
+                FileIO delegate = delegateFactory.create(file, modes);
+
+                return new TrackableFileIO(delegate, metrics);
             }
         };
 
@@ -353,21 +355,41 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
         return new H2ManagedGroupByData(ses, grpIdx);
     }
 
+    /** {@inheritDoc} */
     @Override public ResultExternal createPlainExternalResult(Session ses) {
         return new PlainExternalResult(ses);
     }
 
+    /** {@inheritDoc} */
     @Override public ResultExternal createSortedExternalResult(Session ses, boolean distinct, int[] distinctIndexes,
         int visibleColCnt, SortOrder sort, int rowCnt) {
         return new SortedExternalResult(ses, distinct, distinctIndexes, visibleColCnt, sort, rowCnt);
     }
 
+    /**
+     * @param ses Session.
+     * @param size Size;
+     * @return Grouped result;
+     */
     public GroupedExternalResult createGroupedExternalResult(Session ses, int size) {
         return new GroupedExternalResult(ses, size);
     }
 
+    /**
+     * Creates external data (offload file wrapper).
+     * @param ses Session.
+     * @param useHashIdx Flag whether to use hash index.
+     * @param initSize Initial size.
+     * @param cls Class of stored values.
+     * @param <T> Type of stored values.
+     * @return Created external data (offload file wrapper).
+     */
     public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
-        metrics.trackFileCreated(); // TODO Hash index tracking.
+        if (!ses.isOffloadedToDisk()) {
+            ses.setOffloadedToDisk(true);
+
+            metrics.trackFileCreated();
+        }
 
         return new ExternalResultData<>(log,
             ctx.config().getWorkDirectory(),
@@ -380,45 +402,80 @@ public class QueryMemoryManager implements H2MemoryTracker, H2MemoryManager  {
             ses.getDatabase());
     }
 
+    /**
+     * FileIO decorator for stats collecting.
+     */
     private static class TrackableFileIO extends FileIODecorator {
+        /** */
         private final SqlMemoryStatisticsHolder metrics;
+
         /**
          * @param delegate File I/O delegate
          */
-        public TrackableFileIO(FileIO delegate, SqlMemoryStatisticsHolder metrics) {
+        private TrackableFileIO(FileIO delegate, SqlMemoryStatisticsHolder metrics) {
             super(delegate);
 
             this.metrics = metrics;
         }
 
+        /** {@inheritDoc} */
         @Override public int read(ByteBuffer destBuf) throws IOException {
             int bytesRead = delegate.read(destBuf);
 
             if (bytesRead > 0)
-                metrics.trackOffloadingReadKb(bytesRead);
+                metrics.trackOffloadingRead(bytesRead);
 
             return bytesRead;
         }
 
+        /** {@inheritDoc} */
         @Override public int read(ByteBuffer destBuf, long position) throws IOException {
+            int bytesRead = delegate.read(destBuf, position);
 
-            return super.read(destBuf, position);
+            if (bytesRead > 0)
+                metrics.trackOffloadingRead(bytesRead);
+
+            return bytesRead;
         }
 
+        /** {@inheritDoc} */
         @Override public int read(byte[] buf, int off, int len) throws IOException {
-            return super.read(buf, off, len);
+            int bytesRead = delegate.read(buf, off, len);
+
+            if (bytesRead > 0)
+                metrics.trackOffloadingRead(bytesRead);
+
+            return bytesRead;
         }
 
+        /** {@inheritDoc} */
         @Override public int write(ByteBuffer srcBuf) throws IOException {
-            return super.write(srcBuf);
+            int bytesWritten = delegate.write(srcBuf);
+
+            if (bytesWritten > 0)
+                metrics.trackOffloadingWritten(bytesWritten);
+
+            return bytesWritten;
         }
 
+        /** {@inheritDoc} */
         @Override public int write(ByteBuffer srcBuf, long position) throws IOException {
-            return super.write(srcBuf, position);
+            int bytesWritten = delegate.write(srcBuf, position);
+
+            if (bytesWritten > 0)
+                metrics.trackOffloadingWritten(bytesWritten);
+
+            return bytesWritten;
         }
 
+        /** {@inheritDoc} */
         @Override public int write(byte[] buf, int off, int len) throws IOException {
-            return super.write(buf, off, len);
+            int bytesWritten = delegate.write(buf, off, len);
+
+            if (bytesWritten > 0)
+                metrics.trackOffloadingWritten(bytesWritten);
+
+            return bytesWritten;
         }
     }
 }

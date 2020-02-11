@@ -146,6 +146,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     private boolean lazyQueryExecution;
     private ColumnNamerConfiguration columnNamerConfiguration;
     private H2QueryContext qryContext;
+    private boolean offloadedToDisk;
     /**
      * Tables marked for ANALYZE after the current transaction is committed.
      * Prevents us calling ANALYZE repeatedly in large transactions.
@@ -261,8 +262,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
                 return grpByData;
         }
 
-        return isGrpQry ? new GroupedGroupByData(this, grpIdx) :
-            new PlainGroupByData(this);
+        return isGrpQry ? new GroupedGroupByData(this, grpIdx) : new PlainGroupByData(this);
     }
 
     /**
@@ -1978,4 +1978,11 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
         return true;
     }
 
+    public boolean isOffloadedToDisk() {
+        return offloadedToDisk;
+    }
+
+    public void setOffloadedToDisk(boolean offloadedToDisk) {
+        this.offloadedToDisk = offloadedToDisk;
+    }
 }

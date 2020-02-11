@@ -23,7 +23,7 @@ import org.h2.result.ResultExternal;
 import org.h2.result.SortOrder;
 
 /**
- * TODO: Add interface description.
+ * Memory manager for H2 query memory tracking and disk offloading.
  */
 public interface H2MemoryManager {
 
@@ -38,9 +38,25 @@ public interface H2MemoryManager {
      */
     GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx);
 
+    /**
+     * Creates plain external result.
+     *
+     * @param session Session.
+     * @return New external result.
+     */
     ResultExternal createPlainExternalResult(Session session);
 
+    /**
+     * Creates sorted external result.
+     *
+     * @param session Session.
+     * @param distinct Distinct flag.
+     * @param indexes Distinct indexes.
+     * @param visibleColCnt Visible column count.
+     * @param sort Sort.
+     * @param rowCount Row count.
+     * @return Sorted external result.
+     */
     ResultExternal createSortedExternalResult(Session session, boolean distinct, int[] indexes, int visibleColCnt,
         SortOrder sort, int rowCount);
-
 }
