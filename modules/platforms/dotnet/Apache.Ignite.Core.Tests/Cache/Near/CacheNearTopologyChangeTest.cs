@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -294,8 +295,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // Change topology, but the key remains in near.
             InitNode(1);
+            
+            Thread.Sleep(2000);
 
-            var foo = cache.LocalPeek(1, CachePeekMode.NativeNear);
+            var foo = cache.Get(1);
             Assert.AreEqual(1, foo.Bar);
             
             // Warmup.
