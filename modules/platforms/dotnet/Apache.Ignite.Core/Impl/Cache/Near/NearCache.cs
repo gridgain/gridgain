@@ -264,7 +264,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
         private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
         {
-            // TODO: Compare perf with a call to Java version of this.
             // - Is the complexity and memory usage worth it?
             // - Can we avoid serializing the key? Yes, by sending just the partition number.
             var ver = version ?? GetCurrentTopologyVersion();
@@ -272,6 +271,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (entry.Version >= ver)
             {
                 return true;
+            }
+
+            // TODO: Compare perf with a call to Java version of this:
+            if (entry.Version.Version > 0) // TODO: Condition always true for benchmarking.
+            {
+                return _affinity.IsAssignmentValid(entry.Version, entry.Partition);
             }
 
             // Check that primary has never changed since entry has been cached.

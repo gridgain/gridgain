@@ -79,6 +79,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         private const int OpMapAllPartitionsToNodes = 16;
 
         /** */
+        private const int OpIsAssignmentValid = 17;
+
+        /** */
         private readonly bool _keepBinary;
         
         /** Grid. */
@@ -224,13 +227,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// </summary>
         /// <returns>List of primary nodes per partition. Size of the list is equal to <see cref="Partitions"/>.
         /// Primary node for partition N is at index N.</returns>
-        internal Guid[] MapAllPartitionsToNodes(AffinityTopologyVersion ver)
+        internal Guid[] MapAllPartitionsToNodes(AffinityTopologyVersion version)
         {
             return DoOutInOp(OpMapAllPartitionsToNodes,
                 w =>
                 {
-                    w.WriteLong(ver.Version);
-                    w.WriteInt(ver.MinorVersion);
+                    w.WriteLong(version.Version);
+                    w.WriteInt(version.MinorVersion);
                 },
                 s =>
                 {
@@ -243,6 +246,19 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                     return res;
                 });
+        }
+
+        /// <summary>
+        /// Checks whether given partition is still assigned to the same node as in specified version.
+        /// </summary>
+        internal bool IsAssignmentValid(AffinityTopologyVersion version, int partition)
+        {
+            return DoOutOp(OpIsAssignmentValid, (IBinaryStream s) =>
+            {
+                s.WriteLong(version.Version);
+                s.WriteInt(version.MinorVersion);
+                s.WriteInt(partition);
+            }) != 0;
         }
 
         /** <inheritDoc /> */
