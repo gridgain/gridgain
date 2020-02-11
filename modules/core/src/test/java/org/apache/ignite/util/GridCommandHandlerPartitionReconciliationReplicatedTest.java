@@ -22,15 +22,13 @@ import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 
-// TODO: 20.11.19 Add to appropriate suites.
-
 /**
  * Tests for checking partition reconciliation control.sh command within context of replicated cache.
  */
 public class GridCommandHandlerPartitionReconciliationReplicatedTest extends
     GridCommandHandlerPartitionReconciliationAbstractTest {
     /** {@inheritDoc} */
-    @Override  protected void prepareCache() {
+    @Override protected void prepareCache() {
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, 16))
             .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC)

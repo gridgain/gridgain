@@ -16,8 +16,6 @@
 
 package org.apache.ignite.util;
 
-// TODO: 20.11.19 Add to appropriate suites.
-
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;

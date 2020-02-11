@@ -115,8 +115,6 @@ public class RepairEntryProcessor implements EntryProcessor {
             }
             else
                 return RepairStatus.CONCURRENT_MODIFICATION;
-
-            // TODO: 23.12.19 Add optimizations here
         }
         else {
             if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {

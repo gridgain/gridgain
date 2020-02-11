@@ -56,8 +56,6 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.SESSION_CHANGE_MSG;
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.AVAILABLE_PROCESSORS_RECONCILIATION;
 
-// TODO: 26.12.19 Add to appropriate suites.
-
 /**
  * Tests for checking partition reconciliation.
  */
