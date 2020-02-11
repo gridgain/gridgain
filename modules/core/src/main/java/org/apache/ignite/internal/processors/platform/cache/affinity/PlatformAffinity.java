@@ -91,6 +91,9 @@ public class PlatformAffinity extends PlatformAbstractTarget {
     public static final int OP_MAP_ALL_PARTITIONS_TO_NODES = 16;
 
     /** */
+    public static final int OP_IS_ASSIGNMENT_VALID = 17;
+
+    /** */
     private static final C1<ClusterNode, UUID> TO_NODE_ID = new C1<ClusterNode, UUID>() {
         @Nullable @Override public UUID apply(ClusterNode node) {
             return node != null ? node.id() : null;
@@ -171,6 +174,14 @@ public class PlatformAffinity extends PlatformAbstractTarget {
                     return FALSE;
 
                 return aff.isPrimaryOrBackup(node, key) ? TRUE : FALSE;
+            }
+
+            case OP_IS_ASSIGNMENT_VALID: {
+                AffinityTopologyVersion ver = new AffinityTopologyVersion(reader.readLong(), reader.readInt());
+                int part = reader.readInt();
+                boolean res = affMgr.primaryChanged(part, ver, affMgr.affinityTopologyVersion());
+
+                return res ? TRUE : FALSE;
             }
 
             default:
