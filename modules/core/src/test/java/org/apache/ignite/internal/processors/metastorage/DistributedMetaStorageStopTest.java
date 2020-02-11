@@ -28,11 +28,12 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TestTcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryAbstractMessage;
 import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryCustomEventMessage;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Test for {@link DistributedMetaStorageImpl} with disabled persistence.
@@ -112,11 +113,11 @@ public class DistributedMetaStorageStopTest extends GridCommonAbstractTest {
             //Expected that write would be failed because node should be stopped before this message reached the node.
         }
 
-        GridTestUtils.waitForCondition(new GridAbsPredicateX() {
+        assertTrue(waitForCondition(new GridAbsPredicateX() {
             @Override public boolean applyx() throws IgniteCheckedException {
                 return "value0".equals(metastorage(0).read("key0"));
             }
-        }, 10_000);
+        }, 10_000));
     }
 
     /** */
