@@ -282,6 +282,23 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Temporary test: compare Java-based IsValid against .NET-based.
+        /// </summary>
+        [Test]
+        public void TestIsValidPerf()
+        {
+            InitNodes(1);
+            var cache = InitClientAndCache();
+            
+            cache[1] = new Foo(1);
+            
+            // Change topology, but the key remains in near.
+            InitNode(1);
+            
+            Assert.AreEqual(1, cache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
+        }
+
+        /// <summary>
         /// Inits a number of grids.
         /// </summary>
         private void InitNodes(int count, bool serverNear = true, int backups = 0)
