@@ -264,6 +264,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
         private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
         {
+            // TODO: Compare perf with a call to Java version of this.
+            // Is the complexity and memory usage worth it?
             var ver = version ?? GetCurrentTopologyVersion();
 
             if (entry.Version >= ver)
