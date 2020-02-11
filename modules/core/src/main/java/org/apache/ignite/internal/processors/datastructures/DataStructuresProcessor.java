@@ -107,7 +107,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  */
 public final class DataStructuresProcessor extends GridProcessorAdapter implements IgniteChangeGlobalStateSupport {
     /** DataRegionConfiguration name reserved for volatile caches. */
-    public static final String VOLATILE_DATA_REGION_NAME = "volatileMemPlc";
+    public static final String VOLATILE_DATA_REGION_NAME = "volatileDsMemPlc";
 
     /** */
     public static final String DEFAULT_VOLATILE_DS_GROUP_NAME = "default-volatile-ds-group";

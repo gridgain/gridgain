@@ -66,7 +66,7 @@ namespace Apache.Ignite.Core.Tests.Cache
             AssertMetricsAreEmpty(txLogMetrics);
 
             var volatileMetrics = metrics[4];
-            Assert.AreEqual("volatileMemPlc", volatileMetrics.Name);
+            Assert.AreEqual("volatileDsMemPlc", volatileMetrics.Name);
             AssertMetricsAreEmpty(volatileMetrics);
 
             // Metrics by name.
