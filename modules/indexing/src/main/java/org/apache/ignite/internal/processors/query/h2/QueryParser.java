@@ -168,8 +168,11 @@ public class QueryParser {
         QueryParserResult parseRes = parseNative(schemaName, qry, remainingAllowed);
 
         // Otherwise parse with H2.
-        if (parseRes == null)
+        if (parseRes == null) {
+            qry = checkAnalyze(qry);
+
             parseRes = parseH2(schemaName, qry, qryDesc.batched(), remainingAllowed);
+        }
 
         // Add to cache if not multi-statement.
         if (parseRes.remainingQuery() == null) {
@@ -735,5 +738,16 @@ public class QueryParser {
             skipReducerOnUpdate,
             batched
         );
+    }
+
+    /** */
+    private static SqlFieldsQuery checkAnalyze(SqlFieldsQuery qry) {
+        if (qry.getSql().startsWith("ANALYZE ")) {
+            return new SqlFieldsQueryEx(qry)
+                .setAnalyze(true)
+                .setSql(qry.getSql().substring(8));
+        }
+        else
+            return qry;
     }
 }

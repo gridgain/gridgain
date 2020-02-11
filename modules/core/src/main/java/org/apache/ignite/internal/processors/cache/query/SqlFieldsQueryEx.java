@@ -48,6 +48,9 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     /** Max memory available for query. */
     private long maxMem;
 
+    /** Is query must be analyzed instead of regular execution. */
+    private boolean analyze;
+
     /**
      * @param sql SQL query.
      * @param isQry Flag indicating whether this object denotes a query or an update operation.
@@ -61,7 +64,16 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
     /**
      * @param qry SQL query.
      */
-    private SqlFieldsQueryEx(SqlFieldsQueryEx qry) {
+    public SqlFieldsQueryEx(SqlFieldsQuery qry) {
+        super(qry);
+
+        this.isQry = null;
+    }
+
+    /**
+     * @param qry SQL query.
+     */
+    public SqlFieldsQueryEx(SqlFieldsQueryEx qry) {
         super(qry);
 
         this.isQry = qry.isQry;
@@ -70,6 +82,7 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
         this.nestedTxMode = qry.nestedTxMode;
         this.batchedArgs = qry.batchedArgs;
         this.maxMem = qry.maxMem;
+        this.analyze = qry.analyze;
     }
 
     /**
@@ -272,6 +285,23 @@ public final class SqlFieldsQueryEx extends SqlFieldsQuery {
      */
     public SqlFieldsQuery setMaxMemory(long maxMem) {
         this.maxMem = maxMem;
+
+        return this;
+    }
+
+    /**
+     * @return {@code true} is the query mys te analyzed (trace query execution) instead of regular execution.
+     */
+    public boolean isAnalyze() {
+        return analyze;
+    }
+
+    /**
+     * @param analyze {@code true} is the query mys te analyzed (trace query execution) instead of regular execution.
+     * @return {@code this} for chaining.
+     */
+    public SqlFieldsQuery setAnalyze(boolean analyze) {
+        this.analyze = analyze;
 
         return this;
     }

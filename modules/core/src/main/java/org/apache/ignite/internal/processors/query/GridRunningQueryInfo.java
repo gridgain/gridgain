@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Query descriptor.
@@ -160,5 +161,10 @@ public class GridRunningQueryInfo {
      */
     public boolean local() {
         return loc;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRunningQueryInfo.class, this);
     }
 }

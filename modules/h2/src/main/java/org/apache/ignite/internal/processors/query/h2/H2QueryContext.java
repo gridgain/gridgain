@@ -40,4 +40,9 @@ public interface H2QueryContext {
      * @return Group-by data.
      */
     GroupByData newGroupByDataInstance(Session ses, ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx);
+
+    /**
+     * @return trace object if trace is enabled for the current session.
+     */
+    H2SqlTrace trace();
 }
