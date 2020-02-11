@@ -117,7 +117,7 @@ public abstract class AbstractActionControllerTest extends AgentCommonAbstractTe
      */
     protected List<TaskResponse> taskResults(UUID reqId) {
         return interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id()), TaskResponse.class).stream()
-            .filter(r -> r.getId().equals(reqId))
+            .filter(r -> reqId.equals(r.getId()))
             .collect(toList());
     }
 
@@ -135,7 +135,7 @@ public abstract class AbstractActionControllerTest extends AgentCommonAbstractTe
      */
     protected List<JobResponse> jobResults(UUID reqId) {
         return interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id()), JobResponse.class).stream()
-            .filter(r -> r.getRequestId().equals(reqId))
+            .filter(r -> reqId.equals(r.getRequestId()))
             .collect(toList());
     }
 
