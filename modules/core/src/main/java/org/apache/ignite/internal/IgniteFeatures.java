@@ -68,6 +68,9 @@ public enum IgniteFeatures {
 //    /** Support of cluster read-only mode. */
 //    CLUSTER_READ_ONLY_MODE(9),
 
+    /** Support of suspend/resume operations for pessimistic transactions. */
+    SUSPEND_RESUME_PESSIMISTIC_TX(10),
+
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
 
