@@ -23,7 +23,12 @@ import java.util.UUID;
  */
 public interface PipelineWorkload {
     /**
-     * @return Unique id of workload.
+     * @return ID of global workload session.
      */
-    UUID getSessionId();
+    long sessionId();
+
+    /**
+     * @return Unique ID of workload chain.
+     */
+    UUID workloadChainId();
 }

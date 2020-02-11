@@ -29,23 +29,25 @@ public class Batch implements PipelineWorkload {
     private final String cacheName;
 
     /** Partition id. */
-    private final int partitionId;
+    private final int partId;
 
     /** Lower key, uses for pagination. The first request should set this value to null. */
     private final KeyCacheObject lowerKey;
 
-    /**
-     *
-     */
-    private final UUID sessionId;
+    /** Session id. */
+    private final long sessionId;
+
+    /** Workload chain id. */
+    private final UUID workloadChainId;
 
     /**
      *
      */
-    public Batch(UUID sessionId, String cacheName, int partId, KeyCacheObject lowerKey) {
+    public Batch(long sessionId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey) {
         this.sessionId = sessionId;
+        this.workloadChainId = workloadChainId;
         this.cacheName = cacheName;
-        this.partitionId = partId;
+        this.partId = partId;
         this.lowerKey = lowerKey;
     }
 
@@ -60,7 +62,7 @@ public class Batch implements PipelineWorkload {
      *
      */
     public int partitionId() {
-        return partitionId;
+        return partId;
     }
 
     /**
@@ -70,7 +72,13 @@ public class Batch implements PipelineWorkload {
         return lowerKey;
     }
 
-    @Override public UUID getSessionId() {
+    /** {@inheritDoc} */
+    @Override public long sessionId() {
         return sessionId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID workloadChainId() {
+        return workloadChainId;
     }
 }

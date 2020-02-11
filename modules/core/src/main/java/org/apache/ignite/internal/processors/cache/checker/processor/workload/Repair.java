@@ -37,28 +37,41 @@ public class Repair implements PipelineWorkload {
     private int partId;
 
     /** Attempt number. */
-    private int attempt;
+    private int repairAttempt;
 
-    private UUID sessionId;
+    /** Session id. */
+    private long sessionId;
+
+    /** Workload chain id. */
+    private final UUID workloadChainId;
 
     /**
      *
      */
     private Map<KeyCacheObject, Map<UUID, VersionedValue>> data;
 
-    /** */
+    /**
+     * @param sessionId Session id.
+     * @param workloadChainId Workload chain id.
+     * @param cacheName Cache name.
+     * @param partId Partition id.
+     * @param data Data.
+     * @param repairAttempt Repair attempt.
+     */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public Repair(
-        UUID sessionId,
+        long sessionId,
+        UUID workloadChainId,
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, VersionedValue>> data,
-        int attempt
+        int repairAttempt
     ) {
         this.sessionId = sessionId;
+        this.workloadChainId = workloadChainId;
         this.cacheName = cacheName;
         this.partId = partId;
         this.data = data;
-        this.attempt = attempt;
+        this.repairAttempt = repairAttempt;
     }
 
     /**
@@ -86,12 +99,17 @@ public class Repair implements PipelineWorkload {
     /**
      * @return Attempt number.
      */
-    public int attempt() {
-        return attempt;
+    public int repairAttempt() {
+        return repairAttempt;
     }
 
     /** {@inheritDoc} */
-    @Override public UUID getSessionId() {
+    @Override public long sessionId() {
         return sessionId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID workloadChainId() {
+        return workloadChainId;
     }
 }

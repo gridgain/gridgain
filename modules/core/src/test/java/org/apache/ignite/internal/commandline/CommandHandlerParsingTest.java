@@ -57,6 +57,7 @@ import static org.apache.ignite.internal.commandline.WalCommands.WAL_DELETE;
 import static org.apache.ignite.internal.commandline.WalCommands.WAL_PRINT;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.FIND_AND_DELETE_GARBAGE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALIDATE_INDEXES;
+import static org.apache.ignite.internal.commandline.cache.PartitionReconciliation.PARALLELISM_FORMAT_MESSAGE;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
@@ -576,19 +577,26 @@ public class CommandHandlerParsingTest {
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--fix-alg", "PRIMARY"));
 
         // --load-factor
-        assertParseArgsThrows("The load factor should be specified.",
-            "--cache", "partition-reconciliation", "--load-factor");
+        assertParseArgsThrows("The parallelism level should be specified.",
+            "--cache", "partition-reconciliation", "--parallelism");
 
-        assertParseArgsThrows("Invalid load factor: abc. Double value between 0 (exclusive) and 1 (inclusive)" +
-            " should be used.", "--cache", "partition-reconciliation", "--load-factor", "abc");
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "abc"),
+            "--cache", "partition-reconciliation", "--parallelism", "abc");
 
-        assertParseArgsThrows("Invalid load factor: 0. Double value between 0 (exclusive) and 1 (inclusive)" +
-            " should be used.", "--cache", "partition-reconciliation", "--load-factor", "0");
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "0.5"),
+            "--cache", "partition-reconciliation", "--parallelism", "0.5");
 
-        assertParseArgsThrows("Invalid load factor: 100. Double value between 0 (exclusive) and 1 (inclusive)" +
-            " should be used.", "--cache", "partition-reconciliation", "--load-factor", "100");
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "-1"),
+            "--cache", "partition-reconciliation", "--parallelism", "-1");
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--load-factor", "0.5"));
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "129"),
+            "--cache", "partition-reconciliation", "--parallelism", "129");
+
+        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "8"));
+
+        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "1"));
+
+        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "0"));
 
         // --batch-size
         assertParseArgsThrows("The batch size should be specified.",

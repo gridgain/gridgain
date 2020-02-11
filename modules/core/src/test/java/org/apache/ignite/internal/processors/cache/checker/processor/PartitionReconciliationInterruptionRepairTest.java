@@ -34,7 +34,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ThrowUp;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.TOPOLOGY_CHANGE_MSG;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHING;
 
@@ -211,7 +210,7 @@ public class PartitionReconciliationInterruptionRepairTest extends PartitionReco
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();;
         builder.batchSize(batchSize);
-        builder.loadFactor(0.0001);
+        builder.parallelism(1);
         builder.fixMode(true);
         builder.repairAlg(RepairAlgorithm.PRIMARY);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));

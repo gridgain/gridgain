@@ -45,8 +45,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     private boolean verbose;
 
-    /** Percent of system loading from 0 to 1. */
-    private double loadFactor;
+    /** Maximum number of threads that can be involved in reconciliation activities. */
+    private int parallelism;
 
     /** Amount of keys to retrieve within one job. */
     private int batchSize;
@@ -75,12 +75,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean fixMode, boolean verbose, boolean console,
-        double loadFactor, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg, int recheckDelay) {
+        int parallelism, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg, int recheckDelay) {
         this.caches = caches;
         this.verbose = verbose;
         this.console = console;
         this.fixMode = fixMode;
-        this.loadFactor = loadFactor;
+        this.parallelism = parallelism;
         this.batchSize = batchSize;
         this.recheckAttempts = recheckAttempts;
         this.repairAlg = repairAlg;
@@ -97,7 +97,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         out.writeBoolean(console);
 
-        out.writeDouble(loadFactor);
+        out.writeInt(parallelism);
 
         out.writeInt(batchSize);
 
@@ -120,7 +120,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         console = in.readBoolean();
 
-        loadFactor = in.readDouble();
+        parallelism = in.readInt();
 
         batchSize = in.readInt();
 
@@ -181,10 +181,10 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /**
-     *
+     * @return Maximum number of threads that can be involved in reconciliation activities.
      */
-    public double loadFactor() {
-        return loadFactor;
+    public int parallelism() {
+        return parallelism;
     }
 
     /**
@@ -210,8 +210,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** If {@code true} - print data to result with sensitive information: keys and values. */
         private boolean verbose;
 
-        /** Percent of system loading from 0 to 1. */
-        private double loadFactor;
+        /** Maximum number of threads that can be involved in reconciliation activities. */
+        private int parallelism;
 
         /** Amount of keys to retrieve within one job. */
         private int batchSize;
@@ -236,11 +236,29 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             fixMode = false;
             console = true;
             verbose = true;
-            loadFactor = 1.0;
+            parallelism = 4;
             batchSize = 100;
             recheckAttempts = 2;
-            recheckDelay = 0;
+            recheckDelay = 1;
             repairAlg = RepairAlgorithm.defaultValue();
+        }
+
+        /**
+         * Copy constructor.
+         *
+         * @param cpFrom Argument to copy from.
+         */
+        public Builder(VisorPartitionReconciliationTaskArg cpFrom) {
+            caches = cpFrom.caches;
+            fixMode = cpFrom.fixMode;
+            console = cpFrom.console;
+            verbose = cpFrom.verbose;
+            parallelism = cpFrom.parallelism;
+            batchSize = cpFrom.batchSize;
+            recheckAttempts = cpFrom.batchSize;
+            recheckAttempts = cpFrom.recheckAttempts;
+            recheckDelay = cpFrom.recheckDelay;
+            repairAlg = cpFrom.repairAlg;
         }
 
         /**
@@ -248,7 +266,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          */
         public VisorPartitionReconciliationTaskArg build() {
             return new VisorPartitionReconciliationTaskArg(
-                caches, fixMode, verbose, console, loadFactor, batchSize, recheckAttempts, repairAlg, recheckDelay);
+                caches, fixMode, verbose, console, parallelism, batchSize, recheckAttempts, repairAlg, recheckDelay);
         }
 
         /**
@@ -288,10 +306,10 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
-         * @param loadFactor New percent of system loading from 0 to 1.
+         * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
          */
-        public Builder loadFactor(double loadFactor) {
-            this.loadFactor = loadFactor;
+        public Builder parallelism(int parallelism) {
+            this.parallelism = parallelism;
 
             return this;
         }

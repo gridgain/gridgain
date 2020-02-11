@@ -70,6 +70,10 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
     @Parameterized.Parameter(3)
     public RepairAlgorithm repairAlgorithm;
 
+    /** Parallelism. */
+    @Parameterized.Parameter(4)
+    public int parallelism;
+
     /** Crd server node. */
     protected IgniteEx ig;
 
@@ -123,7 +127,8 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
     /**
      *
      */
-    @Parameterized.Parameters(name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}")
+    @Parameterized.Parameters(
+        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
@@ -134,8 +139,11 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
 
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
-                params.add(new Object[] {atomicityMode, parts, false, null});
+                params.add(new Object[] {atomicityMode, parts, false, null, 4});
         }
+
+        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, false, null, 1});
+        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, false, null, 1});
 
         return params;
     }
@@ -193,9 +201,9 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
                 if (isHotKey(i))
                     clientCache.put(i, String.valueOf(2 * i));
             }
-        }, 6, "rand-loader");
+        }, 4, "rand-loader");
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, DEFAULT_CACHE_NAME);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 

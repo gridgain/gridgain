@@ -121,7 +121,7 @@ public class AbstractPipelineProcessor {
      *
      */
     protected boolean isSessionExpired() {
-        return ignite.context().diagnostic().getReconciliationSessionId() != sesId;
+        return ignite.context().diagnostic().reconciliationExecutionContext().sessionId() != sesId;
     }
 
     /**
@@ -144,7 +144,7 @@ public class AbstractPipelineProcessor {
     protected void waitWorkFinish() {
         while (hasLiveHandlers()) {
             try {
-                Thread.sleep(300);
+                Thread.sleep(100);
             }
             catch (InterruptedException ignore) {
             }
