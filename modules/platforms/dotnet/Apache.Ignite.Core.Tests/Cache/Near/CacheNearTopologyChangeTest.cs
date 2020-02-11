@@ -293,7 +293,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             for (var i = 0; i < count; i++)
             {
-                InitNode(i, serverNear, false, backups);
+                InitNode(i, serverNear, backups: backups);
             }
         }
 
