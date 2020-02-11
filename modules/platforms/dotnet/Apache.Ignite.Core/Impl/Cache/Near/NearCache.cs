@@ -265,7 +265,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
         {
             // TODO: Compare perf with a call to Java version of this.
-            // Is the complexity and memory usage worth it?
+            // - Is the complexity and memory usage worth it?
+            // - Can we avoid serializing the key? Yes, by sending just the partition number.
             var ver = version ?? GetCurrentTopologyVersion();
 
             if (entry.Version >= ver)
@@ -275,7 +276,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             // Check that primary has never changed since entry has been cached.
             // Primary change requires invalidation (see GridNearCacheEntry.valid()).
-            // TODO: Verify change to and from backup node. Hopefully it does not matter for us.
             var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
 
             foreach (var newVer in _affinityTopologyVersions)
@@ -290,7 +290,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                     return false;
                 }
             }
-
+            
+            // TODO: Update entry with ver to reduce the cost of future checks.
             return true;
         }
 
