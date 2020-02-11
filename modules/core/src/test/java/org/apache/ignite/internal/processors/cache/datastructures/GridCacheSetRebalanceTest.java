@@ -40,6 +40,9 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+
 /**
  * Tests rebalancing of IgniteSet for a case when a custom class, that is used as a key, is absent in the classpath on
  * the joined node.
@@ -56,6 +59,9 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
     /** Flag indicates additional classes should be included into the class-path. */
     private boolean useExtendedClasses;
+
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -89,7 +95,6 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         IgniteEx ignite0 = startGrid(0);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(false);
         ignite0.cluster().active(true);
 
         IgniteSet set = ignite0.set("test-set", new CollectionConfiguration().setBackups(1).setCollocated(true));
@@ -111,17 +116,17 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         GridTestUtils.runAsync(() -> startGrid(1));
 
-        ignite0.cluster().setBaselineTopology(ignite0.cluster().forServers().nodes());
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
 
-        assertTrue(
-            "Data rebalancing is not started.",
-            TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked(1, 10_000));
+        assertTrue("Data rebalancing is not started.",
+                TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked(1, 10_000));
 
         // Resend delayed rebalance messages.
         TestRecordingCommunicationSpi.spi(ignite0).stopBlock(true);
 
-        GridDhtPartitionDemander.RebalanceFuture fut = (GridDhtPartitionDemander.RebalanceFuture)grid(1).context().
-            cache().internalCache(DATA_STRUCTURES_CACHE_NAME).preloader().rebalanceFuture();
+        GridDhtPartitionDemander.RebalanceFuture fut = (GridDhtPartitionDemander.RebalanceFuture) grid(1).context().
+                cache().internalCache(DATA_STRUCTURES_CACHE_NAME).preloader().rebalanceFuture();
 
         // Rebalance future should not be cancelled or failed.
         assertTrue(fut.get(10, TimeUnit.SECONDS));

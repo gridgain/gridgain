@@ -67,7 +67,6 @@ public class SupportFeaturesUtils {
         )
             return IgniteSystemProperties.getBoolean(featureName, true);
 
-
         return IgniteSystemProperties.getBoolean(featureName, false);
     }
 }

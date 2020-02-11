@@ -61,7 +61,7 @@ public class ExchangeContext {
     private final boolean compatibilityNode = getBoolean(IGNITE_EXCHANGE_COMPATIBILITY_VER_1, false);
 
     /** */
-    private final boolean bltForVolatileCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+    private final boolean bltForVolatileCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /** Free switch is supported for current exchange topology. */
     private final boolean supFreeSwitch;
@@ -81,7 +81,7 @@ public class ExchangeContext {
             fut.wasRebalanced() &&
             fut.isBaselineNodeFailed() &&
             supFreeSwitch &&
-            (bltForVolatileCachesSupport ||
+            (bltForVolatileCachesSup ||
                 CU.dataRegions(fut.firstEventCache().allNodes(),
                     fut.sharedContext().kernalContext().marshallerContext().jdkMarshaller(),
                     U.resolveClassLoader(fut.sharedContext().kernalContext().config())).

@@ -59,6 +59,8 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PART_DISTRIBUTION_
 import static org.apache.ignite.IgniteSystemProperties.getFloat;
 import static org.apache.ignite.IgniteSystemProperties.getInteger;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.IgniteFeatures.PME_FREE_SWITCH;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
@@ -141,7 +143,7 @@ public class GridAffinityAssignmentCache {
     private final boolean persistentCache;
 
     /** */
-    private final boolean bltForInMemoryCachesSupport = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /** Node stop flag. */
     private volatile IgniteCheckedException stopErr;
@@ -355,8 +357,13 @@ public class GridAffinityAssignmentCache {
 
             hasBaseline = blt != null;
 
-            if (!bltForInMemoryCachesSupport)
+            // Use PME_FREE_SWITCH feature presence to avoid compatibility issues when BLT is forced for in memory caches.
+            boolean supFreeSwitch = allNodesSupports(ctx, discoCache.allNodes(), PME_FREE_SWITCH);
+
+            if (!bltForInMemoryCachesSup)
                 hasBaseline &= persistentCache;
+            else
+                hasBaseline &= supFreeSwitch;
 
             changedBaseline = !hasBaseline ? baselineTopology != null : !blt.equals(baselineTopology);
         }
