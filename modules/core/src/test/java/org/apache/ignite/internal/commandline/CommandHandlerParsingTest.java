@@ -566,12 +566,11 @@ public class CommandHandlerParsingTest {
      */
     @Test
     public void testPartitionReconciliationArgumentsValidation() {
-        // --fix-alg
         assertParseArgsThrows("The repair algorithm should be specified. The following values can be used: "
-            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--fix-alg");
+            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--repair");
 
         assertParseArgsThrows("Invalid repair algorithm: invalid-repair-alg. The following values can be used: "
-            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--fix-alg",
+            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--repair",
             "invalid-repair-alg");
 
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--fix-alg", "PRIMARY"));
