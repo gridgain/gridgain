@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteInterruptedException;
@@ -80,6 +81,9 @@ import org.h2.index.Cursor;
 import org.h2.index.Index;
 import org.h2.message.DbException;
 
+import static java.util.Collections.singletonList;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 
@@ -125,6 +129,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
     /** Counter of integrity checked indexes. */
     private final AtomicInteger integrityCheckedIndexes = new AtomicInteger(0);
+
+    /** Counter of processed check sizes. */
+    private final AtomicInteger processedCheckSizes = new AtomicInteger(0);
 
     /** Total partitions. */
     private volatile int totalIndexes;
@@ -205,6 +212,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
         List<Future<Map<PartitionKey, ValidateIndexesPartitionResult>>> procPartFutures = new ArrayList<>();
         List<Future<Map<String, ValidateIndexesPartitionResult>>> procIdxFutures = new ArrayList<>();
+        List<Future<T2<String, ValidateIndexesCheckSizeResult>>> checkSizeFutures = new ArrayList<>();
+
         List<T2<CacheGroupContext, GridDhtLocalPartition>> partArgs = new ArrayList<>();
         List<T2<GridCacheContext, Index>> idxArgs = new ArrayList<>();
 
@@ -259,14 +268,20 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         for (T2<CacheGroupContext, GridDhtLocalPartition> t2 : partArgs)
             procPartFutures.add(processPartitionAsync(t2.get1(), t2.get2()));
 
-        for (T2<GridCacheContext, Index> t2 : idxArgs)
+        for (T2<GridCacheContext, Index> t2 : idxArgs) {
             procIdxFutures.add(processIndexAsync(t2.get1(), t2.get2()));
+
+            if (checkSizes)
+                checkSizeFutures.add(checkSizeAsync(t2.get1(), t2.get2()));
+        }
 
         Map<PartitionKey, ValidateIndexesPartitionResult> partResults = new HashMap<>();
         Map<String, ValidateIndexesPartitionResult> idxResults = new HashMap<>();
+        Map<String, ValidateIndexesCheckSizeResult> checkSizeResults = new HashMap<>();
 
         int curPart = 0;
         int curIdx = 0;
+        int curCheckSize = 0;
         try {
             for (; curPart < procPartFutures.size(); curPart++) {
                 Future<Map<PartitionKey, ValidateIndexesPartitionResult>> fut = procPartFutures.get(curPart);
@@ -286,6 +301,19 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                     idxResults.putAll(idxRes);
             }
 
+            for (; curCheckSize < checkSizeFutures.size(); curCheckSize++) {
+                T2<String, ValidateIndexesCheckSizeResult> checkSizeResT2 = checkSizeFutures.get(curCheckSize).get();
+
+                if (nonNull(checkSizeResT2)) {
+                    ValidateIndexesCheckSizeResult checkSizeRes = checkSizeResT2.get2();
+
+                    checkSizeResults.computeIfAbsent(
+                        checkSizeResT2.get1(),
+                        k -> new ValidateIndexesCheckSizeResult(checkSizeRes.cacheSize(), new ArrayList<>())
+                    ).issues().addAll(checkSizeRes.issues());
+                }
+            }
+
             log.warning("ValidateIndexesClosure finished: processed " + totalPartitions + " partitions and "
                     + totalIndexes + " indexes.");
         }
@@ -296,10 +324,18 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             for (int j = curIdx; j < procIdxFutures.size(); j++)
                 procIdxFutures.get(j).cancel(false);
 
+            for (int j = curCheckSize; j < checkSizeFutures.size(); j++)
+                checkSizeFutures.get(j).cancel(false);
+
             throw unwrapFutureException(e);
         }
 
-        return new VisorValidateIndexesJobResult(partResults, idxResults, integrityCheckResults.values());
+        return new VisorValidateIndexesJobResult(
+            partResults,
+            idxResults,
+            integrityCheckResults.values(),
+            checkSizeResults
+        );
     }
 
     /**
@@ -409,7 +445,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         finally {
             integrityCheckedIndexes.incrementAndGet();
 
-            printProgressIfNeeded("Current progress of ValidateIndexesClosure: checked integrity of "
+            printProgressIfNeeded(() -> "Current progress of ValidateIndexesClosure: checked integrity of "
                     + integrityCheckedIndexes.get() + " index partitions of " + totalCacheGrps + " cache groups");
         }
     }
@@ -609,20 +645,21 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      *
      */
     private void printProgressOfIndexValidationIfNeeded() {
-        printProgressIfNeeded("Current progress of ValidateIndexesClosure: processed " +
-                processedPartitions.get() + " of " + totalPartitions + " partitions, " +
-                processedIndexes.get() + " of " + totalIndexes + " SQL indexes");
+        printProgressIfNeeded(() -> "Current progress of ValidateIndexesClosure: processed " +
+            processedPartitions.get() + " of " + totalPartitions + " partitions, " +
+            processedIndexes.get() + " of " + totalIndexes + " SQL indexes" +
+            (checkSizes ? ", " + processedCheckSizes.get() + " of " + totalIndexes + " size checks performed" : ""));
     }
 
     /**
      *
      */
-    private void printProgressIfNeeded(String msg) {
+    private void printProgressIfNeeded(Supplier<String> msgSup) {
         long curTs = U.currentTimeMillis();
         long lastTs = lastProgressPrintTs.get();
 
         if (curTs - lastTs >= 60_000 && lastProgressPrintTs.compareAndSet(lastTs, curTs))
-            log.warning(msg);
+            log.warning(msgSup.get());
     }
 
     /**
@@ -784,5 +821,57 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             return  (IgniteException)e.getCause();
         else
             return new IgniteException(e.getCause());
+    }
+
+    /**
+     * Asynchronous check size of cache and index.
+     *
+     * @param cacheCtx Cache context.
+     * @param idx      Index.
+     * @return Future for getting size check result.
+     */
+    private Future<T2<String, ValidateIndexesCheckSizeResult>> checkSizeAsync(
+        GridCacheContext cacheCtx,
+        Index idx
+    ) {
+        return calcExecutor.submit(() -> {
+            CacheGroupContext cacheGrp = cacheCtx.group();
+
+            String cacheInfo = "cacheName=" + cacheCtx.name() + ", cacheId=" + cacheCtx.cacheId() +
+                ", cacheGrpName=" + cacheGrp.name() + ", cacheGrpId=" + cacheGrp.groupId();
+
+            int cacheSize = cacheCtx.cache().size();
+            long idxSize = -1;
+
+            String idxName = idx.getName();
+            String idxSchemaName = idx.getSchema().getName();
+
+            Throwable error = null;
+
+            try {
+                idxSize = ignite.context().query().getIndexing().indexSize(idxSchemaName, idxName);
+
+                if (cacheSize != idxSize)
+                    error = new IgniteException("Cache and index sizes are not equal");
+            }
+            catch (Throwable t) {
+                log.error("Error when checking size of cache and index: [" + cacheInfo + ", idxName=" + idxName +
+                    ", idxSchemaName=" + idxSchemaName + "]", t);
+
+               error = t;
+            } finally {
+                processedCheckSizes.incrementAndGet();
+
+                printProgressOfIndexValidationIfNeeded();
+            }
+
+            return isNull(error) ? null : new T2<>(
+                "[" + cacheInfo + "]",
+                new ValidateIndexesCheckSizeResult(
+                    cacheSize,
+                    singletonList(new ValidateIndexesCheckSizeIssue(idxName, idxSchemaName, idxSize, error))
+                )
+            );
+        });
     }
 }
