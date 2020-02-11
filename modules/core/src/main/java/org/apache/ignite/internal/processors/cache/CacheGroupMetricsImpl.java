@@ -191,6 +191,13 @@ public class CacheGroupMetricsImpl {
     public void decrementIndexBuildCountPartitionsLeft() {
         idxBuildCntPartitionsLeft.decrement();
     }
+    /**
+     * Add number of partitions before processed indexes create or rebuilding.
+     * @param partitions Count partition for add.
+     */
+    public void addIndexBuildCountPartitionsLeft(long partitions) {
+        idxBuildCntPartitionsLeft.add(partitions);
+    }
 
     /**
      * Increments number of local partitions initialized on current node.
