@@ -20,6 +20,7 @@ package org.apache.ignite.internal.commandline.cache;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -36,6 +37,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.IndexIntegrityCheckIssue;
 import org.apache.ignite.internal.visor.verify.IndexValidationIssue;
+import org.apache.ignite.internal.visor.verify.ValidateIndexesCheckSizeIssue;
+import org.apache.ignite.internal.visor.verify.ValidateIndexesCheckSizeResult;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesPartitionResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesJobResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskArg;
@@ -43,6 +46,7 @@ import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskResult;
 
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
+import static org.apache.ignite.internal.commandline.CommandLogger.join;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommandLogger.or;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
@@ -186,45 +190,52 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
             boolean errors = CommandLogger.printErrors(taskRes.exceptions(), "Index validation failed on nodes:", logger);
 
-            for (Map.Entry<UUID, VisorValidateIndexesJobResult> nodeEntry : taskRes.results().entrySet()) {
-                if (!nodeEntry.getValue().hasIssues())
+            for (Entry<UUID, VisorValidateIndexesJobResult> nodeEntry : taskRes.results().entrySet()) {
+                VisorValidateIndexesJobResult jobRes = nodeEntry.getValue();
+
+                if (!jobRes.hasIssues())
                     continue;
 
                 errors = true;
 
                 logger.info("Index issues found on node " + nodeEntry.getKey() + ":");
 
-                Collection<IndexIntegrityCheckIssue> integrityCheckFailures = nodeEntry.getValue().integrityCheckFailures();
+                for (IndexIntegrityCheckIssue is : jobRes.integrityCheckFailures())
+                    logger.info(INDENT + is);
 
-                if (!integrityCheckFailures.isEmpty()) {
-                    for (IndexIntegrityCheckIssue is : integrityCheckFailures)
-                        logger.info(INDENT + is);
-                }
-
-                Map<PartitionKey, ValidateIndexesPartitionResult> partRes = nodeEntry.getValue().partitionResult();
-
-                for (Map.Entry<PartitionKey, ValidateIndexesPartitionResult> e : partRes.entrySet()) {
+                for (Entry<PartitionKey, ValidateIndexesPartitionResult> e : jobRes.partitionResult().entrySet()) {
                     ValidateIndexesPartitionResult res = e.getValue();
 
                     if (!res.issues().isEmpty()) {
-                        logger.info(INDENT + CommandLogger.join(" ", e.getKey(), e.getValue()));
+                        logger.info(INDENT + join(" ", e.getKey(), e.getValue()));
 
                         for (IndexValidationIssue is : res.issues())
                             logger.info(DOUBLE_INDENT + is);
                     }
                 }
 
-                Map<String, ValidateIndexesPartitionResult> idxRes = nodeEntry.getValue().indexResult();
-
-                for (Map.Entry<String, ValidateIndexesPartitionResult> e : idxRes.entrySet()) {
+                for (Entry<String, ValidateIndexesPartitionResult> e : jobRes.indexResult().entrySet()) {
                     ValidateIndexesPartitionResult res = e.getValue();
 
                     if (!res.issues().isEmpty()) {
-                        logger.info(INDENT + CommandLogger.join(" ", "SQL Index", e.getKey(), e.getValue()));
+                        logger.info(INDENT + join(" ", "SQL Index", e.getKey(), e.getValue()));
 
                         for (IndexValidationIssue is : res.issues())
                             logger.info(DOUBLE_INDENT + is);
                     }
+                }
+
+                for (Entry<String, ValidateIndexesCheckSizeResult> e : jobRes.checkSizeResult().entrySet()) {
+                    ValidateIndexesCheckSizeResult res = e.getValue();
+                    Collection<ValidateIndexesCheckSizeIssue> issues = res.issues();
+
+                    if (issues.isEmpty())
+                        continue;
+
+                    logger.info(INDENT + join(" ", "Size check", e.getKey(), res));
+
+                    for (ValidateIndexesCheckSizeIssue issue : issues)
+                        logger.info(DOUBLE_INDENT + issue);
                 }
             }
 
