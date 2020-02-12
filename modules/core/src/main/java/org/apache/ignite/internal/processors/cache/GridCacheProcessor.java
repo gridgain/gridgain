@@ -609,6 +609,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
                 sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
 
+        // Notify shared managers.
+        for (GridCacheSharedManager mgr : sharedCtx.managers())
+            mgr.onKernalStart(active);
+
         // Escape if cluster inactive.
         if (!active)
             return;
