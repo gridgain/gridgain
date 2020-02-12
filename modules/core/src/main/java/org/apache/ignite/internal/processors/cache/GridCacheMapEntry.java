@@ -78,6 +78,8 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionConfl
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionEx;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEntryEx;
 import org.apache.ignite.internal.processors.dr.GridDrType;
+import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
@@ -4471,8 +4473,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public void updateIndex(SchemaIndexCacheVisitorClosure clo) throws IgniteCheckedException,
-        GridCacheEntryRemovedException {
+    @Override public void updateIndex(
+        SchemaIndexCacheVisitorClosure clo,
+        @Nullable SchemaIndexCacheStat stat
+    ) throws IgniteCheckedException, GridCacheEntryRemovedException {
         lockEntry();
 
         try {
@@ -4483,8 +4487,22 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             CacheDataRow row = cctx.offheap().read(this);
 
-            if (row != null)
+            if (row != null) {
                 clo.apply(row);
+
+                if (stat != null) {
+                    QueryTypeDescriptorImpl type = cctx.kernalContext().query().typeByValue(
+                        cctx.cache().name(),
+                        cctx.cacheObjectContext(),
+                        row.key(),
+                        row.value(),
+                        true
+                    );
+
+                    if (type != null)
+                        stat.types.put(type.name(), type);
+                }
+            }
         }
         finally {
             unlockEntry();

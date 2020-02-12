@@ -65,6 +65,9 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     /** String exceeding max length of metastorage key. */
     private static final String LONG_KEY;
 
+    /** **/
+    private TcpDiscoverySpi customTcpDiscoverySpi = null;
+
     static {
         String template = "012345678901234567890123456789";
 
@@ -88,8 +91,15 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DiscoverySpi discoSpi = cfg.getDiscoverySpi();
 
-        if (discoSpi instanceof TcpDiscoverySpi)
+        if (discoSpi instanceof TcpDiscoverySpi) {
+            if (customTcpDiscoverySpi != null)
+                cfg.setDiscoverySpi(
+                    customTcpDiscoverySpi
+                        .setIpFinder(((TcpDiscoverySpi)cfg.getDiscoverySpi()).getIpFinder())
+                );
+
             ((TcpDiscoverySpi)discoSpi).setNetworkTimeout(1000);
+        }
 
         if (igniteInstanceName.contains("client"))
             cfg.setClientMode(true);
@@ -144,9 +154,9 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     }
 
     /**
-     *  Test verifies that Distributed Metastorage on client is not operational until client connects to some cluster.
+     * Test verifies that Distributed Metastorage on client is not operational until client connects to some cluster.
      *
-     *  After successful join DMS on client becomes operational.
+     * After successful join DMS on client becomes operational.
      *
      * @throws Exception If failed.
      */
@@ -226,7 +236,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
 
-        GridTestUtils.assertThrows(null,
+        GridTestUtils.assertThrowsAnyCause(null,
             new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     metastorage.write(LONG_KEY, "randomValue");
@@ -238,7 +248,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             "Key is too long."
         );
 
-        GridTestUtils.assertThrows(null,
+        GridTestUtils.assertThrowsAnyCause(null,
             new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     metastorage.writeAsync(LONG_KEY, "randomValue");
@@ -264,7 +274,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
 
-        GridTestUtils.assertThrows(null,
+        GridTestUtils.assertThrowsAnyCause(null,
             new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     metastorage.compareAndSet(LONG_KEY, "randomValue", "newRandomValue");
@@ -276,7 +286,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             "Key is too long."
         );
 
-        GridTestUtils.assertThrows(null,
+        GridTestUtils.assertThrowsAnyCause(null,
             new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     metastorage.compareAndSetAsync(LONG_KEY, "randomValue", "newRandomValue");
@@ -288,7 +298,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
             "Key is too long."
         );
 
-        GridTestUtils.assertThrows(null,
+        GridTestUtils.assertThrowsAnyCause(null,
             new Callable<Object>() {
                 @Override public Object call() throws Exception {
                     metastorage.compareAndRemove(LONG_KEY, "randomValue");
