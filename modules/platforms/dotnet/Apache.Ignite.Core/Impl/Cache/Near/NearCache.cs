@@ -287,6 +287,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             
             if (ReferenceEquals(currentVerBoxed, entryVerBoxed))
             {
+                // Happy path: true on stable topology.
                 return true;
             }
 
