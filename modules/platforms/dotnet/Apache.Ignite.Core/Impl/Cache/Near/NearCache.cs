@@ -18,9 +18,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System;
     using System.Collections.Concurrent;
-    using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Linq;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -30,21 +28,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
-        /** Maximum size of _partitionNodeIds map.  */
-        private const int PartitionNodeIdsMaxSize = 100;
-        
-        /** Partition assignment map: from topology version to array of node id per partition. */
-        private volatile Dictionary<AffinityTopologyVersion, Guid[]> _partitionNodeIds
-            = new Dictionary<AffinityTopologyVersion, Guid[]>();
-
-        /** Partition node ids lock. */
-        private readonly object _partitionNodeIdsLock = new object();
-        
         /** Fallback init lock. */
         private readonly object _fallbackMapLock = new object();
-
-        /** Topology versions. */
-        private readonly ConcurrentStack<AffinityTopologyVersion> _affinityTopologyVersions;
 
         /** Affinity. */
         private readonly CacheAffinityImpl _affinity;
@@ -57,15 +42,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
+        /** Topology version func. */
+        private readonly Func<AffinityTopologyVersion> _affinityTopologyVersionFunc;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        public NearCache(ConcurrentStack<AffinityTopologyVersion> affinityTopologyVersions, CacheAffinityImpl affinity)
+        public NearCache(Func<AffinityTopologyVersion> affinityTopologyVersionFunc, CacheAffinityImpl affinity)
         {
             // TODO: Enable callbacks in Java.
             // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
 
-            _affinityTopologyVersions = affinityTopologyVersions;
+            _affinityTopologyVersionFunc = affinityTopologyVersionFunc;
             _affinity = affinity;
         }
 
@@ -266,101 +254,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             // - Is the complexity and memory usage worth it?
             // - Can we avoid serializing the key? Yes, by sending just the partition number.
-            var ver = version ?? GetCurrentTopologyVersion();
+            var ver = version ?? _affinityTopologyVersionFunc();
 
             if (entry.Version >= ver)
             {
                 return true;
             }
 
-            // TODO: Compare perf with a call to Java version of this:
-            if (entry.Version.Version < 0) // TODO: Condition always true for benchmarking.
-            {
-                return _affinity.IsAssignmentValid(entry.Version, entry.Partition);
-            }
-
-            // Check that primary has never changed since entry has been cached.
-            // Primary change requires invalidation (see GridNearCacheEntry.valid()).
-            var oldPrimary = GetPrimaryNodeId(entry.Version, entry.Partition);
-
-            foreach (var newVer in _affinityTopologyVersions)
-            {
-                if (newVer <= entry.Version)
-                {
-                    continue;
-                }
-                
-                if (GetPrimaryNodeId(newVer, entry.Partition) != oldPrimary)
-                {
-                    return false;
-                }
-            }
-            
             // TODO: Update entry with ver to reduce the cost of future checks.
-            return true;
-        }
-
-        private Guid? GetPrimaryNodeId(AffinityTopologyVersion ver, int part)
-        {
-            var nodeIdPerPartition = GetNodeIdPerPartition(ver);
-            if (nodeIdPerPartition == null)
-            {
-                return null;
-            }
-
-            Debug.Assert(part >= 0);
-            Debug.Assert(part < nodeIdPerPartition.Length);
-
-            return nodeIdPerPartition[part];
-        }
-
-        private Guid[] GetNodeIdPerPartition(AffinityTopologyVersion ver)
-        {
-            Guid[] nodeIdPerPartition;
-
-            // ReSharper disable once InconsistentlySynchronizedField
-            var partitionNodeIds = _partitionNodeIds;
-            if (partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
-            {
-                return nodeIdPerPartition;
-            }
-
-            // TODO: Cache min version when history limit is reached.
-            if (partitionNodeIds.Count == PartitionNodeIdsMaxSize && ver < partitionNodeIds.Keys.Min())
-            {
-                // Version is too old, don't request.
-                return null;
-            }
-
-            lock (_partitionNodeIdsLock)
-            {
-                // TODO: Use plain array for _partitionNodeIds AND _affinityTopologyVersions
-                // So they have same index for same version
-                // Since we only append (under lock), and never use `foreach` (only `for`), we should be fine.
-                // Purge old items by setting them to null
-                if (_partitionNodeIds.TryGetValue(ver, out nodeIdPerPartition))
-                {
-                    return nodeIdPerPartition;
-                }
-                
-                nodeIdPerPartition = _affinity.MapAllPartitionsToNodes(ver);
-                
-                if (nodeIdPerPartition != null)
-                {
-                    partitionNodeIds = new Dictionary<AffinityTopologyVersion, Guid[]>(_partitionNodeIds);
-                    partitionNodeIds[ver] = nodeIdPerPartition;
-
-                    if (partitionNodeIds.Count > PartitionNodeIdsMaxSize)
-                    {
-                        var oldest = partitionNodeIds.Keys.Min();
-                        partitionNodeIds.Remove(oldest);
-                    }
-
-                    _partitionNodeIds = partitionNodeIds;
-                }
-
-                return nodeIdPerPartition;
-            }
+            // TODO: Lazy-load Partition
+            return _affinity.IsAssignmentValid(entry.Version, entry.Partition);
         }
 
         private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
@@ -368,7 +271,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
             return new NearCacheEntry<TVal>(
                 valueFactory(k),
-                GetCurrentTopologyVersion(), 
+                _affinityTopologyVersionFunc(), 
                 GetPartition(k));
         }
 
@@ -376,12 +279,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             // TODO: Calculate locally when possible (rendezvous).
             return _affinity.GetPartition(k);
-        }
-
-        private AffinityTopologyVersion GetCurrentTopologyVersion()
-        {
-            AffinityTopologyVersion ver;
-            return _affinityTopologyVersions.TryPeek(out ver) ? ver : default(AffinityTopologyVersion);
         }
     }
 }
