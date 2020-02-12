@@ -825,7 +825,7 @@ public class ExchangeLatchManager {
     /**
      * Latch id + topology
      */
-    static class CompletableLatchUid {
+    private static class CompletableLatchUid {
         /** Id. */
         @GridToStringInclude
         private String id;
@@ -838,7 +838,7 @@ public class ExchangeLatchManager {
          * @param id Id.
          * @param topVer Topology version.
          */
-        CompletableLatchUid(String id, AffinityTopologyVersion topVer) {
+        private CompletableLatchUid(String id, AffinityTopologyVersion topVer) {
             this.id = id;
             this.topVer = topVer;
         }
