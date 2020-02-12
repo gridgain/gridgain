@@ -24,6 +24,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -98,7 +99,7 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
         // Set broken file factory.
         BrokenIoFactory ioFactory = new BrokenIoFactory(crashOnCreateCnt);
 
-        GridTestUtils.setFieldValue(grid(0).context().query(), "fileIOFactory", ioFactory);
+        GridTestUtils.setFieldValue(((IgniteH2Indexing)grid(0).context().query().getIndexing()).memoryManager(), "fileIOFactory", ioFactory);
 
         FieldsQueryCursor<List<?>> cur = grid(0).cache(DEFAULT_CACHE_NAME)
             .query(new SqlFieldsQueryEx(
