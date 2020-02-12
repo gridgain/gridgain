@@ -188,10 +188,16 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
 
         stopGrid(GRID_CNT + 1);
 
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
+
         for (int g = 0; g < GRID_CNT + 1; g++)
             grid(g).cache(CACHE_NAME).rebalance().get();
 
         stopGrid(GRID_CNT);
+
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
 
         for (int g = 0; g < GRID_CNT; g++) {
             IgniteCache<Object, Object> cache0 = grid(g).cache(CACHE_NAME);
