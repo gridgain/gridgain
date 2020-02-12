@@ -28,6 +28,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
+        /** Indicates unknown partition. */
+        private const int UnknownPartition = -1;
+        
         /** Fallback init lock. */
         private readonly object _fallbackMapLock = new object();
 
@@ -66,7 +69,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 NearCacheEntry<TVal> entry;
                 if (map.TryGetValue(key, out entry))
                 {
-                    if (IsValid(entry))
+                    if (IsValid(key, entry))
                     {
                         val = entry.Val;
                         return true;
@@ -81,7 +84,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (_fallbackMap != null)
             {
                 NearCacheEntry<object> fallbackEntry;
-                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && IsValid(fallbackEntry))
+                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && IsValid(key, fallbackEntry))
                 {
                     val = (TVal) fallbackEntry.Val;
                     return true;
@@ -99,7 +102,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (map != null)
             {
                 return map.AddOrUpdate(key, k => GetEntry(valueFactory, k),
-                    (k, old) => IsValid(old) ? old : GetEntry(valueFactory, k)).Val;
+                    (k, old) => IsValid(k, old) ? old : GetEntry(valueFactory, k)).Val;
             }
             
             EnsureFallbackMap();
@@ -108,7 +111,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return (TVal) _fallbackMap.AddOrUpdate(
                 key, 
                 factory,
-                (k, old) => IsValid(old) ? old : factory(k)).Val;
+                (k, old) => IsValid(k, old) ? old : factory(k)).Val;
         }
 
         public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
@@ -246,14 +249,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <para />
         /// This method is similar to GridNearCacheEntry.valid(). 
         /// </summary>
+        /// <param name="key">Entry key.</param>
         /// <param name="entry">Entry to validate.</param>
         /// <param name="version">Topology version to check against.</param>
-        /// <typeparam name="T">Entry type.</typeparam>
+        /// <typeparam name="TKey">Key type.</typeparam>
+        /// <typeparam name="TVal">Value type.</typeparam>
         /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
-        private bool IsValid<T>(NearCacheEntry<T> entry, AffinityTopologyVersion? version = null)
+        private bool IsValid<TKey, TVal>(TKey key, NearCacheEntry<TVal> entry, AffinityTopologyVersion? version = null)
         {
-            // - Is the complexity and memory usage worth it?
-            // - Can we avoid serializing the key? Yes, by sending just the partition number.
             var ver = version ?? _affinityTopologyVersionFunc();
 
             if (entry.Version >= ver)
@@ -262,8 +265,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
 
             // TODO: Update entry with ver to reduce the cost of future checks.
-            // TODO: Lazy-load Partition
-            return _affinity.IsAssignmentValid(entry.Version, entry.Partition);
+            var part = entry.Partition == UnknownPartition ? GetPartition(key) : entry.Partition;
+            return _affinity.IsAssignmentValid(entry.Version, part);
         }
 
         private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
@@ -272,7 +275,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return new NearCacheEntry<TVal>(
                 valueFactory(k),
                 _affinityTopologyVersionFunc(), 
-                GetPartition(k));
+                UnknownPartition);
         }
 
         private int GetPartition<TKey>(TKey k)
