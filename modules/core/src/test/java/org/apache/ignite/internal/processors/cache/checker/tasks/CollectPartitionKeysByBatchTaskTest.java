@@ -44,7 +44,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
 /**
- *
+ * Tests that collecting by batch work fine.
  */
 public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbstractTest {
     /** {@inheritDoc} */
@@ -76,7 +76,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
     }
 
     /**
-     *
+     * Checks that pre-filtrating works with batching.
      */
     @Test
     public void testShouldReduceAndReturnOnlyRecheckKeys() throws Exception {
@@ -202,7 +202,7 @@ public class CollectPartitionKeysByBatchTaskTest extends CollectPartitionInfoAbs
     }
 
     /**
-     *
+     * Checks that returns keys by batch.
      */
     @Test
     public void testShouldReturnKeysByBatches() throws Exception {

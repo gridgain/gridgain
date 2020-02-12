@@ -22,7 +22,7 @@ import java.io.ObjectOutput;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 
 /**
- *
+ * Container for generic job result contains error message.
  */
 public class ExecutionResult<T> extends IgniteDataTransferObject {
     /**
@@ -30,22 +30,18 @@ public class ExecutionResult<T> extends IgniteDataTransferObject {
      */
     private static final long serialVersionUID = 0L;
 
-    /**
-     *
-     */
+    /** Result. */
     protected T result;
 
-    /**
-     *
-     */
+    /** Error message. */
     protected String errorMessage;
 
     /**
      *
      */
-    public ExecutionResult(T result, String errorMessage) {
-        this.result = result;
-        this.errorMessage = errorMessage;
+    public ExecutionResult(T res, String errorMsg) {
+        this.result = res;
+        this.errorMessage = errorMsg;
     }
 
     /**

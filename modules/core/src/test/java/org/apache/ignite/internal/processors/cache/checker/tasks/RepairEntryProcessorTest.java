@@ -40,7 +40,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- *
+ * Isolated unit test for {@link RepairEntryProcessor}.
  */
 public class RepairEntryProcessorTest {
     /**
@@ -103,7 +103,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Force should apply remove.
      */
     @Test
     public void testForceRepairApplyRemove() {
@@ -133,7 +133,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Force should apply new value.
      */
     @Test
     public void testForceRepairApplyValue() {
@@ -163,7 +163,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Setting value where old value not null.
      */
     @Test
     public void testSetValueWithoutParallelUpdateWhereCurrentRecheckNotNull() {
@@ -192,7 +192,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Removing value where old value not null.
      */
     @Test
     public void testRemoveValueWithoutParallelUpdateWhereCurrentRecheckNotNull() {
@@ -221,7 +221,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Setting value under parallel update where old value not null, but changed.
      */
     @Test
     public void testWriteValueParallelUpdateWhereCurrentRecheckNotNull() {
@@ -266,7 +266,8 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Setting new value when old value null and TTL of entry isn't expired and update counter of partition in the
+     * delete queue border.
      */
     @Test
     public void testRecheckVersionNullAndTtlEntryShouldNotAlreadyRemovedAndNewUpdateCounterLessDelQueueSizeOpRemove() {
@@ -294,7 +295,8 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Removing new value when old value null and TTL of entry isn't expired and update counter of partition in the
+     * delete queue border.
      */
     @Test
     public void testRecheckVersionNullAndTtlEntryShouldNotAlreadyRemovedAndNewUpdateCounterLessDelQueueSizeOpSet() {
@@ -322,7 +324,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * If current value other then old, it detects {@link RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION}.
      */
     @Test
     public void testEntryWasChangedDuringRepairAtOtherValue() {
@@ -349,7 +351,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * If current value other then old, it detects {@link RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION}.
      */
     @Test
     public void testEntryWasChangedDuringRepairAtNull() {
@@ -376,7 +378,7 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * If current value other then old, it detects {@link RepairEntryProcessor.RepairStatus.CONCURRENT_MODIFICATION}.
      */
     @Test
     public void testEntryWasChangedDuringRepairFromNullToValue() {
@@ -403,7 +405,8 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * If ttl expired for old null value, it can't solve ABA problem and should return {@link
+     * RepairEntryProcessor.RepairStatus.FAIL}.
      */
     @Test
     public void testRecheckVersionNullAndTtlEntryExpired() {
@@ -429,7 +432,8 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * If Deleted queue expired for old null value, it can't solve ABA problem and should return {@link
+     * RepairEntryProcessor.RepairStatus.FAIL}.
      */
     @Test
     public void testRecheckVersionNullAndDefDelQueueExpired() {
@@ -457,28 +461,28 @@ public class RepairEntryProcessorTest {
     }
 
     /**
-     *
+     * Stub for testing approach, mocks methods.
      */
     private class RepairEntryProcessorStub extends RepairEntryProcessor {
         /**
          *
          */
-        private GridCacheContext context = cctx;
+        private GridCacheContext ctx = cctx;
 
         /**
          *
          */
-        private boolean topologyChanged = false;
+        private boolean topChanged = false;
 
         /**
          *
          */
-        private GridCacheVersion keyVersion;
+        private GridCacheVersion keyVer;
 
         /**
          *
          */
-        private long updateCounter = 1;
+        private long updateCntr = 1;
 
         /**
          * @param val Value.
@@ -501,35 +505,35 @@ public class RepairEntryProcessorTest {
          *
          */
         @Override protected GridCacheContext cacheContext(MutableEntry entry) {
-            return context;
+            return ctx;
         }
 
         /**
          *
          */
         @Override protected boolean topologyChanged(GridCacheContext cctx, AffinityTopologyVersion expTop) {
-            return topologyChanged;
+            return topChanged;
         }
 
         /**
          *
          */
         @Override protected GridCacheVersion keyVersion(MutableEntry entry) {
-            return keyVersion;
+            return keyVer;
         }
 
         /**
          *
          */
         @Override protected long updateCounter(GridCacheContext cctx, Object affKey) {
-            return updateCounter;
+            return updateCntr;
         }
 
         /**
          *
          */
         public RepairEntryProcessorStub setContext(GridCacheContext ctx) {
-            this.context = ctx;
+            this.ctx = ctx;
 
             return this;
         }
@@ -538,7 +542,7 @@ public class RepairEntryProcessorTest {
          *
          */
         public RepairEntryProcessorStub setTopologyChanged(boolean topChanged) {
-            this.topologyChanged = topChanged;
+            this.topChanged = topChanged;
 
             return this;
         }
@@ -547,7 +551,7 @@ public class RepairEntryProcessorTest {
          *
          */
         public RepairEntryProcessorStub setKeyVersion(GridCacheVersion keyVer) {
-            this.keyVersion = keyVer;
+            this.keyVer = keyVer;
 
             return this;
         }
@@ -556,7 +560,7 @@ public class RepairEntryProcessorTest {
          *
          */
         public RepairEntryProcessorStub setUpdateCounter(long updateCntr) {
-            this.updateCounter = updateCntr;
+            this.updateCntr = updateCntr;
 
             return this;
         }

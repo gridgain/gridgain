@@ -32,7 +32,8 @@ public class DelayedHolder<T> implements Delayed {
     private final T task;
 
     /**
-     *
+     * @param time Time in millis.
+     * @param task Task.
      */
     public DelayedHolder(long time, T task) {
         this.finishTime = time;
@@ -40,21 +41,21 @@ public class DelayedHolder<T> implements Delayed {
     }
 
     /**
-     *
+     * @return task.
      */
     public T getTask() {
         return task;
     }
 
     /**
-     *
+     * @return remanding delay in millis.
      */
     @Override public long getDelay(@NotNull TimeUnit unit) {
         return unit.convert(finishTime - U.currentTimeMillis(), TimeUnit.MILLISECONDS);
     }
 
     /**
-     *
+     * Compare objects by finishTime.
      */
     @Override public int compareTo(@NotNull Delayed o) {
         return Long.compare(finishTime, ((DelayedHolder)o).finishTime);

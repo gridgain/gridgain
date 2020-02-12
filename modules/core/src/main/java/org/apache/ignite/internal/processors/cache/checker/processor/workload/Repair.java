@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValu
 import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWorkload;
 
 /**
- *
+ * Work container for repair stage.
  */
 public class Repair implements PipelineWorkload {
     /**

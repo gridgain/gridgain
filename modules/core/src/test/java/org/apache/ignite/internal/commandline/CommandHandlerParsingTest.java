@@ -541,11 +541,11 @@ public class CommandHandlerParsingTest {
      *
      * validate that following partition-reconciliation arguments validated as expected:
      *
-     * --fix-alg
+     * --repair
      * 	    if value is missing - IllegalArgumentException (The repair algorithm should be specified.
-     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, PRINT_ONLY].) is expected.
+     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
      * 	    if unsupported value is used - IllegalArgumentException (Invalid repair algorithm: <invalid-repair-alg>.
-     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, PRINT_ONLY].) is expected.
+     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
      *
      * --load-factor
      * 	    if value is missing - IllegalArgumentException (The load factor should be specified.) is expected.

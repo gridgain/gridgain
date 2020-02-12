@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -141,10 +142,10 @@ public class PartitionReconciliationDataRowMeta extends IgniteDataTransferObject
 
         PartitionReconciliationDataRowMeta meta = (PartitionReconciliationDataRowMeta)o;
 
-        if (keyMeta != null ? !keyMeta.equals(meta.keyMeta) : meta.keyMeta != null)
+        if (!Objects.equals(keyMeta, meta.keyMeta))
             return false;
-        if (valMeta != null ? !valMeta.equals(meta.valMeta) : meta.valMeta != null)
+        if (!Objects.equals(valMeta, meta.valMeta))
             return false;
-        return repairMeta != null ? repairMeta.equals(meta.repairMeta) : meta.repairMeta == null;
+        return Objects.equals(repairMeta, meta.repairMeta);
     }
 }

@@ -41,7 +41,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- *
+ * Tests the utility under loading.
  */
 @RunWith(Parameterized.class)
 public class PartitionReconciliationStressTest extends PartitionReconciliationAbstractTest {
@@ -125,7 +125,7 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
     }
 
     /**
-     *
+     * Makes different variations of input params.
      */
     @Parameterized.Parameters(
         name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")
@@ -219,7 +219,9 @@ public class PartitionReconciliationStressTest extends PartitionReconciliationAb
             assertFalse("Correct key detected as broken: " + correctKey, conflictKeys.contains(correctKey));
     }
 
-    /** */
+    /**
+     *
+     */
     protected static boolean isHotKey(int key) {
         return key % 13 == 5 || key % 13 == 7 || key % 13 == 11;
     }

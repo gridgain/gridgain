@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.junit.Test;
@@ -51,7 +52,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- *
+ * Unit test for utility methods for the partition reconciliation.
  */
 public class ConsistencyCheckUtilsTest {
     /** Node 2. */
@@ -92,7 +93,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Test different scenario of {@link ConsistencyCheckUtils#checkConsistency}
      */
     @Test
     public void testCheckConsistency() {
@@ -178,7 +179,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Test different scenario of {@link ConsistencyCheckUtils#checkConsistency}. When one of max group changed.
      */
     @Test
     public void testCheckConsistencyMaxGroup() {
@@ -258,7 +259,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Old key count less then owners, and one of old key was removed from actual key set.
      */
     @Test
     public void testOldKeySizeLessThenOwnerAndAnyOldKeyIsMissingInActualKeysCheckSuccess() {
@@ -285,7 +286,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Old key count less then owners, and actual key is greater then old max.
      */
     @Test
     public void testOldKeySizeLessThenOwnerAndAnyActualKeyIsGreaterThenOldMax() {
@@ -312,7 +313,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return value from primary node when {@link RepairAlgorithm.PRIMARY} selected and value exist.
      */
     @Test
     public void testCalcValuePrimaryNodeHasValue() throws IgniteCheckedException {
@@ -326,7 +327,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return null from primary node when {@link RepairAlgorithm.PRIMARY} selected and value doesn't exist.
      */
     @Test
     public void testCalcValuePrimaryNodeDoesNotHaveValue() throws IgniteCheckedException {
@@ -336,7 +337,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return null when {@link RepairAlgorithm.LATEST} selected and value doesn't exist.
      */
     @Test
     public void testCalcValueMaxGridVersionNodeDoesNotHaveValue() throws IgniteCheckedException {
@@ -346,7 +347,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return value with max {@link GridCacheVersion} when {@link RepairAlgorithm.LATEST} selected and value exist.
      */
     @Test
     public void testCalcValueMaxGridVersionNodeFindMaxVersion() throws IgniteCheckedException {
@@ -366,7 +367,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return null when {@link RepairAlgorithm.MAJORITY} selected and values doesn't exist.
      */
     @Test
     public void testCalcValueMajorityNodeDoesNotHaveValue() throws IgniteCheckedException {
@@ -376,7 +377,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return null when {@link RepairAlgorithm.MAJORITY} selected and quorum doesn't exist.
      */
     @Test
     public void testCalcValueMajorityMajorityWithoutQuorum() throws IgniteCheckedException {
@@ -390,7 +391,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return majority (null) value when {@link RepairAlgorithm.MAJORITY} selected and value exist.
      */
     @Test
     public void testCalcValueMajorityNullValuesMoreThenValued() throws IgniteCheckedException {
@@ -414,7 +415,7 @@ public class ConsistencyCheckUtilsTest {
     }
 
     /**
-     *
+     * Return majority value when {@link RepairAlgorithm.MAJORITY} selected and value exist.
      */
     @Test
     public void testCalcValueMajorityByValue() throws IgniteCheckedException {

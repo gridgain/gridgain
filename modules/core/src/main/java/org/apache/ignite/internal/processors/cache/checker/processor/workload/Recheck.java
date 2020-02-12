@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWor
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 /**
- *
+ * Work container for recheck stage.
  */
 public class Recheck implements PipelineWorkload {
     /** Recheck keys. */

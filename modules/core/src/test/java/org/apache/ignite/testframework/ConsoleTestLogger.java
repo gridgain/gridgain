@@ -80,14 +80,17 @@ public class ConsoleTestLogger implements IgniteLogger {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean isInfoEnabled() {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean isQuiet() {
         return false;
     }
 
+    /** {@inheritDoc} */
     @Override public String fileName() {
         return null;
     }

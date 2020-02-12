@@ -36,12 +36,10 @@ import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionC
 import org.junit.Test;
 
 /**
- *
+ * Tests that collects actual value by keys from nodes for recheck.
  */
 public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartitionInfoAbstractTest {
-    /**
-     *
-     */
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -61,7 +59,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
     }
 
     /**
-     *
+     * Checks that all keys returned.
      */
     @Test
     public void testShouldReturnAllRequiredKeys() throws Exception {
@@ -93,7 +91,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
     }
 
     /**
-     *
+     * Checks that empty result returned.
      */
     @Test
     public void testEmptyKeysSelectEmptyResult() throws Exception {
@@ -116,7 +114,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
     }
 
     /**
-     *
+     * If a key was removed, it should return empty result.
      */
     @Test
     public void testRemovedKeyShouldReturnEmptyResult() throws Exception {

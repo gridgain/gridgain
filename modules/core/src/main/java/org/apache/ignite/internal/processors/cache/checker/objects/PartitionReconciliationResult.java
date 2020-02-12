@@ -35,7 +35,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliatio
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- *
+ * Result with lists of broken and fixed, skipped entries.
  */
 public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /**
@@ -49,10 +49,13 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /** Map of node ids to node consistent ids. */
     private Map<UUID, String> nodesIdsToConsistenceIdsMap = new HashMap<>();
 
+    /** Inconsistent keys. */
     private Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
+    /** Skipped caches. */
     private Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches = new HashSet<>();
 
+    /** Skipped entries. */
     private Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
         skippedEntries = new HashMap<>();
 
@@ -114,6 +117,9 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
         skippedEntries = U.readMap(in);
     }
 
+    /**
+     * Fills printer {@link Consumer<String>} by string view of this class.
+     */
     public void print(Consumer<String> printer, boolean verbose) {
         if (inconsistentKeys != null && !inconsistentKeys.isEmpty()) {
             printer.accept("\nINCONSISTENT KEYS: " + inconsistentKeysCount() + "\n\n");
@@ -201,7 +207,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     /**
-     *
+     * Added outer value to this class.
      */
     public void merge(PartitionReconciliationResult outer) {
         assert outer instanceof PartitionReconciliationResult;
@@ -233,28 +239,28 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     /**
-     *
+     * Mapping node ids to consistence ids.
      */
-    public Map<UUID, String> nodesIdsToConsistenseIdsMap() {
+    public Map<UUID, String> nodesIdsToConsistenceIdsMap() {
         return nodesIdsToConsistenceIdsMap;
     }
 
     /**
-     *
+     * Broken keys.
      */
     public Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys() {
         return inconsistentKeys;
     }
 
     /**
-     *
+     * Skipped caches.
      */
     public Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches() {
         return skippedCaches;
     }
 
     /**
-     *
+     * Skipped entries.
      */
     public Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries() {
         return skippedEntries;

@@ -27,6 +27,9 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
+/**
+ * Data container for result of repair.
+ */
 public class RepairMeta extends IgniteDataTransferObject {
     /**
      *

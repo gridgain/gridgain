@@ -25,10 +25,12 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 /**
- *
+ * Representation of cache data row with partition states.
  */
 public class PartitionDataRow extends PartitionKeyVersion {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** Value. */

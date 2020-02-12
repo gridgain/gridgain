@@ -57,7 +57,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- *
+ * Tests {@link RepairRequestTask} with different inputs and repair algorithms.
  */
 @RunWith(Parameterized.class)
 public class RepairRequestTaskTest {
@@ -110,7 +110,7 @@ public class RepairRequestTaskTest {
     }
 
     /**
-     *
+     * Test can't resolve conflict and should use user algorithm.
      */
     @Test
     public void testNotFullSetOfOldKeysUsesUserRepairAlg() throws IllegalAccessException {
@@ -193,6 +193,9 @@ public class RepairRequestTaskTest {
         }
     }
 
+    /**
+     * Repair reached max attempts, it should use user algorithm.
+     */
     @Test
     public void testFullOwnerSetMaxAttempt() throws IllegalAccessException {
         Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data = new HashMap<>();

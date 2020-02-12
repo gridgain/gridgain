@@ -55,7 +55,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Part
 import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
 
 /**
- *
+ * The main task which services {@link PartitionReconciliationProcessor} per nodes.
  */
 @GridInternal
 public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<VisorPartitionReconciliationTaskArg, ReconciliationResult> {
@@ -146,7 +146,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     }
 
     /**
-     *
+     * Holder of execution {@link PartitionReconciliationProcessor}
      */
     private static class PartitionReconciliationJob extends ComputeJobAdapter {
         /**
@@ -241,7 +241,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /**
+         * Does print local result.
          *
+         * @return link to file with result.
          */
         private String localPrint(PartitionReconciliationResult reconciliationRes) {
             if (reconciliationRes != null && !reconciliationRes.isEmpty()) {

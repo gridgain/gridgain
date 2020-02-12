@@ -40,7 +40,7 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.STARTING;
 
 /**
- *
+ * Tests count of calls the recheck process with different inputs.
  */
 public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconciliationAbstractTest {
     /** Nodes. */
@@ -89,7 +89,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
     }
 
     /**
-     *
+     * Checks that only one call happened.
      */
     @Test
     public void testZeroAttemptMakeOnlyOneRecheck() {
@@ -97,7 +97,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
     }
 
     /**
-     *
+     * Checks that three additional calls happened.
      */
     @Test
     public void testThreeAdditionalAttempts() {
@@ -105,7 +105,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
     }
 
     /**
-     *
+     * Check that broken keys are excluded if they are repaired.
      */
     @Test
     public void testBrokenKeysWillFixedDuringRecheck() throws InterruptedException, IgniteInterruptedCheckedException {

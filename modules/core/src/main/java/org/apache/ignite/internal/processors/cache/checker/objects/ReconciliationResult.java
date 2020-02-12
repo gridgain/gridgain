@@ -26,7 +26,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- *
+ * Common result of partition reconciliation.
  */
 public class ReconciliationResult extends IgniteDataTransferObject {
     /**
@@ -35,17 +35,17 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /**
-     *
+     * Result.
      */
     private PartitionReconciliationResult partitionReconciliationResult;
 
     /**
-     *
+     * Folders with local results.
      */
     private Map<UUID, String> nodeIdToFolder;
 
     /**
-     *
+     * Errors happened during execution.
      */
     private List<String> errors;
 

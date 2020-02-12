@@ -17,11 +17,11 @@
 package org.apache.ignite.testframework;
 
 /**
- *
+ * Specific test interface for transmitting exceptions from lambda to external method without a catch.
  */
 public interface ThrowUp<E extends Throwable> {
     /**
-     *
+     * Body of lambda.
      */
     void run() throws E;
 }

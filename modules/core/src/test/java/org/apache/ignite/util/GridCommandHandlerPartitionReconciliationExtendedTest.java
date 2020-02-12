@@ -120,7 +120,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Checks that the start message exist.
      */
     @Test
     @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", value = "0")
@@ -217,7 +217,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Checks that a wrong cache name leads to interruption of utility.
      */
     @Test
     public void testWrongCacheNameTerminatesOperation() throws Exception {
@@ -247,7 +247,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Extract cache names which used for a start.
      */
     private LogListener fillCacheNames(Set<String> usedCaches) {
         Pattern r = Pattern.compile("Partition reconciliation started.*caches: \\[(.*)\\]\\].*");
@@ -267,7 +267,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Extract reconciliation sessionId.
      */
     private long reconciliationSessionId() {
         List<Ignite> srvs = G.allGrids().stream().filter(g -> !g.configuration().getDiscoverySpi().isClientMode()).collect(toList());

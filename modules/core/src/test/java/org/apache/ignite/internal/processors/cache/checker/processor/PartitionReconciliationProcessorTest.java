@@ -87,7 +87,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- *
+ * Isolation test for {@link PartitionReconciliationProcessor}.
  */
 public class PartitionReconciliationProcessorTest {
     /** Default cache. */
@@ -107,7 +107,7 @@ public class PartitionReconciliationProcessorTest {
     private static final int MAX_RECHECK_ATTEMPTS = 3;
 
     /**
-     *
+     * Tests that empty result of batch doesn't schedule a work.
      */
     @Test
     public void testBatchDoesNotHaveElementsNothingSchedule() throws IgniteCheckedException {
@@ -126,7 +126,7 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
-     *
+     * Tests that if batch has elements, next batch should scheduled.
      */
     @Test
     public void testBatchHasElementsRecheckAndNextBatchShouldSchedule() throws IgniteCheckedException {
@@ -147,7 +147,7 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
-     *
+     * Test that recheck stops if result is empty.
      */
     @Test
     public void testRecheckShouldFinishWithoutActionIfResultEmpty() throws IgniteCheckedException {
@@ -169,7 +169,7 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
-     *
+     * Test that recheck stops if all conflicts resolved.
      */
     @Test
     public void testRecheckShouldFinishWithoutActionIfConflictWasSolved() throws IgniteCheckedException {
@@ -204,7 +204,7 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
-     *
+     * Tests that recheck schedule new recheck.
      */
     @Test
     public void testRecheckShouldTryAgainIfConflictAndAttemptsExist() throws IgniteCheckedException {
@@ -237,7 +237,7 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
-     *
+     * Tests that repair should try to repair if recheck attempts are finished.
      */
     @Test
     public void testRecheckShouldTryRepairIfAttemptsDoesNotExist() throws IgniteCheckedException {

@@ -8364,6 +8364,7 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Compares two byte arrays by bytes.
      * @param bytes1 Bytes 1.
      * @param bytes2 Bytes 2.
      */

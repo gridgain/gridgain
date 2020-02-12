@@ -159,7 +159,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     }
 
     /**
-     *
+     * @return partition reconciliation result
      */
     public ExecutionResult<PartitionReconciliationResult> execute() {
         log.info(String.format(START_EXECUTION_MSG, fixMode, repairAlg, batchSize, recheckAttempts, parallelismLevel, caches));

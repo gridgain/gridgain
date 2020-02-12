@@ -41,7 +41,7 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 
 /**
- *
+ * Abstract utility class for partition reconciliation testing.
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
     /**
@@ -95,8 +95,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     }
 
     /**
-     * @param res Response.
-     * @param cacheName Cache name.
+     *
      */
     public static Set<PartitionReconciliationKeyMeta> conflictKeyMetas(ReconciliationResult res, String cacheName) {
         return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)

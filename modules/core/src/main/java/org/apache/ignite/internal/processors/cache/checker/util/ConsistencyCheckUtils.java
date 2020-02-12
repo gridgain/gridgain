@@ -54,7 +54,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.io.File.separatorChar;
 
 /**
- *
+ * Utility class for the partition reconciliation.
  */
 public class ConsistencyCheckUtils {
     /**
@@ -66,7 +66,7 @@ public class ConsistencyCheckUtils {
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss_SSS");
 
     /**
-     *
+     * Give old and actual keys does check and returns set with unresolved conflicts.
      */
     public static Map<KeyCacheObject, Map<UUID, GridCacheVersion>> checkConflicts(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> oldKeys,
@@ -126,7 +126,7 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * Does check that key already consistent.
      */
     public static boolean checkConsistency(Map<UUID, GridCacheVersion> oldKeyVers,
         Map<UUID, VersionedValue> actualKeyVers, int ownerSize) {
@@ -248,9 +248,9 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * @return set of node ids where element has max version.
      */
-    private static Set<UUID> findMaxVersionSet(Map<UUID, GridCacheVersion> verSet) {
+    public static Set<UUID> findMaxVersionSet(Map<UUID, GridCacheVersion> verSet) {
         Set<UUID> maxVersions = new HashSet<>();
 
         maxVersions.add(verSet.keySet().iterator().next());
@@ -271,7 +271,7 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * Does unmarshal.
      */
     public static KeyCacheObject unmarshalKey(KeyCacheObject unmarshalKey,
         GridCacheContext<Object, Object> cctx) throws IgniteCheckedException {
@@ -284,7 +284,7 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * Does remap conflicts and actual keys to {@link List<PartitionReconciliationDataRowMeta>}.
      */
     public static List<PartitionReconciliationDataRowMeta> mapPartitionReconciliation(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,

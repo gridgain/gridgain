@@ -28,11 +28,11 @@ import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 
 /**
- *
+ * Tests the utility under loading.
  */
 public class PartitionReconciliationFixStressTest extends PartitionReconciliationStressTest {
     /**
-     *
+     * Makes different variations of input params.
      */
     @Parameterized.Parameters(
         name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")

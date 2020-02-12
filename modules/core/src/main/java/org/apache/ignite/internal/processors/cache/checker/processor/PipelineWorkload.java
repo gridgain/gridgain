@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.processor;
 import java.util.UUID;
 
 /**
- *
+ * Abstract workload.
  */
 public interface PipelineWorkload {
     /**

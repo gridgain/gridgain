@@ -21,7 +21,7 @@ import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 /**
- *
+ * Container for {@link CacheObject} with version.
  */
 public class VersionedValue implements Serializable {
     /**
