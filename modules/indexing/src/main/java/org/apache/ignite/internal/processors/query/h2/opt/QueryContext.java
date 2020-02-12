@@ -22,7 +22,6 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
-import org.apache.ignite.internal.processors.query.h2.H2SqlTrace;
 import org.apache.ignite.internal.processors.query.h2.disk.ManagedGroupByData;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
@@ -170,11 +169,6 @@ public class QueryContext implements H2QueryContext {
         assert isGrpQry; // isGrpQry == false allowed only for window queries which are not supported yet.
 
         return new ManagedGroupByData(ses, grpIdx);
-    }
-
-    /** {@inheritDoc} */
-    @Override public H2SqlTrace trace() {
-        return null;
     }
 
     /**

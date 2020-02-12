@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
+import org.apache.ignite.internal.processors.query.h2.H2SqlTrace;
 import org.h2.api.ErrorCode;
 import org.h2.command.Command;
 import org.h2.command.CommandInterface;
@@ -145,6 +146,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     private boolean lazyQueryExecution;
     private ColumnNamerConfiguration columnNamerConfiguration;
     private H2QueryContext qryContext;
+    private H2SqlTrace sqlTrace;
     /**
      * Tables marked for ANALYZE after the current transaction is committed.
      * Prevents us calling ANALYZE repeatedly in large transactions.
@@ -1970,4 +1972,11 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
         return true;
     }
 
+    public H2SqlTrace getSqlTrace() {
+        return sqlTrace;
+    }
+
+    public void setSqlTrace(H2SqlTrace sqlTrace) {
+        this.sqlTrace = sqlTrace;
+    }
 }

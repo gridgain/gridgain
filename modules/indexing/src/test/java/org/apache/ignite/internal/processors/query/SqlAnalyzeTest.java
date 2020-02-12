@@ -72,7 +72,7 @@ public class SqlAnalyzeTest extends AbstractIndexingCommonTest {
     public void test() {
         List<List<?>> res = sql("ANALYZE SELECT * FROM test").getAll();
 
-        System.out.println("+++ " + res);
+        System.out.println("+++ " + res.get(0).get(0));
     }
 
     /**

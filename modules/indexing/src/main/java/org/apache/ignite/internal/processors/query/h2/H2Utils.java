@@ -458,6 +458,24 @@ public class H2Utils {
         boolean enforceJoinOrder,
         boolean lazy
     ) {
+        setupConnection(conn, qctx, distributedJoins, enforceJoinOrder, lazy, null);
+    }
+
+    /**
+     * @param conn Connection to use.
+     * @param qctx Query context.
+     * @param distributedJoins If distributed joins are enabled.
+     * @param enforceJoinOrder Enforce join order of tables.
+     * @param lazy Lazy query execution mode.
+     */
+    public static void setupConnection(
+        H2PooledConnection conn,
+        H2QueryContext qctx,
+        boolean distributedJoins,
+        boolean enforceJoinOrder,
+        boolean lazy,
+        H2SqlTrace trace
+    ) {
         Session s = session(conn);
 
         s.setForceJoinOrder(enforceJoinOrder);
@@ -471,6 +489,7 @@ public class H2Utils {
         assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryTracker() == null : oldCtx;
 
         s.setQueryContext(qctx);
+        s.setSqlTrace(trace);
     }
 
     /**

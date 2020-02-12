@@ -16,12 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.Map;
-import java.util.concurrent.atomic.LongAccumulator;
-import java.util.concurrent.atomic.LongAdder;
-
 /**
- * Memory tracker.
  */
 public abstract class H2SqlTrace implements AutoCloseable {
     public abstract H2SqlTrace createTrace(String name);
@@ -38,5 +33,5 @@ public abstract class H2SqlTrace implements AutoCloseable {
 
     public abstract void log(String msg);
 
-    public abstract void add(String metricName, int val);
+    public abstract void add(String cntName, long val);
 }

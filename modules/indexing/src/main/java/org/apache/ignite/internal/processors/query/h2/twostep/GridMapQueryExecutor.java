@@ -41,8 +41,11 @@ import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
+import org.apache.ignite.internal.metric.IoStatisticsHolder;
+import org.apache.ignite.internal.metric.IoStatisticsQueryHelper;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
@@ -56,6 +59,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
+import org.apache.ignite.internal.processors.query.h2.trace.IgniteH2SqlTrace;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryCancelRequest;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryFailResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageRequest;
@@ -231,7 +235,8 @@ public class GridMapQueryExecutor {
                             lazy,
                             req.mvccSnapshot(),
                             dataPageScanEnabled,
-                            req.maxMemory());
+                            req.maxMemory(),
+                            req.analyze());
 
                         return null;
                     }
@@ -257,7 +262,8 @@ public class GridMapQueryExecutor {
             lazy,
             req.mvccSnapshot(),
             dataPageScanEnabled,
-            req.maxMemory());
+            req.maxMemory(),
+            req.analyze());
     }
 
     /**
@@ -300,7 +306,8 @@ public class GridMapQueryExecutor {
         boolean lazy,
         @Nullable final MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled,
-        long maxMem) {
+        long maxMem,
+        boolean analyze) {
         // Prepare to run queries.
         GridCacheContext<?, ?> mainCctx = mainCacheContext(cacheIds);
 
@@ -381,12 +388,20 @@ public class GridMapQueryExecutor {
             for (GridCacheSqlQuery qry : qrys) {
                 H2PooledConnection conn = h2.connections().connection(schemaName);
 
+                IgniteH2SqlTrace trace = null;
+                if (analyze) {
+                    trace = new IgniteH2SqlTrace("MAP EXEC " + qryIdx);
+
+                    IoStatisticsQueryHelper.startGatheringQueryStatistics(Long.toString(reqId));
+                }
+
                 H2Utils.setupConnection(
                     conn,
                     qctx,
                     distributedJoins,
                     enforceJoinOrder,
-                    lazy
+                    lazy,
+                    trace
                 );
 
                 MapQueryResult res = new MapQueryResult(h2, mainCctx, node.id(), qry, params, conn, log);
@@ -860,6 +875,18 @@ public class GridMapQueryExecutor {
             loc ? null : toMessages(rows, new ArrayList<>(res.columnCount()), res.columnCount()),
             loc ? rows : null,
             last);
+
+        if (res.trace() != null) {
+            IoStatisticsHolder ioStat = IoStatisticsQueryHelper.finishGatheringQueryStatistics();
+            res.trace().add("logicalReads", ioStat.logicalReads());
+            res.trace().add("physicalReads", ioStat.physicalReads());
+
+            U.closeQuiet(res.trace());
+
+            CacheObjectBinaryProcessorImpl binaryProc = (CacheObjectBinaryProcessorImpl)ctx.cacheObjects();
+
+            msg.trace(IgniteH2SqlTrace.toBytes(binaryProc.binaryContext(), (IgniteH2SqlTrace)res.trace()));
+        }
 
         return msg;
     }

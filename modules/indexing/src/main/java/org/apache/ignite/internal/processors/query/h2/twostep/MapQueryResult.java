@@ -31,6 +31,7 @@ import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2QueryFetchSizeInterceptor;
+import org.apache.ignite.internal.processors.query.h2.H2SqlTrace;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
@@ -316,6 +317,11 @@ class MapQueryResult {
     public void checkTablesVersions() {
         if (ses.isLazyQueryExecution())
             GridH2Table.checkTablesVersions(ses);
+    }
+
+    /** */
+    public H2SqlTrace trace() {
+        return ses.getSqlTrace();
     }
 
     /** */

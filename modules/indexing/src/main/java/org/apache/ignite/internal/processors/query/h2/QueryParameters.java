@@ -62,6 +62,9 @@ public class QueryParameters {
     /** Memory limit for query results. */
     private final long maxMem;
 
+    /** Analyze flag. */
+    private final boolean analyze;
+
     /**
      * Create parameters from query.
      *
@@ -73,6 +76,7 @@ public class QueryParameters {
         boolean autoCommit = true;
         List<Object[]> batchedArgs = null;
         long maxMem = 0;
+        boolean analyze = false;
 
         if (qry instanceof SqlFieldsQueryEx) {
             SqlFieldsQueryEx qry0 = (SqlFieldsQueryEx)qry;
@@ -84,7 +88,7 @@ public class QueryParameters {
 
             batchedArgs = qry0.batchedArguments();
 
-            maxMem = qry0.getMaxMemory();
+            analyze = qry0.isAnalyze();
         }
 
         return new QueryParameters(
@@ -98,7 +102,8 @@ public class QueryParameters {
             nestedTxMode,
             autoCommit,
             batchedArgs,
-            qry.getUpdateBatchSize()
+            qry.getUpdateBatchSize(),
+            analyze
         );
     }
 
@@ -129,7 +134,8 @@ public class QueryParameters {
         NestedTxMode nestedTxMode,
         boolean autoCommit,
         List<Object[]> batchedArgs,
-        int updateBatchSize
+        int updateBatchSize,
+        boolean analyze
     ) {
         this.args = args;
         this.parts = parts;
@@ -142,6 +148,7 @@ public class QueryParameters {
         this.autoCommit = autoCommit;
         this.batchedArgs = batchedArgs;
         this.updateBatchSize = updateBatchSize;
+        this.analyze = analyze;
     }
 
     /**
@@ -230,6 +237,13 @@ public class QueryParameters {
     }
 
     /**
+     * @return {@code true} is the query must be traced.
+     */
+    public boolean analyze() {
+        return analyze;
+    }
+
+    /**
      * Convert current batched arguments to a form with single arguments.
      *
      * @param args Arguments.
@@ -247,7 +261,8 @@ public class QueryParameters {
             this.nestedTxMode,
             this.autoCommit,
             null,
-            this.updateBatchSize
+            this.updateBatchSize,
+            this.analyze
         );
     }
 }

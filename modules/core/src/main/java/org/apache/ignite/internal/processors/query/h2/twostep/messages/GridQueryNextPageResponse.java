@@ -75,6 +75,9 @@ public class GridQueryNextPageResponse implements Message {
     /** Remove mapping flag. */
     private boolean removeMapping;
 
+    /** Trace binary object bytes. */
+    private byte[] traceBinBytes;
+
     /**
      * For {@link Externalizable}.
      */
@@ -156,6 +159,16 @@ public class GridQueryNextPageResponse implements Message {
      */
     public Collection<Message> values() {
         return vals;
+    }
+
+    /** */
+    public void trace(byte [] traceBinBytes) {
+        this.traceBinBytes = traceBinBytes;
+    }
+
+    /** */
+    public byte[] trace() {
+        return traceBinBytes;
     }
 
     /**
@@ -244,6 +257,12 @@ public class GridQueryNextPageResponse implements Message {
 
             case 10:
                 if (!writer.writeBoolean("removeMapping", removeMapping))
+                    return false;
+
+                writer.incrementState();
+
+            case 11:
+                if (!writer.writeByteArray("z01trace", traceBinBytes))
                     return false;
 
                 writer.incrementState();
@@ -348,6 +367,13 @@ public class GridQueryNextPageResponse implements Message {
 
                 reader.incrementState();
 
+            case 11:
+                traceBinBytes = reader.readByteArray("z01trace");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(GridQueryNextPageResponse.class);
@@ -360,7 +386,7 @@ public class GridQueryNextPageResponse implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 11;
+        return 12;
     }
 
     /**

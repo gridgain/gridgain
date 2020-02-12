@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.cache.CacheException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.query.h2.trace.IgniteH2SqlTrace;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
@@ -48,6 +49,8 @@ public class ReduceQueryRun {
     /** */
     private final AtomicReference<State> state = new AtomicReference<>();
 
+    private final IgniteH2SqlTrace trace;
+
     /**
      * Constructor.
      * @param idxsCnt Number of indexes.
@@ -57,7 +60,8 @@ public class ReduceQueryRun {
     ReduceQueryRun(
         int idxsCnt,
         int pageSize,
-        Boolean dataPageScanEnabled
+        Boolean dataPageScanEnabled,
+        @Nullable IgniteH2SqlTrace trace
     ) {
         assert pageSize > 0;
 
@@ -65,6 +69,7 @@ public class ReduceQueryRun {
 
         this.pageSize = pageSize;
         this.dataPageScanEnabled  = dataPageScanEnabled;
+        this.trace = trace;
     }
 
     /**
@@ -222,6 +227,10 @@ public class ReduceQueryRun {
      */
     boolean mapped() {
         return latch != null && latch.getCount() == 0;
+    }
+
+    public IgniteH2SqlTrace trace() {
+        return trace;
     }
 
     /**

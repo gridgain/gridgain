@@ -162,6 +162,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** Memory available for query. */
     private long maxMem;
 
+    /** Query analyze. */
+    private boolean analyze;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -530,6 +533,21 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         return null;
     }
 
+    /**
+     * @return {@code true} is the queries must be traced.
+     */
+    public boolean analyze() {
+        return analyze;
+    }
+
+    /**
+     */
+    public GridH2QueryRequest analyze(boolean analyze) {
+        this.analyze = analyze;
+
+        return this;
+    }
+
     /** {@inheritDoc} */
     @Override public void marshall(Marshaller m) {
         if (paramsBytes != null)
@@ -666,6 +684,11 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 writer.incrementState();
 
+            case 15:
+                if (!writer.writeBoolean("z01analyze", analyze))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -799,6 +822,14 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
                 reader.incrementState();
 
+            case 15:
+                analyze = reader.readBoolean("z01analyze");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
+
         }
 
         return reader.afterMessageRead(GridH2QueryRequest.class);
@@ -811,7 +842,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 15;
+        return 16;
     }
 
     /** {@inheritDoc} */
@@ -823,4 +854,5 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     @Override public String toString() {
         return S.toString(GridH2QueryRequest.class, this);
     }
+
 }

@@ -471,6 +471,10 @@ public class TableFilter implements ColumnResolver {
      * @return true if there are
      */
     public boolean next() {
+        if (session.getSqlTrace() != null) {
+            session.getSqlTrace().add("filter: " + index.getName(), 1);
+        }
+
         if (joinBatch != null) {
             // will happen only on topTableFilter since joinBatch.next() does
             // not call join.next()

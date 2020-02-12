@@ -1711,13 +1711,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             qryDesc.enforceJoinOrder(),
                             timeout,
                             cancel,
-                            qryParams.arguments(),
                             parts,
-                            qryParams.lazy(),
                             mvccTracker,
-                            qryParams.dataPageScanEnabled(),
-                            qryParams.pageSize(),
-                            qryParams.maxMemory()
+                            qryParams
                         );
                     }
                     catch (Throwable e) {

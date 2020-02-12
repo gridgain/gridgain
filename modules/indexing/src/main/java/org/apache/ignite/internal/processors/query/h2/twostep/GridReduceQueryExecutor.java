@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
+import java.nio.ByteBuffer;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -47,9 +48,12 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.direct.DirectMessageWriter;
+import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccQueryTracker;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.GridCacheTwoStepQuery;
@@ -60,14 +64,18 @@ import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2SqlTrace;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.QueryParameters;
 import org.apache.ignite.internal.processors.query.h2.ReduceH2QueryInfo;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.dml.DmlDistributedUpdateRun;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlSortColumn;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlType;
+import org.apache.ignite.internal.processors.query.h2.trace.IgniteH2SqlTrace;
+import org.apache.ignite.internal.processors.query.h2.trace.QueryTraceIterator;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryCancelRequest;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryFailResponse;
 import org.apache.ignite.internal.processors.query.h2.twostep.messages.GridQueryNextPageRequest;
@@ -258,6 +266,32 @@ public class GridReduceQueryExecutor {
 
         ReduceResultPage page;
 
+        if (r.trace() != null) {
+            CacheObjectBinaryProcessorImpl binaryProc = (CacheObjectBinaryProcessorImpl)ctx.cacheObjects();
+
+            IgniteH2SqlTrace mapTrace = IgniteH2SqlTrace.fromBytes(binaryProc.binaryContext() , msg.trace());
+
+            DirectMessageWriter msgWriter = new DirectMessageWriter(GridIoManager.DIRECT_PROTO_VER);
+            ByteBuffer bb = ByteBuffer.allocate(10000);
+            msgWriter.setBuffer(bb);
+
+            int size = 0;
+            while(msg.writeTo(bb, msgWriter) != true) {
+                size += bb.position();
+
+                bb.reset();
+            }
+
+            size += bb.position();
+
+            mapTrace.log("node=" + node);
+            mapTrace.add("bytes", size);
+            mapTrace.add("rows", msg.plainRows() != null ? msg.plainRows().size() : msg.values().size() / msg.columns());
+            mapTrace.add("page", msg.page());
+
+            r.trace().addTrace(mapTrace);
+        }
+
         try {
             page = new ReduceResultPage(ctx, node.id(), msg) {
                 @Override public void fetchNextPage() {
@@ -325,13 +359,9 @@ public class GridReduceQueryExecutor {
      * @param enforceJoinOrder Enforce join order of tables.
      * @param timeoutMillis Timeout in milliseconds.
      * @param cancel Query cancel.
-     * @param params Query parameters.
      * @param parts Partitions.
-     * @param lazy Lazy execution flag.
      * @param mvccTracker Query tracker.
-     * @param dataPageScanEnabled If data page scan is enabled.
-     * @param pageSize Page size.
-     * @param maxMem Query memory limit.
+     * @param qryParam Query parameters.
      * @return Rows iterator.
      */
     @SuppressWarnings({"BusyWait", "IfMayBeConditional"})
@@ -342,15 +372,21 @@ public class GridReduceQueryExecutor {
         boolean enforceJoinOrder,
         int timeoutMillis,
         GridQueryCancel cancel,
-        Object[] params,
-        int[] parts,
-        boolean lazy,
+        int [] parts,
         MvccQueryTracker mvccTracker,
-        Boolean dataPageScanEnabled,
-        int pageSize,
-        long maxMem
+        QueryParameters qryParam
     ) {
         assert !qry.mvccEnabled() || mvccTracker != null;
+
+        IgniteH2SqlTrace trace = null;
+
+        if (qryParam.analyze()) {
+            trace = new IgniteH2SqlTrace("TRACE INFO");
+
+            IgniteH2SqlTrace.trace(trace);
+        }
+
+        int pageSize = qryParam.pageSize();
 
         if (pageSize <= 0)
             pageSize = Query.DFLT_PAGE_SIZE;
@@ -372,6 +408,8 @@ public class GridReduceQueryExecutor {
         }
 
         final boolean singlePartMode = parts != null && parts.length == 1;
+
+        Object[] params = qryParam.arguments();
 
         if (F.isEmpty(params))
             params = EMPTY_PARAMS;
@@ -425,7 +463,7 @@ public class GridReduceQueryExecutor {
 
             try {
                 final ReduceQueryRun r = createReduceQueryRun(conn, mapQueries, nodes,
-                    pageSize, segmentsPerIndex, skipMergeTbl, qry.explain(), dataPageScanEnabled);
+                    pageSize, segmentsPerIndex, skipMergeTbl, qry.explain(), qryParam.dataPageScanEnabled(), trace);
 
                 runs.put(qryReqId, r);
 
@@ -441,10 +479,17 @@ public class GridReduceQueryExecutor {
                         .partitions(convert(mapping.partitionsMap()))
                         .queries(mapQueries)
                         .parameters(params)
-                        .flags(queryFlags(qry, enforceJoinOrder, lazy, dataPageScanEnabled))
+                        .flags(queryFlags(qry, enforceJoinOrder, qryParam.lazy(), qryParam.dataPageScanEnabled()))
                         .timeout(timeoutMillis)
                         .schemaName(schemaName)
-                        .maxMemory(maxMem);
+                        .maxMemory(qryParam.maxMemory())
+                        .analyze(qryParam.analyze());
+
+                    H2SqlTrace tPreMap = null;
+                    if (trace != null) {
+                        tPreMap = trace.createTrace("MAP, attempt " + attempt);
+                        tPreMap.log("[qry=" + qry.originalSql() + ", nodes=" + nodes + ", req=" + req);
+                    }
 
                     if (mvccTracker != null)
                         req.mvccSnapshot(mvccTracker.snapshot());
@@ -453,6 +498,9 @@ public class GridReduceQueryExecutor {
                         parts == null ? null : new ReducePartitionsSpecializer(mapping.queryPartitionsMap());
 
                     if (send(nodes, req, spec, false)) {
+                        if (tPreMap != null)
+                            U.closeQuiet(tPreMap);
+
                         awaitAllReplies(r, nodes, cancel);
 
                         if (r.hasErrorOrRetry()) {
@@ -501,15 +549,15 @@ public class GridReduceQueryExecutor {
                         else {
                             ensureQueryNotCancelled(cancel);
 
-                        QueryContext qctx = new QueryContext(
-                            0,
-                            null,
-                            null,
-                            null,
-                            null,
-                            true,
-                            maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem),
-                            ctx);
+                            QueryContext qctx = new QueryContext(
+                                0,
+                                null,
+                                null,
+                                null,
+                                null,
+                                true,
+                                qryParam.maxMemory() < 0 ? null : h2.memoryManager().createQueryMemoryTracker(qryParam.maxMemory()),
+                                ctx);
 
                             H2Utils.setupConnection(conn, qctx, false, enforceJoinOrder);
 
@@ -530,7 +578,7 @@ public class GridReduceQueryExecutor {
                                 F.asList(rdc.parameters(params)),
                                 timeoutMillis,
                                 cancel,
-                                dataPageScanEnabled,
+                                qryParam.dataPageScanEnabled(),
                                 qryInfo
                             );
 
@@ -541,11 +589,16 @@ public class GridReduceQueryExecutor {
                             mvccTracker = null; // To prevent callback inside finally block;
                         }
 
-                        return new GridQueryCacheObjectsIterator(resIter, h2.objectContext(), keepBinary);
+                        if (qryParam.analyze())
+                            return new QueryTraceIterator(resIter, trace);
+                        else
+                            return new GridQueryCacheObjectsIterator(resIter, h2.objectContext(), keepBinary);
                     }
                 }
                 catch (IgniteCheckedException | RuntimeException e) {
                     release = true;
+
+                    log.error("+++", e);
 
                     if (e instanceof CacheException) {
                         if (QueryUtils.wasCancelled(e))
@@ -698,12 +751,14 @@ public class GridReduceQueryExecutor {
         int segmentsPerIndex,
         boolean skipMergeTbl,
         boolean explain,
-        Boolean dataPageScanEnabled) {
+        Boolean dataPageScanEnabled,
+        @Nullable IgniteH2SqlTrace trace) {
 
         final ReduceQueryRun r = new ReduceQueryRun(
             mapQueries.size(),
             pageSize,
-            dataPageScanEnabled
+            dataPageScanEnabled,
+            trace
         );
 
         int tblIdx = 0;
