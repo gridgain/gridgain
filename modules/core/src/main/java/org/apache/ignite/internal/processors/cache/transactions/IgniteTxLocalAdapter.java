@@ -1109,13 +1109,6 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
         }
 
         if (DONE_FLAG_UPD.compareAndSet(this, 0, 1)) {
-            if (!txState.mvccEnabled()) {
-                TxCounters txCounters = txCounters(false);
-
-                if (txCounters != null)
-                    cctx.tm().txHandler().applyPartitionsUpdatesCounters(txCounters.updateCounters(), true, true);
-            }
-
             cctx.tm().rollbackTx(this, clearThreadMap, skipCompletedVersions());
 
             cctx.mvccCaching().onTxFinished(this, false);
@@ -1192,7 +1185,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                 GridCacheEntryEx cached = txEntry.cached();
 
                 try {
-                    assert cached.detached() || cached.lockedByThread(threadId) || isRollbackOnly() :
+                    assert cached.detached() || cached.lockedLocally(xidVersion()) || isRollbackOnly() :
                         "Transaction lock is not acquired [entry=" + cached + ", tx=" + this +
                             ", nodeId=" + cctx.localNodeId() + ", threadId=" + threadId + ']';
 
@@ -1574,7 +1567,7 @@ public abstract class IgniteTxLocalAdapter extends IgniteTxAdapter implements Ig
                 else if (explicitCand.dhtLocal())
                     locCand = cctx.localNodeId().equals(explicitCand.otherNodeId());
 
-                if (!explicitVer.equals(xidVer) && explicitCand.threadId() == threadId && !explicitCand.tx() && locCand) {
+                if (!explicitVer.equals(xidVer) && explicitCand.isHeldByThread(threadId) && !explicitCand.tx() && locCand) {
                     txEntry.explicitVersion(explicitVer);
 
                     if (explicitVer.isLess(minVer))

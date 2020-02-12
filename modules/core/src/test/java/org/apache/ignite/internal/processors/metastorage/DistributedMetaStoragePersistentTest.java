@@ -299,6 +299,38 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
     }
 
     /**
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testComplexObjectWrite() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
+
+        ComponentConfig compCfg = new ComponentConfig(101, "comp: config");
+        AppConfig appCfg = new AppConfig(102, compCfg);
+
+        metastorage.write("appConf", appCfg);
+
+        stopGrid(0);
+
+        ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        AppConfig readAppCfg = ignite.context().distributedMetastorage().read("appConf");
+
+        assertNotNull(readAppCfg);
+
+        assertEquals(appCfg.appId, readAppCfg.appId);
+        assertEquals(appCfg.compConf.compId, readAppCfg.compConf.compId);
+        assertEquals(appCfg.compConf.config, readAppCfg.compConf.config);
+    }
+
+    /**
      * @throws Exception If failed.
      */
     @Test
@@ -566,5 +598,40 @@ public class DistributedMetaStoragePersistentTest extends DistributedMetaStorage
         Object[] hist = GridTestUtils.getFieldValue(joiningNodeData, "hist");
 
         assertEquals(1, hist.length);
+    }
+
+    /**
+     * Class to test complex objects put to metastorage.
+     */
+    private static class AppConfig implements Serializable {
+        /** */
+        private final long appId;
+
+        /** */
+        private final ComponentConfig compConf;
+
+        /** */
+        private AppConfig(long id,
+            ComponentConfig conf) {
+            appId = id;
+            compConf = conf;
+        }
+    }
+
+    /**
+     * Class to test complex objects put to metastorage.
+     */
+    private static class ComponentConfig implements Serializable {
+        /** */
+        private final long compId;
+
+        /** */
+        private final String config;
+
+        /** */
+        private ComponentConfig(long compId, String config) {
+            this.compId = compId;
+            this.config = config;
+        }
     }
 }

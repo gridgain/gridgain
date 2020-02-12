@@ -217,7 +217,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /** IO policy. */
     private byte plc;
 
-    /** */
+    /** One phase commit flag. */
     protected boolean onePhaseCommit;
 
     /** Commit version. */
@@ -630,7 +630,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
     /**
      * @return Finalization status.
      */
-    protected FinalizationStatus finalizationStatus() {
+    @Override @Nullable public FinalizationStatus finalizationStatus() {
         return finalizing;
     }
 
@@ -871,7 +871,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
 
         return local() && !cacheCtx.isDht() ?
-            entry.lockedByThread(threadId()) || (explicit != null && entry.lockedBy(explicit)) :
+            entry.lockedBy(xidVersion()) || (explicit != null && entry.lockedBy(explicit)) :
             // If candidate is not there, then lock was explicit.
             // Otherwise, check if entry is owned by version.
             !entry.hasLockCandidate(xidVersion()) || entry.lockedBy(xidVersion());
@@ -886,7 +886,7 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         GridCacheVersion explicit = txEntry == null ? null : txEntry.explicitVersion();
 
         return local() && !cacheCtx.isDht() ?
-            entry.lockedByThreadUnsafe(threadId()) || (explicit != null && entry.lockedByUnsafe(explicit)) :
+            entry.lockedByUnsafe(xidVersion()) || (explicit != null && entry.lockedByUnsafe(explicit)) :
             // If candidate is not there, then lock was explicit.
             // Otherwise, check if entry is owned by version.
             !entry.hasLockCandidateUnsafe(xidVersion()) || entry.lockedByUnsafe(xidVersion());
@@ -2294,6 +2294,11 @@ public abstract class IgniteTxAdapter extends GridMetadataAwareAdapter implement
         /** {@inheritDoc} */
         @Override public boolean markFinalizing(FinalizationStatus status) {
             throw new IllegalStateException("Deserialized transaction can only be used as read-only.");
+        }
+
+        /** {@inheritDoc} */
+        @Nullable @Override public FinalizationStatus finalizationStatus() {
+            return null;
         }
 
         /** {@inheritDoc} */

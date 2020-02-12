@@ -22,6 +22,8 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteMessaging;
 import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.cluster.ClusterGroup;
+import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
@@ -67,6 +69,7 @@ public abstract class AbstractServiceTest {
         GridKernalContext ctx = mock(GridKernalContext.class);
 
         when(ctx.log(any(Class.class))).thenReturn(mock(IgniteLogger.class));
+        when(ctx.config()).thenReturn(new IgniteConfiguration());
 
         ClusterProcessor clusterProcessor = mock(ClusterProcessor.class);
 
@@ -74,14 +77,24 @@ public abstract class AbstractServiceTest {
 
         IgniteMessaging messaging = mock(IgniteMessaging.class);
 
+        ClusterNode node = mock(ClusterNode.class);
+        when(node.consistentId()).thenReturn(UUID.fromString("c-c-c-c-c"));
+
+        ClusterGroup grp = mock(ClusterGroup.class);
+
         IgniteClusterImpl cluster = mock(IgniteClusterImpl.class);
 
         when(cluster.id()).thenReturn(UUID.fromString("a-a-a-a-a"));
         when(cluster.tag()).thenReturn("Test tag");
+        when(cluster.localNode()).thenReturn(node);
+        when(cluster.forOldest()).thenReturn(grp);
+
         when(ctx.grid()).thenReturn(grid);
         when(ctx.cluster()).thenReturn(clusterProcessor);
-        when(grid.cluster()).thenReturn(cluster);
+
         when(clusterProcessor.get()).thenReturn(cluster);
+
+        when(grid.cluster()).thenReturn(cluster);
         when(grid.message()).thenReturn(messaging);
         when(grid.message(any(ClusterGroup.class))).thenReturn(messaging);
 

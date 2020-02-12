@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
  * DTO for node info.
  */
 public class Node {
-    /** Set of attributes required by Management Console. */
+    /** Set of attributes required by Control Center. */
     private static final Set<String> ATTRS = Stream.of(
         ATTR_IPS,
         ATTR_MACS,
@@ -48,6 +48,9 @@ public class Node {
 
     /** */
     private String consistentId;
+
+    /** */
+    private long order;
 
     /** */
     private boolean client;
@@ -73,6 +76,7 @@ public class Node {
      *
      * @param nid Node ID.
      * @param consistentId Consistent ID.
+     * @param order Node order.
      * @param client Client flag.
      * @param baselineNode Is baseline node.
      * @param attrs Node attributes.
@@ -80,12 +84,14 @@ public class Node {
     public Node(
         UUID nid,
         Object consistentId,
+        long order,
         boolean client,
         boolean baselineNode,
         Map<String, Object> attrs
     ) {
         this.nid = nid;
         this.consistentId = String.valueOf(consistentId);
+        this.order = order;
         this.client = client;
         this.baselineNode = baselineNode;
         this.attrs = attrs
@@ -93,6 +99,7 @@ public class Node {
             .stream()
             .filter(e -> ATTRS.contains(e.getKey()))
             .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
     }
 
     /**
@@ -101,7 +108,7 @@ public class Node {
      * @param node Cluster node.
      */
     public Node(ClusterNode node) {
-        this(node.id(), node.consistentId(), node.isClient(), false, node.attributes());
+        this(node.id(), node.consistentId(), node.order(), node.isClient(), false, node.attributes());
     }
 
     /**
@@ -110,7 +117,7 @@ public class Node {
      * @param node Baseline node.
      */
     public Node(BaselineNode node) {
-        this(null, node.consistentId(), false, true, node.attributes());
+        this(null, node.consistentId(), -1, false, true, node.attributes());
     }
 
     /**
@@ -142,6 +149,23 @@ public class Node {
     }
 
     /**
+     * @return Order.
+     */
+    public long getOrder() {
+        return order;
+    }
+
+    /**
+     * @param order Node order. Will return {@code -1} for baseline node.
+     * @return {@code This} for chaining method calls.
+     */
+    public Node setOrder(long order) {
+        this.order = order;
+
+        return this;
+    }
+
+    /**
      * @return {@code true} for client node.
      */
     public boolean isClient() {
@@ -170,7 +194,7 @@ public class Node {
     }
 
     /**
-     * @return @{code True} if node is in baseline.
+     * @return {@code true} if node is in baseline.
      */
     public boolean isBaselineNode() {
         return baselineNode;
@@ -187,7 +211,7 @@ public class Node {
     }
 
     /**
-     * @return @{code True} if node is online.
+     * @return {@code true} if node is online.
      */
     public boolean isOnline() {
         return online;

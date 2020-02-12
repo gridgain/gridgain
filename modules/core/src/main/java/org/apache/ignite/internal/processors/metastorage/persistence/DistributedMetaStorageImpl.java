@@ -71,6 +71,7 @@ import org.jetbrains.annotations.TestOnly;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.META_STORAGE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistenceEnabled;
+import static org.apache.ignite.internal.processors.cache.persistence.metastorage.MetastorageTree.MAX_KEY_LEN;
 import static org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage.isSupported;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryItem.EMPTY_ARRAY;
 import static org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageUtil.historyItemPrefix;
@@ -275,6 +276,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         }
         finally {
             lock.writeLock().unlock();
+
+            cancelUpdateFutures();
         }
     }
 
@@ -420,7 +423,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     @Override public void write(@NotNull String key, @NotNull Serializable val) throws IgniteCheckedException {
         assert val != null : key;
 
-        startWrite(key, marshal(marshaller, val)).get();
+        try {
+            startWrite(key, marshal(marshaller, val)).get();
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteCheckedException("Write was failed", ex);
+        }
     }
 
     /** {@inheritDoc} */
@@ -446,7 +454,12 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     ) throws IgniteCheckedException {
         assert newVal != null : key;
 
-        return compareAndSetAsync(key, expVal, newVal).get();
+        try {
+            return compareAndSetAsync(key, expVal, newVal).get();
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteCheckedException("Write was failed", ex);
+        }
     }
 
     /** {@inheritDoc} */
@@ -871,14 +884,21 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
 
             ver = INITIAL_VERSION;
 
-            for (GridFutureAdapter<Boolean> fut : updateFuts.values())
-                fut.onDone(new IgniteCheckedException("Client was disconnected during the operation."));
-
-            updateFuts.clear();
+            cancelUpdateFutures();
         }
         finally {
             lock.writeLock().unlock();
         }
+    }
+
+    /**
+     * Cancel all waiting futures and clear the map.
+     */
+    private void cancelUpdateFutures() {
+        for (GridFutureAdapter<Boolean> fut : updateFuts.values())
+            fut.onDone(new IgniteCheckedException("Client was disconnected during the operation."));
+
+        updateFuts.clear();
     }
 
     /** {@inheritDoc} */
@@ -975,6 +995,21 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     }
 
     /**
+     * Checks that key is shorter than maximum allowed key length.
+     * If it is longer an {@code IgniteCheckedException}  is thrown.
+     *
+     * @param key Key to check length.
+     * @throws IgniteCheckedException If key exceeds maximum key length.
+     */
+    private void checkMaxKeyLengthExceeded(String key) throws IgniteCheckedException {
+        if (DistributedMetaStorageUtil.localKey(key).getBytes().length > MAX_KEY_LEN) {
+            throw new IgniteCheckedException("Key is too long. Maximum key length is " +
+                (MAX_KEY_LEN - DistributedMetaStorageUtil.localKeyPrefix().getBytes().length) +
+                " bytes in UTF8");
+        }
+    }
+
+    /**
      * Common implementation for {@link #write(String, Serializable)} and {@link #remove(String)}. Synchronously waits
      * for operation to be completed.
      *
@@ -985,6 +1020,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
     private GridFutureAdapter<?> startWrite(String key, byte[] valBytes) throws IgniteCheckedException {
        if (!isSupported(ctx))
             throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
+
+       checkMaxKeyLengthExceeded(key);
 
         UUID reqId = UUID.randomUUID();
 
@@ -1006,6 +1043,8 @@ public class DistributedMetaStorageImpl extends GridProcessorAdapter
         throws IgniteCheckedException {
          if (!isSupported(ctx))
             throw new IgniteCheckedException(NOT_SUPPORTED_MSG);
+
+         checkMaxKeyLengthExceeded(key);
 
         UUID reqId = UUID.randomUUID();
 

@@ -21,11 +21,13 @@ namespace Apache.Ignite.Core.Tests.Compute
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Cache.Affinity;
+    using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Compute;
-    using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Resource;
     using NUnit.Framework;
@@ -50,6 +52,9 @@ namespace Apache.Ignite.Core.Tests.Compute
         /** Third node. */
         private IIgnite _grid3;
 
+        /** Thin client. */
+        private IIgniteClient _igniteClient;
+
         /// <summary>
         /// Initialization routine.
         /// </summary>
@@ -60,12 +65,15 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             _grid1 = Ignition.Start(Configuration(configs.Item1));
             _grid2 = Ignition.Start(Configuration(configs.Item2));
+
+            AffinityTopologyVersion waitingTop = new AffinityTopologyVersion(2, 1);
+            
+            Assert.True(_grid1.WaitTopology(waitingTop), "Failed to wait topology " + waitingTop);
+            
             _grid3 = Ignition.Start(Configuration(configs.Item3));
 
-            // Wait for rebalance.
-            var events = _grid1.GetEvents();
-            events.EnableLocal(EventType.CacheRebalanceStopped);
-            events.WaitForLocal(EventType.CacheRebalanceStopped);
+            // Start thin client.
+            _igniteClient = Ignition.StartClient(GetThinClientConfiguration());
         }
 
         /// <summary>
@@ -77,6 +85,19 @@ namespace Apache.Ignite.Core.Tests.Compute
                 "Config\\Compute\\compute-grid1.xml",
                 "Config\\Compute\\compute-grid2.xml",
                 "Config\\Compute\\compute-grid3.xml");
+        }
+
+
+        /// <summary>
+        /// Gets the thin client configuration.
+        /// </summary>
+        private static IgniteClientConfiguration GetThinClientConfiguration()
+        {
+            return new IgniteClientConfiguration
+            {
+                Endpoints = new List<string> { IPAddress.Loopback.ToString() },
+                SocketTimeout = TimeSpan.FromSeconds(15)
+            };
         }
 
         /// <summary>
@@ -522,6 +543,19 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
+        /// Tests thin client ForServers projection.
+        /// </summary>
+        [Test]
+        public void TestThinClientForServers()
+        {
+            var cluster = _igniteClient.GetCluster();
+
+            var servers = cluster.ForServers().GetNodes();
+            Assert.AreEqual(2, servers.Count);
+            Assert.IsTrue(servers.All(x => !x.IsClient));
+        }
+
+        /// <summary>
         /// Test for attribute projection.
         /// </summary>
         [Test]
@@ -533,6 +567,19 @@ namespace Apache.Ignite.Core.Tests.Compute
             Assert.AreEqual(1, prj.GetNodes().Count);
             Assert.IsTrue(nodes.Contains(prj.GetNode()));
             Assert.AreEqual("value1", prj.GetNodes().First().GetAttribute<string>("my_attr"));
+        }
+
+        /// <summary>
+        /// Test thin client for attribute projection.
+        /// </summary>
+        [Test]
+        public void TestClientForAttribute()
+        {
+            IClientClusterGroup clientPrj = _igniteClient.GetCluster().ForAttribute("my_attr", "value1");
+            Assert.AreEqual(1,clientPrj.GetNodes().Count);
+
+            var nodeId = _grid1.GetCluster().ForAttribute("my_attr", "value1").GetNodes().Single().Id;
+            Assert.AreEqual(nodeId, clientPrj.GetNode().Id);
         }
         
         /// <summary>
@@ -564,17 +611,19 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             Assert.AreEqual(0, prjClient.GetNodes().Count);
         }
-        
+
         /// <summary>
         /// Test for cache predicate.
         /// </summary>
         [Test]
         public void TestForPredicate()
         {
-            IClusterGroup prj1 = _grid1.GetCluster().ForPredicate(new NotAttributePredicate("value1").Apply);
+            IClusterGroup prj1 = _grid1.GetCluster()
+                .ForPredicate(new NotAttributePredicate<IClusterNode>("value1").Apply);
             Assert.AreEqual(2, prj1.GetNodes().Count);
 
-            IClusterGroup prj2 = prj1.ForPredicate(new NotAttributePredicate("value2").Apply);
+            IClusterGroup prj2 = prj1
+                .ForPredicate(new NotAttributePredicate<IClusterNode>("value2").Apply);
             Assert.AreEqual(1, prj2.GetNodes().Count);
 
             string val;
@@ -585,9 +634,28 @@ namespace Apache.Ignite.Core.Tests.Compute
         }
 
         /// <summary>
+        /// Test thin client for cache predicate.
+        /// </summary>
+        [Test]
+        public void TestClientForPredicate()
+        {
+            var prj1 = _igniteClient.GetCluster()
+                .ForPredicate(new NotAttributePredicate<IClientClusterNode>("value1").Apply);
+            Assert.AreEqual(2, prj1.GetNodes().Count);
+
+            var prj2 = prj1
+                .ForPredicate(new NotAttributePredicate<IClientClusterNode>("value2").Apply);
+            Assert.AreEqual(1, prj2.GetNodes().Count);
+
+            var val = (string) prj2.GetNodes().First().Attributes.FirstOrDefault(attr => attr.Key == "my_attr").Value;
+
+            Assert.IsTrue(val == null || (!val.Equals("value1") && !val.Equals("value2")));
+        }
+
+        /// <summary>
         /// Attribute predicate.
         /// </summary>
-        private class NotAttributePredicate
+        private class NotAttributePredicate<T> where T: IBaselineNode
         {
             /** Required attribute value. */
             private readonly string _attrVal;
@@ -602,17 +670,15 @@ namespace Apache.Ignite.Core.Tests.Compute
             }
 
             /** <inhreitDoc /> */
-            public bool Apply(IClusterNode node)
+            public bool Apply(T node)
             {
-                string val;
+                object val;
 
-                node.TryGetAttribute("my_attr", out val);
+                node.Attributes.TryGetValue("my_attr", out val);
 
                 return val == null || !val.Equals(_attrVal);
             }
         }
-
-
 
         /// <summary>
         /// Tests the action broadcast.
@@ -948,6 +1014,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     {
         [InstanceResource]
 #pragma warning disable 649
+        // ReSharper disable once UnassignedField.Local
         private IIgnite _grid;
 
         public static ConcurrentBag<Guid> Invokes = new ConcurrentBag<Guid>();
@@ -1016,6 +1083,7 @@ namespace Apache.Ignite.Core.Tests.Compute
     class ComputeFunc : INestedComputeFunc, IUserInterface<int>
     {
         [InstanceResource]
+        // ReSharper disable once UnassignedField.Local
         private IIgnite _grid;
 
         public static int InvokeCount;

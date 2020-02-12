@@ -16,9 +16,11 @@
 
 package org.apache.ignite.jdbc.suite;
 
+import java.security.Security;
 import org.apache.ignite.internal.jdbc2.JdbcBlobTest;
 import org.apache.ignite.internal.jdbc2.JdbcBulkLoadSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
+import org.apache.ignite.internal.jdbc2.JdbcDiskSpillingClientsTest;
 import org.apache.ignite.internal.jdbc2.JdbcDistributedJoinsQueryTest;
 import org.apache.ignite.internal.jdbc2.JdbcQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.jdbc2.JdbcSchemaCaseSelfTest;
@@ -57,6 +59,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinConnectionTimeoutSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataPageScanPropertySelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDataSourceSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDeleteStatementSelfTest;
+import org.apache.ignite.jdbc.thin.JdbcThinDiskSpillingClientsTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicPartitionedNearSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicPartitionedSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinDynamicIndexAtomicReplicatedSelfTest;
@@ -99,6 +102,7 @@ import org.apache.ignite.jdbc.thin.JdbcThinUpdateStatementSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinUpdateStatementSkipReducerOnUpdateSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinWalModeChangeSelfTest;
 import org.apache.ignite.qa.QaJdbcTestSuite;
+import org.junit.BeforeClass;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -241,10 +245,20 @@ import org.junit.runners.Suite;
     JdbcThinTransactionsLeaksMvccTest.class,
 
     JdbcThinQueryMemoryTrackerSelfTest.class,
+    JdbcThinDiskSpillingClientsTest.class,
+    JdbcDiskSpillingClientsTest.class,
 
     // Data types coverage.
     JdbcThinCacheToJdbcDataTypesCoverageTest.class,
     JdbcThinJdbcToCacheDataTypesCoverageTest.class,
 })
 public class IgniteJdbcDriverTestSuite {
+    /**
+     * Enable NULL algorithm and keep 3DES_EDE_CBC disabled.
+     * See {@link JdbcThinConnectionSSLTest#testDisabledCustomCipher()} for details.
+     */
+    @BeforeClass
+    public static void init() {
+        Security.setProperty("jdk.tls.disabledAlgorithms", "3DES_EDE_CBC");
+    }
 }

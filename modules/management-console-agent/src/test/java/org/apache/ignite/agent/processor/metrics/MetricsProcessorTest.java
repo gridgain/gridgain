@@ -51,7 +51,7 @@ public class MetricsProcessorTest extends AgentCommonAbstractTest {
     public void shouldSendMetricsOnPull() throws Exception {
         IgniteEx ignite = startGrids(2);
 
-        changeManagementConsoleUri(ignite);
+        changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 

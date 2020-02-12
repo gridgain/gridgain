@@ -68,7 +68,6 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.C1;
 import org.apache.ignite.internal.util.typedef.C2;
-import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -228,7 +227,7 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         threadId = tx == null ? Thread.currentThread().getId() : tx.threadId();
 
-        lockVer = tx != null ? tx.xidVersion() : cctx.versions().next();
+        lockVer = tx != null ? tx.xidVersion() : cctx.cache().nextVersion();
 
         futId = IgniteUuid.randomUuid();
 
@@ -1233,56 +1232,19 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
             add(fut); // Append new future.
 
-            IgniteInternalFuture<?> txSync = null;
+            try {
+                cctx.io().send(node, req, cctx.ioPolicy());
 
-            if (inTx())
-                txSync = cctx.tm().awaitFinishAckAsync(node.id(), tx.threadId());
-
-            if (txSync == null || txSync.isDone()) {
-                try {
-                    cctx.io().send(node, req, cctx.ioPolicy());
-
-                    if (msgLog.isDebugEnabled()) {
-                        msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
-                            ", inTx=" + inTx() +
-                            ", node=" + node.id() + ']');
-                    }
-                }
-                catch (ClusterTopologyCheckedException ex) {
-                    assert fut != null;
-
-                    fut.onResult(ex);
+                if (msgLog.isDebugEnabled()) {
+                    msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
+                        ", inTx=" + inTx() +
+                        ", node=" + node.id() + ']');
                 }
             }
-            else {
-                txSync.listen(new CI1<IgniteInternalFuture<?>>() {
-                    @Override public void apply(IgniteInternalFuture<?> t) {
-                        try {
-                            cctx.io().send(node, req, cctx.ioPolicy());
+            catch (ClusterTopologyCheckedException ex) {
+                assert fut != null;
 
-                            if (msgLog.isDebugEnabled()) {
-                                msgLog.debug("Collocated lock fut, sent request [txId=" + lockVer +
-                                    ", inTx=" + inTx() +
-                                    ", node=" + node.id() + ']');
-                            }
-                        }
-                        catch (ClusterTopologyCheckedException ex) {
-                            assert fut != null;
-
-                            fut.onResult(ex);
-                        }
-                        catch (IgniteCheckedException e) {
-                            if (msgLog.isDebugEnabled()) {
-                                msgLog.debug("Collocated lock fut, failed to send request [txId=" + lockVer +
-                                    ", inTx=" + inTx() +
-                                    ", node=" + node.id() +
-                                    ", err=" + e + ']');
-                            }
-
-                            onError(e);
-                        }
-                    }
-                });
+                fut.onResult(ex);
             }
         }
     }

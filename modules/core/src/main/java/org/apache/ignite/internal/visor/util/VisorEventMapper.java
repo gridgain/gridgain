@@ -53,8 +53,16 @@ public class VisorEventMapper implements IgniteClosure<Event, VisorGridEvent> {
      * @param shortDisplay Shortened version of {@code toString()} result.
      * @return Visor data transfer object for event.
      */
-    protected VisorGridEvent map(Event evt, int type, IgniteUuid id, String name, UUID nid, long ts, String msg,
-        String shortDisplay) {
+    protected VisorGridEvent map(
+        Event evt,
+        int type,
+        IgniteUuid id,
+        String name,
+        UUID nid,
+        long ts,
+        String msg,
+        String shortDisplay
+    ) {
         if (evt instanceof TaskEvent)
             return taskEvent((TaskEvent)evt, type, id, name, nid, ts, msg, shortDisplay);
 
@@ -70,7 +78,7 @@ public class VisorEventMapper implements IgniteClosure<Event, VisorGridEvent> {
         if (evt instanceof ClusterActivationEvent)
             return new VisorGridEvent(type, id, name, nid, ts, msg, shortDisplay);
 
-        return null;
+        return new VisorGridEvent(type, id, name, nid, ts, msg, shortDisplay);
     }
 
     /**

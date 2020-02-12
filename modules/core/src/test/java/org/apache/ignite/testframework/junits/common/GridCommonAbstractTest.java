@@ -815,7 +815,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                                 GridDhtLocalPartition loc = top.localPartition(p, readyVer, false);
 
                                 boolean notPrimary = !affNodes.isEmpty() &&
-                                    !exchMgr.rebalanceTopologyVersion().equals(AffinityTopologyVersion.NONE) &&
                                     !affNodes.get(0).equals(dht.context().affinity().primaryByPartition(p, readyVer));
 
                                 if (affNodesCnt != ownerNodesCnt || !affNodes.containsAll(owners) ||
@@ -1901,7 +1900,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param exp Expected.
      * @param act Actual.
      */
-    protected void assertEqualsCollections(Collection<?> exp, Collection<?> act) {
+    protected static void assertEqualsCollections(Collection<?> exp, Collection<?> act) {
         if (exp.size() != act.size())
             fail("Collections are not equal:\nExpected:\t" + exp + "\nActual:\t" + act);
 

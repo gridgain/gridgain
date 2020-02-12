@@ -19,13 +19,16 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheRebalanceMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cache.eviction.lru.LruEvictionPolicyFactory;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
-import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -112,11 +115,7 @@ public class GridCacheDhtPreloadMultiThreadedSelfTest extends GridCommonAbstract
             multithreadedAsync(
                 new Callable<Object>() {
                     @Nullable @Override public Object call() throws Exception {
-                        IgniteConfiguration cfg = loadConfiguration("modules/core/src/test/config/spring-multicache.xml");
-
-                        cfg.setGridLogger(getTestResources().getLogger());
-
-                        startGrid(Thread.currentThread().getName(), cfg);
+                        startGrid(Thread.currentThread().getName());
 
                         return null;
                     }
@@ -143,7 +142,7 @@ public class GridCacheDhtPreloadMultiThreadedSelfTest extends GridCommonAbstract
                     @Nullable @Override public Object call() throws Exception {
                         String igniteInstanceName = "grid-" + Thread.currentThread().getName();
 
-                        startGrid(igniteInstanceName, "modules/core/src/test/config/example-cache.xml");
+                        startGrid(igniteInstanceName);
 
                         // Immediately stop the grid.
                         stopGrid(igniteInstanceName);
@@ -162,20 +161,25 @@ public class GridCacheDhtPreloadMultiThreadedSelfTest extends GridCommonAbstract
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = loadConfiguration("modules/core/src/test/config/spring-multicache.xml");
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setGridLogger(getTestResources().getLogger());
+        CacheConfiguration[] ccfgs = new CacheConfiguration[8];
+        for (int i = 1; i <= 8; i++) {
+            CacheConfiguration ccfg = new CacheConfiguration("partitioned" + i);
 
-        cfg.setIgniteInstanceName(igniteInstanceName);
+            ccfg.setCacheMode(CacheMode.PARTITIONED);
+            ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+            ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
+            ccfg.setRebalanceMode(CacheRebalanceMode.SYNC);
+            ccfg.setOnheapCacheEnabled(true);
+            ccfg.setEvictionPolicyFactory(new LruEvictionPolicyFactory().setMaxSize(100));
+            ccfg.setAffinity(new RendezvousAffinityFunction(2048, null));
+            ccfg.setBackups(1);
 
-        cfg.setFailureHandler(new NoOpFailureHandler());
-
-        for (CacheConfiguration cCfg : cfg.getCacheConfiguration()) {
-            if (cCfg.getCacheMode() == CacheMode.PARTITIONED) {
-                cCfg.setAffinity(new RendezvousAffinityFunction(2048, null));
-                cCfg.setBackups(1);
-            }
+            ccfgs[i - 1] = ccfg;
         }
+
+        cfg.setCacheConfiguration(ccfgs);
 
         return cfg;
     }

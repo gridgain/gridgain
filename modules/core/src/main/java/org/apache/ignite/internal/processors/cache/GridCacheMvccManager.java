@@ -905,7 +905,7 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
      */
     public void addExplicitLock(long threadId, GridCacheMvccCandidate cand, AffinityTopologyVersion topVer) {
         while (true) {
-            GridCacheExplicitLockSpan span = pendingExplicit.get(cand.threadId());
+            GridCacheExplicitLockSpan span = pendingExplicit.get(threadId);
 
             if (span == null) {
                 span = new GridCacheExplicitLockSpan(topVer, cand);
@@ -1007,7 +1007,7 @@ public class GridCacheMvccManager extends GridCacheSharedManagerAdapter {
         GridCacheMvccCandidate cand = span.removeCandidate(key, ver);
 
         if (cand != null && span.isEmpty())
-            pendingExplicit.remove(cand.threadId(), span);
+            pendingExplicit.remove(threadId, span);
 
         return cand;
     }
