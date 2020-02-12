@@ -207,7 +207,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * </ul>
      */
     @Test
-    public void testConsoleOutputContainsWarningAboutSensetiveInformation() {
+    public void testConsoleOutputContainsWarningAboutSensitiveInformation() {
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--local-output", "--include-sensitive"));

@@ -16,10 +16,12 @@
 
 package org.apache.ignite.internal.processors.diagnostic;
 
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobContinuation;
@@ -81,11 +83,10 @@ public class ReconciliationExecutionContext {
         pendingJobs.put(sesId, new LinkedList<>());
 
         if (runningJobsCnt.size() == MAX_SESSIONS + 1) {
-            runningJobsCnt.entrySet().iterator().remove();
-
-            runningJobsLimit.entrySet().iterator().remove();
-
-            pendingJobs.entrySet().iterator().remove();
+            Stream.of(runningJobsCnt, runningJobsLimit, pendingJobs)
+                .map(m -> m.entrySet().iterator())
+                .peek(Iterator::next)
+                .forEach(Iterator::remove);
         }
     }
 
