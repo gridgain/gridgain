@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
+    using System.Linq;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -143,11 +144,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** <inheritdoc /> */
         public int GetSize()
         {
-            // TODO: Count valid entries only.
             var map = _map;
             if (map != null)
             {
-                return map.Count;
+                return map.Count(e => IsValid(e.Key, e.Value));
             }
 
             if (_fallbackMap != null)
@@ -282,12 +282,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var entryVerBoxed = entry.Version;
             
             Debug.Assert(currentVerBoxed != null);
-            Debug.Assert(entryVerBoxed != null);
             
             if (ReferenceEquals(currentVerBoxed, entryVerBoxed))
             {
                 // Happy path: true on stable topology.
                 return true;
+            }
+
+            if (entryVerBoxed == null)
+            {
+                return false;
             }
 
             var entryVer = (AffinityTopologyVersion) entryVerBoxed;
@@ -306,6 +310,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 // Update entry with current version and known partition to speed up future checks.
                 entry.Partition = part;
                 entry.Version = currentVerBoxed;
+            }
+            else
+            {
+                // Mark as invalid.
+                entry.Version = null;
             }
 
             return valid;
