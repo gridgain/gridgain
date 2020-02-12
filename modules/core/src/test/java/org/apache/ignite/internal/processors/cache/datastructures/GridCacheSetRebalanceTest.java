@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.datastructures;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -114,10 +115,16 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         useExtendedClasses = false;
 
-        GridTestUtils.runAsync(() -> startGrid(1));
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(1);
 
-        if (bltForInMemoryCachesSup)
-            resetBaselineTopology();
+                if (bltForInMemoryCachesSup)
+                    resetBaselineTopology();
+
+                return null;
+            }
+        });
 
         assertTrue("Data rebalancing is not started.",
                 TestRecordingCommunicationSpi.spi(ignite0).waitForBlocked(1, 10_000));
