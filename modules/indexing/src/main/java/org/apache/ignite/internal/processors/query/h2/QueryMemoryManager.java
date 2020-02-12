@@ -216,7 +216,7 @@ public class QueryMemoryManager implements H2MemoryTracker {
     /**
      * @return Current query quota.
      */
-    public String getQryQuotaStr() {
+    public String getQueryQuotaString() {
         return qryQuotaStr;
     }
 

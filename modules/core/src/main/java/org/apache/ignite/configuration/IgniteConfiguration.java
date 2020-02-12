@@ -3380,9 +3380,9 @@ public class IgniteConfiguration {
      *  <p>
      *  Quota may be specified also in:
      *  <ul>
-     *      <li>Kilobytes - just append the letter 'K' of 'k': {@code 10k, 400K}</li>
-     *      <li>Megabytes - just append the letter 'M' of 'm': {@code 60m, 420M}</li>
-     *      <li>Gigabytes - just append the letter 'G' of 'g': {@code 7g, 2G}</li>
+     *      <li>Kilobytes - just append the letter 'K' or 'k': {@code 10k, 400K}</li>
+     *      <li>Megabytes - just append the letter 'M' or 'm': {@code 60m, 420M}</li>
+     *      <li>Gigabytes - just append the letter 'G' or 'g': {@code 7g, 2G}</li>
      *      <li>Percent of heap - just append the sign '%': {@code 45%, 80%}</li>
      *  </ul>
      *
@@ -3425,9 +3425,9 @@ public class IgniteConfiguration {
      *  <p>
      *  Quota may be specified also in:
      *  <ul>
-     *      <li>Kilobytes - just append the letter 'K' of 'k': {@code 10k, 400K}</li>
-     *      <li>Megabytes - just append the letter 'M' of 'm': {@code 60m, 420M}</li>
-     *      <li>Gigabytes - just append the letter 'G' of 'g': {@code 7g, 2G}</li>
+     *      <li>Kilobytes - just append the letter 'K' or 'k': {@code 10k, 400K}</li>
+     *      <li>Megabytes - just append the letter 'M' or 'm': {@code 60m, 420M}</li>
+     *      <li>Gigabytes - just append the letter 'G' or 'g': {@code 7g, 2G}</li>
      *      <li>Percent of the heap - just append the sign '%': {@code 45%, 80%}</li>
      *  </ul>
      *
