@@ -76,10 +76,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         private const int OpPartitions = 15;
 
         /** */
-        private const int OpMapAllPartitionsToNodes = 16;
-
-        /** */
-        private const int OpIsAssignmentValid = 17;
+        private const int OpIsAssignmentValid = 16;
 
         /** */
         private readonly bool _keepBinary;
@@ -220,32 +217,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         public IList<IClusterNode> MapPartitionToPrimaryAndBackups(int part)
         {
             return DoOutInOp(OpMapPartitionToPrimaryAndBackups, w => w.WriteObject(part), r => ReadNodes(r));
-        }
-
-        /// <summary>
-        /// Gets primary nodes for all partitions.
-        /// </summary>
-        /// <returns>List of primary nodes per partition. Size of the list is equal to <see cref="Partitions"/>.
-        /// Primary node for partition N is at index N.</returns>
-        internal Guid[] MapAllPartitionsToNodes(AffinityTopologyVersion version)
-        {
-            return DoOutInOp(OpMapAllPartitionsToNodes,
-                w =>
-                {
-                    w.WriteLong(version.Version);
-                    w.WriteInt(version.MinorVersion);
-                },
-                s =>
-                {
-                    var res = new Guid[s.ReadInt()];
-
-                    for (var i = 0; i < res.Length; i++)
-                    {
-                        res[i] = BinaryUtils.ReadGuid(s);
-                    }
-
-                    return res;
-                });
         }
 
         /// <summary>

@@ -88,10 +88,7 @@ public class PlatformAffinity extends PlatformAbstractTarget {
     public static final int OP_PARTITIONS = 15;
 
     /** */
-    public static final int OP_MAP_ALL_PARTITIONS_TO_NODES = 16;
-
-    /** */
-    public static final int OP_IS_ASSIGNMENT_VALID = 17;
+    public static final int OP_IS_ASSIGNMENT_VALID = 16;
 
     /** */
     private static final C1<ClusterNode, UUID> TO_NODE_ID = new C1<ClusterNode, UUID>() {
@@ -304,22 +301,6 @@ public class PlatformAffinity extends PlatformAbstractTarget {
                     writer.writeInt(e.getKey());
 
                     writer.writeUuid(e.getValue().id());
-                }
-
-                break;
-            }
-
-            case OP_MAP_ALL_PARTITIONS_TO_NODES: {
-                AffinityTopologyVersion ver = new AffinityTopologyVersion(reader.readLong(), reader.readInt());
-
-                List<List<ClusterNode>> assignment = affMgr.assignment(ver).assignment();
-
-                writer.writeInt(assignment.size());
-
-                for (List<ClusterNode> clusterNodes : assignment) {
-                    UUID nodeId = clusterNodes.get(0).id();
-                    writer.writeLong(nodeId.getMostSignificantBits());
-                    writer.writeLong(nodeId.getLeastSignificantBits());
                 }
 
                 break;
