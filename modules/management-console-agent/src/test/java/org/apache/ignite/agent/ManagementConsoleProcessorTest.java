@@ -24,9 +24,9 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Test;
 
-import static java.util.Collections.singleton;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -69,7 +69,7 @@ public class ManagementConsoleProcessorTest extends AgentCommonAbstractTest {
         try (IgniteEx ignite = startGrids(1)) {
             ManagementConfiguration cfg = ignite.context().managementConsole().configuration();
 
-            assertEqualsCollections(singleton("http://localhost:3000"), cfg.getConsoleUris());
+            assertEquals("http://localhost:3000", F.first(cfg.getConsoleUris()));
         }
     }
 
