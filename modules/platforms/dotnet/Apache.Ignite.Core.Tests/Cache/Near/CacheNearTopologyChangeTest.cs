@@ -248,7 +248,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     StopNode(idx);
                 }
 
-                var dataLost = serverCache.GetSize() == 0;
+                var dataLost = serverCache.GetSize(CachePeekMode.Primary | CachePeekMode.Backup) == 0;
                 var status = string.Format("Node {0}: {1}, data lost: {2}, current val: {3}",
                     _ignite[idx] == null ? "stopped" : "started", idx, dataLost, val);
                 
