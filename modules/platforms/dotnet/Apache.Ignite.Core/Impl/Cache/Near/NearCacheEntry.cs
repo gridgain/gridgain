@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System.Diagnostics;
     using Apache.Ignite.Core.Cache.Affinity;
 
     /// <summary>
@@ -36,6 +37,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public NearCacheEntry(T value, object version, int partition)
         {
+            Debug.Assert(version != null);
+            
             _value = value;
             _version = version;
             _partition = partition;
