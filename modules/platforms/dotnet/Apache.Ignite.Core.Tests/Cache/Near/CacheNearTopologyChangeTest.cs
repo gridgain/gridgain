@@ -249,17 +249,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
                 else
                 {
-                    // TODO: This is not stable, we should wait for rebalance to finish
-                    primaryLeft = _ignite[idx].GetAffinity(CacheName)
-                        .IsPrimary(_ignite[idx].GetCluster().GetLocalNode(), key);
-                    
                     StopNode(idx);
 
                     status = string.Format("Node stopped: {0}, data lost: {1}, current val: {2}", idx, primaryLeft, val);
                 }
+
+                var dataLost = serverCache.GetSize() == 0;
                 
                 // Verify data.
-                if (primaryLeft && backups == 0)
+                if (dataLost)
                 {
                     TestUtils.WaitForTrueCondition(() => !serverCache.ContainsKey(key), timeout, status);
                     TestUtils.WaitForTrueCondition(() => !clientCache.ContainsKey(key), timeout, status);
