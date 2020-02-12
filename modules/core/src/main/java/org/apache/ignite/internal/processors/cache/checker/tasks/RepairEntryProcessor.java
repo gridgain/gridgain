@@ -69,7 +69,11 @@ public class RepairEntryProcessor implements EntryProcessor {
     }
 
     /**
-     *
+     * @param val Value.
+     * @param data Data.
+     * @param rmvQueueMaxSize Remove queue max size.
+     * @param forceRepair Force repair.
+     * @param startTopVer Start topology version.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public RepairEntryProcessor(

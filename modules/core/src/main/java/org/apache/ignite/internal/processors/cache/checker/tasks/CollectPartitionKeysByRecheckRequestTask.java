@@ -66,7 +66,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
     private IgniteEx ignite;
 
     /**
-     *
+     * Recheck request.
      */
     private RecheckRequest recheckRequest;
 

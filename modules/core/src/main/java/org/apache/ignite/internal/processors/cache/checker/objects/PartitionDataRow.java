@@ -37,23 +37,28 @@ public class PartitionDataRow extends PartitionKeyVersion {
     private CacheObject val;
 
     /**
-     *
+     * Partition update counter for the moment of read from data store.
      */
     private long updateCounter;
 
     /**
-     *
+     * Recheck start time.
      */
     private long recheckStartTime;
 
     /**
-     *
+     * Default constructor.
      */
     public PartitionDataRow() {
     }
 
     /**
-     *
+     * @param nodeId Node id.
+     * @param key Key.
+     * @param ver Version.
+     * @param val Value.
+     * @param updateCounter Update counter.
+     * @param recheckStartTime Recheck start time.
      */
     public PartitionDataRow(UUID nodeId, KeyCacheObject key, GridCacheVersion ver, CacheObject val, long updateCounter,
         long recheckStartTime) {
@@ -64,21 +69,21 @@ public class PartitionDataRow extends PartitionKeyVersion {
     }
 
     /**
-     *
+     * @return Entry value.
      */
     public CacheObject getVal() {
         return val;
     }
 
     /**
-     *
+     * @return Partition update counter for the moment of read from data store.
      */
     public long getUpdateCounter() {
         return updateCounter;
     }
 
     /**
-     *
+     * @return Recheck start time.
      */
     public long getRecheckStartTime() {
         return recheckStartTime;
@@ -94,8 +99,7 @@ public class PartitionDataRow extends PartitionKeyVersion {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         super.readExternalData(protoVer, in);
         val = (CacheObject)in.readObject();
         updateCounter = in.readLong();

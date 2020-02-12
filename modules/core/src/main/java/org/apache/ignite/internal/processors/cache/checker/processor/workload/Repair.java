@@ -27,12 +27,12 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWor
  */
 public class Repair implements PipelineWorkload {
     /**
-     *
+     * Cache name.
      */
     private String cacheName;
 
     /**
-     *
+     * Partition ID.
      */
     private int partId;
 
@@ -46,7 +46,7 @@ public class Repair implements PipelineWorkload {
     private final UUID workloadChainId;
 
     /**
-     *
+     * Per-node values from recheck phase.
      */
     private Map<KeyCacheObject, Map<UUID, VersionedValue>> data;
 

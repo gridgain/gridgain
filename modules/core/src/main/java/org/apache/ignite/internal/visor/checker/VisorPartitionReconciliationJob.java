@@ -27,7 +27,7 @@ import org.apache.ignite.resources.JobContextResource;
 import org.jetbrains.annotations.Nullable;
 
 /**
- *  Partition reconciliation job.
+ * Partition reconciliation job.
  * @param <ResultT> Result type.
  */
 public class VisorPartitionReconciliationJob<ResultT> extends VisorJob<VisorPartitionReconciliationTaskArg, ResultT> {

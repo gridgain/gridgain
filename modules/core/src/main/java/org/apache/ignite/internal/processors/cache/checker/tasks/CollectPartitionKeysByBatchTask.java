@@ -108,8 +108,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override
-    public ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> reduce(
+    @Override public @Nullable ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         assert partBatch != null;
 

@@ -109,17 +109,17 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private final RepairAlgorithm repairAlg;
 
     /**
-     *
+     * Keys that were detected as incosistent during the reconciliation process.
      */
     private final Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
     /**
-     *
+     * Entries that were detected as inconsistent but weren't repaired due to some reason.
      */
     private final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
 
     /**
-     *
+     * Progress tracker.
      */
     private final WorkProgress workProgress = new WorkProgress();
 
@@ -159,7 +159,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     }
 
     /**
-     * @return partition reconciliation result
+     * @return Partition reconciliation result
      */
     public ExecutionResult<PartitionReconciliationResult> execute() {
         log.info(String.format(START_EXECUTION_MSG, fixMode, repairAlg, batchSize, recheckAttempts, parallelismLevel, caches));
@@ -362,7 +362,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     }
 
     /**
-     *
+     * Adds skipped keys to the total result.
      */
     private void addToPrintSkippedEntriesResult(
         String cacheName,
@@ -423,7 +423,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     }
 
     /**
-     *
+     * Adds processed keys to the total result.
      */
     private void addToPrintResult(
         String cacheName,
@@ -534,7 +534,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     }
 
     /**
-     *
+     * Reconciliation local progress tracker.
      */
     private class WorkProgress {
         /** Work progress print interval. */

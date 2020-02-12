@@ -66,7 +66,9 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     /**
-     *
+     * @param nodesIdsToConsistenceIdsMap Nodes ids to consistence ids map.
+     * @param inconsistentKeys Inconsistent keys.
+     * @param skippedEntries Skipped entries.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public PartitionReconciliationResult(
@@ -80,7 +82,10 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     }
 
     /**
-     *
+     * @param nodesIdsToConsistenceIdsMap Nodes ids to consistence ids map.
+     * @param inconsistentKeys Inconsistent keys.
+     * @param skippedCaches Skipped caches.
+     * @param skippedEntries Skipped entries.
      */
     public PartitionReconciliationResult(
         Map<UUID, String> nodesIdsToConsistenceIdsMap,

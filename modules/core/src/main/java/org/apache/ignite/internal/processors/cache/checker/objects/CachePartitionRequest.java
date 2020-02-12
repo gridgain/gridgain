@@ -22,7 +22,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWor
 import java.io.Serializable;
 
 /**
- * Uses for requests that work with partition.
+ * Used for requests that work with partition.
  */
 public abstract class CachePartitionRequest implements PipelineWorkload, Serializable {
     /** Session id. */

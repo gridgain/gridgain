@@ -36,17 +36,20 @@ public class VersionedValue implements Serializable {
     private GridCacheVersion ver;
 
     /**
-     *
+     * Partition update counter.
      */
     private long updateCntr;
 
     /**
-     *
+     * Recheck start time.
      */
     private long recheckStartTime;
 
     /**
-     *
+     * @param val Value.
+     * @param ver Version.
+     * @param updateCntr Update counter.
+     * @param recheckStartTime Recheck start time.
      */
     public VersionedValue(CacheObject val, GridCacheVersion ver, long updateCntr, long recheckStartTime) {
         this.val = val;

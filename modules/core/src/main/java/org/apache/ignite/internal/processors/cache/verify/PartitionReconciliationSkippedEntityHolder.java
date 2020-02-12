@@ -97,7 +97,7 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
     }
 
     /**
-     *
+     * Enumerates possible reasons for skipping entries.
      */
     public enum SkippingReason {
         /**
@@ -136,7 +136,7 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
          * @param ord Ordinal value.
          * @return Enumerated value or {@code null} if ordinal out of range.
          */
-        @Nullable public static SkippingReason fromOrdinal(int ord) {
+        public static @Nullable SkippingReason fromOrdinal(int ord) {
             return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
         }
     }

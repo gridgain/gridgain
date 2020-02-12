@@ -86,8 +86,7 @@ public class ExecutionResult<T> extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         result = (T)in.readObject();
         errorMessage = (String)in.readObject();
     }

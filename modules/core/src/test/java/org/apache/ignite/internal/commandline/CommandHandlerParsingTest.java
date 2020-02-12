@@ -547,10 +547,10 @@ public class CommandHandlerParsingTest {
      * 	    if unsupported value is used - IllegalArgumentException (Invalid repair algorithm: <invalid-repair-alg>.
      * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
      *
-     * --load-factor
-     * 	    if value is missing - IllegalArgumentException (The load factor should be specified.) is expected.
-     * 	    if unsupported value is used - IllegalArgumentException (Invalid load factor: <invalid-load-factor>.
-     * 	    Double value between 0 (exclusive) and 1 (inclusive) should be used.) is expected.
+     * --parallelism
+     *      Int value from [0, 128] is expected.
+     *      If value is missing of differs from metioned integer -
+     *      IllegalArgumentException (Invalid parallelism) is expected.
      *
      * --batch-size
      * 	    if value is missing - IllegalArgumentException (The batch size should be specified.) is expected.

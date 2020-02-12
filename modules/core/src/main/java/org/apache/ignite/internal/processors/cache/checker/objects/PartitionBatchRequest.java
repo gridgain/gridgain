@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.checker.objects;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Pageable partition batch request.
@@ -44,7 +45,7 @@ public class PartitionBatchRequest extends CachePartitionRequest {
     private final KeyCacheObject lowerKey;
 
     /**
-     *
+     * Reconciliation start topology version.
      */
     private final AffinityTopologyVersion startTopVer;
 
@@ -74,36 +75,32 @@ public class PartitionBatchRequest extends CachePartitionRequest {
         this.startTopVer = startTopVer;
     }
 
-    /**
-     *
-     */
+    /** {@inheritDoc} */
     @Override public int partitionId() {
         return partId;
     }
 
-    /**
-     *
-     */
+    /** {@inheritDoc} */
     @Override public String cacheName() {
         return cacheName;
     }
 
     /**
-     *
+     * @return Batch size.
      */
     public int batchSize() {
         return batchSize;
     }
 
     /**
-     *
+     * @return Lowest key of current batch.
      */
     public KeyCacheObject lowerKey() {
         return lowerKey;
     }
 
     /**
-     *
+     * @return Reconciliation start topology version.
      */
     public AffinityTopologyVersion startTopVer() {
         return startTopVer;
@@ -111,12 +108,6 @@ public class PartitionBatchRequest extends CachePartitionRequest {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return "PartitionBatchRequest{" +
-            "cacheName='" + cacheName + '\'' +
-            ", partId=" + partId +
-            ", batchSize=" + batchSize +
-            ", lowerKey=" + lowerKey +
-            ", startTopVer=" + startTopVer +
-            '}';
+        return S.toString(PartitionBatchRequest.class, this);
     }
 }

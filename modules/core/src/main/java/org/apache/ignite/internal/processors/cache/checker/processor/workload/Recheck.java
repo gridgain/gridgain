@@ -48,7 +48,13 @@ public class Recheck implements PipelineWorkload {
     private final UUID workloadChainId;
 
     /**
-     *
+     * @param sessionId Session id.
+     * @param workloadChainId Workload chain id.
+     * @param recheckKeys Recheck keys.
+     * @param cacheName Cache name.
+     * @param partId Partition id.
+     * @param recheckAttempt Recheck attempt.
+     * @param repairAttempt Repair attempt.
      */
     public Recheck(long sessionId, UUID workloadChainId,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
@@ -63,28 +69,28 @@ public class Recheck implements PipelineWorkload {
     }
 
     /**
-     *
+     * @return Recheck keys.
      */
     public Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys() {
         return recheckKeys;
     }
 
     /**
-     *
+     * @return Cache name.
      */
     public String cacheName() {
         return cacheName;
     }
 
     /**
-     *
+     * @return Partition ID.
      */
     public int partitionId() {
         return partId;
     }
 
     /**
-     *
+     * @return Recheck attempt.
      */
     public int recheckAttempt() {
         return recheckAttempt;

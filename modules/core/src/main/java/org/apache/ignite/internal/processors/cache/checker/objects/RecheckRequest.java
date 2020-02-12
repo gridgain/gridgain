@@ -58,22 +58,18 @@ public class RecheckRequest extends CachePartitionRequest {
     }
 
     /**
-     *
+     * @return Keys to recheck.
      */
     public Collection<KeyCacheObject> recheckKeys() {
         return recheckKeys;
     }
 
-    /**
-     *
-     */
+    /** {@inheritDoc} */
     @Override public String cacheName() {
         return cacheName;
     }
 
-    /**
-     *
-     */
+    /** {@inheritDoc} */
     @Override public int partitionId() {
         return partId;
     }

@@ -50,9 +50,7 @@ public class AbstractPipelineProcessor {
     /** Session identifier that allows identifying particular data flow and workload. */
     protected final long sesId;
 
-    /**
-     *
-     */
+    /** Queue. */
     private final BlockingQueue<DelayedHolder<? extends PipelineWorkload>> queue = new DelayQueue<>();
 
     /** High priority queue. */
