@@ -325,6 +325,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private int GetPartition<TKey>(TKey k)
         {
             // TODO: Calculate locally when possible (rendezvous).
+            // Is it worth the complexity? Don't think so, the case is rare, does not happen on stable topologies,
+            // happens once per key.
             return _affinity.GetPartition(k);
         }
     }
