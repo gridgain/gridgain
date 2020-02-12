@@ -16,7 +16,12 @@
 
 package org.apache.ignite.cache;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
@@ -44,6 +49,30 @@ public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
         CacheConfiguration<Integer, Integer> cacheCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
         cacheCfg.setCacheMode(CacheMode.PARTITIONED);
+
+        cacheCfg.setAffinity(new RendezvousAffinityFunction(false, 1));
+
+        cacheCfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
+
+        cacheCfg.setBackups(1);
+
+        IgniteCache<Integer, Integer> cache = grid(1).getOrCreateCache(cacheCfg);
+
+        putAllConcurrent(cache);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPutAllAtomicPartitioned() throws Exception {
+        startGrid(1);
+
+        CacheConfiguration<Integer, Integer> cacheCfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+
+        cacheCfg.setCacheMode(CacheMode.PARTITIONED);
+
+        cacheCfg.setAffinity(new RendezvousAffinityFunction(false, 1));
 
         cacheCfg.setAtomicityMode(CacheAtomicityMode.ATOMIC);
 
@@ -153,9 +182,56 @@ public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
                     for (int j = i; j < c + i; j++)
                         cache.put(j, j * c);
                 }
-                else
-                    cache.removeAll();
+                else {
+                    Set<Integer> m = new HashSet<>();
+
+                    for (int j = i; j < c + i; j++)
+                        m.add(j);
+
+                    cache.removeAll(m);
+                    //cache.removeAll();
+                }
             }
         }, THREADS);
+    }
+
+    /**
+     * @param cache Cache.
+     */
+    private void putAllConcurrent(IgniteCache<Integer, Integer> cache) throws Exception {
+        multithreaded(() -> {
+            for (int i = 0; i < 1234; i++) {
+                final int c = i % 123;
+
+                if (c % 15 != 0) {
+
+                    for (int j = i; j < c + i; j++)
+                        cache.put(j, j * c);
+                }
+                else {
+                    HashMap<Integer, Integer> m = new HashMap<>();
+
+                    for (int j = i; j < c + i; j++)
+                        m.put(j, j * c);
+
+                    cache.putAll(m);
+                    //cache.removeAll();
+                }
+            }
+        }, THREADS);
+    }
+
+    private void removeKeys(IgniteCache<Integer, Integer> cache) throws Exception {
+        cache.put(1, 111);
+        cache.put(2, 111);
+
+        Set<Integer> m = new HashSet<>();
+
+        m.add(1);
+        m.add(2);
+
+        //cache.removeAll(m);
+
+        cache.removeAll();
     }
 }

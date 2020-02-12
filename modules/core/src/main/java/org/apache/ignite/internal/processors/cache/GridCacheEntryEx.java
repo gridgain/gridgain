@@ -1163,6 +1163,11 @@ public interface GridCacheEntryEx {
     public void lockEntry();
 
     /**
+     *
+     */
+    public void lockEntry(boolean nestedLocksAreAllowed) throws IgniteCheckedException;
+
+    /**
      * Unlocks entry previously locked by {@link GridCacheEntryEx#lockEntry()}.
      */
     public void unlockEntry();
