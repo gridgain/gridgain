@@ -41,7 +41,7 @@ import org.junit.Test;
 import static org.apache.ignite.jdbc.JdbcTestUtils.sql;
 
 /**
- * Thin client authorization with Native Ignite authentication tests.
+ * Checks JDBC thin client on different timezones.
  */
 public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /** Jdbc thin url. */
@@ -84,7 +84,7 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void test() throws Exception {
+    public void testEnableTimezone() throws Exception {
         for (String tz : TIME_ZONES) {
             insertObjectByLegacyApi(URL, TimeZone.getTimeZone(tz));
             insertObjectByModernApi(URL, TimeZone.getTimeZone(tz));

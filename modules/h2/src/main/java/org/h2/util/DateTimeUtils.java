@@ -1582,10 +1582,17 @@ public class DateTimeUtils {
         return nanosOfDay - mod;
     }
 
+    /**
+     * @return Server time zone is used to convert date.
+     */
     private static TimeZone getTimeZone() {
         return timeZone;
     }
 
+    /**
+     * Sets  time zone for the node that is used to convert date.
+     * @param tz Server time zone is used to convert date.
+     */
     private static void setTimeZone(TimeZone tz) {
         timeZone = tz;
     }

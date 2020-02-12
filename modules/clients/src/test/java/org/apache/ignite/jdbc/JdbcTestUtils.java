@@ -28,7 +28,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Tests for complex queries (joins, etc.).
+ * Utility methods for JDBC tests.
  */
 public final class JdbcTestUtils {
     /** Jdbc thin url. */
