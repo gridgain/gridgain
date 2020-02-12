@@ -75,7 +75,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                         return true;
                     }
 
-                    // TODO: Remove from map atomically, otherwise we risk wasting memory.
+                    // Remove invalid entry to free up memory.
+                    // NOTE: We may end up removing a good entry that was inserted concurrently,
+                    // but this does not violate correctness, only causes a potential near cache miss.
+                    map.TryRemove(key, out entry);
                     val = default(TVal);
                     return false;
                 }
@@ -84,10 +87,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (_fallbackMap != null)
             {
                 NearCacheEntry<object> fallbackEntry;
-                if (_fallbackMap.TryGetValue(key, out fallbackEntry) && IsValid(key, fallbackEntry))
+                if (_fallbackMap.TryGetValue(key, out fallbackEntry))
                 {
-                    val = (TVal) fallbackEntry.Val;
-                    return true;
+                    if (IsValid(key, fallbackEntry))
+                    {
+                        val = (TVal) fallbackEntry.Val;
+                        return true;
+                    }
+
+                    _fallbackMap.TryRemove(key, out fallbackEntry);
                 }
             }
 
