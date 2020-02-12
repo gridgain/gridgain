@@ -237,24 +237,22 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 // Change topology randomly.
                 var idx = rnd.Next(1, 5);
-                var primaryLeft = false;
-                string status;
-
                 Console.WriteLine(">>> Changing topology: " + idx);
+                
                 if (_ignite[idx] == null)
                 {
                     InitNode(idx, waitForPrimary: false);
-                    
-                    status = string.Format("Node started: {0}, current val: {1}", idx, val);
                 }
                 else
                 {
                     StopNode(idx);
-
-                    status = string.Format("Node stopped: {0}, data lost: {1}, current val: {2}", idx, primaryLeft, val);
                 }
 
                 var dataLost = serverCache.GetSize() == 0;
+                var status = string.Format("Node {0}: {1}, data lost: {2}, current val: {3}",
+                    _ignite[idx] == null ? "stopped" : "started", idx, dataLost, val);
+                
+                Console.WriteLine(">>> " + status);
                 
                 // Verify data.
                 if (dataLost)
