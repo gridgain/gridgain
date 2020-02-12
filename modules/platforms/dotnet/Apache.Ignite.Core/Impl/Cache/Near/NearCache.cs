@@ -255,7 +255,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 _fallbackMap = new ConcurrentDictionary<object, NearCacheEntry<object>>();
             }
         }
-        
 
         /// <summary>
         /// Checks whether specified cache entry is still valid, based on Affinity Topology Version.
@@ -272,16 +271,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
         private bool IsValid<TKey, TVal>(TKey key, NearCacheEntry<TVal> entry, AffinityTopologyVersion? version = null)
         {
-            var ver = version ?? _affinityTopologyVersionFunc();
-
-            if (entry.Version >= ver)
+            var currentVer = version ?? _affinityTopologyVersionFunc();
+            var entryVer = entry.Version;
+            
+            if (entryVer >= currentVer)
             {
                 return true;
             }
 
             // TODO: Update entry with ver to reduce the cost of future checks.
             var part = entry.Partition == UnknownPartition ? GetPartition(key) : entry.Partition;
-            return _affinity.IsAssignmentValid(entry.Version, part);
+            return _affinity.IsAssignmentValid(entryVer, part);
         }
 
         private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
