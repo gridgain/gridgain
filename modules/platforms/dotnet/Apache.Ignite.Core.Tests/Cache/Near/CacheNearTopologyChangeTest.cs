@@ -220,8 +220,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestContinuousTopologyChangeMaintainsCorrectNearCacheData([Values(0, 1, 2)] int backups)
         {
-            // TODO: Restore MBEANS and debug failure.
-            
             // Start 5 servers and 1 client.
             // Server 0 and client node always run
             // Other servers start and stop periodically.
@@ -242,7 +240,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 var primaryLeft = false;
                 string status;
 
-                Console.WriteLine(">>> Changing topology...");
+                Console.WriteLine(">>> Changing topology: " + idx);
                 if (_ignite[idx] == null)
                 {
                     InitNode(idx, waitForPrimary: false);
