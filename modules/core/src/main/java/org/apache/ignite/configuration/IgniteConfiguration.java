@@ -436,6 +436,7 @@ public class IgniteConfiguration {
     private TransactionConfiguration txCfg = new TransactionConfiguration();
 
     /** */
+    @Deprecated
     private PluginConfiguration[] pluginCfgs;
 
     /** Flag indicating whether cache sanity check is enabled. */
@@ -563,6 +564,7 @@ public class IgniteConfiguration {
     /** SQL schemas to be created on node start. */
     private String[] sqlSchemas;
 
+
     /** Global memory quota. */
     private String sqlGlobalMemoryQuota = DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA;
 
@@ -571,6 +573,9 @@ public class IgniteConfiguration {
 
     /** Offloading enabled flag - whether to start offloading where quota is exceeded or throw an exception. */
     private boolean sqlOffloadingEnabled = DFLT_SQL_QUERY_OFFLOADING_ENABLED;
+
+    /** Plugin providers. */
+    private PluginProvider[] pluginProvs;
 
     /**
      * Creates valid grid configuration with all default values.
@@ -663,6 +668,7 @@ public class IgniteConfiguration {
         p2pPoolSize = cfg.getPeerClassLoadingThreadPoolSize();
         platformCfg = cfg.getPlatformConfiguration();
         pluginCfgs = cfg.getPluginConfigurations();
+        pluginProvs = cfg.getPluginProviders();
         pubPoolSize = cfg.getPublicThreadPoolSize();
         qryPoolSize = cfg.getQueryThreadPoolSize();
         rebalanceThreadPoolSize = cfg.getRebalanceThreadPoolSize();
@@ -2993,6 +2999,7 @@ public class IgniteConfiguration {
      * @return Plugin configurations.
      * @see PluginProvider
      */
+    @Deprecated
     public PluginConfiguration[] getPluginConfigurations() {
         return pluginCfgs;
     }
@@ -3003,7 +3010,10 @@ public class IgniteConfiguration {
      * @param pluginCfgs Plugin configurations.
      * @return {@code this} for chaining.
      * @see PluginProvider
+     * @deprecated Since {@link PluginProvider}s can be set explicitly via {@link #setPluginProviders(PluginProvider[])}
+     * it's preferable to store {@link PluginConfiguration} as a part of {@link PluginProvider}.
      */
+    @Deprecated
     public IgniteConfiguration setPluginConfigurations(PluginConfiguration... pluginCfgs) {
         this.pluginCfgs = pluginCfgs;
 
@@ -3475,6 +3485,27 @@ public class IgniteConfiguration {
      */
     public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
         this.sqlOffloadingEnabled = offloadingEnabled;
+
+        return this;
+    }
+
+    /**
+     * Gets plugin providers.
+     *
+     * @return Plugin providers.
+     */
+    public PluginProvider[] getPluginProviders() {
+        return pluginProvs;
+    }
+
+    /**
+     * Sets plugin providers.
+     *
+     * @param pluginProvs Plugin providers.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setPluginProviders(PluginProvider... pluginProvs) {
+        this.pluginProvs = pluginProvs;
 
         return this;
     }
