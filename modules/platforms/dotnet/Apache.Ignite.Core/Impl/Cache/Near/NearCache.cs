@@ -190,7 +190,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             {
                 if (hasVal)
                 {
-                    map[(TK) key] = new NearCacheEntry<TV>((TV)val, ver, part);
+                    // Reuse existing boxed copy when possible to reduce allocations.
+                    var currentVerBoxed = _affinityTopologyVersionFunc();
+                    var verBoxed = (AffinityTopologyVersion) currentVerBoxed == ver ? currentVerBoxed : ver;
+                    
+                    map[(TK) key] = new NearCacheEntry<TV>((TV) val, verBoxed, part);
                 }
                 else
                 {
