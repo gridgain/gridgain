@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System.Diagnostics;
+    using System.Threading;
     using Apache.Ignite.Core.Cache.Affinity;
 
     /// <summary>
@@ -52,13 +53,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public object Version
         {
             get { return _version; }
-            set { _version = value; }
         }
 
         public int Partition
         {
             get { return _partition; }
             set { _partition = value; }
+        }
+
+        /// <summary>
+        /// Sets new version using <see cref="Interlocked.CompareExchange(ref object,object,object)"/>.
+        /// </summary>
+        public void CompareExchangeVersion(object newVal, object oldVal)
+        {
+            Interlocked.CompareExchange(ref _version, newVal, oldVal);
         }
     }
 }

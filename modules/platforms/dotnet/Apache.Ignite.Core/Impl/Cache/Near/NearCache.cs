@@ -308,13 +308,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (valid)
             {
                 // Update entry with current version and known partition to speed up future checks.
+                // Partition can only change from UnknownPartition to an actual value that never changes for the key,
+                // so this is thread-safe.
                 entry.Partition = part;
-                entry.Version = currentVerBoxed;
+                
+                // Version could be set concurrently, use CompareExchange.
+                entry.CompareExchangeVersion(currentVerBoxed, entryVerBoxed);
             }
             else
             {
                 // Mark as invalid.
-                entry.Version = null;
+                entry.CompareExchangeVersion(null, entryVerBoxed);
             }
 
             return valid;
