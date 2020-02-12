@@ -33,16 +33,15 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ThrowUp;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.TOPOLOGY_CHANGE_MSG;
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHING;
 
 /**
- *
+ * Tests different scenario of interruption of recheck stage.
  */
 public class PartitionReconciliationInterruptionRecheckTest extends PartitionReconciliationInterruptionTest {
     /**
-     *
+     * Stop node during check.
      */
     @Test
     public void testStopNodeDuringCheck() throws Exception {
@@ -54,7 +53,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Start new node during check.
      */
     @Test
     public void testStartNewNodeDuringCheck() throws Exception {
@@ -66,7 +65,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Start new client node during check.
      */
     @Test
     public void testStartNewClientNodeDuringCheck() throws Exception {
@@ -80,7 +79,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Stop client node during check.
      */
     @Test
     public void testStopClientNodeDuringCheck() throws Exception {
@@ -96,7 +95,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Start new thin client node during check.
      */
     @Test
     public void testStartNewThinClientNodeDuringCheck() throws Exception {
@@ -110,7 +109,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Stop thin client node during check.
      */
     @Test
     public void testStopThinClientNodeDuringCheck() throws Exception {
@@ -126,7 +125,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Create cache during check.
      */
     @Test
     public void testCreateCacheDuringCheck() throws Exception {
@@ -138,7 +137,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Remove not processed cache during check.
      */
     @Test
     public void testRemoveNotProcessedCacheDuringCheck() throws Exception {
@@ -151,7 +150,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
     }
 
     /**
-     *
+     * Remove processed cache during check.
      */
     @Test
     public void testRemoveProcessedCacheDuringCheck() throws Exception {
@@ -204,7 +203,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.fixMode(false);
         builder.batchSize(batchSize);
-        builder.loadFactor(0.0001);
+        builder.parallelism(1);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
         builder.console(true);
         builder.recheckAttempts(0);

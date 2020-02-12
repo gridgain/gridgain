@@ -28,13 +28,14 @@ import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm
 import static org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm.REMOVE;
 
 /**
- *
+ * Tests the utility under loading.
  */
 public class PartitionReconciliationFixStressTest extends PartitionReconciliationStressTest {
     /**
-     *
+     * Makes different variations of input params.
      */
-    @Parameterized.Parameters(name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm={3}")
+    @Parameterized.Parameters(
+        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
@@ -47,8 +48,11 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
                 for (RepairAlgorithm repairAlgorithm : repairAlgorithms)
-                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm});
+                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm, 4});
         }
+
+        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, true, LATEST, 1});
+        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, true, PRIMARY, 1});
 
         return params;
     }
@@ -58,8 +62,8 @@ public class PartitionReconciliationFixStressTest extends PartitionReconciliatio
      *
      * @throws Exception If failed.
      */
-    @Test
-    public void testReconciliationOfColdKeysUnderLoad() throws Exception {
+     @Test
+     @Override public void testReconciliationOfColdKeysUnderLoad() throws Exception {
         super.testReconciliationOfColdKeysUnderLoad();
 
         assertFalse(idleVerify(ig, DEFAULT_CACHE_NAME).hasConflicts());

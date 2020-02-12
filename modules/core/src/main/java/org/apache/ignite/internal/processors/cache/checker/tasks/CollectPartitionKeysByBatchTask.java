@@ -28,7 +28,6 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
-import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
@@ -109,8 +108,7 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override
-    public ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> reduce(
+    @Override public @Nullable ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> reduce(
         List<ComputeJobResult> results) throws IgniteException {
         assert partBatch != null;
 
@@ -175,32 +173,29 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
     /**
      *
      */
-    public static class CollectPartitionKeysByBatchJob extends ComputeJobAdapter {
+    public static class CollectPartitionKeysByBatchJob extends ReconciliationResourceLimitedJob {
         /**
          *
          */
         private static final long serialVersionUID = 0L;
 
-        /** Ignite instance. */
-        @IgniteInstanceResource
-        private IgniteEx ignite;
-
-        /** Injected logger. */
-        @LoggerResource
-        private IgniteLogger log;
-
         /** Partition key. */
         private PartitionBatchRequest partBatch;
 
         /**
-         * @param partKey Partition key.
+         * @param partBatch Partition key.
          */
         private CollectPartitionKeysByBatchJob(PartitionBatchRequest partBatch) {
             this.partBatch = partBatch;
         }
 
         /** {@inheritDoc} */
-        @Override public ExecutionResult<List<PartitionKeyVersion>> execute() throws IgniteException {
+        @Override protected long sessionId() {
+            return partBatch.sessionId();
+        }
+
+        /** {@inheritDoc} */
+        @Override protected ExecutionResult<List<PartitionKeyVersion>> execute0() {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(partBatch.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();

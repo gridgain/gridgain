@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.verify;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
@@ -31,7 +32,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * </ul>
  */
 public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** Boolean flag that indicates whether data was fixed or not. */
@@ -99,6 +102,9 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
         return repairAlg;
     }
 
+    /**
+     * @return string view.
+     */
     public String stringView(boolean verbose) {
         return "fixed=" + fixed + ", new_val=" + (val != null ? val.stringView(verbose) : "null") +
             ", repairAlg=" + repairAlg;
@@ -115,8 +121,10 @@ public class PartitionReconciliationRepairMeta extends IgniteDataTransferObject 
 
         if (fixed != meta.fixed)
             return false;
-        if (val != null ? !val.equals(meta.val) : meta.val != null)
+
+        if (!Objects.equals(val, meta.val))
             return false;
+
         return repairAlg == meta.repairAlg;
     }
 }

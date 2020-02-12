@@ -17,20 +17,29 @@
 package org.apache.ignite.internal.processors.cache.checker.processor;
 
 /**
- *
+ * Description of contract for {@link ReconciliationEventListener}.
  */
 public interface ReconciliationEventListener {
     /**
-     *
+     * State of workload lifecycle.
      */
     enum WorkLoadStage {
+        /**
+         * It means that workload added to queue.
+         */
         PLANNED,
+        /**
+         * It means that a compute result fetched and ready to process.
+         */
         STARTING,
+        /**
+         * It means that processing finished.
+         */
         FINISHING
     }
 
     /**
-     *
+     * Process event.
      */
     void registerEvent(WorkLoadStage stage, PipelineWorkload workload);
 }

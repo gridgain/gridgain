@@ -30,7 +30,6 @@ import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -54,9 +53,6 @@ import org.junit.Test;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.SESSION_CHANGE_MSG;
-import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.AVAILABLE_PROCESSORS_RECONCILIATION;
-
-// TODO: 26.12.19 Add to appropriate suites.
 
 /**
  * Tests for checking partition reconciliation.
@@ -124,7 +120,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Checks that the start message exist.
      */
     @Test
     @WithSystemProperty(key = "RECONCILIATION_WORK_PROGRESS_PRINT_INTERVAL", value = "0")
@@ -140,46 +136,6 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
         assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--repair", "MAJORITY", "--recheck-attempts", "1"));
 
         assertTrue(lsnr.check(10_000));
-    }
-
-    /**
-     * Check that passing -load_factor parameter actually affects maximum number of simultaneously executing tasks.
-     */
-    @Test
-    public void testLoadFactorAffectValuesInProcessor() throws Exception {
-        String regexp = "Partition reconciliation started.*parallelismLevel: %s.*";
-        LogListener lsnrOneLevel = LogListener.matches(s -> s.matches(String.format(regexp, 1))).atLeast(1).build();
-        log.registerListener(lsnrOneLevel);
-
-        LogListener lsnrTwoLevel = LogListener.matches(s -> s.matches(String.format(regexp, 2))).atLeast(1).build();
-        log.registerListener(lsnrTwoLevel);
-
-        startGrids(3);
-
-        IgniteEx ignite = grid(0);
-        ignite.cluster().active(true);
-
-        ignite.getOrCreateCache(new CacheConfiguration<>("100_backups").setBackups(100));
-
-        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "4");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups", "--load-factor", "0.0001"));
-        assertTrue(lsnrOneLevel.check(10_000));
-
-        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "220");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups", "--load-factor", "1"));
-        assertTrue(lsnrTwoLevel.check(10_000));
-
-        ignite.getOrCreateCache(new CacheConfiguration<>("100_backups_replicated").setCacheMode(CacheMode.REPLICATED).setBackups(100));
-
-        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "4");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups_replicated", "--load-factor", "0.0001"));
-        assertTrue(lsnrOneLevel.check(10_000));
-
-        System.setProperty(AVAILABLE_PROCESSORS_RECONCILIATION, "120");
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "100_backups_replicated", "--load-factor", "1"));
-        assertTrue(lsnrTwoLevel.check(10_000));
-
-        System.clearProperty(AVAILABLE_PROCESSORS_RECONCILIATION);
     }
 
     /**
@@ -261,7 +217,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Checks that a wrong cache name leads to interruption of utility.
      */
     @Test
     public void testWrongCacheNameTerminatesOperation() throws Exception {
@@ -291,7 +247,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Extract cache names which used for a start.
      */
     private LogListener fillCacheNames(Set<String> usedCaches) {
         Pattern r = Pattern.compile("Partition reconciliation started.*caches: \\[(.*)\\]\\].*");
@@ -311,7 +267,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
     }
 
     /**
-     *
+     * Extract reconciliation sessionId.
      */
     private long reconciliationSessionId() {
         List<Ignite> srvs = G.allGrids().stream().filter(g -> !g.configuration().getDiscoverySpi().isClientMode()).collect(toList());
@@ -320,7 +276,7 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
 
         do {
             collect = srvs.stream()
-                .map(g -> ((IgniteEx)g).context().diagnostic().getReconciliationSessionId())
+                .map(g -> ((IgniteEx)g).context().diagnostic().reconciliationExecutionContext().sessionId())
                 .distinct()
                 .collect(toList());
         }
@@ -336,8 +292,6 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      *
      * @param ctx Context.
      * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
      */
     protected void corruptDataEntry(
         GridCacheContext<Object, Object> ctx,

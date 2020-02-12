@@ -193,7 +193,7 @@ public class PartitionReconciliationBinaryObjectsTest extends PartitionReconcili
 
         ig.cluster().active(true);
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, DEFAULT_CACHE_NAME);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, RepairAlgorithm.PRIMARY, 4, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 

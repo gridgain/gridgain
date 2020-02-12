@@ -44,13 +44,13 @@ import static org.apache.ignite.internal.processors.cache.checker.processor.Reco
 import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.STARTING;
 
 /**
- *
+ * Abstraction for the control unit of work.
  */
 public class AbstractPipelineProcessor {
     /** Session identifier that allows identifying particular data flow and workload. */
     protected final long sesId;
 
-    /** */
+    /** Queue. */
     private final BlockingQueue<DelayedHolder<? extends PipelineWorkload>> queue = new DelayQueue<>();
 
     /** High priority queue. */
@@ -102,14 +102,14 @@ public class AbstractPipelineProcessor {
     }
 
     /**
-     *
+     * Register event listener.
      */
     public void registerListener(ReconciliationEventListener evtLsnr) {
         this.evtLsnr = evtLsnr;
     }
 
     /**
-     *
+     * @return true if current topology version isn't equal start topology.
      */
     protected boolean topologyChanged() throws IgniteCheckedException {
         AffinityTopologyVersion currVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
@@ -118,33 +118,33 @@ public class AbstractPipelineProcessor {
     }
 
     /**
-     *
+     * @return true if other session exist or interrupted.
      */
     protected boolean isSessionExpired() {
-        return ignite.context().diagnostic().getReconciliationSessionId() != sesId;
+        return ignite.context().diagnostic().reconciliationExecutionContext().sessionId() != sesId;
     }
 
     /**
-     *
+     * @return true if some of job register an error.
      */
     protected boolean isInterrupted() {
         return error.get() != null;
     }
 
     /**
-     *
+     * @return count of live listener.
      */
     protected boolean hasLiveHandlers() {
         return parallelismLevel != liveListeners.availablePermits();
     }
 
     /**
-     *
+     * Wait to finish of mission-critical jobs before stopping.
      */
     protected void waitWorkFinish() {
         while (hasLiveHandlers()) {
             try {
-                Thread.sleep(300);
+                Thread.sleep(100);
             }
             catch (InterruptedException ignore) {
             }
@@ -152,14 +152,14 @@ public class AbstractPipelineProcessor {
     }
 
     /**
-     *
+     * @return true if tasks for processing doesn't exist.
      */
     protected boolean isEmpty() {
         return highPriorityQueue.isEmpty() && queue.isEmpty();
     }
 
     /**
-     *
+     * @return {@link PipelineWorkload} from queue of tasks.
      */
     protected PipelineWorkload takeTask() throws InterruptedException {
         return !highPriorityQueue.isEmpty() ? highPriorityQueue.take().getTask() : queue.take().getTask();
@@ -222,7 +222,7 @@ public class AbstractPipelineProcessor {
     }
 
     /**
-     *
+     * Schedule with duration -1;
      */
     protected void scheduleHighPriority(PipelineWorkload task) {
         try {
@@ -256,7 +256,7 @@ public class AbstractPipelineProcessor {
     }
 
     /**
-     *
+     * @return Set of partition owners.
      */
     private ClusterGroup partOwners(String cacheName, int partId) {
         Collection<ClusterNode> nodes = ignite.cachex(cacheName).context().topology().owners(partId, startTopVer);

@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PartitionRe
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessorTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationRecheckAttemptsTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationStressTest;
+import org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationResourceLimitedJobTest;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByBatchTaskTest;
 import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitionKeysByRecheckRequestTaskTest;
 import org.apache.ignite.internal.processors.cache.checker.tasks.RepairEntryProcessorTest;
@@ -84,6 +85,7 @@ public class PartitionReconciliationTestSuite {
         GridTestUtils.addTestIfNeeded(suite, ConsistencyCheckUtilsTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, RepairEntryProcessorTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, RepairRequestTaskTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ReconciliationResourceLimitedJobTest.class, ignoredTests);
 
         return suite;
     }

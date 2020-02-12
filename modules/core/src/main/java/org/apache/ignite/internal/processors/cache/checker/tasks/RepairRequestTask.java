@@ -46,7 +46,6 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.verify.RepairMeta;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.processors.task.GridInternal;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
@@ -59,10 +58,14 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  */
 @GridInternal
 public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, ExecutionResult<RepairResult>> {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
-    /** */
+    /**
+     *
+     */
     public static final int MAX_REPAIR_ATTEMPTS = 3;
 
     /** Injected logger. */
@@ -87,7 +90,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
         Map<UUID, Map<KeyCacheObject, Map<UUID, VersionedValue>>> targetNodesToData = new HashMap<>();
 
-        for (Map.Entry<KeyCacheObject, Map<UUID, VersionedValue>> dataEntry: repairReq.data().entrySet()) {
+        for (Map.Entry<KeyCacheObject, Map<UUID, VersionedValue>> dataEntry : repairReq.data().entrySet()) {
             KeyCacheObject keyCacheObj;
 
             GridCacheContext<Object, Object> ctx = ignite.cachex(repairReq.cacheName()).context();
@@ -197,7 +200,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
      * Repair job.
      */
     protected static class RepairJob extends ComputeJobAdapter {
-        /** */
+        /**
+         *
+         */
         private static final long serialVersionUID = 0L;
 
         /** Ignite instance. */
@@ -253,7 +258,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         @SuppressWarnings("unchecked") @Override public ExecutionResult<RepairResult> execute() throws IgniteException {
             Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
 
-            Map<T2<PartitionKeyVersion, RepairMeta>, Map<UUID, VersionedValue>> repairedKeys =
+            Map<PartitionKeyVersion, RepairMeta> repairedKeys =
                 new HashMap<>();
 
             GridCacheContext ctx = ignite.cachex(cacheName).context();
@@ -342,14 +347,13 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                         keysToRepairWithNextAttempt.put(dataEntry.getKey(), dataEntry.getValue());
                     else {
                         repairedKeys.put(
-                            new T2<>(
-                                dataEntry.getKey(),
-                                new RepairMeta(
-                                    true,
-                                    valToFixWith,
-                                    usedRepairAlg)
-                            ),
-                            dataEntry.getValue());
+                            dataEntry.getKey(),
+                            new RepairMeta(
+                                true,
+                                valToFixWith,
+                                usedRepairAlg,
+                                dataEntry.getValue()
+                            ));
                     }
                 }
                 catch (IgniteCheckedException e) {

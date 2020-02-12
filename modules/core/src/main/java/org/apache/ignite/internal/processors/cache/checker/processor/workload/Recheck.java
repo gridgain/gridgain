@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWor
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 
 /**
- *
+ * Work container for recheck stage.
  */
 public class Recheck implements PipelineWorkload {
     /** Recheck keys. */
@@ -33,58 +33,67 @@ public class Recheck implements PipelineWorkload {
     private final String cacheName;
 
     /** Partition id. */
-    private final int partitionId;
+    private final int partId;
 
     /** Attempt number. */
-    private final int attempt;
+    private final int recheckAttempt;
 
     /** Repair attempt. */
     private final int repairAttempt;
 
-    /**
-     *
-     */
-    private final UUID sessionId;
+    /** Session id. */
+    private final long sessionId;
+
+    /** Workload chain id. */
+    private final UUID workloadChainId;
 
     /**
-     *
+     * @param sessionId Session id.
+     * @param workloadChainId Workload chain id.
+     * @param recheckKeys Recheck keys.
+     * @param cacheName Cache name.
+     * @param partId Partition id.
+     * @param recheckAttempt Recheck attempt.
+     * @param repairAttempt Repair attempt.
      */
-    public Recheck(UUID sessionId, Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
-        int partitionId, int attempt, int repairAttempt) {
+    public Recheck(long sessionId, UUID workloadChainId,
+        Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
+        int partId, int recheckAttempt, int repairAttempt) {
         this.sessionId = sessionId;
+        this.workloadChainId = workloadChainId;
         this.recheckKeys = recheckKeys;
         this.cacheName = cacheName;
-        this.partitionId = partitionId;
-        this.attempt = attempt;
+        this.partId = partId;
+        this.recheckAttempt = recheckAttempt;
         this.repairAttempt = repairAttempt;
     }
 
     /**
-     *
+     * @return Recheck keys.
      */
     public Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys() {
         return recheckKeys;
     }
 
     /**
-     *
+     * @return Cache name.
      */
     public String cacheName() {
         return cacheName;
     }
 
     /**
-     *
+     * @return Partition ID.
      */
     public int partitionId() {
-        return partitionId;
+        return partId;
     }
 
     /**
-     *
+     * @return Recheck attempt.
      */
-    public int attempt() {
-        return attempt;
+    public int recheckAttempt() {
+        return recheckAttempt;
     }
 
     /**
@@ -95,7 +104,12 @@ public class Recheck implements PipelineWorkload {
     }
 
     /** {@inheritDoc} */
-    @Override public UUID getSessionId() {
+    @Override public long sessionId() {
         return sessionId;
+    }
+
+    /** {@inheritDoc} */
+    @Override public UUID workloadChainId() {
+        return workloadChainId;
     }
 }

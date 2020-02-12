@@ -23,32 +23,47 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+/**
+ * Container for skipped entries with their reason.
+ */
 public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
+    /** Skipped entity. */
     private T skippedEntity;
 
+    /** Skipping reason. */
     private SkippingReason skippingReason;
 
+    /**
+     * Default constructor.
+     */
     public PartitionReconciliationSkippedEntityHolder() {
     }
 
+    /**
+     * @param skippedEntity Skipped entity.
+     * @param skippingReason Skipping reason.
+     */
     public PartitionReconciliationSkippedEntityHolder(T skippedEntity,
         SkippingReason skippingReason) {
         this.skippedEntity = skippedEntity;
         this.skippingReason = skippingReason;
     }
 
-    @Override protected void
-    writeExternalData(ObjectOutput out) throws IOException {
+    /** {@inheritDoc} */
+    @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(skippedEntity);
         U.writeEnum(out, skippingReason);
     }
 
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        skippedEntity = (T) in.readObject();
+    /** {@inheritDoc} */
+    @Override protected void readExternalData(byte protoVer,
+        ObjectInput in) throws IOException, ClassNotFoundException {
+        skippedEntity = (T)in.readObject();
 
         skippingReason = SkippingReason.fromOrdinal(in.readByte());
     }
@@ -81,16 +96,26 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
         this.skippingReason = skippingReason;
     }
 
-    /** */
+    /**
+     * Enumerates possible reasons for skipping entries.
+     */
     public enum SkippingReason {
-        /** */
+        /**
+         *
+         */
         ENTITY_WITH_TTL("Given entity has ttl enabled."),
 
-        /** */
+        /**
+         *
+         */
         KEY_WAS_NOT_REPAIRED("Key was not repaired. Repair attempts were over.");
 
+        /** Reason. */
         private String reason;
 
+        /**
+         * @param reason Reason.
+         */
         SkippingReason(String reason) {
             this.reason = reason;
         }
@@ -102,7 +127,6 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
             return reason;
         }
 
-
         /** Enumerated values. */
         private static final SkippingReason[] VALS = values();
 
@@ -112,7 +136,7 @@ public class PartitionReconciliationSkippedEntityHolder<T> extends IgniteDataTra
          * @param ord Ordinal value.
          * @return Enumerated value or {@code null} if ordinal out of range.
          */
-        @Nullable public static SkippingReason fromOrdinal(int ord) {
+        public static @Nullable SkippingReason fromOrdinal(int ord) {
             return ord >= 0 && ord < VALS.length ? VALS[ord] : null;
         }
     }

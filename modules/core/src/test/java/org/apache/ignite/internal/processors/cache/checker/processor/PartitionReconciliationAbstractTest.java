@@ -22,22 +22,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
-import org.apache.ignite.binary.BinaryObject;
-import org.apache.ignite.cache.CacheEntry;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
-import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.KeyCacheObject;
-import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationDataRowMeta;
 import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationKeyMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
@@ -48,20 +38,23 @@ import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
+
 /**
- *
+ * Abstract utility class for partition reconciliation testing.
  */
 public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest {
     /**
      *
      */
     public static ReconciliationResult partitionReconciliation(Ignite ig, boolean fixMode,
-        @Nullable RepairAlgorithm repairAlgorithm, String... caches) {
+        @Nullable RepairAlgorithm repairAlgorithm, int parallelism, String... caches) {
         return partitionReconciliation(
             ig,
             new VisorPartitionReconciliationTaskArg.Builder()
                 .caches(new HashSet<>(Arrays.asList(caches)))
                 .recheckDelay(1)
+                .parallelism(parallelism)
                 .fixMode(fixMode)
                 .repairAlg(repairAlgorithm)
         );
@@ -102,8 +95,7 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
     }
 
     /**
-     * @param res Response.
-     * @param cacheName Cache name.
+     *
      */
     public static Set<PartitionReconciliationKeyMeta> conflictKeyMetas(ReconciliationResult res, String cacheName) {
         return res.partitionReconciliationResult().inconsistentKeys().get(cacheName)
@@ -140,75 +132,5 @@ public class PartitionReconciliationAbstractTest extends GridCommonAbstractTest 
         GridCacheAdapter<Object, Object> cache = (GridCacheAdapter<Object, Object>)ctx.cache();
 
         cache.clearLocally(key);
-    }
-
-    /**
-     * TODO we need to stop copypasting this code to every test.
-     *
-     * Corrupts data entry.
-     *
-     * @param ctx Context.
-     * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
-     * @param ver GridCacheVersion to use.
-     * @param brokenValPostfix Postfix to add to value if breakData flag is set to true.
-     */
-    private static void corruptDataEntry(
-        GridCacheContext<?, ?> ctx,
-        Object key,
-        boolean breakCntr,
-        boolean breakData,
-        GridCacheVersion ver,
-        String brokenValPostfix
-    ) {
-        int partId = ctx.affinity().partition(key);
-
-        try {
-            long updateCntr = ctx.topology().localPartition(partId).updateCounter();
-
-            CacheEntry<Object, Object> e = ctx.cache().keepBinary().getEntry(key);
-
-            Object valToPut = e.getValue();
-
-            KeyCacheObject keyCacheObj = e.getKey() instanceof BinaryObject ?
-                (KeyCacheObject)e.getKey() :
-                new KeyCacheObjectImpl(e.getKey(), null, partId);
-
-            if (breakCntr)
-                updateCntr++;
-
-            if (breakData)
-                valToPut = e.getValue().toString() + brokenValPostfix;
-
-            // Create data entry
-
-            DataEntry dataEntry = new DataEntry(
-                ctx.cacheId(),
-                keyCacheObj,
-                new CacheObjectImpl(valToPut, null),
-                GridCacheOperation.UPDATE,
-                new GridCacheVersion(),
-                ver,
-                0L,
-                partId,
-                updateCntr
-            );
-
-            IgniteCacheDatabaseSharedManager db = ctx.shared().database();
-
-            db.checkpointReadLock();
-
-            try {
-                U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry,
-                    false);
-            }
-            finally {
-                db.checkpointReadUnlock();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            e.printStackTrace();
-        }
     }
 }

@@ -20,8 +20,6 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 
-// TODO: 20.11.19 Add to appropriate suites.
-
 /**
  * Tests for checking partition reconciliation control.sh command within context of replicated persistent cache.
  */

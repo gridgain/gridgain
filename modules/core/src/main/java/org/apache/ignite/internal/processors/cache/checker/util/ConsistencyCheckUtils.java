@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,9 +33,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -55,11 +52,9 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static java.io.File.separatorChar;
-import static org.apache.ignite.IgniteSystemProperties.getInteger;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
- *
+ * Utility class for the partition reconciliation.
  */
 public class ConsistencyCheckUtils {
     /**
@@ -67,16 +62,11 @@ public class ConsistencyCheckUtils {
      */
     public static final String RECONCILIATION_DIR = "reconciliation";
 
-    /**
-     *
-     */
-    public static final String AVAILABLE_PROCESSORS_RECONCILIATION = "AVAILABLE_PROCESSORS_RECONCILIATION";
-
     /** Time formatter for log file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss_SSS");
 
     /**
-     *
+     * Give old and actual keys does check and returns set with unresolved conflicts.
      */
     public static Map<KeyCacheObject, Map<UUID, GridCacheVersion>> checkConflicts(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> oldKeys,
@@ -87,7 +77,6 @@ public class ConsistencyCheckUtils {
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> keysWithConflicts = new HashMap<>();
 
         // Actual keys are a subset of old keys.
-        // TODO: 05.12.19 Seems that it's not correct to use keyCacheObject.equals() here.
         for (Map.Entry<KeyCacheObject, Map<UUID, GridCacheVersion>> keyEntry : oldKeys.entrySet()) {
             KeyCacheObject key = keyEntry.getKey();
             Map<UUID, GridCacheVersion> oldKeyVers = keyEntry.getValue();
@@ -137,7 +126,7 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * Does check that key already consistent.
      */
     public static boolean checkConsistency(Map<UUID, GridCacheVersion> oldKeyVers,
         Map<UUID, VersionedValue> actualKeyVers, int ownerSize) {
@@ -259,10 +248,9 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * @return set of node ids where element has max version.
      */
-    private static Set<UUID> findMaxVersionSet(Map<UUID, GridCacheVersion> verSet) {
-        //TODO Possible you can check it use only one iteration.
+    public static Set<UUID> findMaxVersionSet(Map<UUID, GridCacheVersion> verSet) {
         Set<UUID> maxVersions = new HashSet<>();
 
         maxVersions.add(verSet.keySet().iterator().next());
@@ -283,7 +271,7 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * Does unmarshal.
      */
     public static KeyCacheObject unmarshalKey(KeyCacheObject unmarshalKey,
         GridCacheContext<Object, Object> cctx) throws IgniteCheckedException {
@@ -296,7 +284,7 @@ public class ConsistencyCheckUtils {
     }
 
     /**
-     *
+     * Does remap conflicts and actual keys to {@link List<PartitionReconciliationDataRowMeta>}.
      */
     public static List<PartitionReconciliationDataRowMeta> mapPartitionReconciliation(
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts,
@@ -361,25 +349,6 @@ public class ConsistencyCheckUtils {
             file.createNewFile();
 
         return file;
-    }
-
-    /**
-     *
-     */
-    public static int parallelismLevel(double loadFactor, Collection<String> caches, IgniteEx ignite) {
-        assert loadFactor > 0 && loadFactor <= 1;
-
-        int totalBackupCnt = 0;
-
-        for (String cache : caches) {
-            CacheMode mode = ignite.cachex(cache).configuration().getCacheMode();
-            totalBackupCnt += (mode == REPLICATED ? ignite.context().discovery().aliveServerNodes().size()
-                : ignite.cachex(cache).configuration().getBackups() + 1);
-        }
-
-        int cpus = Math.max(4, getInteger(AVAILABLE_PROCESSORS_RECONCILIATION, Runtime.getRuntime().availableProcessors()));
-
-        return Math.max(1, (int)((loadFactor * cpus) / ((double)totalBackupCnt / (caches.isEmpty() ? 1 : caches.size()))));
     }
 
     /**

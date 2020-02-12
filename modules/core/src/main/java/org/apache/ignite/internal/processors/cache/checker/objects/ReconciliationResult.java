@@ -26,7 +26,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
- *
+ * Common result of partition reconciliation.
  */
 public class ReconciliationResult extends IgniteDataTransferObject {
     /**
@@ -35,28 +35,30 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     private static final long serialVersionUID = 0L;
 
     /**
-     *
+     * Result.
      */
     private PartitionReconciliationResult partitionReconciliationResult;
 
     /**
-     *
+     * Folders with local results.
      */
     private Map<UUID, String> nodeIdToFolder;
 
     /**
-     *
+     * Errors happened during execution.
      */
     private List<String> errors;
 
     /**
-     *
+     * Default constructor.
      */
     public ReconciliationResult() {
     }
 
     /**
-     *
+     * @param partReconciliationRes Partition reconciliation response.
+     * @param nodeIdToFolder Node id to folder.
+     * @param errors Errors.
      */
     public ReconciliationResult(
         PartitionReconciliationResult partReconciliationRes,
@@ -76,8 +78,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         partitionReconciliationResult = (PartitionReconciliationResult)in.readObject();
 
         nodeIdToFolder = U.readMap(in);
@@ -86,21 +87,21 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     }
 
     /**
-     *
+     * @return Result.
      */
     public PartitionReconciliationResult partitionReconciliationResult() {
         return partitionReconciliationResult;
     }
 
     /**
-     *
+     * @return Folders with local results.
      */
     public Map<UUID, String> nodeIdToFolder() {
         return nodeIdToFolder;
     }
 
     /**
-     *
+     * @return Errors happened during execution.
      */
     public List<String> errors() {
         return errors;

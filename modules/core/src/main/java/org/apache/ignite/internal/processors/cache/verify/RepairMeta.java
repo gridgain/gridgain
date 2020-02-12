@@ -16,16 +16,24 @@
 
 package org.apache.ignite.internal.processors.cache.verify;
 
+import java.util.Map;
+import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 
+/**
+ * Data container for result of repair.
+ */
 public class RepairMeta extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
     /** Boolean flag that indicates whether data was fixed or not. */
@@ -36,6 +44,9 @@ public class RepairMeta extends IgniteDataTransferObject {
 
     /** Repair algorithm that was used. */
     private RepairAlgorithm repairAlg;
+
+    /** Previous value per node. */
+    private Map<UUID, VersionedValue> previousValue;
 
     /**
      * Default constructor for externalization.
@@ -50,11 +61,16 @@ public class RepairMeta extends IgniteDataTransferObject {
      * @param val Value that was used to fix entry.
      * @param repairAlg Repair algorithm that was used.
      */
-    public RepairMeta(boolean fixed, CacheObject val,
-        RepairAlgorithm repairAlg) {
+    public RepairMeta(
+        boolean fixed,
+        CacheObject val,
+        RepairAlgorithm repairAlg,
+        Map<UUID, VersionedValue> previousValue
+    ) {
         this.fixed = fixed;
         this.val = val;
         this.repairAlg = repairAlg;
+        this.previousValue = previousValue;
     }
 
     /** {@inheritDoc} */
@@ -62,6 +78,7 @@ public class RepairMeta extends IgniteDataTransferObject {
         out.writeBoolean(fixed);
         out.writeObject(val);
         U.writeEnum(out, repairAlg);
+        U.writeMap(out, previousValue);
     }
 
     /** {@inheritDoc} */
@@ -70,6 +87,14 @@ public class RepairMeta extends IgniteDataTransferObject {
         fixed = in.readBoolean();
         val = (CacheObject)in.readObject();
         repairAlg = RepairAlgorithm.fromOrdinal(in.readByte());
+        previousValue = U.readMap(in);
+    }
+
+    /**
+     * @return Previous value, before fix.
+     */
+    public Map<UUID, VersionedValue> getPreviousValue() {
+        return previousValue;
     }
 
     /**

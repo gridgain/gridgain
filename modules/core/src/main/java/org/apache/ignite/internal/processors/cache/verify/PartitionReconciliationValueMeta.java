@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Arrays;
+import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
@@ -28,7 +29,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import static org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult.HIDDEN_DATA;
 
 /**
- *
+ * Value container for result.
  */
 public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
     /**
@@ -36,11 +37,14 @@ public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
      */
     private static final long serialVersionUID = 0L;
 
+    /** Binary view. */
     @GridToStringInclude
     private byte[] binaryView;
 
+    /** String view. */
     private String strView;
 
+    /** Version. */
     private GridCacheVersion ver;
 
     /**
@@ -49,6 +53,9 @@ public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
     public PartitionReconciliationValueMeta() {
     }
 
+    /**
+     *
+     */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public PartitionReconciliationValueMeta(byte[] binaryView, String strView, GridCacheVersion ver) {
         this.binaryView = binaryView;
@@ -71,10 +78,13 @@ public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
         ver = (GridCacheVersion)in.readObject();
     }
 
+    /**
+     * @return string view.
+     */
     public String stringView(boolean verbose) {
         return verbose ?
             strView + " hex=[" + U.byteArray2HexString(binaryView) + "]" + (ver != null ? " ver=[topVer=" +
-            ver.topologyVersion() + ", order=" + ver.order() + ", nodeOrder=" + ver.nodeOrder() + ']' : "" ):
+                ver.topologyVersion() + ", order=" + ver.order() + ", nodeOrder=" + ver.nodeOrder() + ']' : "") :
             HIDDEN_DATA + (ver != null ? " ver=[topVer=" + ver.topologyVersion() + ", order=" + ver.order() +
                 ", nodeOrder=" + ver.nodeOrder() : "") + ']';
     }
@@ -90,8 +100,8 @@ public class PartitionReconciliationValueMeta extends IgniteDataTransferObject {
 
         if (!Arrays.equals(binaryView, meta.binaryView))
             return false;
-        if (strView != null ? !strView.equals(meta.strView) : meta.strView != null)
+        if (!Objects.equals(strView, meta.strView))
             return false;
-        return ver != null ? ver.equals(meta.ver) : meta.ver == null;
+        return Objects.equals(ver, meta.ver);
     }
 }

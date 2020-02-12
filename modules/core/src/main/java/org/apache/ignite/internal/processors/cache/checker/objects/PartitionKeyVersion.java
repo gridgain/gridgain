@@ -41,7 +41,7 @@ public class PartitionKeyVersion extends IgniteDataTransferObject {
     private GridCacheVersion version;
 
     /**
-     *
+     * Default constructor.
      */
     public PartitionKeyVersion() {
     }
@@ -58,21 +58,21 @@ public class PartitionKeyVersion extends IgniteDataTransferObject {
     }
 
     /**
-     *
+     * @return Node ID.
      */
     public UUID getNodeId() {
         return nodeId;
     }
 
     /**
-     *
+     * @return Key.
      */
     public KeyCacheObject getKey() {
         return key;
     }
 
     /**
-     *
+     * @return Write version of current entry.
      */
     public GridCacheVersion getVersion() {
         return version;

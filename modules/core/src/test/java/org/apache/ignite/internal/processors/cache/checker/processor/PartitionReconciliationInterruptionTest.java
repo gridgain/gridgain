@@ -33,15 +33,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- *
+ * Abstract test with utility methods for interruption testing.
  */
 @RunWith(Parameterized.class)
 public abstract class PartitionReconciliationInterruptionTest extends PartitionReconciliationAbstractTest {
-    /**
-     *
-     */
-    protected static final String GRID_SHUTDOWN_MSG = "Failed to execute task due to grid shutdown";
-
     /** Nodes. */
     protected static final int NODES_CNT = 4;
 
@@ -66,7 +61,7 @@ public abstract class PartitionReconciliationInterruptionTest extends PartitionR
     protected Map<Integer, String> nodeToNodeId = new HashMap<>();
 
     /** Batch size. */
-    protected int batchSize = 50;
+    protected int batchSize = 1;
 
     /**
      *

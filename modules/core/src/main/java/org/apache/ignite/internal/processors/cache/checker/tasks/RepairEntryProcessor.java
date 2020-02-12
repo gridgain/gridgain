@@ -69,7 +69,11 @@ public class RepairEntryProcessor implements EntryProcessor {
     }
 
     /**
-     *
+     * @param val Value.
+     * @param data Data.
+     * @param rmvQueueMaxSize Remove queue max size.
+     * @param forceRepair Force repair.
+     * @param startTopVer Start topology version.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public RepairEntryProcessor(
@@ -115,8 +119,6 @@ public class RepairEntryProcessor implements EntryProcessor {
             }
             else
                 return RepairStatus.CONCURRENT_MODIFICATION;
-
-            // TODO: 23.12.19 Add optimizations here
         }
         else {
             if (currKeyGridCacheVer.compareTo(new GridCacheVersion(0, 0, 0)) == 0) {

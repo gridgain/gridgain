@@ -36,8 +36,8 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     INCLUDE_SENSITIVE("--include-sensitive", Boolean.FALSE),
 
-    /** Percent of system loading between 0 and 1. */
-    LOAD_FACTOR("--load-factor", 1d),
+    /** Maximum number of threads that can be involved in reconciliation activities. */
+    PARALLELISM("--parallelism", 0),
 
     /** Amount of keys to retrieve within one job. */
     BATCH_SIZE("--batch-size", 1000),
@@ -49,7 +49,7 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     LOCAL_OUTPUT("--local-output", Boolean.FALSE),
 
     /** Recheck delay seconds. */
-    RECHECK_DELAY("--recheck-delay", 10);
+    RECHECK_DELAY("--recheck-delay", 5);
 
     /** Option name. */
     private final String name;

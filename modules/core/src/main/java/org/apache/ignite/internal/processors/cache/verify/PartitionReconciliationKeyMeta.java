@@ -20,19 +20,27 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Arrays;
+import java.util.Objects;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 import static org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult.HIDDEN_DATA;
 
+/**
+ * Container for key value.
+ */
 public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
-    /** */
+    /**
+     *
+     */
     private static final long serialVersionUID = 0L;
 
+    /** Binary view. */
     @GridToStringInclude
     private byte[] binaryView;
 
+    /** String view. */
     private String strView;
 
     /**
@@ -41,6 +49,10 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
     public PartitionReconciliationKeyMeta() {
     }
 
+    /**
+     * @param binaryView Binary view.
+     * @param strView String view.
+     */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public PartitionReconciliationKeyMeta(byte[] binaryView, String strView) {
         this.binaryView = binaryView;
@@ -60,6 +72,9 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
         strView = U.readString(in);
     }
 
+    /**
+     * @return string view.
+     */
     public String stringView(boolean verbose) {
         return verbose ? strView + " hex=[" + U.byteArray2HexString(binaryView) + ']' : HIDDEN_DATA;
     }
@@ -82,6 +97,7 @@ public class PartitionReconciliationKeyMeta extends IgniteDataTransferObject {
 
         if (!Arrays.equals(binaryView, meta.binaryView))
             return false;
-        return strView != null ? strView.equals(meta.strView) : meta.strView == null;
+
+        return Objects.equals(strView, meta.strView);
     }
 }

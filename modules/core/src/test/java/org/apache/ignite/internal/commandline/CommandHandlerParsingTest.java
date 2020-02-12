@@ -57,6 +57,7 @@ import static org.apache.ignite.internal.commandline.WalCommands.WAL_DELETE;
 import static org.apache.ignite.internal.commandline.WalCommands.WAL_PRINT;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.FIND_AND_DELETE_GARBAGE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALIDATE_INDEXES;
+import static org.apache.ignite.internal.commandline.cache.PartitionReconciliation.PARALLELISM_FORMAT_MESSAGE;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
@@ -540,16 +541,16 @@ public class CommandHandlerParsingTest {
      *
      * validate that following partition-reconciliation arguments validated as expected:
      *
-     * --fix-alg
+     * --repair
      * 	    if value is missing - IllegalArgumentException (The repair algorithm should be specified.
-     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, PRINT_ONLY].) is expected.
+     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
      * 	    if unsupported value is used - IllegalArgumentException (Invalid repair algorithm: <invalid-repair-alg>.
-     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, PRINT_ONLY].) is expected.
+     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
      *
-     * --load-factor
-     * 	    if value is missing - IllegalArgumentException (The load factor should be specified.) is expected.
-     * 	    if unsupported value is used - IllegalArgumentException (Invalid load factor: <invalid-load-factor>.
-     * 	    Double value between 0 (exclusive) and 1 (inclusive) should be used.) is expected.
+     * --parallelism
+     *      Int value from [0, 128] is expected.
+     *      If value is missing of differs from metioned integer -
+     *      IllegalArgumentException (Invalid parallelism) is expected.
      *
      * --batch-size
      * 	    if value is missing - IllegalArgumentException (The batch size should be specified.) is expected.
@@ -566,30 +567,36 @@ public class CommandHandlerParsingTest {
      */
     @Test
     public void testPartitionReconciliationArgumentsValidation() {
-        // --fix-alg
         assertParseArgsThrows("The repair algorithm should be specified. The following values can be used: "
-            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--fix-alg");
+            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--repair");
 
         assertParseArgsThrows("Invalid repair algorithm: invalid-repair-alg. The following values can be used: "
-            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--fix-alg",
+            + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--repair",
             "invalid-repair-alg");
 
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--fix-alg", "PRIMARY"));
 
         // --load-factor
-        assertParseArgsThrows("The load factor should be specified.",
-            "--cache", "partition-reconciliation", "--load-factor");
+        assertParseArgsThrows("The parallelism level should be specified.",
+            "--cache", "partition-reconciliation", "--parallelism");
 
-        assertParseArgsThrows("Invalid load factor: abc. Double value between 0 (exclusive) and 1 (inclusive)" +
-            " should be used.", "--cache", "partition-reconciliation", "--load-factor", "abc");
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "abc"),
+            "--cache", "partition-reconciliation", "--parallelism", "abc");
 
-        assertParseArgsThrows("Invalid load factor: 0. Double value between 0 (exclusive) and 1 (inclusive)" +
-            " should be used.", "--cache", "partition-reconciliation", "--load-factor", "0");
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "0.5"),
+            "--cache", "partition-reconciliation", "--parallelism", "0.5");
 
-        assertParseArgsThrows("Invalid load factor: 100. Double value between 0 (exclusive) and 1 (inclusive)" +
-            " should be used.", "--cache", "partition-reconciliation", "--load-factor", "100");
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "-1"),
+            "--cache", "partition-reconciliation", "--parallelism", "-1");
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--load-factor", "0.5"));
+        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "129"),
+            "--cache", "partition-reconciliation", "--parallelism", "129");
+
+        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "8"));
+
+        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "1"));
+
+        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "0"));
 
         // --batch-size
         assertParseArgsThrows("The batch size should be specified.",
