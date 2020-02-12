@@ -272,10 +272,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
         {
             // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
-            return new NearCacheEntry<TVal>(
-                valueFactory(k),
-                _affinityTopologyVersionFunc(), 
-                UnknownPartition);
+            
+            // Important: get the version before the value. 
+            var ver = _affinityTopologyVersionFunc();
+            var val = valueFactory(k);
+            
+            return new NearCacheEntry<TVal>(val,  ver, UnknownPartition);
         }
 
         private int GetPartition<TKey>(TKey k)
