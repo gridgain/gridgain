@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
+import org.apache.ignite.internal.processors.diagnostic.ReconciliationExecutionContext;
 import org.junit.Test;
 
 /**
@@ -83,7 +84,8 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(UUID.randomUUID(), recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
+            new RecheckRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+                recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
         ).getResult();
 
         assertEquals(2, res.size());
@@ -106,7 +108,8 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(UUID.randomUUID(), recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
+            new RecheckRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+                recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
         ).getResult();
 
         assertTrue(res.isEmpty());
@@ -133,7 +136,8 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
 
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = node.compute(group(node, nodes)).execute(
             CollectPartitionKeysByRecheckRequestTask.class,
-            new RecheckRequest(UUID.randomUUID(), recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
+            new RecheckRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
+                recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
         ).getResult();
 
         assertTrue(res.isEmpty());

@@ -44,7 +44,8 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
     /**
      *
      */
-    @Parameterized.Parameters(name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm={3}")
+    @Parameterized.Parameters(
+        name = "atomicity = {0}, partitions = {1}, fixModeEnabled = {2}, repairAlgorithm = {3}, parallelism = {4}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
@@ -57,8 +58,11 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
         for (CacheAtomicityMode atomicityMode : atomicityModes) {
             for (int parts : partitions)
                 for (RepairAlgorithm repairAlgorithm : repairAlgorithms)
-                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm});
+                    params.add(new Object[] {atomicityMode, parts, true, repairAlgorithm, 4});
         }
+
+        params.add(new Object[] {CacheAtomicityMode.ATOMIC, 1, true, MAJORITY, 1});
+        params.add(new Object[] {CacheAtomicityMode.TRANSACTIONAL, 32, true, REMOVE, 1});
 
         return params;
     }
@@ -68,7 +72,7 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
      *
      * @throws Exception If failed.
      */
-    @Test
+    @Override @Test
     public void testReconciliationOfColdKeysUnderLoad() throws Exception {
         IgniteCache<Integer, String> clientCache = client.cache(DEFAULT_CACHE_NAME);
 
@@ -106,7 +110,7 @@ public class PartitionReconciliationFullFixStressTest extends PartitionReconcili
             }
         }, 6, "rand-loader");
 
-        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, DEFAULT_CACHE_NAME);
+        ReconciliationResult res = partitionReconciliation(ig, fixMode, repairAlgorithm, parallelism, DEFAULT_CACHE_NAME);
 
         log.info(">>>> Partition reconciliation finished");
 

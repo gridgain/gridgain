@@ -116,7 +116,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
         ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
             if (stage.equals(STARTING) && workload instanceof RecheckRequest) {
-                int attempt = recheckAttempts.computeIfAbsent(workload.getSessionId(), (key) -> new AtomicInteger(0)).incrementAndGet();
+                int attempt = recheckAttempts.computeIfAbsent(workload.workloadChainId(), (key) -> new AtomicInteger(0)).incrementAndGet();
 
                 if (attempt == 2)
                     waitToStartFirstLastRecheck.countDown();
@@ -139,7 +139,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.fixMode(false);
-        builder.loadFactor(0.0001);
+        builder.parallelism(1);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
         builder.console(true);
         builder.recheckAttempts(3);
@@ -169,7 +169,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
         ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
             if (stage.equals(FINISHING) && workload instanceof RecheckRequest)
-                recheckAttempts.computeIfAbsent(workload.getSessionId(), (key) -> new AtomicInteger(0)).incrementAndGet();
+                recheckAttempts.computeIfAbsent(workload.workloadChainId(), (key) -> new AtomicInteger(0)).incrementAndGet();
         });
 
         for (int i = 0; i < 15; i++) {
@@ -180,7 +180,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
         builder.fixMode(false);
-        builder.loadFactor(0.0001);
+        builder.parallelism(1);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
         builder.console(true);
         builder.recheckAttempts(attempts);

@@ -16,10 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.checker.objects;
 
-import java.util.Collection;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+
+import java.util.Collection;
 
 /**
  * Request object contains a set key for recheck.
@@ -40,14 +41,17 @@ public class RecheckRequest extends CachePartitionRequest {
     private int partId;
 
     /**
+     * @param sesId Session id.
+     * @param workloadChainId Workload chain id.
      * @param recheckKeys Recheck keys.
      * @param cacheName Cache name.
      * @param partId Partition id.
-     * @param startTopVer
+     * @param startTopVer Start topology version.
      */
-    public RecheckRequest(UUID sesId, Collection<KeyCacheObject> recheckKeys, String cacheName, int partId,
+    public RecheckRequest(long sesId, UUID workloadChainId, Collection<KeyCacheObject> recheckKeys,
+        String cacheName, int partId,
         AffinityTopologyVersion startTopVer) {
-        super(sesId);
+        super(sesId, workloadChainId);
         this.recheckKeys = recheckKeys;
         this.cacheName = cacheName;
         this.partId = partId;
@@ -63,14 +67,14 @@ public class RecheckRequest extends CachePartitionRequest {
     /**
      *
      */
-    public String cacheName() {
+    @Override public String cacheName() {
         return cacheName;
     }
 
     /**
      *
      */
-    public int partitionId() {
+    @Override public int partitionId() {
         return partId;
     }
 }

@@ -22,7 +22,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,9 +33,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
@@ -55,8 +52,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static java.io.File.separatorChar;
-import static org.apache.ignite.IgniteSystemProperties.getInteger;
-import static org.apache.ignite.cache.CacheMode.REPLICATED;
 
 /**
  *
@@ -66,11 +61,6 @@ public class ConsistencyCheckUtils {
      * Folder with local result of reconciliation.
      */
     public static final String RECONCILIATION_DIR = "reconciliation";
-
-    /**
-     *
-     */
-    public static final String AVAILABLE_PROCESSORS_RECONCILIATION = "AVAILABLE_PROCESSORS_RECONCILIATION";
 
     /** Time formatter for log file name. */
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH-mm-ss_SSS");
@@ -359,25 +349,6 @@ public class ConsistencyCheckUtils {
             file.createNewFile();
 
         return file;
-    }
-
-    /**
-     *
-     */
-    public static int parallelismLevel(double loadFactor, Collection<String> caches, IgniteEx ignite) {
-        assert loadFactor > 0 && loadFactor <= 1;
-
-        int totalBackupCnt = 0;
-
-        for (String cache : caches) {
-            CacheMode mode = ignite.cachex(cache).configuration().getCacheMode();
-            totalBackupCnt += (mode == REPLICATED ? ignite.context().discovery().aliveServerNodes().size()
-                : ignite.cachex(cache).configuration().getBackups() + 1);
-        }
-
-        int cpus = Math.max(4, getInteger(AVAILABLE_PROCESSORS_RECONCILIATION, Runtime.getRuntime().availableProcessors()));
-
-        return Math.max(1, (int)((loadFactor * cpus) / ((double)totalBackupCnt / (caches.isEmpty() ? 1 : caches.size()))));
     }
 
     /**
