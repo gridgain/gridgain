@@ -271,6 +271,9 @@ public class CycleDetectingLockFactory {
      */
     private static class ExampleStackTrace extends IllegalStateException {
 
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** Excluded class names. */
         static final Set<String> EXCLUDED_CLASS_NAMES =
             new HashSet<>(Arrays.asList(
@@ -315,6 +318,9 @@ public class CycleDetectingLockFactory {
      * @since 13.0
      */
     public static final class PotentialDeadlockException extends ExampleStackTrace {
+
+        /** */
+        private static final long serialVersionUID = 0L;
 
         /** Conflicting stack trace. */
         private final ExampleStackTrace conflictingStackTrace;
@@ -554,6 +560,9 @@ public class CycleDetectingLockFactory {
     }
 
     final class CycleDetectingReentrantLock extends ReentrantLock implements CycleDetectingLock {
+
+        /** */
+        private static final long serialVersionUID = 0L;
 
         /** Lock graph node. */
         private final LockGraphNode lockGraphNode;
