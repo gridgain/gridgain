@@ -48,8 +48,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Topology version func. Returns boxed <see cref="AffinityTopologyVersion"/>.
          * Boxed copy is passed directly to <see cref="NearCacheEntry{T}"/>, avoiding extra allocations.
          * This way for every unique <see cref="AffinityTopologyVersion"/> we only have one boxed copy,
-         * and we can update <see cref="NearCacheEntry{T}.Version"/> atomically without locks.
-         */
+         * and we can update <see cref="NearCacheEntry{T}.Version"/> atomically without locks. */
         private readonly Func<object> _affinityTopologyVersionFunc;
 
         /// <summary>
