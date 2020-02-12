@@ -136,7 +136,33 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             return (TVal) _fallbackMap.GetOrAdd(key, k => GetEntry(_ => (object) val, k)).Val;
         }
+        
+        /** <inheritdoc /> */
+        public int GetSize()
+        {
+            // TODO: Count valid entries only.
+            var map = _map;
+            if (map != null)
+            {
+                return map.Count;
+            }
 
+            if (_fallbackMap != null)
+            {
+                return _fallbackMap.Count;
+            }
+
+            return 0;
+        }
+
+        /** <inheritdoc /> */
+        public bool ContainsKey<TKey, TVal>(TKey key)
+        {
+            object _;
+            return TryGetValue(key, out _);
+        }
+
+        /** <inheritdoc /> */
         public void Update(IBinaryStream stream, Marshaller marshaller)
         {
             Debug.Assert(stream != null);
@@ -191,6 +217,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
         }
 
+        /** <inheritdoc /> */
         public void Clear()
         {
             if (_fallbackMap != null)
@@ -207,29 +234,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
         }
 
-        /** <inheritdoc /> */
-        public int GetSize()
-        {
-            var map = _map;
-            if (map != null)
-            {
-                return map.Count;
-            }
-
-            if (_fallbackMap != null)
-            {
-                return _fallbackMap.Count;
-            }
-
-            return 0;
-        }
-
-        public bool ContainsKey<TKey, TVal>(TKey key)
-        {
-            object _;
-            return TryGetValue(key, out _);
-        }
-
+        /// <summary>
+        /// Ensures that fallback map exists.
+        /// </summary>
         private void EnsureFallbackMap()
         {
             if (_fallbackMap != null)
