@@ -45,13 +45,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
-        /** Topology version func. */
-        private readonly Func<AffinityTopologyVersion> _affinityTopologyVersionFunc;
+        /** Topology version func. Returns boxed <see cref="AffinityTopologyVersion"/>.
+         * Boxed copy is passed directly to <see cref="NearCacheEntry{T}"/>, avoiding extra allocations.
+         * This way for every unique <see cref="AffinityTopologyVersion"/> we only have one boxed copy,
+         * and we can update <see cref="NearCacheEntry{T}.Version"/> atomically without locks.
+         */
+        private readonly Func<object> _affinityTopologyVersionFunc;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        public NearCache(Func<AffinityTopologyVersion> affinityTopologyVersionFunc, CacheAffinityImpl affinity)
+        public NearCache(Func<object> affinityTopologyVersionFunc, CacheAffinityImpl affinity)
         {
             // TODO: Enable callbacks in Java.
             // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
@@ -71,7 +75,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     if (IsValid(key, entry))
                     {
-                        val = entry.Val;
+                        val = entry.Value;
                         return true;
                     }
 
@@ -91,7 +95,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     if (IsValid(key, fallbackEntry))
                     {
-                        val = (TVal) fallbackEntry.Val;
+                        val = (TVal) fallbackEntry.Value;
                         return true;
                     }
 
@@ -110,7 +114,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (map != null)
             {
                 return map.AddOrUpdate(key, k => GetEntry(valueFactory, k),
-                    (k, old) => IsValid(k, old) ? old : GetEntry(valueFactory, k)).Val;
+                    (k, old) => IsValid(k, old) ? old : GetEntry(valueFactory, k)).Value;
             }
             
             EnsureFallbackMap();
@@ -119,7 +123,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return (TVal) _fallbackMap.AddOrUpdate(
                 key, 
                 factory,
-                (k, old) => IsValid(k, old) ? old : factory(k)).Val;
+                (k, old) => IsValid(k, old) ? old : factory(k)).Value;
         }
 
         public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
@@ -129,12 +133,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (map != null)
             {
                 // TODO: Validate on get
-                return map.GetOrAdd(key, k => GetEntry(_ => val, k)).Val;
+                return map.GetOrAdd(key, k => GetEntry(_ => val, k)).Value;
             }
             
             EnsureFallbackMap();
 
-            return (TVal) _fallbackMap.GetOrAdd(key, k => GetEntry(_ => (object) val, k)).Val;
+            return (TVal) _fallbackMap.GetOrAdd(key, k => GetEntry(_ => (object) val, k)).Value;
         }
         
         /** <inheritdoc /> */
@@ -265,23 +269,42 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         /// <param name="key">Entry key.</param>
         /// <param name="entry">Entry to validate.</param>
-        /// <param name="version">Topology version to check against.</param>
         /// <typeparam name="TKey">Key type.</typeparam>
         /// <typeparam name="TVal">Value type.</typeparam>
         /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
-        private bool IsValid<TKey, TVal>(TKey key, NearCacheEntry<TVal> entry, AffinityTopologyVersion? version = null)
+        private bool IsValid<TKey, TVal>(TKey key, NearCacheEntry<TVal> entry)
         {
-            var currentVer = version ?? _affinityTopologyVersionFunc();
-            var entryVer = entry.Version;
+            // See comments on _affinityTopologyVersionFunc about boxed copy approach. 
+            var currentVerBoxed = _affinityTopologyVersionFunc();
+            var entryVerBoxed = entry.Version;
             
+            Debug.Assert(currentVerBoxed != null);
+            Debug.Assert(entryVerBoxed != null);
+            
+            if (ReferenceEquals(currentVerBoxed, entryVerBoxed))
+            {
+                return true;
+            }
+
+            var entryVer = (AffinityTopologyVersion) entryVerBoxed;
+            var currentVer = (AffinityTopologyVersion) currentVerBoxed;
+
             if (entryVer >= currentVer)
             {
                 return true;
             }
 
-            // TODO: Update entry with ver to reduce the cost of future checks.
             var part = entry.Partition == UnknownPartition ? GetPartition(key) : entry.Partition;
-            return _affinity.IsAssignmentValid(entryVer, part);
+            var valid = _affinity.IsAssignmentValid(entryVer, part);
+
+            if (valid)
+            {
+                // Update entry with current version and known partition to speed up future checks.
+                entry.Partition = part;
+                entry.Version = currentVerBoxed;
+            }
+
+            return valid;
         }
 
         private NearCacheEntry<TVal> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)

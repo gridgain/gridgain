@@ -123,7 +123,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private NearCache<TK, TV> CreateNearCache<TK, TV>(string cacheName)
         {
             return new NearCache<TK, TV>(
-                () => (AffinityTopologyVersion) _affinityTopologyVersion, 
+                () => _affinityTopologyVersion, 
                 _ignite.GetAffinity(cacheName));
         }
     }

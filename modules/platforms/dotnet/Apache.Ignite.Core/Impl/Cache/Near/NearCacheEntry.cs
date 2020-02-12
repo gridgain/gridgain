@@ -16,40 +16,43 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using Apache.Ignite.Core.Cache.Affinity;
-
     /// <summary>
     /// Near cache entry.
     /// </summary>
     /// <typeparam name="T">Value type.</typeparam>
     internal class NearCacheEntry<T>
     {
-        private readonly T _val;
+        /** Value. */
+        private readonly T _value;
 
-        private readonly AffinityTopologyVersion _version;
+        /** Version. Stored as object for atomic updates. */
+        private volatile object _version;
 
-        private readonly int _partition;
+        /** Partition. */
+        private volatile int _partition;
 
-        public NearCacheEntry(T val, AffinityTopologyVersion version, int partition)
+        public NearCacheEntry(T value, object version, int partition)
         {
-            _val = val;
+            _value = value;
             _version = version;
             _partition = partition;
         }
 
-        public T Val
+        public T Value
         {
-            get { return _val; }
+            get { return _value; }
         }
 
-        public AffinityTopologyVersion Version
+        public object Version
         {
             get { return _version; }
+            set { _version = value; }
         }
 
         public int Partition
         {
             get { return _partition; }
+            set { _partition = value; }
         }
     }
 }
