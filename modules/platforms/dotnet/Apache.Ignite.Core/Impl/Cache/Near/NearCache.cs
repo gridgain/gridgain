@@ -298,7 +298,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return true;
             }
 
-            var part = entry.Partition == UnknownPartition ? GetPartition(key) : entry.Partition;
+            var part = entry.Partition == UnknownPartition ? _affinity.GetPartition(key) : entry.Partition;
             var valid = _affinity.IsAssignmentValid(entryVer, part);
 
             if (valid)
@@ -320,14 +320,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var val = valueFactory(k);
             
             return new NearCacheEntry<TVal>(val,  ver, UnknownPartition);
-        }
-
-        private int GetPartition<TKey>(TKey k)
-        {
-            // TODO: Calculate locally when possible (rendezvous).
-            // Is it worth the complexity? Don't think so, the case is rare, does not happen on stable topologies,
-            // happens once per key.
-            return _affinity.GetPartition(k);
         }
     }
 }
