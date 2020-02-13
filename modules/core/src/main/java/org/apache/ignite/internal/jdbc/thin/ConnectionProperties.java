@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.jdbc.thin;
 
 import java.sql.SQLException;
-import java.util.EnumSet;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.jetbrains.annotations.Nullable;
