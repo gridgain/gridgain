@@ -33,6 +33,7 @@ import org.apache.ignite.internal.binary.BinaryObjectBuilderDefaultMappersSelfTe
 import org.apache.ignite.internal.binary.BinaryObjectBuilderSimpleNameLowerCaseMappersSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectExceptionSelfTest;
 import org.apache.ignite.internal.binary.BinaryObjectToStringSelfTest;
+import org.apache.ignite.internal.binary.BinaryObjectToStringTest;
 import org.apache.ignite.internal.binary.BinaryObjectTypeCompatibilityTest;
 import org.apache.ignite.internal.binary.BinarySerialiedFieldComparatorSelfTest;
 import org.apache.ignite.internal.binary.BinarySimpleNameTestPropertySelfTest;
@@ -111,6 +112,7 @@ import org.junit.runners.Suite;
     GridBinaryAffinityKeySelfTest.class,
     GridBinaryWildcardsSelfTest.class,
     BinaryObjectToStringSelfTest.class,
+    BinaryObjectToStringTest.class,
     BinaryObjectTypeCompatibilityTest.class,
 
     // Tests for objects with non-compact footers.
