@@ -87,7 +87,7 @@ public class ConnectionManager {
     private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
-    private ConcurrentStripedPool<H2Connection> connPool;
+    private final ConcurrentStripedPool<H2Connection> connPool;
 
     /** H2 connection for INFORMATION_SCHEMA. Holds H2 open until node is stopped. */
     private volatile Connection sysConn;

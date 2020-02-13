@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.security.impl;
+package org.apache.ignite.internal.processors.cache.query.continuous;
 
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.plugin.PluginConfiguration;
+import org.apache.ignite.cache.query.AbstractContinuousQuery;
+import org.apache.ignite.cache.query.ContinuousQuery;
 
 /**
- * Grid security configuration for tests.
+ * Test for continuous query buffer cleanup.
  */
-@FunctionalInterface
-public interface TestSecurityPluginConfiguration extends PluginConfiguration {
-    /**
-     * @param ctx GridKernalContext.
-     * @return GridSecurityProcessor.
-     */
-    public GridSecurityProcessor build(GridKernalContext ctx);
+public class ContinuousQueryBufferCleanupTest extends ContinuousQueryBufferCleanupAbstractTest {
+    /** {@inheritDoc} */
+    @Override
+    protected AbstractContinuousQuery<Integer, String> getContinuousQuery() {
+        ContinuousQuery<Integer, String> qry = new ContinuousQuery<>();
+
+        qry.setLocalListener((evts) -> evts.forEach(e -> System.out.println("key=" + e.getKey() + ", val=" + e.getValue())));
+
+        return qry;
+    }
 }

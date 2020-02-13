@@ -176,7 +176,6 @@ import static org.apache.ignite.configuration.DeploymentMode.CONTINUOUS;
 import static org.apache.ignite.configuration.DeploymentMode.SHARED;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.CACHE_PROC;
 import static org.apache.ignite.internal.IgniteComponentType.JTA;
-import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.ALL_NODES;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isPersistentCache;
 import static org.apache.ignite.internal.processors.cache.ValidationOnNodeJoinUtils.validateHashIdResolvers;
@@ -609,6 +608,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         if (!ctx.clientNode())
             sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
                 sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
+
+        // Notify shared managers.
+        for (GridCacheSharedManager mgr : sharedCtx.managers())
+            mgr.onKernalStart(active);
 
         // Escape if cluster inactive.
         if (!active)
@@ -5156,7 +5159,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     private CacheConfigurationSplitter backwardCompatibleSplitter() {
         IgniteDiscoverySpi spi = (IgniteDiscoverySpi) ctx.discovery().getInjectedDiscoverySpi();
 
-        boolean oldFormat = !spi.allNodesSupport(IgniteFeatures.SPLITTED_CACHE_CONFIGURATIONS, ALL_NODES);
+        boolean oldFormat = !spi.allNodesSupport(IgniteFeatures.SPLITTED_CACHE_CONFIGURATIONS);
 
         return splitter(oldFormat);
     }
