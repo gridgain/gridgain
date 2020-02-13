@@ -49,13 +49,16 @@ import org.junit.Ignore;
 import org.junit.Test;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD;
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
 import static org.apache.ignite.internal.util.IgniteUtils.MB;
 
 /**
  * Query memory manager tests.
  */
-@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
+@WithSystemProperty(key = IGNITE_SQL_USE_DISK_OFFLOAD, value = "false")
+@WithSystemProperty(key = IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, value = "true")
 public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
     /** Row count. */
     static final int SMALL_TABLE_SIZE = 1000;
