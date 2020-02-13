@@ -26,10 +26,12 @@ import java.util.Set;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -122,45 +124,53 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
             .setSqlSchema("TEST")
             .setAtomicityMode(atomicityMode)
             .setCacheMode(cacheMode)
-            .setQueryEntities(Collections.singleton(new QueryEntity(Long.class, Long.class)
+            .setQueryEntities(Collections.singleton(new QueryEntity(Long.class.getName(), "testVal")
                 .setTableName("test")
                 .addQueryField("id", Long.class.getName(), null)
-                .addQueryField("val", Long.class.getName(), null)
+                .addQueryField("val0", Long.class.getName(), null)
+                .addQueryField("val1", Long.class.getName(), null)
+                .addQueryField("val2", Long.class.getName(), null)
                 .setKeyFieldName("id")
-                .setValueFieldName("val")
                 .setIndexes(Collections.singletonList(
-                    new QueryIndex("val")
+                    new QueryIndex(Arrays.asList("val0", "val1"), QueryIndexType.SORTED)
                 ))
             ))
             .setBackups(1)
             .setAffinity(new RendezvousAffinityFunction(false, 10)));
 
         try (IgniteDataStreamer streamer = grid(0).dataStreamer("test")) {
-            for (long i = 0; i < KEY_CNT; ++i)
-                streamer.addData(i, i);
+            for (long i = 0; i < KEY_CNT; ++i) {
+                BinaryObjectBuilder bob = grid(0).binary().builder("testVal");
+
+                bob.setField("val0", i);
+                bob.setField("val1", i);
+                bob.setField("val2", i);
+
+                streamer.addData(i, bob.build());
+            }
         }
 
-        sql("CREATE TABLE table1 (column1 INT PRIMARY KEY, column2 INT, column3 VARCHAR (100))");
+        sql("CREATE TABLE table1 (id INT PRIMARY KEY, col0 INT, col1 VARCHAR (100))");
 
-        sql("INSERT INTO table1 (column1, column2, column3) " +
-                "SELECT 1, 11, 'FIRST' " +
-                "UNION ALL " +
-                "SELECT 11,12, 'SECOND' " +
-                "UNION ALL " +
-                "SELECT 21, 13, 'THIRD' " +
-                "UNION ALL " +
-                "SELECT 31, 14, 'FOURTH'");
+        sql("INSERT INTO table1 (id, col0, col1) " +
+            "SELECT 1, 11, 'FIRST' " +
+            "UNION ALL " +
+            "SELECT 11,12, 'SECOND' " +
+            "UNION ALL " +
+            "SELECT 21, 13, 'THIRD' " +
+            "UNION ALL " +
+            "SELECT 31, 14, 'FOURTH'");
 
-        sql("CREATE TABLE  table2 (column1 INT PRIMARY KEY, column2 INT, column3 VARCHAR (100))");
+        sql("CREATE TABLE  table2 (id INT PRIMARY KEY, col0 INT, col1 VARCHAR (100))");
 
-        sql("INSERT INTO table2 (column1, column2, column3) " +
-                "SELECT 1, 21, 'TWO-ONE' " +
-                "UNION ALL " +
-                "SELECT 11, 22, 'TWO-TWO' " +
-                "UNION ALL " +
-                "SELECT 21, 23, 'TWO-THREE' " +
-                "UNION ALL " +
-                "SELECT 31, 24, 'TWO-FOUR'");
+        sql("INSERT INTO table2 (id, col0, col1) " +
+            "SELECT 1, 21, 'TWO-ONE' " +
+            "UNION ALL " +
+            "SELECT 11, 22, 'TWO-TWO' " +
+            "UNION ALL " +
+            "SELECT 21, 23, 'TWO-THREE' " +
+            "UNION ALL " +
+            "SELECT 31, 24, 'TWO-FOUR'");
 
         localResults.clear();
     }
@@ -177,24 +187,45 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testUpdateNotLazy() {
-        List<List<?>> res = sql("UPDATE test SET val = val + 1 WHERE val >= 0").getAll();
+        checkUpdateNotLazy("UPDATE test SET val0 = val0 + 1 WHERE val0 >= 0");
+        checkUpdateNotLazy("UPDATE test SET val1 = val1 + 1 WHERE val0 >= 0");
+    }
 
-        // Check that all rows updates only ones.
-        assertEquals((long)KEY_CNT, res.get(0).get(0));
+    /**
+     */
+    public void checkUpdateNotLazy(String sql) {
+        try {
+            List<List<?>> res = sql(sql).getAll();
 
-        if (atomicityMode == CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT)
-            assertEquals(0, localResults.size());
-        else if (cacheMode == CacheMode.REPLICATED)
-            assertEquals(1, localResults.size());
-        else
-            assertEquals(3, localResults.size());
+            // Check that all rows updates only ones.
+            assertEquals((long)KEY_CNT, res.get(0).get(0));
+
+            if (atomicityMode == CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT)
+                assertEquals(0, localResults.size());
+            else if (cacheMode == CacheMode.REPLICATED)
+                assertEquals(1, localResults.size());
+            else
+                assertEquals(3, localResults.size());
+
+        }
+        finally {
+            localResults.clear();
+        }
     }
 
     /**
      */
     @Test
     public void testUpdateLazy() {
-        List<List<?>> res = sql("UPDATE test SET val = val + 1").getAll();
+        checkUpdateLazy("UPDATE test SET val0 = val0 + 1");
+        checkUpdateLazy("UPDATE test SET val2 = val2 + 1 WHERE val2 >= 0");
+        checkUpdateLazy("UPDATE test SET val0 = val0 + 1 WHERE val1 >= 0");
+    }
+
+    /**
+     */
+    public void checkUpdateLazy(String sql) {
+        List<List<?>> res = sql(sql).getAll();
 
         // Check that all rows updates only ones.
         assertEquals((long)KEY_CNT, res.get(0).get(0));
@@ -206,7 +237,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testDeleteWithoutReduce() {
-        List<List<?>> res = sql("DELETE FROM test WHERE val >= 0").getAll();
+        List<List<?>> res = sql("DELETE FROM test WHERE val0 >= 0").getAll();
 
         assertEquals((long)KEY_CNT, res.get(0).get(0));
 
@@ -218,7 +249,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-27502")
     public void testUpdateWithReduce() {
-        List<List<?>> res = sql("UPDATE test SET val = val + AVG(val)").getAll();
+        List<List<?>> res = sql("UPDATE test SET val0 = val0 + AVG(val0)").getAll();
 
         assertEquals((long)KEY_CNT, res.get(0).get(0));
 
@@ -228,39 +259,27 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
-    public void testUpdateJoin() {
+    public void testUpdateFromSubqueryLazy() {
         List<List<?>> res;
 
         res = sql("UPDATE table1 " +
-            "SET column2 = table2.column2, column3 = table2.column3 " +
-            "FROM table1 " +
-            "INNER JOIN table2 " +
-            "ON table1.column1 = table2.column1 " +
-            "WHERE table1.column1 in (21, 31)").getAll();
+            "SET (col0, col1) = " +
+            "   (SELECT table2.col0, table2.col1 FROM table2 WHERE table2.id = table1.id)" +
+            "WHERE table1.id in (21, 31)").getAll();
 
-        assertEquals(0, localResults.size());
-
-        res = sql("UPDATE table1, table2 " +
-            "INNER JOIN table2 " +
-            "ON table1.column1 = table2.column1 " +
-            "SET column2 = table2.column2, column3 = table2.column3 " +
-            "WHERE table1.column1 in (21, 31)").getAll();
+        assertEquals(2L, res.get(0).get(0));
 
         assertEquals(0, localResults.size());
 
         res = sql("UPDATE table1 " +
-            "INNER JOIN table2 " +
-            "ON table1.column1 = table2.column1 " +
-            "SET column2 = table2.column2, column3 = table2.column3 " +
-            "WHERE table1.column1 in (21, 31)").getAll();
+            "SET (col0, col1) = " +
+            "   (SELECT table2.col0, table2.col1 FROM table2 WHERE table2.id = table1.id) " +
+            "WHERE exists (select * from table2 where table2.id = table1.id) " +
+            "AND table1.id in (21, 31)").getAll();
+
+        assertEquals(2L, res.get(0).get(0));
 
         assertEquals(0, localResults.size());
-
-        res = sql("UPDATE table1 " +
-            "SET (column2, column3) = " +
-            "   (SELECT table2.column2, table2.column3 FROM table2 WHERE table2.column1 = table1.column1) " +
-            "WHERE exists (select * from table2 where table2.column1 = table1.column1) " +
-            "AND table1.column1 in (21, 31)").getAll();
     }
 
     /**
