@@ -20,16 +20,21 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
+import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientException;
+import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
@@ -41,8 +46,12 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTask;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
+import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 
 import static java.lang.String.format;
+import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTask;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
@@ -171,25 +180,43 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             args.recheckDelay
         );
 
-        ReconciliationResult res =
-            executeTask(client, VisorPartitionReconciliationTask.class, taskArg, clientCfg);
+        List<GridClientNode> unsupportedSrvNodes = client.compute().nodes().stream()
+            .filter(node -> Objects.equals(node.attribute(IgniteNodeAttributes.ATTR_CLIENT_MODE), false))
+            .filter(node -> !nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.PARTITION_RECONCILIATION))
+            .collect(Collectors.toList());
 
-        print(res, log::info);
+        if (!unsupportedSrvNodes.isEmpty()) {
+            final String strErrReason = "Partition reconciliation was rejected. The node [id=%s, consistentId=%s] doesn't support this feature.";
 
-        return res;
+            List<String> errs = unsupportedSrvNodes.stream()
+                .map(n -> String.format(strErrReason, n.nodeId(), n.consistentId()))
+                .collect(toList());
+
+            print(new ReconciliationResult(new PartitionReconciliationResult(), new HashMap<>(), errs), log::info);
+
+            throw new VisorIllegalStateException("There are server nodes not supported partition reconciliation.");
+        }
+        else {
+            ReconciliationResult res =
+                executeTask(client, VisorPartitionReconciliationTask.class, taskArg, clientCfg);
+
+            print(res, log::info);
+
+            return res;
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
         boolean fixMode = false;
-        boolean verbose = (boolean) INCLUDE_SENSITIVE.defaultValue();
-        boolean console = (boolean) LOCAL_OUTPUT.defaultValue();
-        int parallelism = (int) PARALLELISM.defaultValue();
-        int batchSize = (int) BATCH_SIZE.defaultValue();
-        int recheckAttempts = (int) RECHECK_ATTEMPTS.defaultValue();
-        RepairAlgorithm repairAlg = (RepairAlgorithm) REPAIR.defaultValue();
-        int recheckDelay = (int) RECHECK_DELAY.defaultValue();
+        boolean verbose = (boolean)INCLUDE_SENSITIVE.defaultValue();
+        boolean console = (boolean)LOCAL_OUTPUT.defaultValue();
+        int parallelism = (int)PARALLELISM.defaultValue();
+        int batchSize = (int)BATCH_SIZE.defaultValue();
+        int recheckAttempts = (int)RECHECK_ATTEMPTS.defaultValue();
+        RepairAlgorithm repairAlg = (RepairAlgorithm)REPAIR.defaultValue();
+        int recheckDelay = (int)RECHECK_DELAY.defaultValue();
 
         int partReconciliationArgsCnt = 8;
 
