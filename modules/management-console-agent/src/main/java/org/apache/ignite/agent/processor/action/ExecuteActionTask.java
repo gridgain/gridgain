@@ -87,7 +87,7 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
         if (res.getException() == null)
             proc.sendJobResponse(jobRes);
         else {
-            log.error("Failed to execute the job, send response with error to request: " + reqId, res.getException());
+            log.error("Failed to execute the job, will send response with error to request: " + reqId, res.getException());
 
             proc.sendJobResponse(convertToErrorJobResponse(reqId, consistentId, res.getException()));
         }
