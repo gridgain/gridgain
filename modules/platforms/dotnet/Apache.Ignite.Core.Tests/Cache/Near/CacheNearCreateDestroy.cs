@@ -159,6 +159,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache[1] = 2;
             Assert.AreEqual(2, cache2[1]);
         }
+        
         /// <summary>
         /// Tests that near cache data is cleared when underlying cache is destroyed.
         /// </summary>
@@ -185,6 +186,31 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             StringAssert.EndsWith(
                 "Failed to perform cache operation (cache is stopped): " + cache.Name, 
                 ex.Message);
+        }
+
+        /// <summary>
+        /// Tests that near cache data is cleared when cache is destroyed and then created again with the same name.
+        /// </summary>
+        /// <param name="mode"></param>
+        [Test]
+        public void TestCreateWithSameNameAfterDestroyClearsOldData(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+        {
+            var cfg = new CacheConfiguration
+            {
+                Name = "destroy-test-" + mode,
+                NearConfiguration = new NearCacheConfiguration()
+            };
+
+            var ignite = GetIgnite(mode);
+            
+            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
+            
+            cache[1] = 1;
+            ignite.DestroyCache(cache.Name);
+            
+            cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
+            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
         }
 
         /// <summary>

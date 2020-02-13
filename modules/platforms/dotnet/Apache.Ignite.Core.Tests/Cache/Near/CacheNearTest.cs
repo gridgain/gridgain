@@ -424,9 +424,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestCacheGetFromEvictedEntryAfterUpdateFromAnotherNode()
         {
-            // TODO: Add other modes, especially:
-            // * Local keys on server nodes
-            // * Non-local keys on server nodes
             var cfg = new CacheConfiguration
             {
                 Name = TestContext.CurrentContext.Test.Name,
