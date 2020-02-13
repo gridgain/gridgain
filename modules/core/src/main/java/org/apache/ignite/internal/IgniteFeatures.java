@@ -119,7 +119,10 @@ public enum IgniteFeatures {
     MANAGEMENT_CONSOLE(28),
 
     /** Distributed change timeout for dump long operations. */
-    DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30);
+    DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30),
+
+    /** Partition reconciliation utility. */
+    PARTITION_RECONCILIATION(34);
 
     /**
      * Unique feature identifier.

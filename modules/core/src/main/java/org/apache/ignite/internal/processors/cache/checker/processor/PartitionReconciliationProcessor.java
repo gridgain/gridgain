@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.processors.cache.CacheObject;
 import org.apache.ignite.internal.processors.cache.CacheObjectContext;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -162,6 +163,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      * @return Partition reconciliation result
      */
     public ExecutionResult<PartitionReconciliationResult> execute() {
+        if (!IgniteFeatures.allNodesSupports(ctx, ctx.discovery().aliveServerNodes(), IgniteFeatures.PARTITION_RECONCILIATION)) {
+            String errMsg = IgniteFeatures.nodeSupports(ctx, ctx.discovery().localNode(), IgniteFeatures.PARTITION_RECONCILIATION) ?
+                null :
+                "Partition reconciliation was rejected. The node doesn't support this feature.";
+
+            return new ExecutionResult<>(prepareResult(), errMsg);
+        }
+
         log.info(String.format(START_EXECUTION_MSG, fixMode, repairAlg, batchSize, recheckAttempts, parallelismLevel, caches));
 
         try {

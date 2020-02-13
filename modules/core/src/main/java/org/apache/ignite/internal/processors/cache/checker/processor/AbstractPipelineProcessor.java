@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeTask;
+import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeManager;
@@ -65,6 +66,9 @@ public class AbstractPipelineProcessor {
     /** Latest affinity changed topology version that was available at the processor initialization. */
     protected final AffinityTopologyVersion startTopVer;
 
+    /** Context. */
+    protected final GridKernalContext ctx;
+
     /** Event listener that allows to track the execution of workload. */
     protected volatile ReconciliationEventListener evtLsnr = ReconciliationEventListenerFactory.defaultListenerInstance();
 
@@ -93,6 +97,7 @@ public class AbstractPipelineProcessor {
         int parallelismLevel
     ) throws IgniteCheckedException {
         this.sesId = sesId;
+        this.ctx = ignite.context();
         this.exchMgr = ignite.context().cache().context().exchange();
         this.startTopVer = exchMgr.lastAffinityChangedTopologyVersion(exchMgr.lastTopologyFuture().get());
         this.parallelismLevel = parallelismLevel;
