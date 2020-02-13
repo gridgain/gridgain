@@ -196,7 +196,7 @@ public class JdbcUtils {
             }
 
             default:
-                return SqlListenerUtils.readObject(reader, binObjAllow);
+                return SqlListenerUtils.readObject(type, reader, binObjAllow);
         }
     }
 
