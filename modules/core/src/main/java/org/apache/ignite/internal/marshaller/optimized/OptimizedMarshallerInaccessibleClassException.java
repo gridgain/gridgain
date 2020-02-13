@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.security.impl;
+package org.apache.ignite.internal.marshaller.optimized;
 
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.plugin.PluginConfiguration;
+import org.apache.ignite.IgniteCheckedException;
 
-/**
- * Grid security configuration for tests.
- */
-@FunctionalInterface
-public interface TestSecurityPluginConfiguration extends PluginConfiguration {
-    /**
-     * @param ctx GridKernalContext.
-     * @return GridSecurityProcessor.
-     */
-    public GridSecurityProcessor build(GridKernalContext ctx);
+/** */
+public final class OptimizedMarshallerInaccessibleClassException extends IgniteCheckedException {
+    /** */
+    private static final long serialVersionUID = 0L;
+
+    /** */
+    public OptimizedMarshallerInaccessibleClassException(String msg, ClassNotFoundException cause) {
+        super(msg, cause);
+    }
+
+    /** */
+    public String inaccessibleClass() {
+        // Message of ClassNotFoundException is a not found class name
+        return getCause().getMessage();
+    }
 }
