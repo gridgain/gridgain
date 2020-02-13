@@ -55,9 +55,12 @@ public class SqlMemoryStatisticsHolder {
             "How many times memory quota have been requested on this node by all the queries in total. " +
                 "Always 0 if sql memory quotas are disabled.");
 
-        offloadingWritten = quotasMetrics.longAdderMetric("SqlOffloadingWritten", "TODO"); //TODO
-        offloadingRead = quotasMetrics.longAdderMetric("SqlOffloadingRead", "TODO"); //TODO
-        filesNum = quotasMetrics.longAdderMetric("SqlOffloadingFilesNumber", "TODO"); //TODO
+        offloadingWritten = quotasMetrics.longAdderMetric("OffloadingWritten",
+            "Metrics that indicates the number of bytes were written to the disk during SQL query offloading.");
+        offloadingRead = quotasMetrics.longAdderMetric("OffloadingRead",
+            "Metrics that indicates the number of bytes were read from the disk during SQL query offloading.");
+        filesNum = quotasMetrics.longAdderMetric("OffloadedQueriesNumber",
+            "Metrics that indicates the number of queries were offloaded to disk locally.");
 
         quotasMetrics.register("maxMem",
             new LongSupplier() {

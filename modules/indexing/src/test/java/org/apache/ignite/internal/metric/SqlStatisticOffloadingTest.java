@@ -156,12 +156,12 @@ public class SqlStatisticOffloadingTest extends DiskSpillingAbstractTest {
      */
     private Metrics withdrawMetrics() {
         return Metrics.of(
-            longMetricValue(false, "SqlOffloadingWritten"),
-            longMetricValue(false, "SqlOffloadingRead"),
-            longMetricValue(false, "SqlOffloadingFilesNumber"),
-            longMetricValue(true, "SqlOffloadingWritten"),
-            longMetricValue(true, "SqlOffloadingRead"),
-            longMetricValue(true, "SqlOffloadingFilesNumber")
+            longMetricValue(false, "OffloadingWritten"),
+            longMetricValue(false, "OffloadingRead"),
+            longMetricValue(false, "OffloadedQueriesNumber"),
+            longMetricValue(true, "OffloadingWritten"),
+            longMetricValue(true, "OffloadingRead"),
+            longMetricValue(true, "OffloadedQueriesNumber")
         );
     }
 
