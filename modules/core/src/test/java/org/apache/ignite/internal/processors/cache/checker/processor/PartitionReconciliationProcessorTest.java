@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
@@ -67,7 +66,6 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.testframework.ConsoleTestLogger;
 import org.apache.ignite.testframework.GridTestNode;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
@@ -75,7 +73,6 @@ import org.mockito.verification.VerificationMode;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
@@ -83,7 +80,6 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -270,18 +266,6 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
-     * Check that parallelism parameter actually affects maximum number of simultaneously executing tasks.
-     */
-    @Test
-    public void testLoadFactorChangeMaxCountOfExecutedTasks() throws Exception {
-        testParallelismLevel(1);
-
-        testParallelismLevel(10);
-
-        testParallelismLevel(50);
-    }
-
-    /**
      * Check if jobs that are trying to fix inconsistency have higher priority (will be executed faster) then jobs that
      * are checking caches. This test schedules {@link Recheck} task with default priority and {@link Repair} with high.
      * High priority task should process first.
@@ -326,27 +310,6 @@ public class PartitionReconciliationProcessorTest {
         assertEquals(RecheckRequest.class.getName(), evtHist.get(0));
         assertEquals(RepairRequest.class.getName(), evtHist.get(1));
         assertEquals(RecheckRequest.class.getName(), evtHist.get(2));
-    }
-
-    /**
-     *
-     */
-    private void testParallelismLevel(int parallelismLevel) throws IgniteCheckedException {
-        MockedProcessor processor = MockedProcessor.create(true, parallelismLevel);
-
-        for (int i = 0; i < 100; i++) {
-            processor.addTask(new Batch(
-                ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
-                DEFAULT_CACHE, PARTITION_ID, null));
-        }
-
-        Thread tp = new Thread(processor::execute);
-
-        tp.start();
-
-        assertTrue(GridTestUtils.waitForCondition(() -> tp.getState() == Thread.State.WAITING, 10_000));
-
-        verify(processor.ignite, times(parallelismLevel)).compute(any());
     }
 
     /**
