@@ -1941,13 +1941,11 @@ public class IgnitionEx {
                     cfg.getIgniteInstanceName(),
                     0,
                     buildIdxThreadPoolSize,
-                    DFLT_THREAD_KEEP_ALIVE_TIME,
+                    0,
                     new LinkedBlockingQueue<>(),
                     GridIoPolicy.UNDEFINED,
                     oomeHnd
                 );
-
-                buildIdxExecSvc.allowCoreThreadTimeOut(true);
             }
 
             validateThreadPoolSize(cfg.getQueryThreadPoolSize(), "query");

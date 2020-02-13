@@ -757,5 +757,5 @@ public interface GridKernalContext extends Iterable<GridComponent> {
      *
      * @return Thread pool for create/rebuild indexes.
      */
-    ExecutorService buildIndexExecutorService();
+    public ExecutorService buildIndexExecutorService();
 }
