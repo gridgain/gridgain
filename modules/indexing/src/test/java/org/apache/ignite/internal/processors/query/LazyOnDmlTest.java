@@ -140,6 +140,28 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
                 streamer.addData(i, i);
         }
 
+        sql("CREATE TABLE table1 (column1 INT PRIMARY KEY, column2 INT, column3 VARCHAR (100))");
+
+        sql("INSERT INTO table1 (column1, column2, column3) " +
+                "SELECT 1, 11, 'FIRST' " +
+                "UNION ALL " +
+                "SELECT 11,12, 'SECOND' " +
+                "UNION ALL " +
+                "SELECT 21, 13, 'THIRD' " +
+                "UNION ALL " +
+                "SELECT 31, 14, 'FOURTH'");
+
+        sql("CREATE TABLE  table2 (column1 INT PRIMARY KEY, column2 INT, column3 VARCHAR (100))");
+
+        sql("INSERT INTO table2 (column1, column2, column3) " +
+                "SELECT 1, 21, 'TWO-ONE' " +
+                "UNION ALL " +
+                "SELECT 11, 22, 'TWO-TWO' " +
+                "UNION ALL " +
+                "SELECT 21, 23, 'TWO-THREE' " +
+                "UNION ALL " +
+                "SELECT 31, 24, 'TWO-FOUR'");
+
         localResults.clear();
     }
 
@@ -184,7 +206,9 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testDeleteWithoutReduce() {
-        sql("DELETE FROM test WHERE val >= 0");
+        List<List<?>> res = sql("DELETE FROM test WHERE val >= 0").getAll();
+
+        assertEquals((long)KEY_CNT, res.get(0).get(0));
 
         assertEquals(0, localResults.size());
     }
@@ -194,9 +218,49 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     @Test
     @Ignore("https://ggsystems.atlassian.net/browse/GG-27502")
     public void testUpdateWithReduce() {
-        sql("UPDATE test SET val = val + AVG(val)");
+        List<List<?>> res = sql("UPDATE test SET val = val + AVG(val)").getAll();
+
+        assertEquals((long)KEY_CNT, res.get(0).get(0));
 
         assertEquals(0, localResults.size());
+    }
+
+    /**
+     */
+    @Test
+    public void testUpdateJoin() {
+        List<List<?>> res;
+
+        res = sql("UPDATE table1 " +
+            "SET column2 = table2.column2, column3 = table2.column3 " +
+            "FROM table1 " +
+            "INNER JOIN table2 " +
+            "ON table1.column1 = table2.column1 " +
+            "WHERE table1.column1 in (21, 31)").getAll();
+
+        assertEquals(0, localResults.size());
+
+        res = sql("UPDATE table1, table2 " +
+            "INNER JOIN table2 " +
+            "ON table1.column1 = table2.column1 " +
+            "SET column2 = table2.column2, column3 = table2.column3 " +
+            "WHERE table1.column1 in (21, 31)").getAll();
+
+        assertEquals(0, localResults.size());
+
+        res = sql("UPDATE table1 " +
+            "INNER JOIN table2 " +
+            "ON table1.column1 = table2.column1 " +
+            "SET column2 = table2.column2, column3 = table2.column3 " +
+            "WHERE table1.column1 in (21, 31)").getAll();
+
+        assertEquals(0, localResults.size());
+
+        res = sql("UPDATE table1 " +
+            "SET (column2, column3) = " +
+            "   (SELECT table2.column2, table2.column3 FROM table2 WHERE table2.column1 = table1.column1) " +
+            "WHERE exists (select * from table2 where table2.column1 = table1.column1) " +
+            "AND table1.column1 in (21, 31)").getAll();
     }
 
     /**
