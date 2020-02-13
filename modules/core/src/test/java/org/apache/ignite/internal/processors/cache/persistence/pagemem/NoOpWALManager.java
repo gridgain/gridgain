@@ -124,6 +124,11 @@ public class NoOpWALManager implements IgniteWriteAheadLogManager {
     }
 
     /** {@inheritDoc} */
+    @Override public void onKernalStart(boolean active) {
+        // No-op.
+    }
+
+    /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
         // No-op.
     }
