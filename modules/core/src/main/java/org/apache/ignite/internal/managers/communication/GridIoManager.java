@@ -59,12 +59,15 @@ import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteDeploymentCheckedException;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.direct.DirectMessageReader;
 import org.apache.ignite.internal.direct.DirectMessageWriter;
 import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.managers.deployment.GridDeployment;
+import org.apache.ignite.internal.managers.discovery.CustomEventListener;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.cache.mvcc.msg.MvccMessage;
@@ -104,6 +107,10 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionFailedException;
+import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
+import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
+import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestMessage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -198,7 +205,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         new ConcurrentHashMap<>();
 
     /** Local node ID. */
-    private final UUID locNodeId;
+    private volatile UUID locNodeId;
 
     /** Cache for messages that were received prior to discovery. */
     private final ConcurrentMap<UUID, Deque<DelayedMessage>> waitMap = new ConcurrentHashMap<>();
@@ -413,6 +420,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 }
             }
         });
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteInternalFuture<?> onReconnected(boolean clusterRestarted) throws IgniteCheckedException {
+        locNodeId = ctx.localNodeId();
+
+        return super.onReconnected(clusterRestarted);
     }
 
     /**
@@ -786,6 +800,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     case EVT_NODE_LEFT:
                     case EVT_NODE_FAILED:
+                        connMap.keySet().removeIf(key -> key.nodeId().equals(nodeId));
+
                         for (Map.Entry<Object, ConcurrentMap<UUID, GridCommunicationMessageSet>> e :
                             msgSetMap.entrySet()) {
                             ConcurrentMap<UUID, GridCommunicationMessageSet> map = e.getValue();
@@ -839,6 +855,41 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         };
 
         ctx.event().addLocalEventListener(discoLsnr, EVT_NODE_JOINED, EVT_NODE_LEFT, EVT_NODE_FAILED);
+
+        CustomEventListener<TcpConnectionRequestDiscoveryMessage> discoConnReqLsnr = (topVer, snd, msg) -> {
+            log.info("<!> Disco message received on " + locNodeId + ": " + msg);
+            if (!locNodeId.equals(msg.receiverNodeId()))
+                return;
+
+            log.info("<!> Disco message reached its destination");
+
+            UUID initiatorNodeId = msg.initiatorNodeId();
+            assert snd.id().equals(initiatorNodeId);
+
+            CommunicationSpi<?> spi = getSpi();
+
+            assert spi instanceof TcpCommunicationSpi;
+
+            TcpCommunicationSpi tcpCommSpi = (TcpCommunicationSpi)spi;
+
+            assert !tcpCommSpi.isUsePairedConnections();
+
+            int connIdx = msg.connectionIndex();
+
+            ctx.getSystemExecutorService().submit(
+                () -> {
+                    try {
+                        log.info("<!> sending request message");
+                        sendToCustomTopic(snd, "aaaa", new TcpConnectionRequestMessage(connIdx), SYSTEM_POOL);
+                    }
+                    catch (IgniteCheckedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            );
+        };
+
+        ctx.discovery().setCustomEventListener(TcpConnectionRequestDiscoveryMessage.class, discoConnReqLsnr);
 
         // Make sure that there are no stale messages due to window between communication
         // manager start and kernal start.
@@ -1015,6 +1066,18 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 finally {
                     lock.readLock().unlock();
                 }
+            }
+
+            if (msg.message() instanceof TcpConnectionRequestMessage) {
+                log.info("<!> receiving request message");
+                TcpConnectionRequestMessage tcpConnReqMsg = (TcpConnectionRequestMessage)msg.message();
+
+                ConnectionKey connKey = new ConnectionKey(nodeId, tcpConnReqMsg.connectionIndex(), ((TcpCommunicationSpi)(CommunicationSpi)getSpi()).getConnectionsPerNode());
+
+                GridFutureAdapter<?> fut = connMap.remove(connKey);
+
+                if (fut != null && !fut.isDone())
+                    fut.onDone();
             }
 
             // If message is P2P, then process in P2P service.
@@ -1720,8 +1783,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     ioMsg.topicBytes(U.marshal(marsh, topic));
 
                 try {
-                    if ((CommunicationSpi)getSpi() instanceof TcpCommunicationSpi)
-                        ((TcpCommunicationSpi)(CommunicationSpi)getSpi()).sendMessage(node, ioMsg, ackC);
+                    if ((CommunicationSpi<?>)getSpi() instanceof TcpCommunicationSpi)
+                        sendMessageThroughTcpCommunicationSpi(node, ioMsg, ackC);
                     else
                         getSpi().sendMessage(node, ioMsg);
                 }
@@ -1738,6 +1801,69 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                         ", msg=" + msg + ", policy=" + plc + ']', e);
                 }
             }
+        }
+    }
+
+    private Map<ConnectionKey, GridFutureAdapter<?>> connMap = new ConcurrentHashMap<>();
+
+    /** */
+    private void sendMessageThroughTcpCommunicationSpi(
+        ClusterNode node,
+        GridIoMessage ioMsg,
+        IgniteInClosure<IgniteException> ackC
+    ) throws ConnectionFailedException {
+        TcpCommunicationSpi tcpCommSpi = (TcpCommunicationSpi)(CommunicationSpi<?>)getSpi();
+
+        try {
+            tcpCommSpi.sendMessage(node, ioMsg, ackC);
+        }
+        catch (ConnectionFailedException e) {
+//            if (Thread.currentThread() instanceof IgniteDiscoveryThread)
+//                throw new IgniteSpiException(e);
+
+            if (tcpCommSpi.isUsePairedConnections())
+                throw new IgniteSpiException(e);
+
+            ConnectionKey connKey = new ConnectionKey(node.id(), e.connIdx, tcpCommSpi.getConnectionsPerNode());
+
+            GridFutureAdapter<?> fut = new GridFutureAdapter<>();
+
+            GridFutureAdapter<?> oldFut = connMap.putIfAbsent(connKey, fut);
+
+            if (oldFut != null)
+                fut = oldFut;
+            else
+                fut.listen(f -> connMap.remove(connKey, f));
+
+            try {
+                TcpConnectionRequestDiscoveryMessage msg = new TcpConnectionRequestDiscoveryMessage(
+                    locNodeId, node.id(), e.connIdx
+                );
+                ctx.discovery().sendCustomEvent(msg);
+                log.info("<!> Disco message sent: " + msg);
+                log.info("<!> Current cluster state: " + ctx.state().clusterState());
+            }
+            catch (IgniteCheckedException ex) {
+                ex.addSuppressed(e);
+
+                fut.onDone(ex);
+
+                throw new IgniteSpiException(e);
+            }
+
+            try {
+                fut.get(5000);
+            }
+            catch (IgniteInterruptedCheckedException | IgniteFutureTimeoutCheckedException ex) {
+                fut.onDone(ex);
+            }
+            catch (IgniteCheckedException ex) {
+                e.addSuppressed(ex);
+
+                throw e;
+            }
+
+            tcpCommSpi.sendMessage(node, ioMsg, ackC);
         }
     }
 

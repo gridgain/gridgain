@@ -185,6 +185,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.spi.collision.jobstealing.JobStealingRequest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
@@ -1074,6 +1075,11 @@ public class GridIoMessageFactory implements MessageFactory {
 
             case GridIoSecurityAwareMessage.TYPE_CODE:
                 msg = new GridIoSecurityAwareMessage();
+
+                break;
+
+            case 175:
+                msg = new TcpConnectionRequestMessage();
 
                 break;
 
