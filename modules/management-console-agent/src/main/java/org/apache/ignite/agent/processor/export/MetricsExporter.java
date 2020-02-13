@@ -51,7 +51,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.BYTE_ARR_OFF;
 import static org.apache.ignite.internal.util.GridUnsafe.copyMemory;
 
 /**
- * Ignite processor which writes the metrics in a compact binary format for Management Console:
+ * Ignite processor which writes the metrics in a compact binary format for Control Center:
  *
  * Header
  * Schema
