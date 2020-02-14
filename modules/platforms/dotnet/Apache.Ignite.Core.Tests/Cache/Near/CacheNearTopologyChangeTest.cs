@@ -54,10 +54,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
         
         /// <summary>
-        /// Tests that near cache is cleared when any server node leaves.
+        /// Tests that near cache is cleared for the key when primary node leaves.
         /// </summary>
         [Test]
-        public void TestServerNodeLeaveClearsNearCache()
+        public void TestPrimaryNodeLeaveClearsNearCache()
         {
             InitNodes(3);
             var clientCache = InitClientAndCache();
@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // Client node cache is cleared.
             Foo foo;
-            //Assert.IsFalse(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
+            Assert.IsFalse(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             
             // Updates are propagated to client near cache.
             _cache[2][Key3] = new Foo(3);
