@@ -46,6 +46,7 @@ public class PlatformCacheManager implements GridCacheManager {
     /** {@inheritDoc} */
     @Override public void start(GridCacheContext cctx) throws IgniteCheckedException {
         assert cctx != null;
+        assert this.cctx == null;
 
         this.cctx = cctx;
     }
