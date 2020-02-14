@@ -306,6 +306,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         /// <summary>
         /// Tests that client node resets cache data when reconnected to the cluster.
+        /// This happens thanks to `stopCachesOnClientReconnect` call in Java.
         /// </summary>
         [Test]
         public void TestClientNodeReconnectResetsNearCacheData()
@@ -340,6 +341,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             serverCache[1] = new Foo(11);
             Assert.AreEqual(11, clientCache[1].Bar);
             
+            // TODO:
+            // - topology updates are no longer received?
+            // - near cache updates do not work?
             serverCache[1] = new Foo(22);
             TestUtils.WaitForTrueCondition(() => 22 == clientCache[1].Bar);
         }

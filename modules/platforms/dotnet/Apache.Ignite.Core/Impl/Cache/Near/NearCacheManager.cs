@@ -105,6 +105,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             if (_nearCaches.TryGetValue(cacheId, out cache))
             {
                 cache.Clear();
+                
+                // TODO: This is not right: Stop is called during client reconnect.
+                // This near cache instance is still used in some caches that may come back to life after reconnect. 
                 _nearCaches.Remove(cacheId);
             }
         }
