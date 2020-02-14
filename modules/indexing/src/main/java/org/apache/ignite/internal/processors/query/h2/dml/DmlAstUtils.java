@@ -21,6 +21,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -372,7 +374,7 @@ public final class DmlAstUtils {
         //    UPDATE test SET val1 = val1 + 1 WHERE val0 >= ?
         mapQry.canBeLazy(!isIndexWithUpdateColumnsMayBeUsed(
             gridTbl,
-            update.set().keySet(),
+            update.cols().stream().map(sqlCol-> sqlCol.column()).collect(Collectors.toSet()),
             extractColumns(gridTbl, where)));
 
         mapQry.where(where);
@@ -404,15 +406,20 @@ public final class DmlAstUtils {
      */
     private static boolean isIndexWithUpdateColumnsMayBeUsed(
         GridH2Table tbl,
-        Set<String> updateCols,
+        Set<Column> updateCols,
         Set<Column> whereCols) {
         if (F.isEmpty(whereCols))
             return false;
 
+        if (updateCols.size() == 1 && whereCols.size() ==1
+            && tbl.rowDescriptor().isValueColumn(F.first(updateCols).getColumnId())
+            && tbl.rowDescriptor().isValueColumn(F.first(whereCols).getColumnId()))
+            return true;
+
         for (Index idx : tbl.getIndexes()) {
             if (idx.equals(tbl.getPrimaryKey()) || whereCols.contains(idx.getColumns()[0])) {
                 for (Column idxCol : idx.getColumns()) {
-                    if (updateCols.contains(idxCol.getName()))
+                    if (updateCols.contains(idxCol))
                         return true;
                 }
             }

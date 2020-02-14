@@ -283,6 +283,24 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     */
+    @Test
+    public void testUpdateValueField() {
+        sql("CREATE TABLE TEST2 (id INT PRIMARY KEY, val INT) " +
+            "WITH\"WRAP_VALUE=false\"");
+
+        sql("INSERT INTO TEST2  VALUES (0, 0), (1, 1), (2, 2)");
+
+        // 'val' field is the alias for _val. There is index for _val.
+        List<List<?>> res = sql("UPDATE TEST2 SET _val = _val + 1 WHERE val >=0").getAll();
+
+        assertEquals(3L, res.get(0).get(0));
+
+        assertFalse(localResults.isEmpty());
+    }
+
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
