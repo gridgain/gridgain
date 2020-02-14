@@ -88,9 +88,6 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearCreateDestroy.cs">
       <Link>Cache\Near\CacheNearCreateDestroy.cs</Link>
     </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearReconnectTest.cs">
-      <Link>Cache\Near\CacheNearReconnectTest.cs</Link>
-    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearTest.cs">
       <Link>Cache\Near\CacheNearTest.cs</Link>
     </Compile>
