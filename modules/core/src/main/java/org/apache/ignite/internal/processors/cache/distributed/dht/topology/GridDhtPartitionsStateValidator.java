@@ -340,11 +340,12 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * Folds given maps of invalid partition states to string (Both PartitionCounters and Size) representation in the following format:
+     * Folds given maps of invalid partition states to string (Both PartitionCounters and Size) representation
+     * in the following format:
      * Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
      */
-    private String fold(AffinityTopologyVersion topVer, Map<Integer, Map<UUID, Long>> invalidPartitionsCounters, Map<Integer, Map<UUID, Long>> invalidPartitionsSize) {
-        SB sb = new SB();
+    private String fold(AffinityTopologyVersion topVer, Map<Integer, Map<UUID, Long>> invalidPartitionsCounters,
+        Map<Integer, Map<UUID, Long>> invalidPartitionsSize) { SB sb = new SB();
 
         NavigableMap<Integer, Map<UUID, IgnitePair<Long>>> sortedAllPartitions = new TreeMap<>();
 
@@ -363,7 +364,8 @@ public class GridDhtPartitionsStateValidator {
             sb.a("Part ").a(p.getKey()).a(": [");
             for (Map.Entry<UUID, IgnitePair<Long>> e : p.getValue().entrySet()) {
                 Object consistentId = cctx.discovery().node(topVer, e.getKey()).consistentId();
-                sb.a("consistentId=").a(consistentId).a(" meta=[updCnt=").a(e.getValue().get1()).a(", size=").a(e.getValue().get2()) .a("] ");
+                sb.a("consistentId=").a(consistentId).a(" meta=[updCnt=").a(e.getValue().get1())
+                    .a(", size=").a(e.getValue().get2()) .a("] ");
             }
             sb.a("] ");
         }
@@ -372,9 +374,11 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * fillMapForPartition given maps of UUID and values (for PartitionCounters or PartitionSize) and set pairs (cnt, size)
+     * fillMapForPartition given maps of UUID and values (for PartitionCounters or PartitionSize)
+     * and set pairs (cnt, size)
      */
-    private void fillMapForPartition(Map<UUID, Long> sourceMap, Map<UUID, IgnitePair<Long>> resultMap, boolean isFirst){
+    private void fillMapForPartition(Map<UUID, Long> sourceMap,
+        Map<UUID, IgnitePair<Long>> resultMap, boolean isFirst) {
         if (sourceMap!=null) {
             sourceMap.forEach((uuid, val) -> {
                 IgnitePair<Long> pair = resultMap.computeIfAbsent(uuid, u -> new IgnitePair<>());

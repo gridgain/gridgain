@@ -118,16 +118,16 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
         ignite.cache(CACHE_NAME).put(0, 0);
 
         if (cnt && !size)
-            assertTrue("Counters inconsistent message found", lsnrCnt.check() && !lsnrSize.check());
+            assertTrue("Counters inconsistent message not found", lsnrCnt.check() && !lsnrSize.check());
 
         if (!cnt && size)
-            assertTrue("Size inconsistent message found", lsnrSize.check() && !lsnrCnt.check());
+            assertTrue("Size inconsistent message not found", lsnrSize.check() && !lsnrCnt.check());
 
         if (cnt && size)
-            assertTrue("Both counters and sizes message found", lsnrSizeCnt.check());
+            assertTrue("Both counters and sizes message not found", lsnrSizeCnt.check());
 
         if (!cnt && !size)
-            assertFalse("Counters and Size inconsistent message not found", lsnrSize.check() && lsnrCnt.check() && lsnrSizeCnt.check());
+            assertFalse("Counters and Size inconsistent message found!", lsnrSize.check() && lsnrCnt.check() && lsnrSizeCnt.check());
     }
 
     /**
@@ -191,21 +191,30 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
 
             int typeInconsistence = 0; //for Cnt 1, for Size 2, for Both 3, no inconsisctence 0.
 
-            if (s.contains("Partitions update counters are inconsistent for ")) {
+            if (s.contains("Partitions update counters are inconsistent for Part (\\d{1,19}): " +
+                "[dht.GridCachePartitionsUpdateCountersAndSizeTest0=(\\d{1,19}) " +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest2=(\\d{1,19}) " +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest1=(\\d{1,19})")) {
                 typeInconsistence = 1;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf("="));
                     setCnt.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
                 }
             }
-            else if (s.contains("Partitions cache sizes are inconsistent for ")) {
+            else if (s.contains("Partitions cache sizes are inconsistent for Part (\\d{1,19}): \" +\n" +
+                "[dht.GridCachePartitionsUpdateCountersAndSizeTest0=(\\d{1,19}) \" +\n" +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest2=(\\d{1,19}) \" +\n" +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest1=(\\d{1,19})")) {
                 typeInconsistence =2;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf("="));
                     setSize.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
                 }
             }
-            else if (s.contains("Partitions cache sizes are inconsistent for ")) {
+            else if (s.contains("Partitions cache sizes are inconsistent for Part (\\d{1,19}): \" +\n" +
+                "[dht.GridCachePartitionsUpdateCountersAndSizeTest0=(\\d{1,19}) \" +\n" +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest2=(\\d{1,19}) \" +\n" +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest1=(\\d{1,19})")) {
                 typeInconsistence = 3;
                 for (int i=0; i<3; i++) {
                     s = s.substring(s.indexOf("size="));
