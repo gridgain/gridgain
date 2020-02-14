@@ -180,6 +180,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
                     cluster.baselineAutoAdjustTimeout()
                 )
             )
+            .setSecure(ctx.authentication().enabled() || ctx.security().enabled())
             .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
 
     }
