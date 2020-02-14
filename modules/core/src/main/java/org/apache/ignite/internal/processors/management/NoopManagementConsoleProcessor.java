@@ -26,7 +26,7 @@ public class NoopManagementConsoleProcessor extends GridProcessorAdapter impleme
     /**
      * @param ctx Kernal context.
      */
-    protected NoopManagementConsoleProcessor(GridKernalContext ctx) {
+    public NoopManagementConsoleProcessor(GridKernalContext ctx) {
         super(ctx);
     }
 
