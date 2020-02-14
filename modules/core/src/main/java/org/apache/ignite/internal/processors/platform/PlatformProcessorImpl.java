@@ -219,9 +219,6 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     /** Cluster restart flag for the reconnect callback. */
     private volatile boolean clusterRestarted;
 
-    /** Cache manager. */
-    private final PlatformCacheManager platformCacheManager;
-
     /**
      * Constructor.
      *
@@ -247,7 +244,6 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
         }
 
         platformCtx = new PlatformContextImpl(ctx, interopCfg.gate(), interopCfg.memory(), interopCfg.platform());
-        platformCacheManager = new PlatformCacheManager(platformCtx.gateway());
 
         // Initialize cache extensions (if any).
         cacheExts = prepareCacheExtensions(interopCfg.cacheExtensions());
@@ -357,7 +353,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** {@inheritDoc} */
     @Override public PlatformCacheManager cacheManager() {
-        return platformCacheManager;
+        return new PlatformCacheManager(platformCtx.gateway());
     }
 
     /** {@inheritDoc} */

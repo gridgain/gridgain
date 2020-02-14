@@ -30,7 +30,7 @@ public class PlatformCacheManager implements GridCacheManager {
     private final PlatformCallbackGateway gate;
 
     /** */
-    private GridCacheContext cctx;
+    private volatile GridCacheContext cctx;
 
     /**
      * Constructor.
@@ -54,6 +54,8 @@ public class PlatformCacheManager implements GridCacheManager {
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel, boolean destroy) {
         gate.onCacheStopped(cctx.cacheId());
+
+        cctx = null;
     }
 
     /** {@inheritDoc} */
