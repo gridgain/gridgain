@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Threading;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -311,20 +312,23 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             InitNodes(1);
             var clientCache = InitClientAndCache();
+            var client = Ignition.GetAll().Last();
             
             var keys = Enumerable.Range(1, 100).ToList();
             keys.ForEach(k => clientCache[k] = new Foo(k));
             Assert.AreEqual(keys.Count, clientCache.GetLocalSize(CachePeekMode.NativeNear));
             
             // Stop the only server node, client goes into disconnected mode.
+            var evt = new ManualResetEventSlim(false);
+            client.ClientDisconnected += (sender, args) => evt.Set(); 
+            
             StopNode(0);
             
-            var client = Ignition.GetAll().Single();
+            evt.Wait();
             var reconnectTask = client.GetCluster().ClientReconnectTask;
             
             // Start server again, client reconnects.
             InitNodes(1);
-            
             Assert.IsTrue(reconnectTask.Wait(TimeSpan.FromSeconds(10)));
             
             // Near cache is empty.
@@ -337,7 +341,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(1, clientCache[1].Bar);
             
             serverCache[1] = new Foo(2);
-            TestUtils.WaitForTrueCondition(() => 2 == clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
+            TestUtils.WaitForTrueCondition(() => 2 == clientCache[1].Bar);
         }
 
         /// <summary>
