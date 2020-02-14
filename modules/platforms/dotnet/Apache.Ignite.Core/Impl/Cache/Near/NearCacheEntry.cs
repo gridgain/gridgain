@@ -66,7 +66,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public void CompareExchangeVersion(object newVal, object oldVal)
         {
+            // CS0420 A reference to a volatile field will not be treated as volatile
+#pragma warning disable 0420
             Interlocked.CompareExchange(ref _version, newVal, oldVal);
+#pragma warning restore 0420
         }
     }
 }
