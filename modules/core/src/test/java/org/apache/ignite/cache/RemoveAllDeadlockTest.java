@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -32,7 +33,7 @@ import org.junit.Test;
  */
 public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
     /** Threads number for reproducing deadlock. */
-    public static final int THREADS = 4;
+    public static final int THREADS = 8;
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -58,7 +59,7 @@ public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, Integer> cache = grid(1).getOrCreateCache(cacheCfg);
 
-        putAllConcurrent(cache);
+        removeAllConcurrent(cache);
     }
 
     /**
@@ -80,7 +81,7 @@ public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
 
         IgniteCache<Integer, Integer> cache = grid(1).getOrCreateCache(cacheCfg);
 
-        removeAllConcurrent(cache);
+        putAllConcurrent(cache);
     }
 
     /**
@@ -209,9 +210,9 @@ public class RemoveAllDeadlockTest extends GridCommonAbstractTest {
                         cache.put(j, j * c);
                 }
                 else {
-                    HashMap<Integer, Integer> m = new HashMap<>();
+                    TreeMap<Integer, Integer> m = new TreeMap<>();
 
-                    for (int j = i; j < c + i; j++)
+                    for (int j = i; j < 1000 + c + i; j++)
                         m.put(j, j * c);
 
                     cache.putAll(m);

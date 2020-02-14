@@ -419,6 +419,7 @@ public class CycleDetectingLockFactory {
         void checkAcquiredLocks(Policy policy, List<LockGraphNode> acquiredLocks) throws IgniteCheckedException {
             for (int i = 0, size = acquiredLocks.size(); i < size; i++)
                 checkAcquiredLock(policy, acquiredLocks.get(i));
+            System.out.println("allowedPriorLocks.size() = " + allowedPriorLocks.size());
         }
 
 
@@ -559,6 +560,16 @@ public class CycleDetectingLockFactory {
         }
     }
 
+    private static void acquire(CycleDetectingLock lock) {
+        if (lock.isAcquiredByCurrentThread()) {
+            ArrayList<LockGraphNode> acquiredLockList = acquiredLocks.get();
+
+            LockGraphNode node = lock.getLockGraphNode();
+
+            acquiredLockList.add(node);
+        }
+    }
+
     final class CycleDetectingReentrantLock extends ReentrantLock implements CycleDetectingLock {
 
         /** */
@@ -606,6 +617,24 @@ public class CycleDetectingLockFactory {
             }
 
         }
+
+/*        public void lockWithDetection() throws IgniteCheckedException {
+            try {
+                if (super.tryLock(10, TimeUnit.MILLISECONDS)) {
+                    aboutToAcquire(this);
+                }
+                else {
+                    aboutToAcquire(this);
+                    super.lock();
+                }
+            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            finally {
+                lockStateChanged(this);
+            }
+        }*/
 
         /** {@inheritDoc} */
         @Override public void lockInterruptibly() throws InterruptedException {

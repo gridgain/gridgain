@@ -245,6 +245,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     //private final ReentrantLock lockForNestedCases = factory.newReentrantLock(String.valueOf(rnd.nextInt()));
     //private final ReentrantLock lock = factory.newReentrantLock(String.valueOf(rnd.nextInt()));
+    //private final ReentrantLock lock = new ReentrantLock();
 
     /** Read Lock for continuous query listener */
     @GridToStringExclude
