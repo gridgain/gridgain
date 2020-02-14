@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         /** Version. Boxed <see cref="AffinityTopologyVersion"/>. Stored as object for atomic updates.
          * Saves memory as well, because sizeof(AffinityTopologyVersion) > sizeof(void*) */
-        private volatile object _version;
+        private object _version;
 
         /** Partition. */
         private volatile int _partition;
@@ -52,7 +52,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public object Version
         {
-            get { return _version; }
+            get { return Interlocked.CompareExchange(ref _version, null, null); }
         }
 
         public int Partition
@@ -66,10 +66,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public void CompareExchangeVersion(object newVal, object oldVal)
         {
-            // CS0420 A reference to a volatile field will not be treated as volatile
-#pragma warning disable 0420
             Interlocked.CompareExchange(ref _version, newVal, oldVal);
-#pragma warning restore 0420
         }
     }
 }
