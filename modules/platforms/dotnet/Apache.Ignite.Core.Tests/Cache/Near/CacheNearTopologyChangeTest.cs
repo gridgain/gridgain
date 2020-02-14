@@ -309,7 +309,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestClientNodeReconnectResetsNearCacheData()
         {
-            InitNode(0);
+            InitNodes(1);
             var clientCache = InitClientAndCache();
             
             var keys = Enumerable.Range(1, 100).ToList();
@@ -323,7 +323,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var reconnectTask = client.GetCluster().ClientReconnectTask;
             
             // Start server again, client reconnects.
-            InitNode(0);
+            InitNodes(1);
             
             Assert.IsTrue(reconnectTask.Wait(TimeSpan.FromSeconds(10)));
             
