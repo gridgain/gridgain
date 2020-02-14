@@ -222,6 +222,11 @@ public class PartitionUpdateCounterDebugWrapper implements PartitionUpdateCounte
     }
 
     /** {@inheritDoc} */
+    @Override public void resetInitialCounter() {
+        delegate.resetInitialCounter();
+    }
+
+    /** {@inheritDoc} */
     @Override public long initial() {
         return delegate.initial();
     }

@@ -32,6 +32,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
+import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cluster.ClusterNode;
@@ -54,6 +55,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactor
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -88,22 +90,25 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         cfg.setConsistentId(gridName);
 
         CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(CACHE_NAME)
+            .setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_SAFE)
             .setAtomicityMode(CacheAtomicityMode.ATOMIC)
             .setRebalanceMode(CacheRebalanceMode.ASYNC)
-            .setCacheMode(CacheMode.REPLICATED)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setBackups(2)
             .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
 
         cfg.setCacheConfiguration(ccfg);
 
         DataStorageConfiguration dbCfg = new DataStorageConfiguration()
-                    .setWalHistorySize(Integer.MAX_VALUE)
-                    .setWalMode(WALMode.LOG_ONLY)
-                    .setCheckpointFrequency(15 * 60 * 1000)
-                    .setDefaultDataRegionConfiguration(
-                        new DataRegionConfiguration()
-                            .setPersistenceEnabled(true)
-                            .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
-                    );
+            .setWalSegmentSize(4 * 1024 * 1024)
+            .setWalHistorySize(Integer.MAX_VALUE)
+            .setWalMode(WALMode.LOG_ONLY)
+            .setCheckpointFrequency(15 * 60 * 1000)
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration()
+                    .setPersistenceEnabled(true)
+                    .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE)
+            );
 
         cfg.setDataStorageConfiguration(dbCfg);
 
@@ -240,7 +245,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     public void testWithLocalWalChange() throws Exception {
         System.setProperty(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, "true");
 
-        IgniteEx crd = (IgniteEx) startGrids(4);
+        IgniteEx crd = startGrids(4);
 
         crd.cluster().active(true);
 
@@ -257,7 +262,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         stopAllGrids();
 
-        IgniteEx ig0 = (IgniteEx) startGrids(2);
+        IgniteEx ig0 = startGrids(2);
 
         ig0.cluster().active(true);
 
@@ -456,7 +461,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
         final GridCachePreloader preloader = demanderNode.cachex(CACHE_NAME).context().group().preloader();
 
         GridTestUtils.waitForCondition(() ->
-            ((GridDhtPartitionDemander.RebalanceFuture) preloader.rebalanceFuture()).topologyVersion().equals(curTopVer),
+                ((GridDhtPartitionDemander.RebalanceFuture) preloader.rebalanceFuture()).topologyVersion().equals(curTopVer),
             getTestTimeout()
         );
 
@@ -494,6 +499,70 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             for (int k = 0; k < entryCnt; k++)
                 assertEquals(new IndexedObject(k), cache1.get(k));
         }
+    }
+
+    /**
+     * Check that historical rebalance doesn't start on the cleared partition when some cluster node restarts.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRebalanceRestartWithNodeBlinking() throws Exception {
+        int entryCnt = PARTS_CNT * 200;
+
+        IgniteEx crd = (IgniteEx)startGridsMultiThreaded(3);
+
+        crd.cluster().active(true);
+
+        IgniteCache<Integer, String> cache0 = crd.cache(CACHE_NAME);
+
+        for (int i = 0; i < entryCnt / 2; i++)
+            cache0.put(i, String.valueOf(i));
+
+        forceCheckpoint();
+
+        stopGrid(2);
+
+        for (int i = entryCnt / 2; i < entryCnt; i++)
+            cache0.put(i, String.valueOf(i));
+
+        blockMessagePredicate = (node, msg) -> {
+            if (msg instanceof GridDhtPartitionDemandMessage) {
+                GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage)msg;
+
+                return msg0.groupId() == CU.cacheId(CACHE_NAME) && msg0.partitions().size() == PARTS_CNT;
+            }
+
+            return false;
+        };
+
+        startGrid(2);
+
+        TestRecordingCommunicationSpi spi2 = TestRecordingCommunicationSpi.spi(grid(2));
+
+        // Wait until node2 starts historical rebalancning.
+        spi2.waitForBlocked(1);
+
+        // Interruption of rebalancing by left supplier, should remap to new supplier with full rebalancing.
+        stopGrid(0);
+
+        // Wait until the full rebalance begins with g1 as a supplier.
+        spi2.waitForBlocked(2);
+
+        blockMessagePredicate = null;
+
+        startGrid(0); // Should be compatible rebalancing.
+
+        startGrid(4);
+
+        resetBaselineTopology(); // Should be incompatible rebalancing and force remap.
+
+        spi2.stopBlock();
+
+        awaitPartitionMapExchange();
+
+        // Verify data on demander node.
+        assertPartitionsSame(idleVerify(grid(0), CACHE_NAME));
     }
 
     /**
