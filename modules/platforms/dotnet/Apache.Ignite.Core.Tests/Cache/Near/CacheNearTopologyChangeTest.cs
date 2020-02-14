@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -135,16 +136,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
         }
-
-        /// <summary>
-        /// Tests that when new server node joins, near cache data is retained for all keys
-        /// that are NOT moved to a new server.
-        /// </summary>
-        [Test]
-        public void TestServerNodeJoinDoesNotAffectNonPrimaryKeysInNearCache()
-        {
-            // TODO
-        }
         
         /// <summary>
         /// Tests that near cache works correctly on client node after primary node changes for a given key.
@@ -174,6 +165,33 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.AreNotSame(clientInstance, foo);
             Assert.AreEqual(3, foo.Bar);
+        }
+
+        /// <summary>
+        /// Tests that when new server node joins, near cache data is retained for all keys
+        /// that are NOT moved to a new server.
+        /// </summary>
+        [Test]
+        public void TestServerNodeJoinDoesNotAffectNonPrimaryKeysInNearCache()
+        {
+            var key = 0;
+            InitNodes(2);
+            var clientCache = InitClientAndCache();
+            var serverCache = _cache[0];
+            
+            serverCache[key] = new Foo(-1);
+            
+            var serverInstance = serverCache[key];
+            var clientInstance = clientCache[key];
+            
+            // New node enters, but key stays on the same primary node.
+            InitNode(2);
+
+            Assert.AreSame(clientInstance, clientCache[key]);
+            Assert.AreSame(serverInstance, serverCache[key]);
+            
+            Assert.AreEqual(-1, clientInstance.Bar);
+            Assert.AreEqual(-1, serverInstance.Bar);
         }
 
         /// <summary>
