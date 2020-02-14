@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
@@ -300,6 +301,43 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 TestUtils.WaitForTrueCondition(() => val == serverCache[key].Bar, timeout, status);
                 TestUtils.WaitForTrueCondition(() => val == clientCache[key].Bar, timeout, status);
             }
+        }
+
+        /// <summary>
+        /// Tests that client node resets cache data when reconnected to the cluster.
+        /// </summary>
+        [Test]
+        public void TestClientNodeReconnectResetsNearCacheData()
+        {
+            InitNode(0);
+            var clientCache = InitClientAndCache();
+            
+            var keys = Enumerable.Range(1, 100).ToList();
+            keys.ForEach(k => clientCache[k] = new Foo(k));
+            Assert.AreEqual(keys.Count, clientCache.GetLocalSize(CachePeekMode.NativeNear));
+            
+            // Stop the only server node, client goes into disconnected mode.
+            StopNode(0);
+            
+            var client = Ignition.GetAll().Single();
+            var reconnectTask = client.GetCluster().ClientReconnectTask;
+            
+            // Start server again, client reconnects.
+            InitNode(0);
+            
+            Assert.IsTrue(reconnectTask.Wait(TimeSpan.FromSeconds(10)));
+            
+            // Near cache is empty.
+            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.NativeNear));
+            
+            // Near cache still works for new entries.
+            var serverCache = _cache[0];
+            
+            serverCache[1] = new Foo(1);
+            Assert.AreEqual(1, clientCache[1].Bar);
+            
+            serverCache[1] = new Foo(2);
+            TestUtils.WaitForTrueCondition(() => 2 == clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
         }
 
         /// <summary>
