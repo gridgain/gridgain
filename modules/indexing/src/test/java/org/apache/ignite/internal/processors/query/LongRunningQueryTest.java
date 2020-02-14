@@ -231,7 +231,6 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      */
     private FieldsQueryCursor<List<?>> sql(String sql, Object... args) {
         return grid().context().query().querySqlFields(new SqlFieldsQueryEx(sql, true)
-            .setMaxMemory(-1)
             .setTimeout(10, TimeUnit.SECONDS)
             .setLocal(local)
             .setLazy(lazy)
