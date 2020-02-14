@@ -134,7 +134,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 TestUtils.WaitForTrueCondition(() => _cache[i][Key3].Bar == 3);
                 Assert.AreSame(_cache[i][Key3], _cache[i][Key3]);
             }
-        }        
+        }
+
+        /// <summary>
+        /// Tests that when new server node joins, near cache data is retained for all keys
+        /// that are NOT moved to a new server.
+        /// </summary>
+        [Test]
+        public void TestServerNodeJoinDoesNotAffectNonPrimaryKeysInNearCache()
+        {
+            // TODO
+        }
         
         /// <summary>
         /// Tests that near cache works correctly on client node after primary node changes for a given key.
@@ -279,7 +289,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Temporary test: compare Java-based IsValid against .NET-based.
         /// </summary>
         [Test]
-        public void TestIsValidPerf()
+        public void TestIsValidPerf() // TODO: Remove this test
         {
             InitNodes(1);
             var cache = InitClientAndCache();
