@@ -40,7 +40,6 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobRespo
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
-import static org.apache.ignite.agent.utils.AgentUtils.fromNullableCollection;
 import static org.awaitility.Awaitility.with;
 
 /**

@@ -32,10 +32,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Collections.singleton;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 import static org.apache.ignite.agent.dto.action.Status.FAILED;
