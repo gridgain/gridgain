@@ -291,7 +291,7 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
 
         /**
          * @param addr Node address.
-         * @param consistentId
+         * @param consistentId Consistent if of the node.
          * @param rmtNodeId Id of node to open connection check session with.
          */
         public void init(InetSocketAddress addr, Object consistentId, UUID rmtNodeId) {
@@ -317,8 +317,10 @@ public class TcpCommunicationConnectionCheckFuture extends GridFutureAdapter<Bit
                 sesMeta = new GridLeanMap<>(3);
 
                 // Set dummy key to identify connection-check outgoing connection.
-                ConnectionKey connKey = new ConnectionKey(consistentId, rmtNodeId, -1, -1, true);
+                ConnectionKey connKey = new ConnectionKey(rmtNodeId, -1, -1, true);
+
                 sesMeta.put(TcpCommunicationSpi.CONN_IDX_META, connKey);
+                sesMeta.put(TcpCommunicationSpi.CONSISTENT_ID_META, consistentId);
                 sesMeta.put(SES_FUT_META, this);
 
                 nioSrvr.createSession(ch, sesMeta, true, new IgniteInClosure<IgniteInternalFuture<GridNioSession>>() {

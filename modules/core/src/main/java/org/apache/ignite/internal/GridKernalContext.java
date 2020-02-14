@@ -749,7 +749,7 @@ public interface GridKernalContext extends Iterable<GridComponent> {
     public RollingUpgradeProcessor rollingUpgrade();
 
     /**
-     * @return Management console processor.
+     * @return Control Center processor.
      */
     public ManagementConsoleProcessorAdapter managementConsole();
 
