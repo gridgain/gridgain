@@ -81,6 +81,9 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
     /** Block message predicate to set to Communication SPI in node configuration. */
     private IgniteBiPredicate<ClusterNode, Message> blockMessagePredicate;
 
+    /** */
+    private int backups;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         System.setProperty(IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "0"); //to make all rebalance wal-based
@@ -94,7 +97,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             .setAtomicityMode(CacheAtomicityMode.ATOMIC)
             .setRebalanceMode(CacheRebalanceMode.ASYNC)
             .setCacheMode(CacheMode.PARTITIONED)
-            .setBackups(2)
+            .setBackups(backups)
             .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
 
         cfg.setCacheConfiguration(ccfg);
@@ -155,6 +158,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testSimple() throws Exception {
+        backups = 4;
+
         IgniteEx ig0 = startGrid(0);
         IgniteEx ig1 = startGrid(1);
 
@@ -195,6 +200,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceRemoves() throws Exception {
+        backups = 4;
+
         IgniteEx ig0 = startGrid(0);
         IgniteEx ig1 = startGrid(1);
 
@@ -243,6 +250,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWithLocalWalChange() throws Exception {
+        backups = 4;
         System.setProperty(IgniteSystemProperties.IGNITE_DISABLE_WAL_DURING_REBALANCING, "true");
 
         IgniteEx crd = startGrids(4);
@@ -333,6 +341,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWithGlobalWalChange() throws Exception {
+        backups = 4;
+
         // Prepare some data.
         IgniteEx crd = (IgniteEx) startGrids(3);
 
@@ -413,6 +423,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceCancelOnSupplyError() throws Exception {
+        backups = 4;
+
         // Prepare some data.
         IgniteEx crd = (IgniteEx) startGrids(3);
 
@@ -508,6 +520,8 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceRestartWithNodeBlinking() throws Exception {
+        backups = 2;
+
         int entryCnt = PARTS_CNT * 200;
 
         IgniteEx crd = (IgniteEx)startGridsMultiThreaded(3);
