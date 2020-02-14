@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestNearCacheEvictsStaleDataOnDisconnect()
         {
-            // TODO
+            // TODO: Remove this file, reconnect test exists in TopologyChange
         }
     }
 }

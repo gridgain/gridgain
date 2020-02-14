@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using NUnit.Framework;
