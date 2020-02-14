@@ -82,7 +82,6 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
-import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationClientFuture;
@@ -102,7 +101,6 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
@@ -1599,46 +1597,18 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         try {
             if (op instanceof SchemaIndexCreateOperation) {
-                SchemaIndexCreateOperation op0 = (SchemaIndexCreateOperation)op;
+                final SchemaIndexCreateOperation op0 = (SchemaIndexCreateOperation)op;
 
                 QueryIndexDescriptorImpl idxDesc = QueryUtils.createIndexDescriptor(type, op0.index());
 
                 SchemaIndexCacheVisitor visitor;
 
                 if (cacheInfo.isCacheContextInited()) {
-                    GridFutureAdapter<Void> createIdxFut = new GridFutureAdapter<>();
+                    GridCacheContext cctx = cacheInfo.cacheContext();
 
-                    int buildIdxPoolSize = ctx.config().getBuildIndexThreadPoolSize();
-                    int parallel = op0.parallel();
+                    cctx.group().metrics().setIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
-                    if (parallel > buildIdxPoolSize) {
-                        String idxName = op0.indexName();
-
-                        log.warning("Provided parallelism " + parallel + " for creation of index " + idxName +
-                            " is greater than the number of index building threads. Will use " + buildIdxPoolSize +
-                            " threads to build index. Increase by IgniteConfiguration.setBuildIndexThreadPoolSize" +
-                            " and restart the node if you want to use more threads. [tableName=" + op0.tableName() +
-                            ", indexName=" + idxName + ", requestedParallelism=" + parallel + ", buildIndexPoolSize=" +
-                            buildIdxPoolSize + "]");
-                    }
-
-                    visitor = new SchemaIndexCacheVisitorImpl(
-                        cacheInfo.cacheContext(),
-                        cancelTok,
-                        createIdxFut
-                    ) {
-                        /** {@inheritDoc} */
-                        @Override public void visit(SchemaIndexCacheVisitorClosure clo) {
-                            super.visit(clo);
-
-                            try {
-                                buildIdxFut.get();
-                            }
-                            catch (Exception e) {
-                                throw new IgniteException(e);
-                            }
-                        }
-                    };
+                    visitor = new SchemaIndexCacheVisitorImpl(cctx, cancelTok, op0.parallel());
                 }
                 else
                     //For not started caches we shouldn't add any data to index.
@@ -2029,8 +1999,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @return Future that will be completed when rebuilding is finished.
      */
     public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
-        assert nonNull(cctx);
-
         // Indexing module is disabled, nothing to rebuild.
         if (rebuildIsMeaningless(cctx))
             return null;
@@ -2049,10 +2017,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (empty)
             return null;
 
-        if (!busyLock.enterBusy()) {
+        if (!busyLock.enterBusy())
             return new GridFinishedFuture<>(new NodeStoppingException("Failed to rebuild indexes from hash " +
                 "(grid is stopping)."));
-        }
 
         try {
             return idx.rebuildIndexesFromHash(cctx);

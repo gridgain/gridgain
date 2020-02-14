@@ -158,7 +158,6 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridEmptyCloseableIterator;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
@@ -167,6 +166,8 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.worker.GridWorker;
+import org.apache.ignite.internal.util.worker.GridWorkerFuture;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
@@ -189,11 +190,7 @@ import org.h2.util.JdbcUtils;
 import org.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
-import static java.util.Objects.isNull;
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -624,7 +621,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tx != null) {
             int remaining = (int)tx.remainingTime();
 
-            return remaining > 0 && qryTimeout > 0 ? min(remaining, qryTimeout) : max(remaining, qryTimeout);
+            return remaining > 0 && qryTimeout > 0 ? Math.min(remaining, qryTimeout) : Math.max(remaining, qryTimeout);
         }
 
         return qryTimeout;
@@ -1952,19 +1949,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
-        assert nonNull(cctx);
-
         // No data in fresh in-memory cache.
         if (!cctx.group().persistenceEnabled())
             return null;
 
         IgnitePageStoreManager pageStore = cctx.shared().pageStore();
 
-        assert nonNull(pageStore);
+        assert pageStore != null;
 
         SchemaIndexCacheVisitorClosure clo;
-
-        String cacheName = cctx.name();
 
         if (!pageStore.hasIndexStore(cctx.groupId())) {
             // If there are no index store, rebuild all indexes.
@@ -1974,12 +1967,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             // Otherwise iterate over tables looking for missing indexes.
             IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
 
-            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
-                GridH2Table tbl = tblDesc.table();
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cctx.name())) {
+                assert tblDesc.table() != null;
 
-                assert nonNull(tbl);
-
-                tbl.collectIndexesForPartialRebuild(clo0);
+                tblDesc.table().collectIndexesForPartialRebuild(clo0);
             }
 
             if (clo0.hasIndexes())
@@ -1989,31 +1980,40 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         // Closure prepared, do rebuild.
-        markIndexRebuild(cacheName, true);
+        final GridWorkerFuture<?> fut = new GridWorkerFuture<>();
 
-        GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
+        markIndexRebuild(cctx.name(), true);
 
-        rebuildCacheIdxFut.listen(fut -> {
-            Throwable err = fut.error();
+        if (cctx.group().metrics() != null)
+            cctx.group().metrics().setIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
-            if (isNull(err)) {
+        GridWorker worker = new GridWorker(ctx.igniteInstanceName(), "index-rebuild-worker-" + cctx.name(), log) {
+            @Override protected void body() {
                 try {
-                    markIndexRebuild(cacheName, false);
-                }
-                catch (Throwable t) {
-                    err = t;
+                    rebuildIndexesFromHash0(cctx, clo);
 
-                    rebuildCacheIdxFut.onDone(t);
+                    markIndexRebuild(cctx.name(), false);
+
+                    fut.onDone();
+                }
+                catch (Exception e) {
+                    fut.onDone(e);
+                }
+                catch (Throwable e) {
+                    U.error(log, "Failed to rebuild indexes for cache: " + cctx.name(), e);
+
+                    fut.onDone(e);
+
+                    throw e;
                 }
             }
+        };
 
-            if (nonNull(err))
-                U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
-        });
+        fut.setWorker(worker);
 
-        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
+        ctx.getExecutorService().execute(worker);
 
-        return rebuildCacheIdxFut;
+        return fut;
     }
 
     /**
@@ -2021,14 +2021,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      *
      * @param cctx Cache context.
      * @param clo Closure.
-     * @param rebuildIdxFut Future for rebuild indexes.
+     * @throws IgniteCheckedException If failed.
      */
-    protected void rebuildIndexesFromHash0(
-        GridCacheContext cctx,
-        SchemaIndexCacheVisitorClosure clo,
-        GridFutureAdapter<Void> rebuildIdxFut
-    ) {
-        new SchemaIndexCacheVisitorImpl(cctx, null, rebuildIdxFut).visit(clo);
+    protected void rebuildIndexesFromHash0(GridCacheContext cctx, SchemaIndexCacheVisitorClosure clo)
+        throws IgniteCheckedException {
+        SchemaIndexCacheVisitor visitor = new SchemaIndexCacheVisitorImpl(cctx);
+
+        visitor.visit(clo);
     }
 
     /**
