@@ -118,7 +118,6 @@
     <Compile Include="Cache\DataStorageMetricsTest.cs" />
     <Compile Include="Cache\Near\CacheNearCreateDestroy.cs" />
     <Compile Include="Cache\Near\CacheNearTopologyChangeTest.cs" />
-    <Compile Include="Cache\Near\CacheNearReconnectTest.cs" />
     <Compile Include="Cache\Near\CacheNearTest.cs" />
     <Compile Include="Cache\Near\CacheNearTestGenericDowngrade.cs" />
     <Compile Include="Cache\Near\Foo.cs" />
