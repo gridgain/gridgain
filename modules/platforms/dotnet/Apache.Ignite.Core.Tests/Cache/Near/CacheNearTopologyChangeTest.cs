@@ -318,6 +318,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var keys = Enumerable.Range(1, 100).ToList();
             keys.ForEach(k => clientCache[k] = new Foo(k));
             Assert.AreEqual(keys.Count, clientCache.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.IsNotNull(clientCache.GetConfiguration().NearConfiguration);
             
             // Stop the only server node, client goes into disconnected mode.
             var evt = new ManualResetEventSlim(false);
@@ -341,9 +342,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             serverCache[1] = new Foo(11);
             Assert.AreEqual(11, clientCache[1].Bar);
             
-            // TODO:
-            // - topology updates are no longer received?
-            // - near cache updates do not work?
+            // TODO: Client near cache is removed after reconnect - it is no longer Near, and config changes!!!
+            // - topology updates are no longer received? - verify
+            Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
+            
             serverCache[1] = new Foo(22);
             TestUtils.WaitForTrueCondition(() => 22 == clientCache[1].Bar);
         }
