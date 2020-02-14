@@ -337,11 +337,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Near cache still works for new entries.
             var serverCache = _cache[0];
             
-            serverCache[1] = new Foo(1);
-            Assert.AreEqual(1, clientCache[1].Bar);
+            serverCache[1] = new Foo(11);
+            Assert.AreEqual(11, clientCache[1].Bar);
             
-            serverCache[1] = new Foo(2);
-            TestUtils.WaitForTrueCondition(() => 2 == clientCache[1].Bar);
+            serverCache[1] = new Foo(22);
+            TestUtils.WaitForTrueCondition(() => 22 == clientCache[1].Bar);
         }
 
         /// <summary>
