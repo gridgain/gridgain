@@ -24,6 +24,7 @@ import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
 import org.apache.ignite.internal.jdbc2.JdbcDiskSpillingClientsTest;
 import org.apache.ignite.internal.jdbc2.JdbcDistributedJoinsQueryTest;
 import org.apache.ignite.internal.jdbc2.JdbcQueryMemoryTrackerSelfTest;
+import org.apache.ignite.internal.jdbc2.JdbcQueryQuotaTest;
 import org.apache.ignite.internal.jdbc2.JdbcSchemaCaseSelfTest;
 import org.apache.ignite.jdbc.JdbcComplexQuerySelfTest;
 import org.apache.ignite.jdbc.JdbcConnectionSelfTest;
@@ -162,6 +163,7 @@ import org.junit.runners.Suite;
     JdbcThinDataPageScanPropertySelfTest.class,
     JdbcThinStreamingResetStreamTest.class,
     JdbcQueryMemoryTrackerSelfTest.class,
+    JdbcQueryQuotaTest.class,
 
     // DDL tests.
     org.apache.ignite.internal.jdbc2.JdbcDynamicIndexAtomicPartitionedNearSelfTest.class,

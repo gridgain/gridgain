@@ -25,23 +25,21 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
-public class QueryMemoryTracker extends H2MemoryTracker {
+public class QueryMemoryTracker implements H2MemoryTracker {
     /** Parent tracker. */
     private final H2MemoryTracker parent;
 
     /** Query memory limit. */
-    private final long maxMem;
+    private final long quota;
 
     /**
      * Defines an action that occurs when the memory limit is exceeded. Possible variants:
      * <ul>
-     * <li>{@code true} - exception will be thrown.</li>
-     * <li>{@code false} - intermediate query results will be spilled to the disk.</li>
+     * <li>{@code false} - exception will be thrown.</li>
+     * <li>{@code true} - intermediate query results will be spilled to the disk.</li>
      * </ul>
-     *
-     * Default: false.
      */
-    private final boolean failOnMemLimitExceed;
+    private final boolean offloadingEnabled;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -59,86 +57,107 @@ public class QueryMemoryTracker extends H2MemoryTracker {
      * Constructor.
      *
      * @param parent Parent memory tracker.
-     * @param maxMem Query memory limit in bytes.
+     * @param quota Query memory limit in bytes.
      * @param blockSize Reservation block size.
-     * @param failOnMemLimitExceed Flag whether to fail when memory limit is exceeded.
+     * @param offloadingEnabled Flag whether to fail when memory limit is exceeded.
      */
-    QueryMemoryTracker(H2MemoryTracker parent, long maxMem, long blockSize, boolean failOnMemLimitExceed) {
-        assert maxMem > 0;
+    QueryMemoryTracker(H2MemoryTracker parent, long quota, long blockSize, boolean offloadingEnabled) {
+        assert quota >= 0;
 
-        this.failOnMemLimitExceed = failOnMemLimitExceed;
+        this.offloadingEnabled = offloadingEnabled;
         this.parent = parent;
-        this.maxMem = maxMem;
-        this.blockSize = blockSize;
+        this.quota = quota;
+        this.blockSize = quota != 0 ? Math.min(quota, blockSize) : blockSize;
     }
 
     /** {@inheritDoc} */
-    @Override public boolean reserved(long size) {
-        assert size >= 0;
+    @Override public synchronized boolean reserved(long toReserve) {
+        assert toReserve >= 0;
 
-        synchronized (this) {
-            if (closed)
-                throw new IllegalStateException("Memory tracker has been closed concurrently.");
+        checkClosed();
 
-            reserved += size;
+        reserved += toReserve;
 
-            if (reserved >= maxMem) {
-                if (failOnMemLimitExceed)
-                    throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded.",
-                        IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
-                else
-                    return false;
-            }
-
-            if (parent != null && reserved > reservedFromParent) {
-                try {
-                    // If single block size is too small.
-                    long blockSize = Math.max(reserved - reservedFromParent, this.blockSize);
-                    // If we are too close to limit.
-                    blockSize = Math.min(blockSize, maxMem - reservedFromParent);
-
-                    parent.reserved(blockSize);
-
-                    reservedFromParent += blockSize;
-                }
-                catch (Throwable e) {
-                    // Fallback if failed to reserve.
-
-                    long res1 = reserved - size;
-
-                    if (res1 < 0)
-                        throw new IllegalStateException("Try to free more memory that ever be reserved: [" +
-                            "reserved=" + reserved + ", toFree=" + size + ']');
-
-                    reserved = res1;
-
-                    throw e;
-                }
-            }
+        if (parent != null && reserved > reservedFromParent) {
+            if (!reserveFromParent())
+                return false; // Offloading.
         }
+
+        if (quota > 0 && reserved >= quota)
+            return onQuotaExceeded();
 
         return true;
     }
 
+    /**
+     * Checks whether tracker was closed.
+     */
+    private void checkClosed() {
+        if (closed)
+            throw new IllegalStateException("Memory tracker has been closed concurrently.");
+    }
+
+    /**
+     * Reserves memory from parent tracker.
+     * @return {@code false} if offloading is needed.
+     */
+    private boolean reserveFromParent() {
+        // If single block size is too small.
+        long blockSize = Math.max(reserved - reservedFromParent, this.blockSize);
+
+        // If we are too close to limit.
+        if (quota > 0)
+            blockSize = Math.min(blockSize, quota - reservedFromParent);
+
+        if (parent.reserved(blockSize))
+            reservedFromParent += blockSize;
+        else
+            return false;
+
+        return true;
+    }
+
+    /**
+     * Action on quota exceeded.
+     * @return {@code false} if offloading is needed.
+     */
+    private boolean onQuotaExceeded() {
+        if (offloadingEnabled)
+            return false;
+        else
+            throw new IgniteSQLException("SQL query run out of memory: Query quota exceeded.",
+                IgniteQueryErrorCode.QUERY_OUT_OF_MEMORY);
+    }
+
     /** {@inheritDoc} */
-    @Override public void released(long size) {
-        if (size == 0)
+    @Override public synchronized void released(long toRelease) {
+        assert toRelease >= 0;
+
+        if (toRelease == 0)
             return;
 
-        assert size > 0;
+        checkClosed();
 
-        synchronized (this) {
-            if (closed)
-                throw new IllegalStateException("Memory tracker has been closed concurrently.");
+        reserved -= toRelease;
 
-            long res = reserved - size;
+        assert reserved >= 0 : "Try to free more memory that ever be reserved: [reserved=" + (reserved + toRelease) +
+            ", toFree=" + toRelease + ']';
 
-            if (res < 0)
-                throw new IllegalStateException("Try to free more memory that ever be reserved: [" +
-                    "reserved=" + reserved + ", toFree=" + size + ']');
+        if (parent != null && reservedFromParent - reserved > blockSize)
+            releaseFromParent();
+    }
 
-            reserved = res;
-        }
+    /**
+     * Releases memory from parent.
+     */
+    private void releaseFromParent() {
+        long toReleaseFromParent = reservedFromParent - reserved;
+
+        parent.released(toReleaseFromParent);
+
+        reservedFromParent -= toReleaseFromParent;
+
+        assert reservedFromParent >= 0 : reservedFromParent;
     }
 
     /** {@inheritDoc} */
@@ -148,7 +167,7 @@ public class QueryMemoryTracker extends H2MemoryTracker {
 
     /** {@inheritDoc} */
     @Override public long memoryLimit() {
-        return maxMem;
+        return quota;
     }
 
     /**
@@ -159,20 +178,18 @@ public class QueryMemoryTracker extends H2MemoryTracker {
     }
 
     /** {@inheritDoc} */
-    @Override public void close() {
+    @Override public synchronized void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
-        synchronized (this) {
-            if (closed)
-                return;
+        if (closed)
+            return;
 
-            closed = true;
+        closed = true;
 
-            reserved = 0;
+        reserved = 0;
 
-            if (parent != null)
-                parent.released(reservedFromParent);
-        }
+        if (parent != null)
+            parent.released(reservedFromParent);
     }
 
     /** {@inheritDoc} */
