@@ -530,7 +530,7 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
             if (msg instanceof GridDhtPartitionDemandMessage) {
                 GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage)msg;
 
-                return msg0.groupId() == CU.cacheId(CACHE_NAME) && msg0.partitions().size() == PARTS_CNT;
+                return msg0.groupId() == CU.cacheId(CACHE_NAME);
             }
 
             return false;
@@ -551,12 +551,12 @@ public class IgniteWalRebalanceTest extends GridCommonAbstractTest {
 
         blockMessagePredicate = null;
 
-        startGrid(0); // Should be compatible rebalancing.
+        startGrid(0); // Should not force rebalancing remap.
 
         startGrid(4);
+        resetBaselineTopology(); // Should force rebalancing remap.
 
-        resetBaselineTopology(); // Should be incompatible rebalancing and force remap.
-
+        spi2.waitForBlocked(3);
         spi2.stopBlock();
 
         awaitPartitionMapExchange();
