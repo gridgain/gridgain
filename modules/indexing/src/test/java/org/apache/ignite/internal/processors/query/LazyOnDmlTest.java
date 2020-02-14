@@ -96,7 +96,6 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
         return paramsSet;
     }
 
-
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -298,7 +297,6 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
 
         assertFalse(localResults.isEmpty());
     }
-
 
     /**
      * @param sql SQL query.
