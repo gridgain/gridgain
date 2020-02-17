@@ -325,8 +325,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             client.ClientDisconnected += (sender, args) => evt.Set(); 
             
             StopNode(0);
+            Assert.IsTrue(evt.Wait(TimeSpan.FromSeconds(5)), "ClientDisconnected event should be fired");
             
-            evt.Wait();
             var reconnectTask = client.GetCluster().ClientReconnectTask;
             
             // Start server again, client reconnects.
