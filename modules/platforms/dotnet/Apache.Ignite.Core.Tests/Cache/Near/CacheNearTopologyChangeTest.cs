@@ -366,7 +366,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration("srv"))
             {
-                CommunicationSpi = new TcpCommunicationSpi {IdleConnectionTimeout = TimeSpan.FromSeconds(3)},
+                CommunicationSpi = new TcpCommunicationSpi {IdleConnectionTimeout = TimeSpan.FromSeconds(2)},
                 FailureDetectionTimeout = TimeSpan.FromSeconds(2),
                 ClientFailureDetectionTimeout = TimeSpan.FromSeconds(2)
             };
@@ -393,7 +393,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var gridName = string.Format("%{0}%", client.Name);
             SuspendThreads(gridName);
-            Thread.Sleep(5000); // TODO: Reduce comm timeout on server - but which one?
+            Thread.Sleep(5000);
             ResumeThreads(gridName);
 
             Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
