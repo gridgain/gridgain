@@ -26,6 +26,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
+import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
@@ -66,6 +67,9 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     /** Manager. */
     private WebSocketManager mgr;
 
+    /** Send full topology to Control Center on baseline change. */
+    private GridLocalEventListener sndTopUpdateLsnr = (event -> sendTopologyUpdate(null, ctx.discovery().discoCache()));
+
     /**
      * @param ctx Context.
      * @param mgr Manager.
@@ -86,7 +90,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
 
         evtMgr.enableEvents(EVTS_BASELINE);
         evtMgr.addLocalEventListener(this::sendClusterInfo, EVTS_BASELINE_PARAMS_CHANGED);
-        evtMgr.addLocalEventListener(this::sendTopologyUpdate, EVT_BASELINE_CHANGED);
+        evtMgr.addLocalEventListener(sndTopUpdateLsnr, EVT_BASELINE_CHANGED);
     }
 
     /**
@@ -94,15 +98,6 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
      */
     public void sendInitialState() {
         sendClusterInfo(null);
-        sendTopologyUpdate(null, ctx.discovery().discoCache());
-    }
-
-    /**
-     * Send full topology to Control Center on baseline change.
-     *
-     * @param evt Event.
-     */
-    void sendTopologyUpdate(Event evt) {
         sendTopologyUpdate(null, ctx.discovery().discoCache());
     }
 
@@ -154,5 +149,8 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
         ctx.event().removeDiscoveryEventListener(this::sendTopologyUpdate, EVTS_DISCOVERY);
 
         ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
+
+        ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_BASELINE_PARAMS_CHANGED);
+        ctx.event().removeLocalEventListener(sndTopUpdateLsnr, EVT_BASELINE_CHANGED);
     }
 }
