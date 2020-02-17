@@ -350,10 +350,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Temporary test: compare Java-based IsValid against .NET-based.
+        /// Checks that near cache performance is adequate.
         /// </summary>
         [Test]
-        public void TestIsValidPerf() // TODO: Remove this test
+        public void TestNearCachePerformance()
         {
             InitNodes(1);
             var cache = InitClientAndCache();
@@ -367,25 +367,27 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(1, foo.Bar);
             
             // Warmup.
-            for (int i = 0; i < 100; i++)
+            for (var i = 0; i < 100; i++)
             {
                 cache.Get(1);
             }
 
+            const int count = 1000000;
             var sw = Stopwatch.StartNew();
-            var count = 1000000;
+            
             for (var i = 0; i < count; i++)
             {
                 var res = cache.Get(1);
                 if (!ReferenceEquals(res, foo))
                 {
-                    throw new Exception();
+                    Assert.Fail();
                 }
             }
             
-            // Java: 671 ms for 1000000 keys
-            // .NET: 216 ms for 1000000 keys
-            Console.WriteLine(">>>>>>>>>>>>>>>> " + sw.ElapsedMilliseconds);
+            var elapsedMs = sw.ElapsedMilliseconds;
+            Assert.Less(elapsedMs, 5000);
+            
+            Console.WriteLine(">>>>>>>>>>>>>>>> " + elapsedMs);
         }
 
         /// <summary>
