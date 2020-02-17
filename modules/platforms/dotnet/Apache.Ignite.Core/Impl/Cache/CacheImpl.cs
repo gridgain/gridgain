@@ -118,7 +118,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// </summary>
         private bool IsNear
         {
-            get { return _nearCache != null; }
+            get { return _nearCache != null && !_nearCache.IsStopped; }
         }
 
         /// <summary>

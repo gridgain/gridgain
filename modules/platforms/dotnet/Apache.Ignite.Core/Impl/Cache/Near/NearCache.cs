@@ -38,6 +38,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Affinity. */
         private readonly CacheAffinityImpl _affinity;
 
+        /** Topology version func. Returns boxed <see cref="AffinityTopologyVersion"/>.
+         * Boxed copy is passed directly to <see cref="NearCacheEntry{T}"/>, avoiding extra allocations.
+         * This way for every unique <see cref="AffinityTopologyVersion"/> we only have one boxed copy,
+         * and we can update <see cref="NearCacheEntry{T}.Version"/> atomically without locks. */
+        private readonly Func<object> _affinityTopologyVersionFunc;
+
         /** Generic map, used by default, should fit most use cases. */
         private volatile ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
             new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
@@ -46,11 +52,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Less efficient because of boxing and casting. */
         private volatile ConcurrentDictionary<object, NearCacheEntry<object>> _fallbackMap;
 
-        /** Topology version func. Returns boxed <see cref="AffinityTopologyVersion"/>.
-         * Boxed copy is passed directly to <see cref="NearCacheEntry{T}"/>, avoiding extra allocations.
-         * This way for every unique <see cref="AffinityTopologyVersion"/> we only have one boxed copy,
-         * and we can update <see cref="NearCacheEntry{T}.Version"/> atomically without locks. */
-        private readonly Func<object> _affinityTopologyVersionFunc;
+        /** Stopped flag. */
+        private volatile bool _stopped;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
@@ -64,8 +67,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             _affinity = affinity;
         }
 
+        /** <inheritdoc /> */
+        public bool IsStopped
+        {
+            get { return _stopped; }
+        }
+
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
+            if (_stopped)
+            {
+                val = default(TVal);
+                return false;
+            }
+            
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
@@ -109,6 +124,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         
         public TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory)
         {
+            if (_stopped)
+            {
+                return valueFactory(key);
+            }
+
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
@@ -128,6 +148,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
         {
+            if (_stopped)
+            {
+                return val;
+            }
+            
             // ReSharper disable once SuspiciousTypeConversion.Global (reviewed)
             var map = _map as ConcurrentDictionary<TKey, NearCacheEntry<TVal>>;
             if (map != null)
@@ -144,6 +169,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** <inheritdoc /> */
         public int GetSize()
         {
+            if (_stopped)
+            {
+                return 0;
+            }
+            
             var map = _map;
             if (map != null)
             {
@@ -161,6 +191,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** <inheritdoc /> */
         public bool ContainsKey<TKey, TVal>(TKey key)
         {
+            if (_stopped)
+            {
+                return false;
+            }
+            
             object _;
             return TryGetValue(key, out _);
         }
@@ -170,6 +205,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         {
             Debug.Assert(stream != null);
             Debug.Assert(marshaller != null);
+
+            if (_stopped)
+            {
+                return;
+            }
 
             var reader = marshaller.StartUnmarshal(stream);
 
@@ -227,7 +267,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** <inheritdoc /> */
         public void Stop()
         {
-            // TODO: Mark as stopped and bypass in all methods.
+            _stopped = true;
             
             if (_fallbackMap != null)
             {

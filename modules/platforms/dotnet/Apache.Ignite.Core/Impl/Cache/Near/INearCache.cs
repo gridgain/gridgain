@@ -47,5 +47,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         int GetSize();
 
         bool ContainsKey<TKey, TVal>(TKey key);
+
+        /// <summary>
+        /// Gets a value indicating whether near cache has been stopped.
+        /// Happens during normal cache destroy, or after client reconnect with full cluster restart.
+        /// </summary>
+        bool IsStopped { get; }
     }
 }
