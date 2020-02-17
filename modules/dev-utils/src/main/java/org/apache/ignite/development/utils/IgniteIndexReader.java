@@ -707,7 +707,7 @@ public class IgniteIndexReader {
         catch (Exception e) {
             System.err.println("How to use: please pass option names, followed by space and option values. Options list:");
             System.err.println("--dir: partition directory, where index.bin and (optionally) partition files are located (obligatory)");
-            System.err.println("--partCnt: partitions count (optional)");
+            System.err.println("--partCnt: full partitions count in cache group (optional)");
             System.err.println("--pageSize: page size (optional, default value is 4096)");
             System.err.println("--pageStoreVer: page store version (optional, default value is 2)");
             System.err.println("--destFile: file to print the report to (optional, by default report is printed to console)");
