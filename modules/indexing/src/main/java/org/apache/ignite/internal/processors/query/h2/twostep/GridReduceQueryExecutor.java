@@ -520,8 +520,9 @@ public class GridReduceQueryExecutor {
 
                             Collection<Object> params0 = F.asList(rdc.parameters(params));
 
-                            final PreparedStatement stmt = h2.preparedStatementWithParams(conn, rdc.query(),
-                                params0, false);
+                            final PreparedStatement stmt = conn.prepareStatementNoCache(rdc.query());
+
+                            H2Utils.bindParameters(stmt, params0);
 
                             ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
 

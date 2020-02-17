@@ -16,18 +16,17 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.sql.PreparedStatement;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.sql.PreparedStatement;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
  * Statement cache. LRU eviction policy is used. Not thread-safe.
  */
-final class H2StatementCache {
+public final class H2StatementCache {
     /** Last usage. */
     private volatile long lastUsage;
 
@@ -92,8 +91,8 @@ final class H2StatementCache {
      * @param schemaName Schema name.
      * @param sql SQL statement.
      */
-    void remove(String schemaName, String sql) {
-        lruStmtCache.remove(new H2CachedStatementKey(schemaName, sql));
+    void remove(String schemaName, String sql, byte qryFlags) {
+        lruStmtCache.remove(new H2CachedStatementKey(schemaName, sql, qryFlags));
     }
 
     /**
@@ -101,5 +100,26 @@ final class H2StatementCache {
      */
     int size() {
         return lruStmtCache.size();
+    }
+
+    /** */
+    public static byte queryFlags(QueryDescriptor qryDesc) {
+        assert qryDesc != null;
+
+        return queryFlags(qryDesc.distributedJoins(), qryDesc.enforceJoinOrder(), qryDesc.collocated(), qryDesc.local());
+    }
+
+    /** */
+    public static byte queryFlags(
+        boolean distributedJoins,
+        boolean enforceJoinOrder,
+        boolean collocated,
+        boolean local) {
+        return (byte)(1 +
+            (distributedJoins ? 2 : 0) +
+            (enforceJoinOrder ? 4 : 0) +
+            (collocated ? 8 : 0) +
+            (local ? 8 : 0)
+        );
     }
 }

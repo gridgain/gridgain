@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor;
@@ -272,7 +273,7 @@ public class GridSqlQuerySplitter {
         // The distributedJoins parameter is ignored because it is not relevant for
         // the REDUCE query optimization.
         qry = GridSqlQueryParser.parseQuery(
-            prepare(conn, H2Utils.context(conn.connection()), qry.getSQL(), false, enforceJoinOrder),
+            prepare(conn, H2Utils.context(conn.connection()), qry.getSQL(), false, enforceJoinOrder, collocatedGrpBy),
             true, log);
 
         // Do the actual query split. We will update the original query AST, need to be careful.
@@ -293,7 +294,8 @@ public class GridSqlQuerySplitter {
                     H2Utils.context(conn.connection()),
                     mapSqlQry.query(),
                     true,
-                    enforceJoinOrder);
+                    enforceJoinOrder,
+                    collocatedGrpBy);
 
                 allCollocated &= isCollocated((Query)prepared0);
 
@@ -1882,13 +1884,12 @@ public class GridSqlQuerySplitter {
      * @param qry Parsed query.
      * @param enforceJoinOrder Enforce join order.
      * @return Optimized prepared command.
-     * @throws SQLException If failed.
      */
     public static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
-        boolean enforceJoinOrder) throws SQLException {
+        boolean enforceJoinOrder, boolean collocated) throws SQLException, IgniteCheckedException {
         H2Utils.setupConnection(c, qctx, distributedJoins, enforceJoinOrder);
 
-        try (PreparedStatement s = c.prepareStatement(qry)) {
+        try (PreparedStatement s = c.prepareStatement(qry, H2StatementCache.queryFlags(distributedJoins, enforceJoinOrder, collocated, false))) {
             return GridSqlQueryParser.prepared(s);
         }
     }

@@ -560,12 +560,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         List<Object> args = F.asList(qryParams.arguments());
 
-                        PreparedStatement stmt = preparedStatementWithParams(
-                            conn,
-                            qry,
-                            args,
-                            true
-                        );
+                        PreparedStatement stmt = conn.prepareStatement(qry, H2StatementCache.queryFlags(qryDesc));
+
+                        H2Utils.bindParameters(stmt, args);
 
                         H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry);
 
@@ -761,32 +758,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /**
-     * Prepares sql statement.
-     *
-     * @param conn Connection.
-     * @param sql Sql.
-     * @param params Params.
-     * @param useStmtCache If {@code true} use stmt cache.
-     * @return Prepared statement with set parameters.
-     * @throws IgniteCheckedException If failed.
-     */
-    public PreparedStatement preparedStatementWithParams(H2PooledConnection conn, String sql, Collection<Object> params,
-        boolean useStmtCache) throws IgniteCheckedException {
-        final PreparedStatement stmt;
-
-        try {
-            stmt = useStmtCache ? conn.prepareStatement(sql) : conn.prepareStatementNoCache(sql);
-
-            H2Utils.bindParameters(stmt, params);
-
-            return stmt;
-        }
-        catch (SQLException e) {
-            throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
-        }
-    }
-
-    /**
      * Executes sql query statement.
      *
      * @param conn Connection,.
@@ -860,7 +831,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         Boolean dataPageScanEnabled,
         final H2QueryInfo qryInfo
     ) throws IgniteCheckedException {
-        return executeSqlQueryWithTimer(preparedStatementWithParams(conn, sql, params, false),
+        PreparedStatement stmt = conn.prepareStatementNoCache(sql);
+
+        H2Utils.bindParameters(stmt, params);
+
+        return executeSqlQueryWithTimer(stmt,
             conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo);
     }
 
