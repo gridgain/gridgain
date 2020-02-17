@@ -343,7 +343,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(11, clientCache[1].Bar);
             
             serverCache[1] = new Foo(22);
-            Assert.AreEqual(22, clientCache[1].Bar);
+            
+            var foo = clientCache[1];
+            Assert.AreEqual(22, foo.Bar);
+            Assert.AreNotSame(foo, clientCache[1]);
             
             // This is a full cluster restart, so client near cache is stopped. 
             Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
