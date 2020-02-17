@@ -1265,6 +1265,7 @@ public class GridDhtPartitionDemander {
         private final Set<Integer> historical = new HashSet<>();
 
         /** Next future in chain. */
+        @GridToStringExclude
         private final RebalanceFuture next;
 
         /** Assigment. */

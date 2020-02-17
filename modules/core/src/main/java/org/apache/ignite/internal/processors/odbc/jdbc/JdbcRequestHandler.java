@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.cache.configuration.Factory;
@@ -512,6 +513,9 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
         // Write all features supported by the node.
         if (protocolVer.compareTo(VER_2_8_2) >= 0)
             writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(connCtx.protocolContext().features()));
+
+        if (connCtx.protocolContext().features().contains(JdbcThinFeature.TIME_ZONE))
+            writer.writeString(nodeTimeZoneId());
     }
 
     /**
@@ -1483,6 +1487,13 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      */
     private JdbcResponse resultToResonse(JdbcResult res) {
         return new JdbcResponse(res, connCtx.getAffinityTopologyVersionIfChanged());
+    }
+
+    /**
+     * @return Node time zome identifier.
+     */
+    private String nodeTimeZoneId() {
+        return TimeZone.getDefault().getID();
     }
 
     /**
