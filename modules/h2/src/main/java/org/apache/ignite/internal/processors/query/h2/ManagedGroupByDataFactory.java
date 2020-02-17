@@ -13,20 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.ArrayList;
+import org.h2.command.dml.GroupByData;
+import org.h2.engine.Session;
+import org.h2.expression.Expression;
+
 /**
- * H2 query context.
+ * Factory for H2 group by data.
  */
-public interface H2QueryContext {
-    /**
-     * @return Query memory tracker.
-     */
-    H2MemoryTracker queryMemoryTracker();
+public interface ManagedGroupByDataFactory {
 
     /**
-     * @return Group by data factory.
+     * Group-by data fabric method.
+     *
+     * @param ses Session.
+     * @param expressions Expressions.
+     * @param isGrpQry Group query flag.
+     * @param grpIdx Group-by fields indexes.
+     * @return Group-by data.
      */
-    ManagedGroupByDataFactory groupByDataFactory();
+    GroupByData newManagedGroupByData(Session ses, ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx);
 }
