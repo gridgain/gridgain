@@ -169,7 +169,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cfg = new CacheConfiguration
             {
-                Name = "destroy-test-" + mode,
+                Name = TestContext.CurrentContext.Test.Name + mode,
                 NearConfiguration = new NearCacheConfiguration()
             };
 
@@ -197,7 +197,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cfg = new CacheConfiguration
             {
-                Name = "destroy-test-" + mode,
+                Name = TestContext.CurrentContext.Test.Name + mode,
                 NearConfiguration = new NearCacheConfiguration()
             };
 
