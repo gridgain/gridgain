@@ -313,7 +313,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             InitNodes(1);
             var clientCache = InitClientAndCache();
-            var client = Ignition.GetAll().Last();
+            var client = Ignition.GetAll().Single(c => c.GetConfiguration().ClientMode);
             
             var keys = Enumerable.Range(1, 100).ToList();
             keys.ForEach(k => clientCache[k] = new Foo(k));
@@ -325,7 +325,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             client.ClientDisconnected += (sender, args) => evt.Set(); 
             
             StopNode(0);
-            Assert.IsTrue(evt.Wait(TimeSpan.FromSeconds(5)), "ClientDisconnected event should be fired");
+            Assert.IsTrue(evt.Wait(TimeSpan.FromSeconds(10)), "ClientDisconnected event should be fired");
             
             var reconnectTask = client.GetCluster().ClientReconnectTask;
             
