@@ -350,10 +350,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Checks that near cache performance is adequate.
+        /// Checks that near cache performance is adequate after topology change.
+        /// (Topology change causes additional entry validation).
         /// </summary>
         [Test]
-        public void TestNearCachePerformance()
+        public void TestNearCacheTopologyVersionValidationPerformance()
         {
             InitNodes(1);
             var cache = InitClientAndCache();
@@ -384,10 +385,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             }
             
-            var elapsedMs = sw.ElapsedMilliseconds;
-            Assert.Less(elapsedMs, 5000);
+            var elapsed = sw.Elapsed;
+            Assert.Less(elapsed, TimeSpan.FromSeconds(5));
             
-            Console.WriteLine(">>>>>>>>>>>>>>>> " + elapsedMs);
+            Console.WriteLine(">>> Retrieved {0} entries in {1}.", count, elapsed);
         }
 
         /// <summary>
