@@ -333,18 +333,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             InitNodes(1);
             Assert.IsTrue(reconnectTask.Wait(TimeSpan.FromSeconds(10)));
             
+            // This is a full cluster restart, so client near cache is stopped. 
+            Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
+            
             // Near cache is empty.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.NativeNear));
             
-            // Near cache still works for new entries.
+            // Cache still works for new entries, near cache is being bypassed.
             var serverCache = _cache[0];
             
             serverCache[1] = new Foo(11);
             Assert.AreEqual(11, clientCache[1].Bar);
-            
-            // TODO: Client near cache is removed after reconnect - it is no longer Near, and config changes!!!
-            // - topology updates are no longer received? - verify
-            Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
             
             serverCache[1] = new Foo(22);
             TestUtils.WaitForTrueCondition(() => 22 == clientCache[1].Bar);
