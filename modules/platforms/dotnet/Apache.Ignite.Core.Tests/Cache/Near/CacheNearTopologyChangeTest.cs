@@ -362,20 +362,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
         {
-            // TODO: Try using discovery/communication so that client connects to one of two server nodes?
-            // OR use Thread.Suspend from .NET?
-            Func<IEnumerable<ProcessThread>> getThreads = () => 
-                Process.GetCurrentProcess().Threads.OfType<ProcessThread>();
-            
-            Func<HashSet<int>> getThreadIds = () => 
-                getThreads().Select(t => t.Id).ToHashSet();
-
-            var threadsBefore = getThreadIds();
             InitNodes(1);
-
-            var serverThreads = getThreads()
-                .Where(t => !threadsBefore.Contains(t.Id))
-                .ToArray();
 
             var client = InitClient();
             var evt = new ManualResetEventSlim(false);
@@ -385,21 +372,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 evt.Set();
             };
 
-            foreach (var serverThread in serverThreads)
-            {
-#pragma warning disable 618
-                serverThread.;
-#pragma warning restore 618
-            }
-            
             Assert.IsTrue(evt.Wait(TimeSpan.FromSeconds(10)));
-
-            foreach (var serverThread in serverThreads)
-            {
-#pragma warning disable 618
-                serverThread.Resume();
-#pragma warning restore 618
-            }
         }
 
         /// <summary>
