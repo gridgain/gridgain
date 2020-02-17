@@ -28,7 +28,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.junit.Assert;
 import org.junit.Test;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
@@ -52,6 +51,7 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
         cluster.active(true);
 
         assertWithPoll(() -> interceptor.getPayload(buildClusterTopologyDest(cluster.id())) != null);
+
         assertWithPoll(() -> {
             ClusterInfo info = interceptor.getPayload(buildClusterDest(cluster.id()), ClusterInfo.class);
 
@@ -60,12 +60,12 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
 
             Set<String> features = AgentUtils.getClusterFeatures(ignite.context(), cluster.nodes());
 
-            Assert.assertEquals(cluster.id(), info.getId());
-            Assert.assertEquals(cluster.tag(), info.getTag());
-            Assert.assertEquals(cluster.baselineAutoAdjustTimeout(), info.getBaselineParameters().getAutoAdjustAwaitingTime());
-            Assert.assertEquals(cluster.isBaselineAutoAdjustEnabled(), info.getBaselineParameters().isAutoAdjustEnabled());
-            Assert.assertEquals(CU.isPersistenceEnabled(ignite.configuration()), info.isPersistenceEnabled());
-            Assert.assertEquals(features, info.getFeatures());
+            assertEquals(cluster.id(), info.getId());
+            assertEquals(cluster.tag(), info.getTag());
+            assertEquals(cluster.baselineAutoAdjustTimeout(), info.getBaselineParameters().getAutoAdjustAwaitingTime());
+            assertEquals(cluster.isBaselineAutoAdjustEnabled(), info.getBaselineParameters().isAutoAdjustEnabled());
+            assertEquals(CU.isPersistenceEnabled(ignite.configuration()), info.isPersistenceEnabled());
+            assertEquals(features, info.getFeatures());
 
             return true;
         });
