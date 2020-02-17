@@ -47,6 +47,9 @@ public class NearCacheConfiguration<K, V> implements Serializable {
     /** Default near cache start size. */
     private int nearStartSize = DFLT_NEAR_START_SIZE;
 
+    /** Whether to enable native near cache for platforms (currently .NET). */
+    private boolean platformNearCacheEnabled;
+
     /**
      * Empty constructor.
      */
@@ -137,6 +140,35 @@ public class NearCacheConfiguration<K, V> implements Serializable {
      */
     public NearCacheConfiguration<K, V> setNearStartSize(int nearStartSize) {
         this.nearStartSize = nearStartSize;
+
+        return this;
+    }
+
+    /**
+     * Gets a value indicating whether native platform near cache is enabled.
+     *
+     * @return True when platform near cache is enabled; otherwise, false.
+     */
+    public boolean isPlatformNearCacheEnabled() {
+        return platformNearCacheEnabled;
+    }
+
+    /**
+     * Sets a value indicating whether native platform (only .NET currently) near cache should be enabled.
+     * Cache entries will be stored in deserialized form in native platform memory (e.g. .NET objects in CLR heap).
+     * <p>
+     * When enabled on server nodes, all primary keys will be stored in platform memory as well.
+     * <p>
+     * Same eviction policy applies to near cache entries for all keys on client nodes and
+     * non-primary keys on server nodes.
+     * <p>
+     * Enabling this can greatly improve performance for key-value operations and scan queries,
+     * at the expense of RAM usage.
+     *
+     * @return {@code this} for chaining.
+     */
+    public NearCacheConfiguration<K, V> setPlatformNearCacheEnabled(boolean platformNearCacheEnabled) {
+        this.platformNearCacheEnabled = platformNearCacheEnabled;
 
         return this;
     }
