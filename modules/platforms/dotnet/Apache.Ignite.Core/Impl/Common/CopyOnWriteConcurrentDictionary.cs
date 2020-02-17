@@ -101,11 +101,16 @@ namespace Apache.Ignite.Core.Impl.Common
             {
                 var dict0 = new Dictionary<TKey, TValue>(_dict);
 
-                var res = _dict.Remove(key, out val);
+                if (!dict0.TryGetValue(key, out val))
+                {
+                    return false;
+                }
+
+                dict0.Remove(key);
 
                 _dict = dict0;
                 
-                return res;
+                return true;
             }
         }
         
