@@ -33,6 +33,10 @@ import java.util.Map;
  * Task to resume Java threads by name.
  */
 public class PlatformResumeThreadsTask extends ComputeTaskAdapter<String, Integer> {
+    static void run(String name) {
+        new PlatformResumeThreadsTask.PlatformResumeThreadsJob(name).execute();
+    }
+
     /** {@inheritDoc} */
     @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         @Nullable String arg) {
