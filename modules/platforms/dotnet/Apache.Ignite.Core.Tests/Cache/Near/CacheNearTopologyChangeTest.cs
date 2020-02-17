@@ -364,14 +364,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             // TODO: Try using discovery/communication so that client connects to one of two server nodes?
             // OR use Thread.Suspend from .NET?
-            Func<IEnumerable<Thread>> getThreads = () => Process.GetCurrentProcess().Threads.OfType<Thread>();
-            Func<HashSet<int>> getThreadIds = () => getThreads().Select(t => t.ManagedThreadId).ToHashSet();
+            Func<IEnumerable<ProcessThread>> getThreads = () => 
+                Process.GetCurrentProcess().Threads.OfType<ProcessThread>();
+            
+            Func<HashSet<int>> getThreadIds = () => 
+                getThreads().Select(t => t.Id).ToHashSet();
 
             var threadsBefore = getThreadIds();
             InitNodes(1);
 
             var serverThreads = getThreads()
-                .Where(t => !threadsBefore.Contains(t.ManagedThreadId))
+                .Where(t => !threadsBefore.Contains(t.Id))
                 .ToArray();
 
             var client = InitClient();
@@ -385,7 +388,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             foreach (var serverThread in serverThreads)
             {
 #pragma warning disable 618
-                serverThread.Suspend();
+                serverThread.;
 #pragma warning restore 618
             }
             
