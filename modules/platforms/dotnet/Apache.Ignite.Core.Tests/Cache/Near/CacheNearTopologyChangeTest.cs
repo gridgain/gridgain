@@ -361,9 +361,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests client reconnect to the same cluster (no cluster restart).
         /// </summary>
         [Test]
-        public void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
+        public unsafe void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
         {
             InitNodes(1);
+            
+            var threads = _ignite[0].GetCompute()
+                .ExecuteJavaTask<string[]>("org.apache.ignite.platform.PlatformThreadNamesTask", null)
+                .Where(x => !x.StartsWith("pub-#") && !x.StartsWith("jvm-"))
+                .OrderBy(x => x)
+                .ToArray();
             
             var client = InitClient();
             var evt = new ManualResetEventSlim(false);
@@ -385,6 +391,22 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             finally
             {
                 CallStringMethod(gridName, "org/apache/ignite/platform/PlatformResumeThreadsTask", "run", "(Ljava/lang/String;)V");
+            }
+        }
+
+        private static unsafe void CallStringMethod(string gridName, string className, string methodName, string methodSig)
+        {
+            var env = Jvm.Get().AttachCurrentThread();
+            using (var cls = env.FindClass(className))
+            {
+                var methodId = env.GetStaticMethodId(cls, methodName, methodSig);
+                using (var gridNameRef = env.NewStringUtf(gridName))
+                {
+                    var args = stackalloc long[1];
+                    args[0] = gridNameRef.Target.ToInt64();
+
+                    env.CallStaticVoidMethod(cls, methodId, args);
+                }
             }
         }
 
@@ -497,22 +519,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             _ignite[idx].Dispose();
             _ignite[idx] = null;
-        }
-        
-        private static unsafe void CallStringMethod(string gridName, string className, string methodName, string methodSig)
-        {
-            var env = Jvm.Get().AttachCurrentThread();
-            using (var cls = env.FindClass(className))
-            {
-                var methodId = env.GetStaticMethodId(cls, methodName, methodSig);
-                using (var gridNameRef = env.NewStringUtf(gridName))
-                {
-                    var args = stackalloc long[1];
-                    args[0] = gridNameRef.Target.ToInt64();
-
-                    env.CallStaticVoidMethod(cls, methodId, args);
-                }
-            }
         }
     }
 }
