@@ -305,11 +305,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Tests that client node resets cache data when reconnected to the cluster.
-        /// This happens thanks to `stopCachesOnClientReconnect` call in Java.
+        /// Tests that client reconnect to a restarted cluster stops near cache.
         /// </summary>
         [Test]
-        public void TestClientNodeReconnectResetsNearCacheData()
+        public void TestClientNodeReconnectWithClusterRestartStopsNearCache()
         {
             InitNodes(1);
             var clientCache = InitClientAndCache();
