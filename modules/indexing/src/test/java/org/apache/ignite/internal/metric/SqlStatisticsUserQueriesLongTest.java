@@ -18,13 +18,11 @@ package org.apache.ignite.internal.metric;
 
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -39,17 +37,6 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @After
     public void stopAll() {
         stopAllGrids();
-
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
-    }
-
-    /**
-     * Setup.
-     */
-    @Before
-    public void setup() {
-        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE,
-            String.valueOf(Runtime.getRuntime().maxMemory() / 2));
     }
 
     /**
@@ -85,7 +72,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testMetricsOnRemoteMapFail() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(MAPPER_IDX, strongMemQuota);
         startGridWithMaxMem(REDUCER_IDX, memQuotaUnlimited, true);
@@ -133,7 +120,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testMetricsOnLocalMapFail() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(REDUCER_IDX, strongMemQuota);
         startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited, true);
@@ -180,7 +167,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testMetricsOnRemoteReduceStepFail() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited);
 
@@ -220,7 +207,7 @@ public class SqlStatisticsUserQueriesLongTest extends UserQueriesTestBase {
     @Test
     public void testLocalSelectFailedByOOM() throws Exception {
         int strongMemQuota = 1024 * 1024;
-        int memQuotaUnlimited = -1;
+        int memQuotaUnlimited = 0;
 
         startGridWithMaxMem(REDUCER_IDX, strongMemQuota);
         startGridWithMaxMem(MAPPER_IDX, memQuotaUnlimited, true);
