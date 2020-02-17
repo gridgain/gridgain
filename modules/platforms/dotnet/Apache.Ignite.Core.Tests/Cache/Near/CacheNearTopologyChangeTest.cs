@@ -26,6 +26,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Communication.Tcp;
     using Apache.Ignite.Core.Impl.Unmanaged.Jni;
+    using Apache.Ignite.Core.Lifecycle;
     using NUnit.Framework;
 
     /// <summary>
@@ -367,9 +368,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var client = InitClient();
             var evt = new ManualResetEventSlim(false);
-            client.ClientDisconnected += (sender, args) =>
+            ClientReconnectEventArgs reconnectEventArgs = null;
+            
+            client.ClientReconnected += (sender, args) =>
             {
-                Console.WriteLine("Disconnected!");
+                reconnectEventArgs = args;
                 evt.Set();
             };
 
@@ -380,9 +383,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
 
-            var disconnected = evt.Wait(TimeSpan.FromSeconds(3));
+            var reconnected = evt.Wait(TimeSpan.FromSeconds(3));
 
-            Assert.IsTrue(disconnected);
+            Assert.IsTrue(reconnected);
+            Assert.IsFalse(reconnectEventArgs.HasClusterRestarted);
         }
 
         /// <summary>
