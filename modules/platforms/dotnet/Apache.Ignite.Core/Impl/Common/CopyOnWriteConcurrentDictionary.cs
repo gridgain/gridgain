@@ -94,15 +94,18 @@ namespace Apache.Ignite.Core.Impl.Common
         /// Removes the value with the specified key.
         /// </summary>
         /// <param name="key">The key.</param>
-        public void Remove(TKey key)
+        /// <param name="val">Removed value, if any.</param>
+        public bool Remove(TKey key, out TValue val)
         {
             lock (this)
             {
                 var dict0 = new Dictionary<TKey, TValue>(_dict);
 
-                _dict.Remove(key);
+                var res = _dict.Remove(key, out val);
 
                 _dict = dict0;
+                
+                return res;
             }
         }
         

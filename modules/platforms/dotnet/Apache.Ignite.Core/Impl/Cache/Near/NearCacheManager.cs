@@ -76,10 +76,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             var cacheId = BinaryUtils.GetCacheId(cacheName);
             
-            INearCache nearCache;
-            return _nearCaches.TryGetValue(cacheId, out nearCache) 
-                ? nearCache 
-                : _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache<TK, TV>(cacheName));
+            return _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache<TK, TV>(cacheName));
         }
 
         /// <summary>
@@ -102,12 +99,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public void Stop(int cacheId)
         {
             INearCache cache;
-            if (_nearCaches.TryGetValue(cacheId, out cache))
+            if (_nearCaches.Remove(cacheId, out cache))
             {
-                // Clear the cache, but don't remove. Besides true cache stop, this is called during client reconnect
-                // (GridCacheProcessor.stopCachesOnClientReconnect).
-                // Existing cache instances continue functioning after reconnect and should receive near cache updates.
-                cache.Clear();
+                cache.Stop();
             }
         }
 

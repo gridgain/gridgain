@@ -31,9 +31,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         void Update(IBinaryStream stream, Marshaller marshaller);
 
         /// <summary>
-        /// Clears the cache.
+        /// Stops the cache, enters bypass mode.
         /// </summary>
-        void Clear();
+        void Stop();
 
         bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
         

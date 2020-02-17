@@ -225,8 +225,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         }
 
         /** <inheritdoc /> */
-        public void Clear()
+        public void Stop()
         {
+            // TODO: Mark as stopped and bypass in all methods.
+            
             if (_fallbackMap != null)
             {
                 _fallbackMap.Clear();
