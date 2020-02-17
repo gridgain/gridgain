@@ -32,7 +32,7 @@ import java.util.Map;
 /**
  * Task to suspend Java threads by name.
  */
-public class PlatformSuspendThreadsTask extends ComputeTaskAdapter<String, Object> {
+public class PlatformSuspendThreadsTask extends ComputeTaskAdapter<String, Integer> {
     /** {@inheritDoc} */
     @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         @Nullable String arg) {
@@ -40,7 +40,7 @@ public class PlatformSuspendThreadsTask extends ComputeTaskAdapter<String, Objec
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public String[] reduce(List<ComputeJobResult> results) {
+    @Nullable @Override public Integer reduce(List<ComputeJobResult> results) {
         return results.get(0).getData();
     }
 
@@ -60,15 +60,18 @@ public class PlatformSuspendThreadsTask extends ComputeTaskAdapter<String, Objec
         }
 
         /** {@inheritDoc} */
-        @Nullable @Override public Object execute() {
+        @Nullable @Override public Integer execute() {
+            int i = 0;
+
             for (Thread thread : Thread.getAllStackTraces().keySet()) {
                 if (thread.getName().contains(name)) {
                     //noinspection CallToThreadStopSuspendOrResumeManager,deprecation
                     thread.suspend();
+                    i++;
                 }
             }
 
-            return null;
+            return i;
         }
     }
 }
