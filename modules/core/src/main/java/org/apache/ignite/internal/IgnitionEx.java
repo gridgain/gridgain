@@ -1559,6 +1559,9 @@ public class IgnitionEx {
         /** Indexing pool. */
         private ThreadPoolExecutor idxExecSvc;
 
+        /** Thread pool for create/rebuild indexes. */
+        private ThreadPoolExecutor buildIdxExecSvc;
+
         /** Continuous query executor service. */
         private IgniteStripedThreadPoolExecutor callbackExecSvc;
 
@@ -1928,6 +1931,21 @@ public class IgnitionEx {
                     GridIoPolicy.IDX_POOL,
                     oomeHnd
                 );
+
+                int buildIdxThreadPoolSize = cfg.getBuildIndexThreadPoolSize();
+
+                validateThreadPoolSize(buildIdxThreadPoolSize, "build-idx");
+
+                buildIdxExecSvc = new IgniteThreadPoolExecutor(
+                    "build-idx-runner",
+                    cfg.getIgniteInstanceName(),
+                    0,
+                    buildIdxThreadPoolSize,
+                    0,
+                    new LinkedBlockingQueue<>(),
+                    GridIoPolicy.UNDEFINED,
+                    oomeHnd
+                );
             }
 
             validateThreadPoolSize(cfg.getQueryThreadPoolSize(), "query");
@@ -2014,6 +2032,7 @@ public class IgnitionEx {
                     restExecSvc,
                     affExecSvc,
                     idxExecSvc,
+                    buildIdxExecSvc,
                     callbackExecSvc,
                     qryExecSvc,
                     schemaExecSvc,
@@ -2683,6 +2702,10 @@ public class IgnitionEx {
             U.shutdownNow(getClass(), idxExecSvc, log);
 
             idxExecSvc = null;
+
+            U.shutdownNow(getClass(), buildIdxExecSvc, log);
+
+            buildIdxExecSvc = null;
 
             U.shutdownNow(getClass(), callbackExecSvc, log);
 
