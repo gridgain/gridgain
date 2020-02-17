@@ -205,7 +205,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     public void testMaxMemMetricShowCustomMaxMemoryValuesForDifferentNodes() throws Exception {
         final int oneMaxMem = 512 * 1024;
         final int otherMaxMem = 1024 * 1024;
-        final int unlimMaxMem = -1;
+        final int unlimMaxMem = 0;
 
         final int oneNodeIdx = 0;
         final int otherNodeIdx = 1;
@@ -228,15 +228,15 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     @Test
     public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
         final MemValidator quotaUnlim = (free, max) -> {
-            assertEquals(-1, max);
+            assertEquals(0, max);
             assertEquals(max, free);
         };
 
         int connNodeIdx = 1;
         int otherNodeIdx = 0;
 
-        startGridWithMaxMem(connNodeIdx, -1);
-        startGridWithMaxMem(otherNodeIdx, -1);
+        startGridWithMaxMem(connNodeIdx, 0);
+        startGridWithMaxMem(otherNodeIdx, 0);
 
         IgniteCache cache = createCacheFrom(grid(connNodeIdx));
 

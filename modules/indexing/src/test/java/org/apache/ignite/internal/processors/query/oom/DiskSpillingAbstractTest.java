@@ -34,20 +34,26 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE;
 import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DISK_SPILL_DIR;
 
 /**
  * Base class for disk spilling tests.
  */
-@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "true")
-@WithSystemProperty(key = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE", value = "2048")
+@WithSystemProperty(key = IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, value = "2048")
+@WithSystemProperty(key = IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, value = "true")
 public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** */
     protected static final int PERS_CNT = 1002;
@@ -73,6 +79,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        cfg.setSqlOffloadingEnabled(true);
 
         // Dummy cache.
         CacheConfiguration<?,?> cache = defaultCacheConfiguration();
@@ -132,9 +139,15 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         orgCache.setBackups(1);
         grid(0).addCacheConfiguration(orgCache);
 
-        startGrid(getConfiguration("client").setClientMode(true));
+        if (startClient())
+            startGrid(getConfiguration("client").setClientMode(true));
 
         populateData();
+    }
+
+    /** */
+    protected boolean startClient() {
+        return true;
     }
 
     /**
@@ -184,7 +197,6 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         listAggs = null;
     }
 
-
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
@@ -219,6 +231,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             assertFalse("In-memory result is empty.", inMemRes.isEmpty());
 
             assertWorkDirClean();
+            checkMemoryManagerState();
 
             List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
 
@@ -246,10 +259,10 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
 
             assertWorkDirClean();
+            checkMemoryManagerState();
 
-            if (log.isInfoEnabled()) {
+            if (log.isInfoEnabled())
                 log.info("Spill files events (created + deleted): " + dirEvts.size());
-            }
 
             if (!checkSortOrder) {
                 fixSortOrder(onDiskRes);
@@ -268,6 +281,8 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                 log.debug("In-memory result:\n" + inMemRes + "\nOn disk result:\n" + onDiskRes);
 
             assertEqualsCollections(inMemRes, onDiskRes);
+
+            checkMemoryManagerState();
         }
         catch (IOException e) {
             throw new RuntimeException(e);
@@ -436,5 +451,18 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         assertTrue(workDir.toFile().isDirectory());
 
         return Arrays.asList(workDir.toFile().list());
+    }
+
+    /**
+     *
+     */
+    protected void checkMemoryManagerState() {
+        for (Ignite node : G.allGrids()) {
+            IgniteH2Indexing h2 = (IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing();
+
+            QueryMemoryManager memoryManager = h2.memoryManager();
+
+            assertEquals(memoryManager.memoryReserved(), 0);
+        }
     }
 }

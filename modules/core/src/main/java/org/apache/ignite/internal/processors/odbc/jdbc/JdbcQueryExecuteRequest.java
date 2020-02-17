@@ -20,7 +20,6 @@ import java.io.IOException;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -149,7 +148,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
         if (args != null) {
             for (Object arg : args)
-                SqlListenerUtils.writeObject(writer, arg, false);
+                JdbcUtils.writeObject(writer, arg, false, protoCtx);
         }
 
         if (protoCtx.isAutoCommitSupported())
@@ -176,7 +175,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         args = new Object[argsNum];
 
         for (int i = 0; i < argsNum; ++i)
-            args[i] = SqlListenerUtils.readObject(reader, false);
+            args[i] = JdbcUtils.readObject(reader, false, protoCtx);
 
         if (protoCtx.isAutoCommitSupported())
             autoCommit = reader.readBoolean();
