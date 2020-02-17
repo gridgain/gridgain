@@ -364,13 +364,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public unsafe void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
         {
             InitNodes(1);
-            
+
             var threads = _ignite[0].GetCompute()
                 .ExecuteJavaTask<string[]>("org.apache.ignite.platform.PlatformThreadNamesTask", null)
                 .Where(x => !x.StartsWith("pub-#") && !x.StartsWith("jvm-"))
                 .OrderBy(x => x)
                 .ToArray();
-            
+
             var client = InitClient();
             var evt = new ManualResetEventSlim(false);
             client.ClientDisconnected += (sender, args) =>
@@ -379,19 +379,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 evt.Set();
             };
 
-            var gridName = string.Format("%{0}%", _ignite[0].Name);
-            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformSuspendThreadsTask", "run", "(Ljava/lang/String;)V");
+            var gridName = string.Format("%{0}%", client.Name);
+            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformSuspendThreadsTask", "run",
+                "(Ljava/lang/String;)V");
+            Thread.Sleep(40000);
+            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformResumeThreadsTask", "run",
+                "(Ljava/lang/String;)V");
 
-            try
-            {
-                var disconnected = evt.Wait(TimeSpan.FromSeconds(10));
+            Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
 
-                Assert.IsTrue(disconnected);
-            }
-            finally
-            {
-                CallStringMethod(gridName, "org/apache/ignite/platform/PlatformResumeThreadsTask", "run", "(Ljava/lang/String;)V");
-            }
+            var disconnected = evt.Wait(TimeSpan.FromSeconds(3));
+
+            Assert.IsTrue(disconnected);
         }
 
         private static unsafe void CallStringMethod(string gridName, string className, string methodName, string methodSig)
