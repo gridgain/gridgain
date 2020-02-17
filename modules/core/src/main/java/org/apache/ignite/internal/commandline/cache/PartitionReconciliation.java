@@ -129,7 +129,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             desc,
             paramsDesc,
             optional(REPAIR), optional(PARALLELISM), optional(BATCH_SIZE), optional(RECHECK_ATTEMPTS),
-            optional(INCLUDE_SENSITIVE), optional(LOCAL_OUTPUT), optional(CACHES));
+            optional(INCLUDE_SENSITIVE), optional(CACHES));
     }
 
     /** {@inheritDoc} */

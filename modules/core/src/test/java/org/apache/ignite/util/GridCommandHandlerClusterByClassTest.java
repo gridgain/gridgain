@@ -93,6 +93,8 @@ import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 import static org.apache.ignite.testframework.GridTestUtils.LOCAL_DATETIME_REGEXP;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertMatches;
@@ -330,6 +332,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      */
     @Test
     public void testCacheHelp() throws Exception {
+        Set<String> skippedCommands = new HashSet<>();
+        skippedCommands.add(RECHECK_DELAY.toString());
+        skippedCommands.add(LOCAL_OUTPUT.toString());
+
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "help"));
@@ -344,8 +350,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
                 if (args != null)
                     for (Enum<? extends CommandArg> arg : args.getEnumConstants())
-                        assertTrue(cmd + " " + arg, output.contains(arg.toString()));
-
+                        if (!skippedCommands.contains(arg.toString()))
+                            assertTrue(cmd + " " + arg, output.contains(arg.toString()));
             }
             else
                 assertContains(log, output, CommandHandler.UTILITY_NAME);
