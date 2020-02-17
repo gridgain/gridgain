@@ -333,9 +333,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             InitNodes(1);
             Assert.IsTrue(reconnectTask.Wait(TimeSpan.FromSeconds(10)));
             
-            // This is a full cluster restart, so client near cache is stopped. 
-            Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
-            
             // Near cache is empty.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.NativeNear));
             
@@ -346,7 +343,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(11, clientCache[1].Bar);
             
             serverCache[1] = new Foo(22);
-            TestUtils.WaitForTrueCondition(() => 22 == clientCache[1].Bar);
+            Assert.AreEqual(22, clientCache[1].Bar);
+            
+            // This is a full cluster restart, so client near cache is stopped. 
+            Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
         }
 
         /// <summary>
