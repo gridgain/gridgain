@@ -364,14 +364,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
         {
-            var cfg = TestUtils.GetTestConfiguration("srv");
-            cfg.CommunicationSpi = new TcpCommunicationSpi
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration("srv"))
             {
-                IdleConnectionTimeout = TimeSpan.FromSeconds(3)
+                CommunicationSpi = new TcpCommunicationSpi {IdleConnectionTimeout = TimeSpan.FromSeconds(3)},
+                FailureDetectionTimeout = TimeSpan.FromSeconds(2),
+                ClientFailureDetectionTimeout = TimeSpan.FromSeconds(2)
             };
             Ignition.Start(cfg);
 
-            var client = InitClient();
+            var clientCfg = new IgniteConfiguration(cfg)
+            {
+                ClientMode = true,
+                IgniteInstanceName = "client"
+            };
+            var client = Ignition.Start(clientCfg);
             
             var disconnectedEvt = new ManualResetEventSlim(false);
             client.ClientDisconnected += (sender, args) => { disconnectedEvt.Set(); };
@@ -387,7 +393,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var gridName = string.Format("%{0}%", client.Name);
             SuspendThreads(gridName);
-            Thread.Sleep(35000); // TODO: Reduce comm timeout on server - but which one?
+            Thread.Sleep(5000); // TODO: Reduce comm timeout on server - but which one?
             ResumeThreads(gridName);
 
             Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
