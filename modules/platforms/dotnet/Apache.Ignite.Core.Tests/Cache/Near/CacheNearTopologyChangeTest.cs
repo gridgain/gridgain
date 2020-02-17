@@ -367,13 +367,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             InitNodes(1);
 
             var client = InitClient();
-            var evt = new ManualResetEventSlim(false);
+            
+            var disconnectedEvt = new ManualResetEventSlim(false);
+            client.ClientDisconnected += (sender, args) => { disconnectedEvt.Set(); };
+
+            var reconnectedEvt = new ManualResetEventSlim(false);
             ClientReconnectEventArgs reconnectEventArgs = null;
             
             client.ClientReconnected += (sender, args) =>
             {
                 reconnectEventArgs = args;
-                evt.Set();
+                reconnectedEvt.Set();
             };
 
             var gridName = string.Format("%{0}%", client.Name);
@@ -383,7 +387,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
 
-            var reconnected = evt.Wait(TimeSpan.FromSeconds(3));
+            var disconnected = disconnectedEvt.Wait(TimeSpan.FromSeconds(3));
+            Assert.IsTrue(disconnected);
+            
+            var reconnected = reconnectedEvt.Wait(TimeSpan.FromSeconds(10));
 
             Assert.IsTrue(reconnected);
             Assert.IsFalse(reconnectEventArgs.HasClusterRestarted);
