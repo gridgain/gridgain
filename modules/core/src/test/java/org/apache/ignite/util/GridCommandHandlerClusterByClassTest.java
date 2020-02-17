@@ -105,9 +105,11 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
 /**
- * Command line handler test. You can use this class if you don't need create nodes for each test because here create
- * {@link #SERVER_NODE_CNT} server and 1 client nodes at before all tests. If you need create nodes for each test you
- * can use {@link GridCommandHandlerTest}
+ * Command line handler test.
+ * You can use this class if you don't need create nodes for each test because
+ * here create {@link #SERVER_NODE_CNT} server and 1 client nodes at before all
+ * tests. If you need create nodes for each test you can use
+ * {@link GridCommandHandlerTest}
  */
 @SystemPropertiesList({
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
@@ -327,9 +329,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertTrue(rollbackMatched);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheHelp() throws Exception {
         Set<String> skippedCommands = new HashSet<>();
@@ -360,9 +360,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         checkHelp(output, "org.apache.ignite.util/control.sh_cache_help.output");
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCorrectCacheOptionsNaming() {
         Pattern p = Pattern.compile("^--([a-z]+(-)?)+([a-z]+)");
@@ -376,9 +374,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     @WithSystemProperty(key = "DISTRIBUTED_ROLLING_UPGRADE_MODE", value = "true")
     public void testHelp() throws Exception {
@@ -434,9 +430,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testPrintTimestampAtEndsOfExecution() {
         injectTestSystemOut();
@@ -451,9 +445,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheIdleVerify() {
         IgniteEx ignite = crd;
@@ -914,15 +906,18 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         corruptDataEntry(storedSysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("sq" + parts / 2,
             "default-ds-group"), false, true, new GridCacheVersion(0, 0, 0), "broken");
 
-        CacheGroupContext memorySysCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId("default-volatile-ds-group"));
+        CacheGroupContext memoryVolatileCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId(
+            "default-volatile-ds-group@volatileDsMemPlc"));
 
-        assertNotNull(memorySysCacheCtx);
+        assertNotNull(memoryVolatileCacheCtx);
+        assertEquals("volatileDsMemPlc", memoryVolatileCacheCtx.dataRegion().config().getName());
+        assertEquals(false, memoryVolatileCacheCtx.dataRegion().config().isPersistenceEnabled());
 
-        corruptDataEntry(memorySysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s0",
-            "default-volatile-ds-group"), true, false, new GridCacheVersion(0, 0, 0), "broken");
+        corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s0",
+            "default-volatile-ds-group@volatileDsMemPlc"), true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-        corruptDataEntry(memorySysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s" + parts / 2,
-            "default-volatile-ds-group"), false, true, new GridCacheVersion(0, 0, 0), "broken");
+        corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s" + parts / 2,
+            "default-volatile-ds-group@volatileDsMemPlc"), false, true, new GridCacheVersion(0, 0, 0), "broken");
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump", "--cache-filter", "SYSTEM"));
 
@@ -933,7 +928,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             U.log(log, dumpWithConflicts);
 
-            assertContains(log, dumpWithConflicts, "found 4 conflict partitions: [counterConflicts=2, " +
+            // Non-persistent caches do not have counter conflicts
+            assertContains(log, dumpWithConflicts, "found 3 conflict partitions: [counterConflicts=1, " +
                 "hashConflicts=2]");
         }
         else
@@ -1047,9 +1043,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         return fileNamePattern.matcher(testOut.toString());
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheContention() throws Exception {
         int cnt = 10;
@@ -1121,9 +1115,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         }
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheGroups() {
         Ignite ignite = crd;
@@ -1144,9 +1136,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertContains(log, testOut.toString(), "G100");
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheAffinity() {
         Ignite ignite = crd;
@@ -1171,79 +1161,59 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertContains(log, out, "affCls=RendezvousAffinityFunction");
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheConfigNoOutputFormat() {
         testCacheConfig(null, 1, 1);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheConfigSingleLineOutputFormatSingleNodeSignleCache() {
         testCacheConfigSingleLineOutputFormat(1, 1);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheConfigSingleLineOutputFormatTwoNodeSignleCache() {
         testCacheConfigSingleLineOutputFormat(2, 1);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheConfigSingleLineOutputFormatTwoNodeManyCaches() {
         testCacheConfigSingleLineOutputFormat(2, 100);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheConfigMultiLineOutputFormatSingleNodeSingleCache() {
         testCacheConfigMultiLineOutputFormat(1, 1);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheConfigMultiLineOutputFormatTwoNodeSingleCache() {
         testCacheConfigMultiLineOutputFormat(2, 1);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheConfigMultiLineOutputFormatTwoNodeManyCaches() {
         testCacheConfigMultiLineOutputFormat(2, 100);
     }
 
-    /**
-     *
-     */
+    /** */
     private void testCacheConfigSingleLineOutputFormat(int nodesCnt, int cachesCnt) {
         testCacheConfig("single-line", nodesCnt, cachesCnt);
     }
 
-    /**
-     *
-     */
+    /** */
     private void testCacheConfigMultiLineOutputFormat(int nodesCnt, int cachesCnt) {
         testCacheConfig("multi-line", nodesCnt, cachesCnt);
     }
 
-    /**
-     *
-     */
+    /** */
     private void testCacheConfig(String outputFormat, int nodesCnt, int cachesCnt) {
         assertTrue("Invalid number of nodes or caches", nodesCnt > 0 && cachesCnt > 0);
 
@@ -1298,9 +1268,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
             fail("Unknown output format: " + outputFormat);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheDistribution() {
         Ignite ignite = crd;
@@ -1315,10 +1283,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         String out = testOut.toString();
 
         // Result include info by cache "default"
-        assertContains(log, out, "[next group: id=1544803905, name=default]");
+        assertContains(log ,out, "[next group: id=1544803905, name=default]");
 
         // Result include info by cache "ignite-sys-cache"
-        assertContains(log, out, "[next group: id=-2100569601, name=ignite-sys-cache]");
+        assertContains(log ,out, "[next group: id=-2100569601, name=ignite-sys-cache]");
 
         // Run distribution for all node and all cache and include additional user attribute
         assertEquals(EXIT_CODE_OK, execute("--cache", "distribution", "null", "--user-attributes", "ZONE,CELL,DC"));
@@ -1326,11 +1294,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         out += "\n" + testOut.toString();
 
         List<String> outLines = Arrays.stream(out.split("\n"))
-            .map(String::trim)
-            .collect(toList());
+                                .map(String::trim)
+                                .collect(toList());
 
         int firstIndex = outLines.indexOf("[next group: id=1544803905, name=default]");
-        int lastIndex = outLines.lastIndexOf("[next group: id=1544803905, name=default]");
+        int lastIndex  = outLines.lastIndexOf("[next group: id=1544803905, name=default]");
 
         String dataLine = outLines.get(firstIndex + 1);
         String userArrtDataLine = outLines.get(lastIndex + 1);
@@ -1342,9 +1310,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertEquals(3, userArrtCommaNum - commaNum);
     }
 
-    /**
-     *
-     */
+    /** */
     @Test
     public void testCacheResetLostPartitions() {
         Ignite ignite = crd;

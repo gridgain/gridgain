@@ -18,6 +18,9 @@ package org.apache.ignite.testsuites;
 
 import org.apache.ignite.ClassPathContentLoggingTest;
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
+import org.apache.ignite.events.BaselineEventsLocalTest;
+import org.apache.ignite.events.BaselineEventsRemoteTest;
+import org.apache.ignite.events.ClusterActivationStartedEventTest;
 import org.apache.ignite.failure.FailureHandlerTriggeredTest;
 import org.apache.ignite.failure.OomFailureHandlerTest;
 import org.apache.ignite.failure.StopNodeFailureHandlerTest;
@@ -49,6 +52,7 @@ import org.apache.ignite.internal.TransactionsMXBeanImplTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesMultipleConnectionsTest;
 import org.apache.ignite.internal.managers.IgniteDiagnosticMessagesTest;
 import org.apache.ignite.internal.managers.discovery.IncompleteDeserializationExceptionTest;
+import org.apache.ignite.internal.pagemem.wal.record.WALRecordSerializationTest;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecordTest;
 import org.apache.ignite.internal.processors.DeadLockOnNodeLeftExchangeTest;
 import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentV2Test;
@@ -92,6 +96,7 @@ import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTe
 import org.apache.ignite.internal.processors.failure.FailureProcessorLoggingTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorThreadDumpThrottlingTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageFeatureTest;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageStopTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryCacheTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorkerTest;
@@ -113,6 +118,7 @@ import org.apache.ignite.messaging.GridMessagingNoPeerClassLoadingSelfTest;
 import org.apache.ignite.messaging.GridMessagingSelfTest;
 import org.apache.ignite.messaging.IgniteMessagingSendAsyncTest;
 import org.apache.ignite.messaging.IgniteMessagingWithClientTest;
+import org.apache.ignite.plugin.PluginConfigurationTest;
 import org.apache.ignite.plugin.PluginNodeValidationTest;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilderTest;
 import org.apache.ignite.spi.GridSpiLocalHostInjectionTest;
@@ -213,6 +219,7 @@ import org.junit.runners.Suite;
     AttributeNodeFilterSelfTest.class,
 
     WALRecordTest.class,
+    WALRecordSerializationTest.class,
 
     GridPeerDeploymentRetryTest.class,
     GridPeerDeploymentRetryModifiedTest.class,
@@ -264,10 +271,12 @@ import org.junit.runners.Suite;
     CacheLocalGetSerializationTest.class,
 
     PluginNodeValidationTest.class,
+    PluginConfigurationTest.class,
 
     // In-memory Distributed MetaStorage.
     DistributedMetaStorageTest.class,
     DistributedMetaStorageFeatureTest.class,
+    DistributedMetaStorageStopTest.class,
     DistributedMetaStorageHistoryCacheTest.class,
     DmsDataWriterWorkerTest.class,
     InMemoryCachedDistributedMetaStorageBridgeTest.class,
@@ -289,6 +298,10 @@ import org.junit.runners.Suite;
     ClassPathContentLoggingTest.class,
 
     IncompleteDeserializationExceptionTest.class,
+
+    ClusterActivationStartedEventTest.class,
+    BaselineEventsLocalTest.class,
+    BaselineEventsRemoteTest.class
 })
 public class IgniteBasicTestSuite {
 }

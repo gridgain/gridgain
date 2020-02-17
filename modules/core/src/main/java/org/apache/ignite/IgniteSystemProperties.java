@@ -1321,14 +1321,6 @@ public final class IgniteSystemProperties {
      */
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
 
-    /**
-     * Index rebuilding parallelism level. If specified, sets the count of threads that are used for index rebuilding
-     * and can only be greater than <code>0</code>, otherwise default value will be used. Maximum count of threads
-     * can't be greater than total available processors count.
-     * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
-     */
-    public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
-
     /** Enable write rebalnce statistics into log. Default: false */
     public static final String IGNITE_WRITE_REBALANCE_STATISTICS = "IGNITE_WRITE_REBALANCE_STATISTICS";
 
@@ -1379,6 +1371,14 @@ public final class IgniteSystemProperties {
      * read from wal every time. Should be used for test purposes only.
      */
     public static final String IGNITE_DISABLE_GRP_STATE_LAZY_STORE = "IGNITE_DISABLE_GRP_STATE_LAZY_STORE";
+
+    /**
+     * Enables extended logging of indexes create/rebuild process. Default {@code false}.
+     * <p/>
+     * <b>Warning</b>: enabling that option can lead to performance degradation of index creation, rebuilding and  node
+     * restart.
+     */
+    public static final String IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING = "IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING";
 
     /**
      * Enforces singleton.

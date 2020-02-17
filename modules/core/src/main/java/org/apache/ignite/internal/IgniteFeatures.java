@@ -17,11 +17,14 @@
 package org.apache.ignite.internal;
 
 import java.util.BitSet;
+import java.util.Collection;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
@@ -67,6 +70,9 @@ public enum IgniteFeatures {
 //    TODO: https://ggsystems.atlassian.net/browse/GG-25084
 //    /** Support of cluster read-only mode. */
 //    CLUSTER_READ_ONLY_MODE(9),
+
+    /** Support of suspend/resume operations for pessimistic transactions. */
+    SUSPEND_RESUME_PESSIMISTIC_TX(10),
 
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
@@ -115,11 +121,17 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /***/
+    /** */
     MANAGEMENT_CONSOLE(28),
 
     /** Distributed change timeout for dump long operations. */
     DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30),
+
+    /** Cluster has task to get value from cache by key value. */
+    WC_GET_CACHE_VALUE(31),
+
+    /** */
+    VOLATILE_DATA_STRUCTURES_REGION(33),
 
     /** Partition reconciliation utility. */
     PARTITION_RECONCILIATION(34);
@@ -211,6 +223,24 @@ public enum IgniteFeatures {
     }
 
     /**
+     * @param ctx Kernal context.
+     * @param feature Feature to check.
+     *
+     * @return {@code True} if all nodes in the cluster support given feature.
+     */
+    public static boolean allNodesSupport(GridKernalContext ctx, IgniteFeatures feature) {
+        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
+
+        if (discoSpi instanceof IgniteDiscoverySpi)
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature);
+        else {
+            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
+
+            return allNodesSupports(ctx, nodes, feature);
+        }
+    }
+
+    /**
      * Features supported by the current node.
      *
      * @param ctx Kernal context.
@@ -236,7 +266,7 @@ public enum IgniteFeatures {
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
                 continue;
 
-            // Add only when management console is enabled.
+            // Add only when Control Center is enabled.
             if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
                 continue;
 

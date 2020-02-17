@@ -41,7 +41,7 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.awaitility.Awaitility.with;
 
 /**
- * Tests for management console span messages processor.
+ * Tests for Control Center span messages processor.
  */
 public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstractTest {
     /**
