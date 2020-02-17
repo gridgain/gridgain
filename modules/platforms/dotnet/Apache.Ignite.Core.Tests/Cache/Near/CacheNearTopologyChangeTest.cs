@@ -392,11 +392,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Updates work as expected.
             Assert.AreEqual(2, clientCache[1].Bar);
             serverCache[1] = new Foo(33);
-            Assert.AreEqual(33, clientCache[1].Bar);
-            TestUtils.WaitForTrueCondition(() => 33 == clientCache[1].Bar);
-            
-            // TODO: Why not immediate? Change sync mode?
-            // Assert.AreEqual(33, clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
+            TestUtils.WaitForTrueCondition(() => 33 == clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
         }
 
         /// <summary>
