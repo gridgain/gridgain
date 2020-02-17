@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.metric.SqlStatisticOffloadingTest;
 import org.apache.ignite.internal.metric.SqlStatisticsMemoryQuotaTest;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesFastTest;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesLongTest;
@@ -77,6 +78,7 @@ import org.apache.ignite.internal.processors.query.h2.twostep.NonCollocatedRetry
 import org.apache.ignite.internal.processors.query.h2.twostep.NoneOrSinglePartitionsQueryOptimizationsTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.RetryCauseMessageSelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.TableViewSubquerySelfTest;
+import org.apache.ignite.internal.processors.query.oom.ClientQueryQuotaTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingBasicTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingDmlTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingGlobalQuotaTest;
@@ -89,6 +91,10 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueryParallel
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingWithBaselineTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
+import org.apache.ignite.internal.processors.query.oom.MemoryQuotaDynamicConfigurationTest;
+import org.apache.ignite.internal.processors.query.oom.MemoryQuotaStaticAndDynamicConfigurationTest;
+import org.apache.ignite.internal.processors.query.oom.MemoryQuotaStaticConfigurationTest;
+import org.apache.ignite.internal.processors.query.oom.QueryMemoryManagerConfigurationSelfTest;
 import org.apache.ignite.internal.processors.query.oom.QueryMemoryTrackerSelfTest;
 import org.apache.ignite.sqltests.SqlDataTypesCoverageTests;
 import org.junit.runner.RunWith;
@@ -178,17 +184,21 @@ import org.junit.runners.Suite;
 
     LongRunningQueryTest.class,
 
-    LocalQueryMemoryTrackerSelfTest.class,
-    LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
-
-    SqlStatisticsMemoryQuotaTest.class,
     SqlStatisticsUserQueriesFastTest.class,
     SqlStatisticsUserQueriesLongTest.class,
 
+    // Memory quota tests.
+    SqlStatisticsMemoryQuotaTest.class,
+    LocalQueryMemoryTrackerSelfTest.class,
+    LocalQueryMemoryTrackerWithQueryParallelismSelfTest.class,
     QueryMemoryTrackerSelfTest.class,
+    MemoryQuotaDynamicConfigurationTest.class,
+    MemoryQuotaStaticConfigurationTest.class,
+    MemoryQuotaStaticAndDynamicConfigurationTest.class,
+    QueryMemoryManagerConfigurationSelfTest.class,
+    ClientQueryQuotaTest.class,
 
-    DmlBatchSizeDeadlockTest.class,
-
+    // Offloading tests.
     DiskSpillingBasicTest.class,
     DiskSpillingGlobalQuotaTest.class,
     DiskSpillingQueriesTest.class,
@@ -199,6 +209,7 @@ import org.junit.runners.Suite;
     DiskSpillingWithBaselineTest.class,
     DiskSpillingIoErrorTest.class,
     DiskSpillingDmlTest.class,
+    SqlStatisticOffloadingTest.class,
 
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,
@@ -207,7 +218,9 @@ import org.junit.runners.Suite;
 
     SqlDataTypesCoverageTests.class,
 
-    SqlQueriesTopologyMappingTest.class
+    SqlQueriesTopologyMappingTest.class,
+
+    DmlBatchSizeDeadlockTest.class,
 })
 public class IgniteBinaryCacheQueryTestSuite2 {
 }

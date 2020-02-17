@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager for local queries.
  */
-public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends AbstractQueryMemoryTrackerSelfTest {
+public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return true;

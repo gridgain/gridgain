@@ -19,29 +19,33 @@ package org.apache.ignite.internal.processors.management;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import org.apache.ignite.internal.IgniteProperties;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static java.util.Arrays.asList;
+
 /**
- * This class defines Management Console Agent configuration.
+ * This class defines Control Center agent configuration.
  */
 public class ManagementConfiguration extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** Default console URI. */
-    private static final String DFLT_CONSOLE_URI = "http://localhost:3000";
+    private static final String DFLT_CONSOLE_URIS = F.isEmpty(IgniteProperties.get("ignite.control.center.uris"))
+        ? "http://localhost:3000" : IgniteProperties.get("ignite.control.center.uris");
+
+    /** */
+    private List<String> consoleUris = asList(DFLT_CONSOLE_URIS.split(","));
 
     /** */
     private boolean enabled = true;
-
-    /** */
-    private List<String> consoleUris = Collections.singletonList(DFLT_CONSOLE_URI);
 
     /** */
     @GridToStringExclude
@@ -226,7 +230,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
             return false;
 
         ManagementConfiguration that = (ManagementConfiguration)o;
-        
+
         return enabled == that.enabled &&
             Objects.equals(consoleUris, that.consoleUris) &&
             Objects.equals(consoleKeyStore, that.consoleKeyStore) &&

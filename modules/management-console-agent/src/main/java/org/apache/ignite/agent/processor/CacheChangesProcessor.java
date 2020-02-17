@@ -105,7 +105,7 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Send caches information to Management Console.
+     * Send caches information to Control Center.
      */
     private void sendCacheInfo() {
         if (!ctx.isStopping() && mgr.connected()) {
@@ -156,15 +156,14 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
         for (Map.Entry<String, DynamicCacheDescriptor> item : cacheDescriptors.entrySet()) {
             DynamicCacheDescriptor cd = item.getValue();
 
-            if (!isSystemCache(item.getKey())) {
-                cachesInfo.add(
-                    new CacheInfo()
-                        .setName(item.getKey())
-                        .setCacheId(cd.cacheId())
-                        .setCreatedBySql(item.getValue().sql())
-                        .setGroup(cd.groupDescriptor().groupName())
-                );
-            }
+            cachesInfo.add(
+                new CacheInfo()
+                    .setName(item.getKey())
+                    .setCacheId(cd.cacheId())
+                    .setCreatedBySql(item.getValue().sql())
+                    .setSystemCache(isSystemCache(item.getKey()))
+                    .setGroup(cd.groupDescriptor().groupName())
+            );
         }
 
         return cachesInfo;

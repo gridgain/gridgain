@@ -609,15 +609,18 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
 
         while (rs.next()) {
             if (cnt == 0) {
-                assert rs.getDate("dateVal").equals(new Date(1, 1, 1));
+                assertEquals(new Date(1, 1, 1), rs.getDate("dateVal"));
+                assertEquals(new Date(1, 1, 1), rs.getDate(12));
+                assertEquals(new Date(1, 1, 1), rs.getObject("dateVal"));
+                assertEquals(new Date(1, 1, 1), rs.getObject(12));
 
-                assert rs.getDate(12).equals(new Date(1, 1, 1));
-                assert rs.getTime(12).equals(new Time(new Date(1, 1, 1).getTime()));
-                assert rs.getTimestamp(12).equals(new Timestamp(new Date(1, 1, 1).getTime()));
+                assertEquals(new Time(new Date(1, 1, 1).getTime()), rs.getTime(12));
+                assertEquals(new Timestamp(new Date(1, 1, 1).getTime()), rs.getTimestamp(12));
 
-                assert rs.getObject(12, Date.class).equals(new Date(1, 1, 1));
-                assert rs.getObject(12, Time.class).equals(new Time(new Date(1, 1, 1).getTime()));
-                assert rs.getObject(12, Timestamp.class).equals(new Timestamp(new Date(1, 1, 1).getTime()));
+                assertEquals(new Date(1, 1, 1), rs.getObject(12, Date.class));
+                assertEquals(new Time(new Date(1, 1, 1).getTime()), rs.getObject(12, Time.class));
+                assertEquals(new Timestamp(new Date(1, 1, 1).getTime()),
+                    rs.getObject(12, Timestamp.class));
             }
 
             cnt++;
@@ -638,15 +641,18 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
 
         while (rs.next()) {
             if (cnt == 0) {
-                assert rs.getTime("timeVal").equals(new Time(1, 1, 1));
+                assertEquals(new Time(1, 1, 1), rs.getTime("timeVal"));
+                assertEquals(new Time(1, 1, 1), rs.getTime(13));
+                assertEquals(new Time(1, 1, 1), rs.getObject("timeVal"));
+                assertEquals(new Time(1, 1, 1), rs.getObject(13));
 
-                assert rs.getDate(13).equals(new Date(new Time(1, 1, 1).getTime()));
-                assert rs.getTime(13).equals(new Time(1, 1, 1));
-                assert rs.getTimestamp(13).equals(new Timestamp(new Time(1, 1, 1).getTime()));
+                assertEquals(new Date(new Time(1, 1, 1).getTime()), rs.getDate(13));
+                assertEquals(new Timestamp(new Time(1, 1, 1).getTime()), rs.getTimestamp(13));
 
-                assert rs.getObject(13, Date.class).equals(new Date(new Time(1, 1, 1).getTime()));
-                assert rs.getObject(13, Time.class).equals(new Time(1, 1, 1));
-                assert rs.getObject(13, Timestamp.class).equals(new Timestamp(new Time(1, 1, 1).getTime()));
+                assertEquals(new Time(1, 1, 1), rs.getObject(13, Time.class));
+                assertEquals(new Date(new Time(1, 1, 1).getTime()), rs.getObject(13, Date.class));
+                assertEquals(new Timestamp(new Time(1, 1, 1).getTime()),
+                    rs.getObject(13, Timestamp.class));
             }
 
             cnt++;
@@ -666,15 +672,17 @@ public class JdbcThinResultSetSelfTest extends JdbcThinAbstractSelfTest {
 
         while (rs.next()) {
             if (cnt == 0) {
-                assert rs.getTimestamp("tsVal").getTime() == 1;
+                assertEquals(new Timestamp(1L), rs.getTimestamp("tsVal"));
+                assertEquals(new Timestamp(1L), rs.getTimestamp(14));
+                assertEquals(new Timestamp(1L), rs.getObject("tsVal"));
+                assertEquals(new Timestamp(1L), rs.getObject(14));
 
-                assert rs.getDate(14).equals(new Date(new Timestamp(1).getTime()));
-                assert rs.getTime(14).equals(new Time(new Timestamp(1).getTime()));
-                assert rs.getTimestamp(14).equals(new Timestamp(1));
+                assertEquals(new Date(new Timestamp(1L).getTime()), rs.getDate(14));
+                assertEquals(new Time(new Timestamp(1).getTime()), rs.getTime(14));
 
-                assert rs.getObject(14, Date.class).equals(new Date(new Timestamp(1).getTime()));
-                assert rs.getObject(14, Time.class).equals(new Time(new Timestamp(1).getTime()));
-                assert rs.getObject(14, Timestamp.class).equals(new Timestamp(1));
+                assertEquals(new Date(new Timestamp(1L).getTime()), rs.getObject(14, Date.class));
+                assertEquals(new Time(new Timestamp(1).getTime()), rs.getObject(14, Time.class));
+                assertEquals(new Timestamp(1L), rs.getObject(14, Timestamp.class));
             }
 
             cnt++;

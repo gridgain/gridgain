@@ -16,12 +16,21 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.TimeZone;
+import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
+import org.apache.ignite.internal.binary.BinaryUtils;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
+import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtils;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,8 +41,10 @@ public class JdbcUtils {
     /**
      * @param writer Binary writer.
      * @param items Query results items.
+     * @param protoCtx Protocol context.
      */
-    public static void writeItems(BinaryWriterExImpl writer, List<List<Object>> items) {
+    public static void writeItems(BinaryWriterExImpl writer, List<List<Object>> items,
+        JdbcProtocolContext protoCtx) {
         writer.writeInt(items.size());
 
         for (List<Object> row : items) {
@@ -41,16 +52,18 @@ public class JdbcUtils {
                 writer.writeInt(row.size());
 
                 for (Object obj : row)
-                    SqlListenerUtils.writeObject(writer, obj, false);
+                    writeObject(writer, obj, false, protoCtx);
             }
         }
     }
 
     /**
      * @param reader Binary reader.
+     * @param protoCtx Protocol context.
      * @return Query results items.
      */
-    public static List<List<Object>> readItems(BinaryReaderExImpl reader) {
+    public static List<List<Object>> readItems(BinaryReaderExImpl reader,
+        JdbcProtocolContext protoCtx) {
         int rowsSize = reader.readInt();
 
         if (rowsSize > 0) {
@@ -62,7 +75,7 @@ public class JdbcUtils {
                 List<Object> col = new ArrayList<>(colsSize);
 
                 for (int colCnt = 0; colCnt < colsSize; ++colCnt)
-                    col.add(SqlListenerUtils.readObject(reader, false));
+                    col.add(readObject(reader, false, protoCtx));
 
                 items.add(col);
             }
@@ -140,5 +153,140 @@ public class JdbcUtils {
 
         if (val != null)
             writer.writeLong(val);
+    }
+
+    /**
+     * @param reader Reader.
+     * @param binObjAllow Allow to read non plaint objects.
+     * @param protoCtx Protocol context.
+     * @return Read object.
+     * @throws BinaryObjectException On error.
+     */
+    @Nullable public static Object readObject(BinaryReaderExImpl reader, boolean binObjAllow,
+        JdbcProtocolContext protoCtx)
+        throws BinaryObjectException {
+        byte type = reader.readByte();
+
+        switch (type) {
+            case GridBinaryMarshaller.DATE: {
+                if (protoCtx.client()) {
+                    return new java.sql.Date(convertWithTimeZone(BinaryUtils.doReadDate(reader.in()),
+                        protoCtx.serverTimeZone(), TimeZone.getDefault()).getTime());
+                }
+                else
+                    return BinaryUtils.doReadDate(reader.in());
+            }
+
+            case GridBinaryMarshaller.TIME: {
+                if (protoCtx.client()) {
+                    return convertWithTimeZone(BinaryUtils.doReadTime(reader.in()),
+                        protoCtx.serverTimeZone(), TimeZone.getDefault());
+                }
+                else
+                    return BinaryUtils.doReadTime(reader.in());
+            }
+
+            case GridBinaryMarshaller.TIMESTAMP: {
+                if (protoCtx.client()) {
+                    return convertWithTimeZone(BinaryUtils.doReadTimestamp(reader.in()),
+                        protoCtx.serverTimeZone(), TimeZone.getDefault());
+                }
+                else
+                    return BinaryUtils.doReadTimestamp(reader.in());
+            }
+
+            default:
+                return SqlListenerUtils.readObject(type, reader, binObjAllow);
+        }
+    }
+
+    /**
+     * @param writer Writer.
+     * @param obj Object to write.
+     * @param binObjAllow Allow to write non plain objects.
+     * @param protoCtx Protocol context.
+     * @throws BinaryObjectException On error.
+     */
+    public static void writeObject(BinaryWriterExImpl writer, @Nullable Object obj, boolean binObjAllow,
+        JdbcProtocolContext protoCtx)
+        throws BinaryObjectException {
+        if (obj == null) {
+            writer.writeByte(GridBinaryMarshaller.NULL);
+
+            return;
+        }
+
+        Class<?> cls = obj.getClass();
+
+        if (cls == java.sql.Date.class || cls == java.util.Date.class) {
+            if (protoCtx.client()) {
+                writer.writeDate(
+                    convertWithTimeZone((java.util.Date)obj, TimeZone.getDefault(), protoCtx.serverTimeZone()));
+            }
+            else
+                writer.writeDate((java.util.Date)obj);
+        }
+        else if (cls == Time.class) {
+            if (protoCtx.client()) {
+                writer.writeTime(
+                    convertWithTimeZone((Time)obj, TimeZone.getDefault(), protoCtx.serverTimeZone()));
+            }
+            else
+                writer.writeTime((Time)obj);
+        }
+        else if (cls == Timestamp.class) {
+            if (protoCtx.client()) {
+                writer.writeTimestamp(
+                    convertWithTimeZone((Timestamp)obj, TimeZone.getDefault(), protoCtx.serverTimeZone()));
+            } else
+                writer.writeTimestamp((Timestamp)obj);
+        }
+        else
+            SqlListenerUtils.writeObject(writer, obj, binObjAllow);
+    }
+
+    /**
+     */
+    public static Timestamp convertWithTimeZone(Timestamp ts, TimeZone tzFrom, TimeZone tzTo) {
+        if (tzTo == null || tzFrom == null)
+            return ts;
+
+        Instant i = Instant.ofEpochMilli(ts.getTime());
+
+        LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
+
+        ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
+
+        return new Timestamp(zdt.toInstant().toEpochMilli());
+    }
+
+    /**
+     */
+    public static Time convertWithTimeZone(Time t, TimeZone tzFrom, TimeZone tzTo) {
+        if (tzTo == null || tzFrom == null)
+            return t;
+
+        Instant i = Instant.ofEpochMilli(t.getTime());
+
+        LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
+
+        ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
+
+        return new Time(zdt.toInstant().toEpochMilli());
+    }
+
+    /**
+     */
+    public static java.util.Date convertWithTimeZone(java.util.Date t, TimeZone tzFrom, TimeZone tzTo) {
+        if (tzTo == null || tzFrom == null)
+            return t;
+
+        Instant i = Instant.ofEpochMilli(t.getTime());
+
+        LocalDateTime ldt = LocalDateTime.ofInstant(i, tzFrom.toZoneId());
+
+        ZonedDateTime zdt = ldt.atZone(tzTo.toZoneId());
+
+        return new Time(zdt.toInstant().toEpochMilli());
     }
 }

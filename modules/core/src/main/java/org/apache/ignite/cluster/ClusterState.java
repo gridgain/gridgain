@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.security.impl;
-
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.plugin.PluginConfiguration;
+package org.apache.ignite.cluster;
 
 /**
- * Grid security configuration for tests.
+ * Cluster states.
+ * Partial copy from IGNITE-12576. Please replace it with a full class later.
  */
-@FunctionalInterface
-public interface TestSecurityPluginConfiguration extends PluginConfiguration {
-    /**
-     * @param ctx GridKernalContext.
-     * @return GridSecurityProcessor.
-     */
-    public GridSecurityProcessor build(GridKernalContext ctx);
+public enum ClusterState {
+    /** Cluster deactivated. Cache operations aren't allowed. */
+    INACTIVE,
+
+    /** Cluster activated. All cache operations are allowed. */
+    ACTIVE,
+
+    /** Cluster activated. Cache read operation allowed, Cache data change operation aren't allowed. */
+    ACTIVE_READ_ONLY;
 }

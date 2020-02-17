@@ -23,7 +23,7 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.junit.Test;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
@@ -32,8 +32,13 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 /**
  * Global quota test.
  */
-@WithSystemProperty(key = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE", value = "16384")
 public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
+    /**{@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setSqlGlobalMemoryQuota("16k");
+    }
+
     /** */
     @Test
     public void testGlobalQuotaCausesDiskSpilling() throws IOException {
@@ -53,7 +58,7 @@ public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
         checkGlobalQuota(qry);
     }
 
-
+    /** */
     private void checkGlobalQuota(String qry) throws IOException {
         Path workDir = getWorkDir();
 
@@ -71,5 +76,7 @@ public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
         assertFalse(dirEvts.isEmpty());
 
         assertWorkDirClean();
+
+        checkMemoryManagerState();
     }
 }

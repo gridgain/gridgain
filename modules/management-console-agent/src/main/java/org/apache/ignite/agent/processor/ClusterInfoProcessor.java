@@ -129,11 +129,11 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Send full topology to Management Console.
+     * Send full topology to Control Center.
      */
     void sendTopologyUpdate(DiscoveryEvent evt, DiscoCache discoCache) {
         if (log.isDebugEnabled())
-            log.debug("Sending full topology to Management Console");
+            log.debug("Sending full topology to Control Center");
 
         Object crdId = cluster.localNode().consistentId();
 
@@ -151,7 +151,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
      */
     void sendClusterInfo(Event evt) {
         if (log.isDebugEnabled())
-            log.debug("Sending cluster info to Management Console");
+            log.debug("Sending cluster info to Control Center");
 
         ClusterInfo clusterInfo = new ClusterInfo(cluster.id(), cluster.tag())
             .setActive(cluster.active())
@@ -162,6 +162,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
                     cluster.baselineAutoAdjustTimeout()
                 )
             )
+            .setSecure(ctx.authentication().enabled() || ctx.security().enabled())
             .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
 
         mgr.send(buildClusterDest(cluster.id()), clusterInfo);
