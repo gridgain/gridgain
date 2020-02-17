@@ -34,6 +34,9 @@ public class CacheInfo {
     /** Cache group. */
     private String grp;
 
+    /** System cache. */
+    private boolean sysCache;
+
     /**
      * @return Cache name.
      */
@@ -98,6 +101,23 @@ public class CacheInfo {
      */
     public CacheInfo setGroup(String grp) {
         this.grp = grp;
+
+        return this;
+    }
+    
+    /**
+     * @return {@code True} if system cache.
+     */
+    public boolean isSystemCache() {
+        return sysCache;
+    }
+
+    /**
+     * @param sysCache System cache.
+     * @return {@code This} for chaining method calls.
+     */
+    public CacheInfo setSystemCache(boolean sysCache) {
+        this.sysCache = sysCache;
 
         return this;
     }

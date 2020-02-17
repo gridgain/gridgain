@@ -71,7 +71,7 @@ public class JdbcQueryFetchResult extends JdbcResult {
 
         writer.writeBoolean(last);
 
-        JdbcUtils.writeItems(writer, items);
+        JdbcUtils.writeItems(writer, items, protoCtx);
     }
 
     /** {@inheritDoc} */
@@ -81,7 +81,7 @@ public class JdbcQueryFetchResult extends JdbcResult {
 
         last = reader.readBoolean();
 
-        items = JdbcUtils.readItems(reader);
+        items = JdbcUtils.readItems(reader, protoCtx);
     }
 
     /** {@inheritDoc} */

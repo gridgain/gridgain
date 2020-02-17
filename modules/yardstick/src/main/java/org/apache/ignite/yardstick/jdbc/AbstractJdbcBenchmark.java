@@ -21,6 +21,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -41,10 +42,16 @@ public abstract class AbstractJdbcBenchmark extends IgniteAbstractBenchmark {
     private final List<Connection> threadConnections = new ArrayList<>();
 
     /**
-     * If JDBC thin driver url starts with this string means that benchmark code should find node to connect.
+     * If JDBC thin driver url starts with this string means that benchmark code should find client node to connect.
      * See {@link #findThinAddress()}.
      */
     public static final String JDBC_THIN_AUTO_FIND_PREFIX = JdbcThinUtils.URL_PREFIX + "auto.find";
+
+    /**
+     * If JDBC thin driver url starts with this string means that benchmark code should find server node to connect.
+     * See {@link #findThinAddress()}.
+     */
+    public static final String JDBC_THIN_AUTO_FIND_SRV_PREFIX = JdbcThinUtils.URL_PREFIX + "auto.find.srv";
 
     /** JDBC URL. */
     protected String url;
@@ -106,8 +113,12 @@ public abstract class AbstractJdbcBenchmark extends IgniteAbstractBenchmark {
      *
      * @return Address for thin driver.
      */
-    private String findThinAddress(){
-        for (ClusterNode n : ignite().cluster().forClients().nodes()) {
+    private String findThinAddress() {
+        Collection<ClusterNode> nodes = args.jdbcUrl().startsWith(JDBC_THIN_AUTO_FIND_SRV_PREFIX) ?
+            ignite().cluster().forServers().nodes() :
+            ignite().cluster().forClients().nodes();
+
+        for (ClusterNode n : nodes) {
             if (n.isLocal())
                 continue;
 
