@@ -418,7 +418,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             TV res;
 
-            if (TryLocalPeek(key, out res))
+            if (TryLocalPeek(key, out res, modes))
                 return res;
 
             throw GetKeyNotFoundException(key);
