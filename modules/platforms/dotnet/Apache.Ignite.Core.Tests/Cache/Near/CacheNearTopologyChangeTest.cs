@@ -349,6 +349,19 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // This is a full cluster restart, so client near cache is stopped. 
             Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
+            
+            var ex = Assert.Throws<CacheException>(() =>
+                client.GetOrCreateNearCache<int, Foo>(clientCache.Name, new NearCacheConfiguration()));
+            StringAssert.Contains("cache with the same name without near cache is already started", ex.Message);
+        }
+
+        /// <summary>
+        /// Tests client reconnect to the same cluster (no cluster restart).
+        /// </summary>
+        [Test]
+        public void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
+        {
+            // TODO: Try using discovery/communication so that client connects to one of two server nodes?
         }
 
         /// <summary>
