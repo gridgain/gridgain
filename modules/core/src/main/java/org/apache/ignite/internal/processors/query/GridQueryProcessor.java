@@ -117,6 +117,7 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
+import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.thread.IgniteThread;
@@ -3225,6 +3226,35 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         long cacheIdShifted = ((long)cacheId << 32);
 
         return (key & cacheIdShifted) == cacheIdShifted;
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
+        if (!moduleEnabled())
+            return null;
+
+        String localSqlTzId = IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_SQL_TIME_ZONE);
+
+        String clusterSqlTzId = node.attribute(IgniteSystemProperties.IGNITE_SQL_TIME_ZONE);
+
+        assert clusterSqlTzId != null;
+
+        if (localSqlTzId == null) {
+            try {
+                idx.clusterTimezone(clusterSqlTzId);
+
+                return null;
+            }
+            catch (IgniteCheckedException e) {
+                return new IgniteNodeValidationResult(node.id(), "TODO");
+            }
+        }
+        else if (!clusterSqlTzId.equals(localSqlTzId)) {
+            return new IgniteNodeValidationResult(node.id(), "Cluster timezone mismatch " +
+                "[local=" + localSqlTzId + ", remote=" + clusterSqlTzId + ']');
+        }
+
+        return null;
     }
 
     /**

@@ -281,6 +281,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REBALANCE_POO
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_RESTART_ENABLED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_REST_PORT_RANGE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SPI_CLASS;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SQL_TIME_ZONE;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_TX_CONFIG;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_USER_NAME;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_VALIDATE_CACHE_REQUESTS;
@@ -1842,6 +1843,9 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
         ctx.addNodeAttribute(ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED,
             ctx.service() instanceof IgniteServiceProcessor);
+
+        if (ctx.query().moduleEnabled())
+            ctx.addNodeAttribute(ATTR_SQL_TIME_ZONE, ctx.query().getIndexing().clusterTimezone());
     }
 
     /**

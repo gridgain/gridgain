@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -185,6 +186,7 @@ import org.h2.store.DataHandler;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableType;
+import org.h2.util.DateTimeUtils;
 import org.h2.util.JdbcUtils;
 import org.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
@@ -3157,5 +3159,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2TreeIndex idx = (H2TreeIndex)tbl.userIndex(idxName);
 
         return idx == null ? 0 : idx.size();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void clusterTimezone(String tzId) throws IgniteCheckedException {
+
+    }
+
+    /** {@inheritDoc} */
+    @Override public TimeZone clusterTimezone() throws IgniteCheckedException {
+        TimeZone tz = DateTimeUtils.getTimeZone();
+
+        return DateTimeUtils.getTimeZone();
     }
 }
