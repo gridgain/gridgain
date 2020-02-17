@@ -12023,4 +12023,39 @@ public abstract class IgniteUtils {
     public static String unquote(String s) {
         return s == null ? null : s.replaceAll("^\"|\"$", "");
     }
+
+    /**
+     * Utility method for parsing strings like '10g', '200m', '1000k' as gigabytes, megabytes and kilobytes.
+     * Plain numbers are parsed as number of bytes. Numbers followed by the '%' sign are parsed as a
+     * percent of the max heap size.
+     *
+     * @param bytesStr String to be parsed.
+     * @return Number of bytes.
+     */
+    public static long parseBytes(String bytesStr) {
+        bytesStr = bytesStr.trim();
+
+        if (bytesStr.matches("-?[0-9]+")) // Plain number.
+            return Long.parseLong(bytesStr);
+        else if (bytesStr.matches("-?[0-9]+[kK]")) // Kilobytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * KB;
+        else if (bytesStr.matches("-?[0-9]+[mM]")) // Megabytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * MB;
+        else if (bytesStr.matches("-?[0-9]+[gG]")) // Gigabytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * GB;
+        else if (bytesStr.matches("-?[0-9]+%")) { // Percent of heap.
+            long percent = Long.parseLong(bytesStr.replaceAll("[^-0-9]", ""));
+
+            if (percent < 0 || percent > 100) {
+                throw new IllegalArgumentException("The percentage should be in the range from 0 to 100, but was: " +
+                    percent);
+            }
+
+            return (long) (percent / 100.0 * Runtime.getRuntime().maxMemory());
+        }
+        else
+            throw new IllegalArgumentException("Wrong format of bytes string. It is expected to be a number or " +
+                "a number followed by one of the symbols: 'k', 'm', 'g', '%'.\n " +
+                "For example: '10000', '10k', '33m', '2G'. But was: " + bytesStr);
+    }
 }

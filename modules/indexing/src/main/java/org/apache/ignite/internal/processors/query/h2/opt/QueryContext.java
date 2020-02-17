@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
@@ -161,7 +160,7 @@ public class QueryContext implements H2QueryContext {
         if (memTracker == null)
             return null;
 
-        boolean spillingEnabled = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SQL_USE_DISK_OFFLOAD);
+        boolean spillingEnabled = ctx.config().isSqlOffloadingEnabled();
 
         if (!spillingEnabled)
             return null;

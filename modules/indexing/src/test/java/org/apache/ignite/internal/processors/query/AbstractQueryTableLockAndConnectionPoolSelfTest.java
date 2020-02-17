@@ -309,7 +309,6 @@ public abstract class AbstractQueryTableLockAndConnectionPoolSelfTest extends Ab
                             "JOIN \"pers\".PERSON p on p.id = pers.id " +
                             "JOIN (SELECT t.persId as persId, SUM(t.time) totalTime " +
                             "FROM \"persTask\".PersonTask as t GROUP BY t.persId) as task ON task.persId = pers.id", true)
-                            .setMaxMemory(-1)
                             .setLazy(lazy())
                             .setLocal(local)
                             .setPageSize(PAGE_SIZE_SMALL));

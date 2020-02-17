@@ -102,8 +102,7 @@ public abstract class TableStatisticsAbstractTest extends GridCommonAbstractTest
         List<List<?>> res = grid.cache(DEFAULT_CACHE_NAME)
             .query(new SqlFieldsQueryEx("EXPLAIN ANALYZE " + sql, null)
                 .setEnforceJoinOrder(enfJoinOrder)
-                .setLocal(true)
-                .setMaxMemory(-1))
+                .setLocal(true))
             .getAll();
 
         if (log.isDebugEnabled())
