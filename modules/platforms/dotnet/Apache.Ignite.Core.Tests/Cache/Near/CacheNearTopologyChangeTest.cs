@@ -364,6 +364,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public unsafe void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
         {
             InitNodes(1);
+            
+            var threads = _ignite[0].GetCompute()
+                .ExecuteJavaTask<string[]>("org.apache.ignite.platform.PlatformThreadNamesTask", null)
+                .Where(x => !x.StartsWith("pub-#") && !x.StartsWith("jvm-"))
+                .OrderBy(x => x)
+                .ToArray();
+            
             var client = InitClient();
             var evt = new ManualResetEventSlim(false);
             client.ClientDisconnected += (sender, args) =>
@@ -386,7 +393,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             }
 
-            Assert.IsTrue(evt.Wait(TimeSpan.FromSeconds(10)));
+            var disconnected = evt.Wait(TimeSpan.FromSeconds(10));
+            Assert.IsTrue(disconnected);
         }
 
         /// <summary>
