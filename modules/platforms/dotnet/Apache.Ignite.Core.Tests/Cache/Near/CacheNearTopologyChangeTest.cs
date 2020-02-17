@@ -387,7 +387,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var gridName = string.Format("%{0}%", client.Name);
             SuspendThreads(gridName);
-            Thread.Sleep(9000); // TODO: Reduce comm timeout on server - but which one?
+            Thread.Sleep(35000); // TODO: Reduce comm timeout on server - but which one?
             ResumeThreads(gridName);
 
             Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
@@ -395,7 +395,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var disconnected = disconnectedEvt.Wait(TimeSpan.FromSeconds(3));
             Assert.IsTrue(disconnected);
             
-            var reconnected = reconnectedEvt.Wait(TimeSpan.FromSeconds(10));
+            Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
+            var reconnected = reconnectedEvt.Wait(TimeSpan.FromSeconds(15));
 
             Assert.IsTrue(reconnected);
             Assert.IsFalse(reconnectEventArgs.HasClusterRestarted);
