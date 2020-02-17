@@ -24,8 +24,6 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.Ignition.localIgnite;
-
 /**
  * Partition reconciliation cancel task.
  */

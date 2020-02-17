@@ -46,34 +46,34 @@ public class RepairEntryProcessorTest {
     /**
      *
      */
-    private final static String OLD_VALUE = "old_value";
+    private static final String OLD_VALUE = "old_value";
 
     /** Old cache value. */
-    private final static CacheObject OLD_CACHE_VALUE = new CacheObjectImpl(OLD_VALUE, OLD_VALUE.getBytes());
+    private static final CacheObject OLD_CACHE_VALUE = new CacheObjectImpl(OLD_VALUE, OLD_VALUE.getBytes());
 
     /**
      *
      */
-    private final static String NEW_VALUE = "new_value";
+    private static final String NEW_VALUE = "new_value";
 
     /**
      * Value at the recheck phase. It uses to check parallel updates.
      */
-    private final static String RECHECK_VALUE = "updated_value";
+    private static final String RECHECK_VALUE = "updated_value";
 
     /**
      *
      */
-    private final static CacheObject RECHECK_CACHE_VALUE = new CacheObjectImpl(RECHECK_VALUE, RECHECK_VALUE.getBytes());
+    private static final CacheObject RECHECK_CACHE_VALUE = new CacheObjectImpl(RECHECK_VALUE, RECHECK_VALUE.getBytes());
 
     /** Local node id. */
-    private final static UUID LOCAL_NODE_ID = UUID.randomUUID();
+    private static final UUID LOCAL_NODE_ID = UUID.randomUUID();
 
     /** Other node id. */
-    private final static UUID OTHRER_NODE_ID = UUID.randomUUID();
+    private static final UUID OTHRER_NODE_ID = UUID.randomUUID();
 
     /** Remove queue max size. */
-    private final static int RMV_QUEUE_MAX_SIZE = 12;
+    private static final int RMV_QUEUE_MAX_SIZE = 12;
 
     /**
      *
