@@ -43,7 +43,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Fixture set up.
         /// </summary>
         [TestFixtureSetUp]
-        public virtual void FixtureSetUp()
+        public void FixtureSetUp()
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
