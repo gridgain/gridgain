@@ -370,7 +370,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 FailureDetectionTimeout = TimeSpan.FromSeconds(2),
                 ClientFailureDetectionTimeout = TimeSpan.FromSeconds(2)
             };
-            Ignition.Start(cfg);
+            var server = Ignition.Start(cfg);
+            var serverCache = server.CreateCache<int, Foo>(CacheName);
 
             var clientCfg = new IgniteConfiguration(cfg)
             {
@@ -378,34 +379,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 IgniteInstanceName = "client"
             };
             var client = Ignition.Start(clientCfg);
+
+            var clientCache = client.GetOrCreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
+            clientCache[1] = new Foo(2);
+            Assert.AreEqual(2, clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
             
-            var disconnectedEvt = new ManualResetEventSlim(false);
-            client.ClientDisconnected += (sender, args) => { disconnectedEvt.Set(); };
-
-            var reconnectedEvt = new ManualResetEventSlim(false);
-            ClientReconnectEventArgs reconnectEventArgs = null;
+            PerformClientReconnect(client);
             
-            client.ClientReconnected += (sender, args) =>
-            {
-                reconnectEventArgs = args;
-                reconnectedEvt.Set();
-            };
-
-            var gridName = string.Format("%{0}%", client.Name);
-            SuspendThreads(gridName);
-            Thread.Sleep(5000);
-            ResumeThreads(gridName);
-
-            Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
-
-            var disconnected = disconnectedEvt.Wait(TimeSpan.FromSeconds(3));
-            Assert.IsTrue(disconnected);
-            
-            Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
-            var reconnected = reconnectedEvt.Wait(TimeSpan.FromSeconds(15));
-
-            Assert.IsTrue(reconnected);
-            Assert.IsFalse(reconnectEventArgs.HasClusterRestarted);
+            Assert.AreEqual(2, clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
         }
 
         /// <summary>
@@ -523,6 +504,37 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             CallStringMethod(gridName, "org/apache/ignite/platform/PlatformThreadUtils", "resume",
                 "(Ljava/lang/String;)V");
+        }
+
+        private static void PerformClientReconnect(IIgnite client)
+        {
+            var disconnectedEvt = new ManualResetEventSlim(false);
+            client.ClientDisconnected += (sender, args) => { disconnectedEvt.Set(); };
+
+            var reconnectedEvt = new ManualResetEventSlim(false);
+            ClientReconnectEventArgs reconnectEventArgs = null;
+
+            client.ClientReconnected += (sender, args) =>
+            {
+                reconnectEventArgs = args;
+                reconnectedEvt.Set();
+            };
+
+            var gridName = string.Format("%{0}%", client.Name);
+            SuspendThreads(gridName);
+            Thread.Sleep(7000);
+            ResumeThreads(gridName);
+
+            Assert.Catch(() => client.CreateCache<int, int>("_fail").Put(1, 1));
+
+            var disconnected = disconnectedEvt.Wait(TimeSpan.FromSeconds(3));
+            Assert.IsTrue(disconnected);
+
+            Assert.Catch(() => client.CreateCache<int, int>("_fail").Put(1, 1));
+            var reconnected = reconnectedEvt.Wait(TimeSpan.FromSeconds(15));
+
+            Assert.IsTrue(reconnected);
+            Assert.IsFalse(reconnectEventArgs.HasClusterRestarted);
         }
 
         private static void SuspendThreads(string gridName)
