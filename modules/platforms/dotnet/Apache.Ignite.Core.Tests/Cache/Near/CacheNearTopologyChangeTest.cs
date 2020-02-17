@@ -361,7 +361,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests client reconnect to the same cluster (no cluster restart).
         /// </summary>
         [Test]
-        public unsafe void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
+        public void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
         {
             InitNodes(1);
 
@@ -374,33 +374,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             };
 
             var gridName = string.Format("%{0}%", client.Name);
-            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformSuspendThreadsTask", "run",
-                "(Ljava/lang/String;)V");
-            Thread.Sleep(40000);
-            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformResumeThreadsTask", "run",
-                "(Ljava/lang/String;)V");
+            SuspendThreads(gridName);
+            Thread.Sleep(40000); // TODO: Reduce comm timeout on server.
+            ResumeThreads(gridName);
 
             Assert.Catch(() => client.CreateCache<int, int>("x").Put(1, 1));
 
             var disconnected = evt.Wait(TimeSpan.FromSeconds(3));
 
             Assert.IsTrue(disconnected);
-        }
-
-        private static unsafe void CallStringMethod(string gridName, string className, string methodName, string methodSig)
-        {
-            var env = Jvm.Get().AttachCurrentThread();
-            using (var cls = env.FindClass(className))
-            {
-                var methodId = env.GetStaticMethodId(cls, methodName, methodSig);
-                using (var gridNameRef = env.NewStringUtf(gridName))
-                {
-                    var args = stackalloc long[1];
-                    args[0] = gridNameRef.Target.ToInt64();
-
-                    env.CallStaticVoidMethod(cls, methodId, args);
-                }
-            }
         }
 
         /// <summary>
@@ -512,6 +494,34 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             _ignite[idx].Dispose();
             _ignite[idx] = null;
+        }
+        
+        private static void ResumeThreads(string gridName)
+        {
+            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformThreadUtils", "resume",
+                "(Ljava/lang/String;)V");
+        }
+
+        private static void SuspendThreads(string gridName)
+        {
+            CallStringMethod(gridName, "org/apache/ignite/platform/PlatformThreadUtils", "suspend",
+                "(Ljava/lang/String;)V");
+        }
+
+        private static unsafe void CallStringMethod(string gridName, string className, string methodName, string methodSig)
+        {
+            var env = Jvm.Get().AttachCurrentThread();
+            using (var cls = env.FindClass(className))
+            {
+                var methodId = env.GetStaticMethodId(cls, methodName, methodSig);
+                using (var gridNameRef = env.NewStringUtf(gridName))
+                {
+                    var args = stackalloc long[1];
+                    args[0] = gridNameRef.Target.ToInt64();
+
+                    env.CallStaticVoidMethod(cls, methodId, args);
+                }
+            }
         }
     }
 }
