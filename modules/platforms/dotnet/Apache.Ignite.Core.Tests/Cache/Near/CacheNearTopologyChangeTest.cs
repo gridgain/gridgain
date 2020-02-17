@@ -365,12 +365,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             InitNodes(1);
 
-            var threads = _ignite[0].GetCompute()
-                .ExecuteJavaTask<string[]>("org.apache.ignite.platform.PlatformThreadNamesTask", null)
-                .Where(x => !x.StartsWith("pub-#") && !x.StartsWith("jvm-"))
-                .OrderBy(x => x)
-                .ToArray();
-
             var client = InitClient();
             var evt = new ManualResetEventSlim(false);
             client.ClientDisconnected += (sender, args) =>
