@@ -386,11 +386,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             PerformClientReconnect(client);
             
-            // Near cache data is still there after reconnect.
-            Assert.AreEqual(2, clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
+            // Near cache data is removed after disconnect.
+            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.NativeNear));
             
             // Updates work as expected.
+            Assert.AreEqual(2, clientCache[1].Bar);
             serverCache[1] = new Foo(33);
+            Assert.AreEqual(33, clientCache[1].Bar);
             TestUtils.WaitForTrueCondition(() => 33 == clientCache[1].Bar);
             
             // TODO: Why not immediate? Change sync mode?

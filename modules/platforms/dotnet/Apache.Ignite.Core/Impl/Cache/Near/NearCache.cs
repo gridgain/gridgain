@@ -268,7 +268,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public void Stop()
         {
             _stopped = true;
-            
+            Clear();
+        }
+        
+        /** <inheritdoc /> */
+        public void Clear()
+        {
             if (_fallbackMap != null)
             {
                 _fallbackMap.Clear();

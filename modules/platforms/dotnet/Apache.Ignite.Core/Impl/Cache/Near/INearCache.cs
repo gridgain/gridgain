@@ -26,6 +26,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     internal interface INearCache
     {
         /// <summary>
+        /// Gets a value indicating whether near cache has been stopped.
+        /// Happens during normal cache destroy, or after client reconnect with full cluster restart.
+        /// </summary>
+        bool IsStopped { get; }
+
+        /// <summary>
         /// Reads cache key and value from a stream and updates near cache.
         /// </summary>
         void Update(IBinaryStream stream, Marshaller marshaller);
@@ -49,9 +55,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         bool ContainsKey<TKey, TVal>(TKey key);
 
         /// <summary>
-        /// Gets a value indicating whether near cache has been stopped.
-        /// Happens during normal cache destroy, or after client reconnect with full cluster restart.
+        /// Removes all mappings from the cache.
         /// </summary>
-        bool IsStopped { get; }
+        void Clear();
     }
 }

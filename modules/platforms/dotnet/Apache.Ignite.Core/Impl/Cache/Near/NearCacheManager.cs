@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
+    using System;
     using System.Diagnostics;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
@@ -57,8 +58,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             Debug.Assert(ignite != null);
 
             _ignite = ignite;
+            _ignite.GetIgnite().ClientDisconnected += OnClientDisconnected;
         }
-        
+
         /// <summary>
         /// Gets the near cache.
         /// <para />
@@ -121,6 +123,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return new NearCache<TK, TV>(
                 () => _affinityTopologyVersion, 
                 _ignite.GetAffinity(cacheName));
+        }
+        
+        /// <summary>
+        /// Handles client disconnect.
+        /// </summary>
+        private void OnClientDisconnected(object sender, EventArgs e)
+        {
+            foreach (var cache in _nearCaches)
+            {
+                cache.Value.Clear();
+            }
         }
     }
 }

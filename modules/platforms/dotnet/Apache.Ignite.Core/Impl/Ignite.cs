@@ -1044,7 +1044,7 @@ namespace Apache.Ignite.Core.Impl
         internal void OnClientDisconnected()
         {
             _clientReconnectTaskCompletionSource = new TaskCompletionSource<bool>();
-
+            
             var handler = ClientDisconnected;
             if (handler != null)
                 handler.Invoke(this, EventArgs.Empty);
