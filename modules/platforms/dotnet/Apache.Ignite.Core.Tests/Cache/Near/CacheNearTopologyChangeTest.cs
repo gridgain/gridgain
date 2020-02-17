@@ -365,6 +365,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             InitNodes(1);
 
             var client = InitClient();
+
+            // TODO: This hangs, we suspend ourselves. Need a better way.
+            var suspended = client.GetCompute()
+                .ExecuteJavaTask<int>("org.apache.ignite.platform.PlatformSuspendThreadsTask", _ignite[0].Name);
+            Assert.Greater(suspended, 0);
+
             var evt = new ManualResetEventSlim(false);
             client.ClientDisconnected += (sender, args) =>
             {
