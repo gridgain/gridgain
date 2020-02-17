@@ -542,10 +542,10 @@ public class CommandHandlerParsingTest {
      * validate that following partition-reconciliation arguments validated as expected:
      *
      * --repair
-     * 	    if value is missing - IllegalArgumentException (The repair algorithm should be specified.
-     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
-     * 	    if unsupported value is used - IllegalArgumentException (Invalid repair algorithm: <invalid-repair-alg>.
-     * 	    The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
+     *      if value is missing - IllegalArgumentException (The repair algorithm should be specified.
+     *      The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
+     *      if unsupported value is used - IllegalArgumentException (Invalid repair algorithm: <invalid-repair-alg>.
+     *      The following values can be used: [LATEST, PRIMARY, MAJORITY, REMOVE, PRINT_ONLY].) is expected.
      *
      * --parallelism
      *      Int value from [0, 128] is expected.
@@ -553,14 +553,14 @@ public class CommandHandlerParsingTest {
      *      IllegalArgumentException (Invalid parallelism) is expected.
      *
      * --batch-size
-     * 	    if value is missing - IllegalArgumentException (The batch size should be specified.) is expected.
-     * 	    if unsupported value is used - IllegalArgumentException (Invalid batch size: <invalid-batch-size>.
-     * 	    Int value greater than zero should be used.) is expected.
+     *      if value is missing - IllegalArgumentException (The batch size should be specified.) is expected.
+     *      if unsupported value is used - IllegalArgumentException (Invalid batch size: <invalid-batch-size>.
+     *      Int value greater than zero should be used.) is expected.
      *
      * --recheck-attempts
-     * 	    if value is missing - IllegalArgumentException (The recheck attempts should be specified.) is expected.
-     * 	    if unsupported value is used - IllegalArgumentException (Invalid recheck attempts:
-     * 	    <invalid-recheck-attempts>. Int value between 1 and 5 should be used.) is expected.
+     *      if value is missing - IllegalArgumentException (The recheck attempts should be specified.) is expected.
+     *      if unsupported value is used - IllegalArgumentException (Invalid recheck attempts:
+     *      <invalid-recheck-attempts>. Int value between 1 and 5 should be used.) is expected.
      *
      * As invalid values use values that produce NumberFormatException and out-of-range values.
      * Also ensure that in case of appropriate parameters parseArgs() doesn't throw any exceptions.
