@@ -101,7 +101,7 @@ public class MixedTracingSpiTest extends GridCommonAbstractTest {
             "node-with-noop-tracing").setTracingSpi(new NoopTracingSpi()).setGridLogger(testLog));
 
         startGrid(getConfiguration(getTestIgniteInstanceName(1) +
-            "node-with-open-census-tracing").setTracingSpi(new NoopTracingSpi()).setGridLogger(testLog));
+            "node-with-noop-tracing").setTracingSpi(new NoopTracingSpi()).setGridLogger(testLog));
 
         listeners.forEach(lsnr -> assertFalse(lsnr.check()));
     }
@@ -116,7 +116,7 @@ public class MixedTracingSpiTest extends GridCommonAbstractTest {
         List<LogListener> listeners = prepareLogListeners();
 
         startGrid(getConfiguration(getTestIgniteInstanceName(0) +
-            "node-with-noop-tracing").setTracingSpi(new OpenCensusTracingSpi()).setGridLogger(testLog));
+            "node-with-open-census-tracing").setTracingSpi(new OpenCensusTracingSpi()).setGridLogger(testLog));
 
         startGrid(getConfiguration(getTestIgniteInstanceName(1) +
             "node-with-open-census-tracing").setTracingSpi(new OpenCensusTracingSpi()).setGridLogger(testLog));
