@@ -364,11 +364,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
         {
-            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration("srv"))
+            var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 CommunicationSpi = new TcpCommunicationSpi {IdleConnectionTimeout = TimeSpan.FromSeconds(2)},
                 FailureDetectionTimeout = TimeSpan.FromSeconds(2),
-                ClientFailureDetectionTimeout = TimeSpan.FromSeconds(2)
+                ClientFailureDetectionTimeout = TimeSpan.FromSeconds(2),
+                IgniteInstanceName = "srv"
             };
             var server = Ignition.Start(cfg);
             var serverCache = server.CreateCache<int, Foo>(CacheName);
