@@ -103,7 +103,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             // Users have to call CreateNearCache/GetOrCreateNearCache to enable near caching on Client nodes.
             if (configuration.NearConfiguration != null)
             {
-                _nearCache = _ignite.NearCacheManager.GetNearCache<TK, TV>(Name);
+                _nearCache = _ignite.NearCacheManager.GetOrCreateNearCache<TK, TV>(Name);
             }
         }
 

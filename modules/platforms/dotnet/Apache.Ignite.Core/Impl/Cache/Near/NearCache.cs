@@ -60,9 +60,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public NearCache(Func<object> affinityTopologyVersionFunc, CacheAffinityImpl affinity)
         {
-            // TODO: Enable callbacks in Java.
-            // Callbacks should be disabled by default for all caches to avoid unnecessary overhead.
-
             _affinityTopologyVersionFunc = affinityTopologyVersionFunc;
             _affinity = affinity;
         }
