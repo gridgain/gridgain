@@ -123,7 +123,6 @@ public class GeneticAlgorithm {
         }
     }
 
-
     /**
      * The main method for genetic algorithm.
      *
@@ -262,7 +261,6 @@ public class GeneticAlgorithm {
         }
         return newPopulation;
     }
-
 
     /**
      * Applies mutation operator to each chromosome in population with mutation probability.

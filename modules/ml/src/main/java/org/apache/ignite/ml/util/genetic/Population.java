@@ -60,7 +60,6 @@ public class Population {
         return fitness;
     }
 
-
     /**
      * Calculates fintness for all chromosomes with custom fitness function.
      *
@@ -82,7 +81,6 @@ public class Population {
         if (!Double.isNaN(chromosome.getFitness())) fitnessCalculatedFlags.set(idx);
 
     }
-
 
     /**
      * Returns the chromosome by given index.
@@ -139,14 +137,12 @@ public class Population {
         return Double.NaN;
     }
 
-
     /**
      * Returns the size of population.
      */
     public int size() {
         return chromosomes.length;
     }
-
 
     /**
      * Sets the fitness value for chromosome with the given index.

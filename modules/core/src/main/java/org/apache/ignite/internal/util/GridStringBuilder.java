@@ -284,7 +284,6 @@ public class GridStringBuilder implements Serializable {
         return this;
     }
 
-
     /**
      *
      * @param start Start position to replace from.
