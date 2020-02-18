@@ -31,7 +31,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
+ * Tests for {@link SqlMemoryStatisticsHolder}. In this test we check that memory metrics reports plausible
  * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
  */
 public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
@@ -295,7 +295,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      * @param metricName short name of the metric from the "sql memory" metric registry.
      */
     private long longMetricValue(int gridIdx, String metricName) {
-        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlStatisticsHolderMemoryQuotas.SQL_QUOTAS_REG_NAME);
+        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlMemoryStatisticsHolder.SQL_QUOTAS_REG_NAME);
 
         Metric metric = sqlMemReg.findMetric(metricName);
 
