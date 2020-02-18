@@ -86,6 +86,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public void Update(int cacheId, IBinaryStream stream, Marshaller marshaller)
         {
+            // TODO: Create near cache here if it does not exist?
+            // Callbacks are invoked only when platform near cache is enabled.
+            // We should pre-populate near for things like Scan Query.
             INearCache nearCache;
             if (!_nearCaches.TryGetValue(cacheId, out nearCache))
             {
