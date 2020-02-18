@@ -895,12 +895,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         final H2QueryInfo qryInfo,
         long maxMem
     ) throws IgniteCheckedException {
-        if (qryInfo != null)
+        if (qryInfo != null) {
             longRunningQryMgr.registerQuery(qryInfo);
+
+            setupMemoryTracking(conn, maxMem, qryInfo.buildShortQueryInfoString());
+        }
 
         enableDataPageScan(dataPageScanEnabled);
 
-        setupMemoryTracking(conn, maxMem, qryInfo.buildShortQueryInfoString());
 
         try {
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
