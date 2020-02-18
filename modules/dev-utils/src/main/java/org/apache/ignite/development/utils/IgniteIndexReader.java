@@ -16,7 +16,6 @@
 package org.apache.ignite.development.utils;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -42,17 +41,18 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
+import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusInnerIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusLeafIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaIO;
@@ -85,14 +85,13 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
-import static org.apache.ignite.internal.processors.cache.persistence.tree.io.AbstractDataPageIO.ITEMS_OFF;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
 
 /**
  *
  */
-public class IgniteIndexReader {
+public class IgniteIndexReader implements AutoCloseable {
     /** */
     private static final String META_TREE_NAME = "MetaTree";
 
@@ -160,7 +159,7 @@ public class IgniteIndexReader {
     }};
 
     /** */
-    public IgniteIndexReader(String cacheWorkDirPath, int pageSize, int partCnt, int filePageStoreVer, String outputFile) throws IgniteCheckedException {
+    public IgniteIndexReader(String cacheWorkDirPath, int pageSize, int partCnt, int filePageStoreVer, OutputStream outputStream) throws IgniteCheckedException {
         this.pageSize = pageSize;
         this.partCnt = partCnt;
         this.dsCfg = new DataStorageConfiguration().setPageSize(pageSize);
@@ -172,18 +171,13 @@ public class IgniteIndexReader {
             }
         };
 
-        if (outputFile == null) {
+        if (outputStream == null) {
             outStream = System.out;
             outErrStream = System.out;
         }
         else {
-            try {
-                this.outStream = new PrintStream(new FileOutputStream(outputFile));
-                this.outErrStream = outStream;
-            }
-            catch (FileNotFoundException e) {
-                throw new IgniteException(e.getMessage(), e);
-            }
+            this.outStream = new PrintStream(outputStream);
+            this.outErrStream = outStream;
         }
 
         idxFile = getFile(INDEX_PARTITION);
@@ -193,7 +187,7 @@ public class IgniteIndexReader {
 
         idxStore = (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocatedTracker);
 
-        pagesNum = (idxFile.length() - ((FilePageStore)idxStore).headerSize()) / pageSize;
+        pagesNum = (idxFile.length() - idxStore.headerSize()) / pageSize;
 
         partStores = new FilePageStore[partCnt];
 
@@ -243,7 +237,7 @@ public class IgniteIndexReader {
     }
 
     /** */
-    private void readIdx() {
+    public void readIdx() {
         long partPageStoresNum = Arrays.stream(partStores)
             .filter(Objects::nonNull)
             .count();
@@ -286,7 +280,7 @@ public class IgniteIndexReader {
                 if (io instanceof PageMetaIO) {
                     PageMetaIO pageMetaIO = (PageMetaIO)io;
 
-                    treeInfo = traverseAllTrees(pageMetaIO.getTreeRoot(addr));
+                    treeInfo = traverseAllTrees(normalizePageId(pageMetaIO.getTreeRoot(addr)));
 
                     treeInfo.forEach((name, info) -> {
                         info.innerPageIds.forEach(id -> {
@@ -344,7 +338,7 @@ public class IgniteIndexReader {
             printErr("---");
             printErr("Errors:");
 
-            errors.forEach(e -> printErr(e.toString()));
+            errors.forEach(this::printStackTrace);
         }
 
         print("---");
@@ -470,7 +464,7 @@ public class IgniteIndexReader {
 
             IndexStorageImpl.IndexItem idxItem = (IndexStorageImpl.IndexItem)item;
 
-            TreeTraversalInfo treeTraversalInfo = traverseTree(idxItem.pageId(), false);
+            TreeTraversalInfo treeTraversalInfo = traverseTree(normalizePageId(idxItem.pageId()), false);
 
             treeInfos.put(idxItem.toString(), treeTraversalInfo);
         });
@@ -576,7 +570,7 @@ public class IgniteIndexReader {
 
         Set<Long> innerPageIds = new HashSet<>();
 
-        PageCallback innerCb = (content, pageId) -> innerPageIds.add(pageId);
+        PageCallback innerCb = (content, pageId) -> innerPageIds.add(normalizePageId(pageId));
 
         List<Object> idxItems = new LinkedList<>();
 
@@ -628,7 +622,7 @@ public class IgniteIndexReader {
 
             return ioProcessor.getNode(pageContent, pageId, nodeCtx);
         }
-        catch (Exception e) {
+        catch (Throwable e) {
             nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>()).add(e);
 
             return new TreeNode(pageId, null, "exception: " + e.getMessage(), Collections.emptyList());
@@ -643,6 +637,17 @@ public class IgniteIndexReader {
             return ioProcessorsMap.get(BPlusLeafIO.class);
         else
             return null;
+    }
+
+
+    /** {@inheritDoc} */
+    @Override public void close() throws StorageException {
+        idxStore.stop(false);
+
+        for (FilePageStore store : partStores) {
+            if (store != null)
+                store.stop(false);
+        }
     }
 
     /** */
@@ -701,8 +706,11 @@ public class IgniteIndexReader {
 
             String destFile = getOptionFromMap(options, "--destFile", String.class, () -> null);
 
-            new IgniteIndexReader(dir, pageSize, partCnt, pageStoreVer, destFile)
-                .readIdx();
+            OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
+
+            try (IgniteIndexReader reader = new IgniteIndexReader(dir, pageSize, partCnt, pageStoreVer, destStream)) {
+                reader.readIdx();
+            }
         }
         catch (Exception e) {
             System.err.println("How to use: please pass option names, followed by space and option values. Options list:");
@@ -883,7 +891,7 @@ public class IgniteIndexReader {
             if (io instanceof IndexStorageImpl.MetaStoreLeafIO) {
                 IndexStorageImpl.MetaStoreLeafIO metaLeafIO = (IndexStorageImpl.MetaStoreLeafIO)io;
 
-                for (int j = 0; j < (pageSize - ITEMS_OFF) / metaLeafIO.getItemSize(); j++) {
+                for (int j = 0; j < metaLeafIO.getCount(addr); j++) {
                     IndexStorageImpl.IndexItem indexItem = null;
 
                     try {
