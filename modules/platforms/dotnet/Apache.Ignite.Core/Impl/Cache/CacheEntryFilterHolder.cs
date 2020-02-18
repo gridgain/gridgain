@@ -73,7 +73,14 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             var rawReader = _marsh.StartUnmarshal(input, _keepBinary).GetRawReader();
 
-            return _invoker(rawReader.ReadObject<object>(), rawReader.ReadObject<object>()) ? 1 : 0;
+            // TODO: Near cache:
+            // - If near is enabled, only the key will be sent
+            // - Get value from near cache; if failed - request from Java thread local. 
+            
+            var key = rawReader.ReadObject<object>();
+            var val = rawReader.ReadObject<object>();
+            
+            return _invoker(key, val) ? 1 : 0;
         }
 
         /** <inheritdoc /> */
@@ -129,6 +136,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Deserialized instance of <see cref="CacheEntryFilterHolder"/></returns>
         public static CacheEntryFilterHolder CreateInstance(long memPtr, Ignite grid)
         {
+            // TODO: Read cache id here and determine whether Near Caching is applicable; return a flag to Java.
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
                 Debug.Assert(grid != null);
