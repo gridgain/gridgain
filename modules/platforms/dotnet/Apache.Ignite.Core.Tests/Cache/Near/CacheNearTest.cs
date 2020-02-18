@@ -456,6 +456,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
+        public void TestContinuousQueryFilterUsesValueFromNearCache()
+        {
+            // TODO: Will this work? Does the value get into Near before filter call?
+        }
+
+        [Test]
         public void TestExpiryPolicyRemovesValuesFromNearCache()
         {
             // TODO: WithExpiryPolicy
