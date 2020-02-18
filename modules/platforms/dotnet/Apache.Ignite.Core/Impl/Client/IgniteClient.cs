@@ -189,6 +189,12 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        public string GetCacheName(int cacheId)
+        {
+            throw GetClientNotSupportedException();
+        }
+
+        /** <inheritDoc /> */
         public IgniteClientConfiguration GetConfiguration()
         {
             // Return a copy to allow modifications by the user.
