@@ -130,7 +130,7 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public void sendTaskResponse(TaskResponse res) {
         UUID clusterId = ctx.cluster().get().id();
 
-        mgr.send(buildActionTaskResponseDest(clusterId, res.getId()), res);
+        mgr.send(buildActionTaskResponseDest(clusterId), res);
     }
 
     /**
@@ -139,7 +139,7 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public void sendJobResponse(JobResponse res) {
         UUID clusterId = ctx.cluster().get().id();
 
-        mgr.send(buildActionJobResponseDest(clusterId, res.getRequestId()), res);
+        mgr.send(buildActionJobResponseDest(clusterId), res);
     }
 
     /**

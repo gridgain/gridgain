@@ -27,14 +27,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
+import org.apache.ignite.agent.dto.action.TaskResponse;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.junit.Before;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
+import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 import static org.awaitility.Awaitility.with;
 
@@ -108,6 +112,42 @@ public abstract class AbstractActionControllerTest extends AgentCommonAbstractTe
     }
 
     /**
+     * @param reqId Request ID.
+     */
+    protected List<TaskResponse> taskResults(UUID reqId) {
+        return interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id()), TaskResponse.class).stream()
+            .filter(r -> reqId.equals(r.getId()))
+            .collect(toList());
+    }
+
+    /**
+     * @param reqId Request ID.
+     */
+    protected TaskResponse taskResult(UUID reqId) {
+        List<TaskResponse> taskRes = taskResults(reqId);
+
+        return taskRes.isEmpty() ? null : F.last(taskRes);
+    }
+
+    /**
+     * @param reqId Request ID.
+     */
+    protected List<JobResponse> jobResults(UUID reqId) {
+        return interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id()), JobResponse.class).stream()
+            .filter(r -> reqId.equals(r.getRequestId()))
+            .collect(toList());
+    }
+
+    /**
+     * @param reqId Request ID.
+     */
+    protected JobResponse jobResult(UUID reqId) {
+        List<JobResponse> jobRes = jobResults(reqId);
+
+        return jobRes.isEmpty() ? null : F.last(jobRes);
+    }
+
+    /**
      * Send action request and check execution result with assert function and stop non coordinator node after specific timeout in ms.
      *
      * @param req Request.
@@ -133,9 +173,9 @@ public abstract class AbstractActionControllerTest extends AgentCommonAbstractTe
 
         assertWithPoll(
             () -> {
-                List<JobResponse> res = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+                List<JobResponse> res = jobResults(req.getId());
 
-                return res != null && assertFn.apply(res);
+                return assertFn.apply(res);
             }
         );
     }
