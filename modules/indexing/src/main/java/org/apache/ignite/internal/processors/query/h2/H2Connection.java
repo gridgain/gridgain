@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.F;
@@ -125,7 +126,7 @@ public class H2Connection implements AutoCloseable {
      * @param sql SQL.
      * @return Prepared statement.
      */
-    PreparedStatement prepareStatement(String sql, byte qryFlags) throws IgniteCheckedException {
+    PreparedStatement prepareStatement(String sql, byte qryFlags) {
         try {
             PreparedStatement stmt = cachedPreparedStatement(sql, qryFlags);
 
@@ -140,7 +141,7 @@ public class H2Connection implements AutoCloseable {
             return stmt;
         }
         catch (SQLException e) {
-            throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
+            throw new IgniteSQLException("Failed to parse query. " + e.getMessage(), IgniteQueryErrorCode.PARSING, e);
         }
     }
 
@@ -180,12 +181,12 @@ public class H2Connection implements AutoCloseable {
      * @param sql SQL.
      * @return Prepared statement.
      */
-    PreparedStatement prepareStatementNoCache(String sql) throws IgniteCheckedException {
+    PreparedStatement prepareStatementNoCache(String sql) {
         try {
             return conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
         }
         catch (SQLException e) {
-            throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
+            throw new IgniteSQLException("Failed to parse query. " + e.getMessage(), IgniteQueryErrorCode.PARSING, e);
         }
     }
 
