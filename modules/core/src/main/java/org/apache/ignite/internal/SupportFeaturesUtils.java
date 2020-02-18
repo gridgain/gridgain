@@ -62,8 +62,7 @@ public class SupportFeaturesUtils {
      */
     public static boolean isFeatureEnabled(String featureName) {
         if (IGNITE_DISTRIBUTED_META_STORAGE_FEATURE.equals(featureName) ||
-            IGNITE_CLUSTER_ID_AND_TAG_FEATURE.equals(featureName) ||
-            IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE.equals(featureName)
+            IGNITE_CLUSTER_ID_AND_TAG_FEATURE.equals(featureName)
         )
             return IgniteSystemProperties.getBoolean(featureName, true);
 
