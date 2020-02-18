@@ -46,4 +46,7 @@ public interface H2MemoryTracker extends AutoCloseable {
      * @return Max memory limit.
      */
     public long memoryLimit();
+
+    /** {@inheritDoc} */
+    @Override void close();
 }

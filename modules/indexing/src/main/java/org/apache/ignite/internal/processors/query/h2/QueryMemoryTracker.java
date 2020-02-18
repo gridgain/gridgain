@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -26,6 +27,12 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker implements H2MemoryTracker {
+    /** Logger. */
+    private final IgniteLogger log;
+
+    /** Trace object. */
+    private final IgniteTrace trace;
+
     /** Parent tracker. */
     private final H2MemoryTracker parent;
 
@@ -56,18 +63,27 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     /**
      * Constructor.
      *
+     * @param log Logger.
      * @param parent Parent memory tracker.
      * @param quota Query memory limit in bytes.
      * @param blockSize Reservation block size.
      * @param offloadingEnabled Flag whether to fail when memory limit is exceeded.
      */
-    QueryMemoryTracker(H2MemoryTracker parent, long quota, long blockSize, boolean offloadingEnabled) {
+    QueryMemoryTracker(
+        IgniteLogger log,
+        H2MemoryTracker parent,
+        long quota,
+        long blockSize,
+        boolean offloadingEnabled,
+        IgniteTrace trace) {
         assert quota >= 0;
 
+        this.log = log;
         this.offloadingEnabled = offloadingEnabled;
         this.parent = parent;
         this.quota = quota;
         this.blockSize = quota != 0 ? Math.min(quota, blockSize) : blockSize;
+        this.trace = trace;
     }
 
     /** {@inheritDoc} */
@@ -77,6 +93,8 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         checkClosed();
 
         reserved += toReserve;
+
+        trace.addMemoryBytes(toReserve);
 
         if (parent != null && reserved > reservedFromParent) {
             if (!reserveFromParent())
@@ -171,6 +189,13 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     }
 
     /**
+     * @return Offloading enabled flag.
+     */
+    public boolean isOffloadingEnabled() {
+        return offloadingEnabled;
+    }
+
+    /**
      * @return {@code True} if closed, {@code False} otherwise.
      */
     public synchronized boolean closed() {
@@ -190,6 +215,13 @@ public class QueryMemoryTracker implements H2MemoryTracker {
 
         if (parent != null)
             parent.released(reservedFromParent);
+
+        if (trace != IgniteTrace.NO_OP_TRACE && log.isDebugEnabled()) {
+            log.debug("Query has been completed with memory metrics: [bytesConsumed="  + trace.memoryBytes() +
+                ", bytesOffloaded=" + trace.offloadedBytes() + ", filesCreated=" + trace.filesCreated() +
+                ", query=" + trace.queryDescriptor() + ']');
+        }
+
     }
 
     /** {@inheritDoc} */
