@@ -146,7 +146,6 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
         if (isManagementConsoleFeaturesEnabled()) {
             this.metaStorage = ctx.distributedMetastorage();
             this.evtsExporter = new EventsExporter(ctx);
-            this.spanExporter = new SpanExporter(ctx);
             this.metricExporter = new MetricsExporter(ctx);
             this.actDispatcher = new ActionDispatcher(ctx);
 
