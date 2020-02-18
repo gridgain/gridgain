@@ -35,10 +35,13 @@ public class ClusterInfo {
     private BaselineInfo baselineParameters;
 
     /** Is active. */
-    private boolean isActive;
+    private boolean active;
 
     /** Is persistence enabled. */
-    private boolean isPersistenceEnabled;
+    private boolean persistenceEnabled;
+
+    /** Is secured cluster. */
+    private boolean secure;
 
     /** Features. */
     private Set<String> features = Collections.emptySet();
@@ -114,7 +117,7 @@ public class ClusterInfo {
      * @return Active status.
      */
     public boolean isActive() {
-        return isActive;
+        return active;
     }
 
     /**
@@ -122,7 +125,7 @@ public class ClusterInfo {
      * @return {@code This} for chaining method calls.
      */
     public ClusterInfo setActive(boolean active) {
-        isActive = active;
+        this.active = active;
 
         return this;
     }
@@ -131,7 +134,7 @@ public class ClusterInfo {
      * @return {@code true} if cluster running in memory mode.
      */
     public boolean isPersistenceEnabled() {
-        return isPersistenceEnabled;
+        return persistenceEnabled;
     }
 
     /**
@@ -139,8 +142,24 @@ public class ClusterInfo {
      * @return {@code This} for chaining method calls.
      */
     public ClusterInfo setPersistenceEnabled(boolean persistenceEnabled) {
-        isPersistenceEnabled = persistenceEnabled;
+        this.persistenceEnabled = persistenceEnabled;
 
+        return this;
+    }
+
+    /**
+     * @return @{code True} if secured cluster.
+     */
+    public boolean isSecure() {
+        return secure;
+    }
+
+    /**
+     * @param secure If secured cluster.
+     * @return {@code This} for method chaining.
+     */
+    public ClusterInfo setSecure(boolean secure) {
+        this.secure = secure;
         return this;
     }
 

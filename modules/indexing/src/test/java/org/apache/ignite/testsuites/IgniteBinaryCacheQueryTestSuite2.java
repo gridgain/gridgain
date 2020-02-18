@@ -16,6 +16,7 @@
 
 package org.apache.ignite.testsuites;
 
+import org.apache.ignite.internal.metric.SqlStatisticOffloadingTest;
 import org.apache.ignite.internal.metric.SqlStatisticsMemoryQuotaTest;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesFastTest;
 import org.apache.ignite.internal.metric.SqlStatisticsUserQueriesLongTest;
@@ -211,6 +212,7 @@ import org.junit.runners.Suite;
     DiskSpillingWithBaselineTest.class,
     DiskSpillingIoErrorTest.class,
     DiskSpillingDmlTest.class,
+    SqlStatisticOffloadingTest.class,
 
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,

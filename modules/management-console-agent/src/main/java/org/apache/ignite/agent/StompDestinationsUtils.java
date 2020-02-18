@@ -92,20 +92,18 @@ public class StompDestinationsUtils {
 
     /**
      * @param clusterId Cluster ID.
-     * @param reqId request ID.
      * @return Task response destination.
      */
-    public static String buildActionTaskResponseDest(UUID clusterId, UUID reqId) {
-        return CLUSTER_ACTION_TASK_RESPONSE_DEST + clusterId + "/" + reqId;
+    public static String buildActionTaskResponseDest(UUID clusterId) {
+        return CLUSTER_ACTION_TASK_RESPONSE_DEST + clusterId;
     }
 
     /**
      * @param clusterId Cluster ID.
-     * @param reqId request ID.
      * @return Job response destination.
      */
-    public static String buildActionJobResponseDest(UUID clusterId, UUID reqId) {
-        return CLUSTER_ACTION_JOB_RESPONSE_DEST + clusterId + "/" + reqId;
+    public static String buildActionJobResponseDest(UUID clusterId) {
+        return CLUSTER_ACTION_JOB_RESPONSE_DEST + clusterId;
     }
 
     /**

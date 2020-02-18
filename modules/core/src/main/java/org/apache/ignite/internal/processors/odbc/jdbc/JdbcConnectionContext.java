@@ -221,7 +221,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        protoCtx = new JdbcProtocolContext(ver, features);
+        protoCtx = new JdbcProtocolContext(ver, features, null, false);
 
         parser = new JdbcMessageParser(ctx, protoCtx);
 
