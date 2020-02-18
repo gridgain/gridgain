@@ -3182,11 +3182,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      */
     public void registerAggregateFunction(String fnName,
         Class<? extends AggregateFunction> cls) throws IgniteCheckedException {
-        if (fnName == null)
-            throw new IllegalArgumentException("Function name can't be null");
-
-        if (cls == null)
-            throw new NullPointerException("Class name can't be null");
+        Objects.requireNonNull(fnName, "Function name can't be null");
+        Objects.requireNonNull(cls, "Class name can't be null");
 
         if (!AggregateFunction.class.isAssignableFrom(cls))
             throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" + AggregateFunction.class.getName() + "'");

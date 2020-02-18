@@ -35,6 +35,7 @@ public class GridAggregateOrderedFunction implements AggregateFunction {
     protected Comparator<? super Comparable> comparator;
 
     /**
+     * @param comparator comparator.
      * @param asc ascending order.
      */
     public GridAggregateOrderedFunction(boolean asc, Comparator<? super Comparable> comparator ) {

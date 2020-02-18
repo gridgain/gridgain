@@ -85,13 +85,13 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
 
         loadCacheWithoutNullValues(cache);
 
-        List<List<?>> lists = cache.query(new SqlFieldsQuery(
+        List<List<?>> rows = cache.query(new SqlFieldsQuery(
             "select companyId,FIRSTVALUE(NAME,AGE), LASTVALUE(UPPER(NAME),AGE) from \"cache\".Person group by companyId")
             .setCollocated(true)).getAll();
 
-        assertEquals(10, lists.size());
+        assertEquals(10, rows.size());
 
-        for (List<?> row : lists) {
+        for (List<?> row : rows) {
             Integer companyId = (Integer)row.get(0);
             String youngest = (String)row.get(1);
             String oldest = (String)row.get(2);
@@ -117,13 +117,13 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
 
         loadCacheWithoutNullValues(cache);
 
-        List<List<?>> lists = cache.query(new SqlFieldsQuery(
+        List<List<?>> rows = cache.query(new SqlFieldsQuery(
             "select companyId,ACCUMULATE(DISTINCT companyId) from \"cache\".Person group by companyId")
             .setCollocated(true)).getAll();
 
-        assertEquals(10, lists.size());
+        assertEquals(10, rows.size());
 
-        for (List<?> row : lists) {
+        for (List<?> row : rows) {
             Integer companyId = (Integer)row.get(0);
             List list = (List)row.get(1);
 
@@ -143,14 +143,14 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
 
         loadCacheWithoutNullValues(cache);
 
-        List<List<?>> lists = cache.query(new SqlFieldsQuery(
+        List<List<?>> rows = cache.query(new SqlFieldsQuery(
             "select DISTINCT departmentId,FIRSTVALUE(departmentId, companyId) from \"cache\".Person group by departmentId")
             .setCollocated(true)).getAll();
 
         // Check that the result set has distinct results
-        assertEquals(5, lists.stream().map(r -> r.get(0)).collect(Collectors.toSet()).size());
+        assertEquals(5, rows.stream().map(r -> r.get(0)).collect(Collectors.toSet()).size());
 
-        for (List<?> row : lists)
+        for (List<?> row : rows)
             assertEquals((Integer)row.get(0), (Integer)row.get(1));
 
     }
@@ -232,25 +232,25 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
         IgniteCache<PersonKey, Person> cache = ignite.cache(CACHE_NAME);
 
         // check on empty table
-        List<List<?>> lists = cache.query(new SqlFieldsQuery(
+        List<List<?>> rows = cache.query(new SqlFieldsQuery(
             "select companyId,FIRSTVALUE(NAME,AGE), LASTVALUE(NAME,AGE) from \"cache\".Person group by companyId")
             .setCollocated(true)).getAll();
 
-        assertEquals(0, lists.size());
+        assertEquals(0, rows.size());
 
         loadCacheWithNullValues(cache);
 
         //check null values for compared and returned fields
-        lists = cache.query(new SqlFieldsQuery(
+        rows = cache.query(new SqlFieldsQuery(
             "select companyId,FIRSTVALUE(NAME,AGE), LASTVALUE(NAME,AGE) from \"cache\".Person group by companyId order by companyId")
             .setCollocated(true)).getAll();
 
-        List<?> first = lists.get(0);
+        List<?> first = rows.get(0);
         assertEquals(1, first.get(0));
         assertEquals("name10", first.get(1));
         assertEquals("name11", first.get(2));
 
-        List<?> second = lists.get(1);
+        List<?> second = rows.get(1);
         assertEquals(2, second.get(0));
         assertNull(second.get(1));
         assertEquals("name11", second.get(2));
