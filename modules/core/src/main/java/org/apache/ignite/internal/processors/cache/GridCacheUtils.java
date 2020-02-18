@@ -1942,7 +1942,7 @@ public class GridCacheUtils {
     }
 
     /**
-     * Returns stream of data regions ectracted from cache configurations for given nodes.
+     * Returns stream of data regions extracted from cache configurations for given nodes.
      *
      * @param nodes Nodes.
      * @param marshaller Marshaller.

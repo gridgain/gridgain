@@ -2545,7 +2545,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     }
 
                     // This will happen if no primary is changed but some backups still need to be rebalanced.
-                    // TODO twice add for same partition ?
                     if (!owners.isEmpty() && !owners.containsAll(newNodes))
                         waitRebalanceInfo.add(grpHolder.groupId(), p, newNodes);
 

@@ -947,7 +947,7 @@ public class GridCacheSharedContext<K, V> {
      *
      * @param topVer Topology version.
      * @param node Failed node.
-     * @return {@code true} if waiting was successful.
+     * @return {@code True} if waiting was successful.
      */
     public IgniteInternalFuture<?> partitionRecoveryFuture(AffinityTopologyVersion topVer, ClusterNode node) {
         return tm().finishLocalTxs(topVer, node);
