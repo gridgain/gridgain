@@ -41,7 +41,6 @@ import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
 import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -69,6 +68,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.internal.IgniteFeatures.TRACING;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
@@ -153,7 +153,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             spanExporter = new SpanExporter(ctx);
         else
             U.quietAndWarn(log, "Current Ignite configuration does not support tracing functionality" +
-                " and management console agent will not collect traces" +
+                " and control center agent will not collect traces" +
                 " (consider adding ignite-opencensus module to classpath).");
 
         // Connect to backend if local node is a coordinator or await coordinator change event.
@@ -193,7 +193,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
      *  Stop agent.
      */
     private void disconnect() {
-        log.info("Stopping Management Console agent.");
+        log.info("Stopping Control Center agent.");
 
         U.shutdownNow(getClass(), connectPool, log);
 
@@ -205,7 +205,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
 
         disconnected.set(false);
 
-        U.quietAndInfo(log, "Management console agent stopped.");
+        U.quietAndInfo(log, "Control Center agent stopped.");
     }
 
     /** {@inheritDoc} */
@@ -261,7 +261,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
      * @return {@code True} if tracing is enable.
      */
     boolean isTracingEnabled() {
-        return IgniteFeatures.nodeSupports(ctx, ctx.grid().localNode(), TRACING);
+        return nodeSupports(ctx, ctx.grid().localNode(), TRACING);
     }
 
     /**
@@ -278,7 +278,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     }
 
     /**
-     * @param uris Management Console Server URIs.
+     * @param uris Control Center Server URIs.
      */
     private String nextUri(List<String> uris, String cur) {
         int idx = uris.indexOf(cur);
@@ -323,10 +323,10 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
                     )
                 ) {
                     if (disconnected.compareAndSet(false, true))
-                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
+                        log.error("Failed to establish websocket connection with Control Center: " + curSrvUri);
                 }
                 else
-                    log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+                    log.error("Failed to establish websocket connection with Control Center: " + curSrvUri, e);
             }
         }
     }
@@ -349,7 +349,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             return;
         }
 
-        log.info("Starting Management Console agent on coordinator");
+        log.info("Starting Control Center agent on coordinator");
 
         mgr = new WebSocketManager(ctx);
         sesRegistry = new SessionRegistry(ctx);
@@ -427,14 +427,14 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
 
             U.quietAndInfo(log, "");
 
-            U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster: " + curSrvUri);
+            U.quietAndInfo(log, "Found Control Center that can be used to monitor your cluster: " + curSrvUri);
 
             U.quietAndInfo(log, "");
 
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
-            U.quietAndInfo(log, "If you are already using Management Console, you can add the cluster manually" +
+            U.quietAndInfo(log, "If you are already using Control Center, you can add the cluster manually" +
                 " by its ID: " + cluster.id());
 
             clusterProc.sendInitialState();

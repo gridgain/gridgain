@@ -81,10 +81,7 @@ public class ManagementConsoleAgentTest extends AgentCommonAbstractTest {
          * GG-26201 - Testcase 5:
          *
          * 1. Mock `isTracingEnabled()` method to return false
-         * 2. Verify the warning message** is present in log after start
-         *
-         * ** "Current Ignite configuration does not support tracing functionality and management console agent will
-         * not collect traces (consider adding ignite-opencensus module to classpath)."
+         * 2. Verify the warning message is present in log after start.
          */
         @Test
         public void shouldNotCreateSpanExporterIfNodeNotSupportTracingFeature() {
@@ -112,8 +109,9 @@ public class ManagementConsoleAgentTest extends AgentCommonAbstractTest {
 
             IgniteLogger log = ctx.log(ManagementConsoleAgent.class);
 
-            verify(log).warning("Current Ignite configuration does not support tracing functionality and management" +
-                " console agent will not collect traces (consider adding ignite-opencensus module to classpath).", null);
+            verify(log).warning("Current Ignite configuration does not support tracing functionality" +
+                " and control center agent will not collect traces" +
+                " (consider adding ignite-opencensus module to classpath).", null);
         }
     }
 }

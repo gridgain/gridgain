@@ -90,7 +90,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Management console URI.
+     * @return Control Center URI.
      */
     public List<String> getConsoleUris() {
         return consoleUris;
@@ -107,14 +107,14 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Management console key store.
+     * @return Control Center key store.
      */
     public String getConsoleKeyStore() {
         return consoleKeyStore;
     }
 
     /**
-     * @param consoleKeyStore Management console key store.
+     * @param consoleKeyStore Control Center key store.
      * @return {@code this} for chaining.
      */
     public ManagementConfiguration setConsoleKeyStore(String consoleKeyStore) {
@@ -124,14 +124,14 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Management console key store password.
+     * @return Control Center key store password.
      */
     public String getConsoleKeyStorePassword() {
         return consoleKeyStorePass;
     }
 
     /**
-     * @param consoleKeyStorePass Management console key store password.
+     * @param consoleKeyStorePass Control Center key store password.
      * @return {@code this} for chaining.
      */
     public ManagementConfiguration setConsoleKeyStorePassword(String consoleKeyStorePass) {
@@ -141,14 +141,14 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Management console trust store.
+     * @return Control Center trust store.
      */
     public String getConsoleTrustStore() {
         return consoleTrustStore;
     }
 
     /**
-     * @param consoleTrustStore Path to management console trust store.
+     * @param consoleTrustStore Path to Control Center trust store.
      * @return {@code this} for chaining.
      */
     public ManagementConfiguration setConsoleTrustStore(String consoleTrustStore) {
@@ -158,7 +158,7 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Management console trust store password.
+     * @return Control Center trust store password.
      */
     public String getConsoleTrustStorePassword() {
         return consoleTrustStorePass;
