@@ -146,7 +146,6 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     @Override public void onKernalStart(boolean active) {
         metaStorage = ctx.distributedMetastorage();
         evtsExporter = new EventsExporter(ctx);
-        spanExporter = new SpanExporter(ctx);
         metricExporter = new MetricsExporter(ctx);
         actDispatcher = new ActionDispatcher(ctx);
 

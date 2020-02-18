@@ -43,7 +43,7 @@ import org.h2.value.ValueRow;
 import static java.nio.file.StandardOpenOption.CREATE_NEW;
 import static java.nio.file.StandardOpenOption.READ;
 import static java.nio.file.StandardOpenOption.WRITE;
-import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DISK_SPILL_DIR;
+import static org.apache.ignite.internal.processors.query.h2.QueryMemoryManager.DISK_SPILL_DIR;
 
 /**
  * Spill file IO.
@@ -121,7 +121,7 @@ public class ExternalResultData<T> implements AutoCloseable {
      * @param cmp Comparator for rows.
      * @param hnd Data handler.
      */
-    ExternalResultData(IgniteLogger log,
+    public ExternalResultData(IgniteLogger log,
         String workDir,
         FileIOFactory fileIOFactory,
         UUID locNodeId,
