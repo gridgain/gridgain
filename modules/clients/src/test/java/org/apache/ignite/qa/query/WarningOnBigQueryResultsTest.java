@@ -68,7 +68,6 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
         assertEquals(KEYS_PER_NODE * 2,
             grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST0", true)
-                    .setMaxMemory(-1)
                     .setSchema("TEST0")
                     .setLazy(lazy()),
                 false).getAll().size());
@@ -80,7 +79,6 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
         assertEquals(KEYS_PER_NODE * 2,
             grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST1", true)
-                    .setMaxMemory(-1)
                     .setSchema("TEST1")
                     .setLazy(lazy()),
             false).getAll().size());
@@ -97,7 +95,6 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
         assertEquals(KEYS_PER_NODE * 2,
             grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST0", true)
-                    .setMaxMemory(-1)
                     .setSchema("TEST0")
                     .setLazy(lazy()),
         false).getAll().size());
@@ -109,7 +106,6 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
 
         assertEquals(KEYS_PER_NODE * 2,
             grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST1", true)
-                    .setMaxMemory(-1)
                     .setSchema("TEST1")
                     .setLazy(lazy()),
                 false).getAll().size());
@@ -127,7 +123,6 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
         assertEquals(KEYS_PER_NODE * 2,
             grid("cli").context().query().querySqlFields(
                 new SqlFieldsQueryEx("SELECT * FROM TEST0 ORDER BY val DESC", true)
-                    .setMaxMemory(-1)
                     .setSchema("TEST0")
                     .setLazy(lazy()),
                 false).getAll().size());
@@ -172,7 +167,6 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
     public void testQueryCacheTest1() throws Exception {
         assertEquals(KEYS_PER_NODE * 2,
             grid("cli").context().query().querySqlFields(new SqlFieldsQueryEx("SELECT * FROM TEST1", true)
-                    .setMaxMemory(-1)
                     .setSchema("TEST1")
                     .setLazy(lazy())
                     .setEnforceJoinOrder(true),
@@ -225,7 +219,6 @@ public class WarningOnBigQueryResultsTest extends WarningOnBigQueryResultsBaseTe
     public void testThinClient() throws Exception {
         try (IgniteClient cli = Ignition.startClient(new ClientConfiguration().setAddresses(THIN_CLI_ADDR))) {
             assertEquals(KEYS_PER_NODE * 2, cli.query(new SqlFieldsQueryEx("SELECT * FROM TEST0", true)
-                .setMaxMemory(-1)
                 .setLazy(lazy())
                 .setSchema("TEST0")).getAll().size());
 

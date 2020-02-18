@@ -33,8 +33,6 @@ import org.junit.Test;
 
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.dto.action.ResponseError.AUTHENTICATION_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 import static org.apache.ignite.agent.dto.action.Status.FAILED;
@@ -54,7 +52,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
      * Should execute action on coordinator node by specific node ID in request.
      */
     @Test
-    public void shouldExecuteActionOnCoordinatorNode() throws Exception {
+    public void shouldExecuteActionOnCoordinatorNode() {
         UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
 
         UUID crdId = cluster.localNode().id();
@@ -66,20 +64,19 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
             .setNodeIds(singleton(crdId))
             .setSessionId(sesId);
 
-        executeAction(req, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+        executeAction(req, jobRes -> {
+            List<TaskResponse> taskRes = taskResults(req.getId());
 
-            Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
-            Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
+            Optional<TaskResponse> runningTask = taskRes.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
+            Optional<TaskResponse> completedTask = taskRes.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
 
             if (runningTask.isPresent() && completedTask.isPresent())
-                return res.size() == completedTask.get().getJobCount();
+                return jobRes.size() == completedTask.get().getJobCount();
 
             return false;
         });
 
-        JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        JobResponse res = F.first(jobResults(req.getId()));
 
         assertEquals(consistentId, res.getNodeConsistentId());
         assertEquals(crdId, UUID.fromString((String) res.getResult()));
@@ -89,7 +86,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
      * Should execute action on nodes by specific node ID's in request.
      */
     @Test
-    public void shouldExecuteActionOnNonCoordinatorNodes() throws Exception {
+    public void shouldExecuteActionOnNonCoordinatorNodes() {
         UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
 
         Request req = new Request()
@@ -98,25 +95,25 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
             .setNodeIds(nonCrdNodeIds)
             .setSessionId(sesId);
 
-        executeAction(req, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+        executeAction(req, jobRes -> {
+            List<TaskResponse> taskRes = taskResults(req.getId());
 
-            Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
-            Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
+            Optional<TaskResponse> runningTask = taskRes.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
+            Optional<TaskResponse> completedTask = taskRes.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
 
             if (runningTask.isPresent() && completedTask.isPresent()) {
-                Set<UUID> results = res.stream()
+                Set<UUID> results = jobRes.stream()
                     .map(r -> UUID.fromString(r.getResult().toString()))
                     .collect(Collectors.toSet());
 
-                return res.size() == completedTask.get().getJobCount() && results.equals(nonCrdNodeIds);
+                return jobRes.size() == completedTask.get().getJobCount() && results.equals(nonCrdNodeIds);
             }
 
             return false;
         });
 
-        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        List<JobResponse> responses = jobResults(req.getId());
+        
         boolean responsesHasCorrectConsistentIds = nonCrdNodeConsistentIds.containsAll(
             responses
                 .stream()
@@ -131,7 +128,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
      * Should execute action on all nodes.
      */
     @Test
-    public void shouldExecuteActionOnAllNodes() throws Exception {
+    public void shouldExecuteActionOnAllNodes() {
         UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
 
         Request req = new Request()
@@ -139,25 +136,25 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
             .setAction("IgniteTestActionController.nodeIdAction")
             .setSessionId(sesId);
 
-        executeAction(req, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+        executeAction(req, jobRes -> {
+            List<TaskResponse> taskRes =taskResults(req.getId());
 
-            Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
-            Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
+            Optional<TaskResponse> runningTask = taskRes.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
+            Optional<TaskResponse> completedTask = taskRes.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
 
             if (runningTask.isPresent() && completedTask.isPresent()) {
-                Set<UUID> results = res.stream()
+                Set<UUID> results = jobRes.stream()
                     .map(r -> UUID.fromString(r.getResult().toString()))
                     .collect(Collectors.toSet());
 
-                return res.size() == completedTask.get().getJobCount() && results.equals(allNodeIds);
+                return results.equals(allNodeIds) && completedTask.get().getJobCount() == allNodeIds.size();
             }
 
             return false;
         });
 
-        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        List<JobResponse> responses = jobResults(req.getId());
+        
         boolean responsesHasCorrectConsistentIds = allNodeConsistentIds.containsAll(
             responses
                 .stream()
@@ -172,7 +169,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
      * Should execute action on all nodes with one node stop after 1 second.
      */
     @Test
-    public void shouldExecuteActionOnAllNodesWithNodeStop() throws Exception {
+    public void shouldExecuteActionOnAllNodesWithNodeStop() {
         UUID sesId = authenticate(new AuthenticateCredentials().setCredentials(new SecurityCredentials("ignite", "ignite")));
 
         Request req = new Request()
@@ -182,11 +179,10 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
             .setSessionId(sesId);
 
         executeActionAndStopNode(req, 1000, 1, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            List<TaskResponse> taskRes =taskResults(req.getId());
 
-            Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
-            Optional<TaskResponse> failedTask = taskResults.stream().filter(r -> r.getStatus() == FAILED).findFirst();
+            Optional<TaskResponse> runningTask = taskRes.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
+            Optional<TaskResponse> failedTask = taskRes.stream().filter(r -> r.getStatus() == FAILED).findFirst();
 
             if (runningTask.isPresent() && failedTask.isPresent()) {
                 long failedJobCnt = res.stream()
@@ -204,7 +200,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
      * Should send error response when user don't provide session id for executing secure action.
      */
     @Test
-    public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAthentication() {
+    public void shouldSendErrorResponseOnExecutingSecuredActionWithoutAuthentication() {
         Request req = new Request()
             .setId(UUID.randomUUID())
             .setAction("IgniteTestActionController.numberAction")
@@ -213,8 +209,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
@@ -234,8 +229,7 @@ public class DistributedActionProcessorWithAuthenticationTest extends AbstractAc
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getError().getCode() == AUTHENTICATION_ERROR_CODE;
         });
