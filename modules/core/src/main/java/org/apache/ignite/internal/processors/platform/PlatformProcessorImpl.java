@@ -184,6 +184,9 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     /** */
     private static final int OP_SET_BASELINE_AUTO_ADJ_TIMEOUT = 35;
 
+    /** */
+    private static final int OP_GET_CACHE_NAME = 36;
+
     /** Start latch. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
@@ -558,6 +561,14 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** {@inheritDoc} */
     @Override public void processInStreamOutStream(int type, BinaryRawReaderEx reader, BinaryRawWriterEx writer) throws IgniteCheckedException {
+        if (type == OP_GET_CACHE_NAME) {
+            int cacheId = reader.readInt();
+            String cacheName = ctx.cache().cacheDescriptor(cacheId).cacheName();
+            writer.writeString(cacheName);
+
+            return;
+        }
+
         PlatformAbstractTarget.throwUnsupported(type);
     }
 
