@@ -16,23 +16,26 @@
 
 package org.apache.ignite.mxbean;
 
-import org.apache.ignite.configuration.DataStorageConfiguration;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
- * An MX bean allowing to monitor and tune persistence.
+ * Provides name and description for MBean method parameter.
  */
-public interface DataStorageMXBean {
-    @MXBeanDescription("ZIP compression level to WAL compaction.")
-    int getWalCompactionLevel();
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.PARAMETER})
+public @interface MXBeanParameter {
+    /**
+     * Parameter name.
+     */
+    String name();
 
     /**
-     * Sets ZIP compression level to WAL compaction.
-     * {@link DataStorageConfiguration#setWalCompactionLevel(int)} configuration property.
-     *
-     * @param walCompactionLevel ZIP compression level.
+     * Parameter description.
      */
-    @MXBeanDescription("Sets ZIP compression level to WAL compaction.")
-    void setWalCompactionLevel(
-        @MXBeanParameter(name = "walCompactionLevel", description = "ZIP compression level.") int walCompactionLevel
-    );
+    String description();
 }
