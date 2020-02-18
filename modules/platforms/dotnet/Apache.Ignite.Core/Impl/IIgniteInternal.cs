@@ -89,5 +89,12 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="cacheName">Cache name.</param>
         /// <returns>Cache data affinity service.</returns>
         CacheAffinityImpl GetAffinity(string cacheName);
+
+        /// <summary>
+        /// Gets cache name by id.
+        /// </summary>
+        /// <param name="cacheId">Cache id.</param>
+        /// <returns>Cache name.</returns>
+        string GetCacheName(int cacheId);
     }
 }

@@ -89,11 +89,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // TODO: Create near cache here if it does not exist?
             // Callbacks are invoked only when platform near cache is enabled.
             // We should pre-populate near for things like Scan Query.
-            INearCache nearCache;
-            if (!_nearCaches.TryGetValue(cacheId, out nearCache))
-            {
-                return;
-            }
+            // But there is a problem with generics. Do we even need them? Run benchmarks with Guids, longs?
+            var nearCache = _nearCaches.GetOrAdd(cacheId, 
+                _ => CreateNearCache<object, object>(_ignite.GetCacheName(cacheId)));
             
             nearCache.Update(stream, marshaller);
         }

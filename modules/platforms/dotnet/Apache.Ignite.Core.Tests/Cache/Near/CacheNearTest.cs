@@ -469,6 +469,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
+        public void TestKeepBinary()
+        {
+            // TODO: ???
+            // Bypass near cache in binary mode?
+        }
+
+        [Test]
         public void TestMultithreadedConcurrentUpdates()
         {
             var localCache = GetCache<int, Foo>(CacheTestMode.Client);
