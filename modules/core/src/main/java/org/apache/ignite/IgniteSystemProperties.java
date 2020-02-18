@@ -543,6 +543,9 @@ public final class IgniteSystemProperties {
     /** Enable backward compatible handling of UUID through DDL. */
     public static final String IGNITE_SQL_UUID_DDL_BYTE_FORMAT = "IGNITE_SQL_UUID_DDL_BYTE_FORMAT";
 
+    /** Enable memory quotas per JDBC connection. */
+    public static final String IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA = "IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA";
+
     /** Maximum size for affinity assignment history. */
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
 
@@ -1230,41 +1233,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
-     * Defines default memory limit for every single sql query (query quota).
-     * Note: Negative value disables memory tracking (for both: query and global quotas) for query by default.
-     *
-     * Default: MaxHeapSize/AvailableCPUs.
-     */
-    public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
-
-    /**
-     * Defines memory pool size available for sql queries on node (global quota).
-     * Note: Negative value disables global memory quota for SQL, but it doesn't affects query quota.
-     *
-     * Default: 60% MaxHeapSize.
-     */
-
-    public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
-
-    /**
      * Defines default memory reservation block size.
      *
      * Default: 512K.
      */
     public static final String IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE";
-
-
-    /**
-     * Defines an action that occurs when the memory limit is exceeded. Possible variants:
-     * <ul>
-     *     <li>{@code false} - exception will be thrown.</li>
-     *     <li>{@code true} - intermediate query results will be spilled to the disk.</li>
-     * </ul>
-     *
-     * Default: false.
-     */
-    // TODO: GG-18629: Move to memory quotas configuration.
-    public static final String IGNITE_SQL_USE_DISK_OFFLOAD = "IGNITE_SQL_USE_DISK_OFFLOAD";
 
     /**
      * Page lock tracker type.
@@ -1320,14 +1293,6 @@ public final class IgniteSystemProperties {
      * Default: false.
      */
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
-
-    /**
-     * Index rebuilding parallelism level. If specified, sets the count of threads that are used for index rebuilding
-     * and can only be greater than <code>0</code>, otherwise default value will be used. Maximum count of threads
-     * can't be greater than total available processors count.
-     * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
-     */
-    public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
 
     /** Enable write rebalnce statistics into log. Default: false */
     public static final String IGNITE_WRITE_REBALANCE_STATISTICS = "IGNITE_WRITE_REBALANCE_STATISTICS";
