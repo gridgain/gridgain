@@ -109,7 +109,6 @@ import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
-import org.apache.ignite.internal.pagemem.wal.record.MvccDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
@@ -124,7 +123,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -3116,115 +3114,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         for (CheckpointEntry cp : rmvFromHist)
             removeCheckpointFiles(cp);
-    }
-
-    /**
-     * @param cacheCtx Cache context to apply an update.
-     * @param dataEntry Data entry to apply.
-     * @param lockEntry If true, update will be performed under entry lock.
-     * @throws IgniteCheckedException If failed to restore.
-     */
-    private void applyUpdate(
-        GridCacheContext cacheCtx,
-        DataEntry dataEntry,
-        boolean lockEntry
-    ) throws IgniteCheckedException {
-        int partId = dataEntry.partitionId();
-
-        if (partId == -1)
-            partId = cacheCtx.affinity().partition(dataEntry.key());
-
-        GridDhtLocalPartition locPart = cacheCtx.isLocal() ? null : cacheCtx.topology().forceCreatePartition(partId);
-
-        GridCacheEntryEx entryEx = null;
-
-        switch (dataEntry.op()) {
-            case CREATE:
-            case UPDATE:
-                if (lockEntry) {
-                    entryEx = cacheCtx.isNear() ? cacheCtx.near().dht().entryEx(dataEntry.key()) :
-                        cacheCtx.cache().entryEx(dataEntry.key());
-
-                    entryEx.lockEntry();
-                }
-
-                try {
-                    if (dataEntry instanceof MvccDataEntry) {
-                        cacheCtx.offheap().mvccApplyUpdate(
-                            cacheCtx,
-                            dataEntry.key(),
-                            dataEntry.value(),
-                            dataEntry.writeVersion(),
-                            dataEntry.expireTime(),
-                            locPart,
-                            ((MvccDataEntry)dataEntry).mvccVer());
-                    }
-                    else {
-                        cacheCtx.offheap().update(
-                            cacheCtx,
-                            dataEntry.key(),
-                            dataEntry.value(),
-                            dataEntry.writeVersion(),
-                            dataEntry.expireTime(),
-                            locPart,
-                            null);
-                    }
-
-                    if (dataEntry.partitionCounter() != 0)
-                        cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);
-                }
-                finally {
-                    if (lockEntry) {
-                        entryEx.unlockEntry();
-
-                        entryEx.context().evicts().touch(entryEx);
-                    }
-                }
-
-                break;
-
-            case DELETE:
-                if (lockEntry) {
-                    entryEx = cacheCtx.isNear() ? cacheCtx.near().dht().entryEx(dataEntry.key()) :
-                        cacheCtx.cache().entryEx(dataEntry.key());
-
-                    entryEx.lockEntry();
-                }
-
-                try {
-                    if (dataEntry instanceof MvccDataEntry) {
-                        cacheCtx.offheap().mvccApplyUpdate(
-                            cacheCtx,
-                            dataEntry.key(),
-                            null,
-                            dataEntry.writeVersion(),
-                            0L,
-                            locPart,
-                            ((MvccDataEntry)dataEntry).mvccVer());
-                    }
-                    else
-                        cacheCtx.offheap().remove(cacheCtx, dataEntry.key(), partId, locPart);
-
-                    if (dataEntry.partitionCounter() != 0)
-                        cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);
-                }
-                finally {
-                    if (lockEntry) {
-                        entryEx.unlockEntry();
-
-                        entryEx.context().evicts().touch(entryEx);
-                    }
-                }
-
-                break;
-
-            case READ:
-                // do nothing
-                break;
-
-            default:
-                throw new IgniteCheckedException("Invalid operation for WAL entry update: " + dataEntry.op());
-        }
     }
 
     /**

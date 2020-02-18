@@ -135,7 +135,10 @@ public enum IgniteFeatures {
     PME_FREE_SWITCH(32),
     
     /** */
-    VOLATILE_DATA_STRUCTURES_REGION(33);
+    VOLATILE_DATA_STRUCTURES_REGION(33),
+
+    /** Partition reconciliation utility. */
+    PARTITION_RECONCILIATION(34);
 
     /**
      * Unique feature identifier.

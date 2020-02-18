@@ -117,4 +117,80 @@ public interface SqlQueryMXBean {
     @MXBeanParametersNames("rsSizeThresholdMultiplier")
     @MXBeanParametersDescriptions("TResult set size threshold multiplier.")
     void setResultSetSizeThresholdMultiplier(int rsSizeThresholdMultiplier);
+
+    /**
+     * Gets global query quota.
+     *
+     * @return Global query quota.
+     */
+    @MXBeanDescription("Gets global SQL query memory quota. Global SQL query memory pool size or SQL query memory " +
+        "quota is an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
+        "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
+        "heavy analytics query.")
+    String getSqlGlobalMemoryQuota();
+
+    /**
+     * Sets global query quota.
+     *
+     * @param size Size of global memory pool for SQL queries.
+     */
+    @MXBeanDescription("Sets global query quota. Global SQL query memory pool size or SQL query memory quota is" +
+        " an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
+        "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
+        "heavy analytics query. If you want to control memory quota on per-query basis consider sqlQueryMemoryQuota}")
+    @MXBeanParametersNames("size")
+    @MXBeanParametersDescriptions("Size of global memory pool for SQL queries in bytes. Can be followed by the" +
+        "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of the current heap." +
+        "For example:  '1000', '10M', '100k', '1G', '70%'")
+    void setSqlGlobalMemoryQuota(String size);
+
+    /**
+     * Gets global query quota.
+     *
+     * @return Global query quota.
+     */
+    @MXBeanDescription("Global SQL query memory pool size or SQL query memory quota is" +
+        " an upper bound for the heap memory part which might be occupied by the SQL query execution engine. " +
+        "This quota is shared among all simultaneously running queries, hence it be easily consumed by the single " +
+        "heavy analytics query.")
+    String getSqlQueryMemoryQuota();
+
+    /**
+     * Sets per-query memory quota.
+     *
+     * @param size Size of per-query memory quota in bytes, kilobytes, megabytes, or percentage of the max heap.
+     */
+    @MXBeanDescription("Gets SQL query memory quota. Query memory quota is the maximum amount of memory intended" +
+        " for the particular single query execution." +
+        " If a query execution exceeds this bound, the either would happen:\n" +
+        " If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>\n" +
+        " If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>\n" +
+        " See SqlOffloadingEnabled for details")
+    @MXBeanParametersNames("size")
+    @MXBeanParametersDescriptions("Size of per-query memory pool for SQL queries in bytes. Can be followed by the" +
+        "letters 'k' for kilobytes, 'm' for megabytes, 'g' for gigabytes and '%' for the percentage of the current heap." +
+        "For example:  '1000', '10M', '100k', '1G', '70%'")
+    void setSqlQueryMemoryQuota(String size);
+
+    /**
+     * Gets offloading flag.
+     *
+     * @return Flag whether query disk offloading is enabled.
+     */
+    @MXBeanDescription("Offloading flag specifies the query execution behavior on either global or query memory " +
+        "quota excess. If flag is set to 'true', the query result will be offloaded to the disk. " +
+        "If flag is set to 'false', an exception will be thrown.")
+    boolean isSqlOffloadingEnabled();
+
+    /**
+     * Sets offloading flag.
+     *
+     * @param enabled The value whether offloading flag is enabled.
+     */
+    @MXBeanDescription("Offloading flag specifies the query execution behavior on either global or query memory " +
+        "quota excess. If flag is set to 'true', the query result will be offloaded to disk. If flag is set to 'false', " +
+        "an exception will be thrown.")
+    @MXBeanParametersNames("enabled")
+    @MXBeanParametersDescriptions("The value whether offloading flag is enabled.")
+    void setSqlOffloadingEnabled(boolean enabled);
 }
