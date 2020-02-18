@@ -100,6 +100,8 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
             writer.writeObject(pred);
 
+            writer.writeInt(-1);  // TODO: Get cache id somehow.
+
             out.synchronize();
 
             ptr = ctx.gateway().cacheEntryFilterCreate(mem.pointer());
