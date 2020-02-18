@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Stream;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
@@ -110,6 +111,8 @@ import org.apache.ignite.transactions.TransactionRollbackException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Stream.concat;
+import static java.util.stream.Stream.of;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SKIP_CONFIGURATION_CONSISTENCY_CHECK;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -1936,6 +1939,27 @@ public class GridCacheUtils {
      */
     public static boolean isInMemoryCluster(Collection<ClusterNode> nodes, JdkMarshaller marshaller, ClassLoader clsLdr) {
         return nodes.stream().allMatch(serNode -> !CU.isPersistenceEnabled(extractDataStorage(serNode, marshaller, clsLdr)));
+    }
+
+    /**
+     * Returns stream of data regions extracted from cache configurations for given nodes.
+     *
+     * @param nodes Nodes.
+     * @param marshaller Marshaller.
+     * @param clsLdr Class loader.
+     *
+     * @return Stream of data regions.
+     */
+    public static Stream<DataRegionConfiguration> dataRegions(
+        Collection<ClusterNode> nodes,
+        JdkMarshaller marshaller,
+        ClassLoader clsLdr
+    ) {
+        return nodes.stream().map(node -> extractDataStorage(node, marshaller, clsLdr)).flatMap(
+                configuration -> configuration == null ? Stream.empty() :
+                        concat(of(configuration.getDefaultDataRegionConfiguration()),
+                                configuration.getDataRegionConfigurations() == null ?
+                                        Stream.empty() : of(configuration.getDataRegionConfigurations())));
     }
 
     /**

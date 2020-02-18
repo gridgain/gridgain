@@ -52,6 +52,11 @@ public class SupportFeaturesUtils {
         "IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER";
 
     /**
+     * PME-free switch explicitly disabled.
+     */
+    public static final String IGNITE_PME_FREE_SWITCH_DISABLED = "IGNITE_PME_FREE_SWITCH_DISABLED";
+
+    /**
      * @param featureName System property feature name.
      * @return {@code true} If given feature is enabled.
      */
@@ -60,7 +65,6 @@ public class SupportFeaturesUtils {
             IGNITE_CLUSTER_ID_AND_TAG_FEATURE.equals(featureName)
         )
             return IgniteSystemProperties.getBoolean(featureName, true);
-
 
         return IgniteSystemProperties.getBoolean(featureName, false);
     }
