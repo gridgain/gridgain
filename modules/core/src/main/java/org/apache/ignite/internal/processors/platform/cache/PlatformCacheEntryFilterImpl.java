@@ -16,14 +16,12 @@
 
 package org.apache.ignite.internal.processors.platform.cache;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractPredicate;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.memory.PlatformMemory;
 import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStream;
-import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
-import org.apache.ignite.resources.IgniteInstanceResource;
 
 /**
  * Interop filter. Delegates apply to native platform.
@@ -83,15 +81,13 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
         ptr = 0;
     }
 
-    /**
-     * @param ignite Ignite instance.
-     */
-    @IgniteInstanceResource
-    public void setIgniteInstance(Ignite ignite) {
-        ctx = PlatformUtils.platformContext(ignite);
-
+    /** {@inheritDoc} */
+    @SuppressWarnings("rawtypes")
+    @Override public void cacheContext(GridCacheContext cctx) {
         if (ptr != 0)
             return;
+
+        ctx = cctx.kernalContext().platform().context();
 
         try (PlatformMemory mem = ctx.memory().allocate()) {
             PlatformOutputStream out = mem.output();
@@ -100,7 +96,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
             writer.writeObject(pred);
 
-            writer.writeInt(-1);  // TODO: Get cache id somehow.
+            writer.writeInt(cctx.cacheId());
 
             out.synchronize();
 
