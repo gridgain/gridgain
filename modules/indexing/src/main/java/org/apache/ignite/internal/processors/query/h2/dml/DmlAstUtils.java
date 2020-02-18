@@ -402,7 +402,7 @@ public final class DmlAstUtils {
     }
 
     /**
-     * @return {@code true} if the index contains update columns may be potentially used fot scan.
+     * @return {@code true} if the index contains update columns may be potentially used for scan.
      */
     private static boolean isIndexWithUpdateColumnsMayBeUsed(
         GridH2Table tbl,
@@ -411,7 +411,7 @@ public final class DmlAstUtils {
         if (F.isEmpty(whereCols))
             return false;
 
-        if (updateCols.size() == 1 && whereCols.size() ==1
+        if (updateCols.size() == 1 && whereCols.size() == 1
             && tbl.rowDescriptor().isValueColumn(F.first(updateCols).getColumnId())
             && tbl.rowDescriptor().isValueColumn(F.first(whereCols).getColumnId()))
             return true;

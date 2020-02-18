@@ -92,7 +92,7 @@ public final class UpdatePlan {
     /** Additional info for distributed update. */
     private final DmlDistributedPlanInfo distributed;
 
-    /** IAdditional info for distributed update. */
+    /** Additional info for distributed update. */
     private final boolean canSelectBeLazy;
 
     /**
