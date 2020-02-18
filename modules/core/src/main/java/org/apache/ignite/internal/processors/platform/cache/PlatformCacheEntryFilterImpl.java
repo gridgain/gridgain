@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.platform.cache;
 
+import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractPredicate;
@@ -29,6 +30,9 @@ import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStrea
 public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate implements PlatformCacheEntryFilter {
     /** */
     private static final long serialVersionUID = 0L;
+
+    /** */
+    private transient boolean platfromNearEnabled;
 
     /**
      * {@link java.io.Externalizable} support.
@@ -59,9 +63,14 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
             writer.writeLong(ptr);
 
-            // TODO: Near cache: don't write value, put it to thread local. Maybe client has it anyway.
             writer.writeObject(k);
-            writer.writeObject(v);
+
+            if (platfromNearEnabled) {
+                // TODO: Put value in thread local inside platform context,
+                // so it can be requested only when near entry does not exist for the key.
+            } else {
+                writer.writeObject(v);
+            }
 
             out.synchronize();
 
@@ -88,6 +97,9 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
             return;
 
         ctx = cctx.kernalContext().platform().context();
+
+        NearCacheConfiguration nearCfg = cctx.config().getNearConfiguration();
+        platfromNearEnabled = nearCfg != null && nearCfg.isPlatformNearCacheEnabled();
 
         try (PlatformMemory mem = ctx.memory().allocate()) {
             PlatformOutputStream out = mem.output();
