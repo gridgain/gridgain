@@ -1,6 +1,7 @@
 ﻿namespace Apache.Ignite.Benchmarks.Interop
 {
     using System.Collections.Generic;
+    using Apache.Ignite.Benchmarks.Model;
     using Apache.Ignite.Core.Cache;
 
     /// <summary>
@@ -12,14 +13,14 @@
         private const string CacheName = "cacheNear";
 
         /** Native cache wrapper. */
-        private ICache<object, object> _cache;
+        private ICache<int, Employee> _cache;
 
         /** <inheritDoc /> */
         protected override void OnStarted()
         {
             base.OnStarted();
 
-            _cache = Node.GetCache<object, object>(CacheName);
+            _cache = Node.GetCache<int, Employee>(CacheName);
         }
 
         /** <inheritDoc /> */
