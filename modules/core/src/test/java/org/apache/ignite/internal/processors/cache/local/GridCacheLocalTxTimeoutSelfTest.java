@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -160,12 +161,20 @@ public class GridCacheLocalTxTimeoutSelfTest extends GridCommonAbstractTest {
             IgniteCache<Integer, String> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
             tx = ignite.transactions().txStart(concurrency, isolation, 50, 0);
+            long endTime = System.currentTimeMillis();
+
+            log.info("Start time :: " + endTime);
+
+            endTime += 100;
 
             cache.put(1, "1");
 
-            Thread.sleep(100);
+
+            while(U.currentTimeMillis() < endTime) {}
 
             cache.put(1, "2");
+
+            log.info("End time :: " + System.currentTimeMillis());
 
             tx.commit();
         }
