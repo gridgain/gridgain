@@ -24,21 +24,21 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRequiredFeatureSupport;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.IgniteFeatures.INVERSE_TCP_CONNECTION;
 
 /**
  * TODO
  */
+@TcpDiscoveryRequiredFeatureSupport(feature = INVERSE_TCP_CONNECTION)
 public class TcpConnectionRequestDiscoveryMessage implements DiscoveryCustomMessage {
     /** */
     private static final long serialVersionUID = 0L;
 
     /** */
     private final IgniteUuid id = IgniteUuid.randomUuid();
-
-    /** */
-    @GridToStringInclude
-    private final UUID initiatorNodeId;
 
     /** */
     @GridToStringInclude
@@ -49,8 +49,7 @@ public class TcpConnectionRequestDiscoveryMessage implements DiscoveryCustomMess
     private final int connIdx;
 
     /** */
-    public TcpConnectionRequestDiscoveryMessage(UUID initiatorNodeId, UUID receiverNodeId, int connIdx) {
-        this.initiatorNodeId = initiatorNodeId;
+    public TcpConnectionRequestDiscoveryMessage(UUID receiverNodeId, int connIdx) {
         this.receiverNodeId = receiverNodeId;
         this.connIdx = connIdx;
     }
@@ -58,11 +57,6 @@ public class TcpConnectionRequestDiscoveryMessage implements DiscoveryCustomMess
     /** {@inheritDoc} */
     @Override public IgniteUuid id() {
         return id;
-    }
-
-    /** */
-    public UUID initiatorNodeId() {
-        return initiatorNodeId;
     }
 
     /** */

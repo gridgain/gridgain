@@ -154,7 +154,7 @@ import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.HandshakeException;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationNodeConnectionCheckFuture;
-import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestMessage;
+import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
@@ -177,6 +177,7 @@ import static org.apache.ignite.internal.processors.tracing.messages.TraceableMe
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
 import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture.SES_FUT_META;
+import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.ALREADY_CONNECTED;
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.NEED_WAIT;
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.NODE_STOPPING;
@@ -806,11 +807,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                         if (log.isDebugEnabled())
                             log.debug("Close incoming connection, failed to enter gateway.");
 
-                        ses.send(new RecoveryLastReceivedMessage(NODE_STOPPING)).listen(new CI1<IgniteInternalFuture<?>>() {
-                            @Override public void apply(IgniteInternalFuture<?> fut) {
-                                ses.close();
-                            }
-                        });
+                        ses.send(new RecoveryLastReceivedMessage(NODE_STOPPING)).listen(fut -> ses.close());
 
                         return;
                     }
@@ -2824,9 +2821,15 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         else {
             GridCommunicationClient client = null;
 
-            int connIdx = msg instanceof TcpConnectionRequestMessage
-                ? ((TcpConnectionRequestMessage)msg).connectionIndex()
-                : connPlc.connectionIndex();
+            int connIdx;
+
+            if (msg instanceof TcpConnectionIndexAwareMessage) {
+                int msgConnIdx = ((TcpConnectionIndexAwareMessage)msg).connectionIndex();
+
+                connIdx = msgConnIdx == UNDEFINED_CONNECTION_INDEX ? connPlc.connectionIndex() : msgConnIdx;
+            }
+            else
+                connIdx = connPlc.connectionIndex();
 
             try {
                 boolean retry;
@@ -2906,8 +2909,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
             newClients[rmvClient.connectionIndex()] = null;
 
-            if (clients.replace(nodeId, curClients, newClients))
+            if (clients.replace(nodeId, curClients, newClients)) {
+                log.info("<!> remove node client " + nodeId + " : " + rmvClient.connectionIndex());
+
                 return true;
+            }
         }
     }
 
@@ -2947,8 +2953,10 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 newClients = curClients.clone();
                 newClients[connIdx] = addClient;
 
-                if (clients.replace(node.id(), curClients, newClients))
+                if (clients.replace(node.id(), curClients, newClients)) {
+                    log.info("<!> add node client " + node.id() + " : " + connIdx);
                     break;
+                }
             }
         }
     }
@@ -2977,8 +2985,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 if (stopping)
                     throw new IgniteSpiException("Node is stopping.");
 
-                if (Boolean.TRUE.equals(node.attribute(createSpiAttributeName(ATTR_UNREACHABLE))) && node.isClient())
+                if (isUnreachable(node) && !getSpiContext().localNode().isClient()) {
+                    log.info("<!> node " + nodeId + " is unreachable from node " + getLocalNode().id());
+                    log.info("<!> " + connIdx + " / " + (curClients == null ? "null" : curClients.length));
                     throw new ConnectionFailedException("", null, nodeId, connIdx);
+                }
 
                 // Do not allow concurrent connects.
                 GridFutureAdapter<GridCommunicationClient> fut = new ConnectFuture();
@@ -3088,6 +3099,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 // Client has just been closed by idle worker. Help it and try again.
                 removeNodeClient(nodeId, client);
         }
+    }
+
+    /** */
+    public boolean isUnreachable(ClusterNode node) {
+        return Boolean.TRUE.equals(node.attribute(createSpiAttributeName(ATTR_UNREACHABLE))) && node.isClient();
     }
 
     /**

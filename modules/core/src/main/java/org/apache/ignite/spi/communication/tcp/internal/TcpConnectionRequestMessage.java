@@ -23,6 +23,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
+ * TODO Can be replaced with any other message I think.
  */
 public class TcpConnectionRequestMessage implements Message {
     /** */
