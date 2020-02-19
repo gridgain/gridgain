@@ -27,6 +27,8 @@ namespace Apache.Ignite.Benchmarks.Interop
         protected override void OnStarted()
         {
             base.OnStarted();
+            
+            BatchSize = 1000;
 
             _cache = Node.GetCache<int, Employee>(CacheName);
 
