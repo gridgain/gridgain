@@ -354,7 +354,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
             
             var ex = Assert.Throws<CacheException>(() =>
-                client.GetOrCreateNearCache<int, Foo>(clientCache.Name, new NearCacheConfiguration()));
+                client.GetOrCreateNearCache<int, Foo>(clientCache.Name, new NearCacheConfiguration(true)));
             StringAssert.Contains("cache with the same name without near cache is already started", ex.Message);
         }
 
@@ -381,7 +381,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             };
             var client = Ignition.Start(clientCfg);
 
-            var clientCache = client.GetOrCreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
+            var clientCache = client.GetOrCreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration(true));
             clientCache[1] = new Foo(2);
             Assert.AreEqual(2, clientCache.LocalPeek(1, CachePeekMode.NativeNear).Bar);
             
@@ -461,7 +461,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cacheConfiguration = new CacheConfiguration(CacheName)
             {
-                NearConfiguration = serverNear ? new NearCacheConfiguration() : null,
+                NearConfiguration = serverNear ? new NearCacheConfiguration(true) : null,
                 Backups = backups
             };
             
@@ -482,7 +482,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var client = InitClient();
 
-            return client.CreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
+            return client.CreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration(true));
         }
 
         /// <summary>
