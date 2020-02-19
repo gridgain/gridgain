@@ -112,7 +112,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testOffloadingEnabledByDefault() throws Exception {
         initGrid(null, "100", true);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY id";
 
         checkQuery(Result.SUCCESS_WITH_OFFLOADING, qry);
 
