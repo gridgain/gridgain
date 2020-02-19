@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Cache.Configuration
 {
     using System.ComponentModel;
+    using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Eviction;
 
@@ -47,6 +48,11 @@ namespace Apache.Ignite.Core.Cache.Configuration
         {
             NearStartSize = reader.ReadInt();
             EvictionPolicy = EvictionPolicyBase.Read(reader);
+
+            if (reader.ReadBoolean())
+            {
+                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration(reader);
+            }
         }
 
         /// <summary>
@@ -56,6 +62,16 @@ namespace Apache.Ignite.Core.Cache.Configuration
         {
             writer.WriteInt(NearStartSize);
             EvictionPolicyBase.Write(writer, EvictionPolicy);
+
+            if (PlatformNearCacheConfiguration != null)
+            {
+                writer.WriteBoolean(true);
+                PlatformNearCacheConfiguration.Write(writer);
+            }
+            else
+            {
+                writer.WriteBoolean(false);
+            }
         }
 
         /// <summary>
@@ -70,5 +86,10 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         [DefaultValue(DefaultNearStartSize)]
         public int NearStartSize { get; set; }
+        
+        /// <summary>
+        /// TODO
+        /// </summary>
+        public PlatformNearCacheConfiguration PlatformNearCacheConfiguration { get; set; }
     }
 }
