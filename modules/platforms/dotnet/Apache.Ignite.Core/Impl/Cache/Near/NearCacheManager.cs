@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Diagnostics;
     using Apache.Ignite.Core.Cache.Affinity;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
@@ -72,13 +73,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// When the use case above is detected, we downgrade near cache map to {object, object}, which will cause
         /// more boxing and casting. 
         /// </summary>
-        public INearCache GetOrCreateNearCache<TK, TV>(string cacheName)
+        public INearCache GetOrCreateNearCache<TK, TV>(CacheConfiguration cacheConfiguration)
         {
-            Debug.Assert(!string.IsNullOrEmpty(cacheName));
+            Debug.Assert(cacheConfiguration != null);
 
-            var cacheId = BinaryUtils.GetCacheId(cacheName);
+            var cacheId = BinaryUtils.GetCacheId(cacheConfiguration.Name);
             
-            return _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache<TK, TV>(cacheName));
+            return _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache<TK, TV>(cacheConfiguration));
         }
 
         /// <summary>
@@ -86,12 +87,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public void Update(int cacheId, IBinaryStream stream, Marshaller marshaller)
         {
-            // TODO: Create near cache here if it does not exist?
-            // Callbacks are invoked only when platform near cache is enabled.
-            // We should pre-populate near for things like Scan Query.
-            // But there is a problem with generics. Do we even need them? Run benchmarks with Guids, longs?
             var nearCache = _nearCaches.GetOrAdd(cacheId, 
-                _ => CreateNearCache<object, object>(_ignite.GetCacheName(cacheId)));
+                _ => CreateNearCache<object, object>(_ignite.GetCacheConfiguration(cacheId)));
             
             nearCache.Update(stream, marshaller);
         }
@@ -119,11 +116,53 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Creates near cache.
         /// </summary>
-        private NearCache<TK, TV> CreateNearCache<TK, TV>(string cacheName)
+        private INearCache CreateNearCache<TK, TV>(CacheConfiguration cacheConfiguration)
         {
-            return new NearCache<TK, TV>(
-                () => _affinityTopologyVersion, 
-                _ignite.GetAffinity(cacheName));
+            Debug.Assert(cacheConfiguration.NearConfiguration != null);
+            Debug.Assert(cacheConfiguration.NearConfiguration.PlatformNearCacheConfiguration != null);
+
+            var nearCfg = cacheConfiguration.NearConfiguration.PlatformNearCacheConfiguration;
+            
+            TypeResolver resolver = null;
+            Func<string, Type> resolve = n =>
+            {
+                if (n == null)
+                {
+                    return null;
+                }
+
+                if (resolver == null)
+                {
+                    resolver = new TypeResolver();
+                }
+
+                return resolver.ResolveType(n);
+            };
+
+            var keyType = resolve(nearCfg.KeyTypeName);
+            var valType = resolve(nearCfg.ValueTypeName);
+
+            if (!keyType.IsAssignableFrom(typeof(TK)) || !valType.IsAssignableFrom(typeof(TV)))
+            {
+                // TODO: Add test for this.
+                var message = string.Format(
+                    "Invalid PlatformNearCacheConfiguration: " +
+                    "Near cache is configured as <{0}. {1}>, but cache is <{2}, {3}>",
+                    keyType, valType, typeof(TK), typeof(TV));
+                
+                throw new InvalidOperationException(message);
+            }
+
+            var cacheType = typeof(NearCache<,>).MakeGenericType(keyType, valType);
+            Func<object> affinityTopologyVersionFunc = () => _affinityTopologyVersion;
+            var affinity = _ignite.GetAffinity(cacheConfiguration.Name);
+            var nearCache = Activator.CreateInstance(
+                cacheType, 
+                affinityTopologyVersionFunc, 
+                affinity,
+                cacheConfiguration);
+            
+            return (INearCache) nearCache;
         }
         
         /// <summary>

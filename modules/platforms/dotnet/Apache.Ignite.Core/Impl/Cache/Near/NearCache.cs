@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System.Diagnostics;
     using System.Linq;
     using Apache.Ignite.Core.Cache.Affinity;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
 
@@ -54,6 +55,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         /** Affinity. */
         private readonly CacheAffinityImpl _affinity;
+        
+        /** Cache configuration. */
+        private readonly CacheConfiguration _cacheConfiguration;
 
         /** Topology version func. Returns boxed <see cref="AffinityTopologyVersion"/>.
          * Boxed copy is passed directly to <see cref="NearCacheEntry{T}"/>, avoiding extra allocations.
@@ -75,10 +79,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class. 
         /// </summary>
-        public NearCache(Func<object> affinityTopologyVersionFunc, CacheAffinityImpl affinity)
+        public NearCache(Func<object> affinityTopologyVersionFunc, CacheAffinityImpl affinity,
+            CacheConfiguration cacheConfiguration)
         {
             _affinityTopologyVersionFunc = affinityTopologyVersionFunc;
             _affinity = affinity;
+            _cacheConfiguration = cacheConfiguration;
+            
+            Debug.Assert(cacheConfiguration != null);
+            Debug.Assert(cacheConfiguration.NearConfiguration != null);
+            Debug.Assert(cacheConfiguration.NearConfiguration.PlatformNearCacheConfiguration != null);
         }
 
         /** <inheritdoc /> */

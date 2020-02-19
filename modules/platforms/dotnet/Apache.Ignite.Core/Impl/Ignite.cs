@@ -98,7 +98,7 @@ namespace Apache.Ignite.Core.Impl
             SetBaselineAutoAdjustmentEnabled = 33,
             GetBaselineAutoAdjustTimeout = 34,
             SetBaselineAutoAdjustTimeout = 35,
-            GetCacheName = 36
+            GetCacheConfig = 36
         }
 
         /** */
@@ -737,11 +737,12 @@ namespace Apache.Ignite.Core.Impl
         }
 
         /** <inheritdoc /> */
-        public string GetCacheName(int cacheId)
+        public CacheConfiguration GetCacheConfiguration(int cacheId)
         {
-            return Target.InStreamOutStream((int) Op.GetCacheName,
+            return Target.InStreamOutStream((int) Op.GetCacheConfig,
                 w => w.WriteInt(cacheId),
-                r => r.ReadString());
+                s => new CacheConfiguration(
+                    BinaryUtils.Marshaller.StartUnmarshal(s), ClientSocket.CurrentProtocolVersion));
         }
 
         /** <inheritdoc /> */

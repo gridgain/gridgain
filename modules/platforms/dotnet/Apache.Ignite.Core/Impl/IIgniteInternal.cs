@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl
 {
     using System;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Datastream;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Cache;
@@ -95,6 +96,6 @@ namespace Apache.Ignite.Core.Impl
         /// </summary>
         /// <param name="cacheId">Cache id.</param>
         /// <returns>Cache name.</returns>
-        string GetCacheName(int cacheId);
+        CacheConfiguration GetCacheConfiguration(int cacheId);
     }
 }

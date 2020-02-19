@@ -24,6 +24,7 @@ namespace Apache.Ignite.Core.Impl.Client
     using System.Globalization;
     using System.Net;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Datastream;
@@ -189,7 +190,7 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
-        public string GetCacheName(int cacheId)
+        public CacheConfiguration GetCacheConfiguration(int cacheId)
         {
             throw GetClientNotSupportedException();
         }
