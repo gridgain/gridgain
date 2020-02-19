@@ -22,6 +22,7 @@ import java.io.ObjectOutput;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.util.IgniteUtils.readString;
 import static org.apache.ignite.internal.util.IgniteUtils.writeString;
@@ -35,9 +36,6 @@ public class ValidateIndexesCheckSizeIssue extends VisorDataTransferObject {
 
     /** Index name. */
     private String idxName;
-
-    /** Schema name. */
-    private String schemaName;
 
     /** Index size. */
     private long idxSize;
@@ -57,13 +55,11 @@ public class ValidateIndexesCheckSizeIssue extends VisorDataTransferObject {
      * Constructor.
      *
      * @param idxName    Index name.
-     * @param schemaName Schema name.
      * @param idxSize    Index size.
      * @param t          Error.
      */
-    public ValidateIndexesCheckSizeIssue(String idxName, String schemaName, long idxSize, Throwable t) {
+    public ValidateIndexesCheckSizeIssue(@Nullable String idxName, long idxSize, @Nullable Throwable t) {
         this.idxName = idxName;
-        this.schemaName = schemaName;
         this.idxSize = idxSize;
         this.t = t;
     }
@@ -71,7 +67,6 @@ public class ValidateIndexesCheckSizeIssue extends VisorDataTransferObject {
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         writeString(out, idxName);
-        writeString(out, schemaName);
         out.writeLong(idxSize);
         out.writeObject(t);
     }
@@ -82,7 +77,6 @@ public class ValidateIndexesCheckSizeIssue extends VisorDataTransferObject {
         ObjectInput in
     ) throws IOException, ClassNotFoundException {
         idxName = readString(in);
-        schemaName = readString(in);
         idxSize = in.readLong();
         t = (Throwable)in.readObject();
     }
