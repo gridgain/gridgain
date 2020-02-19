@@ -100,11 +100,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cache = _grid.CreateCache<int, int>(cfg);
             cache[1] = 1;
 
-            var nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration());
+            var nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration
+            {
+                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+            });
             Assert.AreEqual(1, nearCache[1]);
 
             // Create when exists.
-            nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration());
+            nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration
+            {
+                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+            });
             Assert.AreEqual(1, nearCache[1]);
 
             // Update entry.
@@ -144,7 +150,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             const string cacheName = "client_with_near_cache";
 
             var cache = _client.CreateCache<int, int>(new CacheConfiguration(cacheName),
-                new NearCacheConfiguration());
+                new NearCacheConfiguration
+                {
+                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+                });
 
             AssertCacheIsNear(cache);
 
@@ -152,7 +161,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(1, cache[1]);
 
             var cache2 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cacheName),
-                new NearCacheConfiguration());
+                new NearCacheConfiguration
+                {
+                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+                });
 
             Assert.AreEqual(1, cache2[1]);
 
@@ -170,12 +182,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestContext.CurrentContext.Test.Name + mode,
-                NearConfiguration = new NearCacheConfiguration()
+                NearConfiguration = new NearCacheConfiguration
+                {
+                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+                }
             };
 
             var ignite = GetIgnite(mode);
             
-            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
+            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration
+            {
+                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+            });
             
             cache[1] = 1;
             ignite.DestroyCache(cache.Name);
@@ -198,17 +216,26 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestContext.CurrentContext.Test.Name + mode,
-                NearConfiguration = new NearCacheConfiguration()
+                NearConfiguration = new NearCacheConfiguration
+                {
+                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+                }
             };
 
             var ignite = GetIgnite(mode);
-            
-            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
+
+            var cache = ignite.CreateCache<int, int>(cfg,  new NearCacheConfiguration
+            {
+                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+            });
             
             cache[1] = 1;
             ignite.DestroyCache(cache.Name);
             
-            cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
+            cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration
+            {
+                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
+            });
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
         }
 
