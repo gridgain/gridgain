@@ -145,6 +145,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var keyType = resolve(nearCfg.KeyTypeName);
             var valType = resolve(nearCfg.ValueTypeName);
 
+            // TODO: Is this check correct?
             if (!keyType.IsAssignableFrom(typeof(TK)) || !valType.IsAssignableFrom(typeof(TV)))
             {
                 var message = string.Format(
