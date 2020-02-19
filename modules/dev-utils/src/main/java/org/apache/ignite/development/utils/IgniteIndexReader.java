@@ -712,6 +712,7 @@ public class IgniteIndexReader implements AutoCloseable {
             }
         }
         catch (Exception e) {
+            System.err.println("THIS UTILITY MUST BE LAUNCHED ON PERSISNENT STORE WHICH IS NOT UNDER RUNNING GRID!");
             System.err.println("How to use: please pass option names, followed by space and option values. Options list:");
             System.err.println("--dir: partition directory, where index.bin and (optionally) partition files are located (obligatory)");
             System.err.println("--partCnt: full partitions count in cache group (optional)");
