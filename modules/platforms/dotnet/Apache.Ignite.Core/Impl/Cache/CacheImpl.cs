@@ -101,7 +101,8 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             // On Client nodes, even if servers have NearConfiguration, clients don't have it by default.
             // Users have to call CreateNearCache/GetOrCreateNearCache to enable near caching on Client nodes.
-            if (configuration.NearConfiguration != null)
+            if (configuration.NearConfiguration != null && 
+                configuration.NearConfiguration.PlatformNearCacheConfiguration != null)
             {
                 _nearCache = _ignite.NearCacheManager.GetOrCreateNearCache<TK, TV>(configuration);
             }
