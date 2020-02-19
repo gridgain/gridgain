@@ -51,4 +51,9 @@ public class TxPartitionCounterStateConsistencyVolatileRebalanceTest extends TxP
     @Override protected int partitions() {
         return 1024;
     }
+
+    /** {@inheritDoc} */
+    @Override public void resetBaselineTopology() {
+        // By default autoAdjust is enabled and manual baseline change is not needed.
+    }
 }

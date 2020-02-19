@@ -76,7 +76,7 @@ public class NonAffinityCoordinatorDynamicStartStopTest extends GridCommonAbstra
 
         final Ignite crd = startGrid(DUMMY_GRID_NAME);
 
-        crd.active(true);
+        crd.cluster().active(true);
 
         startGrid("client");
     }

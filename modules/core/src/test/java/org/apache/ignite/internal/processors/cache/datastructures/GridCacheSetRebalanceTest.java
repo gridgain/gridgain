@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.datastructures;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
@@ -35,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -87,7 +89,6 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         Ignite ignite0 = startGrid(0);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(false);
         ignite0.cluster().active(true);
 
         IgniteSet set = ignite0.set("test-set", new CollectionConfiguration().setBackups(1).setCollocated(true));
@@ -107,9 +108,15 @@ public class GridCacheSetRebalanceTest extends GridCommonAbstractTest {
 
         useExtendedClasses = false;
 
-        startGrid(1);
+        GridTestUtils.runAsync(new Callable<Void>() {
+            @Override public Void call() throws Exception {
+                startGrid(1);
 
-        ignite0.cluster().setBaselineTopology(ignite0.cluster().forServers().nodes());
+                resetBaselineTopology();
+
+                return null;
+            }
+        });
 
         assertTrue(
             "Data rebalancing is not started.",

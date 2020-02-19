@@ -41,6 +41,9 @@ public class ExchangeContext {
     /** Per-group affinity fetch on join (old protocol). */
     private boolean fetchAffOnJoin;
 
+    /** Wait-free affinity switch was performed for current exchange. */
+    private boolean exchangeFreeSwitch;
+
     /** Merges allowed flag. */
     private final boolean merge;
 
@@ -57,9 +60,15 @@ public class ExchangeContext {
     public ExchangeContext(boolean crd, GridDhtPartitionsExchangeFuture fut) {
         int protocolVer = exchangeProtocolVersion(fut.firstEventCache().minimumNodeVersion());
 
-        if (compatibilityNode || (crd && fut.localJoinExchange())) {
+        // Tests if free switch is supported for current exchange.
+        if (!compatibilityNode &&
+            fut.wasRebalanced() &&
+            fut.isBaselineNodeFailed()) {
+            exchangeFreeSwitch = true;
+            merge = false;
+        }
+        else if (compatibilityNode || (crd && fut.localJoinExchange())) {
             fetchAffOnJoin = true;
-
             merge = false;
         }
         else {
@@ -93,6 +102,13 @@ public class ExchangeContext {
      */
     public boolean fetchAffinityOnJoin() {
         return fetchAffOnJoin;
+    }
+
+    /**
+     * @return {@code True} if it's safe to perform PME-free affinity switch.
+     */
+    public boolean exchangeFreeSwitch() {
+        return exchangeFreeSwitch;
     }
 
     /**

@@ -34,6 +34,8 @@ import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCount
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest;
 import org.apache.ignite.internal.metric.IoStatisticsCachePersistenceSelfTest;
 import org.apache.ignite.internal.metric.IoStatisticsCacheSelfTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyOptimisticHistoryRebalanceTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyOptimisticTest;
 import org.apache.ignite.testframework.junits.DynamicSuite;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyVolatileRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryOneBackupHistoryRebalanceTest;
@@ -90,6 +92,8 @@ public class IgniteCacheMvccTestSuite9 {
         ignoredTests.add(TxPartitionCounterStateConsistencyVolatileRebalanceTest.class);
         ignoredTests.add(TxCrossCachePartitionConsistencyTest.class);
         ignoredTests.add(TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest.class);
+        ignoredTests.add(TxPartitionCounterStateConsistencyOptimisticTest.class);
+        ignoredTests.add(TxPartitionCounterStateConsistencyOptimisticHistoryRebalanceTest.class);
 
         // IO statistics.
         ignoredTests.add(IoStatisticsCacheSelfTest.class);

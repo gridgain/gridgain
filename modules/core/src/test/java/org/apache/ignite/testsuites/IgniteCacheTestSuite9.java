@@ -47,6 +47,8 @@ import org.apache.ignite.internal.processors.cache.transactions.TxCrossCachePart
 import org.apache.ignite.internal.processors.cache.transactions.TxDataConsistencyOnCommitFailureTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyHistoryRebalanceTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyOptimisticHistoryRebalanceTest;
+import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyOptimisticTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateConsistencyVolatileRebalanceTest;
 import org.apache.ignite.internal.processors.cache.transactions.TxPartitionCounterStateOnePrimaryOneBackupHistoryRebalanceTest;
@@ -112,6 +114,8 @@ public class IgniteCacheTestSuite9 {
         GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyVolatileRebalanceTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, TxCrossCachePartitionConsistencyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyOptimisticTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, TxPartitionCounterStateConsistencyOptimisticHistoryRebalanceTest.class, ignoredTests);
 
         // IO statistics
         GridTestUtils.addTestIfNeeded(suite, IoStatisticsCachePersistenceSelfTest.class, ignoredTests);

@@ -577,7 +577,7 @@ public class GridAffinityAssignmentCache {
     }
 
     /**
-     * @return Last calculated affinity version.
+     * @return Last initialized affinity version.
      */
     public AffinityTopologyVersion lastVersion() {
         return head.get().topologyVersion();
@@ -656,6 +656,13 @@ public class GridAffinityAssignmentCache {
     public List<ClusterNode> nodes(int part, AffinityTopologyVersion topVer) {
         // Resolve cached affinity nodes.
         return cachedAffinity(topVer).get(part);
+    }
+
+    /**
+     * @param topVer Topology version.
+     */
+    public Set<Integer> partitionPrimariesDifferentToIdeal(AffinityTopologyVersion topVer) {
+        return cachedAffinity(topVer).partitionPrimariesDifferentToIdeal();
     }
 
     /**

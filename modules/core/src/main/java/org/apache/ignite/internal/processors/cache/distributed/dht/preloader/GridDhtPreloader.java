@@ -221,6 +221,8 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         CachePartitionFullCountersMap countersMap = grp.topology().fullUpdateCounters();
 
+        boolean changed = false;
+
         for (int p = 0; p < partitions; p++) {
             if (ctx.exchange().hasPendingServerExchange()) {
                 if (log.isDebugEnabled())
@@ -297,7 +299,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     List<ClusterNode> picked = remoteOwners(p, topVer);
 
                     if (picked.isEmpty()) {
-                        top.own(part);
+                        changed |= top.own(part);
 
                         if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_DATA_LOST)) {
                             grp.addRebalanceEvent(p,
@@ -328,8 +330,16 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
             }
         }
 
-        if (!assignments.isEmpty())
+        if (!assignments.isEmpty()) {
             ctx.database().lastCheckpointInapplicableForWalRebalance(grp.groupId());
+
+            assert exchFut == null || !exchFut.rebalanced() :
+                "Unexpected rebalance on rebalanced cluster " +
+                    "[top=" + topVer + ", grp=" + grp.groupId() + ", assignments=" + assignments + "]";
+        }
+
+        if (changed)
+            ctx.exchange().scheduleResendPartitions();
 
         return assignments;
     }
