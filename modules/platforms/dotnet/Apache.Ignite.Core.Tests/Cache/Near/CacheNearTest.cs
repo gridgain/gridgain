@@ -473,6 +473,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             // TODO: ???
             // Bypass near cache in binary mode?
+            // What if classes are not present on server nodes, we can't deserialize? What does Java do?
         }
 
         [Test]
