@@ -27,7 +27,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ForceRebalanceExchangeTask;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -66,10 +65,11 @@ public interface GridCachePreloader {
     public void onInitialExchangeComplete(@Nullable Throwable err);
 
     /**
+     * @param rebTopVer Previous rebalance topology version or {@code NONE} if there is no info.
      * @param exchFut Completed exchange future.
      * @return {@code True} if rebalance should be started (previous will be interrupted).
      */
-    public boolean rebalanceRequired(GridDhtPartitionsExchangeFuture exchFut);
+    public boolean rebalanceRequired(AffinityTopologyVersion rebTopVer, GridDhtPartitionsExchangeFuture exchFut);
 
     /**
      * @param exchId Exchange ID.
@@ -89,12 +89,11 @@ public interface GridCachePreloader {
      * @param forcedRebFut External future for forced rebalance.
      * @return Rebalancing runnable.
      */
-    public RebalanceFuture addAssignments(GridDhtPreloaderAssignments assignments,
+    public Runnable addAssignments(GridDhtPreloaderAssignments assignments,
         boolean forcePreload,
         long rebalanceId,
-        final RebalanceFuture next,
-        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut,
-        GridCompoundFuture<Boolean, Boolean> compatibleWaitFut);
+        Runnable next,
+        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut);
 
     /**
      * @param p Preload predicate.

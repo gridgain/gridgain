@@ -21,13 +21,11 @@ namespace Apache.Ignite.Core.Tests.Compute
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
-    using System.Net;
     using System.Threading;
     using Apache.Ignite.Core.Binary;
-    using Apache.Ignite.Core.Cache.Affinity;
-    using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Compute;
+    using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Resource;
     using NUnit.Framework;
@@ -52,9 +50,6 @@ namespace Apache.Ignite.Core.Tests.Compute
         /** Third node. */
         private IIgnite _grid3;
 
-        /** Thin client. */
-        private IIgniteClient _igniteClient;
-
         /// <summary>
         /// Initialization routine.
         /// </summary>
@@ -65,15 +60,12 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             _grid1 = Ignition.Start(Configuration(configs.Item1));
             _grid2 = Ignition.Start(Configuration(configs.Item2));
-
-            AffinityTopologyVersion waitingTop = new AffinityTopologyVersion(2, 1);
-
-            Assert.True(_grid1.WaitTopology(waitingTop), "Failed to wait topology " + waitingTop);
-
             _grid3 = Ignition.Start(Configuration(configs.Item3));
 
-            // Start thin client.
-            _igniteClient = Ignition.StartClient(GetThinClientConfiguration());
+            // Wait for rebalance.
+            var events = _grid1.GetEvents();
+            events.EnableLocal(EventType.CacheRebalanceStopped);
+            events.WaitForLocal(EventType.CacheRebalanceStopped);
         }
 
         /// <summary>
@@ -85,19 +77,6 @@ namespace Apache.Ignite.Core.Tests.Compute
                 "Config\\Compute\\compute-grid1.xml",
                 "Config\\Compute\\compute-grid2.xml",
                 "Config\\Compute\\compute-grid3.xml");
-        }
-
-
-        /// <summary>
-        /// Gets the thin client configuration.
-        /// </summary>
-        private static IgniteClientConfiguration GetThinClientConfiguration()
-        {
-            return new IgniteClientConfiguration
-            {
-                Endpoints = new List<string> { IPAddress.Loopback.ToString() },
-                SocketTimeout = TimeSpan.FromSeconds(15)
-            };
         }
 
         /// <summary>
@@ -585,7 +564,7 @@ namespace Apache.Ignite.Core.Tests.Compute
 
             Assert.AreEqual(0, prjClient.GetNodes().Count);
         }
-
+        
         /// <summary>
         /// Test for cache predicate.
         /// </summary>

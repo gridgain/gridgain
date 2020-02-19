@@ -25,7 +25,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -152,7 +151,8 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean rebalanceRequired(GridDhtPartitionsExchangeFuture exchFut) {
+    @Override public boolean rebalanceRequired(AffinityTopologyVersion rebTopVer,
+        GridDhtPartitionsExchangeFuture exchFut) {
         return true;
     }
 
@@ -163,12 +163,11 @@ public class GridCachePreloaderAdapter implements GridCachePreloader {
     }
 
     /** {@inheritDoc} */
-    @Override public RebalanceFuture addAssignments(GridDhtPreloaderAssignments assignments,
+    @Override public Runnable addAssignments(GridDhtPreloaderAssignments assignments,
         boolean forcePreload,
         long rebalanceId,
-        RebalanceFuture next,
-        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut,
-        GridCompoundFuture<Boolean, Boolean> commonRebalanceFuture) {
+        Runnable next,
+        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut) {
         return null;
     }
 

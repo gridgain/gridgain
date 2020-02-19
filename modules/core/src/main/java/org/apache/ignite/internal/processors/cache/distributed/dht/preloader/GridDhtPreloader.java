@@ -36,10 +36,9 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.GridCachePreloaderAdapter;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNearAtomicAbstractUpdateRequest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -54,6 +53,7 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_L
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
@@ -160,8 +160,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean rebalanceRequired(GridDhtPartitionsExchangeFuture exchFut) {
-        if (ctx.kernalContext().clientNode())
+    @Override public boolean rebalanceRequired(AffinityTopologyVersion rebTopVer,
+        GridDhtPartitionsExchangeFuture exchFut) {
+        if (ctx.kernalContext().clientNode() || rebTopVer.equals(AffinityTopologyVersion.NONE))
             return false; // No-op.
 
         if (exchFut.resetLostPartitionFor(grp.cacheOrGroupName()))
@@ -170,24 +171,23 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         if (exchFut.localJoinExchange())
             return true; // Required, can have outdated updSeq partition counter if node reconnects.
 
-        RebalanceFuture rebalanceFuture = (RebalanceFuture)rebalanceFuture();
-
-        if (rebalanceFuture.isInitial())
-            return true;
-
-        AffinityTopologyVersion rebTopVer = rebalanceFuture.topologyVersion();
-
         TransactionalDrProcessor txDrProc = ctx.kernalContext().txDr();
 
         if (txDrProc != null && txDrProc.shouldScheduleRebalance(exchFut))
             return true;
 
         if (!grp.affinity().cachedVersions().contains(rebTopVer)) {
-            if (rebTopVer.compareTo(grp.localStartVersion()) > 0)
-                log.warning("Affinity history is exceed, rebalance should be try triggered [grp=" + grp.cacheOrGroupName() + "].");
+            assert rebTopVer.compareTo(grp.localStartVersion()) <= 0 :
+                "Empty history allowed only for newly started cache group [rebTopVer=" + rebTopVer +
+                    ", localStartTopVer=" + grp.localStartVersion() + ']';
 
             return true; // Required, since no history info available.
         }
+
+        final IgniteInternalFuture<Boolean> rebFut = rebalanceFuture();
+
+        if (rebFut.isDone() && !rebFut.result())
+            return true; // Required, previous rebalance cancelled.
 
         AffinityTopologyVersion lastAffChangeTopVer =
             ctx.exchange().lastAffinityChangedTopologyVersion(exchFut.topologyVersion());
@@ -267,7 +267,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     part.resetUpdateCounter();
                 }
 
-//                assert part.state() == MOVING : "Partition has invalid state for rebalance " + aff.topologyVersion() + " " + part;
+                assert part.state() == MOVING : "Partition has invalid state for rebalance " + aff.topologyVersion() + " " + part;
 
                 ClusterNode histSupplier = null;
 
@@ -296,6 +296,11 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     msg.partitions().addHistorical(p, part.initialUpdateCounter(), countersMap.updateCounter(p), partitions);
                 }
                 else {
+                    // If for some reason (for example if supplier fails and new supplier is elected) partition is
+                    // assigned for full rebalance force clearing if not yet set.
+                    if (grp.persistenceEnabled() && exchFut != null && !exchFut.isClearingPartition(grp, p))
+                        part.clearAsync();
+
                     List<ClusterNode> picked = remoteOwners(p, topVer);
 
                     if (picked.isEmpty()) {
@@ -410,15 +415,14 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /** {@inheritDoc} */
-    @Override public RebalanceFuture addAssignments(
+    @Override public Runnable addAssignments(
         GridDhtPreloaderAssignments assignments,
         boolean forceRebalance,
         long rebalanceId,
-        final RebalanceFuture next,
-        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut,
-        GridCompoundFuture<Boolean, Boolean> commonRebalanceFuture
+        Runnable next,
+        @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut
     ) {
-        return demander.addAssignments(assignments, forceRebalance, rebalanceId, next, forcedRebFut, commonRebalanceFuture);
+        return demander.addAssignments(assignments, forceRebalance, rebalanceId, next, forcedRebFut);
     }
 
     /**

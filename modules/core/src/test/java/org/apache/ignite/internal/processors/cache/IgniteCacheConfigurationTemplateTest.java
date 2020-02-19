@@ -349,7 +349,7 @@ public class IgniteCacheConfigurationTemplateTest extends GridCommonAbstractTest
 
         evt = evtLatch.await(3000, TimeUnit.MILLISECONDS);
 
-        assertFalse(evt);
+        assertTrue(evt);
     }
 
     /**
