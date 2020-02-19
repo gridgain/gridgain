@@ -476,9 +476,13 @@ public class IgniteIndexReaderTest {
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             checkIdxs(output, TableInfo.generate(i), false);
+    }
 
+    /** */
+    @Test
+    public void testEmpty() throws IgniteCheckedException {
         // Check output for empty cache group.
-        output = runIndexReader(workDir, EMPTY_CACHE_GROUP_NAME);
+        String output = runIndexReader(workDir, EMPTY_CACHE_GROUP_NAME);
 
         checkOutput(output, 1, 0, 0, 0);
 
