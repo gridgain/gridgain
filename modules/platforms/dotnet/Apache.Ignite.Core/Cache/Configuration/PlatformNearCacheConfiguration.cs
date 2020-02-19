@@ -39,6 +39,14 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// TODO
         /// </summary>
         public bool KeepBinary { get; set; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NearCacheConfiguration"/> class.
+        /// </summary>
+        public PlatformNearCacheConfiguration()
+        {
+            // No-op.
+        }
         
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCacheConfiguration"/> class.
