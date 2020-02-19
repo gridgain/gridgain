@@ -896,7 +896,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                         if (isNull(gridH2Tbl))
                             continue; // Tolerate - (k, v) is just not indexed.
 
-                        cacheSizeByTbl.computeIfAbsent(cacheId, i -> new HashMap<>())
+                        cacheSizeByTbl.computeIfAbsent(cacheCtx.cacheId(), i -> new HashMap<>())
                             .computeIfAbsent(tableName, s -> new AtomicLong()).incrementAndGet();
                     }
 
