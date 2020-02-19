@@ -168,7 +168,7 @@ public class NearCacheConfiguration<K, V> implements Serializable {
      *
      * @return {@code this} for chaining.
      */
-    public NearCacheConfiguration<K, V> setPlatformNearCacheEnabled(
+    public NearCacheConfiguration<K, V> setPlatformNearCacheConfiguration(
             PlatformNearCacheConfiguration platformNearCacheConfiguration) {
         this.platformNearCacheConfiguration = platformNearCacheConfiguration;
 

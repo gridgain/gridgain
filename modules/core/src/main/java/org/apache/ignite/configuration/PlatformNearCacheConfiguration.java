@@ -51,9 +51,12 @@ public class PlatformNearCacheConfiguration implements Serializable {
     /**
      * TODO
      * @param keyTypeName
+     * @return {@code this} for chaining.
      */
-    public void setKeyTypeName(String keyTypeName) {
+    public PlatformNearCacheConfiguration setKeyTypeName(String keyTypeName) {
         this.keyTypeName = keyTypeName;
+
+        return this;
     }
 
     /**
@@ -67,9 +70,12 @@ public class PlatformNearCacheConfiguration implements Serializable {
     /**
      * TODO
      * @param valueTypeName
+     * @return {@code this} for chaining.
      */
-    public void setValueTypeName(String valueTypeName) {
+    public PlatformNearCacheConfiguration setValueTypeName(String valueTypeName) {
         this.valueTypeName = valueTypeName;
+
+        return this;
     }
 
     /**
@@ -83,9 +89,12 @@ public class PlatformNearCacheConfiguration implements Serializable {
     /**
      * TODO
      * @param keepBinary
+     * @return {@code this} for chaining.
      */
-    public void setKeepBinary(boolean keepBinary) {
+    public PlatformNearCacheConfiguration setKeepBinary(boolean keepBinary) {
         this.keepBinary = keepBinary;
+
+        return this;
     }
 
     /** {@inheritDoc} */
