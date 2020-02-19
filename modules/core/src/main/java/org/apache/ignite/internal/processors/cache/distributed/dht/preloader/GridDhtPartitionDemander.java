@@ -314,9 +314,8 @@ public class GridDhtPartitionDemander {
                 return null;
             }
 
-            if (!force && (!oldFut.isDone() || oldFut.result()) && oldFut.compatibleWith(assignments)) {
-                if (!oldFut.isDone())
-                    compatibleRebFut.add(oldFut);
+            if (!force && !oldFut.isDone() && oldFut.compatibleWith(assignments)) {
+                compatibleRebFut.add(oldFut);
 
                 return null;
             }
