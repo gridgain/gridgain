@@ -29,7 +29,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
-        // TODO: Get rid of generic/fallback separation, it is not worth it
+        // TODO: Get rid of generic/fallback separation, it is not worth it?
+        // Run GetNear benchmark and compare
         /*
             |                    Method |       Runtime |      Mean |    Error |   StdDev |
             |-------------------------- |-------------- |----------:|---------:|---------:|
