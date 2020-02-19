@@ -25,6 +25,7 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionKey;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.VisorDataTransferObject;
+import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
@@ -66,9 +67,9 @@ public class VisorValidateIndexesJobResult extends VisorDataTransferObject {
      */
     public VisorValidateIndexesJobResult(
         Map<PartitionKey, ValidateIndexesPartitionResult> partRes,
-        Map<String, ValidateIndexesPartitionResult> idxRes,
-        Collection<IndexIntegrityCheckIssue> integrityCheckFailures,
-        Map<String, ValidateIndexesCheckSizeResult> checkSizeRes
+        @Nullable Map<String, ValidateIndexesPartitionResult> idxRes,
+        @Nullable Collection<IndexIntegrityCheckIssue> integrityCheckFailures,
+        @Nullable Map<String, ValidateIndexesCheckSizeResult> checkSizeRes
     ) {
         this.partRes = partRes;
         this.idxRes = idxRes;
