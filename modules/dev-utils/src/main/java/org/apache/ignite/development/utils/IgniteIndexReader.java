@@ -68,7 +68,6 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 
 import static java.util.Collections.singletonList;
@@ -311,7 +310,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     });
                 }
             } catch (Throwable e) {
-                String err = "Exception occurred on step " + i + ": " + e.getMessage() + "; page=" + U.toHexString(buf);
+                String err = "Exception occurred on step " + i + ": " + e.getMessage();
 
                 errors.add(new IgniteException(err, e));
             }
