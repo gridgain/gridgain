@@ -100,17 +100,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cache = _grid.CreateCache<int, int>(cfg);
             cache[1] = 1;
 
-            var nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration
-            {
-                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-            });
+            var nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration(true));
             Assert.AreEqual(1, nearCache[1]);
 
             // Create when exists.
-            nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration
-            {
-                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-            });
+            nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration(true));
             Assert.AreEqual(1, nearCache[1]);
 
             // Update entry.
@@ -138,7 +132,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             // Near cache can't be started on client node
             Assert.Throws<CacheException>(
-                () => _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration()));
+                () => _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration(true)));
         }
 
         /// <summary>
@@ -150,21 +144,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             const string cacheName = "client_with_near_cache";
 
             var cache = _client.CreateCache<int, int>(new CacheConfiguration(cacheName),
-                new NearCacheConfiguration
-                {
-                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-                });
+                new NearCacheConfiguration(true));
 
             AssertCacheIsNear(cache);
 
             cache[1] = 1;
             Assert.AreEqual(1, cache[1]);
 
-            var cache2 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cacheName),
-                new NearCacheConfiguration
-                {
-                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-                });
+            var cache2 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cacheName), 
+                new NearCacheConfiguration(true));
 
             Assert.AreEqual(1, cache2[1]);
 
@@ -182,18 +170,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestContext.CurrentContext.Test.Name + mode,
-                NearConfiguration = new NearCacheConfiguration
-                {
-                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-                }
+                NearConfiguration = new NearCacheConfiguration(true)
             };
 
             var ignite = GetIgnite(mode);
             
-            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration
-            {
-                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-            });
+            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration(true));
             
             cache[1] = 1;
             ignite.DestroyCache(cache.Name);
@@ -216,26 +198,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestContext.CurrentContext.Test.Name + mode,
-                NearConfiguration = new NearCacheConfiguration
-                {
-                    PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-                }
+                NearConfiguration = new NearCacheConfiguration(true)
             };
 
             var ignite = GetIgnite(mode);
 
-            var cache = ignite.CreateCache<int, int>(cfg,  new NearCacheConfiguration
-            {
-                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-            });
+            var cache = ignite.CreateCache<int, int>(cfg,  new NearCacheConfiguration(true));
             
             cache[1] = 1;
             ignite.DestroyCache(cache.Name);
             
-            cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration
-            {
-                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()
-            });
+            cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration(true));
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
         }
 

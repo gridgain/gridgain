@@ -44,6 +44,17 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCacheConfiguration"/> class.
         /// </summary>
+        public NearCacheConfiguration(bool enablePlatformNearCache) : this()
+        {
+            if (enablePlatformNearCache)
+            {
+                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration();
+            }
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NearCacheConfiguration"/> class.
+        /// </summary>
         internal NearCacheConfiguration(IBinaryRawReader reader)
         {
             NearStartSize = reader.ReadInt();
