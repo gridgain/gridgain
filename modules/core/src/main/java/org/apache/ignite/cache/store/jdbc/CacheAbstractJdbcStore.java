@@ -679,6 +679,7 @@ public abstract class CacheAbstractJdbcStore<K, V> implements CacheStore<K, V>, 
     @Override public void loadCache(final IgniteBiInClosure<K, V> clo, @Nullable Object... args)
         throws CacheLoaderException {
         ExecutorService pool = null;
+        int fechSize = dialect.getFetchSize();
 
         String cacheName = session().cacheName();
 
@@ -773,7 +774,7 @@ public abstract class CacheAbstractJdbcStore<K, V> implements CacheStore<K, V>, 
                                 for (int i = 0; i < keyCnt; i++)
                                     upperBound[i] = rs.getObject(i + 1);
 
-                                futs.add(pool.submit(loadCacheRange(em, clo, null, upperBound, 0)));
+                                futs.add(pool.submit(loadCacheRange(em, clo, null, upperBound, fechSize)));
 
                                 while (rs.next()) {
                                     Object[] lowerBound = upperBound;
@@ -783,10 +784,10 @@ public abstract class CacheAbstractJdbcStore<K, V> implements CacheStore<K, V>, 
                                     for (int i = 0; i < keyCnt; i++)
                                         upperBound[i] = rs.getObject(i + 1);
 
-                                    futs.add(pool.submit(loadCacheRange(em, clo, lowerBound, upperBound, 0)));
+                                    futs.add(pool.submit(loadCacheRange(em, clo, lowerBound, upperBound, fechSize)));
                                 }
 
-                                futs.add(pool.submit(loadCacheRange(em, clo, upperBound, null, 0)));
+                                futs.add(pool.submit(loadCacheRange(em, clo, upperBound, null, fechSize)));
 
                                 continue;
                             }

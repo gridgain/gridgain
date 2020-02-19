@@ -2703,7 +2703,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     col.name(),
                     null,
                     Class.forName(col.typeName()),
-                    false,
+                    PropertyMembership.VALUE,
                     null,
                     !col.isNullable(),
                     null,

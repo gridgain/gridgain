@@ -56,7 +56,7 @@ public interface GridQueryProperty {
      * Property ownership flag.
      * @return {@code true} if this property belongs to key, {@code false} if it belongs to value.
      */
-    public boolean key();
+    public PropertyMembership membership();
 
     /**
      * @return Parent property or {@code null} if this property is not nested.

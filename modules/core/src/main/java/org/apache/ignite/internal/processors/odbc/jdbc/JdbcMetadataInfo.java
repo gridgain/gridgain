@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.query.ColumnInformation;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.TableInformation;
 import org.jetbrains.annotations.Nullable;
@@ -113,7 +114,7 @@ public class JdbcMetadataInfo {
                 List<String> fields = new ArrayList<>();
 
                 for (String field : table.fields().keySet()) {
-                    if (table.property(field).key())
+                    if (table.property(field).membership() != PropertyMembership.VALUE)
                         fields.add(field);
                 }
 

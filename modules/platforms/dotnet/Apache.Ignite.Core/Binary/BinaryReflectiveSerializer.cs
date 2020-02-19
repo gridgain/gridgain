@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Binary
         private bool _isInUse;
 
         /** Force timestamp flag. */
-        private bool _forceTimestamp;
+        private bool _forceTimestamp = true;
 
         /// <summary>
         /// Write binary object.

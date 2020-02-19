@@ -25,6 +25,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryObjectEx;
 import org.apache.ignite.internal.binary.BinaryObjectExImpl;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
+import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.util.typedef.F;
 
 /**
@@ -46,8 +47,8 @@ public class QueryBinaryProperty implements GridQueryProperty {
     /** Result class. */
     private Class<?> type;
 
-    /** Defines where value should be extracted from : cache entry's key or value. */
-    private final boolean isKeyProp;
+    /** Defines where value should be extracted from: cache entry's key or value. */
+    private final PropertyMembership membership;
 
     /** Binary field to speed-up deserialization. */
     private volatile BinaryField field;
@@ -74,7 +75,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
      * @param propName Property name.
      * @param parent Parent property.
      * @param type Result type.
-     * @param key {@code true} if key property, {@code false} otherwise.
+     * @param membership Whether the property belongs to the cache entry's key, value or both.
      * @param alias Field alias.
      * @param notNull {@code true} if null value is not allowed.
      * @param defaultValue Default value.
@@ -82,7 +83,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
      * @param scale Scale.
      */
     public QueryBinaryProperty(GridKernalContext ctx, String propName, QueryBinaryProperty parent,
-        Class<?> type, boolean key, String alias, boolean notNull, Object defaultValue,
+        Class<?> type, PropertyMembership membership, String alias, boolean notNull, Object defaultValue,
         int precision, int scale) {
         this.ctx = ctx;
         this.propName = propName;
@@ -90,7 +91,7 @@ public class QueryBinaryProperty implements GridQueryProperty {
         this.parent = parent;
         this.type = type;
         this.notNull = notNull;
-        this.isKeyProp = key;
+        this.membership = membership;
         this.defaultValue = defaultValue;
         this.precision = precision;
         this.scale = scale;
@@ -111,10 +112,12 @@ public class QueryBinaryProperty implements GridQueryProperty {
                     "[parent=" + parent + ", propName=" + propName + ", obj=" + obj + ']');
         }
         else
-            obj = isKeyProp ? key : val;
+            // Extract property value from the Key object if property belongs to both the Key and Value
+            // (if membership is PropertyMembership.KEY_VALUE)
+            obj = membership == PropertyMembership.VALUE ? val : key;
 
         if (obj instanceof BinaryObject) {
-            BinaryObject obj0 = (BinaryObject) obj;
+            BinaryObject obj0 = (BinaryObject)obj;
 
             return fieldValue(obj0);
         }
@@ -129,8 +132,23 @@ public class QueryBinaryProperty implements GridQueryProperty {
 
     /** {@inheritDoc} */
     @Override public void setValue(Object key, Object val, Object propVal) throws IgniteCheckedException {
-        Object obj = key() ? key : val;
+        if (membership() != PropertyMembership.VALUE)
+            setValue(key, val, propVal, key);
 
+        if (membership() != PropertyMembership.KEY)
+            setValue(key, val, propVal, val);
+    }
+
+    /**
+     * Sets this property value for the given object.
+     *
+     * @param key Key.
+     * @param val Value.
+     * @param propVal Property value.
+     * @param obj The object to set the property of.
+     * @throws IgniteCheckedException If failed.
+     */
+    private void setValue(Object key, Object val, Object propVal, Object obj) throws IgniteCheckedException {
         if (obj == null)
             return;
 
@@ -235,8 +253,8 @@ public class QueryBinaryProperty implements GridQueryProperty {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean key() {
-        return isKeyProp;
+    @Override public PropertyMembership membership() {
+        return membership;
     }
 
     /** {@inheritDoc} */

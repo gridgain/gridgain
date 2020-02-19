@@ -58,6 +58,7 @@ import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2IndexBase;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
@@ -1083,7 +1084,7 @@ public class H2Utils {
                     for (String propName : type.fields().keySet()) {
                         GridQueryProperty prop = type.property(propName);
 
-                        if (prop.key()) {
+                        if (prop.membership() != PropertyMembership.VALUE) {
                             added = true;
 
                             Column col = tbl.getColumn(propName);

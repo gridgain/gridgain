@@ -28,6 +28,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContextInfo;
 import org.apache.ignite.internal.processors.query.GridQueryIndexDescriptor;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.PropertyMembership;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.database.H2PkHashIndex;
 import org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase;
@@ -328,7 +329,7 @@ public class H2TableDescriptor {
                 for (String propName : type.fields().keySet()) {
                     GridQueryProperty prop = type.property(propName);
 
-                    if (prop.key()) {
+                    if (prop.membership() != PropertyMembership.VALUE) {
                         Column col = tbl.getColumn(propName);
 
                         keyCols.add(tbl.indexColumn(col.getColumnId(), SortOrder.ASCENDING));

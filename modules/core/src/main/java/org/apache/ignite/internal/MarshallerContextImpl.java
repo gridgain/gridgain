@@ -58,6 +58,7 @@ import org.apache.ignite.plugin.PluginProvider;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.MarshallerPlatformIds.DOTNET_ID;
 import static org.apache.ignite.internal.MarshallerPlatformIds.JAVA_ID;
 import static org.apache.ignite.marshaller.MarshallerUtils.CLS_NAMES_FILE;
 import static org.apache.ignite.marshaller.MarshallerUtils.JDK_CLS_NAMES_FILE;
@@ -365,7 +366,25 @@ public class MarshallerContextImpl implements MarshallerContext {
 
     /** {@inheritDoc} */
     @Override public Class getClass(int typeId, ClassLoader ldr) throws ClassNotFoundException, IgniteCheckedException {
-        String clsName = getClassName(JAVA_ID, typeId);
+        String clsName = null;
+        ClassNotFoundException clsNotFoundEx = null;
+
+        for (byte platformId : new byte[] {JAVA_ID, DOTNET_ID}) {
+            try {
+                clsName = getClassName(platformId, typeId);
+            }
+            catch (ClassNotFoundException ex) {
+                clsNotFoundEx = ex;
+            }
+
+            if (clsName != null) {
+                clsNotFoundEx = null;
+                break;
+            }
+        }
+
+        if (clsNotFoundEx != null)
+            throw clsNotFoundEx;
 
         if (clsName == null)
             throw new ClassNotFoundException("Unknown type ID: " + typeId);

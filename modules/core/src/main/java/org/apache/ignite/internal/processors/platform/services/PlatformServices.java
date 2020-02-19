@@ -278,7 +278,7 @@ public class PlatformServices extends PlatformAbstractTarget {
                     args = new Object[reader.readInt()];
 
                     for (int i = 0; i < args.length; i++)
-                        args[i] = reader.readObjectDetached();
+                        args[i] = reader.readObjectDetached(!srvKeepBinary);
                 }
                 else
                     args = null;
@@ -573,10 +573,6 @@ public class PlatformServices extends PlatformAbstractTarget {
                 return ((PlatformService)proxy).invokeMethod(mthdName, srvKeepBinary, args);
             else {
                 assert proxy instanceof GridServiceProxy;
-
-                // Deserialize arguments for Java service when not in binary mode
-                if (!srvKeepBinary)
-                    args = PlatformUtils.unwrapBinariesInArray(args);
 
                 Method mtd = getMethod(serviceClass, mthdName, args);
 

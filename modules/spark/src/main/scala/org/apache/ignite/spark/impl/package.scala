@@ -21,7 +21,7 @@ import org.apache.ignite.cache.CacheMode
 import org.apache.ignite.cluster.ClusterNode
 import org.apache.ignite.configuration.CacheConfiguration
 import org.apache.ignite.internal.IgniteEx
-import org.apache.ignite.internal.processors.query.{GridQueryTypeDescriptor, QueryTypeDescriptorImpl}
+import org.apache.ignite.internal.processors.query.{GridQueryTypeDescriptor, PropertyMembership, QueryTypeDescriptorImpl}
 import org.apache.ignite.internal.processors.query.QueryUtils.normalizeSchemaName
 import org.apache.ignite.internal.util.lang.GridFunc.contains
 import org.apache.ignite.{Ignite, Ignition}
@@ -142,7 +142,7 @@ package object impl {
       * @return All the key fields in a Set.
       */
     def allKeyFields(table: GridQueryTypeDescriptor): scala.collection.Set[String] =
-        table.fields.filter(entry => table.property(entry._1).key).keySet
+        table.fields.filter(entry => table.property(entry._1).membership() != PropertyMembership.VALUE).keySet
 
     /**
       * Computes spark partitions for a given cache.

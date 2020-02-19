@@ -28,6 +28,8 @@ namespace Apache.Ignite.Core.Impl.Binary
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Common;
+    using NodaTime;
+    using NodaTime.TimeZones;
 
     /// <summary>
     /// Utilities for binary serialization.
@@ -79,6 +81,16 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             RegistrationDisabled = true
         };
+
+        /** 
+         * We use NodaTime to ensure Java/.NET interoperability since <see cref="TimeZoneInfo"/> adjustment rules 
+         * are incomplete for some time zones.
+         */
+        private static readonly DateTimeZone NodaZone = DateTimeZoneProviders.Tzdb.GetSystemDefault();
+
+        /** Ambiguous and skipped local time resolvers. */
+        private static readonly ZoneLocalMappingResolver NodaZoneMappingResolver =
+            Resolvers.CreateMappingResolver(Resolvers.ReturnEarlier, Resolvers.ReturnStartOfIntervalAfter);
 
         /** Method: ReadArray. */
         public static readonly MethodInfo MtdhReadArray =
@@ -405,7 +417,20 @@ namespace Apache.Ignite.Core.Impl.Binary
             long high = stream.ReadLong();
             int low = stream.ReadInt();
 
-            return new DateTime(JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, DateTimeKind.Utc);
+            var utcDateTime = new DateTime(
+                JavaDateTicks + high * TimeSpan.TicksPerMillisecond + low / 100, 
+                DateTimeKind.Utc);
+            var nodaTime = Instant.FromDateTimeUtc(utcDateTime).InZone(NodaZone);
+            
+            return new DateTime(
+                nodaTime.Year, 
+                nodaTime.Month, 
+                nodaTime.Day, 
+                nodaTime.Hour, 
+                nodaTime.Minute, 
+                nodaTime.Second, 
+                nodaTime.Millisecond, 
+                DateTimeKind.Local);
         }
 
         /// <summary>
@@ -1609,13 +1634,12 @@ namespace Apache.Ignite.Core.Impl.Binary
          */
         private static void ToJavaDate(DateTime date, out long high, out int low)
         {
-            if (date.Kind != DateTimeKind.Utc)
-            {
-                throw new BinaryObjectException(
-                    "DateTime is not UTC. Only UTC DateTime can be used for interop with other platforms.");
-            }
-
-            long diff = date.Ticks - JavaDateTicks;
+            long diff = date.Kind == DateTimeKind.Utc
+                ? date.Ticks - JavaDateTicks
+                : LocalDateTime.FromDateTime(date)
+                    .InZone(NodaZone, NodaZoneMappingResolver)
+                    .ToInstant()
+                    .ToUnixTimeTicks();
 
             high = diff / TimeSpan.TicksPerMillisecond;
 

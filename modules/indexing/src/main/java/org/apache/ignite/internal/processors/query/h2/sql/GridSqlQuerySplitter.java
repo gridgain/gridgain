@@ -1479,7 +1479,8 @@ public class GridSqlQuerySplitter {
         if (el instanceof GridSqlAlias ||
             el instanceof GridSqlOperation ||
             el instanceof GridSqlFunction ||
-            el instanceof GridSqlArray) {
+            el instanceof GridSqlArray ||
+            el instanceof GridSqlValueRow) {
             for (int i = 0; i < el.size(); i++)
                 normalizeExpression(el, i);
         }
@@ -1740,7 +1741,9 @@ public class GridSqlQuerySplitter {
                 if (hasDistinctAggregate)
                     mapAgg = agg.child();
                 else {
-                    mapAgg = SplitterUtils.aggregate(agg.distinct(), agg.type()).resultType(GridSqlType.STRING)
+                    mapAgg = SplitterUtils.aggregate(agg.distinct(), agg.type())
+                        .setGroupConcatSeparator(agg.getGroupConcatSeparator())
+                        .resultType(GridSqlType.STRING)
                         .addChild(agg.child());
                 }
 

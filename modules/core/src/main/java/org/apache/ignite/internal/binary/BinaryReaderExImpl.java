@@ -1335,6 +1335,11 @@ public class BinaryReaderExImpl implements BinaryReader, BinaryRawReaderEx, Bina
     }
 
     /** {@inheritDoc} */
+    @Nullable @Override public Object readObjectDetached(boolean deserialize) throws BinaryObjectException {
+        return BinaryUtils.unmarshal(in, ctx, ldr, this, true, deserialize);
+    }
+
+    /** {@inheritDoc} */
     @Nullable @Override public Object[] readObjectArray(String fieldName) throws BinaryObjectException {
         try {
             return findFieldByName(fieldName) ? this.readObjectArray() : null;
