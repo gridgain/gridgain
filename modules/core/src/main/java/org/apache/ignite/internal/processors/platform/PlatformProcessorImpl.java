@@ -77,7 +77,7 @@ import static org.apache.ignite.internal.processors.platform.client.ClientConnec
 /**
  * GridGain platform processor.
  */
-@SuppressWarnings({"unchecked"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class PlatformProcessorImpl extends GridProcessorAdapter implements PlatformProcessor, PlatformTarget {
     /** */
     private static final int OP_GET_CACHE = 1;
@@ -185,7 +185,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     private static final int OP_SET_BASELINE_AUTO_ADJ_TIMEOUT = 35;
 
     /** */
-    private static final int OP_GET_CACHE_NAME = 36;
+    private static final int OP_GET_CACHE_CONFIG = 36;
 
     /** Start latch. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
@@ -561,10 +561,10 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** {@inheritDoc} */
     @Override public void processInStreamOutStream(int type, BinaryRawReaderEx reader, BinaryRawWriterEx writer) throws IgniteCheckedException {
-        if (type == OP_GET_CACHE_NAME) {
+        if (type == OP_GET_CACHE_CONFIG) {
             int cacheId = reader.readInt();
-            String cacheName = ctx.cache().cacheDescriptor(cacheId).cacheName();
-            writer.writeString(cacheName);
+            CacheConfiguration cfg = ctx.cache().cacheDescriptor(cacheId).cacheConfiguration();
+            PlatformConfigurationUtils.writeCacheConfiguration(writer, cfg, DEFAULT_VER);
 
             return;
         }
