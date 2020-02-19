@@ -91,9 +91,6 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearTest.cs">
       <Link>Cache\Near\CacheNearTest.cs</Link>
     </Compile>
-    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearTestGenericDowngrade.cs">
-      <Link>Cache\Near\CacheNearTestGenericDowngrade.cs</Link>
-    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\CacheNearTopologyChangeTest.cs">
       <Link>Cache\Near\CacheNearTopologyChangeTest.cs</Link>
     </Compile>
