@@ -147,7 +147,7 @@ public class IgniteIndexReader implements AutoCloseable {
     /** */
     private PageIOProcessor leafPageIOProcessor = new LeafPageIOProcessor();
 
-    /** */
+    /** Mapping IO classes to their processors. */
     private final Map<Class, PageIOProcessor> ioProcessorsMap = new HashMap<Class, PageIOProcessor>() {{
         put(BPlusMetaIO.class, new MetaPageIOProcessor());
         put(BPlusInnerIO.class, innerPageIOProcessor);
@@ -236,7 +236,9 @@ public class IgniteIndexReader implements AutoCloseable {
         return file;
     }
 
-    /** */
+    /**
+     * Read index file.
+     */
     public void readIdx() {
         long partPageStoresNum = Arrays.stream(partStores)
             .filter(Objects::nonNull)
@@ -346,7 +348,11 @@ public class IgniteIndexReader implements AutoCloseable {
             "from count of pages found in index trees and page lists.");
     }
 
-    /** */
+    /**
+     * Gets meta info about page lists.
+     * @param metaPageListId Page list meta id.
+     * @return Meta info.
+     */
     private PageListsInfo getPageListsMetaInfo(long metaPageListId) {
         Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData = new HashMap<>();
 
@@ -397,7 +403,12 @@ public class IgniteIndexReader implements AutoCloseable {
         return new PageListsInfo(bucketsData, allPages, pageListStat, errors);
     }
 
-    /** */
+    /**
+     * Get single page list.
+     * @param pageListStartId Id of the start page of the page list.
+     * @param pageStat Page types statistics.
+     * @return List of page ids.
+     */
     private List<Long> getPageList(long pageListStartId, Map<Class, AtomicLong> pageStat) {
         List<Long> res = new LinkedList<>();
 
@@ -447,7 +458,11 @@ public class IgniteIndexReader implements AutoCloseable {
         return res;
     }
 
-    /** */
+    /**
+     * Traverse all trees in file and return their info.
+     * @param metaTreeRootPageId Meta tree root id.
+     * @return Index trees info.
+     */
     private Map<String, TreeTraversalInfo> traverseAllTrees(long metaTreeRootPageId) {
         Map<String, TreeTraversalInfo> treeInfos = new HashMap<>();
 
@@ -470,7 +485,10 @@ public class IgniteIndexReader implements AutoCloseable {
         return treeInfos;
     }
 
-    /** */
+    /**
+     * Prints traversal info.
+     * @param treeInfos Tree traversal info.
+     */
     private void printTraversalResults(Map<String, TreeTraversalInfo> treeInfos) {
         print("\nTree traversal results: ");
 
@@ -518,7 +536,10 @@ public class IgniteIndexReader implements AutoCloseable {
         print("------------------");
     }
 
-    /** */
+    /**
+     * Prints page lists info.
+     * @param pageListsInfo Page lists info.
+     */
     private void printPagesListsInfo(PageListsInfo pageListsInfo) {
         print("\n---Page lists info.");
 
@@ -560,7 +581,12 @@ public class IgniteIndexReader implements AutoCloseable {
         print("------------------");
     }
 
-    /** */
+    /**
+     * Traverse single index tree.
+     * @param rootPageId Root page id.
+     * @param isMetaTree Whether it is meta tree.
+     * @return Tree traversal info.
+     */
     private TreeTraversalInfo traverseTree(long rootPageId, boolean isMetaTree) {
         Map<Class, AtomicLong> ioStat = new HashMap<>();
 
@@ -578,15 +604,20 @@ public class IgniteIndexReader implements AutoCloseable {
             ? (currPageId, item, link) -> idxItems.add(item)
             : (currPageId, item, link) -> idxItemsCnt.incrementAndGet();
 
-        getTreeNode(rootPageId, new TreeNodeContext(idxStore, ioStat, errors, innerCb, null, itemCb));
+        getTreeNode(rootPageId, new TreeTraverseContext(idxStore, ioStat, errors, innerCb, null, itemCb));
 
         return isMetaTree
             ? new TreeTraversalInfo(ioStat, errors, innerPageIds, rootPageId, idxItems)
             : new TreeTraversalInfo(ioStat, errors, innerPageIds, rootPageId, idxItemsCnt.get());
     }
 
-    /** */
-    private TreeNode getTreeNode(long pageId, TreeNodeContext nodeCtx) {
+    /**
+     * Gets tree node and all its children.
+     * @param pageId Page id, where tree node is located.
+     * @param nodeCtx Tree traverse context.
+     * @return Tree node.
+     */
+    private TreeNode getTreeNode(long pageId, TreeTraverseContext nodeCtx) {
         Class ioCls;
 
         PageContent pageContent;
@@ -648,7 +679,15 @@ public class IgniteIndexReader implements AutoCloseable {
         }
     }
 
-    /** */
+    /**
+     * Gets CLI option from filled options map.
+     * @param options Options and their values.
+     * @param name Option name.
+     * @param cls Value class,
+     * @param dfltVal Default value supplier.
+     * @param <T> Value type.
+     * @return Value.
+     */
     private static <T> T getOptionFromMap(Map<String, String> options, String name, Class<T> cls, Supplier<T> dfltVal) {
         String s = options.get(name);
 
@@ -725,12 +764,19 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     *
+     * Tree node info.
      */
     private static class TreeNode {
+        /** */
         final long pageId;
+
+        /** */
         final PageIO io;
+
+        /** */
         final String additionalInfo;
+
+        /** */
         final List<TreeNode> children;
 
         /** */
@@ -743,18 +789,29 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     *
+     * Traverse context, which is unique for traversal of one single tree.
      */
-    private static class TreeNodeContext {
+    private static class TreeTraverseContext {
+        /** Page store. */
         final FilePageStore store;
+
+        /** Page type statistics. */
         final Map<Class, AtomicLong> ioStat;
+
+        /** Map of errors, pageId -> set of exceptions. */
         final Map<Long, Set<Throwable>> errors;
+
+        /** Callback that is called for each inner node page. */
         final PageCallback innerCb;
+
+        /** Callback that is called for each leaf node page.*/
         final PageCallback leafCb;
+
+        /** Callback that is called for each leaf item. */
         final ItemCallback itemCb;
 
         /** */
-        private TreeNodeContext(
+        private TreeTraverseContext(
             FilePageStore store,
             Map<Class, AtomicLong> ioStat,
             Map<Long, Set<Throwable>> errors,
@@ -772,12 +829,19 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     *
+     * Content of the deserialized page. When content is gained, we can free the page buffer.
      */
     private static class PageContent {
+        /** */
         final PageIO io;
+
+        /** List of children page ids, or links to root pages (for meta leaf). */
         final List<Long> linkedPageIds;
+
+        /** List of items (for leaf pages). */
         final List<Object> items;
+
+        /** Some info. */
         final String info;
 
         /** */
@@ -806,13 +870,27 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     *
+     * Processor for page IOs.
      */
     private interface PageIOProcessor {
-        /** */
-        PageContent getContent(PageIO io, long addr, long pageId, TreeNodeContext nodeCtx);
-        /** */
-        TreeNode getNode(PageContent content, long pageId, TreeNodeContext nodeCtx);
+        /**
+         * Gets deserialized content.
+         * @param io Page IO.
+         * @param addr Page address.
+         * @param pageId Page id.
+         * @param nodeCtx Tree traversal context.
+         * @return Page content.
+         */
+        PageContent getContent(PageIO io, long addr, long pageId, TreeTraverseContext nodeCtx);
+
+        /**
+         * Gets node info from page contents.
+         * @param content Page content.
+         * @param pageId Page id.
+         * @param nodeCtx Tree traversal context.
+         * @return Tree node info.
+         */
+        TreeNode getNode(PageContent content, long pageId, TreeTraverseContext nodeCtx);
     }
 
     /**
@@ -820,7 +898,7 @@ public class IgniteIndexReader implements AutoCloseable {
      */
     private class MetaPageIOProcessor implements PageIOProcessor {
         /** {@inheritDoc} */
-        @Override public PageContent getContent(PageIO io, long addr, long pageId, TreeNodeContext nodeCtx) {
+        @Override public PageContent getContent(PageIO io, long addr, long pageId, TreeTraverseContext nodeCtx) {
             BPlusMetaIO bPlusMetaIO = (BPlusMetaIO)io;
 
             int rootLvl = bPlusMetaIO.getRootLevel(addr);
@@ -830,7 +908,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         /** {@inheritDoc} */
-        @Override public TreeNode getNode(PageContent content, long pageId, TreeNodeContext nodeCtx) {
+        @Override public TreeNode getNode(PageContent content, long pageId, TreeTraverseContext nodeCtx) {
             return new TreeNode(pageId, content.io, null, singletonList(getTreeNode(content.linkedPageIds.get(0), nodeCtx)));
         }
     }
@@ -840,7 +918,7 @@ public class IgniteIndexReader implements AutoCloseable {
      */
     private class InnerPageIOProcessor implements PageIOProcessor {
         /** {@inheritDoc} */
-        @Override public PageContent getContent(PageIO io, long addr, long pageId, TreeNodeContext nodeCtx) {
+        @Override public PageContent getContent(PageIO io, long addr, long pageId, TreeTraverseContext nodeCtx) {
             BPlusInnerIO innerIo = (BPlusInnerIO)io;
 
             int cnt = innerIo.getCount(addr);
@@ -865,7 +943,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         /** {@inheritDoc} */
-        @Override public TreeNode getNode(PageContent content, long pageId, TreeNodeContext nodeCtx) {
+        @Override public TreeNode getNode(PageContent content, long pageId, TreeTraverseContext nodeCtx) {
             List<TreeNode> children = new ArrayList<>(content.linkedPageIds.size());
 
             for (Long id : content.linkedPageIds)
@@ -883,7 +961,7 @@ public class IgniteIndexReader implements AutoCloseable {
      */
     private class LeafPageIOProcessor implements PageIOProcessor {
         /** {@inheritDoc} */
-        @Override public PageContent getContent(PageIO io, long addr, long pageId, TreeNodeContext nodeCtx) {
+        @Override public PageContent getContent(PageIO io, long addr, long pageId, TreeTraverseContext nodeCtx) {
             GridStringBuilder sb = new GridStringBuilder();
 
             List<Object> items = new LinkedList<>();
@@ -919,7 +997,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         /** */
-        private boolean processIndexLeaf(PageIO io, long addr, long pageId, List<Object> items, TreeNodeContext nodeCtx) {
+        private boolean processIndexLeaf(PageIO io, long addr, long pageId, List<Object> items, TreeTraverseContext nodeCtx) {
             if (io instanceof BPlusIO && (io instanceof H2RowLinkIO || io instanceof PendingRowIO)) {
                 int itemsCnt = ((BPlusIO)io).getCount(addr);
 
@@ -1005,7 +1083,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         /** {@inheritDoc} */
-        @Override public TreeNode getNode(PageContent content, long pageId, TreeNodeContext nodeCtx) {
+        @Override public TreeNode getNode(PageContent content, long pageId, TreeTraverseContext nodeCtx) {
             if (nodeCtx.leafCb != null)
                 nodeCtx.leafCb.cb(content, pageId);
 
@@ -1022,11 +1100,25 @@ public class IgniteIndexReader implements AutoCloseable {
      *
      */
     private static class TreeTraversalInfo {
+        /** Page type statistics. */
         final Map<Class, AtomicLong> ioStat;
+
+        /** Map of errors, pageId -> set of exceptions. */
         final Map<Long, Set<Throwable>> errors;
+
+        /** Set of all inner page ids. */
         final Set<Long> innerPageIds;
+
+        /** Root page id. */
         final long rootPageId;
+
+        /**
+         * List of index items. This list is filled only for meta tree. For other index trees only {@link #itemsCnt}
+         * is set.
+         */
         final List<Object> idxItems;
+
+        /** Items count. */
         final long itemsCnt;
 
         /** */
@@ -1045,6 +1137,8 @@ public class IgniteIndexReader implements AutoCloseable {
             this.itemsCnt = idxItems.size();
         }
 
+
+        /** */
         public TreeTraversalInfo(
             Map<Class, AtomicLong> ioStat,
             Map<Long, Set<Throwable>> errors,
@@ -1065,9 +1159,19 @@ public class IgniteIndexReader implements AutoCloseable {
      *
      */
     private static class PageListsInfo {
+        /**
+         * Page list bucket data (next meta id, bucket index) -> list of page ids.
+         * See {@link PagesListMetaIO#getBucketsData }.
+         */
         final Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData;
+
+        /** All page ids from page lists. */
         final Set<Long> allPages;
+
+        /** Page type statistics. */
         final Map<Class, AtomicLong> pageListStat;
+
+        /** Map of errors, pageId -> exception. */
         final Map<Long, Throwable> errors;
 
         /** */
