@@ -123,12 +123,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             var nearCfg = cacheConfiguration.NearConfiguration.PlatformNearCacheConfiguration;
             
+            Func<object> affinityTopologyVersionFunc = () => _affinityTopologyVersion;
+            var affinity = _ignite.GetAffinity(cacheConfiguration.Name);
+            var keepBinary = nearCfg.KeepBinary;
+
             TypeResolver resolver = null;
             Func<string, Type> resolve = n =>
             {
                 if (n == null)
                 {
-                    return null;
+                    return typeof(object);
                 }
 
                 if (resolver == null)
@@ -136,7 +140,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                     resolver = new TypeResolver();
                 }
 
-                return resolver.ResolveType(n);
+                var resolved = resolver.ResolveType(n);
+
+                if (resolved == null)
+                {
+                    throw new InvalidOperationException(string.Format("Failed to resolve type: '{0}'", n));
+                }
+
+                return resolved;
             };
 
             var keyType = resolve(nearCfg.KeyTypeName);
@@ -144,7 +155,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             if (!keyType.IsAssignableFrom(typeof(TK)) || !valType.IsAssignableFrom(typeof(TV)))
             {
-                // TODO: Add test for this.
                 var message = string.Format(
                     "Invalid PlatformNearCacheConfiguration: " +
                     "Near cache is configured as <{0}. {1}>, but cache is <{2}, {3}>",
@@ -154,13 +164,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             }
 
             var cacheType = typeof(NearCache<,>).MakeGenericType(keyType, valType);
-            Func<object> affinityTopologyVersionFunc = () => _affinityTopologyVersion;
-            var affinity = _ignite.GetAffinity(cacheConfiguration.Name);
             var nearCache = Activator.CreateInstance(
                 cacheType, 
                 affinityTopologyVersionFunc, 
                 affinity,
-                cacheConfiguration);
+                keepBinary);
             
             return (INearCache) nearCache;
         }
