@@ -29,6 +29,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
+        // TODO: Get rid of generic/fallback separation, it is not worth it
+        /*
+            |                    Method |       Runtime |      Mean |    Error |   StdDev |
+            |-------------------------- |-------------- |----------:|---------:|---------:|
+            |   TestGenericDictGuidKeys | .NET Core 2.2 | 145.68 ns | 0.401 ns | 0.375 ns |
+            |    TestObjectDictGuidKeys | .NET Core 2.2 | 128.33 ns | 0.298 ns | 0.264 ns |
+            | TestGenericDictStringKeys | .NET Core 2.2 | 180.33 ns | 2.415 ns | 2.259 ns |
+            |  TestObjectDictStringKeys | .NET Core 2.2 | 175.74 ns | 0.439 ns | 0.410 ns |
+            |   TestGenericDictGuidKeys | .NET Core 3.1 |  74.94 ns | 0.406 ns | 0.360 ns |
+            |    TestObjectDictGuidKeys | .NET Core 3.1 | 105.90 ns | 0.225 ns | 0.210 ns |
+            | TestGenericDictStringKeys | .NET Core 3.1 | 158.95 ns | 0.297 ns | 0.248 ns |
+            |  TestObjectDictStringKeys | .NET Core 3.1 | 162.72 ns | 0.289 ns | 0.256 ns |
+         */
+
         /** Indicates unknown partition. */
         private const int UnknownPartition = -1;
         
