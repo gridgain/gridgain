@@ -100,11 +100,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cache = _grid.CreateCache<int, int>(cfg);
             cache[1] = 1;
 
-            var nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration(true));
+            var nearCacheConfiguration = new NearCacheConfiguration().EnablePlatformNearCache<int, int>();
+            var nearCache = _client.CreateNearCache<int, int>(cacheName, nearCacheConfiguration);
             Assert.AreEqual(1, nearCache[1]);
 
             // Create when exists.
-            nearCache = _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration(true));
+            nearCache = _client.CreateNearCache<int, int>(cacheName, nearCacheConfiguration);
             Assert.AreEqual(1, nearCache[1]);
 
             // Update entry.
