@@ -30,7 +30,10 @@ public class ProgressPrinter {
     private static final int DEFAULT_CHUNKS_NUM = 50;
 
     /** */
-    private static final int PROGRESS_BAR_LENGTH = 20;
+    private static final int MIN_PROGRESS_BAR_LENGTH = 20;
+
+    /** */
+    private static final int MAX_CAPTION_LENTH = 40;
 
     /** */
     private final long total;
@@ -72,7 +75,7 @@ public class ProgressPrinter {
      */
     public ProgressPrinter(PrintStream printStream, String caption, long total, int chunksNum) {
         this.printStream = printStream;
-        this.caption = caption;
+        this.caption = caption.length() >= MAX_CAPTION_LENTH ? caption.substring(0, MAX_CAPTION_LENTH) : caption;
         this.total = total;
         this.chunksNum = chunksNum;
     }
@@ -86,11 +89,8 @@ public class ProgressPrinter {
         if (curr > total)
             throw new RuntimeException("Current value can't be greater than total value.");
 
-        if (timeStarted == null) {
+        if (timeStarted == null)
             timeStarted = System.currentTimeMillis();
-
-            printStream.println();
-        }
 
         final double currRatio = (double)curr / total;
 
@@ -105,31 +105,38 @@ public class ProgressPrinter {
 
     /** */
     private void printProgress0(long curr, double currRatio) {
-        String progressBarFmt = "\r%s: %4s [%" + PROGRESS_BAR_LENGTH + "s] %s/%s (%s / %s)";
+        int progressBarLen = MIN_PROGRESS_BAR_LENGTH + (MAX_CAPTION_LENTH - caption.length());
+
+        String progressBarFmt = "\r%s %4s [%" + progressBarLen + "s] %-50s";
 
         int percentage = (int)(currRatio * 100);
-        int progressCurrLen = (int)(currRatio * PROGRESS_BAR_LENGTH);
+        int progressCurrLen = (int)(currRatio * progressBarLen);
         long timeRunning = System.currentTimeMillis() - timeStarted;
         long timeEstimated = (long)(timeRunning / currRatio);
 
         GridStringBuilder progressBuilder = new GridStringBuilder();
 
-        for (int i = 0; i < PROGRESS_BAR_LENGTH; i++)
+        for (int i = 0; i < progressBarLen; i++)
             progressBuilder.a(i < progressCurrLen ? "=" : " ");
 
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
         timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
-        String progressBar = String.format(
-            progressBarFmt,
-            caption,
-            percentage + "%",
-            progressBuilder.toString(),
+        String txtProgress = String.format(
+            "%s/%s (%s / %s)",
             curr,
             total,
             timeFormat.format(new Date(timeRunning)),
             timeFormat.format(new Date(timeEstimated))
+        );
+
+        String progressBar = String.format(
+            progressBarFmt,
+            caption + ":",
+            percentage + "%",
+            progressBuilder.toString(),
+            txtProgress
         );
 
         printStream.print(progressBar);

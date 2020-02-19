@@ -89,12 +89,13 @@ import static org.apache.ignite.internal.processors.cache.persistence.tree.io.Pa
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
 
 /**
- *
+ * Offline reader for index files.
  */
 public class IgniteIndexReader implements AutoCloseable {
     /** */
     private static final String META_TREE_NAME = "MetaTree";
 
+    /** */
     static {
         PageIO.registerH2(H2InnerIO.VERSIONS, H2LeafIO.VERSIONS, H2MvccInnerIO.VERSIONS, H2MvccLeafIO.VERSIONS);
 
@@ -293,8 +294,6 @@ public class IgniteIndexReader implements AutoCloseable {
 
                         pageIoIds.computeIfAbsent(BPlusMetaIO.class, k -> new HashSet<>()).add(info.rootPageId);
                     });
-
-                    print("");
                 }
                 else if (io instanceof PagesListMetaIO)
                     pageListsInfo.set(getPageListsMetaInfo(pageId));
@@ -986,7 +985,11 @@ public class IgniteIndexReader implements AutoCloseable {
                             }
                         }
                         catch (Exception e) {
-                            nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>()).add(e);
+                            String err = "Failed to read data payload from partition, partId=" + linkedPagePartId +
+                                ", pageIndex=" + pageIndex(linkedPageId) + ", linkedPageId=" + linkedPageId;
+
+                            nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>())
+                                .add(new IgniteException(err, e));
                         }
                         finally {
                             GridUnsafe.freeBuffer(dataBuf);
