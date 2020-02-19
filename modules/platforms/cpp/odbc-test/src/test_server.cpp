@@ -18,8 +18,10 @@
 
 #include <vector>
 
-#pragma warning(push)
-#pragma warning(disable : 4355)
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable : 4355)
+#endif //_MSC_VER
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501
@@ -29,7 +31,9 @@
 #include <boost/bind/bind.hpp>
 #include <boost/make_shared.hpp>
 
-#pragma warning(pop)
+#ifdef _MSC_VER
+#   pragma warning(pop
+#endif //_MSC_VER
 
 #include <ignite/binary/binary.h>
 #include <ignite/impl/binary/binary_utils.h>
@@ -39,7 +43,7 @@
 namespace ignite
 {
 
-TestServerSession::TestServerSession(boost::asio::io_service& service, const std::vector<std::vector<int8_t>>& responses) :
+TestServerSession::TestServerSession(boost::asio::io_service& service, const std::vector< std::vector<int8_t> >& responses) :
     socket(service),
     responses(responses),
     requestsResponded(0)
