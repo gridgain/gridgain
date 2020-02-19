@@ -1626,9 +1626,12 @@ namespace Apache.Ignite.Core
         }
 
         /// <summary>
+        /// This is an experimental feature. Transactional SQL is currently in a beta status.
+        /// <para/>
         /// Time interval between MVCC vacuum runs in milliseconds.
         /// </summary>
         [DefaultValue(DefaultMvccVacuumFrequency)]
+        [IgniteExperimentalAttribute]
         public long MvccVacuumFrequency
         {
             get { return _mvccVacuumFreq ?? DefaultMvccVacuumFrequency; }
@@ -1636,9 +1639,12 @@ namespace Apache.Ignite.Core
         }
 
         /// <summary>
+        /// This is an experimental feature. Transactional SQL is currently in a beta status.
+        /// <para/>
         /// Number of MVCC vacuum threads.
         /// </summary>
         [DefaultValue(DefaultMvccVacuumThreadCount)]
+        [IgniteExperimentalAttribute]
         public int MvccVacuumThreadCount
         {
             get { return _mvccVacuumThreadCnt ?? DefaultMvccVacuumThreadCount; }

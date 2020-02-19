@@ -32,6 +32,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AU
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
@@ -130,6 +131,9 @@ public enum IgniteFeatures {
     /** Cluster has task to get value from cache by key value. */
     WC_GET_CACHE_VALUE(31),
 
+    /** Partition Map Exchange-free switch on baseline node left at fully rebalanced cluster. */
+    PME_FREE_SWITCH(32),
+    
     /** */
     VOLATILE_DATA_STRUCTURES_REGION(33),
 
@@ -284,6 +288,9 @@ public enum IgniteFeatures {
                 continue;
 
             if (SPLITTED_CACHE_CONFIGURATIONS == value && isFeatureEnabled(IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER))
+                continue;
+
+            if (PME_FREE_SWITCH == value && isFeatureEnabled(IGNITE_PME_FREE_SWITCH_DISABLED))
                 continue;
 
             final int featureId = value.getFeatureId();

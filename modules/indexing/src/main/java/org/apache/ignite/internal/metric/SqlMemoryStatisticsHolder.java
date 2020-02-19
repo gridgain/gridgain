@@ -27,25 +27,40 @@ import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
  *
  * @see QueryMemoryManager
  */
-public class SqlStatisticsHolderMemoryQuotas {
+public class SqlMemoryStatisticsHolder {
     /** Name of MetricRegistry that contains for sql purposes. */
     public static final String SQL_QUOTAS_REG_NAME = "sql.memory.quotas";
 
     /** Measures number of sql memory allocations on this node. */
     private final LongAdderMetric quotaRequestedCnt;
 
+    /** Measures the number of bytes written to disk during offloading. */
+    private final LongAdderMetric offloadingWritten;
+
+    /** Measures the number of bytes read from disk during offloading. */
+    private final LongAdderMetric offloadingRead;
+
+    /** Measures the number of queries were offloaded. */
+    private final LongAdderMetric offloadedQueriesNum;
+
     /**
-     * Creates this mertrics holder.
+     * Creates this metrics holder.
      *
      * @param memMgr Memory manager which tracks sql memory.
      * @param metricMgr registers and exports outside this class metrics.
      */
-    public SqlStatisticsHolderMemoryQuotas(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
+    public SqlMemoryStatisticsHolder(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
-        
         quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
             "How many times memory quota have been requested on this node by all the queries in total. " +
                 "Always 0 if sql memory quotas are disabled.");
+
+        offloadingWritten = quotasMetrics.longAdderMetric("OffloadingWritten",
+            "Metrics that indicates the number of bytes written to the disk during SQL query offloading.");
+        offloadingRead = quotasMetrics.longAdderMetric("OffloadingRead",
+            "Metrics that indicates the number of bytes read from the disk during SQL query offloading.");
+        offloadedQueriesNum = quotasMetrics.longAdderMetric("OffloadedQueriesNumber",
+            "Metrics that indicates the number of queries were offloaded to disk locally.");
 
         quotasMetrics.register("maxMem",
             new LongSupplier() {
@@ -71,10 +86,31 @@ public class SqlStatisticsHolderMemoryQuotas {
 
     /**
      * Updates statistics when memory is reserved for any query. Thread safe.
-     *
-     * @param size size of reserved memory in bytes.
      */
-    public void trackReserve(long size) {
+    public void trackReserve() {
         quotaRequestedCnt.increment();
+    }
+
+    /**
+     * Updates statistics for bytes written to the disk during offloading.
+     * @param written Bytes written.
+     */
+    public void trackOffloadingWritten(long written) {
+        offloadingWritten.add(written);
+    }
+
+    /**
+     * Updates statistics for bytes read from the disk during offloading.
+     * @param read Bytes read.
+     */
+    public void trackOffloadingRead(long read) {
+        offloadingRead.add(read);
+    }
+
+    /**
+     * Increments the number of offloaded queries
+     */
+    public void trackQueryOffloaded() {
+        offloadedQueriesNum.increment();
     }
 }

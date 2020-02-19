@@ -42,10 +42,16 @@ import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+
 /**
  *
  */
 public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+
     /** Entry count. */
     public static final int ENTRY_CNT = 5000;
 
@@ -170,6 +176,9 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
         startGrid(GRID_CNT);
         startGrid(GRID_CNT + 1);
 
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
+
         for (int g = 0; g < GRID_CNT + 2; g++) {
             IgniteCache<Object, Object> cache0 = grid(g).cache(CACHE_NAME);
 
@@ -179,10 +188,16 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
 
         stopGrid(GRID_CNT + 1);
 
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
+
         for (int g = 0; g < GRID_CNT + 1; g++)
             grid(g).cache(CACHE_NAME).rebalance().get();
 
         stopGrid(GRID_CNT);
+
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
 
         for (int g = 0; g < GRID_CNT; g++) {
             IgniteCache<Object, Object> cache0 = grid(g).cache(CACHE_NAME);

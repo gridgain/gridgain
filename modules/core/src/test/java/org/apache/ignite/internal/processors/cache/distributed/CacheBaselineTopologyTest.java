@@ -69,6 +69,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  *
@@ -91,6 +92,9 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
 
     /** */
     private static final String DATA_NODE = "dataNodeUserAttr";
+
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
@@ -866,6 +870,9 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
      */
     @Test
     public void testNonPersistentCachesIgnoreBaselineTopologyIfBltForInMemoryFeatureIsOff() throws Exception {
+        if (bltForInMemoryCachesSup)
+            return;
+
         Ignite ig = startGrids(4);
 
         ig.cluster().active(true);
@@ -997,9 +1004,12 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
     /**
      * @param primary
      * @param near
-     * @throws Exception
+     * @throws Exception If failed.
      */
     public void checkNotMapNonBaselineTxNodes(boolean primary, boolean near) throws Exception {
+        if (bltForInMemoryCachesSup)
+            return;
+
         int bltNodesCount = 3;
 
         startNodesAndCaches(bltNodesCount);

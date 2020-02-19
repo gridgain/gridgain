@@ -32,11 +32,17 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+
 /**
  * This test hangs exchange and waits rebalance complete. After partitions rebalance completed exchange will unlock and
  * test will wait ideal assignment.
  */
 public class RebalanceCompleteDuringExchangeTest extends GridCommonAbstractTest {
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
         return super.getConfiguration(name)
@@ -112,6 +118,9 @@ public class RebalanceCompleteDuringExchangeTest extends GridCommonAbstractTest 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
             try {
                 IgniteEx ignite2 = startGrid(cfg);
+
+                if (bltForInMemoryCachesSup)
+                    resetBaselineTopology();
             }
             catch (Exception e) {
                 log.error("Start clustr exception " + e.getMessage(), e);
@@ -155,6 +164,11 @@ public class RebalanceCompleteDuringExchangeTest extends GridCommonAbstractTest 
             return false;
         });
 
-        return startGrid(cfg);
+        IgniteEx node = startGrid(cfg);
+
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
+
+        return node;
     }
 }
