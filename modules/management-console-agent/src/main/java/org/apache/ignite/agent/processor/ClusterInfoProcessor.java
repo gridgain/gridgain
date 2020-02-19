@@ -16,33 +16,27 @@
 
 package org.apache.ignite.agent.processor;
 
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.apache.ignite.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
 import org.apache.ignite.agent.ws.WebSocketManager;
-import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
+import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
-import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopologyDest;
-import static org.apache.ignite.agent.utils.AgentUtils.fromNullableCollection;
 import static org.apache.ignite.agent.utils.AgentUtils.getClusterFeatures;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -54,11 +48,18 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_JOINED, EVT_NODE_FAILED, EVT_NODE_LEFT};
 
-    /** TODO GG-21449: this code emulates EVT_BASELINE_CHANGED */
-    private volatile Set<String> curBaseline;
+    /** Baseline events. */
+    private static final int[] EVTS_BASELINE = new int[] {
+        EVT_BASELINE_CHANGED,
+        EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED,
+        EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED
+    };
 
-    /** Baseline parameters. */
-    private volatile BaselineInfo curBaselineParameters;
+    /** Baseline params changed events. */
+    private static final int[] EVTS_BASELINE_PARAMS_CHANGED = new int[] {
+        EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED,
+        EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED
+    };
 
     /** Cluster. */
     private IgniteClusterEx cluster;
@@ -66,9 +67,8 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
     /** Manager. */
     private WebSocketManager mgr;
 
-    /** Executor service. */
-    private ScheduledExecutorService baselineExecSrvc =
-        Executors.newScheduledThreadPool(1, new CustomizableThreadFactory("mgmt-console-baseline-watcher-"));
+    /** Send full topology to Control Center on baseline change. */
+    private GridLocalEventListener sndTopUpdateLsnr = (event -> sendTopologyUpdate(null, ctx.discovery().discoCache()));
 
     /**
      * @param ctx Context.
@@ -88,36 +88,9 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
         evtMgr.enableEvents(EVTS_CLUSTER_ACTIVATION);
         evtMgr.addLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
 
-        // TODO GG-21449: this code emulates EVT_BASELINE_CHANGED and EVT_BASELINE_AUTO_*
-        baselineExecSrvc.scheduleWithFixedDelay(() -> {
-            Stream<BaselineNode> stream = fromNullableCollection(ctx.grid().cluster().currentBaselineTopology());
-
-            Set<String> baseline = stream
-                .map(BaselineNode::consistentId)
-                .map(Object::toString)
-                .collect(Collectors.toSet());
-
-            if (curBaseline == null)
-                curBaseline = baseline;
-            else if (!curBaseline.equals(baseline)) {
-                curBaseline = baseline;
-
-                sendTopologyUpdate(null, ctx.discovery().discoCache());
-            }
-
-            BaselineInfo baselineParameters = new BaselineInfo(
-                cluster.isBaselineAutoAdjustEnabled(),
-                cluster.baselineAutoAdjustTimeout()
-            );
-
-            if (curBaselineParameters == null)
-                curBaselineParameters = baselineParameters;
-            else if (!curBaselineParameters.equals(baselineParameters)) {
-                curBaselineParameters = baselineParameters;
-
-                sendClusterInfo(null);
-            }
-        }, 2, 5, TimeUnit.SECONDS);
+        evtMgr.enableEvents(EVTS_BASELINE);
+        evtMgr.addLocalEventListener(this::sendClusterInfo, EVTS_BASELINE_PARAMS_CHANGED);
+        evtMgr.addLocalEventListener(sndTopUpdateLsnr, EVT_BASELINE_CHANGED);
     }
 
     /**
@@ -130,6 +103,9 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
 
     /**
      * Send full topology to Control Center.
+     *
+     * @param evt Discovery event.
+     * @param discoCache Disco cache.
      */
     void sendTopologyUpdate(DiscoveryEvent evt, DiscoCache discoCache) {
         if (log.isDebugEnabled())
@@ -162,6 +138,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
                     cluster.baselineAutoAdjustTimeout()
                 )
             )
+            .setSecure(ctx.authentication().enabled() || ctx.security().enabled())
             .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
 
         mgr.send(buildClusterDest(cluster.id()), clusterInfo);
@@ -173,6 +150,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
 
         ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_CLUSTER_ACTIVATION);
 
-        U.shutdownNow(getClass(), baselineExecSrvc, log);
+        ctx.event().removeLocalEventListener(this::sendClusterInfo, EVTS_BASELINE_PARAMS_CHANGED);
+        ctx.event().removeLocalEventListener(sndTopUpdateLsnr, EVT_BASELINE_CHANGED);
     }
 }

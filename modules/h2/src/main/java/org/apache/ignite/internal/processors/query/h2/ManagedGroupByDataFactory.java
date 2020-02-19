@@ -13,21 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.internal.processors.query.h2;
 
-package org.apache.ignite.internal.processors.security.impl;
-
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.security.GridSecurityProcessor;
-import org.apache.ignite.plugin.PluginConfiguration;
+import java.util.ArrayList;
+import org.h2.command.dml.GroupByData;
+import org.h2.engine.Session;
+import org.h2.expression.Expression;
 
 /**
- * Grid security configuration for tests.
+ * Factory for H2 group by data.
  */
-@FunctionalInterface
-public interface TestSecurityPluginConfiguration extends PluginConfiguration {
+public interface ManagedGroupByDataFactory {
+
     /**
-     * @param ctx GridKernalContext.
-     * @return GridSecurityProcessor.
+     * Group-by data fabric method.
+     *
+     * @param ses Session.
+     * @param expressions Expressions.
+     * @param isGrpQry Group query flag.
+     * @param grpIdx Group-by fields indexes.
+     * @return Group-by data.
      */
-    public GridSecurityProcessor build(GridKernalContext ctx);
+    GroupByData newManagedGroupByData(Session ses, ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx);
 }

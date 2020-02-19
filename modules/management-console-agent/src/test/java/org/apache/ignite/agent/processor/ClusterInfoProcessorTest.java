@@ -22,6 +22,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.agent.AgentCommonAbstractTest;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
+import org.apache.ignite.agent.dto.topology.Node;
 import org.apache.ignite.agent.dto.topology.TopologySnapshot;
 import org.apache.ignite.agent.utils.AgentUtils;
 import org.apache.ignite.cluster.ClusterNode;
@@ -114,7 +115,7 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
             () -> {
                 TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
 
-                return top != null && top.getNodes().size() == 1;
+                return top != null && top.getNodes().stream().filter(Node::isBaselineNode).count() == 1;
             }
         );
 
@@ -128,7 +129,7 @@ public class ClusterInfoProcessorTest extends AgentCommonAbstractTest {
             () -> {
                 TopologySnapshot top = interceptor.getPayload(buildClusterTopologyDest(cluster.id()), TopologySnapshot.class);
 
-                return top != null && top.getNodes().size() == 2;
+                return top != null && top.getNodes().stream().filter(Node::isBaselineNode).count() == 2;
             }
         );
     }

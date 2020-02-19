@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lifecycle.LifecycleBean;
@@ -80,6 +81,8 @@ import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.ssl.SslContextFactory;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.STOP;
 
 /**
@@ -148,7 +151,7 @@ public class IgniteConfiguration {
     public static final int AVAILABLE_PROC_CNT = Runtime.getRuntime().availableProcessors();
 
     /** Default core size of public thread pool. */
-    public static final int DFLT_PUBLIC_THREAD_CNT = Math.max(8, AVAILABLE_PROC_CNT);
+    public static final int DFLT_PUBLIC_THREAD_CNT = max(8, AVAILABLE_PROC_CNT);
 
     /** Default size of data streamer thread pool. */
     public static final int DFLT_DATA_STREAMER_POOL_SIZE = DFLT_PUBLIC_THREAD_CNT;
@@ -173,6 +176,9 @@ public class IgniteConfiguration {
 
     /** Default size of query thread pool. */
     public static final int DFLT_QUERY_THREAD_POOL_SIZE = DFLT_PUBLIC_THREAD_CNT;
+
+    /** Default size of index create/rebuild thread pool. */
+    public static final int DFLT_BUILD_IDX_THREAD_POOL_SIZE = min(4, max(1, AVAILABLE_PROC_CNT / 4));
 
     /** Default Ignite thread keep alive time. */
     public static final long DFLT_THREAD_KEEP_ALIVE_TIME = 60_000L;
@@ -243,6 +249,15 @@ public class IgniteConfiguration {
     /** Default SQL query history size. */
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
 
+    /** Default SQL query global memory quota. */
+    public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "60%"; // 60% of heap.
+
+    /** Default SQL per query memory quota. */
+    public static final String DFLT_SQL_QUERY_MEMORY_QUOTA = "0";
+
+    /** Default value for SQL offloading flag. */
+    public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
+
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
 
@@ -287,6 +302,9 @@ public class IgniteConfiguration {
 
     /** Query pool size. */
     private int qryPoolSize = DFLT_QUERY_THREAD_POOL_SIZE;
+
+    /** Index create/rebuild pool size. */
+    private int buildIdxPoolSize = DFLT_BUILD_IDX_THREAD_POOL_SIZE;
 
     /** SQL query history size. */
     private int sqlQryHistSize = DFLT_SQL_QUERY_HISTORY_SIZE;
@@ -427,6 +445,7 @@ public class IgniteConfiguration {
     private TransactionConfiguration txCfg = new TransactionConfiguration();
 
     /** */
+    @Deprecated
     private PluginConfiguration[] pluginCfgs;
 
     /** Flag indicating whether cache sanity check is enabled. */
@@ -554,6 +573,18 @@ public class IgniteConfiguration {
     /** SQL schemas to be created on node start. */
     private String[] sqlSchemas;
 
+    /** Global memory quota. */
+    private String sqlGlobalMemoryQuota = DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA;
+
+    /** Per query memory quota. */
+    private String sqlQueryMemoryQuota = DFLT_SQL_QUERY_MEMORY_QUOTA;
+
+    /** Offloading enabled flag - whether to start offloading where quota is exceeded or throw an exception. */
+    private boolean sqlOffloadingEnabled = DFLT_SQL_QUERY_OFFLOADING_ENABLED;
+
+    /** Plugin providers. */
+    private PluginProvider[] pluginProvs;
+
     /**
      * Creates valid grid configuration with all default values.
      */
@@ -645,8 +676,10 @@ public class IgniteConfiguration {
         p2pPoolSize = cfg.getPeerClassLoadingThreadPoolSize();
         platformCfg = cfg.getPlatformConfiguration();
         pluginCfgs = cfg.getPluginConfigurations();
+        pluginProvs = cfg.getPluginProviders();
         pubPoolSize = cfg.getPublicThreadPoolSize();
         qryPoolSize = cfg.getQueryThreadPoolSize();
+        buildIdxPoolSize = cfg.getBuildIndexThreadPoolSize();
         rebalanceThreadPoolSize = cfg.getRebalanceThreadPoolSize();
         rebalanceTimeout = cfg.getRebalanceTimeout();
         rebalanceBatchesPrefetchCnt = cfg.getRebalanceBatchesPrefetchCount();
@@ -676,6 +709,9 @@ public class IgniteConfiguration {
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
+        sqlGlobalMemoryQuota = cfg.getSqlGlobalMemoryQuota();
+        sqlQueryMemoryQuota = cfg.getSqlQueryMemoryQuota();
+        sqlOffloadingEnabled = cfg.isSqlOffloadingEnabled();
     }
 
     /**
@@ -1017,6 +1053,31 @@ public class IgniteConfiguration {
      */
     public int getQueryThreadPoolSize() {
         return qryPoolSize;
+    }
+
+    /**
+     * Size of thread pool for create/rebuild index.
+     * <p>
+     * If not provided, executor service will have size
+     * {@link #DFLT_BUILD_IDX_THREAD_POOL_SIZE}.
+     *
+     * @return Thread pool size for create/rebuild index.
+     */
+    public int getBuildIndexThreadPoolSize() {
+        return buildIdxPoolSize;
+    }
+
+    /**
+     * Sets index create/rebuild thread pool size to use within grid.
+     *
+     * @param poolSize Thread pool size to use within grid.
+     * @return {@code this} for chaining.
+     * @see IgniteConfiguration#getBuildIndexThreadPoolSize()
+     */
+    public IgniteConfiguration setBuildIndexThreadPoolSize(int poolSize) {
+        buildIdxPoolSize = poolSize;
+
+        return this;
     }
 
     /**
@@ -2972,6 +3033,7 @@ public class IgniteConfiguration {
      * @return Plugin configurations.
      * @see PluginProvider
      */
+    @Deprecated
     public PluginConfiguration[] getPluginConfigurations() {
         return pluginCfgs;
     }
@@ -2982,7 +3044,10 @@ public class IgniteConfiguration {
      * @param pluginCfgs Plugin configurations.
      * @return {@code this} for chaining.
      * @see PluginProvider
+     * @deprecated Since {@link PluginProvider}s can be set explicitly via {@link #setPluginProviders(PluginProvider[])}
+     * it's preferable to store {@link PluginConfiguration} as a part of {@link PluginProvider}.
      */
+    @Deprecated
     public IgniteConfiguration setPluginConfigurations(PluginConfiguration... pluginCfgs) {
         this.pluginCfgs = pluginCfgs;
 
@@ -3233,20 +3298,26 @@ public class IgniteConfiguration {
     }
 
     /**
+     * <b>This is an experimental feature. Transactional SQL is currently in a beta status.</b>
+     * <p>
      * Returns number of MVCC vacuum threads.
      *
      * @return Number of MVCC vacuum threads.
      */
+    @IgniteExperimental
     public int getMvccVacuumThreadCount() {
         return mvccVacuumThreadCnt;
     }
 
     /**
+     * <b>This is an experimental feature. Transactional SQL is currently in a beta status.</b>
+     * <p>
      * Sets number of MVCC vacuum threads.
      *
      * @param mvccVacuumThreadCnt Number of MVCC vacuum threads.
      * @return {@code this} for chaining.
      */
+    @IgniteExperimental
     public IgniteConfiguration setMvccVacuumThreadCount(int mvccVacuumThreadCnt) {
         this.mvccVacuumThreadCnt = mvccVacuumThreadCnt;
 
@@ -3254,20 +3325,26 @@ public class IgniteConfiguration {
     }
 
     /**
+     * <b>This is an experimental feature. Transactional SQL is currently in a beta status.</b>
+     * <p>
      * Returns time interval between MVCC vacuum runs in milliseconds.
      *
      * @return Time interval between MVCC vacuum runs in milliseconds.
      */
+    @IgniteExperimental
     public long getMvccVacuumFrequency() {
         return mvccVacuumFreq;
     }
 
     /**
+     * <b>This is an experimental feature. Transactional SQL is currently in a beta status.</b>
+     * <p>
      * Sets time interval between MVCC vacuum runs in milliseconds.
      *
      * @param mvccVacuumFreq Time interval between MVCC vacuum runs in milliseconds.
      * @return {@code this} for chaining.
      */
+    @IgniteExperimental
     public IgniteConfiguration setMvccVacuumFrequency(long mvccVacuumFreq) {
         this.mvccVacuumFreq = mvccVacuumFreq;
 
@@ -3321,6 +3398,160 @@ public class IgniteConfiguration {
      */
     public IgniteConfiguration setSqlSchemas(String... sqlSchemas) {
         this.sqlSchemas = sqlSchemas;
+
+        return this;
+    }
+
+    /**
+     * Returns global memory pool size for SQL queries.
+     * <p>
+     * See {@link #setSqlGlobalMemoryQuota(String)} for details.
+     *
+     * @return Global memory pool size for SQL queries.
+     */
+    public String getSqlGlobalMemoryQuota() {
+        return sqlGlobalMemoryQuota;
+    }
+
+    /**
+     * Sets global memory pool size for SQL queries.
+     * <p>
+     * Global SQL query memory pool size or SQL query memory quota - is an upper bound for the heap memory part
+     * which might be occupied by the SQL query execution engine. This quota is shared among all simultaneously
+     * running queries, hence it be easily consumed by the single heavy analytics query. If you want to control
+     * memory quota on per-query basis consider {@link #setSqlQueryMemoryQuota(String)}.
+     * <p>
+     * There are two options of query behaviour when either query or global memory quota is exceeded:
+     * <ul>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
+     * </ul>
+     * See {@link #setSqlOffloadingEnabled(boolean)} for details.
+     * <p>
+     * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
+     * <p>
+     * The value is specified as string value of size of in bytes.
+     * <p>
+     * Value {@code 0} means no quota at all.
+     *  <p>
+     *  Quota may be specified also in:
+     *  <ul>
+     *      <li>Kilobytes - just append the letter 'K' or 'k': {@code 10k, 400K}</li>
+     *      <li>Megabytes - just append the letter 'M' or 'm': {@code 60m, 420M}</li>
+     *      <li>Gigabytes - just append the letter 'G' or 'g': {@code 7g, 2G}</li>
+     *      <li>Percent of heap - just append the sign '%': {@code 45%, 80%}</li>
+     *  </ul>
+     *
+     * @param size Size of global memory pool for SQL queries in bytes, kilobytes, megabytes,
+     * or percentage of the max heap.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setSqlGlobalMemoryQuota(String size) {
+        this.sqlGlobalMemoryQuota = size;
+
+        return this;
+    }
+
+    /**
+     * Returns per-query memory quota.
+     * See {@link #setSqlQueryMemoryQuota(String)} for details.
+     *
+     * @return Per-query memory quota.
+     */
+    public String getSqlQueryMemoryQuota() {
+        return sqlQueryMemoryQuota;
+    }
+
+    /**
+     * Sets per-query memory quota.
+     * <p>
+     * It is the maximum amount of memory intended for the particular single query execution.
+     * If a query execution exceeds this bound, the either would happen:
+     * <ul>
+     *     <li> If disk offloading is disabled, the query caller gets an error that quota exceeded. </li>
+     *     <li> If disk offloading is enabled, the intermediate query results will be offloaded to a disk. </li>
+     * </ul>
+     * See {@link #setSqlOffloadingEnabled(boolean)} for details.
+     * <p>
+     * If not provided, the default value is defined by {@link #DFLT_SQL_QUERY_MEMORY_QUOTA}.
+     * <p>
+     * The value is specified as string value of size of in bytes.
+     * <p>
+     * Value {@code 0} means no quota at all.
+     *  <p>
+     *  Quota may be specified also in:
+     *  <ul>
+     *      <li>Kilobytes - just append the letter 'K' or 'k': {@code 10k, 400K}</li>
+     *      <li>Megabytes - just append the letter 'M' or 'm': {@code 60m, 420M}</li>
+     *      <li>Gigabytes - just append the letter 'G' or 'g': {@code 7g, 2G}</li>
+     *      <li>Percent of the heap - just append the sign '%': {@code 45%, 80%}</li>
+     *  </ul>
+     *
+     * @param size Size of per-query memory quota in bytes, kilobytes, megabytes, or percentage of the max heap.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setSqlQueryMemoryQuota(String size) {
+        this.sqlQueryMemoryQuota = size;
+
+        return this;
+    }
+
+    /**
+     * Returns flag whether disk offloading is enabled.
+     * See {@link #setSqlOffloadingEnabled(boolean)} for details.
+     *
+     * @return Flag whether disk offloading is enabled.
+     */
+    public boolean isSqlOffloadingEnabled() {
+        return sqlOffloadingEnabled;
+    }
+
+    /**
+     * Sets the SQL query offloading enabled flag.
+     * <p>
+     * Offloading flag specifies the query execution behavior on memory quota excess - either global quota
+     * (see {@link #setSqlGlobalMemoryQuota(String)}) or per query quota (see {@link #setSqlQueryMemoryQuota(String)}).
+     * Possible options on quota excess are:
+     * <ul>
+     *     <li>
+     *         If {@code offloadingEnabled} flag set to {@code false}, the exception will be thrown when
+     *         memory quota is exceeded.
+     *     </li>
+     *     <li>
+     *         If {@code offloadingEnabled} flag set to {@code true}, the intermediate query results will be
+     *         offloaded to disk. It may slow down the query execution time by orders of magnitude, but eventually
+     *         the query will be executed and the caller will get a result.
+     *     </li>
+     * </ul>
+     *
+     * If not provided, the default value is {@code false}.
+     *
+     * @param offloadingEnabled Offloading enabled flag.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
+        this.sqlOffloadingEnabled = offloadingEnabled;
+
+        return this;
+    }
+
+    /**
+     * Gets plugin providers.
+     *
+     * @return Plugin providers.
+     */
+    public PluginProvider[] getPluginProviders() {
+        return pluginProvs;
+    }
+
+    /**
+     * Sets plugin providers.
+     *
+     * @param pluginProvs Plugin providers.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setPluginProviders(PluginProvider... pluginProvs) {
+        this.pluginProvs = pluginProvs;
 
         return this;
     }

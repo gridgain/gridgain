@@ -34,21 +34,15 @@ import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MessageOrderLogListener;
-import org.apache.ignite.testframework.junits.SystemPropertiesRule;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.ClassRule;
 import org.junit.Test;
-import org.junit.rules.TestRule;
 
 import static java.lang.String.format;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 
 /** */
 public class H2TreeCorruptedTreeExceptionTest extends GridCommonAbstractTest {
-    /** Class rule. */
-    @ClassRule public static final TestRule classRule = new SystemPropertiesRule();
-
     /** */
     private static final String IDX_NAME = "A_IDX";
 

@@ -132,7 +132,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
             writer.writeBoolean(last);
 
-            JdbcUtils.writeItems(writer, items);
+            JdbcUtils.writeItems(writer, items, protoCtx);
         }
         else
             writer.writeLong(updateCnt);
@@ -154,7 +154,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
         if (isQuery) {
             last = reader.readBoolean();
 
-            items = JdbcUtils.readItems(reader);
+            items = JdbcUtils.readItems(reader, protoCtx);
         }
         else {
             last = true;
