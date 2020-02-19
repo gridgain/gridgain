@@ -80,6 +80,7 @@ import org.h2.index.Index;
 import org.h2.message.DbException;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.newSetFromMap;
 import static java.util.Collections.shuffle;
 import static java.util.Objects.isNull;
@@ -498,13 +499,13 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         GridDhtLocalPartition part
     ) {
         if (!part.reserve())
-            return Collections.emptyMap();
+            return emptyMap();
 
         ValidateIndexesPartitionResult partRes;
 
         try {
             if (part.state() != OWNING)
-                return Collections.emptyMap();
+                return emptyMap();
 
             long updateCntrBefore = part.updateCounter();
 
@@ -628,7 +629,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             error(log, "Failed to process partition [grpId=" + grpCtx.groupId() +
                 ", partId=" + part.id() + "]", e);
 
-            return Collections.emptyMap();
+            return emptyMap();
         }
         finally {
             part.release();
@@ -1025,7 +1026,10 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             Index idx = idxSizeFut.get2();
             String tblName = idx.getTable().getName();
 
-            long cacheSizeByTbl = cacheSizeTotal.get(grpId).cacheSizePerTbl.get(cacheCtx.cacheId()).get(tblName).get();
+            AtomicLong cacheSizeObj = cacheSizeTotal.get(grpId).cacheSizePerTbl
+                .getOrDefault(cacheCtx.cacheId(), emptyMap()).get(tblName);
+
+            long cacheSizeByTbl = isNull(cacheSizeObj) ? 0L : cacheSizeObj.get();
 
             T2<Throwable, Long> idxSizeRes = idxSizeFut.get3().get();
 
