@@ -16,6 +16,8 @@
 
 package org.apache.ignite.configuration;
 
+import org.apache.ignite.internal.util.typedef.internal.S;
+
 import java.io.Serializable;
 
 /**
@@ -84,5 +86,10 @@ public class PlatformNearCacheConfiguration implements Serializable {
      */
     public void setKeepBinary(boolean keepBinary) {
         this.keepBinary = keepBinary;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(PlatformNearCacheConfiguration.class, this, super.toString());
     }
 }

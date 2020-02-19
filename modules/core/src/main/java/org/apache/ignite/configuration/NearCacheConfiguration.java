@@ -48,7 +48,7 @@ public class NearCacheConfiguration<K, V> implements Serializable {
     private int nearStartSize = DFLT_NEAR_START_SIZE;
 
     /** Whether to enable native near cache for platforms (currently .NET). */
-    private boolean platformNearCacheEnabled;
+    private PlatformNearCacheConfiguration platformNearCacheConfiguration;
 
     /**
      * Empty constructor.
@@ -145,16 +145,17 @@ public class NearCacheConfiguration<K, V> implements Serializable {
     }
 
     /**
-     * Gets a value indicating whether native platform near cache is enabled.
+     * Gets platform near cache configuration.
      *
-     * @return True when platform near cache is enabled; otherwise, false.
+     * @return Platform near cache configuration or null.
      */
-    public boolean isPlatformNearCacheEnabled() {
-        return platformNearCacheEnabled;
+    public PlatformNearCacheConfiguration getPlatformNearCacheConfiguration() {
+        return platformNearCacheConfiguration;
     }
 
     /**
-     * Sets a value indicating whether native platform (only .NET currently) near cache should be enabled.
+     * Sets platform near cache configuration.
+     * Enables native platform (only .NET currently) near cache when not null.
      * Cache entries will be stored in deserialized form in native platform memory (e.g. .NET objects in CLR heap).
      * <p>
      * When enabled on server nodes, all primary keys will be stored in platform memory as well.
@@ -167,8 +168,9 @@ public class NearCacheConfiguration<K, V> implements Serializable {
      *
      * @return {@code this} for chaining.
      */
-    public NearCacheConfiguration<K, V> setPlatformNearCacheEnabled(boolean platformNearCacheEnabled) {
-        this.platformNearCacheEnabled = platformNearCacheEnabled;
+    public NearCacheConfiguration<K, V> setPlatformNearCacheEnabled(
+            PlatformNearCacheConfiguration platformNearCacheConfiguration) {
+        this.platformNearCacheConfiguration = platformNearCacheConfiguration;
 
         return this;
     }

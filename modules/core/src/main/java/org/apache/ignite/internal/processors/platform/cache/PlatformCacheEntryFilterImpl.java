@@ -99,7 +99,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
         ctx = cctx.kernalContext().platform().context();
 
         NearCacheConfiguration nearCfg = cctx.config().getNearConfiguration();
-        platfromNearEnabled = nearCfg != null && nearCfg.isPlatformNearCacheEnabled();
+        platfromNearEnabled = nearCfg != null && nearCfg.getPlatformNearCacheConfiguration() != null;
 
         try (PlatformMemory mem = ctx.memory().allocate()) {
             PlatformOutputStream out = mem.output();
