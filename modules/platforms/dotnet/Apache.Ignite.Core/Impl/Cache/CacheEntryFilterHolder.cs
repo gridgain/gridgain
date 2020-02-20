@@ -89,6 +89,8 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
             else
             {
+                // Near cache on primary node is always up-to-date with actual cache entry in Java,
+                // so we can use value from near cache for filtering.
                 if (_nearCache == null || !_nearCache.TryGetValue(key, out val))
                 {
                     // Request value from Java.
