@@ -6975,7 +6975,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             return;
 
         PlatformProcessor proc = this.cctx.kernalContext().platform();
-        if (!proc.hasContext())
+        if (!proc.hasContext() || !proc.context().isNativeNearCacheSupported())
             return;
 
         try {

@@ -590,13 +590,19 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isNativeNearCacheSupported() {
+        return platform.equals(PlatformUtils.PLATFORM_DOTNET);
+    }
+
+    /** {@inheritDoc} */
     @Override public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes,
                                           int part, AffinityTopologyVersion ver) {
+        if (!isNativeNearCacheSupported())
+            return;
+
         assert keyBytes != null;
         assert part >= 0;
 
-        // TODO: Track active caches and avoid unnecessary callbacks?
-        // TODO: At least, disable those callbacks for unsupported platforms.
         try (PlatformMemory mem0 = mem.allocate()) {
             PlatformOutputStream out = mem0.output();
 
@@ -621,6 +627,10 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
 
             gateway().nearCacheUpdate(mem0.pointer());
         }
+    }
+
+    @Override public void setThreadLocal(Object value) {
+
     }
 
     /** {@inheritDoc} */
