@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.local;
 
+import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -161,20 +162,15 @@ public class GridCacheLocalTxTimeoutSelfTest extends GridCommonAbstractTest {
             IgniteCache<Integer, String> cache = ignite.cache(DEFAULT_CACHE_NAME);
 
             tx = ignite.transactions().txStart(concurrency, isolation, 50, 0);
-            long endTime = System.currentTimeMillis();
-
-            log.info("Start time :: " + endTime);
-
-            endTime += 100;
 
             cache.put(1, "1");
 
+            long endTime = System.currentTimeMillis() + 100;
 
-            while(U.currentTimeMillis() < endTime) {}
+            while(U.currentTimeMillis() < endTime)
+                LockSupport.parkNanos(1000);
 
             cache.put(1, "2");
-
-            log.info("End time :: " + System.currentTimeMillis());
 
             tx.commit();
         }
