@@ -481,26 +481,27 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: CacheConfiguration.ExpiryPolicy
         }
 
+        /// <summary>
+        /// Tests server-side near cache binary mode.
+        /// </summary>
         [Test]
-        public void TestKeepBinary()
+        public void TestKeepBinaryServer()
         {
             // Create server near cache with binary mode enabled.
             var cfg = new CacheConfiguration
             {
                 Name = TestUtils.TestName,
-                NearConfiguration = new NearCacheConfiguration().EnablePlatformNearCache<int, IBinaryObject>()
+                NearConfiguration = new NearCacheConfiguration().EnablePlatformNearCache<int, IBinaryObject>(true)
             };
             
             var clientCache = _client.CreateCache<int, Foo>(cfg);
+            var serverCache = _grid2.GetCache<int, object>(cfg.Name);
+            Assert.IsTrue(serverCache.GetConfiguration().NearConfiguration.PlatformNearCacheConfiguration.KeepBinary);
             
             // Put non-binary from client. There is no near cache on client.
             clientCache[1] = new Foo(2);
             
             // Read from near on server.
-            var serverCache = _grid.GetCache<int, object>(cfg.Name);
-            
-            Assert.IsTrue(serverCache.GetConfiguration().NearConfiguration.PlatformNearCacheConfiguration.KeepBinary);
-
             var res = (IBinaryObject) serverCache.LocalPeek(1, CachePeekMode.NativeNear);
             Assert.AreEqual(2, res.GetField<int>("Bar"));
         }

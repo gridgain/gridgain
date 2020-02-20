@@ -170,7 +170,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return;
             }
 
-            var reader = marshaller.StartUnmarshal(stream, _keepBinary);
+            var mode = _keepBinary ? BinaryMode.ForceBinary : BinaryMode.Deserialize;
+            var reader = marshaller.StartUnmarshal(stream, mode);
 
             var key = reader.ReadObject<TK>();
             var hasVal = reader.ReadBoolean();
