@@ -473,11 +473,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
-        public void TestScanQueryFilterUsesValueFromNearCache()
+        public void TestScanQueryFilterUsesValueFromNearCache(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
             // TODO: Check use case when filter is stored locally in handle registry.
-            var cache = GetCache<int, Foo>(CacheTestMode.Client);
-            cache[1] = new Foo(1);
+            var cache = GetCache<int, Foo>(mode);
+            
+            const int count = 100;
+            cache.PutAll(Enumerable.Range(1, count).Select(x => new KeyValuePair<int, Foo>(x, new Foo(x))));
 
             // Filter will check that value comes from native near cache.
             var filter = new ScanQueryNearCacheFilter
@@ -487,7 +490,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             var res = cache.Query(new ScanQuery<int, Foo>(filter));
             
-            Assert.AreEqual(1, res.Single().Value.Bar);
+            Assert.AreEqual(count, res.Count());
         }
 
         [Test]
