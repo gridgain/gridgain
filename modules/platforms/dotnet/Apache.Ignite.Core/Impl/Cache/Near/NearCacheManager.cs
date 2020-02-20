@@ -65,13 +65,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Gets the near cache.
         /// </summary>
-        public INearCache GetOrCreateNearCache<TK, TV>(CacheConfiguration cacheConfiguration)
+        public INearCache GetOrCreateNearCache(CacheConfiguration cacheConfiguration)
         {
             Debug.Assert(cacheConfiguration != null);
 
             var cacheId = BinaryUtils.GetCacheId(cacheConfiguration.Name);
             
-            return _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache<TK, TV>(cacheConfiguration));
+            return _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache(cacheConfiguration));
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public void Update(int cacheId, IBinaryStream stream, Marshaller marshaller)
         {
             var nearCache = _nearCaches.GetOrAdd(cacheId, 
-                _ => CreateNearCache<object, object>(_ignite.GetCacheConfiguration(cacheId)));
+                _ => CreateNearCache(_ignite.GetCacheConfiguration(cacheId)));
             
             nearCache.Update(stream, marshaller);
         }
@@ -108,7 +108,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Creates near cache.
         /// </summary>
-        private INearCache CreateNearCache<TK, TV>(CacheConfiguration cacheConfiguration)
+        private INearCache CreateNearCache(CacheConfiguration cacheConfiguration)
         {
             Debug.Assert(cacheConfiguration.NearConfiguration != null);
             Debug.Assert(cacheConfiguration.NearConfiguration.PlatformNearCacheConfiguration != null);
@@ -144,17 +144,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             var keyType = resolve(nearCfg.KeyTypeName);
             var valType = resolve(nearCfg.ValueTypeName);
-
-            // TODO: Is this check correct?
-            if (!keyType.IsAssignableFrom(typeof(TK)) || !valType.IsAssignableFrom(typeof(TV)))
-            {
-                var message = string.Format(
-                    "Invalid PlatformNearCacheConfiguration: " +
-                    "Near cache is configured as <{0}. {1}>, but cache is <{2}, {3}>",
-                    keyType, valType, typeof(TK), typeof(TV));
-                
-                throw new InvalidOperationException(message);
-            }
 
             var cacheType = typeof(NearCache<,>).MakeGenericType(keyType, valType);
             var nearCache = Activator.CreateInstance(

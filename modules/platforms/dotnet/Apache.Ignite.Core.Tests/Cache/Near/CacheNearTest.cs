@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
@@ -292,7 +293,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestSameNearCacheWithDifferentGenericTypeParameters()
         {
-            var cfg = new CacheConfiguration(TestContext.CurrentContext.Test.Name)
+            var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 NearConfiguration = new NearCacheConfiguration
                     {PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()}
@@ -318,7 +319,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestRepeatedGetReturnsSameInstanceAfterGenericDowngrade()
         {
-            var cfg = new CacheConfiguration(TestContext.CurrentContext.Test.Name)
+            var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 NearConfiguration = new NearCacheConfiguration
                     {PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration()}
@@ -345,7 +346,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestDataInvalidationAfterGenericDowngrade()
         {
-            var cacheName = TestContext.CurrentContext.Test.Name;
+            var cacheName = TestUtils.TestName;
             var cfg = new CacheConfiguration
             {
                 Name = cacheName,
@@ -437,7 +438,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cfg = new CacheConfiguration
             {
-                Name = TestContext.CurrentContext.Test.Name,
+                Name = TestUtils.TestName,
                 NearConfiguration = new NearCacheConfiguration
                 {
                     EvictionPolicy = new FifoEvictionPolicy
@@ -483,9 +484,25 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestKeepBinary()
         {
-            // TODO: ???
-            // Bypass near cache in binary mode?
-            // What if classes are not present on server nodes, we can't deserialize? What does Java do?
+            // Create server near cache with binary mode enabled.
+            var cfg = new CacheConfiguration
+            {
+                Name = TestUtils.TestName,
+                NearConfiguration = new NearCacheConfiguration().EnablePlatformNearCache<int, IBinaryObject>()
+            };
+            
+            var clientCache = _client.CreateCache<int, Foo>(cfg);
+            
+            // Put non-binary from client. There is no near cache on client.
+            clientCache[1] = new Foo(2);
+            
+            // Read from near on server.
+            var serverCache = _grid.GetCache<int, object>(cfg.Name);
+            
+            Assert.IsTrue(serverCache.GetConfiguration().NearConfiguration.PlatformNearCacheConfiguration.KeepBinary);
+
+            var res = (IBinaryObject) serverCache.LocalPeek(1, CachePeekMode.NativeNear);
+            Assert.AreEqual(2, res.GetField<int>("Bar"));
         }
 
         [Test]

@@ -99,6 +99,14 @@ namespace Apache.Ignite.Core.Tests
         }
 
         /// <summary>
+        /// Gets current test name.
+        /// </summary>
+        public static string TestName
+        {
+            get { return TestContext.CurrentContext.Test.Name; }
+        }
+
+        /// <summary>
         ///
         /// </summary>
         /// <returns></returns>
