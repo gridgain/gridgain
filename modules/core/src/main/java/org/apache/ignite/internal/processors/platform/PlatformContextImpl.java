@@ -629,10 +629,6 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
         }
     }
 
-    @Override public void setThreadLocal(Object value) {
-
-    }
-
     /** {@inheritDoc} */
     @Override public void onDoneAfterTopologyUnlock(GridDhtPartitionsExchangeFuture fut) {
         AffinityTopologyVersion ver = fut.topologyVersion();

@@ -307,11 +307,4 @@ public interface PlatformContext {
      * @param ver Key version.
      */
     public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes, int part, AffinityTopologyVersion ver);
-
-    /**
-     * Sets thread local value for platform.
-     *
-     * @param value Value.
-     */
-    public void setThreadLocal(Object value);
 }

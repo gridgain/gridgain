@@ -187,6 +187,9 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     /** */
     private static final int OP_GET_CACHE_CONFIG = 36;
 
+    /** */
+    private static final int OP_GET_THREAD_LOCAL = 37;
+
     /** Start latch. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
@@ -221,6 +224,9 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** Cluster restart flag for the reconnect callback. */
     private volatile boolean clusterRestarted;
+
+    /** Thread local storage for platform needs. */
+    private final ThreadLocal<Object> threadLocal = new ThreadLocal<>();
 
     /**
      * Constructor.
@@ -762,6 +768,10 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 return;
             }
+
+            case OP_GET_THREAD_LOCAL: {
+                writer.writeObjectDetached(threadLocal.get());
+            }
         }
 
         PlatformAbstractTarget.throwUnsupported(type);
@@ -792,6 +802,11 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     /** {@inheritDoc} */
     @Override public Exception convertException(Exception e) {
         return e;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setThreadLocal(Object value) {
+        threadLocal.set(value);
     }
 
     /**

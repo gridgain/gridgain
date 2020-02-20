@@ -66,8 +66,9 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
             writer.writeObject(k);
 
             if (platfromNearEnabled) {
-                // TODO: Put value in thread local inside platform context,
-                // so it can be requested only when near entry does not exist for the key.
+                // Normally, platform near cache already has the value.
+                // Put value to platform thread local so it can be requested when missing.
+                ctx.kernalContext().platform().setThreadLocal(v);
             } else {
                 writer.writeObject(v);
             }

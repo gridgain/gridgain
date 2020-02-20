@@ -82,4 +82,11 @@ public interface PlatformProcessor extends GridProcessor {
      * @return Cache manager.
      */
     PlatformCacheManager cacheManager();
+
+    /**
+     * Sets thread local value for platform.
+     *
+     * @param value Value.
+     */
+    public void setThreadLocal(Object value);
 }
