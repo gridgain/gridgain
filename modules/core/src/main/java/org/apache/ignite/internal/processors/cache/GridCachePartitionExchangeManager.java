@@ -3459,7 +3459,7 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                                         ", evt=" + exchId.discoveryEventName() +
                                         ", node=" + exchId.nodeId() + ']');
 
-                                    finalR.init();
+                                    finalR.requestPartitions();
                                 }
                             });
                         }
@@ -3507,8 +3507,9 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         }
 
         /**
-         * Rebalance is not required on client node and always required when exchange future is null.
-         * In other cases the method checks all caches and decides required rebalance or not for specific exchange.
+         * Rebalance is not required on a client node and is always required when the exchange future is null.
+         * In other cases, this method checks all caches and decides whether rebalancing is required or not
+         * for the specific exchange.
          *
          * @param exchFut Exchange future.
          * @return {@code True} if rebalance is required at least for one of cache groups.
