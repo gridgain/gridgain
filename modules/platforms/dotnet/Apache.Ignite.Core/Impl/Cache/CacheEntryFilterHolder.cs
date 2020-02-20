@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     /// <summary>
     /// Non-generic binary filter wrapper.
     /// </summary>
-    internal class CacheEntryFilterHolder : IBinaryWriteAware
+    internal sealed class CacheEntryFilterHolder : IBinaryWriteAware
     {
         /** Wrapped ICacheEntryFilter */
         private readonly object _pred;
@@ -87,8 +87,8 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (!_nearCache.TryGetValue(key, out val))
                 {
                     // Request value from Java.
-                    // This should be very rare, because primary keys are always in .NET Near Cache.
-                    throw new NotImplementedException("TODO");
+                    // This should be rare, because primary keys are always in .NET Near Cache.
+                    val = _marsh.Ignite.GetJavaThreadLocal();
                 }
             }
             else

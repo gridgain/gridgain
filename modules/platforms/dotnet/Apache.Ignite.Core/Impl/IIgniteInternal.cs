@@ -97,5 +97,11 @@ namespace Apache.Ignite.Core.Impl
         /// <param name="cacheId">Cache id.</param>
         /// <returns>Cache name.</returns>
         CacheConfiguration GetCacheConfiguration(int cacheId);
+
+        /// <summary>
+        /// Gets platform-specific thread local value from Java.
+        /// </summary>
+        /// <returns>Thread local value from Java.</returns>
+        object GetJavaThreadLocal();
     }
 }
