@@ -17,7 +17,6 @@ package org.apache.ignite.internal.processors.query.oom;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.processors.query.h2.IgniteTrace;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -63,7 +62,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, IgniteTrace.NO_OP_TRACE);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         // Check defaults for tracker
         assertTrackerState(tracker,
@@ -92,14 +91,14 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             5_000);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, IgniteTrace.NO_OP_TRACE);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertTrackerState(tracker,
             10 * 1024,
             !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             5_000);
 
-        tracker = memMgr.createQueryMemoryTracker(1_000, IgniteTrace.NO_OP_TRACE);
+        tracker = memMgr.createQueryMemoryTracker(1_000, "");
 
         assertTrackerState(tracker,
             1_000,
@@ -168,11 +167,11 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, IgniteTrace.NO_OP_TRACE);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertNull(tracker);
 
-        tracker = memMgr.createQueryMemoryTracker(10, IgniteTrace.NO_OP_TRACE);
+        tracker = memMgr.createQueryMemoryTracker(10, "");
 
         assertTrackerState(tracker,
             10,
@@ -198,11 +197,11 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, IgniteTrace.NO_OP_TRACE);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertNull(tracker);
 
-        tracker = memMgr.createQueryMemoryTracker(10, IgniteTrace.NO_OP_TRACE);
+        tracker = memMgr.createQueryMemoryTracker(10, "");
 
         assertTrackerState(tracker,
             10,
@@ -226,7 +225,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(30, IgniteTrace.NO_OP_TRACE);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(30, "");
 
         assertTrackerState(tracker,
             30,
@@ -251,7 +250,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, IgniteTrace.NO_OP_TRACE);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertTrackerState(tracker,
             33,

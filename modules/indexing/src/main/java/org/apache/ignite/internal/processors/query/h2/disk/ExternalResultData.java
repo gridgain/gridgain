@@ -28,7 +28,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
-import org.apache.ignite.internal.processors.query.h2.IgniteTrace;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.api.ErrorCode;
@@ -120,7 +120,7 @@ public class ExternalResultData<T> implements AutoCloseable {
      * @param cls Class of stored data.
      * @param cmp Comparator for rows.
      * @param hnd Data handler.
-     * @param trace Trace object.
+     * @param tracker Memory tracker.
      */
     public ExternalResultData(IgniteLogger log,
         String workDir,
@@ -131,7 +131,7 @@ public class ExternalResultData<T> implements AutoCloseable {
         Class<T> cls,
         CompareMode cmp,
         DataHandler hnd,
-        IgniteTrace trace) {
+        H2MemoryTracker tracker) {
         this.log = log;
         this.cls = cls;
         this.cmp = cmp;
@@ -147,7 +147,7 @@ public class ExternalResultData<T> implements AutoCloseable {
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(file, trace, CREATE_NEW, READ, WRITE);
+                fileIo = fileIOFactory.create(file, tracker, CREATE_NEW, READ, WRITE);
             }
 
             if (log.isDebugEnabled())
@@ -158,7 +158,7 @@ public class ExternalResultData<T> implements AutoCloseable {
             writeBuff = Data.create(hnd, DEFAULT_ROW_SIZE, false);
 
             hashIdx = useHashIdx ?
-                new ExternalResultHashIndex(fileIOFactory, file, this, initSize, trace) : null;
+                new ExternalResultHashIndex(fileIOFactory, file, this, initSize, tracker) : null;
         }
         catch (IgniteCheckedException | IgniteException | IOException e) {
             U.closeQuiet(this);
@@ -181,7 +181,7 @@ public class ExternalResultData<T> implements AutoCloseable {
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(file, IgniteTrace.NO_OP_TRACE, READ);
+                fileIo = fileIOFactory.create(file, H2MemoryTracker.NO_OP_TRACKER, READ);
             }
 
             writeBuff = parent.writeBuff;

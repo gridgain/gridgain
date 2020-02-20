@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
-import org.apache.ignite.internal.processors.query.h2.IgniteTrace;
 import org.apache.ignite.internal.processors.query.h2.ManagedGroupByDataFactory;
 import org.h2.api.ErrorCode;
 import org.h2.command.Command;
@@ -147,7 +146,6 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     private boolean lazyQueryExecution;
     private ColumnNamerConfiguration columnNamerConfiguration;
     private H2QueryContext qryContext;
-    private IgniteTrace igniteTrace;
     private H2MemoryTracker memoryTracker;
     private ManagedGroupByDataFactory groupByDataFactory;
     /**
@@ -1992,13 +1990,5 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     @Override
     public boolean isSupportsGeneratedKeys() {
         return true;
-    }
-
-    public IgniteTrace getIgniteTrace() {
-        return igniteTrace;
-    }
-
-    public void setIgniteTrace(IgniteTrace igniteTrace) {
-        this.igniteTrace = igniteTrace;
     }
 }

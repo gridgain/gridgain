@@ -26,8 +26,8 @@ import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOF
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.internal.processors.query.h2.IgniteTrace;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.processors.query.h2.disk.TrackableFileIoFactory;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -149,11 +149,11 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public FileIO create(File file, IgniteTrace trace, OpenOption... modes) throws IOException {
+        @Override public FileIO create(File file, H2MemoryTracker tracker, OpenOption... modes) throws IOException {
             if (--crashOnCreateCnt == 0)
                 throw new IOException("Test crash.");
 
-            return super.create(file, IgniteTrace.NO_OP_TRACE, modes);
+            return super.create(file, H2MemoryTracker.NO_OP_TRACKER, modes);
         }
     }
 }

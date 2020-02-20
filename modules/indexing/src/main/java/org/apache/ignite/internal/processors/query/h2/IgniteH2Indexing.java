@@ -936,13 +936,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     public void setupMemoryTracking(H2PooledConnection conn, long maxMem, String qryDesc) {
         Session s = H2Utils.session(conn);
 
-        IgniteTrace trace = new IgniteTrace(qryDesc);
-
-        s.setIgniteTrace(trace);
-
         s.groupByDataFactory(memoryMgr);
 
-        QueryMemoryTracker memTracker = memoryMgr.createQueryMemoryTracker(maxMem, trace);
+        QueryMemoryTracker memTracker = memoryMgr.createQueryMemoryTracker(maxMem, qryDesc);
 
         if (memTracker != null)
             s.memoryTracker(memTracker);

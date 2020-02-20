@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.query.h2.disk.SortedExternalResult;
 import org.apache.ignite.internal.processors.query.h2.disk.TrackableFileIoFactory;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.dml.GroupByData;
 import org.h2.engine.Session;
@@ -183,9 +184,10 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * Note: Negative values are reserved for disable memory tracking.
      *
      * @param maxQryMemory Query memory limit in bytes.
+     * @param qryDesc Query descriptor.
      * @return Query memory tracker.
      */
-    public QueryMemoryTracker createQueryMemoryTracker(long maxQryMemory, IgniteTrace trace) {
+    public QueryMemoryTracker createQueryMemoryTracker(long maxQryMemory, String qryDesc) {
         assert maxQryMemory >= 0;
 
         if (maxQryMemory == 0)
@@ -196,15 +198,15 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (maxQryMemory == 0 && globalQuota0 == 0) {
             if (log.isDebugEnabled()) {
                 log.debug("No memory quota configured for the query. " +
-                    "It will be executed without memory tracking: "  + trace.queryDescriptor());
+                    "It will be executed without memory tracking: "  + qryDesc);
             }
 
             return null;
         }
 
         if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
-            if (log.isDebugEnabled()) {
-                log.debug( "Max query memory can't exceed SQL memory pool size. Will be reduced down to: " +
+            if (log.isInfoEnabled()) {
+                LT.info(log, "Max query memory can't exceed SQL memory pool size. Will be reduced down to: " +
                     globalQuota);
             }
 
@@ -216,10 +218,10 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (log.isDebugEnabled()) {
             log.debug("Started query with memory tracking parameters [queryQuota=" + maxQryMemory +
                 ", globalQuota=" + globalQuota0 + ", offloadingEnabled=" + offloadingEnabled +
-                ", query=" + trace.queryDescriptor() + ']');
+                ", query=" + qryDesc + ']');
         }
 
-        return new QueryMemoryTracker(log, parent, maxQryMemory, blockSize, offloadingEnabled, trace);
+        return new QueryMemoryTracker(log, parent, maxQryMemory, blockSize, offloadingEnabled, qryDesc);
     }
 
     /**
@@ -274,6 +276,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
                 "[qryQuota=" + qryQuota + ", globalQuota=" + globalQuota +
                 ", offloadingEnabled=" + offloadingEnabled + ']');
         }
+
+        if (qryQuota > globalQuota) {
+            log.warning("The local quota was set higher than global. The new value will be truncated " +
+                "to the size of the global quota [qryQuota=" + qryQuota + ", globalQuota=" + globalQuota);
+        }
     }
 
     /**
@@ -321,6 +328,16 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         // For now, it is ok as neither extra memory is actually hold with MemoryManager nor file descriptors are used.
         if (log.isDebugEnabled() && reserved.get() != 0)
             log.debug("Potential memory leak in SQL processor. Some query cursors were not closed or forget to free memory.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void incrementFilesCreated() {
+        throw new AssertionError("Should not be called.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void addTotalWrittenOnDisk(long written) {
+        throw new AssertionError("Should not be called.");
     }
 
     /** */
@@ -421,18 +438,16 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Created external data (offload file wrapper).
      */
     public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
-        IgniteTrace trace = ses.getIgniteTrace();
+        QueryMemoryTracker tracker = (QueryMemoryTracker)ses.queryMemoryTracker();
 
-        if (!trace.isOffloadStarted()) {
-            trace.offloadStarted(true);
-
+        if (tracker.totalWrittenOnDisk() == 0) {
             metrics.trackQueryOffloaded();
 
-            if (log.isDebugEnabled())
-                log.debug("Started offloading for query: " + trace.queryDescriptor());
+            if (log.isInfoEnabled())
+                LT.info(log, "Started offloading for query: " + tracker.queryDescriptor());
         }
 
-        return new ExternalResultData<>(log,
+        return new ExternalResultData<T>(log,
             ctx.config().getWorkDirectory(),
             fileIOFactory,
             ctx.localNodeId(),
@@ -441,6 +456,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
             cls,
             ses.getDatabase().getCompareMode(),
             ses.getDatabase(),
-            ses.getIgniteTrace());
+            ses.queryMemoryTracker());
     }
 }

@@ -30,9 +30,6 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     /** Logger. */
     private final IgniteLogger log;
 
-    /** Trace object. */
-    private final IgniteTrace trace;
-
     /** Parent tracker. */
     private final H2MemoryTracker parent;
 
@@ -60,6 +57,18 @@ public class QueryMemoryTracker implements H2MemoryTracker {
     /** Close flag to prevent tracker reuse. */
     private Boolean closed = Boolean.FALSE;
 
+    /** Total number of bytes written on disk tracked by current tracker. */
+    private volatile long totalWrittenOnDisk;
+
+    /** Total number of bytes tracked by current tracker. */
+    private volatile long totalReserved;
+
+    /** The number of files created by the query. */
+    private volatile int filesCreated;
+
+    /** Query descriptor (for logging). */
+    private final String qryDesc;
+
     /**
      * Constructor.
      *
@@ -75,7 +84,7 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         long quota,
         long blockSize,
         boolean offloadingEnabled,
-        IgniteTrace trace) {
+        String qryDesc) {
         assert quota >= 0;
 
         this.log = log;
@@ -83,7 +92,7 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         this.parent = parent;
         this.quota = quota;
         this.blockSize = quota != 0 ? Math.min(quota, blockSize) : blockSize;
-        this.trace = trace;
+        this.qryDesc = qryDesc;
     }
 
     /** {@inheritDoc} */
@@ -93,8 +102,7 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         checkClosed();
 
         reserved += toReserve;
-
-        trace.addMemoryBytes(toReserve);
+        totalReserved += toReserve;
 
         if (parent != null && reserved > reservedFromParent) {
             if (!reserveFromParent())
@@ -216,12 +224,49 @@ public class QueryMemoryTracker implements H2MemoryTracker {
         if (parent != null)
             parent.released(reservedFromParent);
 
-        if (trace != IgniteTrace.NO_OP_TRACE && log.isDebugEnabled()) {
-            log.debug("Query has been completed with memory metrics: [bytesConsumed="  + trace.memoryBytes() +
-                ", bytesOffloaded=" + trace.offloadedBytes() + ", filesCreated=" + trace.filesCreated() +
-                ", query=" + trace.queryDescriptor() + ']');
+        if (log.isDebugEnabled()) {
+            log.debug("Query has been completed with memory metrics: [bytesConsumed="  + totalReserved +
+                ", bytesOffloaded=" + totalWrittenOnDisk + ", filesCreated=" + filesCreated +
+                ", query=" + qryDesc + ']');
         }
+    }
 
+    /**
+     * @return Total number of bytes written on disk.
+     */
+    public long totalWrittenOnDisk() {
+        return totalWrittenOnDisk;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void addTotalWrittenOnDisk(long written) {
+        this.totalWrittenOnDisk += written;
+    }
+
+    /**
+     * @return Total bytes reserved by current query.
+     */
+    public long totalReserved() {
+        return totalReserved;
+    }
+
+    /**
+     * @return Total files number created by current query.
+     */
+    public int filesCreated() {
+        return filesCreated;
+    }
+
+    /** {@inheritDoc} */
+    @Override public synchronized void incrementFilesCreated() {
+        this.filesCreated++;
+    }
+
+    /**
+     * @return Query descriptor.
+     */
+    public String queryDescriptor() {
+        return qryDesc;
     }
 
     /** {@inheritDoc} */

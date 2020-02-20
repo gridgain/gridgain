@@ -23,7 +23,7 @@ import org.apache.ignite.internal.metric.SqlMemoryStatisticsHolder;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIODecorator;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
-import org.apache.ignite.internal.processors.query.h2.IgniteTrace;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 
 /**
  * File IO factory with tracking possibilities.
@@ -47,15 +47,15 @@ public class TrackableFileIoFactory {
     /**
      * Creates trackable file IO.
      * @param file File.
-     * @param trace Trace object.
+     * @param tracker Memory tracker..
      * @param modes Modes.
      * @return Trackable file IO.
      * @throws IOException If failed.
      */
-    public FileIO create(File file, IgniteTrace trace, OpenOption... modes) throws IOException {
+    public FileIO create(File file, H2MemoryTracker tracker, OpenOption... modes) throws IOException {
         FileIO delegate = delegateFactory.create(file, modes);
 
-        return new TrackableFileIO(delegate, metrics, trace);
+        return new TrackableFileIO(delegate, metrics, tracker);
     }
 
     /**
@@ -66,31 +66,24 @@ public class TrackableFileIoFactory {
         private final SqlMemoryStatisticsHolder metrics;
 
         /** */
-        private final IgniteTrace trace;
-
-        /** */
-        private long totalBytesRead;
-
-        /** */
-        private long  totalBytesWritten;
+        private final H2MemoryTracker tracker;
 
         /**
          * @param delegate File I/O delegate
          */
-        private TrackableFileIO(FileIO delegate, SqlMemoryStatisticsHolder metrics, IgniteTrace trace) {
+        private TrackableFileIO(FileIO delegate, SqlMemoryStatisticsHolder metrics, H2MemoryTracker tracker) {
             super(delegate);
 
             this.metrics = metrics;
-            this.trace = trace;
-            this.trace.addFilesCreated(1);
+            this.tracker = tracker;
+            this.tracker.incrementFilesCreated();
         }
 
         /** {@inheritDoc} */
         @Override public int read(ByteBuffer destBuf) throws IOException {
             int bytesRead = delegate.read(destBuf);
 
-            if (bytesRead > 0)
-                totalBytesRead += bytesRead;
+            trackReads(bytesRead);
 
             return bytesRead;
         }
@@ -99,8 +92,7 @@ public class TrackableFileIoFactory {
         @Override public int read(ByteBuffer destBuf, long position) throws IOException {
             int bytesRead = delegate.read(destBuf, position);
 
-            if (bytesRead > 0)
-                totalBytesRead += bytesRead;
+            trackReads(bytesRead);
 
             return bytesRead;
         }
@@ -109,8 +101,7 @@ public class TrackableFileIoFactory {
         @Override public int read(byte[] buf, int off, int len) throws IOException {
             int bytesRead = delegate.read(buf, off, len);
 
-            if (bytesRead > 0)
-                totalBytesRead += bytesRead;
+            trackReads(bytesRead);
 
             return bytesRead;
         }
@@ -119,8 +110,7 @@ public class TrackableFileIoFactory {
         @Override public int write(ByteBuffer srcBuf) throws IOException {
             int bytesWritten = delegate.write(srcBuf);
 
-            if (bytesWritten > 0)
-                totalBytesWritten += bytesWritten;
+            trackWrites(bytesWritten);
 
             return bytesWritten;
         }
@@ -129,8 +119,7 @@ public class TrackableFileIoFactory {
         @Override public int write(ByteBuffer srcBuf, long position) throws IOException {
             int bytesWritten = delegate.write(srcBuf, position);
 
-            if (bytesWritten > 0)
-                totalBytesWritten += bytesWritten;
+            trackWrites(bytesWritten);
 
             return bytesWritten;
         }
@@ -139,22 +128,28 @@ public class TrackableFileIoFactory {
         @Override public int write(byte[] buf, int off, int len) throws IOException {
             int bytesWritten = delegate.write(buf, off, len);
 
-            if (bytesWritten > 0)
-                totalBytesWritten += bytesWritten;
+            trackWrites(bytesWritten);
 
             return bytesWritten;
         }
 
-        @Override public void close() throws IOException {
-            if (metrics != null) {
-                metrics.trackOffloadingWritten(totalBytesWritten);
-                metrics.trackOffloadingRead(totalBytesRead);
-            }
+        /**
+         * @param read Byte read.
+         */
+        private void trackReads(int read) {
+            if (read > 0 && metrics != null)
+                metrics.trackOffloadingRead(read);
+        }
 
-            if (trace != null)
-                trace.addOffloadedBytes(totalBytesWritten);
+        /**
+         * @param written Bytes written.
+         */
+        private void trackWrites(int written) {
+            if (metrics != null)
+                metrics.trackOffloadingWritten(written);
 
-            super.close();
+            if (tracker != null)
+                tracker.addTotalWrittenOnDisk(written);
         }
     }
 }
