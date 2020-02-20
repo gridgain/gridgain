@@ -771,6 +771,8 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
             case OP_GET_THREAD_LOCAL: {
                 writer.writeObjectDetached(threadLocal.get());
+
+                return;
             }
         }
 
