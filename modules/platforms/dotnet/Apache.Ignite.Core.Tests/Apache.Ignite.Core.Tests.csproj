@@ -119,7 +119,6 @@
     <Compile Include="Cache\Near\CacheNearCreateDestroy.cs" />
     <Compile Include="Cache\Near\CacheNearTopologyChangeTest.cs" />
     <Compile Include="Cache\Near\CacheNearTest.cs" />
-    <Compile Include="Cache\Near\CacheNearTestGenericDowngrade.cs" />
     <Compile Include="Cache\Near\Foo.cs" />
     <Compile Include="Cache\PartitionPreloadTest.cs" />
     <Compile Include="Cache\PersistenceTest.cs" />

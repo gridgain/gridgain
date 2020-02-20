@@ -52,6 +52,7 @@
     <Compile Include="Interop\GetAllBinaryBenchmark.cs" />
     <Compile Include="Interop\GetAllBenchmark.cs" />
     <Compile Include="Interop\GetAllEmployeesBenchmark.cs" />
+    <Compile Include="Interop\GetNearBenchmark.cs" />
     <Compile Include="Interop\PlatformBenchmarkBase.cs" />
     <Compile Include="Interop\ClosureBenchmark.cs" />
     <Compile Include="Interop\GetAsyncBenchmark.cs" />

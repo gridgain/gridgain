@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Cache.Configuration
 {
     using System.ComponentModel;
-    using System.Threading;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Eviction;
 

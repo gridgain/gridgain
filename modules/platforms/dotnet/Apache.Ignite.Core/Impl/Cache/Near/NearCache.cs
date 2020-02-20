@@ -175,7 +175,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var key = reader.ReadObject<TK>();
             var hasVal = reader.ReadBoolean();
 
-            var val = hasVal ? reader.ReadObject<TV>() : default;
+            var val = hasVal ? reader.ReadObject<TV>() : default(TV);
             var part = hasVal ? reader.ReadInt() : 0;
             var ver = hasVal
                 ? new AffinityTopologyVersion(reader.ReadLong(), reader.ReadInt())
