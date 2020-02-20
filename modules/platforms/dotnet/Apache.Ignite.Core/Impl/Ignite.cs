@@ -98,7 +98,8 @@ namespace Apache.Ignite.Core.Impl
             SetBaselineAutoAdjustmentEnabled = 33,
             GetBaselineAutoAdjustTimeout = 34,
             SetBaselineAutoAdjustTimeout = 35,
-            GetCacheConfig = 36
+            GetCacheConfig = 36,
+            GetThreadLocal = 37
         }
 
         /** */
@@ -743,6 +744,12 @@ namespace Apache.Ignite.Core.Impl
                 w => w.WriteInt(cacheId),
                 s => new CacheConfiguration(
                     BinaryUtils.Marshaller.StartUnmarshal(s), ClientSocket.CurrentProtocolVersion));
+        }
+
+        /** <inheritdoc /> */
+        public object GetJavaThreadLocal()
+        {
+            return Target.OutStream((int) Op.GetThreadLocal, r => r.ReadObject<object>());
         }
 
         /** <inheritdoc /> */

@@ -80,20 +80,22 @@ namespace Apache.Ignite.Core.Impl.Cache
             var rawReader = _marsh.StartUnmarshal(input, _keepBinary).GetRawReader();
 
             var key = rawReader.ReadObject<object>();
+            var hasVal = rawReader.ReadBoolean();
             object val;
 
-            if (_nearCache != null)
+            if (hasVal)
+            {
+                val = rawReader.ReadObject<object>();
+            }
+            else
             {
                 if (!_nearCache.TryGetValue(key, out val))
                 {
                     // Request value from Java.
                     // This should be rare, because primary keys are always in .NET Near Cache.
+                    // TODO: Add test for this somehow.
                     val = _marsh.Ignite.GetJavaThreadLocal();
                 }
-            }
-            else
-            {
-                val = rawReader.ReadObject<object>();
             }
 
             return _invoker(key, val) ? 1 : 0;

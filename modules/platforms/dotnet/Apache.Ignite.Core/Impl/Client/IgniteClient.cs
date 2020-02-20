@@ -195,6 +195,11 @@ namespace Apache.Ignite.Core.Impl.Client
             throw GetClientNotSupportedException();
         }
 
+        public object GetJavaThreadLocal()
+        {
+            throw GetClientNotSupportedException();
+        }
+
         /** <inheritDoc /> */
         public IgniteClientConfiguration GetConfiguration()
         {
