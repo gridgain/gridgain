@@ -604,7 +604,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestServerNearCacheTypeMismatch()
         {
-            // TODO
+            var cfg = new CacheConfiguration(TestUtils.TestName)
+            {
+                NearConfiguration = new NearCacheConfiguration().EnablePlatformNearCache<long, Guid>()
+            };
+
+            var cache = _grid.CreateCache<int, Foo>(cfg);
+            cache[1] = new Foo(2);
+            
+            Assert.Fail("TODO: Check logs?");
         }
         
         /// <summary>
