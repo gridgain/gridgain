@@ -302,9 +302,6 @@ public class DataRegionMetricsImpl implements DataRegionMetrics {
 
     /** {@inheritDoc} */
     @Override public int getPageSize() {
-        if (!metricsEnabled)
-            return 0;
-
         return pageMem.pageSize();
     }
 

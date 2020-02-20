@@ -19,8 +19,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.DataRegionMetrics;
 import org.apache.ignite.DataRegionMetricsProvider;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
@@ -49,22 +51,34 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
         }
     };
 
-    /** */
+    /**
+     *
+     */
     private DataRegionMetricsImpl memMetrics;
 
-    /** */
+    /**
+     *
+     */
     private int threadsCnt = 1;
 
-    /** */
+    /**
+     *
+     */
     private Thread[] allocationThreads;
 
-    /** */
+    /**
+     *
+     */
     private Thread watcherThread;
 
-    /** */
+    /**
+     *
+     */
     private static final int RATE_TIME_INTERVAL_1 = 5_000;
 
-    /** */
+    /**
+     *
+     */
     private static final int RATE_TIME_INTERVAL_2 = 10_000;
 
     /** {@inheritDoc} */
@@ -82,6 +96,7 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
 
     /**
      * Test for allocationRate metric in single-threaded mode.
+     *
      * @throws Exception if any happens during test.
      */
     @Test
@@ -106,6 +121,7 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
 
     /**
      * Test for allocationRate metric in multi-threaded mode with short silent period in the middle of the test.
+     *
      * @throws Exception if any happens during test.
      */
     @Test
@@ -145,7 +161,9 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test verifies that allocationRate calculation algorithm survives setting new values to rateTimeInterval parameter.
+     * Test verifies that allocationRate calculation algorithm survives setting new values to rateTimeInterval
+     * parameter.
+     *
      * @throws Exception if any happens during test.
      */
     @Test
@@ -176,7 +194,6 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     *
      * @throws Exception if any happens during test.
      */
     @Test
@@ -206,9 +223,35 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
             watcher.rateDropsCntr.get() > 4);
     }
 
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
+
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        cfg.setCacheConfiguration(ccfg);
+        return cfg;
+    }
+
     /**
-     * As rate metrics {@link HitRateMetric implementation} is tied to absolute time ticks
-     * (not related to the first hit) all tests need to align start time with this sequence of ticks.
+     * Test verifies that Page Size should be available even with disabled metrics
+     *
+     * @throws Exception if any happens during test
+     */
+    @Test
+    public void testPageSize() throws Exception {
+        IgniteEx ig = startGrid(0);
+        ig.cluster().active(true);
+
+        final DataRegionMetricsImpl regionMetrics = ig.cachex(DEFAULT_CACHE_NAME)
+            .context().group().dataRegion().memoryMetrics();
+        regionMetrics.disableMetrics();
+
+        assertTrue("Page Size should be available even with disabled metrics", regionMetrics.getPageSize() > 0);
+    }
+
+    /**
+     * As rate metrics {@link HitRateMetric implementation} is tied to absolute time ticks (not related to the first
+     * hit) all tests need to align start time with this sequence of ticks.
      *
      * @param rateTimeInterval Rate time interval.
      * @param size Size.
@@ -280,16 +323,24 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
      *
      */
     private static class AllocationsIncrementer implements Runnable {
-        /** */
+        /**
+         *
+         */
         private final CountDownLatch startLatch;
 
-        /** */
+        /**
+         *
+         */
         private final DataRegionMetricsImpl memMetrics;
 
-        /** */
+        /**
+         *
+         */
         private final int iterationsCnt;
 
-        /** */
+        /**
+         *
+         */
         private final int delay;
 
         /**
@@ -298,7 +349,8 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
          * @param iterationsCnt Iterations count.
          * @param delay Delay.
          */
-        private AllocationsIncrementer(CountDownLatch startLatch, DataRegionMetricsImpl memMetrics, int iterationsCnt, int delay) {
+        private AllocationsIncrementer(CountDownLatch startLatch, DataRegionMetricsImpl memMetrics, int iterationsCnt,
+            int delay) {
             this.startLatch = startLatch;
             this.memMetrics = memMetrics;
             this.iterationsCnt = iterationsCnt;
@@ -329,16 +381,24 @@ public class DataRegionMetricsSelfTest extends GridCommonAbstractTest {
      *
      */
     private static class AllocationRateWatcher implements Runnable {
-        /** */
+        /**
+         *
+         */
         private final AtomicInteger rateDropsCntr = new AtomicInteger();
 
-        /** */
+        /**
+         *
+         */
         private final CountDownLatch startLatch;
 
-        /** */
+        /**
+         *
+         */
         private final DataRegionMetrics memMetrics;
 
-        /** */
+        /**
+         *
+         */
         private final int delay;
 
         /**
