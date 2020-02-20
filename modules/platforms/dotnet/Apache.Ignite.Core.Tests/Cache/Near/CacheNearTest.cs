@@ -27,6 +27,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Eviction;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Events;
+    using Apache.Ignite.Core.Log;
+    using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
     /// <summary>
@@ -49,12 +51,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /** */
         private IIgnite _client;
 
+        /** */
+        private ListLogger _logger;
+
         /// <summary>
         /// Fixture set up.
         /// </summary>
         [TestFixtureSetUp]
         public virtual void FixtureSetUp()
         {
+            _logger = new ListLogger(new ConsoleLogger())
+            {
+                EnabledLevels = new[] {LogLevel.Error}
+            };
+            
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
                 CacheConfiguration = new[]
@@ -73,7 +83,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         }
                     }
                 },
-                IgniteInstanceName = "server1"
+                IgniteInstanceName = "server1",
+                Logger = _logger
             };
 
             _grid = Ignition.Start(cfg);
@@ -113,6 +124,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TearDown()
         {
             _grid.GetCache<int, int>(CacheName).RemoveAll();
+            _logger.Clear();
         }
 
         /// <summary>
@@ -590,29 +602,30 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
-        public void TestClientNearCacheTypeMismatch()
+        public void TestNearCacheTypeMismatchLogsErrorAndUpdatesMainCache()
         {
             var cfg = new CacheConfiguration(TestUtils.TestName);
             var nearCfg = new NearCacheConfiguration().EnablePlatformNearCache<long, Guid>();
             
-            var cache = _client.CreateCache<int, Foo>(cfg, nearCfg);
-            cache[1] = new Foo(2);
+            var clientCache = _client.CreateCache<int, Foo>(cfg, nearCfg);
+            var serverCache = _grid.GetCache<int, Foo>(cfg.Name);
             
-            Assert.Fail("TODO: Check logs?");
-        }
-        
-        [Test]
-        public void TestServerNearCacheTypeMismatch()
-        {
-            var cfg = new CacheConfiguration(TestUtils.TestName)
-            {
-                NearConfiguration = new NearCacheConfiguration().EnablePlatformNearCache<long, Guid>()
-            };
-
-            var cache = _grid.CreateCache<int, Foo>(cfg);
-            cache[1] = new Foo(2);
+            // Put Foo, but near cache expects Guid.
+            clientCache[1] = new Foo(2);
             
-            Assert.Fail("TODO: Check logs?");
+            // Error is logged.
+            Assert.AreEqual(
+                "Failed to update Platform Near Cache: class o.a.i.IgniteException: Specified cast is not valid.",
+                _logger.Entries.Single().Message);
+            
+            // Entry is not in near cache.
+            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.NativeNear));
+                
+            // Ignite cache updated.
+            Assert.AreEqual(2, serverCache[1].Bar);
+            
+            // Near cache fails on get.
+            Assert.Throws<InvalidCastException>(() => clientCache.Get(1));
         }
         
         /// <summary>
