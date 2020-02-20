@@ -95,6 +95,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.plugin.extensions.communication.MessageFormatter;
@@ -1141,7 +1142,16 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     threadProcessingMessage(true, msgC);
 
-                    processRegularMessage0(msg, nodeId);
+                    ClusterNode node = ctx.discovery().node(nodeId);
+
+                    MarshallerUtils.jobSenderVersion(node.version());
+
+                    try {
+                        processRegularMessage0(msg, nodeId);
+                    }
+                    finally {
+                        MarshallerUtils.jobSenderVersion(null);
+                    }
                 }
                 catch (Throwable e) {
                     log.error("An error occurred processing the message [msg=" + msg + ", nodeId=" + nodeId + "].", e);
