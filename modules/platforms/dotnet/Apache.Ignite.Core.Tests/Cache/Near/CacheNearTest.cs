@@ -28,6 +28,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Log;
+    using Apache.Ignite.Core.Tests.Cache.Query;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
@@ -474,7 +475,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestScanQueryFilterUsesValueFromNearCache()
         {
+            var cache = GetCache<int, Foo>(CacheTestMode.Client);
+            cache[1] = new Foo(1);
+
+            // Filter will check that value comes from native near cache.
+            var filter = new ScanQueryNearCacheFilter
+            {
+                CacheName = cache.Name
+            };
             
+            var res = cache.Query(new ScanQuery<int, Foo>(filter));
+            
+            Assert.AreEqual(1, res.Single().Value.Bar);
         }
 
         [Test]
