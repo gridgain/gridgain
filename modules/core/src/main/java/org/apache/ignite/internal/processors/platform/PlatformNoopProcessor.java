@@ -74,4 +74,9 @@ public class PlatformNoopProcessor extends GridProcessorAdapter implements Platf
     @Override public PlatformCacheManager cacheManager() {
         return null;
     }
+
+    /** {@inheritDoc} */
+    @Override public void setThreadLocal(Object value) {
+        // No-op.
+    }
 }
