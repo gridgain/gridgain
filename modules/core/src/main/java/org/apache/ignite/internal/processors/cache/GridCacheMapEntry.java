@@ -6987,7 +6987,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes, partition(), ver);
         } catch (IgniteCheckedException e) {
-            throw U.convertException(e);
+            U.error(log, "Failed to update Platform Near Cache: " + e);
         }
     }
 
