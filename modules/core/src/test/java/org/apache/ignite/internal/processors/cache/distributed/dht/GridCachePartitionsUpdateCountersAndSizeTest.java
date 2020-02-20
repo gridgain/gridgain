@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
-import java.util.*;
-import java.util.regex.*;
+import java.util.HashSet;
+import java.util.regex.Pattern;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -202,34 +202,34 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
             if (s.matches("Partitions update counters are inconsistent for Part (\\[0-2]): " +
                 "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) " +
-                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) \\]")) {
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) ]")) {
                 typeInconsistence = 1;
                 for (int i = 0; i < 3; i++) {
-                    s = s.substring(s.indexOf("="));
-                    setCnt.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
+                    s = s.substring(s.indexOf('='));
+                    setCnt.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
                 }
             }
             else if (s.matches("Partitions cache sizes are inconsistent for Part (\\[0-2]): " +
                 "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0}) " +
-                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0}) \\]")) {
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0}) ]")) {
                 typeInconsistence =2;
                 for (int i = 0; i < 3; i++) {
-                    s = s.substring(s.indexOf("="));
-                    setSize.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
+                    s = s.substring(s.indexOf('='));
+                    setSize.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
                 }
             }
 
             else if (s.matches("Partitions cache size and update counters are inconsistent for Part (\\[0-2]]): \\[" +
-                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)\\] " +
-                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)\\] " +
-                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)\\]")) {
+                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)] " +
+                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)] " +
+                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)]")) {
                 typeInconsistence = 3;
                 for (int i=0; i<3; i++) {
                     s = s.substring(s.indexOf("size="));
-                    setSize.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
+                    setSize.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
                     s = s.substring(s.indexOf("updCnt="));
-                    setCnt.add(Long.parseLong(s.substring(0, s.indexOf(" ") - 1)));
+                    setCnt.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
                 }
             }
 
