@@ -1991,10 +1991,12 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                         if (type.name().startsWith("GridCache"))
                             continue;
 
-                        names.add(type.name());
+                        String typeName = F.isEmpty(type.tableName()) ? type.name() : type.tableName();
 
-                        keyClasses.put(type.name(), type.keyClass().getName());
-                        valClasses.put(type.name(), type.valueClass().getName());
+                        names.add(typeName);
+
+                        keyClasses.put(typeName, type.keyClass().getName());
+                        valClasses.put(typeName, type.valueClass().getName());
 
                         int size = type.fields().isEmpty() ? NO_FIELDS_COLUMNS_COUNT : type.fields().size();
 
@@ -2009,7 +2011,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                         for (Map.Entry<String, Class<?>> e : type.fields().entrySet())
                             fieldsMap.put(e.getKey().toUpperCase(), e.getValue().getName());
 
-                        fields.put(type.name(), fieldsMap);
+                        fields.put(typeName, fieldsMap);
 
                         Map<String, GridQueryIndexDescriptor> idxs = type.indexes();
 
@@ -2037,7 +2039,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                             }
                         }
 
-                        indexes.put(type.name(), indexesCol);
+                        indexes.put(typeName, indexesCol);
                     }
 
                     return new CacheSqlMetadata(cacheName, names, keyClasses, valClasses, fields, indexes);
