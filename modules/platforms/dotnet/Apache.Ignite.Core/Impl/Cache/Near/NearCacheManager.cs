@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         }
 
         /// <summary>
-        /// Gets the near cache.
+        /// Gets or creates the near cache.
         /// </summary>
         public INearCache GetOrCreateNearCache(CacheConfiguration cacheConfiguration)
         {
@@ -74,6 +74,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return _nearCaches.GetOrAdd(cacheId, _ => CreateNearCache(cacheConfiguration));
         }
 
+        /// <summary>
+        /// Gets near cache when it exists.
+        /// </summary>
+        public INearCache TryGetNearCache(int cacheId)
+        {
+            INearCache nearCache;
+            return _nearCaches.TryGetValue(cacheId, out nearCache) ? nearCache : null;
+        }
+        
         /// <summary>
         /// Reads cache entry from a stream and updates the near cache.
         /// </summary>

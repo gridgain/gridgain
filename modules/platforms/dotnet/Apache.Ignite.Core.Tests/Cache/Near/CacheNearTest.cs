@@ -475,6 +475,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestScanQueryFilterUsesValueFromNearCache()
         {
+            // TODO: Check use case when filter is stored locally in handle registry.
             var cache = GetCache<int, Foo>(CacheTestMode.Client);
             cache[1] = new Foo(1);
 

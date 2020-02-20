@@ -89,7 +89,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
             else
             {
-                if (!_nearCache.TryGetValue(key, out val))
+                if (_nearCache == null || !_nearCache.TryGetValue(key, out val))
                 {
                     // Request value from Java.
                     // This should be rare, because primary keys are always in .NET Near Cache.
@@ -161,7 +161,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 var filterHolder = grid.Marshaller.Unmarshal<CacheEntryFilterHolder>(stream);
 
                 var cacheId = stream.ReadInt();
-                filterHolder._nearCache = null; // TODO: Retrieve from manager only if exists already.
+                filterHolder._nearCache = grid.NearCacheManager.TryGetNearCache(cacheId);
                 
                 return filterHolder;
             }
