@@ -171,7 +171,6 @@ public abstract class BaseIndex extends SchemaObjectBase implements Index {
         long rowsCost = rowCount;
         if (masks != null) {
             int i = 0, len = columns.length;
-            boolean tryAdditional = false;
             while (i < len) {
                 Column column = columns[i++];
                 int index = column.getColumnId();
@@ -187,36 +186,20 @@ public abstract class BaseIndex extends SchemaObjectBase implements Index {
                     if (distinctRows <= 0) {
                         distinctRows = 1;
                     }
-                    rowsCost = 2 + Math.max(rowCount / distinctRows, 1);
+                    rowsCost = Math.min(5 + Math.max(rowsCost / distinctRows, 1), rowsCost - (i > 0 ? 1 : 0));
                 } else if ((mask & IndexCondition.RANGE) == IndexCondition.RANGE) {
-                    rowsCost = 2 + rowsCost / 4;
-                    tryAdditional = true;
+                    rowsCost = Math.min(5 + rowsCost / 4, rowsCost - (i > 0 ? 1 : 0));
                     break;
                 } else if ((mask & IndexCondition.START) == IndexCondition.START) {
-                    rowsCost = 2 + rowsCost / 3;
-                    tryAdditional = true;
+                    rowsCost = Math.min(5 + rowsCost / 3, rowsCost - (i > 0 ? 1 : 0));
                     break;
                 } else if ((mask & IndexCondition.END) == IndexCondition.END) {
-                    rowsCost = rowsCost / 3;
-                    tryAdditional = true;
+                    rowsCost = Math.min(rowsCost / 3, rowsCost - (i > 0 ? 1 : 0));
                     break;
                 } else {
-                    if (mask == 0) {
-                        // Adjust counter of used columns (i)
-                        i--;
-                    }
                     break;
                 }
             }
-            // Some additional columns can still be used
-            if (tryAdditional) {
-                while (i < len && masks[columns[i].getColumnId()] != 0) {
-                    i++;
-                    rowsCost--;
-                }
-            }
-            // Increase cost of indexes with additional unused columns
-            rowsCost += len - i;
         }
         // If the ORDER BY clause matches the ordering of this index,
         // it will be cheaper than another index, so adjust the cost
