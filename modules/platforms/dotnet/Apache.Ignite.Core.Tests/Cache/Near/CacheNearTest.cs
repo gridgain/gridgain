@@ -472,12 +472,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
-        public void TestScanQueryUsesValueFromNearCache()
+        public void TestScanQueryFilterUsesValueFromNearCache()
         {
-            // TODO: Can we pass only the key to scan query filter, and pass value only when needed?
-            //       - yes, we can put the value in a thread local and request as needed.
-            // TODO: When receiving scan query results, can we also use existing values from near cache?
-            //      - yes we can, by writing keys for the batch first, then retrieving missing values as a separate call
+            
+        }
+
+        [Test]
+        public void TestScanQueryResultUsesValueFromNearCache()
+        {
+            // TODO: Looks like we can't do this, because scanned value can be different from current near cache value.
+            // We need a scan with transformer to improve this.
         }
 
         [Test]
