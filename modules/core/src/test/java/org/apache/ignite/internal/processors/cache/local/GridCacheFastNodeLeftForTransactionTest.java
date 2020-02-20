@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -122,6 +123,12 @@ public class GridCacheFastNodeLeftForTransactionTest extends GridCommonAbstractT
      */
     @Test
     public void testRollbackTransactions() throws Exception {
+        if (Boolean.getBoolean(IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS)) {
+            log.warning("https://ggsystems.atlassian.net/browse/GG-27708");
+
+            return;
+        }
+
         int txCnt = TX_COUNT;
 
         int nodes = NODES;
