@@ -111,9 +111,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private INearCache CreateNearCache(CacheConfiguration cacheConfiguration)
         {
             Debug.Assert(cacheConfiguration.NearConfiguration != null);
-            Debug.Assert(cacheConfiguration.NearConfiguration.PlatformNearCacheConfiguration != null);
+            Debug.Assert(cacheConfiguration.NearConfiguration.PlatformNearConfiguration != null);
 
-            var nearCfg = cacheConfiguration.NearConfiguration.PlatformNearCacheConfiguration;
+            var nearCfg = cacheConfiguration.NearConfiguration.PlatformNearConfiguration;
             
             Func<object> affinityTopologyVersionFunc = () => _affinityTopologyVersion;
             var affinity = _ignite.GetAffinity(cacheConfiguration.Name);

@@ -43,13 +43,13 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCacheConfiguration"/> class.
         /// </summary>
-        /// <param name="enablePlatformNearCache">When true, sets <see cref="PlatformNearCacheConfiguration"/>
+        /// <param name="enablePlatformNearCache">When true, sets <see cref="PlatformNearConfiguration"/>
         /// to a default instance.</param>
         public NearCacheConfiguration(bool enablePlatformNearCache) : this()
         {
             if (enablePlatformNearCache)
             {
-                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration();
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration();
             }
         }
 
@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
             if (reader.ReadBoolean())
             {
-                PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration(reader);
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration(reader);
             }
         }
 
@@ -75,10 +75,10 @@ namespace Apache.Ignite.Core.Cache.Configuration
             writer.WriteInt(NearStartSize);
             EvictionPolicyBase.Write(writer, EvictionPolicy);
 
-            if (PlatformNearCacheConfiguration != null)
+            if (PlatformNearConfiguration != null)
             {
                 writer.WriteBoolean(true);
-                PlatformNearCacheConfiguration.Write(writer);
+                PlatformNearConfiguration.Write(writer);
             }
             else
             {
@@ -102,10 +102,10 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// TODO
         /// </summary>
-        public PlatformNearCacheConfiguration PlatformNearCacheConfiguration { get; set; }
+        public PlatformNearCacheConfiguration PlatformNearConfiguration { get; set; }
 
         /// <summary>
-        /// Convenience method to set <see cref="PlatformNearCacheConfiguration"/> with specified key and value types.
+        /// Convenience method to set <see cref="PlatformNearConfiguration"/> with specified key and value types.
         /// </summary>
         /// <param name="keepBinary">Whether to enable binary mode for the platform near cache.</param>
         /// <typeparam name="TK">Key type for near cache map.</typeparam>
@@ -113,7 +113,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <returns>This instance for chaining.</returns>
         public NearCacheConfiguration EnablePlatformNearCache<TK, TV>(bool keepBinary = false)
         {
-            PlatformNearCacheConfiguration = new PlatformNearCacheConfiguration
+            PlatformNearConfiguration = new PlatformNearCacheConfiguration
             {
                 KeepBinary = keepBinary,
                 KeyTypeName = typeof(TK).AssemblyQualifiedName,
