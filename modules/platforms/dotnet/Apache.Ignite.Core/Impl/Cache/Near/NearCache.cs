@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCache{TK, TV}"/> class.
-        /// Called via reflection from <see cref="NearCacheManager.CreateNearCache{TK,TV}"/>. 
+        /// Called via reflection from <see cref="NearCacheManager.CreateNearCache"/>. 
         /// </summary>
         public NearCache(Func<object> affinityTopologyVersionFunc, CacheAffinityImpl affinity, bool keepBinary)
         {
