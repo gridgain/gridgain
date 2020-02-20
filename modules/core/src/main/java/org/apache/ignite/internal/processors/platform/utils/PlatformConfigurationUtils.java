@@ -318,7 +318,7 @@ public class PlatformConfigurationUtils {
                     .setValueTypeName(in.readString())
                     .setKeepBinary(in.readBoolean());
 
-            cfg.setPlatformNearCacheConfiguration(platCfg);
+            cfg.setPlatformNearConfiguration(platCfg);
         }
 
         return cfg;
@@ -406,7 +406,7 @@ public class PlatformConfigurationUtils {
         out.writeInt(cfg.getNearStartSize());
         writeEvictionPolicy(out, cfg.getNearEvictionPolicy());
 
-        PlatformNearCacheConfiguration platCfg = cfg.getPlatformNearCacheConfiguration();
+        PlatformNearCacheConfiguration platCfg = cfg.getPlatformNearConfiguration();
         if (platCfg != null) {
             out.writeBoolean(true);
             out.writeString(platCfg.getKeyTypeName());

@@ -48,7 +48,7 @@ public class NearCacheConfiguration<K, V> implements Serializable {
     private int nearStartSize = DFLT_NEAR_START_SIZE;
 
     /** Whether to enable native near cache for platforms (currently .NET). */
-    private PlatformNearCacheConfiguration platformNearCacheConfiguration;
+    private PlatformNearCacheConfiguration platformNearConfiguration;
 
     /**
      * Empty constructor.
@@ -149,8 +149,8 @@ public class NearCacheConfiguration<K, V> implements Serializable {
      *
      * @return Platform near cache configuration or null.
      */
-    public PlatformNearCacheConfiguration getPlatformNearCacheConfiguration() {
-        return platformNearCacheConfiguration;
+    public PlatformNearCacheConfiguration getPlatformNearConfiguration() {
+        return platformNearConfiguration;
     }
 
     /**
@@ -168,9 +168,9 @@ public class NearCacheConfiguration<K, V> implements Serializable {
      *
      * @return {@code this} for chaining.
      */
-    public NearCacheConfiguration<K, V> setPlatformNearCacheConfiguration(
-            PlatformNearCacheConfiguration platformNearCacheConfiguration) {
-        this.platformNearCacheConfiguration = platformNearCacheConfiguration;
+    public NearCacheConfiguration<K, V> setPlatformNearConfiguration(
+            PlatformNearCacheConfiguration platformNearConfiguration) {
+        this.platformNearConfiguration = platformNearConfiguration;
 
         return this;
     }

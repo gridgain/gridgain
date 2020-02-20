@@ -7004,6 +7004,6 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         return cache != null &&
                 cache.cacheCfg.getNearConfiguration() != null &&
-                cache.cacheCfg.getNearConfiguration().getPlatformNearCacheConfiguration() != null;
+                cache.cacheCfg.getNearConfiguration().getPlatformNearConfiguration() != null;
     }
 }
