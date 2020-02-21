@@ -41,7 +41,11 @@ public class MixedTracingSpiTest extends GridCommonAbstractTest {
         super.afterTest();
     }
 
-    /** {@inheritDoc} */
+    /**
+     * Prepares log listeners list.
+     *
+     * @return List of prepared log listeners.
+     */
     private List<LogListener> prepareLogListeners() {
         testLog.clearListeners();
 
