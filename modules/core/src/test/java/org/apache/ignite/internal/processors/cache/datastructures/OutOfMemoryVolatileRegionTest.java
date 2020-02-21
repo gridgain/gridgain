@@ -40,7 +40,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
  */
 public class OutOfMemoryVolatileRegionTest extends GridCommonAbstractTest {
     /** Minimal region size. */
-    private static final long DATA_REGION_SIZE = 20L * 1024 * 1024;
+    private static final long DATA_REGION_SIZE = 15L * 1024 * 1024;
 
     /** */
     private static final int ATTEMPTS_NUM = 3;
@@ -136,7 +136,7 @@ public class OutOfMemoryVolatileRegionTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < attempts; ++i) {
             for (int key = 0; key < 5_000; ++key)
-                cache.put(key, new byte[4000]);
+                cache.put(key, new byte[40]);
 
             cache.clear();
         }
@@ -145,9 +145,12 @@ public class OutOfMemoryVolatileRegionTest extends GridCommonAbstractTest {
 
         try {
             for (int j = 0; j < 100000; j++) {
-                grid(0).reentrantLock("l" + j, j % 2 == 0, j % 3 == 0, true);
-                grid(1).semaphore("s" + j, 1 + (j % 7), j % 3 == 0, true);
-                grid(0).countDownLatch("c" + j, 1 + (j % 13), j % 2 == 0, true);
+                grid(0).reentrantLock("l" + getClass().getName() + j,
+                    j % 2 == 0, j % 3 == 0, true);
+                grid(1).semaphore("s" + getClass().getName() + j,
+                    1 + (j % 7), j % 3 == 0, true);
+                grid(0).countDownLatch("c" + getClass().getName() + j,
+                    1 + (j % 13), j % 2 == 0, true);
             }
 
             fail("OutOfMemoryException hasn't been thrown");
@@ -163,7 +166,7 @@ public class OutOfMemoryVolatileRegionTest extends GridCommonAbstractTest {
 
         for (int i = 0; i < attempts; ++i) {
             for (int key = 0; key < 5_000; ++key)
-                cache.put(key, new byte[4000]);
+                cache.put(key, new byte[40]);
 
             cache.clear();
         }

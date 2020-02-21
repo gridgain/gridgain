@@ -352,16 +352,14 @@ public class IgniteCacheDatabaseSharedManager extends GridCacheSharedManagerAdap
             persistenceEnabled
         );
 
-        if (persistenceEnabled) {
-            addDataRegion(
-                memCfg,
-                createVolatileDataRegion(
-                    memCfg.getSystemRegionInitialSize(),
-                    memCfg.getSystemRegionMaxSize()
-                ),
-                false
-            );
-        }
+        addDataRegion(
+            memCfg,
+            createVolatileDataRegion(
+                memCfg.getSystemRegionInitialSize(),
+                memCfg.getSystemRegionMaxSize()
+            ),
+            false
+        );
 
         for (DatabaseLifecycleListener lsnr : getDatabaseListeners(cctx.kernalContext()))
             lsnr.onInitDataRegions(this);

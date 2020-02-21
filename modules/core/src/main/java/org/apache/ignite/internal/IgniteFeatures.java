@@ -111,7 +111,7 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /***/
+    /** */
     MANAGEMENT_CONSOLE(28),
 
     /** Distributed change timeout for dump long operations. */
