@@ -117,6 +117,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.GridProcessor;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
@@ -179,7 +180,6 @@ import org.apache.ignite.internal.processors.session.GridTaskSessionProcessor;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
-import org.apache.ignite.internal.processors.tracing.TracingProcessor;
 import org.apache.ignite.internal.processors.txdr.NoOpTransactionalDrProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
@@ -1080,8 +1080,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 }
             }
 
-            startProcessor(new TracingProcessor(ctx));
-
             // Lifecycle notification.
             notifyLifecycleBeans(BEFORE_NODE_START);
 
@@ -1111,6 +1109,12 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
 
             // Start SPI managers.
             // NOTE: that order matters as there are dependencies between managers.
+            try {
+                startManager(new GridTracingManager(ctx, false));
+            }
+            catch (IgniteCheckedException e) {
+                startManager(new GridTracingManager(ctx, true));
+            }
             startManager(new GridMetricManager(ctx));
             startManager(new GridIoManager(ctx));
             startManager(new GridCheckpointManager(ctx));
@@ -1134,7 +1138,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             // Start processors before discovery manager, so they will
             // be able to start receiving messages once discovery completes.
             try {
-                startProcessor(new TracingProcessor(ctx));
                 startProcessor(COMPRESSION.createOptional(ctx));
                 startProcessor(new PdsConsistentIdProcessor(ctx));
                 startProcessor(new MvccProcessorImpl(ctx));
@@ -1834,6 +1837,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         addSpiAttributes(cfg.getCheckpointSpi());
         addSpiAttributes(cfg.getLoadBalancingSpi());
         addSpiAttributes(cfg.getDeploymentSpi());
+        addSpiAttributes(cfg.getTracingSpi());
 
         // Set user attributes for this node.
         if (cfg.getUserAttributes() != null) {
