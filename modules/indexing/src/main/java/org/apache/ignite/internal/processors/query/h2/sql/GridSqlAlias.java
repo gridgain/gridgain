@@ -36,7 +36,7 @@ public class GridSqlAlias extends GridSqlElement {
      * @param expr Expr.
      */
     public GridSqlAlias(String alias, GridSqlAst expr) {
-        this(alias, expr, false);
+        this(alias, expr, true);
     }
 
     /**
@@ -51,7 +51,7 @@ public class GridSqlAlias extends GridSqlElement {
 
         assert !F.isEmpty(alias): alias;
 
-        this.useAs = useAs;
+        this.useAs = true;
         this.alias = alias;
     }
 

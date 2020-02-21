@@ -22,6 +22,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
@@ -49,23 +50,18 @@ public class StatementCacheTest extends AbstractIndexingCommonTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
+
         local = false;
         enforceJoinOrder = false;
         distributedJoin = false;
         collocatedGroupBy = false;
+    }
 
-        startGrids(2);
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        stopAllGrids();
 
-        sql("CREATE TABLE TBL0 (ID INT PRIMARY KEY, JID INT, VAL INT)");
-        sql("CREATE TABLE TBL1 (ID INT PRIMARY KEY, JID INT, VAL INT)");
-
-        sql("CREATE INDEX IDX_TBL1_JID ON TBL1(JID)");
-
-        for (int i = 0; i < SIZE_SMALL; ++i)
-            sql("INSERT INTO TBL0 VALUES (?, ?, ?)", i + 1, i + 1, i + 1);
-
-        for (int i = 0; i < SIZE_BIG; ++i)
-            sql("INSERT INTO TBL1 VALUES (?, ?, ?)", i, i + 1, i);
+        super.afterTest();
     }
 
     /**
@@ -73,6 +69,18 @@ public class StatementCacheTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testEnforceJoinOrderFlag() throws Exception {
+        startGrids(1);
+
+        sql("CREATE TABLE TBL0 (ID INT PRIMARY KEY, JID INT, VAL INT)");
+        sql("CREATE TABLE TBL1 (ID INT PRIMARY KEY, JID INT, VAL INT)");
+
+        sql("CREATE INDEX IDX_TBL1_JID ON TBL1(JID)");
+
+        sql("INSERT INTO TBL0 VALUES (0, 0, 0)");
+
+        for (int i = 0; i < SIZE_BIG; ++i)
+            sql("INSERT INTO TBL1 VALUES (?, ?, ?)", i, i + 1, i);
+
         local = true;
 
         sql("EXPLAIN SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll();
@@ -91,25 +99,34 @@ public class StatementCacheTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testDistributedJoinFlag() throws Exception {
-//        startGrid(1);
+        startGrids(3);
 
-        awaitPartitionMapExchange();
+        sql("CREATE TABLE TBL0 (ID INT PRIMARY KEY, JID INT, VAL INT)");
+        sql("CREATE TABLE TBL1 (ID INT PRIMARY KEY, JID INT, VAL INT)");
 
-        try {
-            sql("CREATE INDEX IDX_TBL0_JID ON TBL0(JID)");
+        sql("CREATE INDEX IDX_TBL0_JID ON TBL0(JID)");
+        sql("CREATE INDEX IDX_TBL1_JID ON TBL1(JID)");
 
-            distributedJoin = false;
-            int size = sql("SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll().size();
+        for (int i = 0; i < SIZE_SMALL; ++i)
+            sql("INSERT INTO TBL0 VALUES (?, ?, ?)", i + 1, i + 1, i + 1);
 
-            distributedJoin = true;
+        for (int i = 0; i < SIZE_BIG; ++i)
+            sql("INSERT INTO TBL1 VALUES (?, ?, ?)", i, i + 1, i);
 
-            int distSize = sql("SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll().size();
+        distributedJoin = false;
+        // Warm-up statements cache
+        GridTestUtils.runMultiThreaded(() -> {
+            for (int i = 0; i < 100; ++i)
+                sql("SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll();
+            }, 20, "statements-cache-warmup");
 
-            System.out.println("+++ " + size + " " + distSize);
-        }
-        finally {
-            stopGrid(1);
-        }
+        int size = sql("SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll().size();
+
+        distributedJoin = true;
+        int distSize = sql("SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll().size();
+
+        assertEquals("Invalid result set size of distributed join", SIZE_SMALL, distSize);
+        assertTrue("Invalid result set size of collocated join: " + size, size > 0 && size < distSize);
     }
 
     /**
