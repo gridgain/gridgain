@@ -27,7 +27,7 @@ import static org.apache.ignite.internal.IgniteFeatures.WC_SCHEDULING_NOT_AVAILA
 import static org.apache.ignite.internal.IgniteFeatures.allFeatures;
 
 /**
- * The test checks that some features is not available in ignite core module.
+ * The test checks that some features are not available in ignite core module.
  */
 public class FeaturesIsNotAvailableTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
