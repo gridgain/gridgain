@@ -544,10 +544,18 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         try {
                             PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
 
-                            if (recoverState != null) {
-                                io.setPartitionState(pageAddr, (byte) recoverState.intValue());
+                            byte persistedPartStateId = io.getPartitionState(pageAddr);
 
-                                changed = updateState(part, recoverState);
+                            part.setState(GridDhtPartitionState.fromOrdinal(persistedPartStateId));
+
+                            if (recoverState != null) {
+                                if (persistedPartStateId != (byte) recoverState.intValue()) {
+                                    io.setPartitionState(pageAddr, (byte)recoverState.intValue());
+
+                                    changed = true;
+                                }
+
+                                updateState(part, recoverState);
 
                                 if (log.isDebugEnabled())
                                     log.debug("Restored partition state (from WAL) " +
@@ -556,14 +564,10 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                         ", size=" + part.fullSize() + "]");
                             }
                             else {
-                                int stateId = (int) io.getPartitionState(pageAddr);
-
-                                changed = updateState(part, stateId);
-
                                 if (log.isDebugEnabled())
                                     log.debug("Restored partition state (from page memory) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
-                                        ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
+                                        ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + (int)persistedPartStateId +
                                         ", size=" + part.fullSize() + "]");
                             }
                         }
@@ -612,20 +616,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     /**
      * @param part Partition to restore state for.
      * @param stateId State enum ordinal.
-     * @return Updated flag.
      */
-    private boolean updateState(GridDhtLocalPartition part, int stateId) {
+    private void updateState(GridDhtLocalPartition part, int stateId) {
         if (stateId != -1) {
             GridDhtPartitionState state = GridDhtPartitionState.fromOrdinal(stateId);
 
             assert state != null;
 
             part.restoreState(state == GridDhtPartitionState.EVICTED ? GridDhtPartitionState.RENTING : state);
-
-            return true;
         }
-
-        return false;
     }
 
     /**
