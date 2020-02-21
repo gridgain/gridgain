@@ -130,6 +130,57 @@ public class StatementCacheTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     *
+     */
+    @Test
+    public void testCollocatedFlag() throws Exception {
+        startGrids(3);
+
+        Object [][] rows = new Object[][] {
+            new Object[] {1, "Bob", 10, "Shank"},
+            new Object[] {2, "Bob", 10, "Shank"},
+            new Object[] {3, "Bob", 10, "Shank"},
+            new Object[] {4, "Bill", 10, "Shank"},
+            new Object[] {5, "Bill", 10, "Shank"},
+            new Object[] {6, "Bill", 10, "Shank"},
+        };
+
+        sql("CREATE TABLE TEST(ID INT PRIMARY KEY, NAME0 VARCHAR, AGE INT, NAME1 VARCHAR)");
+
+        for (Object[] row : rows)
+            sql("INSERT INTO TEST VALUES (?, ?, ?, ?)", row);
+
+        collocatedGroupBy = false;
+        // Warm-up statements cache
+        GridTestUtils.runMultiThreaded(() -> {
+            for (int i = 0; i < 100; ++i) {
+                sql("SELECT SUM(AGE), NAME0 FROM TEST GROUP BY name0").getAll();
+                sql("SELECT SUM(AGE), NAME1 FROM TEST GROUP BY name1").getAll();
+            }
+        }, 20, "statements-cache-warmup");
+
+        int size = sql("SELECT SUM(AGE), NAME0 FROM TEST GROUP BY name0").getAll().size();
+
+        collocatedGroupBy = true;
+
+        int collSize = sql("SELECT SUM(AGE), NAME0 FROM TEST GROUP BY name0").getAll().size();
+
+        assertEquals("Invalid group by results", 2, size);
+        assertTrue("Result set of collocated query must be invalid on not collocated data", collSize > size);
+
+        collocatedGroupBy = false;
+
+        size = sql("SELECT SUM(AGE), NAME1 FROM TEST GROUP BY name1").getAll().size();
+
+        collocatedGroupBy = true;
+
+        collSize = sql("SELECT SUM(AGE), NAME1 FROM TEST GROUP BY name1").getAll().size();
+
+        assertEquals("Invalid group by results", 1, size);
+        assertTrue("Result set of collocated query must be invalid on not collocated data", collSize > size);
+    }
+
+    /**
      * @param sql SQL query.
      * @param args Query parameters.
      * @return Results cursor.
@@ -149,6 +200,7 @@ public class StatementCacheTest extends AbstractIndexingCommonTest {
             .setLocal(local)
             .setEnforceJoinOrder(enforceJoinOrder)
             .setDistributedJoins(distributedJoin)
+            .setCollocated(collocatedGroupBy)
             .setArgs(args), false);
     }
 }
