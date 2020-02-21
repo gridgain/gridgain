@@ -240,7 +240,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     /**
      * @return Query memory tracker if it is available or 'null' otherwise.
      */
-    public H2MemoryTracker queryMemoryTracker() {
+    public H2MemoryTracker memoryTracker() {
         return memoryTracker;
     }
 

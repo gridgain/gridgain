@@ -53,7 +53,7 @@ public interface H2MemoryTracker extends AutoCloseable {
     public void incrementFilesCreated();
 
     /**
-     * Updates counter of writes written to disk.
+     * Updates the counter of bytes written to disk.
      *
      * @param written Number of bytes.
      */

@@ -438,7 +438,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Created external data (offload file wrapper).
      */
     public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
-        QueryMemoryTracker tracker = (QueryMemoryTracker)ses.queryMemoryTracker();
+        QueryMemoryTracker tracker = (QueryMemoryTracker)ses.memoryTracker();
 
         if (tracker.totalWrittenOnDisk() == 0) {
             metrics.trackQueryOffloaded();
@@ -456,6 +456,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
             cls,
             ses.getDatabase().getCompareMode(),
             ses.getDatabase(),
-            ses.queryMemoryTracker());
+            ses.memoryTracker());
     }
 }
