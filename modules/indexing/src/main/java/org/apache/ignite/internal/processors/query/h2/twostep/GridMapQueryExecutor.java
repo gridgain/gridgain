@@ -402,12 +402,12 @@ public class GridMapQueryExecutor {
                         String sql = qry.query();
                         Collection<Object> params0 = F.asList(qry.parameters(params));
 
-                        PreparedStatement stmt = conn.prepareStatement(sql,
-                            H2StatementCache.queryFlags(
-                                distributedJoins,
-                                enforceJoinOrder,
-                                false,
-                                true));
+//                        PreparedStatement stmt = conn.prepareStatement(sql, H2StatementCache.queryFlags(
+//                            distributedJoins,
+//                            enforceJoinOrder));
+                        PreparedStatement stmt = conn.prepareStatement(sql, H2StatementCache.queryFlags(
+                            false,
+                            false));
 
                         H2Utils.bindParameters(stmt, params0);
 

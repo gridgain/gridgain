@@ -70,6 +70,7 @@ import org.apache.ignite.internal.processors.query.SqlQueriesTopologyMappingTest
 import org.apache.ignite.internal.processors.query.SqlTwoCachesInGroupWithSameEntryTest;
 import org.apache.ignite.internal.processors.query.h2.CacheQueryEntityWithDateTimeApiFieldsTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
+import org.apache.ignite.internal.processors.query.h2.StatementCacheTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CacheQueryMemoryLeakTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CreateTableWithDateKeySelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.DisappearedCacheCauseRetryMessageSelfTest;
@@ -105,6 +106,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    StatementCacheTest.class,
     SqlInsertMergeImplicitColumnsTest.class,
     SqlMergeTest.class,
     SqlMergeOnClientNodeTest.class,

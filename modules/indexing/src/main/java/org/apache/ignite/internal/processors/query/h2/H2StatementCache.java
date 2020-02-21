@@ -106,20 +106,17 @@ public final class H2StatementCache {
     public static byte queryFlags(QueryDescriptor qryDesc) {
         assert qryDesc != null;
 
-        return queryFlags(qryDesc.distributedJoins(), qryDesc.enforceJoinOrder(), qryDesc.collocated(), qryDesc.local());
+        return queryFlags(qryDesc.distributedJoins(), qryDesc.enforceJoinOrder());
     }
 
     /** */
     public static byte queryFlags(
         boolean distributedJoins,
-        boolean enforceJoinOrder,
-        boolean collocated,
-        boolean local) {
+        boolean enforceJoinOrder
+        ) {
         return (byte)(1 +
             (distributedJoins ? 2 : 0) +
-            (enforceJoinOrder ? 4 : 0) +
-            (collocated ? 8 : 0) +
-            (local ? 8 : 0)
+            (enforceJoinOrder ? 4 : 0)
         );
     }
 }

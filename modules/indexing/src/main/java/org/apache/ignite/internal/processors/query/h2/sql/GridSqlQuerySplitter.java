@@ -273,7 +273,7 @@ public class GridSqlQuerySplitter {
         // The distributedJoins parameter is ignored because it is not relevant for
         // the REDUCE query optimization.
         qry = GridSqlQueryParser.parseQuery(
-            prepare(conn, H2Utils.context(conn.connection()), qry.getSQL(), false, enforceJoinOrder, collocatedGrpBy),
+            prepare(conn, H2Utils.context(conn.connection()), qry.getSQL(), false, enforceJoinOrder),
             true, log);
 
         // Do the actual query split. We will update the original query AST, need to be careful.
@@ -294,8 +294,7 @@ public class GridSqlQuerySplitter {
                     H2Utils.context(conn.connection()),
                     mapSqlQry.query(),
                     true,
-                    enforceJoinOrder,
-                    collocatedGrpBy);
+                    enforceJoinOrder);
 
                 allCollocated &= isCollocated((Query)prepared0);
 
@@ -1885,11 +1884,11 @@ public class GridSqlQuerySplitter {
      * @param enforceJoinOrder Enforce join order.
      * @return Optimized prepared command.
      */
-    public static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
-        boolean enforceJoinOrder, boolean collocated) throws SQLException, IgniteCheckedException {
+    private static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
+        boolean enforceJoinOrder) throws SQLException, IgniteCheckedException {
         H2Utils.setupConnection(c, qctx, distributedJoins, enforceJoinOrder);
 
-        try (PreparedStatement s = c.prepareStatement(qry, H2StatementCache.queryFlags(distributedJoins, enforceJoinOrder, collocated, false))) {
+        try (PreparedStatement s = c.prepareStatement(qry, H2StatementCache.queryFlags(distributedJoins, enforceJoinOrder))) {
             return GridSqlQueryParser.prepared(s);
         }
     }

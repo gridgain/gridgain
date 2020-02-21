@@ -27,38 +27,52 @@ import org.junit.Test;
 /**
  *
  */
-public class StatementCacheWithQueryFlagsTest extends AbstractIndexingCommonTest {
+public class StatementCacheTest extends AbstractIndexingCommonTest {
     /** */
-    private static final int SIZE = 1000;
+    private static final int SIZE_BIG = 1000;
+
+    /** */
+    private static final int SIZE_SMALL = 10;
 
     /** Enforce join order. */
     private boolean enforceJoinOrder;
 
-    /** Enforce join order. */
+    /** Local flag . */
     private boolean local;
+
+    /** Distributed join flag . */
+    private boolean distributedJoin;
+
+    /** Collocated GROUP BY flag . */
+    private boolean collocatedGroupBy;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
+        local = false;
+        enforceJoinOrder = false;
+        distributedJoin = false;
+        collocatedGroupBy = false;
 
-        startGrids(1);
+        startGrids(2);
 
         sql("CREATE TABLE TBL0 (ID INT PRIMARY KEY, JID INT, VAL INT)");
         sql("CREATE TABLE TBL1 (ID INT PRIMARY KEY, JID INT, VAL INT)");
 
         sql("CREATE INDEX IDX_TBL1_JID ON TBL1(JID)");
 
-        sql("INSERT INTO TBL0 VALUES (1, 1, 1)");
+        for (int i = 0; i < SIZE_SMALL; ++i)
+            sql("INSERT INTO TBL0 VALUES (?, ?, ?)", i + 1, i + 1, i + 1);
 
-        for (int i = 0; i < SIZE; ++i)
-            sql("INSERT INTO TBL1 VALUES (?, ?, ?)", i, i, i);
+        for (int i = 0; i < SIZE_BIG; ++i)
+            sql("INSERT INTO TBL1 VALUES (?, ?, ?)", i, i + 1, i);
     }
 
     /**
      *
      */
     @Test
-    public void test() throws Exception {
+    public void testEnforceJoinOrderFlag() throws Exception {
         local = true;
 
         sql("EXPLAIN SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll();
@@ -70,6 +84,32 @@ public class StatementCacheWithQueryFlagsTest extends AbstractIndexingCommonTest
         assertTrue("Invalid join order: " + plan ,
             Pattern.compile("\"PUBLIC\".\"TBL1\"[\\n\\w\\W]+\"PUBLIC\".\"TBL0\"", Pattern.MULTILINE)
                 .matcher(plan).find());
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testDistributedJoinFlag() throws Exception {
+//        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        try {
+            sql("CREATE INDEX IDX_TBL0_JID ON TBL0(JID)");
+
+            distributedJoin = false;
+            int size = sql("SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll().size();
+
+            distributedJoin = true;
+
+            int distSize = sql("SELECT TBL1.ID FROM TBL1, TBL0 WHERE TBL0.JID=TBL1.JID").getAll().size();
+
+            System.out.println("+++ " + size + " " + distSize);
+        }
+        finally {
+            stopGrid(1);
+        }
     }
 
     /**
@@ -91,6 +131,7 @@ public class StatementCacheWithQueryFlagsTest extends AbstractIndexingCommonTest
         return ign.context().query().querySqlFields(new SqlFieldsQuery(sql)
             .setLocal(local)
             .setEnforceJoinOrder(enforceJoinOrder)
+            .setDistributedJoins(distributedJoin)
             .setArgs(args), false);
     }
 }
