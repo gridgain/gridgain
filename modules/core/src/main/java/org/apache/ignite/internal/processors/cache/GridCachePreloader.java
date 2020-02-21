@@ -87,6 +87,7 @@ public interface GridCachePreloader {
      * @param rebalanceId Rebalance id created by exchange thread.
      * @param next Runnable responsible for cache rebalancing chain.
      * @param forcedRebFut External future for forced rebalance.
+     * @param compatibleRebFut Future for waiting for compatible rebalances.
      * @return Rebalancing runnable.
      */
     public RebalanceFuture addAssignments(GridDhtPreloaderAssignments assignments,
@@ -94,7 +95,7 @@ public interface GridCachePreloader {
         long rebalanceId,
         final RebalanceFuture next,
         @Nullable GridCompoundFuture<Boolean, Boolean> forcedRebFut,
-        GridCompoundFuture<Boolean, Boolean> compatibleWaitFut);
+        GridCompoundFuture<Boolean, Boolean> compatibleRebFut);
 
     /**
      * @param p Preload predicate.
