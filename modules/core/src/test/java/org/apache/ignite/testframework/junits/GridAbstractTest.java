@@ -339,7 +339,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed. {@link #afterTestsStopped()} will be called in this case.
      */
     protected void beforeTestsStarted() throws Exception {
-        regularPageHndWrapper = BPlusTree.pageHndWrapper == null ? ((tree, hnd) -> hnd) : BPlusTree.pageHndWrapper;
+        // Checking that no test wrapper is set before test execution.
+        assert BPlusTree.testHndWrapper == null;
     }
 
     /**
@@ -351,11 +352,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If failed.
      */
     protected void afterTestsStopped() throws Exception {
-        //restoring page handler wrapper and destroy closure
-        BPlusTree.pageHndWrapper = regularPageHndWrapper == null ? ((tree, hnd) -> hnd) : regularPageHndWrapper;
-
-        clearStaticLogClasses.forEach(this::clearStaticClassLog);
-        clearStaticLogClasses.clear();
+        // No-op.
     }
 
     /**

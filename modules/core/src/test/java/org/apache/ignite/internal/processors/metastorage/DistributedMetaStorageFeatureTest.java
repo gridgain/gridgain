@@ -54,12 +54,6 @@ public class DistributedMetaStorageFeatureTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testFeatureDisabled() throws Exception {
-        testFeatureDisabled0();
-    }
-
-    /** */
-    @Test
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
     public void testFeatureExplicitlyDisabled() throws Exception {
         testFeatureDisabled0();
@@ -80,7 +74,6 @@ public class DistributedMetaStorageFeatureTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testFeatureEnabled() throws Exception {
         IgniteEx ignite = startGrid(0);
 

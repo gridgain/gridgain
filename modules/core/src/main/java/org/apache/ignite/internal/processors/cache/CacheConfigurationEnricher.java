@@ -27,7 +27,8 @@ import org.apache.ignite.marshaller.Marshaller;
 import org.jetbrains.annotations.Nullable;
 
 /**
- *
+ * The responsibility of this class is to enrich cache configuration with stored enrichment, in other words it allows to
+ * deserialize fields of {@link CacheConfiguration} that are marked with {@link SerializeSeparately}.
  */
 public class CacheConfigurationEnricher {
     /** Marshaller. */
@@ -37,8 +38,10 @@ public class CacheConfigurationEnricher {
     private final ClassLoader clsLdr;
 
     /**
-     * @param marshaller Marshaller.
-     * @param clsLdr Class loader.
+     * Creates a new instance of enricher.
+     *
+     * @param marshaller Marshaller to be used for deserializing parts on {@link CacheConfiguration}.
+     * @param clsLdr Class loader to be used for deserializing parts on {@link CacheConfiguration}.
      */
     public CacheConfigurationEnricher(Marshaller marshaller, ClassLoader clsLdr) {
         this.marshaller = marshaller;
@@ -48,8 +51,8 @@ public class CacheConfigurationEnricher {
     /**
      * Enriches descriptor cache configuration with stored enrichment.
      *
-     * @param desc Description.
-     * @param affinityNode Affinity node.
+     * @param desc Cache desriptor.
+     * @param affinityNode {@code true} if enrichment is happened on affinity node.
      */
     public DynamicCacheDescriptor enrich(DynamicCacheDescriptor desc, boolean affinityNode) {
         if (CU.isUtilityCache(desc.cacheName()))
@@ -71,8 +74,8 @@ public class CacheConfigurationEnricher {
     /**
      * Enriches descriptor cache configuration with stored enrichment.
      *
-     * @param desc Description.
-     * @param affinityNode Affinity node.
+     * @param desc Cache group descriptor to be enriched.
+     * @param affinityNode {@code true} if enrichment is happened on affinity node.
      */
     public CacheGroupDescriptor enrich(CacheGroupDescriptor desc, boolean affinityNode) {
         if (CU.isUtilityCache(desc.cacheOrGroupName()))
@@ -92,7 +95,7 @@ public class CacheConfigurationEnricher {
     }
 
     /**
-     * Enriches cache configuration fields with deserialized values from given @{code enrichment}.
+     * Enriches cache configuration fields with deserialized values from given {@code enrichment}.
      *
      * @param ccfg Cache configuration to enrich.
      * @param enrichment Cache configuration enrichment.
@@ -134,6 +137,11 @@ public class CacheConfigurationEnricher {
     /**
      * @see #enrich(CacheConfiguration, CacheConfigurationEnrichment, boolean).
      * Does the same thing but without skipping any fields.
+     *
+     * @param ccfg Cache configuration to enrich.
+     * @param enrichment Cache configuration enrichment.
+     *
+     * @return Enriched cache configuration.
      */
     public CacheConfiguration<?, ?> enrichFully(
         CacheConfiguration<?, ?> ccfg,
@@ -144,6 +152,7 @@ public class CacheConfigurationEnricher {
 
     /**
      * @param fieldName Field name.
+     * @return Deserialized value of the given {@code fieldName}.
      */
     private Object deserialize(String fieldName, byte[] serializedVal) {
         try {
@@ -158,7 +167,7 @@ public class CacheConfigurationEnricher {
      * Skips deserialization for some fields.
      *
      * @param ccfg Cache configuration.
-     * @param field Field.
+     * @param field Field to check.
      *
      * @return {@code true} if deserialization for given field should be skipped.
      */

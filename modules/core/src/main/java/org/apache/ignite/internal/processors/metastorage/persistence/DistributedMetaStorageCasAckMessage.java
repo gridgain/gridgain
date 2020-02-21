@@ -17,9 +17,12 @@
 package org.apache.ignite.internal.processors.metastorage.persistence;
 
 import java.util.UUID;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryRequiredFeatureSupport;
 
 /** */
+@TcpDiscoveryRequiredFeatureSupport(feature = IgniteFeatures.DISTRIBUTED_METASTORAGE)
 class DistributedMetaStorageCasAckMessage extends DistributedMetaStorageUpdateAckMessage {
     /** */
     private static final long serialVersionUID = 0L;

@@ -71,7 +71,7 @@ public abstract class SelectGroups {
                 groupByData.reset();
             }
 
-            groupByData = session.newGroupByDataInstance(session, expressions, true, groupIndex);
+            groupByData = session.newGroupByDataInstance(expressions, true, groupIndex);
             currentGroupsKey = null;
         }
 
@@ -165,7 +165,7 @@ public abstract class SelectGroups {
                 rows.reset();
             }
 
-            rows = session.newGroupByDataInstance(session, expressions, false, null);
+            rows = session.newGroupByDataInstance(expressions, false, null);
         }
 
         @Override

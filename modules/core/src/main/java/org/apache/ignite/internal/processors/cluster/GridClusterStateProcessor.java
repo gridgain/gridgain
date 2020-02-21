@@ -42,8 +42,11 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.events.BaselineConfigurationChangedEvent;
+import org.apache.ignite.events.ClusterStateChangeStartedEvent;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
+import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
@@ -70,6 +73,7 @@ import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadO
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.ReadWriteMetastorage;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.ChangeTopologyWatcher;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -99,11 +103,14 @@ import org.apache.ignite.spi.IgniteNodeValidationResult;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.cluster.ClusterState.lesserOf;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_STATE_ON_START;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -118,6 +125,9 @@ import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extract
  *
  */
 public class GridClusterStateProcessor extends GridProcessorAdapter implements IGridClusterStateProcessor, MetastorageLifecycleListener {
+    /** Stripe id for cluster activation event. */
+    public static final int CLUSTER_ACTIVATION_EVT_STRIPE_ID = Integer.MAX_VALUE;
+
     /** */
     private static final String METASTORE_CURR_BLT_KEY = "metastoreBltKey";
 
@@ -128,6 +138,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     private static final String NODE_JOIN_ERROR_MSG_READ_ONLY_MODE_NOT_SUPPORTED = "Node not supporting " +
         ACTIVE_READ_ONLY + " mode. The node is not allowed to join the cluster " + "with enabled" + ACTIVE_READ_ONLY +
         " mode";
+
+    /**
+     * This property allows disabling baseline topology validation on the coordinator node
+     * if the joining node does have baseline history and the coordinator does not.
+     */
+    private static final String IGNITE_STOP_EMPTY_NODE_ON_JOIN = "IGNITE_STOP_EMPTY_NODE_ON_JOIN";
 
     /** */
     private boolean inMemoryMode;
@@ -211,7 +227,36 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             ctx,
             ctx.log(DistributedBaselineConfiguration.class)
         );
+
+        distributedBaselineConfiguration.listenAutoAdjustEnabled(makeEventListener(
+            EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED
+        ));
+
+        distributedBaselineConfiguration.listenAutoAdjustTimeout(makeEventListener(
+            EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED
+        ));
     }
+
+    /** */
+    private DistributePropertyListener<Object> makeEventListener(int evtType) {
+        //noinspection CodeBlock2Expr
+        return (name, oldVal, newVal) -> {
+            ctx.getStripedExecutorService().execute(CLUSTER_ACTIVATION_EVT_STRIPE_ID, () -> {
+                if (ctx.event().isRecordable(evtType)) {
+                    ctx.event().record(new BaselineConfigurationChangedEvent(
+                        ctx.discovery().localNode(),
+                        evtType == EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED
+                            ? "Baseline auto-adjust \"enabled\" flag has been changed"
+                            : "Baseline auto-adjust timeout has been changed",
+                        evtType,
+                        distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(),
+                        distributedBaselineConfiguration.getBaselineAutoAdjustTimeout()
+                    ));
+                }
+            });
+        };
+    }
+
 
     /** {@inheritDoc} */
     @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
@@ -672,19 +717,17 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                     log.info("Started state transition: " + prettyStr(msg.state()));
 
                 BaselineTopologyHistoryItem bltHistItem = BaselineTopologyHistoryItem.fromBaseline(
-                    globalState.baselineTopology());
+                    state.baselineTopology());
 
                 transitionFuts.put(msg.requestId(), new GridFutureAdapter<>());
 
-                DiscoveryDataClusterState prevState = globalState;
-
-                globalState = DiscoveryDataClusterState.createTransitionState(
+                DiscoveryDataClusterState newState = globalState = DiscoveryDataClusterState.createTransitionState(
                     msg.state(),
-                    prevState,
-                    activate(prevState.state(), msg.state()) || msg.forceChangeBaselineTopology() ? msg.baselineTopology() : prevState.baselineTopology(),
+                    state,
+                    activate(state.state(), msg.state()) || msg.forceChangeBaselineTopology() ? msg.baselineTopology() : state.baselineTopology(),
                     msg.requestId(),
                     topVer,
-                    !state.active() && msg.activate() ? msg.timestamp() : prevState.activationTime(),
+                    !state.active() && msg.activate() ? msg.timestamp() : state.activationTime(),
                     nodeIds
                 );
 
@@ -703,6 +746,20 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 exchangeActions.stateChangeRequest(req);
 
                 msg.exchangeActions(exchangeActions);
+
+                if (state.state() != newState.state()) {
+                    if (ctx.event().isRecordable(EventType.EVT_CLUSTER_STATE_CHANGE_STARTED)) {
+                        ctx.getStripedExecutorService().execute(
+                            CLUSTER_ACTIVATION_EVT_STRIPE_ID,
+                            () -> ctx.event().record(new ClusterStateChangeStartedEvent(
+                                state.state(),
+                                newState.state(),
+                                ctx.discovery().localNode(),
+                                "Cluster state change started."
+                            ))
+                        );
+                    }
+                }
 
                 return true;
             }
@@ -1239,10 +1296,21 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         if (globalState == null || globalState.baselineTopology() == null) {
             if (joiningNodeState.baselineTopology() != null) {
-                String msg = "Node with set up BaselineTopology is not allowed to join cluster without one: " +
+                boolean validationCanBeIgnored = getBoolean(IGNITE_STOP_EMPTY_NODE_ON_JOIN, false);
+
+                if (!validationCanBeIgnored) {
+                    String msg = "Node with set up BaselineTopology is not allowed to join cluster without one: " +
                         node.consistentId();
 
-                return new IgniteNodeValidationResult(node.id(), msg);
+                    return new IgniteNodeValidationResult(node.id(), msg);
+                }
+                else {
+                    // It seems that this node was cleaned up and was started first.
+                    // Let's try to stop this node and give a try to a new one
+                    // that is currently joining the cluster and has info about baseline, caches, etc.
+                    throw new IgniteException("Stopping the node due to the fact " +
+                        "the joining one has more actual baseline history.");
+                }
             }
         }
 

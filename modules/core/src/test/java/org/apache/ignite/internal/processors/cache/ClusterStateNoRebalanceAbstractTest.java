@@ -41,6 +41,8 @@ import org.junit.Test;
 import static com.google.common.base.Functions.identity;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * Checks that join node to {@link ClusterState#INACTIVE} cluster doesn't trigger rebalance.
@@ -57,6 +59,9 @@ public abstract class ClusterStateNoRebalanceAbstractTest extends GridCommonAbst
 
     /** */
     private static final int GRID_CNT = 2;
+
+    /** */
+    private final boolean bltForInMemoryCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /**
      * @param cacheName Cache name.
@@ -127,6 +132,9 @@ public abstract class ClusterStateNoRebalanceAbstractTest extends GridCommonAbst
         startGrid(GRID_CNT);
         startGrid(GRID_CNT + 1);
 
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
+
         for (int g = 0; g < GRID_CNT + 2; g++) {
             for (int k = 0; k < ENTRY_CNT; k++)
                 assertEquals("Failed for [grid=" + g + ", key=" + k + ']', k, grid(g).cache(DEFAULT_CACHE_NAME).get(k));
@@ -134,10 +142,16 @@ public abstract class ClusterStateNoRebalanceAbstractTest extends GridCommonAbst
 
         stopGrid(GRID_CNT + 1);
 
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
+
         for (int g = 0; g < GRID_CNT + 1; g++)
             grid(g).cache(DEFAULT_CACHE_NAME).rebalance().get();
 
         stopGrid(GRID_CNT);
+
+        if (bltForInMemoryCachesSup)
+            resetBaselineTopology();
 
         for (int g = 0; g < GRID_CNT; g++) {
             IgniteCache<Object, Object> cache0 = grid(g).cache(DEFAULT_CACHE_NAME);

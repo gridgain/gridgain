@@ -77,7 +77,6 @@ import org.apache.ignite.IgniteInterruptedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.CheckpointWriteOrder;
 import org.apache.ignite.configuration.DataPageEvictionMode;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -110,7 +109,6 @@ import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MemoryRecoveryRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
-import org.apache.ignite.internal.pagemem.wal.record.MvccDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.RollbackRecord;
@@ -125,7 +123,6 @@ import org.apache.ignite.internal.processors.cache.CacheGroupDescriptor;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cache.ExchangeActions;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -169,7 +166,6 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.lang.GridTuple3;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
-import org.apache.ignite.internal.util.typedef.CI1;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
@@ -194,6 +190,8 @@ import org.jetbrains.annotations.Nullable;
 import org.jsr166.ConcurrentLinkedHashMap;
 
 import static java.nio.file.StandardOpenOption.READ;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CHECKPOINT_READ_LOCK_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JVM_PAUSE_DETECTOR_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
@@ -235,6 +233,19 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** MemoryPolicyConfiguration name reserved for meta store. */
     public static final String METASTORE_DATA_REGION_NAME = "metastoreMemPlc";
+
+    /**
+     * Threshold to calculate limit for pages list on-heap caches.
+     * <p>
+     * Note: When a checkpoint is triggered, we need some amount of page memory to store pages list on-heap cache.
+     * If a checkpoint is triggered by "too many dirty pages" reason and pages list cache is rather big, we can get
+     * {@code IgniteOutOfMemoryException}. To prevent this, we can limit the total amount of cached page list buckets,
+     * assuming that checkpoint will be triggered if no more then 3/4 of pages will be marked as dirty (there will be
+     * at least 1/4 of clean pages) and each cached page list bucket can be stored to up to 2 pages (this value is not
+     * static, but depends on PagesCache.MAX_SIZE, so if PagesCache.MAX_SIZE > PagesListNodeIO#getCapacity it can take
+     * more than 2 pages). Also some amount of page memory needed to store page list metadata.
+     */
+    private static final double PAGE_LIST_CACHE_LIMIT_THRESHOLD = 0.1;
 
     /** Skip sync. */
     private final boolean skipSync = getBoolean(IGNITE_PDS_CHECKPOINT_TEST_SKIP_SYNC);
@@ -426,6 +437,9 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
     /** Lock for releasing history for preloading. */
     private ReentrantLock releaseHistForPreloadingLock = new ReentrantLock();
+
+    /** Page list cache limits per data region. */
+    private final Map<String, AtomicLong> pageListCacheLimits = new ConcurrentHashMap<>();
 
     /**
      * @param ctx Kernal context.
@@ -1484,69 +1498,76 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /** {@inheritDoc} */
-    @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture fut) {
+    @Override public void rebuildIndexesIfNeeded(GridDhtPartitionsExchangeFuture exchangeFut) {
         GridQueryProcessor qryProc = cctx.kernalContext().query();
 
-        GridCompoundFuture compoundAllIdxsRebuilt = null;
+        if (!qryProc.moduleEnabled())
+            return;
 
-        if (qryProc.moduleEnabled()) {
-            for (final GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
-                if (cacheCtx.startTopologyVersion().equals(fut.initialVersion())) {
-                    final int cacheId = cacheCtx.cacheId();
-                    final GridFutureAdapter<Void> usrFut = idxRebuildFuts.get(cacheId);
+        GridCompoundFuture allCacheIdxsCompoundFut = null;
 
-                    IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx);
+        for (GridCacheContext cacheCtx : (Collection<GridCacheContext>)cctx.cacheContexts()) {
+            if (!cacheCtx.startTopologyVersion().equals(exchangeFut.initialVersion()))
+                continue;
 
-                    if (rebuildFut != null) {
-                        log().info("Started indexes rebuilding for cache [name=" + cacheCtx.name()
-                            + ", grpName=" + cacheCtx.group().name() + ']');
+            int cacheId = cacheCtx.cacheId();
+            GridFutureAdapter<Void> usrFut = idxRebuildFuts.get(cacheId);
 
-                        if (compoundAllIdxsRebuilt == null)
-                            compoundAllIdxsRebuilt = new GridCompoundFuture();
+            IgniteInternalFuture<?> rebuildFut = qryProc.rebuildIndexesFromHash(cacheCtx);
 
-                        compoundAllIdxsRebuilt.add(rebuildFut);
+            if (nonNull(rebuildFut)) {
+                if (log.isInfoEnabled())
+                    log.info("Started indexes rebuilding for cache [" + cacheInfo(cacheCtx) + ']');
 
-                        rebuildFut.listen(new CI1<IgniteInternalFuture>() {
-                            @Override public void apply(IgniteInternalFuture fut) {
-                                idxRebuildFuts.remove(cacheId, usrFut);
+                if (isNull(allCacheIdxsCompoundFut))
+                    allCacheIdxsCompoundFut = new GridCompoundFuture<>();
 
-                                Throwable err = fut.error();
+                allCacheIdxsCompoundFut.add(rebuildFut);
 
-                                usrFut.onDone(err);
+                rebuildFut.listen(fut -> {
+                    idxRebuildFuts.remove(cacheId, usrFut);
 
-                                CacheConfiguration ccfg = cacheCtx.config();
+                    Throwable err = fut.error();
 
-                                if (ccfg != null) {
-                                    if (err == null) {
-                                        if (log.isInfoEnabled())
-                                            log.info("Finished indexes rebuilding for cache [name=" + ccfg.getName()
-                                                + ", grpName=" + ccfg.getGroupName() + ']');
-                                    }
-                                    else {
-                                        if (!(err instanceof NodeStoppingException))
-                                            log().error("Failed to rebuild indexes for cache  [name=" + ccfg.getName()
-                                                + ", grpName=" + ccfg.getGroupName() + ']', err);
-                                    }
-                                }
-                            }
-                        });
+                    usrFut.onDone(err);
+
+                    if (isNull(err)) {
+                        if (log.isInfoEnabled())
+                            log.info("Finished indexes rebuilding for cache [" + cacheInfo(cacheCtx) + ']');
                     }
                     else {
-                        if (usrFut != null) {
-                            idxRebuildFuts.remove(cacheId, usrFut);
-
-                            usrFut.onDone();
-                        }
+                        if (!(err instanceof NodeStoppingException))
+                            log.error("Failed to rebuild indexes for cache [" + cacheInfo(cacheCtx) + ']', err);
                     }
-                }
+                });
             }
+            else if (nonNull(usrFut)) {
+                idxRebuildFuts.remove(cacheId, usrFut);
 
-            if (compoundAllIdxsRebuilt != null) {
-                compoundAllIdxsRebuilt.listen(a -> log().info("Indexes rebuilding completed for all caches."));
-
-                compoundAllIdxsRebuilt.markInitialized();
+                usrFut.onDone();
             }
         }
+
+        if (nonNull(allCacheIdxsCompoundFut)) {
+            allCacheIdxsCompoundFut.listen(fut -> {
+                if (log.isInfoEnabled())
+                    log.info("Indexes rebuilding completed for all caches.");
+            });
+
+            allCacheIdxsCompoundFut.markInitialized();
+        }
+    }
+
+    /**
+     * Return short information about cache.
+     *
+     * @param cacheCtx Cache context.
+     * @return Short cache info.
+     */
+    private String cacheInfo(GridCacheContext cacheCtx) {
+        assert nonNull(cacheCtx);
+
+        return "name=" + cacheCtx.name() + ", grpName=" + cacheCtx.group().name();
     }
 
     /** {@inheritDoc} */
@@ -3096,115 +3117,6 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
     }
 
     /**
-     * @param cacheCtx Cache context to apply an update.
-     * @param dataEntry Data entry to apply.
-     * @param lockEntry If true, update will be performed under entry lock.
-     * @throws IgniteCheckedException If failed to restore.
-     */
-    private void applyUpdate(
-        GridCacheContext cacheCtx,
-        DataEntry dataEntry,
-        boolean lockEntry
-    ) throws IgniteCheckedException {
-        int partId = dataEntry.partitionId();
-
-        if (partId == -1)
-            partId = cacheCtx.affinity().partition(dataEntry.key());
-
-        GridDhtLocalPartition locPart = cacheCtx.isLocal() ? null : cacheCtx.topology().forceCreatePartition(partId);
-
-        GridCacheEntryEx entryEx = null;
-
-        switch (dataEntry.op()) {
-            case CREATE:
-            case UPDATE:
-                if (lockEntry) {
-                    entryEx = cacheCtx.isNear() ? cacheCtx.near().dht().entryEx(dataEntry.key()) :
-                        cacheCtx.cache().entryEx(dataEntry.key());
-
-                    entryEx.lockEntry();
-                }
-
-                try {
-                    if (dataEntry instanceof MvccDataEntry) {
-                        cacheCtx.offheap().mvccApplyUpdate(
-                            cacheCtx,
-                            dataEntry.key(),
-                            dataEntry.value(),
-                            dataEntry.writeVersion(),
-                            dataEntry.expireTime(),
-                            locPart,
-                            ((MvccDataEntry)dataEntry).mvccVer());
-                    }
-                    else {
-                        cacheCtx.offheap().update(
-                            cacheCtx,
-                            dataEntry.key(),
-                            dataEntry.value(),
-                            dataEntry.writeVersion(),
-                            dataEntry.expireTime(),
-                            locPart,
-                            null);
-                    }
-
-                    if (dataEntry.partitionCounter() != 0)
-                        cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);
-                }
-                finally {
-                    if (lockEntry) {
-                        entryEx.unlockEntry();
-
-                        entryEx.context().evicts().touch(entryEx);
-                    }
-                }
-
-                break;
-
-            case DELETE:
-                if (lockEntry) {
-                    entryEx = cacheCtx.isNear() ? cacheCtx.near().dht().entryEx(dataEntry.key()) :
-                        cacheCtx.cache().entryEx(dataEntry.key());
-
-                    entryEx.lockEntry();
-                }
-
-                try {
-                    if (dataEntry instanceof MvccDataEntry) {
-                        cacheCtx.offheap().mvccApplyUpdate(
-                            cacheCtx,
-                            dataEntry.key(),
-                            null,
-                            dataEntry.writeVersion(),
-                            0L,
-                            locPart,
-                            ((MvccDataEntry)dataEntry).mvccVer());
-                    }
-                    else
-                        cacheCtx.offheap().remove(cacheCtx, dataEntry.key(), partId, locPart);
-
-                    if (dataEntry.partitionCounter() != 0)
-                        cacheCtx.offheap().onPartitionInitialCounterUpdated(partId, dataEntry.partitionCounter() - 1, 1);
-                }
-                finally {
-                    if (lockEntry) {
-                        entryEx.unlockEntry();
-
-                        entryEx.context().evicts().touch(entryEx);
-                    }
-                }
-
-                break;
-
-            case READ:
-                // do nothing
-                break;
-
-            default:
-                throw new IgniteCheckedException("Invalid operation for WAL entry update: " + dataEntry.op());
-        }
-    }
-
-    /**
      * @throws IgniteCheckedException If failed.
      */
     private void finalizeCheckpointOnRecovery(
@@ -3550,6 +3462,18 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
      */
     @Override public void checkpointReadLockTimeout(long val) {
         checkpointReadLockTimeout = val;
+    }
+
+    /**
+     * @return Holder for page list cache limit for given data region.
+     */
+    public AtomicLong pageListCacheLimitHolder(DataRegion dataRegion) {
+        if (dataRegion.config().isPersistenceEnabled()) {
+            return pageListCacheLimits.computeIfAbsent(dataRegion.config().getName(), name -> new AtomicLong(
+                (long)(((PageMemoryEx)dataRegion.pageMemory()).totalPages() * PAGE_LIST_CACHE_LIMIT_THRESHOLD)));
+        }
+
+        return null;
     }
 
     /**

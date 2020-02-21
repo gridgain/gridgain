@@ -22,6 +22,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -39,8 +40,6 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
         System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
 
         super.beforeTest();
@@ -51,8 +50,6 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
         super.afterTest();
 
         System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
         System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
 
         stopAllGrids();
@@ -67,8 +64,6 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
 
         System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
         System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, String.valueOf(maxMem));
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT);
-        System.clearProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE);
 
         startGrid(0);
         client = true;
@@ -92,12 +87,14 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testWrongSqlMemoryPoolSize() throws Exception {
-        final long maxMem = Runtime.getRuntime().maxMemory();
-
-        System.setProperty(IgniteSystemProperties.IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE, String.valueOf(maxMem));
-
         GridTestUtils.assertThrows(log, () -> {
-            startGrid(0);
+            IgniteConfiguration cfg = getConfiguration("node1");
+
+            final long maxMem = Runtime.getRuntime().maxMemory();
+
+            cfg.setSqlGlobalMemoryQuota(String.valueOf(maxMem + 1));
+
+            startGrid(cfg);
         }, IgniteException.class, "Sql memory pool size can't be more than heap memory max size");
     }
 

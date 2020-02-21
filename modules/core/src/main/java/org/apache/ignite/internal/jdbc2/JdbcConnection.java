@@ -44,12 +44,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Logger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteJdbcDriver;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.compute.ComputeTaskTimeoutException;
@@ -82,9 +84,9 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_DISTRIBUTED_JOINS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_ENFORCE_JOIN_ORDER;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LAZY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_LOCAL;
-import static org.apache.ignite.IgniteJdbcDriver.PROP_QRY_MAX_MEMORY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_MULTIPLE_STMTS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_NODE_ID;
+import static org.apache.ignite.IgniteJdbcDriver.PROP_QRY_MAX_MEMORY;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_SCHEMA;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_SKIP_REDUCER_ON_UPDATE;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING;
@@ -93,6 +95,7 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING_FLUSH_FREQ;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING_PER_NODE_BUF_SIZE;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING_PER_NODE_PAR_OPS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_TX_ALLOWED;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
 import static org.apache.ignite.internal.jdbc2.JdbcUtils.convertToSqlException;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.createJdbcSqlException;
 
@@ -120,6 +123,9 @@ public class JdbcConnection implements Connection {
      * </ol>
      */
     private static final ConcurrentMap<String, IgniteNodeFuture> NODES = new ConcurrentHashMap<>();
+
+    /** Logger. */
+    private static final Logger LOG = Logger.getLogger(JdbcConnection.class.getName());
 
     /** Ignite ignite. */
     private final Ignite ignite;
@@ -210,7 +216,18 @@ public class JdbcConnection implements Connection {
         enforceJoinOrder = Boolean.parseBoolean(props.getProperty(PROP_ENFORCE_JOIN_ORDER));
         lazy = Boolean.parseBoolean(props.getProperty(PROP_LAZY));
         txAllowed = Boolean.parseBoolean(props.getProperty(PROP_TX_ALLOWED));
-        qryMaxMemory = Long.parseLong(props.getProperty(PROP_QRY_MAX_MEMORY, "0"));
+
+        long maxMemory = Long.parseLong(props.getProperty(PROP_QRY_MAX_MEMORY, "0"));
+
+        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, false) && maxMemory != 0L) {
+            LOG.warning("Memory quotas per connection is disabled." +
+                " To enable it please set Ignite system property \"" + IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA
+                + "\" to \"true\"");
+
+            maxMemory = 0L;
+        }
+
+        qryMaxMemory = maxMemory;
 
         stream = Boolean.parseBoolean(props.getProperty(PROP_STREAMING));
 

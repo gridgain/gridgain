@@ -612,10 +612,10 @@ public class Comparison extends Condition {
      */
     Expression getAdditional(Session session, Comparison other, boolean and) {
         if (compareType == other.compareType && compareType == EQUAL) {
-            boolean lc = left.isConstant();
-            boolean rc = right.isConstant();
-            boolean l2c = other.left.isConstant();
-            boolean r2c = other.right.isConstant();
+            boolean lc = left.isConstant() || left instanceof Parameter;
+            boolean rc = right.isConstant() || right instanceof Parameter;
+            boolean l2c = other.left.isConstant() || other.left instanceof Parameter;
+            boolean r2c = other.right.isConstant() || other.right instanceof Parameter;
             String l = left.getSQL(true);
             String l2 = other.left.getSQL(true);
             String r = right.getSQL(true);

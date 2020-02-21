@@ -16,11 +16,13 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -36,6 +38,7 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.F;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
 
 /**
@@ -66,8 +69,11 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.8.1: adds query memory quotas.*/
     static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
 
+    /** Version 2.8.2: adds features flags support.*/
+    static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_2;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
@@ -90,11 +96,15 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Request handler. */
     private JdbcRequestHandler handler = null;
 
+    /** Current protocol context. */
+    private JdbcProtocolContext protoCtx;
+
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
 
     static {
         SUPPORTED_VERS.add(CURRENT_VER);
+        SUPPORTED_VERS.add(VER_2_8_1);
         SUPPORTED_VERS.add(VER_2_8_0);
         SUPPORTED_VERS.add(VER_2_7_0);
         SUPPORTED_VERS.add(VER_2_5_0);
@@ -172,6 +182,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         Boolean dataPageScanEnabled = null;
         Integer updateBatchSize = null;
         long maxMemory = 0L;
+        EnumSet<JdbcThinFeature> features = null;
 
         try {
             if (ver.compareTo(VER_2_8_0) >= 0) {
@@ -183,6 +194,14 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                     if (reader.readBoolean())
                         maxMemory = reader.readLong();
                 }
+            }
+
+            if (ver.compareTo(VER_2_8_2) >= 0) {
+                byte [] cliFeatures = reader.readByteArray();
+
+                features = JdbcThinFeature.enumSet(cliFeatures);
+
+                features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
             }
         }
         catch (Exception ex) {
@@ -209,7 +228,9 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        parser = new JdbcMessageParser(ctx, ver);
+        protoCtx = new JdbcProtocolContext(ver, features);
+
+        parser = new JdbcMessageParser(ctx, protoCtx);
 
         ClientListenerResponseSender sender = new ClientListenerResponseSender() {
             @Override public void send(ClientListenerResponse resp) {
@@ -223,6 +244,14 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 }
             }
         };
+
+        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, false) && maxMemory != 0L) {
+            log.warning("Memory quotas per connection is disabled." +
+                " To enable it please set Ignite system property \"" + IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA
+                + "\" to \"true\"");
+
+            maxMemory = 0L;
+        }
 
         handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
             collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, nestedTxMode,
@@ -267,5 +296,12 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             return changed ? newVer : null;
         }
+    }
+
+    /**
+     * @return Binary context.
+     */
+    public JdbcProtocolContext protocolContext() {
+        return protoCtx;
     }
 }

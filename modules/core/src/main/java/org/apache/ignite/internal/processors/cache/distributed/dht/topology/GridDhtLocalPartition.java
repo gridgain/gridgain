@@ -164,7 +164,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
     /** Set if failed to move partition to RENTING state due to reservations, to be checked when
      * reservation is released. */
-    private volatile boolean delayedRenting;
+    private volatile long delayedRentingTopVer;
 
     /** Set if topology update sequence should be updated on partition destroy. */
     private boolean updateSeqOnDestroy;
@@ -498,7 +498,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             if (this.state.compareAndSet(state, newState)) {
                 // If no more reservations try to continue delayed renting.
                 if (reservations == 0) {
-                    if (delayedRenting)
+                    if (delayedRentingTopVer != 0 &&
+                        // Prevents delayed renting on topology which expects ownership.
+                        delayedRentingTopVer == ctx.exchange().readyAffinityVersion().topologyVersion())
                         rent(true);
                     else if (getPartState(state) == RENTING)
                         tryContinueClearing();
@@ -658,10 +660,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         if (partState == RENTING || partState == EVICTED)
             return rent;
 
-        delayedRenting = true;
+        delayedRentingTopVer = ctx.exchange().readyAffinityVersion().topologyVersion();
 
         if (getReservations(state0) == 0 && casState(state0, RENTING)) {
-            delayedRenting = false;
+            delayedRentingTopVer = 0;
 
             // Evict asynchronously, as the 'rent' method may be called
             // from within write locks on local partition.
@@ -694,6 +696,10 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         // Clearing process is already running at the moment. No need to run it again.
         if (!reinitialized)
             return;
+
+        // Reset the initial update counter value to prevent historical rebalancing on this partition.
+        if (grp.persistenceEnabled())
+            store.resetInitialUpdateCounter();
 
         // Make sure current rebalance future is finished before start clearing
         // to avoid clearing currently rebalancing partition (except "initial" dummy rebalance).

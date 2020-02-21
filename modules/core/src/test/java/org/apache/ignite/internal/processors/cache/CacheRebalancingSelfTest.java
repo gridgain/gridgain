@@ -33,6 +33,8 @@ import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -44,6 +46,9 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
     /** Cache name with one backups */
     private static final String REBALANCE_TEST_CACHE_NAME = "rebalanceCache";
 
+    /** Test logger. */
+    ListeningTestLogger logger = null;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -54,6 +59,9 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
         ccfg.setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC);
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME), ccfg);
+
+        if (logger != null)
+            cfg.setGridLogger(logger);
 
         return cfg;
     }
@@ -108,6 +116,38 @@ public class CacheRebalancingSelfTest extends GridCommonAbstractTest {
         assert internalFuture(fut2) != internalFuture(fut1);
 
         fut2.get();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRebalanceLog() throws Exception {
+        IgniteEx ignite0 = startGrid(0);
+
+        logger = new ListeningTestLogger(false, log);
+
+        int countOfCaches = ignite0.context().cache().cacheGroups().size();
+
+        info("Count of caches which will be rebalanced: " + countOfCaches);
+
+        LogListener prepareRebalanceLogListener = LogListener.matches(logStr ->
+            logStr.contains("Prepared rebalancing")
+        ).times(countOfCaches).build();
+
+        LogListener completeRebalanceLogListener = LogListener.matches(logStr ->
+            logStr.contains("Completed rebalance future: RebalanceFuture") &&
+                !logStr.contains("next=RebalanceFuture")
+        ).times(countOfCaches).build();
+
+        logger.registerAllListeners(completeRebalanceLogListener, prepareRebalanceLogListener);
+
+        IgniteEx ignite1 = startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        assertTrue("Rebalance was not logged or did not even run.",
+            prepareRebalanceLogListener.check()&& completeRebalanceLogListener.check());
     }
 
     /**
