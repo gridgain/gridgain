@@ -23,12 +23,13 @@ import org.junit.Test;
 import static org.apache.ignite.internal.IgniteFeatures.INDEXING;
 import static org.apache.ignite.internal.IgniteFeatures.MANAGEMENT_CONSOLE;
 import static org.apache.ignite.internal.IgniteFeatures.TRACING;
+import static org.apache.ignite.internal.IgniteFeatures.WC_SCHEDULING_NOT_AVAILABLE;
 import static org.apache.ignite.internal.IgniteFeatures.allFeatures;
 
 /**
- * The test checks that indexing feature is not available in ignite core module.
+ * The test checks that some features is not available in ignite core module.
  */
-public class FeatureIsNotAvailableTest extends GridCommonAbstractTest {
+public class FeaturesIsNotAvailableTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         startGrid();
@@ -55,5 +56,11 @@ public class FeatureIsNotAvailableTest extends GridCommonAbstractTest {
     @Test
     public void testManagementConsoleFeatureIsNotAvailable() {
         assertFalse(IgniteFeatures.nodeSupports(allFeatures(grid().context()), MANAGEMENT_CONSOLE));
+    }
+
+    /** */
+    @Test
+    public void schedulingFeatureIsNotAvailable() {
+        assertTrue(IgniteFeatures.nodeSupports(allFeatures(grid().context()), WC_SCHEDULING_NOT_AVAILABLE));
     }
 }
