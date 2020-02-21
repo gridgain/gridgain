@@ -349,9 +349,7 @@ public final class DmlAstUtils {
 
         for (GridSqlColumn c : update.cols()) {
             String newColName = Parser.quoteIdentifier("_upd_" + c.columnName(), true);
-            // We have to use aliases to cover cases when the user
-            // wants to update _val field directly (if it's a literal)
-            GridSqlAlias alias = new GridSqlAlias(newColName, elementOrDefault(update.set().get(c.columnName()), c), true);
+            GridSqlAlias alias = new GridSqlAlias(newColName, elementOrDefault(update.set().get(c.columnName()), c));
             alias.resultType(c.resultType());
             mapQry.addColumn(alias, true);
         }
