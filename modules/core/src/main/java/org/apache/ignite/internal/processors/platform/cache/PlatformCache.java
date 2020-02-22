@@ -55,8 +55,6 @@ import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.PlatformNativeException;
 import org.apache.ignite.internal.processors.platform.PlatformTarget;
 import org.apache.ignite.internal.processors.platform.cache.expiry.PlatformExpiryPolicy;
-import org.apache.ignite.internal.processors.platform.cache.near.PlatformNearCacheContinuousQuery;
-import org.apache.ignite.internal.processors.platform.cache.near.PlatformNearCacheContinuousQueryProxy;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQuery;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformContinuousQueryProxy;
 import org.apache.ignite.internal.processors.platform.cache.query.PlatformFieldsQueryCursor;
@@ -353,9 +351,6 @@ public class PlatformCache extends PlatformAbstractTarget {
 
     /** */
     public static final int OP_SIZE_LONG_LOC = 92;
-
-    /** */
-    public static final int OP_NEAR_CACHE_QRY_CONTINUOUS = 93;
 
     /** Underlying JCache in binary mode. */
     private final IgniteCacheProxy cache;
@@ -964,16 +959,6 @@ public class PlatformCache extends PlatformAbstractTarget {
                 qry.start(cache, loc, bufSize, timeInterval, autoUnsubscribe, initQry);
 
                 return new PlatformContinuousQueryProxy(platformCtx, qry);
-            }
-
-            case OP_NEAR_CACHE_QRY_CONTINUOUS: {
-                long ptr = reader.readLong();
-
-                PlatformNearCacheContinuousQuery qry = new PlatformNearCacheContinuousQuery(platformCtx, ptr);
-
-                qry.start(cache);
-
-                return new PlatformNearCacheContinuousQueryProxy(platformCtx, qry);
             }
 
             case OP_WITH_EXPIRY_POLICY: {
