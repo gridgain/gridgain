@@ -23,23 +23,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
     /// </summary>
     public class PlatformNearCacheConfiguration
     {
-        // TODO: Convenience properties?
-        
-        /// <summary>
-        /// TODO
-        /// </summary>
-        public string KeyTypeName { get; set; }
-        
-        /// <summary>
-        /// TODO
-        /// </summary>
-        public string ValueTypeName { get; set; }
-        
-        /// <summary>
-        /// TODO
-        /// </summary>
-        public bool KeepBinary { get; set; }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="NearCacheConfiguration"/> class.
         /// </summary>
@@ -57,6 +40,23 @@ namespace Apache.Ignite.Core.Cache.Configuration
             ValueTypeName = reader.ReadString();
             KeepBinary = reader.ReadBoolean();
         }
+
+        /// <summary>
+        /// Gets or sets fully-qualified platform type name of the cache key used for the local map.
+        /// When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
+        /// </summary>
+        public string KeyTypeName { get; set; }
+        
+        /// <summary>
+        /// Gets or sets fully-qualified platform type name of the cache value used for the local map.
+        /// When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
+        /// </summary>
+        public string ValueTypeName { get; set; }
+        
+        /// <summary>
+        /// Gets or sets a value indicating whether platform near cache should store keys and values in binary form.
+        /// </summary>
+        public bool KeepBinary { get; set; }
 
         /// <summary>
         /// Writes to the specified writer.
