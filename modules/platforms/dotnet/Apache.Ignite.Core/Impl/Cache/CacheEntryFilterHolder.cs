@@ -53,9 +53,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="invoker">The invoker func that takes key and value and invokes wrapped ICacheEntryFilter.</param>
         /// <param name="marsh">Marshaller.</param>
         /// <param name="keepBinary">Keep binary flag.</param>
-        /// <param name="nearCache">Near cache.</param>
         public CacheEntryFilterHolder(object pred, Func<object, object, bool> invoker, Marshaller marsh, 
-            bool keepBinary, INearCache nearCache = null)
+            bool keepBinary)
         {
             Debug.Assert(pred != null);
             Debug.Assert(invoker != null);
@@ -65,7 +64,6 @@ namespace Apache.Ignite.Core.Impl.Cache
             _invoker = invoker;
             _marsh = marsh;
             _keepBinary = keepBinary;
-            _nearCache = nearCache;
 
             InjectResources();
         }
