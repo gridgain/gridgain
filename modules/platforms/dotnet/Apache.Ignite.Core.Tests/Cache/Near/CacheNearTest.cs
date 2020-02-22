@@ -603,6 +603,23 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
+        public void TestGetAll()
+        {
+            var clientCache = GetCache<int, Foo>(CacheTestMode.Client); 
+            var serverCache = GetCache<int, Foo>(CacheTestMode.ServerRemote);
+            
+            // One entry is in near cache, another is not.
+            clientCache[1] = new Foo(1);
+            serverCache[2] = new Foo(2);
+
+            var res = clientCache.GetAll(Enumerable.Range(1, 2));
+            
+            Assert.AreEqual(2, res.Count);
+
+            // TODO: Check that near cache has all entries after GetAll
+        }
+
+        [Test]
         public void TestLocalPeek()
         {
             // TODO: Test in combination with other modes.
