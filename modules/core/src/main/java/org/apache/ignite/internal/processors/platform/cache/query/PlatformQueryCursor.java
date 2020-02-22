@@ -38,7 +38,6 @@ public class PlatformQueryCursor extends PlatformAbstractQueryCursor<Cache.Entry
 
     /** {@inheritDoc} */
     @Override protected void write(BinaryRawWriterEx writer, Cache.Entry val) {
-        // TODO: Near cache: don't write the value yet, put to thread local, maybe client has it.
         writer.writeObjectDetached(val.getKey());
         writer.writeObjectDetached(val.getValue());
     }
