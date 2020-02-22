@@ -16,15 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
-import java.util.AbstractMap;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeMap;
 import java.util.UUID;
-import org.apache.ignite.IgniteCheckedException;
+import java.util.Map;
+import java.util.Set;
+import java.util.HashMap;
+import java.util.AbstractMap;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+
+import org.apache.ignite.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -32,9 +33,10 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.util.lang.*;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.lang.IgniteProductVersion;
-import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.*;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
@@ -83,11 +85,7 @@ public class GridDhtPartitionsStateValidator {
 
         AffinityTopologyVersion topVer = fut.context().events().topologyVersion();
 
-        // Validate update counters.
-        Map<Integer, Map<UUID, Long>> result = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
-
-        if (!result.isEmpty())
-            throw new IgniteCheckedException("Partitions update counters are inconsistent for " + fold(topVer, result));
+        Map<Integer, Map<UUID, Long>> resultUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
 
         // For sizes validation ignore also nodes which are not able to send cache sizes.
         for (UUID id : messages.keySet()) {
@@ -96,13 +94,25 @@ public class GridDhtPartitionsStateValidator {
                 ignoringNodes.add(id);
         }
 
+        StringBuilder error = new StringBuilder();
+
         if (!cctx.cache().cacheGroup(top.groupId()).mvccEnabled()) { // TODO: Remove "if" clause in IGNITE-9451.
             // Validate cache sizes.
-            result = validatePartitionsSizes(top, messages, ignoringNodes);
+            Map<Integer, Map<UUID, Long>> resultSize = validatePartitionsSizes(top, messages, ignoringNodes);
 
-            if (!result.isEmpty())
-                throw new IgniteCheckedException("Partitions cache sizes are inconsistent for " + fold(topVer, result));
+            if (!resultUpdCnt.isEmpty() && resultSize.isEmpty())
+                error.append("Partitions update counters are inconsistent for ").append(fold(topVer, resultUpdCnt));
+
+            else if (!resultUpdCnt.isEmpty() && !resultSize.isEmpty())
+                error.append("Partitions cache size and update counters are inconsistent for ")
+                    .append(fold(topVer, resultUpdCnt, resultSize));
+
+            else if (resultUpdCnt.isEmpty() && !resultSize.isEmpty())
+                error.append("Partitions cache sizes are inconsistent for ").append(fold(topVer, resultSize));
         }
+
+        if (error.length() > 0)
+            throw new IgniteCheckedException(error.toString());
     }
 
     /**
@@ -327,5 +337,56 @@ public class GridDhtPartitionsStateValidator {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Folds given maps of invalid partition states to string (Both PartitionCounters and Size) representation
+     * in the following format:
+     * Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
+     */
+    private String fold(AffinityTopologyVersion topVer, Map<Integer, Map<UUID, Long>> invalidPartitionsCounters,
+        Map<Integer, Map<UUID, Long>> invalidPartitionsSize) { SB sb = new SB();
+
+        NavigableMap<Integer, Map<UUID, IgnitePair<Long>>> sortedAllPartitions = new TreeMap<>();
+
+        Set<Integer> allKeys = new HashSet<>(invalidPartitionsCounters.keySet());
+
+        allKeys.addAll(invalidPartitionsSize.keySet());
+
+        for (Integer p : allKeys) {
+            Map<UUID, IgnitePair<Long>> map = new HashMap<>();
+            fillMapForPartition(invalidPartitionsCounters.get(p), map, true);
+            fillMapForPartition(invalidPartitionsSize.get(p), map, false);
+            sortedAllPartitions.put(p, map);
+        }
+
+        for (Map.Entry<Integer, Map<UUID, IgnitePair<Long>>> p : sortedAllPartitions.entrySet()) {
+            sb.a("Part ").a(p.getKey()).a(": [");
+            for (Map.Entry<UUID, IgnitePair<Long>> e : p.getValue().entrySet()) {
+                Object consistentId = cctx.discovery().node(topVer, e.getKey()).consistentId();
+                sb.a("consistentId=").a(consistentId).a(" meta=[updCnt=").a(e.getValue().get1())
+                    .a(", size=").a(e.getValue().get2()) .a("] ");
+            }
+            sb.a("] ");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * fillMapForPartition given maps of UUID and values (for PartitionCounters or PartitionSize)
+     * and set pairs (cnt, size)
+     */
+    private void fillMapForPartition(Map<UUID, Long> sourceMap,
+        Map<UUID, IgnitePair<Long>> resultMap, boolean isFirst) {
+        if (sourceMap!=null) {
+            sourceMap.forEach((uuid, val) -> {
+                IgnitePair<Long> pair = resultMap.computeIfAbsent(uuid, u -> new IgnitePair<>());
+                if (isFirst)
+                    pair.set1(val);
+                else
+                    pair.set2(val);
+            });
+        }
     }
 }
