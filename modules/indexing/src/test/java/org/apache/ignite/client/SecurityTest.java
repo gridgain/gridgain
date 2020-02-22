@@ -36,6 +36,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_KEY_ALGORITHM;
+import static org.apache.ignite.ssl.SslContextFactory.DFLT_STORE_TYPE;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -109,12 +111,12 @@ public class SecurityTest {
             try (IgniteClient client = Ignition.startClient(clientCfg
                 .setSslMode(SslMode.REQUIRED)
                 .setSslClientCertificateKeyStorePath(rsrcPath.apply("/client.jks"))
-                .setSslClientCertificateKeyStoreType("JKS")
+                .setSslClientCertificateKeyStoreType(DFLT_STORE_TYPE)
                 .setSslClientCertificateKeyStorePassword("123456")
                 .setSslTrustCertificateKeyStorePath(rsrcPath.apply("/trust.jks"))
-                .setSslTrustCertificateKeyStoreType("JKS")
+                .setSslTrustCertificateKeyStoreType(DFLT_STORE_TYPE)
                 .setSslTrustCertificateKeyStorePassword("123456")
-                .setSslKeyAlgorithm("SunX509")
+                .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM)
                 .setSslTrustAll(false)
                 .setSslProtocol(SslProtocol.TLS)
             )) {
@@ -203,7 +205,8 @@ public class SecurityTest {
         Ignite ignite = Ignition.start(Config.getServerConfiguration()
             .setAuthenticationEnabled(true)
             .setDataStorageConfiguration(new DataStorageConfiguration()
-                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true))
+                .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)
+                .setMaxSize(DataStorageConfiguration.DFLT_DATA_REGION_INITIAL_SIZE))
             )
         );
 

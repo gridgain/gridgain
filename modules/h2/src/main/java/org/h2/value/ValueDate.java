@@ -139,5 +139,4 @@ public class ValueDate extends Value {
             throws SQLException {
         prep.setDate(parameterIndex, getDate());
     }
-
 }

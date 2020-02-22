@@ -658,14 +658,15 @@ public class GridReduceQueryExecutor {
                         else {
                             cancel.checkCancelled();
 
-                            QueryContext qctx = new QueryContext(
-                                0,
-                                null,
-                                null,
-                                null,
-                                null,
-                                maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem),
-                                true);
+                        QueryContext qctx = new QueryContext(
+                            0,
+                            null,
+                            null,
+                            null,
+                            null,
+                            true,
+                            maxMem < 0 ? null : h2.memoryManager().createQueryMemoryTracker(maxMem),
+                            ctx);
 
                             H2Utils.setupConnection(conn, qctx, false, enforceJoinOrder);
 

@@ -19,12 +19,15 @@ package org.apache.ignite.agent.action.controller;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.agent.dto.action.AuthenticateCredentials;
+import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 
-import static org.apache.ignite.agent.dto.action.ActionStatus.COMPLETED;
-import static org.apache.ignite.agent.dto.action.ActionStatus.FAILED;
+import static java.util.Collections.singleton;
+import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
+import static org.apache.ignite.agent.dto.action.Status.FAILED;
 
 /**
  * Abstract action controller with authentication config.
@@ -47,16 +50,19 @@ public abstract class AbstractActionControllerWithAuthenticationTest extends Abs
         Request authReq = new Request()
             .setId(UUID.randomUUID())
             .setAction("SecurityActions.authenticate")
+            .setNodeIds(singleton(cluster.localNode().id()))
             .setArgument(creds);
 
-        executeAction(authReq, (r) -> {
-            if (r.getStatus() == COMPLETED && r.getResult() != null) {
+        executeAction(authReq, (res) -> {
+            JobResponse r = F.first(res);
+
+            if (r != null && r.getStatus() == COMPLETED && r.getResult() != null) {
                 sesId.set((UUID.fromString((String) r.getResult())));
 
                 return true;
             }
 
-            if (r.getStatus() == FAILED) {
+            if (r != null && r.getStatus() == FAILED) {
                 sesId.set(null);
 
                 return true;
