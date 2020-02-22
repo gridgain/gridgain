@@ -642,6 +642,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
+        public void TestNearCachingWithBackups()
+        {
+            // TODO: What to do with backup entries? Optionally put them to Near too?
+            // Can be useful for replicated caches when everything is in memory.
+        }
+
+        [Test]
         public void TestNearCacheTypeMismatchLogsErrorAndUpdatesMainCache()
         {
             var cfg = new CacheConfiguration(TestUtils.TestName);
