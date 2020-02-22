@@ -10,57 +10,45 @@ namespace Apache.Ignite.Benchmarks.Interop
     /// </summary>
     internal sealed class ScanQueryBenchmark : PlatformBenchmarkBase
     {
-        /** Cache name. */
-        private const string CacheName = "cache";
-        
-        /** Native cache wrapper. */
+        /** Cache. */
         private ICache<int, Employee> _cache;
 
-        /// <summary>
-        /// Gets the cache.
-        /// </summary>
-        private ICache<int, Employee> Cache
-        {
-            get { return _cache; }
-        }
+        /** Cache with near enabled. */
+        private ICache<int, Employee> _cacheWithNear;
 
         /** <inheritDoc /> */
         protected override void OnStarted()
         {
             base.OnStarted();
 
-            _cache = Node.GetCache<int, Employee>(CacheName);
+            _cache = Node.GetCache<int, Employee>("cache");
+            _cacheWithNear = Node.GetCache<int, Employee>("cacheNear");
 
-            for (int i = 0; i < Emps.Length; i++)
+            for (var i = 0; i < Emps.Length; i++)
+            {
                 _cache.Put(i, Emps[i]);
+                _cacheWithNear.Put(i, Emps[i]);
+            }
         }
         
         /** <inheritDoc /> */
         protected override void GetDescriptors(ICollection<BenchmarkOperationDescriptor> descs)
         {
-            // TODO: Near caches
-            descs.Add(BenchmarkOperationDescriptor.Create("ScanQueryMatchNone", ScanQueryMatchNone, 1));
-            descs.Add(BenchmarkOperationDescriptor.Create("ScanQueryMatchAll", ScanQueryMatchAll, 1));
+            descs.Add(BenchmarkOperationDescriptor.Create("ScanQueryMatchNone", _ => Scan(_cache, false), 1));
+            descs.Add(BenchmarkOperationDescriptor.Create("ScanQueryMatchAll", _ => Scan(_cache, true), 1));
+            descs.Add(BenchmarkOperationDescriptor.Create("ScanQueryNearMatchNone", _ => Scan(_cacheWithNear, false), 1));
+            descs.Add(BenchmarkOperationDescriptor.Create("ScanQueryNearMatchAll", _ => Scan(_cacheWithNear, true), 1));
         }
 
         /// <summary>
         /// Scan.
         /// </summary>
-        private void ScanQueryMatchNone(BenchmarkState state)
+        private static void Scan(ICache<int, Employee> cache, bool shouldMatch)
         {
-            var filter = new Filter {ShouldMatch = false};
-            Cache.Query(new ScanQuery<int, Employee>(filter)).GetAll();
+            var filter = new Filter {ShouldMatch = shouldMatch};
+            cache.Query(new ScanQuery<int, Employee>(filter)).GetAll();
         }
-
-        /// <summary>
-        /// Scan.
-        /// </summary>
-        private void ScanQueryMatchAll(BenchmarkState state)
-        {
-            var filter = new Filter {ShouldMatch = true};
-            Cache.Query(new ScanQuery<int, Employee>(filter)).GetAll();
-        }
-
+        
         /// <summary>
         /// Scan query filter.
         /// </summary>

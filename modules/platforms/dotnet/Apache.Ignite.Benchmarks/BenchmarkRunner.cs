@@ -37,13 +37,13 @@ namespace Apache.Ignite.Benchmarks
         {
             args = new[] {
                 //typeof(GetAllBenchmark).FullName,
-                typeof(PutNearBenchmark).FullName,
+                typeof(ScanQueryBenchmark).FullName,
                 //typeof(ThinClientGetAllBenchmark).FullName,
                 //typeof(ThinClientGetAllBinaryBenchmark).FullName,
                 "-ConfigPath", GetConfigPath(),
                 "-Threads", "1",
-                "-Warmup", "0",
-                "-Duration", "60",
+                "-Warmup", "5",
+                "-Duration", "30",
                 "-BatchSize", "1"
             };
 
