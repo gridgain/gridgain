@@ -28,7 +28,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Log;
-    using Apache.Ignite.Core.Tests.Cache.Query;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
@@ -38,7 +37,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     public class CacheNearTest
     {
         /** */
-        protected const string CacheName = "default";
+        private const string CacheName = "default";
 
         /** */
         private const int NearCacheMaxSize = 3;
