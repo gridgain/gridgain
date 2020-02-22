@@ -129,8 +129,6 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             get
             {
-                // TODO: Add cache-wide or global setting to disable .NET Near Cache.
-                
                 // Near caching within transaction is not supported for now.
                 // Commit/rollback logic requires additional implementation.
                 return IsNear && (_txManager == null || !_txManager.IsInTx());
@@ -438,7 +436,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return true;
             }
 
-            // TODO: near.GetOrAdd? Is it valid in all modes?
             var res = DoOutInOpX((int) CacheOp.Peek,
                 w =>
                 {
@@ -543,10 +540,47 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            // TODO: Return what we can from Near Cache.
+            if (CanUseNear)
+            {
+                // Get what we can from Near Cache, and the rest from Java.
+                ICollection<ICacheEntry<TK, TV>> res = null;
+                
+                return DoOutInOpX((int) CacheOp.GetAll,
+                    writer =>
+                    {
+                        var count = 0;
+                        var pos = writer.Stream.Position;
+                        writer.WriteInt(0);  // Reserve count.
+                        
+                        foreach (var key in keys)
+                        {
+                            TV val;
+                            if (_nearCache.TryGetValue(key, out val))
+                            {
+                                res = res ?? new List<ICacheEntry<TK, TV>>();
+                                res.Add(new CacheEntry<TK, TV>(key, val));
+                            }
+                            else
+                            {
+                                writer.WriteObjectDetached(key);
+                                count++;
+                            }
+                        }
+
+                        writer.Stream.Seek(pos);
+                        writer.WriteInt(count);
+                    },
+                    (s, r) => r == True 
+                        ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary), res) 
+                        : null,
+                    _readException);
+            }
+
             return DoOutInOpX((int) CacheOp.GetAll,
                 writer => writer.WriteEnumerable(keys),
-                (s, r) => r == True ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary)) : null,
+                (s, r) => r == True 
+                    ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary)) 
+                    : null,
                 _readException);
         }
 
@@ -1604,7 +1638,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// </summary>
         /// <param name="reader">Reader.</param>
         /// <returns>Dictionary.</returns>
-        private static ICollection<ICacheEntry<TK, TV>> ReadGetAllDictionary(BinaryReader reader)
+        private static ICollection<ICacheEntry<TK, TV>> ReadGetAllDictionary(BinaryReader reader, 
+            ICollection<ICacheEntry<TK, TV>> res = null)
         {
             if (reader == null)
                 return null;
@@ -1615,7 +1650,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 int size = stream.ReadInt();
 
-                var res = new List<ICacheEntry<TK, TV>>(size);
+                res = res ?? new List<ICacheEntry<TK, TV>>(size);
 
                 for (int i = 0; i < size; i++)
                 {
