@@ -40,17 +40,19 @@ public class PlatformNearCacheConfiguration implements Serializable {
 
     /**
      * Gets fully-qualified platform type name of the cache key used for the local map.
-     * When not set, non-generic map is used, which can reduce performance and increase allocations.
+     * When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
      *
-     * @return
+     * @return Key type name.
      */
     public String getKeyTypeName() {
         return keyTypeName;
     }
 
     /**
-     * TODO
-     * @param keyTypeName
+     * Sets fully-qualified platform type name of the cache key used for the local map.
+     * When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
+     *
+     * @param keyTypeName Key type name.
      * @return {@code this} for chaining.
      */
     public PlatformNearCacheConfiguration setKeyTypeName(String keyTypeName) {
@@ -60,16 +62,20 @@ public class PlatformNearCacheConfiguration implements Serializable {
     }
 
     /**
-     * TODO
-     * @return
+     * Gets fully-qualified platform type name of the cache value used for the local map.
+     * When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
+     *
+     * @return Key type name.
      */
     public String getValueTypeName() {
         return valueTypeName;
     }
 
     /**
-     * TODO
-     * @param valueTypeName
+     * Sets fully-qualified platform type name of the cache value used for the local map.
+     * When not set, object-based map is used, which can reduce performance and increase allocations due to boxing.
+     *
+     * @param valueTypeName Key type name.
      * @return {@code this} for chaining.
      */
     public PlatformNearCacheConfiguration setValueTypeName(String valueTypeName) {
@@ -79,16 +85,18 @@ public class PlatformNearCacheConfiguration implements Serializable {
     }
 
     /**
-     * TODO
-     * @return
+     * Gets a value indicating whether platform near cache should store keys and values in binary form.
+     *
+     * @return Whether binary mode is enabled.
      */
     public boolean isKeepBinary() {
         return keepBinary;
     }
 
     /**
-     * TODO
-     * @param keepBinary
+     * Sets a value indicating whether platform near cache should store keys and values in binary form.
+     *
+     * @param keepBinary Whether binary mode is enabled.
      * @return {@code this} for chaining.
      */
     public PlatformNearCacheConfiguration setKeepBinary(boolean keepBinary) {
