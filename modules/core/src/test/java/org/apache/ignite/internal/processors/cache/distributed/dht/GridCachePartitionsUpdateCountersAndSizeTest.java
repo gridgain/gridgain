@@ -112,7 +112,8 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
 
         if (size)
             // Modify update size for some partition.
-            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).dataStore().clear(ignite.cachex(CACHE_NAME).context().cacheId());
+            ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).dataStore()
+                .clear(ignite.cachex(CACHE_NAME).context().cacheId());
 
         // Trigger exchange.
         startGrid(3);
@@ -198,9 +199,9 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
             int typeInconsistence = 0; //for Cnt 1, for Size 2, for Both 3, no inconsisctence 0.
 
             if (s.matches("Partitions update counters are inconsistent for Part (\\[0-2]): " +
-                "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) " +
-                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) " +
-                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) ]")) {
+                "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|100500) " +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|100500) " +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|100500) ]")) {
                 typeInconsistence += 1;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf('='));
@@ -208,9 +209,9 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                 }
             }
             else if (s.matches("Partitions cache sizes are inconsistent for Part (\\[0-2]): " +
-                "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0) " +
-                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0}) " +
-                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0}) ]")) {
+                "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|0) " +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|0}) " +
+                "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|0}) ]")) {
                 typeInconsistence += 10;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf('='));
@@ -219,9 +220,9 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
             }
 
             else if (s.matches("Partitions cache size and update counters are inconsistent for Part (\\[0-2]]): \\[" +
-                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)] " +
-                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)] " +
-                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)]")) {
+                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(32|10500), size=(32|0)] " +
+                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(32|10500), size=(32|0)] " +
+                "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(32|10500), size=(32|0)]")) {
                 typeInconsistence = 100;
                 for (int i=0; i<3; i++) {
                     s = s.substring(s.indexOf("size="));
