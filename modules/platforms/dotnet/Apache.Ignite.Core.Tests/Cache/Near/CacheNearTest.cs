@@ -626,28 +626,40 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cfg = new CacheConfiguration(TestUtils.TestName);
             var nearCfg = new NearCacheConfiguration().EnablePlatformNearCache<long, Guid>();
-            
+
             var clientCache = _client.CreateCache<int, Foo>(cfg, nearCfg);
             var serverCache = _grid.GetCache<int, Foo>(cfg.Name);
-            
+
             // Put Foo, but near cache expects Guid.
             clientCache[1] = new Foo(2);
-            
+
             // Error is logged.
+            Func<ListLogger.Entry> getEntry = () =>
+                _logger.Entries.FirstOrDefault(e => e.Category.Contains("processors.cache"));
+
+            TestUtils.WaitForTrueCondition(() => getEntry() != null);
+
+#if NETCOREAPP
+            Assert.AreEqual(
+                "Failed to update Platform Near Cache: class o.a.i.IgniteException: Unable to cast object " +
+                "of type 'Apache.Ignite.Core.Tests.Cache.Near.Foo' to type 'System.Guid'.",
+                getEntry().Message);
+#else
             Assert.AreEqual(
                 "Failed to update Platform Near Cache: class o.a.i.IgniteException: Specified cast is not valid.",
-                _logger.Entries.Single().Message);
-            
+                getEntry().Message);
+#endif
+
             // Entry is not in near cache.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.NativeNear));
-                
+
             // Ignite cache updated.
             Assert.AreEqual(2, serverCache[1].Bar);
-            
+
             // Near cache fails on get.
             Assert.Throws<InvalidCastException>(() => clientCache.Get(1));
         }
-        
+
         /// <summary>
         /// Gets the cache instance.
         /// </summary>

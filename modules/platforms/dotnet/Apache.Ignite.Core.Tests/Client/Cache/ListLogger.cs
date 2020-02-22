@@ -157,6 +157,12 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             {
                 get { return _category; }
             }
+
+            /** <inheritdoc /> */
+            public override string ToString()
+            {
+                return string.Format("{0} [Level={1}, Message={2}]", GetType().Name, Level, Message);
+            }
         }
     }
 }
