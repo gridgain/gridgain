@@ -123,12 +123,10 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
         ignite.cache(CACHE_NAME).put(0, 0);
 
         if (cnt && !size)
-            assertTrue("Counters inconsistent message not found", lsnrCnt.check() && !lsnrSize.check()
-                && !lsnrSizeCnt.check());
+            assertTrue("Counters inconsistent message not found", lsnrCnt.check());
 
         if (!cnt && size)
-            assertTrue("Size inconsistent message not found", lsnrSize.check() && !lsnrCnt.check()
-                && !lsnrSizeCnt.check());
+            assertTrue("Size inconsistent message not found", lsnrSize.check());
 
         if (cnt && size)
             assertTrue("Both counters and sizes message not found", lsnrSizeCnt.check());
@@ -203,7 +201,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                 "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|100500) ]")) {
-                typeInconsistence = 1;
+                typeInconsistence += 1;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf('='));
                     setCnt.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
@@ -213,7 +211,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                 "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0}) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(\\32|0}) ]")) {
-                typeInconsistence =2;
+                typeInconsistence += 10;
                 for (int i = 0; i < 3; i++) {
                     s = s.substring(s.indexOf('='));
                     setSize.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
@@ -224,7 +222,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                 "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)] " +
                 "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)] " +
                 "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(\\32|10500), size=(\\32|0)]")) {
-                typeInconsistence = 3;
+                typeInconsistence = 100;
                 for (int i=0; i<3; i++) {
                     s = s.substring(s.indexOf("size="));
                     setSize.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
@@ -235,9 +233,9 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
 
             if (typeInconsistence == 1 && setCnt.size()==2)
                 assertTrue("Counters inconsistent message found", true);
-            else if (typeInconsistence == 2 && setSize.size()==2)
+            else if (typeInconsistence == 10 && setSize.size()==2)
                 assertTrue("Size inconsistent message found", true);
-            else if (typeInconsistence == 3 && setCnt.size()==2 && setSize.size()==2)
+            else if (typeInconsistence == 100 && setCnt.size()==2 && setSize.size()==2)
                 assertTrue("Size inconsistent message found", true);
         }
     }
