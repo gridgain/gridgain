@@ -613,10 +613,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             serverCache[2] = new Foo(2);
 
             var res = clientCache.GetAll(Enumerable.Range(1, 2));
-            
-            Assert.AreEqual(2, res.Count);
 
-            // TODO: Check that near cache has all entries after GetAll
+            Assert.AreEqual(new[] {1, 2}, res.Select(x => x.Key));
+            
+            // First entry is from near cache.
+            Assert.AreSame(res.First().Value, clientCache.LocalPeek(1, CachePeekMode.NativeNear));
+
+            // Second entry is now in near cache.
+            Assert.AreEqual(2, clientCache.LocalPeek(2, CachePeekMode.NativeNear).Bar);
         }
 
         [Test]
