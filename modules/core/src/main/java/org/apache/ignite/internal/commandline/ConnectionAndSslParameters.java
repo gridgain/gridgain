@@ -40,6 +40,9 @@ public class ConnectionAndSslParameters {
     /** Force option is used for auto confirmation. */
     private boolean autoConfirmation;
 
+    /** Print error stack trace flag. */
+    private final boolean printErrStackTrace;
+
     /** Ping timeout for grid client. See {@link GridClientConfiguration#getPingTimeout()}. */
     private long pingTimeout;
 
@@ -87,6 +90,7 @@ public class ConnectionAndSslParameters {
      * @param pingTimeout Ping timeout. See {@link GridClientConfiguration#getPingTimeout()}.
      * @param pingInterval Ping interval. See {@link GridClientConfiguration#getPingInterval()}.
      * @param autoConfirmation Auto confirmation flag.
+     * @param printErrStackTrace Print error stack trace flag.
      * @param sslProtocol SSL Protocol.
      * @param sslCipherSuites SSL cipher suites.
      * @param sslKeyAlgorithm SSL Key Algorithm.
@@ -98,7 +102,7 @@ public class ConnectionAndSslParameters {
      * @param sslTrustStoreType Truststore Type.
      */
     public ConnectionAndSslParameters(Command command, String host, String port, String user, String pwd,
-        Long pingTimeout, Long pingInterval, boolean autoConfirmation,
+        Long pingTimeout, Long pingInterval, boolean autoConfirmation, boolean printErrStackTrace,
         String sslProtocol, String sslCipherSuites, String sslKeyAlgorithm,
         String sslKeyStorePath, char[] sslKeyStorePassword, String sslKeyStoreType,
         String sslTrustStorePath, char[] sslTrustStorePassword, String sslTrustStoreType
@@ -113,6 +117,7 @@ public class ConnectionAndSslParameters {
         this.pingInterval = pingInterval;
 
         this.autoConfirmation = autoConfirmation;
+        this.printErrStackTrace = printErrStackTrace;
 
         this.sslProtocol = sslProtocol;
         this.sslCipherSuites = sslCipherSuites;
@@ -280,6 +285,15 @@ public class ConnectionAndSslParameters {
      */
     public void sslTrustStorePassword(char[] sslTrustStorePassword) {
         this.sslTrustStorePassword = sslTrustStorePassword;
+    }
+
+    /**
+     * Return is print error stack trace.
+     *
+     * @return {@code True} is print error stack trace.
+     */
+    public boolean printErrStackTrace() {
+        return printErrStackTrace;
     }
 
     /** {@inheritDoc} */
