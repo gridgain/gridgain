@@ -1637,6 +1637,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Read dictionary returned by GET_ALL operation.
         /// </summary>
         /// <param name="reader">Reader.</param>
+        /// <param name="res">Resulting collection.</param>
         /// <returns>Dictionary.</returns>
         private static ICollection<ICacheEntry<TK, TV>> ReadGetAllDictionary(BinaryReader reader, 
             ICollection<ICacheEntry<TK, TV>> res = null)
