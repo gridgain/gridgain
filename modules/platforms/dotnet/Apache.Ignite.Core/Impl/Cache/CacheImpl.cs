@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
@@ -431,9 +432,19 @@ namespace Apache.Ignite.Core.Impl.Cache
             bool hasNativeNear;
             var peekModes = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
 
-            if (hasNativeNear && _nearCache != null && _nearCache.TryGetValue(key, out value))
+            if (hasNativeNear)
             {
-                return true;
+                if (_nearCache != null && _nearCache.TryGetValue(key, out value))
+                {
+                    return true;
+                }
+
+                if (peekModes == 0)
+                {
+                    // Only NativeNear is specified.
+                    value = default(TV);
+                    return false;
+                }
             }
 
             var res = DoOutInOpX((int) CacheOp.Peek,

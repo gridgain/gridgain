@@ -127,7 +127,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsFalse(_cache[0].TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             Assert.IsFalse(_cache[1].TryLocalPeek(Key3, out foo, CachePeekMode.NativeNear));
             
-            // Check value on the new node.
+            // Check value on the new node: it should be already in near cache, because key is primary.
+            Assert.AreEqual(-1, _cache[2].LocalPeek(Key3, CachePeekMode.NativeNear).Bar);
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
             Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
             
