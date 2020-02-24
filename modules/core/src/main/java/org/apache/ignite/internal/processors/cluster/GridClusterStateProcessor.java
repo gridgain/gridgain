@@ -1417,7 +1417,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         else {
             assert state != ACTIVE_READ_ONLY : "No one server node doesn't supports this feature.";
 
-            fut = servers.compute().runAsync(new ClientChangeGlobalStateComputeRequest(ClusterState.active(state), blt, forceBlt));
+            fut = servers.compute().runAsync(new ClientChangeGlobalStateComputeRequest(ClusterState.active(state), state == ACTIVE_READ_ONLY, blt, forceBlt));
         }
 
         return ((IgniteFutureImpl<Void>)fut).internalFuture();
@@ -2247,6 +2247,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         private final boolean activate;
 
         /** */
+        private final boolean readOnly;
+
+        /** */
         private final BaselineTopology baselineTopology;
         /** */
         private final boolean forceChangeBaselineTopology;
@@ -2256,15 +2259,18 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         /**
          * @param activate New cluster state.
+         * @param readOnly Read only flag.
          * @param blt New baseline topology.
          * @param forceBlt Force change cluster state.
          */
         private ClientChangeGlobalStateComputeRequest(
             boolean activate,
+            boolean readOnly,
             BaselineTopology blt,
             boolean forceBlt
         ) {
             this.activate = activate;
+            this.readOnly = readOnly;
             this.baselineTopology = blt;
             this.forceChangeBaselineTopology = forceBlt;
         }
