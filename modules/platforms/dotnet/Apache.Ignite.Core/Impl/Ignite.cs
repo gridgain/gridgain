@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Impl
     /// <summary>
     /// Native Ignite wrapper.
     /// </summary>
-    internal class Ignite : PlatformTargetAdapter, ICluster, IIgniteInternal, IIgnite
+    internal sealed class Ignite : PlatformTargetAdapter, ICluster, IIgniteInternal, IIgnite
     {
         /// <summary>
         /// Operation codes for PlatformProcessorImpl calls.
@@ -1126,6 +1126,12 @@ namespace Apache.Ignite.Core.Impl
         internal IPlatformTarget GetExtension(int id)
         {
             return ((IPlatformTarget) Target).InStreamOutObject((int) Op.GetExtension, w => w.WriteInt(id));
+        }
+
+        /** <inheritdoc /> */
+        public override string ToString()
+        {
+            return string.Format("Ignite [Name={0}]", _name);
         }
     }
 }

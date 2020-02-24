@@ -3503,6 +3503,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         topVer);
                 }
 
+                updatePlatformNearCache(val, topVer);
+
                 onUpdateFinished(updateCntr);
 
                 return true;
