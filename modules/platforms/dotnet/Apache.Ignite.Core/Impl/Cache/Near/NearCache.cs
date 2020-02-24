@@ -112,10 +112,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return (TVal) (object) entry.Value;
             }
 
-            entry = _map.AddOrUpdate(key0, _ => GetEntry(valueFactory, key),
-                (k, old) => IsValid(k, old) ? old : GetEntry(valueFactory, key));
-
-            return (TVal) (object) entry.Value;
+            // The only code path that puts values into _map goes through Java callbacks (Update method).
+            // We can't call _map.GetOrAdd, because near entry may become evicted concurrently, causing stale data.
+            // If the following valueFactory() call causes NearCacheEntry to be created for the key,
+            // then _map will be updated in the background.
+            return valueFactory(key);
         }
 
         public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
@@ -125,14 +126,14 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return val;
             }
 
+            NearCacheEntry<TV> entry;
             var key0 = (TK) (object) key;
-            var entry = _map.GetOrAdd(key0, k => GetEntry(_ => val, k));
-
-            if (IsValid(key0, entry))
+            
+            if (_map.TryGetValue(key0, out entry) && IsValid(key, entry))
             {
                 return (TVal) (object) entry.Value;
             }
-            
+
             return val;
         }
 
