@@ -69,11 +69,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             _cache[0][Key3] = new Foo(Key3);
 
-            Assert.AreSame(_cache[0].Get(Key3), _cache[0].Get(Key3));
-            Assert.AreSame(_cache[1].Get(Key3), _cache[1].Get(Key3));
             Assert.AreEqual(Key3, _cache[0][Key3].Bar);
             Assert.AreEqual(Key3, _cache[1][Key3].Bar);
             Assert.AreEqual(Key3, clientCache[Key3].Bar);
+            Assert.AreSame(_cache[0].Get(Key3), _cache[0].Get(Key3));
+            Assert.AreSame(_cache[1].Get(Key3), _cache[1].Get(Key3));
 
             // Stop primary node for Key3.
             _ignite[2].Dispose();
@@ -184,9 +184,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var serverCache = _cache[0];
             
             serverCache[key] = new Foo(-1);
+            Assert.AreEqual(-1, clientCache[key].Bar);
             
-            var serverInstance = serverCache[key];
             var clientInstance = clientCache[key];
+            var serverInstance = serverCache[key];
             
             // New node enters, but key stays on the same primary node.
             InitNode(2);
