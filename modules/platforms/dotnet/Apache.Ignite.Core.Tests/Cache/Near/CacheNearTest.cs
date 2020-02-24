@@ -206,12 +206,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 
                 remoteCache[key] = obj;
             }
-            
-            var res1 = cache[key];
-            var res2 = cache[key];
-            
-            Assert.AreSame(res1, res2);
-            Assert.AreEqual(3, res1.Bar);
+
+            Assert.AreEqual(3, cache[key].Bar);
+            Assert.AreSame(cache[key], cache[key]);
         }
         
         /// <summary>
@@ -745,7 +742,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             // And now it is near again:
             Assert.IsTrue(cache.TryLocalPeek(key, out _, CachePeekMode.NativeNear));
-            Assert.AreSame(fromCache, cache[key]);
+            Assert.AreSame(cache[key], cache[key]);
         }
 
         private void WaitForRebalance()

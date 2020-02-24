@@ -29,12 +29,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Value. */
         private readonly T _value;
 
+        /** Partition. */
+        private readonly int _partition;
+        
         /** Version. Boxed <see cref="AffinityTopologyVersion"/>. Stored as object for atomic updates.
          * Saves memory as well, because sizeof(AffinityTopologyVersion) > sizeof(void*) */
         private object _version;
-
-        /** Partition. */
-        private volatile int _partition;
 
         public NearCacheEntry(T value, object version, int partition)
         {
@@ -58,7 +58,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public int Partition
         {
             get { return _partition; }
-            set { _partition = value; }
         }
 
         /// <summary>

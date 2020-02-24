@@ -45,8 +45,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         
         TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory);
         
-        TVal GetOrAdd<TKey, TVal>(TKey key, TVal val);
-        
         /// <summary>
         /// Gets the size.
         /// </summary>

@@ -491,18 +491,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (!CanUseNear)
-            {
-                return GetAsyncInternal(key);
-            }
-            
             TV val;
-            if (_nearCache.TryGetValue(key, out val))
+            if (CanUseNear && _nearCache.TryGetValue(key, out val))
             {
                 return TaskRunner.FromResult(val);
             }
 
-            return GetAsyncInternal(key).ContWith(t => _nearCache.GetOrAdd(key, t.Result));
+            return GetAsyncInternal(key);
         }
 
         /** <inheritDoc /> */
@@ -518,11 +513,6 @@ namespace Apache.Ignite.Core.Impl.Cache
             var res = DoOutInOpNullable(CacheOp.Get, key);
 
             value = res.Value;
-
-            if (CanUseNear && res.Success)
-            {
-                _nearCache.GetOrAdd(key, value);
-            }
 
             return res.Success;
         }

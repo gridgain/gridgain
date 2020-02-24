@@ -29,9 +29,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// </summary>
     internal sealed class NearCache<TK, TV> : INearCache
     {
-        /** Indicates unknown partition. */
-        private const int UnknownPartition = -1;
-        
         /** Affinity. */
         private readonly CacheAffinityImpl _affinity;
         
@@ -81,7 +78,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             
             if (_map.TryGetValue(key0, out entry))
             {
-                if (IsValid(key, entry))
+                if (IsValid(entry))
                 {
                     val = (TVal) (object) entry.Value;
                     return true;
@@ -99,17 +96,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         public TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory)
         {
-            if (_stopped)
+            TVal val;
+            if (TryGetValue(key, out val))
             {
-                return valueFactory(key);
-            }
-
-            NearCacheEntry<TV> entry;
-            var key0 = (TK) (object) key;
-            
-            if (_map.TryGetValue(key0, out entry) && IsValid(key, entry))
-            {
-                return (TVal) (object) entry.Value;
+                return val;
             }
 
             // The only code path that puts values into _map goes through Java callbacks (Update method).
@@ -117,24 +107,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             // If the following valueFactory() call causes NearCacheEntry to be created for the key,
             // then _map will be updated in the background.
             return valueFactory(key);
-        }
-
-        public TVal GetOrAdd<TKey, TVal>(TKey key, TVal val)
-        {
-            if (_stopped)
-            {
-                return val;
-            }
-
-            NearCacheEntry<TV> entry;
-            var key0 = (TK) (object) key;
-            
-            if (_map.TryGetValue(key0, out entry) && IsValid(key, entry))
-            {
-                return (TVal) (object) entry.Value;
-            }
-
-            return val;
         }
 
         /** <inheritdoc /> */
@@ -145,7 +117,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return 0;
             }
 
-            return _map.Count(e => IsValid(e.Key, e.Value));
+            return _map.Count(e => IsValid(e.Value));
         }
 
         /** <inheritdoc /> */
@@ -218,12 +190,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <para />
         /// This method is similar to GridNearCacheEntry.valid(). 
         /// </summary>
-        /// <param name="key">Entry key.</param>
         /// <param name="entry">Entry to validate.</param>
-        /// <typeparam name="TKey">Key type.</typeparam>
         /// <typeparam name="TVal">Value type.</typeparam>
         /// <returns>True if entry is valid and can be returned to the user; false otherwise.</returns>
-        private bool IsValid<TKey, TVal>(TKey key, NearCacheEntry<TVal> entry)
+        private bool IsValid<TVal>(NearCacheEntry<TVal> entry)
         {
             // See comments on _affinityTopologyVersionFunc about boxed copy approach. 
             var currentVerBoxed = _affinityTopologyVersionFunc();
@@ -250,37 +220,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return true;
             }
 
-            var part = entry.Partition == UnknownPartition ? _affinity.GetPartition(key) : entry.Partition;
+            var part = entry.Partition;
             var valid = _affinity.IsAssignmentValid(entryVer, part);
 
-            if (valid)
-            {
-                // Update entry with current version and known partition to speed up future checks.
-                // Partition can only change from UnknownPartition to an actual value that never changes for the key,
-                // so this is thread-safe.
-                entry.Partition = part;
-                
-                // Version could be set concurrently, use CompareExchange.
-                entry.CompareExchangeVersion(currentVerBoxed, entryVerBoxed);
-            }
-            else
-            {
-                // Mark as invalid.
-                entry.CompareExchangeVersion(null, entryVerBoxed);
-            }
+            // Update version or mark as invalid (null).
+            entry.CompareExchangeVersion(valid ? currentVerBoxed : null, entryVerBoxed);
 
             return valid;
-        }
-
-        private NearCacheEntry<TV> GetEntry<TKey, TVal>(Func<TKey, TVal> valueFactory, TKey k)
-        {
-            // TODO: Make sure this is not invoked unnecessarily, when actual entry is already initialized from a callback.
-            
-            // Important: get the version before the value. 
-            var ver = _affinityTopologyVersionFunc();
-            var val = valueFactory(k);
-
-            return new NearCacheEntry<TV>((TV) (object) val, ver, UnknownPartition);
         }
     }
 }
