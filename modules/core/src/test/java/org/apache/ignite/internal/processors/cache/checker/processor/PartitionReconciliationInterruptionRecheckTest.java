@@ -201,11 +201,11 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
         }
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
-        builder.fixMode(false);
+        builder.repair(false);
         builder.batchSize(batchSize);
         builder.parallelism(1);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
-        builder.console(true);
+        builder.locOutput(true);
         builder.recheckAttempts(0);
 
         final AtomicReference<ReconciliationResult> res = new AtomicReference<>();

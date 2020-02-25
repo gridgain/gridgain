@@ -26,17 +26,17 @@ import java.io.Serializable;
  */
 public abstract class CachePartitionRequest implements PipelineWorkload, Serializable {
     /** Session id. */
-    protected final long sessionId;
+    protected final long sesId;
 
     /** Workload chain id. */
     protected final UUID workloadChainId;
 
     /**
-     * @param sessionId Session id.
+     * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      */
-    protected CachePartitionRequest(long sessionId, UUID workloadChainId) {
-        this.sessionId = sessionId;
+    protected CachePartitionRequest(long sesId, UUID workloadChainId) {
+        this.sesId = sesId;
         this.workloadChainId = workloadChainId;
     }
 
@@ -52,7 +52,7 @@ public abstract class CachePartitionRequest implements PipelineWorkload, Seriali
 
     /** {@inheritDoc} */
     @Override public long sessionId() {
-        return sessionId;
+        return sesId;
     }
 
     /** {@inheritDoc} */

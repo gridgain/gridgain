@@ -71,14 +71,14 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     private IgniteLogger log;
 
     /** Flag indicates that the result of the utility should be logged to the console. */
-    private boolean consoleMode;
+    private boolean localOutoutMode;
 
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(
         List<ClusterNode> subgrid,
         VisorPartitionReconciliationTaskArg arg
     ) throws IgniteException {
-        consoleMode = arg.console();
+        localOutoutMode = arg.locOutput();
 
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
@@ -105,7 +105,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** {@inheritDoc} */
     @Override public ReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
         Map<UUID, String> nodeIdToFolder = new HashMap<>();
-        PartitionReconciliationResult res = consoleMode ?
+
+        PartitionReconciliationResult res = localOutoutMode ?
             new PartitionReconciliationResult() :
             new PartitionReconciliationResultMeta();
 
@@ -124,10 +125,10 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             T2<String, ExecutionResult<PartitionReconciliationResult>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
-            res.merge(data.get2().getResult());
+            res.merge(data.get2().getRes());
 
-            if (data.get2().getErrorMessage() != null)
-                errors.add(nodeId + " - " + data.get2().getErrorMessage());
+            if (data.get2().getErrorMsg() != null)
+                errors.add(nodeId + " - " + data.get2().getErrorMsg());
         }
 
         return new ReconciliationResult(res, nodeIdToFolder, errors);
@@ -214,7 +215,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     sesId,
                     ignite,
                     caches,
-                    reconciliationTaskArg.fixMode(),
+                    reconciliationTaskArg.repair(),
                     reconciliationTaskArg.parallelism(),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
@@ -222,14 +223,14 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     reconciliationTaskArg.recheckDelay()
                 ).execute();
 
-                String path = localPrint(reconciliationRes.getResult());
+                String path = localPrint(reconciliationRes.getRes());
 
                 return new T2<>(
                     path,
-                    reconciliationTaskArg.console() ? reconciliationRes : new ExecutionResult<>(new PartitionReconciliationResultMeta(
-                        reconciliationRes.getResult().inconsistentKeysCount(),
-                        reconciliationRes.getResult().skippedEntriesCount(),
-                        reconciliationRes.getResult().skippedEntriesCount()), reconciliationRes.getErrorMessage())
+                    reconciliationTaskArg.locOutput() ? reconciliationRes : new ExecutionResult<>(new PartitionReconciliationResultMeta(
+                        reconciliationRes.getRes().inconsistentKeysCount(),
+                        reconciliationRes.getRes().skippedEntriesCount(),
+                        reconciliationRes.getRes().skippedEntriesCount()), reconciliationRes.getErrorMsg())
                 );
             }
             catch (Exception e) {
@@ -251,7 +252,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
 
                     try (PrintWriter pw = new PrintWriter(file)) {
-                        reconciliationRes.print(pw::write, reconciliationTaskArg.verbose());
+                        reconciliationRes.print(pw::write, reconciliationTaskArg.includeSensitive());
 
                         pw.flush();
 
@@ -265,7 +266,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     log.error("Unable to create file " + e.getMessage());
                 }
 
-                reconciliationRes.print(log::info, reconciliationTaskArg.verbose());
+                reconciliationRes.print(log::info, reconciliationTaskArg.includeSensitive());
             }
 
             return null;

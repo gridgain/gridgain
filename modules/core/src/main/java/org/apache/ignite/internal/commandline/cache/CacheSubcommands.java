@@ -41,12 +41,12 @@ public enum CacheSubcommands {
     IDLE_VERIFY("idle_verify", IdleVerifyCommandArg.class, new IdleVerify()),
 
     /**
-     * Check consistency of primary and backup partitions assuming that there might be concurrent updated.
+     * Checks consistency of primary and backup partitions assuming that there might be concurrent updated.
      */
     PARTITION_RECONCILIATION("partition-reconciliation", PartitionReconciliationCommandArg.class, new PartitionReconciliation()),
 
     /**
-     * Does cancel of partition reconciliation command.
+     * Cancels of partition reconciliation command.
      */
     PARTITION_RECONCILIATION_CANCEL("partition-reconciliation-cancel", null, new PartitionReconciliationCancel()),
 

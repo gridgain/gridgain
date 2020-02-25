@@ -35,20 +35,20 @@ public class Batch implements PipelineWorkload {
     private final KeyCacheObject lowerKey;
 
     /** Session id. */
-    private final long sessionId;
+    private final long sesId;
 
     /** Workload chain id. */
     private final UUID workloadChainId;
 
     /**
-     * @param sessionId Session id.
+     * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param lowerKey Lower key.
      */
-    public Batch(long sessionId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey) {
-        this.sessionId = sessionId;
+    public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey) {
+        this.sesId = sesId;
         this.workloadChainId = workloadChainId;
         this.cacheName = cacheName;
         this.partId = partId;
@@ -78,7 +78,7 @@ public class Batch implements PipelineWorkload {
 
     /** {@inheritDoc} */
     @Override public long sessionId() {
-        return sessionId;
+        return sesId;
     }
 
     /** {@inheritDoc} */

@@ -38,7 +38,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
@@ -123,7 +123,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                 jobs.put(
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
-                            entry -> new PartitionKeyVersion(null, entry.getKey(), null),
+                            entry -> new VersionedKey(null, entry.getKey(), null),
                             Map.Entry::getValue)),
                         arg.cacheName(),
                         repairReq.repairAlg(),
@@ -144,7 +144,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                 jobs.put(
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
-                            entry -> new PartitionKeyVersion(null, entry.getKey(), null),
+                            entry -> new VersionedKey(null, entry.getKey(), null),
                             Map.Entry::getValue)),
                         arg.cacheName(),
                         repairReq.repairAlg(),
@@ -184,10 +184,10 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             ExecutionResult<RepairResult> excRes = result.getData();
 
-            if (excRes.getErrorMessage() != null)
-                return new ExecutionResult<>(excRes.getErrorMessage());
+            if (excRes.getErrorMsg() != null)
+                return new ExecutionResult<>(excRes.getErrorMsg());
 
-            RepairResult repairRes = excRes.getResult();
+            RepairResult repairRes = excRes.getRes();
 
             aggregatedRepairRes.keysToRepair().putAll(repairRes.keysToRepair());
             aggregatedRepairRes.repairedKeys().putAll(repairRes.repairedKeys());
@@ -216,7 +216,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         private IgniteLogger log;
 
         /** Partition key. */
-        private final Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data;
+        private final Map<VersionedKey, Map<UUID, VersionedValue>> data;
 
         /** Cache name. */
         private String cacheName;
@@ -244,7 +244,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
          * @param partId Partition Id.
          */
         @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-        public RepairJob(Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data, String cacheName,
+        public RepairJob(Map<VersionedKey, Map<UUID, VersionedValue>> data, String cacheName,
             RepairAlgorithm repairAlg, int repairAttempt, AffinityTopologyVersion startTopVer, int partId) {
             this.data = data;
             this.cacheName = cacheName;
@@ -255,10 +255,11 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         }
 
         /** {@inheritDoc} */
-        @SuppressWarnings("unchecked") @Override public ExecutionResult<RepairResult> execute() throws IgniteException {
-            Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
+        @SuppressWarnings("unchecked")
+        @Override public ExecutionResult<RepairResult> execute() throws IgniteException {
+            Map<VersionedKey, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
 
-            Map<PartitionKeyVersion, RepairMeta> repairedKeys =
+            Map<VersionedKey, RepairMeta> repairedKeys =
                 new HashMap<>();
 
             GridCacheContext ctx = ignite.cachex(cacheName).context();
@@ -268,7 +269,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
             final int rmvQueueMaxSize = 32;
             final int ownersNodesSize = owners(ctx);
 
-            for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
+            for (Map.Entry<VersionedKey, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
                     Object key = keyValue(ctx, dataEntry.getKey().getKey());
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();

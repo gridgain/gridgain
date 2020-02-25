@@ -40,7 +40,7 @@ public class Repair implements PipelineWorkload {
     private int repairAttempt;
 
     /** Session id. */
-    private long sessionId;
+    private long sesId;
 
     /** Workload chain id. */
     private final UUID workloadChainId;
@@ -51,22 +51,23 @@ public class Repair implements PipelineWorkload {
     private Map<KeyCacheObject, Map<UUID, VersionedValue>> data;
 
     /**
-     * @param sessionId Session id.
+     * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param cacheName Cache name.
      * @param partId Partition id.
      * @param data Data.
      * @param repairAttempt Repair attempt.
      */
-    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType") public Repair(
-        long sessionId,
+    @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
+    public Repair(
+        long sesId,
         UUID workloadChainId,
         String cacheName,
         int partId,
         Map<KeyCacheObject, Map<UUID, VersionedValue>> data,
         int repairAttempt
     ) {
-        this.sessionId = sessionId;
+        this.sesId = sesId;
         this.workloadChainId = workloadChainId;
         this.cacheName = cacheName;
         this.partId = partId;
@@ -105,7 +106,7 @@ public class Repair implements PipelineWorkload {
 
     /** {@inheritDoc} */
     @Override public long sessionId() {
-        return sessionId;
+        return sesId;
     }
 
     /** {@inheritDoc} */

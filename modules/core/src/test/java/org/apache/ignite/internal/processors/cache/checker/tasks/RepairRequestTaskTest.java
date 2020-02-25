@@ -34,7 +34,7 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
@@ -114,8 +114,8 @@ public class RepairRequestTaskTest {
      */
     @Test
     public void testNotFullSetOfOldKeysUsesUserRepairAlg() throws IllegalAccessException {
-        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data = new HashMap<>();
-        PartitionKeyVersion key = new PartitionKeyVersion(null, new KeyCacheObjectImpl(), null);
+        Map<VersionedKey, Map<UUID, VersionedValue>> data = new HashMap<>();
+        VersionedKey key = new VersionedKey(null, new KeyCacheObjectImpl(), null);
         Map<UUID, VersionedValue> keyVers = new HashMap<>();
         keyVers.put(NODE_1, versionedValue("1", 1));
         keyVers.put(NODE_2, versionedValue("2", 2));
@@ -127,10 +127,10 @@ public class RepairRequestTaskTest {
 
         ExecutionResult<RepairResult> res = injectIgnite(repairJob(data, 5, 1), igniteMock).execute();
 
-        assertTrue(res.getResult().keysToRepair().isEmpty());
-        assertEquals(1, res.getResult().repairedKeys().size());
+        assertTrue(res.getRes().keysToRepair().isEmpty());
+        assertEquals(1, res.getRes().repairedKeys().size());
 
-        Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
+        Map.Entry<VersionedKey, RepairMeta> entry = res.getRes()
             .repairedKeys().entrySet().iterator().next();
         assertEquals(keyVers, entry.getValue().getPreviousValue());
 
@@ -159,8 +159,8 @@ public class RepairRequestTaskTest {
      */
     @Test
     public void testFullOwnerSetNotMaxAttempt() throws IllegalAccessException {
-        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data = new HashMap<>();
-        PartitionKeyVersion key = new PartitionKeyVersion(null, new KeyCacheObjectImpl(), null);
+        Map<VersionedKey, Map<UUID, VersionedValue>> data = new HashMap<>();
+        VersionedKey key = new VersionedKey(null, new KeyCacheObjectImpl(), null);
         Map<UUID, VersionedValue> keyVers = new HashMap<>();
         keyVers.put(NODE_1, versionedValue("1", 1));
         keyVers.put(NODE_2, versionedValue("2", 2));
@@ -171,10 +171,10 @@ public class RepairRequestTaskTest {
         ExecutionResult<RepairResult> res = injectIgnite(repairJob(data, 2, 1), igniteMock).execute();
 
         if (fixed) {
-            assertTrue(res.getResult().keysToRepair().isEmpty());
-            assertEquals(1, res.getResult().repairedKeys().size());
+            assertTrue(res.getRes().keysToRepair().isEmpty());
+            assertEquals(1, res.getRes().repairedKeys().size());
 
-            Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
+            Map.Entry<VersionedKey, RepairMeta> entry = res.getRes()
                 .repairedKeys().entrySet().iterator().next();
             assertEquals(keyVers, entry.getValue().getPreviousValue());
 
@@ -183,10 +183,10 @@ public class RepairRequestTaskTest {
             assertEquals(LATEST, repairMeta.repairAlg());
         }
         else {
-            assertTrue(res.getResult().repairedKeys().isEmpty());
-            assertEquals(1, res.getResult().keysToRepair().size());
+            assertTrue(res.getRes().repairedKeys().isEmpty());
+            assertEquals(1, res.getRes().keysToRepair().size());
 
-            Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> entry = res.getResult()
+            Map.Entry<VersionedKey, Map<UUID, VersionedValue>> entry = res.getRes()
                 .keysToRepair().entrySet().iterator().next();
 
             assertEquals(keyVers, entry.getValue());
@@ -198,8 +198,8 @@ public class RepairRequestTaskTest {
      */
     @Test
     public void testFullOwnerSetMaxAttempt() throws IllegalAccessException {
-        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data = new HashMap<>();
-        PartitionKeyVersion key = new PartitionKeyVersion(null, new KeyCacheObjectImpl(), null);
+        Map<VersionedKey, Map<UUID, VersionedValue>> data = new HashMap<>();
+        VersionedKey key = new VersionedKey(null, new KeyCacheObjectImpl(), null);
         Map<UUID, VersionedValue> keyVers = new HashMap<>();
         keyVers.put(NODE_1, versionedValue("1", 1));
         keyVers.put(NODE_2, versionedValue("2", 2));
@@ -212,10 +212,10 @@ public class RepairRequestTaskTest {
         final int lastAttempt = 3;
         ExecutionResult<RepairResult> res = injectIgnite(repairJob(data, 4, lastAttempt), igniteMock).execute();
 
-        assertTrue(res.getResult().keysToRepair().isEmpty());
-        assertEquals(1, res.getResult().repairedKeys().size());
+        assertTrue(res.getRes().keysToRepair().isEmpty());
+        assertEquals(1, res.getRes().repairedKeys().size());
 
-        Map.Entry<PartitionKeyVersion, RepairMeta> entry = res.getResult()
+        Map.Entry<VersionedKey, RepairMeta> entry = res.getRes()
             .repairedKeys().entrySet().iterator().next();
         assertEquals(keyVers, entry.getValue().getPreviousValue());
 
@@ -257,7 +257,7 @@ public class RepairRequestTaskTest {
      *
      */
     private RepairRequestTask.RepairJob repairJob(
-        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data,
+        Map<VersionedKey, Map<UUID, VersionedValue>> data,
         int owners,
         int repairAttempt
     ) {

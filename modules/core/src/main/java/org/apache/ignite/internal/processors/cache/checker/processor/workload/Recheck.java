@@ -35,20 +35,20 @@ public class Recheck implements PipelineWorkload {
     /** Partition id. */
     private final int partId;
 
-    /** Attempt number. */
+    /** Serial number of recheck attempt. */
     private final int recheckAttempt;
 
-    /** Repair attempt. */
+    /** Serial number of repair attempt. */
     private final int repairAttempt;
 
     /** Session id. */
-    private final long sessionId;
+    private final long sesId;
 
     /** Workload chain id. */
     private final UUID workloadChainId;
 
     /**
-     * @param sessionId Session id.
+     * @param sesId Session id.
      * @param workloadChainId Workload chain id.
      * @param recheckKeys Recheck keys.
      * @param cacheName Cache name.
@@ -56,10 +56,10 @@ public class Recheck implements PipelineWorkload {
      * @param recheckAttempt Recheck attempt.
      * @param repairAttempt Repair attempt.
      */
-    public Recheck(long sessionId, UUID workloadChainId,
+    public Recheck(long sesId, UUID workloadChainId,
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys, String cacheName,
         int partId, int recheckAttempt, int repairAttempt) {
-        this.sessionId = sessionId;
+        this.sesId = sesId;
         this.workloadChainId = workloadChainId;
         this.recheckKeys = recheckKeys;
         this.cacheName = cacheName;
@@ -105,7 +105,7 @@ public class Recheck implements PipelineWorkload {
 
     /** {@inheritDoc} */
     @Override public long sessionId() {
-        return sessionId;
+        return sesId;
     }
 
     /** {@inheritDoc} */

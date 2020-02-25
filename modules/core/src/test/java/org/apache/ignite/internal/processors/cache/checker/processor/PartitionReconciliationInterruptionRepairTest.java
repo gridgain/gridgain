@@ -212,10 +212,10 @@ public class PartitionReconciliationInterruptionRepairTest extends PartitionReco
         ;
         builder.batchSize(batchSize);
         builder.parallelism(1);
-        builder.fixMode(true);
+        builder.repair(true);
         builder.repairAlg(RepairAlgorithm.PRIMARY);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
-        builder.console(true);
+        builder.locOutput(true);
         builder.recheckAttempts(0);
         if (zeroDelay)
             builder.recheckDelay(0);

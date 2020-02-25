@@ -84,7 +84,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
-        ).getResult();
+        ).getRes();
 
         assertEquals(2, res.size());
         assertTrue(res.keySet().containsAll(recheckKeys));
@@ -108,7 +108,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
-        ).getResult();
+        ).getRes();
 
         assertTrue(res.isEmpty());
     }
@@ -136,7 +136,7 @@ public class CollectPartitionKeysByRecheckRequestTaskTest extends CollectPartiti
             CollectPartitionKeysByRecheckRequestTask.class,
             new RecheckRequest(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
                 recheckKeys, DEFAULT_CACHE_NAME, FIRST_PARTITION, lastTopologyVersion(node))
-        ).getResult();
+        ).getRes();
 
         assertTrue(res.isEmpty());
     }

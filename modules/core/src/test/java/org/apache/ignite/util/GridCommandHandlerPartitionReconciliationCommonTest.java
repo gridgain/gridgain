@@ -192,7 +192,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
     }
 
     /**
-     * Checks that -verbose parameter raises a warining requiring consent from user to print sensitive data to output.
+     * Checks that -includeSensitive parameter raises a warining requiring consent from user to print sensitive data to output.
      * <b>Preconditions:</b>
      * <ul>
      *     <li>Grid with 4 nodes is started, cache with 3 backups with some data is up and running</li>
@@ -219,7 +219,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
     }
 
     /**
-     * Checks that sensitive information is hidden when -verbose parameter is not specified.
+     * Checks that sensitive information is hidden when -includeSensitive parameter is not specified.
      * <b>Preconditions:</b>
      * <ul>
      *     <li>Grid with 4 nodes is started, cache with 3 backups with some data is up and running</li>

@@ -22,8 +22,8 @@ import java.io.ObjectOutput;
 import java.util.function.Consumer;
 
 /**
- * Partition reconciliation result that contains only info about amount of inconsistent keys,
- * skipped caches etc, instead of full information. Used in case of non-console mode for console-scoped report.
+ * Partition reconciliation result that contains only info about amount of inconsistent keys, skipped caches etc,
+ * instead of full information. Used in case of non-console mode for console-scoped report.
  */
 public class PartitionReconciliationResultMeta extends PartitionReconciliationResult {
     /** */
@@ -42,6 +42,7 @@ public class PartitionReconciliationResultMeta extends PartitionReconciliationRe
      * Default constructor for externalization.
      */
     public PartitionReconciliationResultMeta() {
+        // No-op
     }
 
     /**
@@ -51,8 +52,7 @@ public class PartitionReconciliationResultMeta extends PartitionReconciliationRe
      * @param skippedCachesCnt Skipped caches count.
      * @param skippedEntriesCnt Skipped entries count.
      */
-    public PartitionReconciliationResultMeta(int inconsistentKeysCnt, int skippedCachesCnt,
-        int skippedEntriesCnt) {
+    public PartitionReconciliationResultMeta(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt) {
         this.inconsistentKeysCnt = inconsistentKeysCnt;
         this.skippedCachesCnt = skippedCachesCnt;
         this.skippedEntriesCnt = skippedEntriesCnt;

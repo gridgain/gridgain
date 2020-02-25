@@ -27,7 +27,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 /**
  * Representation of cache data row with partition states.
  */
-public class PartitionDataRow extends PartitionKeyVersion {
+public class DataRow extends VersionedKey {
     /**
      *
      */
@@ -39,7 +39,7 @@ public class PartitionDataRow extends PartitionKeyVersion {
     /**
      * Partition update counter for the moment of read from data store.
      */
-    private long updateCounter;
+    private long updateCntr;
 
     /**
      * Recheck start time.
@@ -49,7 +49,8 @@ public class PartitionDataRow extends PartitionKeyVersion {
     /**
      * Default constructor.
      */
-    public PartitionDataRow() {
+    public DataRow() {
+        // No-op
     }
 
     /**
@@ -57,14 +58,14 @@ public class PartitionDataRow extends PartitionKeyVersion {
      * @param key Key.
      * @param ver Version.
      * @param val Value.
-     * @param updateCounter Update counter.
+     * @param updateCntr Update counter.
      * @param recheckStartTime Recheck start time.
      */
-    public PartitionDataRow(UUID nodeId, KeyCacheObject key, GridCacheVersion ver, CacheObject val, long updateCounter,
+    public DataRow(UUID nodeId, KeyCacheObject key, GridCacheVersion ver, CacheObject val, long updateCntr,
         long recheckStartTime) {
         super(nodeId, key, ver);
         this.val = val;
-        this.updateCounter = updateCounter;
+        this.updateCntr = updateCntr;
         this.recheckStartTime = recheckStartTime;
     }
 
@@ -78,8 +79,8 @@ public class PartitionDataRow extends PartitionKeyVersion {
     /**
      * @return Partition update counter for the moment of read from data store.
      */
-    public long getUpdateCounter() {
-        return updateCounter;
+    public long getUpdateCntr() {
+        return updateCntr;
     }
 
     /**
@@ -93,16 +94,17 @@ public class PartitionDataRow extends PartitionKeyVersion {
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         super.writeExternalData(out);
         out.writeObject(val);
-        out.writeLong(updateCounter);
+        out.writeLong(updateCntr);
         out.writeLong(recheckStartTime);
 
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer,
+        ObjectInput in) throws IOException, ClassNotFoundException {
         super.readExternalData(protoVer, in);
         val = (CacheObject)in.readObject();
-        updateCounter = in.readLong();
+        updateCntr = in.readLong();
         recheckStartTime = in.readLong();
     }
 }

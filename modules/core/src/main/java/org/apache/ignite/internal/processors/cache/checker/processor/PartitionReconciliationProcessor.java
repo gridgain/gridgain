@@ -39,7 +39,7 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
@@ -81,7 +81,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     public static final String WORK_PROGRESS_MSG = "Partition reconciliation task [sesId=%s, total=%s, remaining=%s]";
 
     /** Start execution message. */
-    public static final String START_EXECUTION_MSG = "Partition reconciliation started [fixMode: %s, repairAlg: %s, " +
+    public static final String START_EXECUTION_MSG = "Partition reconciliation started [repair: %s, repairAlg: %s, " +
         "batchSize: %s, recheckAttempts: %s, parallelismLevel: %s, caches: %s].";
 
     /** Error reason. */
@@ -168,7 +168,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             for (String cache : caches) {
                 IgniteInternalCache<Object, Object> cachex = ignite.cachex(cache);
 
-                Factory expiryPlcFactory = cachex.configuration().getExpiryPolicyFactory();
+                Factory<?> expiryPlcFactory = cachex.configuration().getExpiryPolicyFactory();
                 if (expiryPlcFactory != null && !(expiryPlcFactory.create() instanceof EternalExpiryPolicy)) {
                     log.warning("The cache '" + cache + "' was skipped because CacheConfiguration#setExpiryPolicyFactory exists.");
 
@@ -197,7 +197,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     throw new IgniteException(error.get());
 
                 if (isEmpty() && live) {
-                    Thread.sleep(100);
+                    U.sleep(100);
 
                     continue;
                 }
@@ -225,14 +225,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
             log.warning(errMsg, e);
 
-            return new ExecutionResult<>(prepareResult(), errMsg + " " + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(prepareResult(), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
         catch (Exception e) {
             String errMsg = "Unexpected error.";
 
             log.error(errMsg, e);
 
-            return new ExecutionResult<>(prepareResult(), errMsg + " " + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
+            return new ExecutionResult<>(prepareResult(), errMsg + ' ' + String.format(ERROR_REASON, e.getMessage(), e.getClass()));
         }
     }
 
@@ -253,13 +253,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                 if (nextBatchKey != null)
                     schedule(new Batch(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), nextBatchKey));
 
-                if (!recheckKeys.isEmpty())
+                if (!recheckKeys.isEmpty()) {
                     schedule(
                         new Recheck(workload.sessionId(), workload.workloadChainId(), recheckKeys,
                             workload.cacheName(), workload.partitionId(), 0, 0),
                         recheckDelay,
                         TimeUnit.SECONDS
                     );
+                }
             }
         );
     }
@@ -273,16 +274,16 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             new RecheckRequest(workload.sessionId(), workload.workloadChainId(), new ArrayList<>(workload.recheckKeys().keySet()), workload.cacheName(),
                 workload.partitionId(), startTopVer),
             actualKeys -> {
-                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> notResolvingConflicts
+                Map<KeyCacheObject, Map<UUID, GridCacheVersion>> conflicts
                     = checkConflicts(workload.recheckKeys(), actualKeys,
                     ignite.cachex(workload.cacheName()).context(), startTopVer);
 
-                if (!notResolvingConflicts.isEmpty()) {
+                if (!conflicts.isEmpty()) {
                     if (workload.recheckAttempt() < recheckAttempts) {
                         schedule(new Recheck(
                                 workload.sessionId(),
                                 workload.workloadChainId(),
-                                notResolvingConflicts,
+                                conflicts,
                                 workload.cacheName(),
                                 workload.partitionId(),
                                 workload.recheckAttempt() + 1,
@@ -293,11 +294,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                         );
                     }
                     else if (fixMode) {
-                        scheduleHighPriority(repair(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), notResolvingConflicts,
+                        scheduleHighPriority(repair(workload.sessionId(), workload.workloadChainId(), workload.cacheName(), workload.partitionId(), conflicts,
                             actualKeys, workload.repairAttempt()));
                     }
                     else {
-                        addToPrintResult(workload.cacheName(), workload.partitionId(), notResolvingConflicts, actualKeys);
+                        addToPrintResult(workload.cacheName(), workload.partitionId(), conflicts, actualKeys);
 
                         workProgress.completeWork();
                     }
@@ -321,7 +322,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     // Repack recheck keys.
                     Map<KeyCacheObject, Map<UUID, GridCacheVersion>> recheckKeys = new HashMap<>();
 
-                    for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry :
+                    for (Map.Entry<VersionedKey, Map<UUID, VersionedValue>> dataEntry :
                         repairRes.keysToRepair().entrySet()) {
                         KeyCacheObject keyCacheObj;
 
@@ -367,14 +368,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void addToPrintSkippedEntriesResult(
         String cacheName,
         int partId,
-        Map<PartitionKeyVersion, Map<UUID, VersionedValue>> skippedKeys
+        Map<VersionedKey, Map<UUID, VersionedValue>> skippedKeys
     ) {
         CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
 
         synchronized (skippedEntries) {
             Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>> data = new HashSet<>();
 
-            for (PartitionKeyVersion keyVersion : skippedKeys.keySet()) {
+            for (VersionedKey keyVersion : skippedKeys.keySet()) {
                 try {
                     byte[] bytes = keyVersion.getKey().valueBytes(ctx);
                     String strVal = ConsistencyCheckUtils.objectStringView(ctx, keyVersion.getKey().value(ctx, false));
@@ -455,7 +456,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     private void addToPrintResult(
         String cacheName,
         int partId,
-        Map<PartitionKeyVersion, RepairMeta> repairedKeys
+        Map<VersionedKey, RepairMeta> repairedKeys
     ) {
         CacheObjectContext ctx = ignite.cachex(cacheName).context().cacheObjectContext();
 
@@ -463,7 +464,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             try {
                 List<PartitionReconciliationDataRowMeta> res = new ArrayList<>();
 
-                for (Map.Entry<PartitionKeyVersion, RepairMeta> entry : repairedKeys.entrySet()) {
+                for (Map.Entry<VersionedKey, RepairMeta> entry : repairedKeys.entrySet()) {
                     Map<UUID, PartitionReconciliationValueMeta> valMap = new HashMap<>();
 
                     for (Map.Entry<UUID, VersionedValue> uuidBasedEntry : entry.getValue().getPreviousValue().entrySet()) {
