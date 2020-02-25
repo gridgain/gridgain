@@ -16,8 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
+import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -28,6 +28,8 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+import org.apache.ignite.internal.processors.cache.persistence.wal.FileWALPointer;
+import org.apache.ignite.internal.processors.cache.persistence.wal.reader.IgniteWalIteratorFactory;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -95,22 +97,21 @@ public class WalOnNodeStartTest extends GridCommonAbstractTest {
 
         ignite = startGrid(0);
 
-        // This stupid iterator advances to the next record syncronously, so we start reading from the record that
-        // 100% exists. It'll be skipped later.
-        WALIterator replayIter = ignite.context().cache().context().wal().replay(lastWalPtr);
-
         ignite.cluster().active(false);
+
+        String walPath = ignite.configuration().getDataStorageConfiguration().getWalPath();
+        String walArchivePath = ignite.configuration().getDataStorageConfiguration().getWalArchivePath();
 
         // Stop grid so there are no ongoing wal records (BLT update and something else maybe).
         stopGrid(0);
 
-        AtomicBoolean firstRecordSkipped = new AtomicBoolean();
+        WALIterator replayIter = new IgniteWalIteratorFactory(log).iterator(
+            (FileWALPointer)lastWalPtr.next(),
+            new File(walArchivePath),
+            new File(walPath)
+        );
 
         replayIter.forEach(walPtrAndRecordPair -> {
-            // Skip last record from previous checkpoint.
-            if (!firstRecordSkipped.getAndSet(true))
-                return;
-
             WALRecord walRecord = walPtrAndRecordPair.getValue();
 
             if (walRecord.type() == WALRecord.RecordType.PAGE_RECORD) {
