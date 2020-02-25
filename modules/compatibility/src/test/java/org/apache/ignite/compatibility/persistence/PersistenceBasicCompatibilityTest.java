@@ -43,6 +43,7 @@ import org.junit.Test;
  * Saves data using previous version of ignite and then load this data using actual version.
  */
 public class PersistenceBasicCompatibilityTest extends IgnitePersistenceCompatibilityAbstractTest {
+
     /** */
     protected static final String TEST_CACHE_NAME = PersistenceBasicCompatibilityTest.class.getSimpleName();
 
