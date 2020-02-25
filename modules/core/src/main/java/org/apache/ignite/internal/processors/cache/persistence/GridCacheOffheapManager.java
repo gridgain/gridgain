@@ -545,15 +545,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                         try {
                             PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
 
-                            byte persistedPartStateId = io.getPartitionState(pageAddr);
-
-                            GridDhtPartitionState persistedPartState =
-                                GridDhtPartitionState.fromOrdinal(persistedPartStateId);
-
-                            // "null" is for "-1" state, which means that the page is newly initialized.
-                            if (persistedPartState != null)
-                                part.setState(persistedPartState);
-
                             if (recoverState != null) {
                                 changed = io.setPartitionState(pageAddr, (byte)recoverState.intValue());
 
@@ -568,14 +559,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             else {
                                 int stateId = io.getPartitionState(pageAddr);
 
-                                updateState(part, stateId);
-
                                 changed = (stateId == EVICTED.ordinal());
+
+                                updateState(part, stateId);
 
                                 if (log.isDebugEnabled())
                                     log.debug("Restored partition state (from page memory) " +
                                         "[grp=" + grp.cacheOrGroupName() + ", p=" + p + ", state=" + part.state() +
-                                        ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + (int)persistedPartStateId +
+                                        ", updCntr=" + part.initialUpdateCounter() + ", stateId=" + stateId +
                                         ", size=" + part.fullSize() + "]");
                             }
                         }
