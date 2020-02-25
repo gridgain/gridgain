@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
@@ -222,6 +223,10 @@ public enum IgniteFeatures {
 
             // Add only when indexing is enabled.
             if (INDEXING == value && !ctx.query().moduleEnabled())
+                continue;
+
+            // Add only when scheduling is disabled.
+            if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
                 continue;
 
             // Add only when tracing is enabled.
