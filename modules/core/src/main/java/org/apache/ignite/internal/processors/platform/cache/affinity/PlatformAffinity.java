@@ -174,9 +174,19 @@ public class PlatformAffinity extends PlatformAbstractTarget {
             case OP_IS_ASSIGNMENT_VALID: {
                 AffinityTopologyVersion ver = new AffinityTopologyVersion(reader.readLong(), reader.readInt());
                 int part = reader.readInt();
-                boolean res = !affMgr.primaryChanged(part, ver, affMgr.affinityTopologyVersion());
+                AffinityTopologyVersion endVer = affMgr.affinityTopologyVersion();
 
-                return res ? TRUE : FALSE;
+                if (!affMgr.primaryChanged(part, ver, endVer)) {
+                    return TRUE;
+                }
+
+                if (!affMgr.partitionLocalNode(part, endVer)) {
+                    return FALSE;
+                }
+
+                // Special case: late affinity assignment when primary changes to local node due to a node join.
+                // Specified partition is local, and near cache entries are valid for primary keys.
+                return ver.topologyVersion() == endVer.topologyVersion() ? TRUE : FALSE;
             }
 
             default:
