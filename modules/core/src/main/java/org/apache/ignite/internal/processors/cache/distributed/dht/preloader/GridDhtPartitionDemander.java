@@ -98,9 +98,6 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
  * Thread pool for requesting partitions from other nodes and populating local cache.
  */
 public class GridDhtPartitionDemander {
-    /** Cache rebalance topic. */
-    private static final Object REBALANCE_TOPIC = GridCachePartitionExchangeManager.rebalanceTopic(0);
-
     /** */
     private final GridCacheSharedContext<?, ?> ctx;
 
@@ -268,8 +265,7 @@ public class GridDhtPartitionDemander {
      * @param assignments Assignments to process.
      * @param force {@code True} if preload request by {@link ForceRebalanceExchangeTask}.
      * @param rebalanceId Rebalance id generated from exchange thread.
-     * @param next The subsequent rebalancing routine, which will be launched after the
-     * completion of the current rebalance.
+     * @param next A next rebalance routine in chain.
      * @param forcedRebFut External future for forced rebalance.
      * @param compatibleRebFut Future for waiting for compatible rebalances.
      *
@@ -333,7 +329,7 @@ public class GridDhtPartitionDemander {
             }
 
             if (!oldFut.isInitial())
-                oldFut.tryCacnel();
+                oldFut.tryCancel();
             else
                 fut.listen(f -> oldFut.onDone(f.result()));
 
@@ -625,12 +621,10 @@ public class GridDhtPartitionDemander {
 
                 d.timeout(grp.preloader().timeout());
 
-                d.topic(REBALANCE_TOPIC);
-
                 if (!fut.isDone()) {
                     // Send demand message.
                     try {
-                        ctx.io().sendOrderedMessage(node, REBALANCE_TOPIC,
+                        ctx.io().sendOrderedMessage(node, d.topic(),
                             d.convertIfNeeded(node.version()), grp.ioPolicy(), grp.preloader().timeout());
 
                         if (log.isDebugEnabled())
@@ -1025,7 +1019,7 @@ public class GridDhtPartitionDemander {
         /** Started. */
         STARTED,
 
-        /** Mark cancelled. */
+        /** Marked as cancelled. */
         MARK_CANCELLED,
     }
 
@@ -1033,15 +1027,15 @@ public class GridDhtPartitionDemander {
      *
      */
     public static class RebalanceFuture extends GridFutureAdapter<Boolean> {
+        /** State updater. */
+        private static final AtomicReferenceFieldUpdater<RebalanceFuture, RebalanceFutureState> STATE_UPD =
+            AtomicReferenceFieldUpdater.newUpdater(RebalanceFuture.class, RebalanceFutureState.class, "state");
+
         /** */
         private final GridCacheSharedContext<?, ?> ctx;
 
         /** Internal state. */
         private volatile RebalanceFutureState state  = RebalanceFutureState.INIT;
-
-        /** State updater. */
-        private final AtomicReferenceFieldUpdater<RebalanceFuture, RebalanceFutureState> stateUpd =
-            AtomicReferenceFieldUpdater.newUpdater(RebalanceFuture.class, RebalanceFutureState.class, "state");
 
         /** */
         private final CacheGroupContext grp;
@@ -1181,7 +1175,7 @@ public class GridDhtPartitionDemander {
          * Before sending messages, method awaits partitions clearing for full partitions.
          */
         public void requestPartitions() {
-            if (!stateUpd.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.STARTED)) {
+            if (!STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.STARTED)) {
                 cancel();
 
                 return;
@@ -1224,7 +1218,6 @@ public class GridDhtPartitionDemander {
                     + ", topVer=" + topVer + "]");
 
                 if (!parts.isEmpty()) {
-                    d.topic(REBALANCE_TOPIC);
                     d.rebalanceId(rebalanceId);
                     d.timeout(grp.preloader().timeout());
 
@@ -1245,7 +1238,7 @@ public class GridDhtPartitionDemander {
 
                             stat.addMessageStatistics(node);
 
-                            ctx.io().sendOrderedMessage(node, REBALANCE_TOPIC,
+                            ctx.io().sendOrderedMessage(node, d.topic(),
                                 d.convertIfNeeded(node.version()), grp.ioPolicy(), d.timeout());
 
                             // Cleanup required in case partitions demanded in parallel with cancellation.
@@ -1414,8 +1407,8 @@ public class GridDhtPartitionDemander {
         /**
          * Cancel future or mark for cancel {@code RebalanceFutureState#MARK_CANCELLED}.
          */
-        private void tryCacnel() {
-            if (stateUpd.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.MARK_CANCELLED))
+        private void tryCancel() {
+            if (STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.MARK_CANCELLED))
                 return;
 
             cancel();
@@ -1508,8 +1501,6 @@ public class GridDhtPartitionDemander {
 
             try {
                 Object rebalanceTopic = GridCachePartitionExchangeManager.rebalanceTopic(0);
-
-                d.topic(rebalanceTopic);
 
                 ctx.io().sendOrderedMessage(node, rebalanceTopic,
                     d.convertIfNeeded(node.version()), grp.ioPolicy(), grp.preloader().timeout());
@@ -1714,8 +1705,8 @@ public class GridDhtPartitionDemander {
          * Collect demander per cache groups. For print statistics.
          *
          * @return List demanders.
-         * */
-        private Set<GridDhtPartitionDemander> demanders(){
+         */
+        private Set<GridDhtPartitionDemander> demanders() {
             return ctx.cacheContexts().stream()
                 .map(GridCacheContext::preloader)
                 .filter(GridDhtPreloader.class::isInstance)
