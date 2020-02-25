@@ -162,6 +162,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Volatile_1() throws Exception {
         testNodeLeftOnStableTopology(false, true, false, true);
     }
@@ -210,6 +211,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Persistent_3() throws Exception {
         testNodeLeftOnStableTopology(true, false, false, false);
     }
@@ -250,6 +252,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Mixed_3() throws Exception {
         testNodeLeftOnStableTopology(true, true, false, true);
     }
