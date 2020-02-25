@@ -4719,6 +4719,17 @@ public abstract class IgniteUtils {
     }
 
     /**
+     *
+     * @param err Whether to print to {@code System.err}.
+     * @param multiline Multiple lines string to print.
+     */
+    public static void quietMultipleLines(boolean err, String multiline) {
+        assert multiline != null;
+
+        quiet(err, multiline.split(NL));
+    }
+
+    /**
      * Prints out the message in quiet and info modes.
      *
      * @param log Logger.
@@ -8354,6 +8365,40 @@ public abstract class IgniteUtils {
         }
 
         X.println("    Map summary [emptySegs=" + emptySegsCnt + ", collisions=" + totalCollisions + ']');
+    }
+
+    /**
+     * Compares two byte arrays by bytes.
+     * @param bytes1 Bytes 1.
+     * @param bytes2 Bytes 2.
+     */
+    public static int compareByteArrays(byte[] bytes1, byte[] bytes2) {
+        final int len = bytes1.length;
+        int lenCmp = Integer.compare(len, bytes2.length);
+
+        if (lenCmp != 0)
+            return lenCmp;
+
+        final int words = len / 8;
+        int cmp;
+
+        for (int i = 0; i < words; i++) {
+            int off = i * 8;
+            long b1 = GridUnsafe.getLong(bytes1, GridUnsafe.BYTE_ARR_OFF + off);
+            long b2 = GridUnsafe.getLong(bytes2, GridUnsafe.BYTE_ARR_OFF + off);
+            cmp = Long.compare(b1, b2);
+            if (cmp != 0)
+                return cmp;
+        }
+
+        for (int i = words * 8; i < len; i++) {
+            byte b1 = bytes1[i];
+            byte b2 = bytes2[i];
+            if (b1 != b2)
+                return b1 > b2 ? 1 : -1;
+        }
+
+        return 0;
     }
 
     /**
@@ -12015,5 +12060,40 @@ public abstract class IgniteUtils {
      */
     public static String unquote(String s) {
         return s == null ? null : s.replaceAll("^\"|\"$", "");
+    }
+
+    /**
+     * Utility method for parsing strings like '10g', '200m', '1000k' as gigabytes, megabytes and kilobytes.
+     * Plain numbers are parsed as number of bytes. Numbers followed by the '%' sign are parsed as a
+     * percent of the max heap size.
+     *
+     * @param bytesStr String to be parsed.
+     * @return Number of bytes.
+     */
+    public static long parseBytes(String bytesStr) {
+        bytesStr = bytesStr.trim();
+
+        if (bytesStr.matches("-?[0-9]+")) // Plain number.
+            return Long.parseLong(bytesStr);
+        else if (bytesStr.matches("-?[0-9]+[kK]")) // Kilobytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * KB;
+        else if (bytesStr.matches("-?[0-9]+[mM]")) // Megabytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * MB;
+        else if (bytesStr.matches("-?[0-9]+[gG]")) // Gigabytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * GB;
+        else if (bytesStr.matches("-?[0-9]+%")) { // Percent of heap.
+            long percent = Long.parseLong(bytesStr.replaceAll("[^-0-9]", ""));
+
+            if (percent < 0 || percent > 100) {
+                throw new IllegalArgumentException("The percentage should be in the range from 0 to 100, but was: " +
+                    percent);
+            }
+
+            return (long) (percent / 100.0 * Runtime.getRuntime().maxMemory());
+        }
+        else
+            throw new IllegalArgumentException("Wrong format of bytes string. It is expected to be a number or " +
+                "a number followed by one of the symbols: 'k', 'm', 'g', '%'.\n " +
+                "For example: '10000', '10k', '33m', '2G'. But was: " + bytesStr);
     }
 }

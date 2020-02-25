@@ -48,6 +48,7 @@ public class JdbcThinQueryMemoryTrackerSelfTest extends QueryMemoryTrackerSelfTe
     @Test
     @Override public void testGlobalQuota() throws Exception {
         maxMem = 8 * MB;
+        useJdbcV2GlobalQuotaCfg = true;
 
         final List<ResultSet> results = Collections.synchronizedList(new ArrayList<>());
         final List<Statement> statements = Collections.synchronizedList(new ArrayList<>());

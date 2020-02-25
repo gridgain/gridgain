@@ -34,7 +34,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager test for distributed queries.
  */
-public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
+public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return false;
@@ -228,7 +228,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
             long globalAllocated = h2.memoryManager().memoryReserved();
 
-            assertTrue(h2.memoryManager().maxMemory() < globalAllocated + MB);
+            assertTrue(h2.memoryManager().memoryLimit() < globalAllocated + MB);
         }
         finally {
             for (QueryCursor c : cursors)

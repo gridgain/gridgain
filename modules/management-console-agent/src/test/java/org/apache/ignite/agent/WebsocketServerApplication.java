@@ -20,7 +20,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * This is Spring Boot application which emulate Management Console backend.
+ * This is Spring Boot application which emulate Control Center backend.
  */
 @SpringBootApplication
 public class WebsocketServerApplication {

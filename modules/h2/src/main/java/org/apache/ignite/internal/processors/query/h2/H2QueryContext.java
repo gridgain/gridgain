@@ -24,4 +24,9 @@ public interface H2QueryContext {
      * @return Query memory tracker.
      */
     H2MemoryTracker queryMemoryTracker();
+
+    /**
+     * @return Group by data factory.
+     */
+    ManagedGroupByDataFactory groupByDataFactory();
 }

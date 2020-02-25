@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.ignite.internal.processors.query.h2.ManagedGroupByDataFactory;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
 import org.h2.api.ErrorCode;
@@ -24,8 +25,12 @@ import org.h2.command.CommandInterface;
 import org.h2.command.Parser;
 import org.h2.command.Prepared;
 import org.h2.command.ddl.Analyze;
+import org.h2.command.dml.GroupByData;
+import org.h2.command.dml.GroupedGroupByData;
+import org.h2.command.dml.PlainGroupByData;
 import org.h2.command.dml.Query;
 import org.h2.constraint.Constraint;
+import org.h2.expression.Expression;
 import org.h2.index.Index;
 import org.h2.index.ViewIndex;
 import org.h2.jdbc.JdbcConnection;
@@ -141,6 +146,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     private boolean lazyQueryExecution;
     private ColumnNamerConfiguration columnNamerConfiguration;
     private H2QueryContext qryContext;
+    private boolean offloadedToDisk;
     /**
      * Tables marked for ANALYZE after the current transaction is committed.
      * Prevents us calling ANALYZE repeatedly in large transactions.
@@ -235,6 +241,28 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
      */
     public H2MemoryTracker queryMemoryTracker() {
         return qryContext != null ? qryContext.queryMemoryTracker() : null;
+    }
+
+    /**
+     * @return Group by data factory.
+     */
+    public ManagedGroupByDataFactory groupByDataFactory() {
+        return qryContext != null ? qryContext.groupByDataFactory() : null;
+    }
+
+    /**
+     * @return Creates new data holder for GROUP BY data.
+     */
+    public GroupByData newGroupByDataInstance(ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx) {
+        if (qryContext != null && qryContext.queryMemoryTracker() != null) {
+            GroupByData grpByData = qryContext.groupByDataFactory()
+                .newManagedGroupByData(this, expressions, isGrpQry, grpIdx);
+
+            if (grpByData != null)
+                return grpByData;
+        }
+
+        return isGrpQry ? new GroupedGroupByData(this, grpIdx) : new PlainGroupByData(this);
     }
 
     /**
@@ -1950,4 +1978,11 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
         return true;
     }
 
+    public boolean isOffloadedToDisk() {
+        return offloadedToDisk;
+    }
+
+    public void setOffloadedToDisk(boolean offloadedToDisk) {
+        this.offloadedToDisk = offloadedToDisk;
+    }
 }

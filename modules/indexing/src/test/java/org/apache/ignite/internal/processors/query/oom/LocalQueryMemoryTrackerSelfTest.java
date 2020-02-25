@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.oom;
 /**
  * Query memory manager for local queries.
  */
-public class LocalQueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
+public class LocalQueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return true;

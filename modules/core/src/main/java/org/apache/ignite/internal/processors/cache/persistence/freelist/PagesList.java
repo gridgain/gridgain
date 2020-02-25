@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.apache.ignite.IgniteCheckedException;
@@ -1866,7 +1867,6 @@ public abstract class PagesList extends DataStructure {
     }
 
     /** Class to store page-list cache onheap. */
-    @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     public static class PagesCache {
         /** Pages cache max size. */
         private static final int MAX_SIZE =
@@ -1903,14 +1903,19 @@ public abstract class PagesList extends DataStructure {
         /** Count of flush calls with empty cache. */
         private int emptyFlushCnt;
 
+        /** Global (per data region) limit of caches for page lists. */
+        private final AtomicLong pagesCacheLimit;
+
         /**
          * Default constructor.
          */
-        public PagesCache() {
+        public PagesCache(@Nullable AtomicLong pagesCacheLimit) {
             A.ensure(U.isPow2(STRIPES_COUNT), "Stripes size must be a power of 2.");
 
             for (int i = 0; i < STRIPES_COUNT; i++)
                 stripeLocks[i] = new Object();
+
+            this.pagesCacheLimit = pagesCacheLimit;
         }
 
         /**
@@ -1927,8 +1932,10 @@ public abstract class PagesList extends DataStructure {
 
                 boolean rmvd = stripe != null && stripe.removeValue(0, pageId) >= 0;
 
-                if (rmvd)
-                    sizeUpdater.decrementAndGet(this);
+                if (rmvd) {
+                    if (sizeUpdater.decrementAndGet(this) == 0 && pagesCacheLimit != null)
+                        pagesCacheLimit.incrementAndGet();
+                }
 
                 return rmvd;
             }
@@ -1950,7 +1957,8 @@ public abstract class PagesList extends DataStructure {
                     GridLongList stripe = stripes[stripeIdx];
 
                     if (stripe != null && !stripe.isEmpty()) {
-                        sizeUpdater.decrementAndGet(this);
+                        if (sizeUpdater.decrementAndGet(this) == 0 && pagesCacheLimit != null)
+                            pagesCacheLimit.incrementAndGet();
 
                         return stripe.remove();
                     }
@@ -1963,7 +1971,6 @@ public abstract class PagesList extends DataStructure {
         /**
          * Flush all stripes to one list and clear stripes.
          */
-        @SuppressWarnings("NonAtomicOperationOnVolatileField")
         public GridLongList flush() {
             GridLongList res = null;
 
@@ -2003,7 +2010,8 @@ public abstract class PagesList extends DataStructure {
                         if (res == null)
                             res = new GridLongList(size);
 
-                        sizeUpdater.addAndGet(this, -stripe.size());
+                        if (sizeUpdater.addAndGet(this, -stripe.size()) == 0 && pagesCacheLimit != null)
+                            pagesCacheLimit.incrementAndGet();
 
                         res.addAll(stripe);
 
@@ -2025,6 +2033,10 @@ public abstract class PagesList extends DataStructure {
             assert pageId != 0L;
 
             // Ok with race here.
+            if (size == 0 && pagesCacheLimit != null && pagesCacheLimit.get() <= 0)
+                return false; // Pages cache limit exceeded.
+
+            // Ok with race here.
             if (size >= MAX_SIZE)
                 return false;
 
@@ -2041,7 +2053,8 @@ public abstract class PagesList extends DataStructure {
                 else {
                     stripe.add(pageId);
 
-                    sizeUpdater.incrementAndGet(this);
+                    if (sizeUpdater.getAndIncrement(this) == 0 && pagesCacheLimit != null)
+                        pagesCacheLimit.decrementAndGet();
 
                     return true;
                 }

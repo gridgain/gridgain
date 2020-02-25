@@ -132,7 +132,6 @@ import static org.apache.ignite.transactions.TransactionState.PREPARED;
 import static org.apache.ignite.transactions.TransactionState.PREPARING;
 import static org.apache.ignite.transactions.TransactionState.ROLLED_BACK;
 import static org.apache.ignite.transactions.TransactionState.ROLLING_BACK;
-import static org.apache.ignite.transactions.TransactionState.SUSPENDED;
 import static org.apache.ignite.transactions.TransactionState.UNKNOWN;
 
 /**
@@ -293,7 +292,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     ) {
         super(
             ctx,
-            ctx.versions().next(),
+            ctx.versions().next(ctx.kernalContext().discovery().topologyVersion()),
             implicit,
             implicitSingle,
             sys,
@@ -1085,7 +1084,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
             if (entryProcessor != null)
                 transform = true;
 
-            GridCacheVersion drVer = dataCenterId != null ? cctx.versions().next(dataCenterId) : null;
+            GridCacheVersion drVer = dataCenterId != null ? cacheCtx.cache().nextVersion(dataCenterId) : null;
 
             boolean loadMissed = enlistWriteEntry(cacheCtx,
                 entryTopVer,
@@ -1260,7 +1259,7 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
                     drExpireTime = -1L;
                 }
                 else if (dataCenterId != null) {
-                    drVer = cctx.versions().next(dataCenterId);
+                    drVer = cacheCtx.cache().nextVersion(dataCenterId);
                     drTtl = -1L;
                     drExpireTime = -1L;
                 }
@@ -3527,9 +3526,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
         if (log.isDebugEnabled())
             log.debug("Suspend near local tx: " + this);
 
-        if (pessimistic())
-            throw new UnsupportedOperationException("Suspension is not supported for pessimistic transactions.");
-
         if (threadId() != Thread.currentThread().getId())
             throw new IgniteCheckedException("Only thread started transaction can suspend it.");
 
@@ -3559,9 +3555,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
     private void resume(boolean checkTimeout, long threadId) throws IgniteCheckedException {
         if (log.isDebugEnabled())
             log.debug("Resume near local tx: " + this);
-
-        if (pessimistic())
-            throw new UnsupportedOperationException("Resume is not supported for pessimistic transactions.");
 
         synchronized (this) {
             checkValid(checkTimeout);
@@ -5016,15 +5009,6 @@ public class GridNearTxLocal extends GridDhtTxLocalAdapter implements GridTimeou
 
     /** {@inheritDoc} */
     @Override public void onTimeout() {
-        if (state() == SUSPENDED) {
-            try {
-                resume(false, threadId());
-            }
-            catch (IgniteCheckedException e) {
-                log.warning("Error resuming suspended transaction on timeout: " + this, e);
-            }
-        }
-
         boolean proceed;
 
         synchronized (this) {

@@ -20,12 +20,9 @@ import java.util.List;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResult;
 import org.apache.ignite.internal.sql.optimizer.affinity.PartitionResultMarshaler;
 import org.apache.ignite.internal.util.typedef.internal.S;
-
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
 
 /**
  * JDBC query execute result.
@@ -124,8 +121,8 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
     /** {@inheritDoc} */
     @Override public void writeBinary(BinaryWriterExImpl writer,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.writeBinary(writer, ver);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.writeBinary(writer, protoCtx);
 
         writer.writeLong(cursorId);
         writer.writeBoolean(isQuery);
@@ -135,21 +132,21 @@ public class JdbcQueryExecuteResult extends JdbcResult {
 
             writer.writeBoolean(last);
 
-            JdbcUtils.writeItems(writer, items);
+            JdbcUtils.writeItems(writer, items, protoCtx);
         }
         else
             writer.writeLong(updateCnt);
 
         writer.writeBoolean(partRes != null);
 
-        if (ver.compareTo(VER_2_8_0) >= 0 && partRes != null)
+        if (protoCtx.isAffinityAwarenessSupported() && partRes != null)
             PartitionResultMarshaler.marshal(writer, partRes);
     }
 
     /** {@inheritDoc} */
     @Override public void readBinary(BinaryReaderExImpl reader,
-        ClientListenerProtocolVersion ver) throws BinaryObjectException {
-        super.readBinary(reader, ver);
+        JdbcProtocolContext protoCtx) throws BinaryObjectException {
+        super.readBinary(reader, protoCtx);
 
         cursorId = reader.readLong();
         isQuery = reader.readBoolean();
@@ -157,7 +154,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
         if (isQuery) {
             last = reader.readBoolean();
 
-            items = JdbcUtils.readItems(reader);
+            items = JdbcUtils.readItems(reader, protoCtx);
         }
         else {
             last = true;
@@ -165,7 +162,7 @@ public class JdbcQueryExecuteResult extends JdbcResult {
             updateCnt = reader.readLong();
         }
 
-        if (ver.compareTo(VER_2_8_0) >= 0 && reader.readBoolean())
+        if (protoCtx.isAffinityAwarenessSupported() && reader.readBoolean())
             partRes = PartitionResultMarshaler.unmarshal(reader);
     }
 

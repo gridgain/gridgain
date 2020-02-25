@@ -17,9 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
+import org.apache.ignite.internal.processors.query.h2.ManagedGroupByDataFactory;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
-import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.processors.query.h2.opt.join.DistributedJoinContext;
 import org.apache.ignite.internal.processors.query.h2.twostep.PartitionReservation;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -46,7 +47,10 @@ public class QueryContext implements H2QueryContext {
     private final PartitionReservation reservations;
 
     /** */
-    private QueryMemoryTracker memTracker;
+    private final H2MemoryTracker memTracker;
+
+    /** */
+    private final QueryMemoryManager memoryMgr;
 
     /** {@code True} for local queries, {@code false} for distributed ones. */
     private final boolean loc;
@@ -59,6 +63,7 @@ public class QueryContext implements H2QueryContext {
      * @param mvccSnapshot MVCC snapshot.
      * @param memTracker Query memory tracker.
      * @param loc {@code True} for local queries, {@code false} for distributed ones.
+     * @param memoryMgr Query memory manager.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
     public QueryContext(
@@ -67,9 +72,9 @@ public class QueryContext implements H2QueryContext {
         @Nullable DistributedJoinContext distributedJoinCtx,
         @Nullable MvccSnapshot mvccSnapshot,
         @Nullable PartitionReservation reservations,
-        @Nullable QueryMemoryTracker memTracker,
-        boolean loc
-    ) {
+        boolean loc,
+        @Nullable H2MemoryTracker memTracker,
+        QueryMemoryManager memoryMgr) {
         this.segment = segment;
         this.filter = filter;
         this.distributedJoinCtx = distributedJoinCtx;
@@ -77,6 +82,7 @@ public class QueryContext implements H2QueryContext {
         this.reservations = reservations;
         this.memTracker = memTracker;
         this.loc = loc;
+        this.memoryMgr = memoryMgr;
     }
 
     /**
@@ -91,8 +97,9 @@ public class QueryContext implements H2QueryContext {
             null,
             null,
             null,
+            local,
             null,
-            local
+            null
         );
     }
 
@@ -141,6 +148,11 @@ public class QueryContext implements H2QueryContext {
      */
     @Override public @Nullable H2MemoryTracker queryMemoryTracker() {
         return memTracker;
+    }
+
+    /** {@inheritDoc} */
+    @Override public ManagedGroupByDataFactory groupByDataFactory() {
+        return memoryMgr;
     }
 
     /**

@@ -73,7 +73,8 @@ public class DistributedBaselineConfiguration {
     public DistributedBaselineConfiguration(
         GridInternalSubscriptionProcessor isp,
         GridKernalContext ctx,
-        IgniteLogger log) {
+        IgniteLogger log
+    ) {
         this.log = log;
 
         boolean persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
@@ -96,6 +97,16 @@ public class DistributedBaselineConfiguration {
                 }
             }
         );
+    }
+
+    /** */
+    public void listenAutoAdjustEnabled(DistributePropertyListener<? super Boolean> lsnr) {
+        baselineAutoAdjustEnabled.addListener(lsnr);
+    }
+
+    /** */
+    public void listenAutoAdjustTimeout(DistributePropertyListener<? super Long> lsnr) {
+        baselineAutoAdjustTimeout.addListener(lsnr);
     }
 
     /**

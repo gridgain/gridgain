@@ -29,6 +29,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -815,7 +816,6 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                                 GridDhtLocalPartition loc = top.localPartition(p, readyVer, false);
 
                                 boolean notPrimary = !affNodes.isEmpty() &&
-                                    !exchMgr.rebalanceTopologyVersion().equals(AffinityTopologyVersion.NONE) &&
                                     !affNodes.get(0).equals(dht.context().affinity().primaryByPartition(p, readyVer));
 
                                 if (affNodesCnt != ownerNodesCnt || !affNodes.containsAll(owners) ||
@@ -1901,7 +1901,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      * @param exp Expected.
      * @param act Actual.
      */
-    protected void assertEqualsCollections(Collection<?> exp, Collection<?> act) {
+    protected static void assertEqualsCollections(Collection<?> exp, Collection<?> act) {
         if (exp.size() != act.size())
             fail("Collections are not equal:\nExpected:\t" + exp + "\nActual:\t" + act);
 
@@ -2300,7 +2300,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
 
         int mode = putType != null && putType.length > 0 ? putType[0] : 0;
 
-        Map<Integer, Integer> map = keys.stream().collect(Collectors.toMap(k -> k, k -> k));
+        Map<Integer, Integer> map = keys.stream().collect(Collectors.toMap(k -> k, k -> k, (a, b) -> a, TreeMap::new));
 
         switch (mode) {
             case 0:

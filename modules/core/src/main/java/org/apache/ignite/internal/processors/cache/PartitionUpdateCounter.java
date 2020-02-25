@@ -102,6 +102,11 @@ public interface PartitionUpdateCounter extends Iterable<long[]> {
     public void reset();
 
     /**
+     * Reset the initial counter value to zero.
+     */
+    public void resetInitialCounter();
+
+    /**
      * @param start Counter.
      * @param delta Delta.
      * @deprecated TODO https://ggsystems.atlassian.net/browse/GG-17396
@@ -132,4 +137,9 @@ public interface PartitionUpdateCounter extends Iterable<long[]> {
      * @return Iterator for pairs [start, range] for each out-of-order update in the update counter sequence.
      */
     @Override public Iterator<long[]> iterator();
+
+    /**
+     * @return Cache group context.
+     */
+    public CacheGroupContext context();
 }
