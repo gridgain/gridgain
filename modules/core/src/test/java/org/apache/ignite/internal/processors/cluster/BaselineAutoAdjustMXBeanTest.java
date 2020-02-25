@@ -93,6 +93,7 @@ public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
     @Test
     @SystemPropertiesList({
         @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
+        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false"),
     })
     public void testBeanNotFoundBecauseFeatureDisabled() throws Exception {
         startGrid();
