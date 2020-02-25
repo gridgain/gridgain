@@ -34,9 +34,6 @@ class ClientCacheRequest extends ClientRequest {
     /** "Under transaction" flag mask. */
     private static final byte TRANSACTIONAL_FLAG_MASK = 0x02;
 
-    /** "Expiry policy" flag mask. */
-    private static final byte FLAG_WITH_EXPIRY_POLICY = 0x04;
-
     /** Cache ID. */
     private final int cacheId;
 
@@ -82,15 +79,6 @@ class ClientCacheRequest extends ClientRequest {
      */
     protected boolean isTransactional() {
         return (flags & TRANSACTIONAL_FLAG_MASK) != 0;
-    }
-
-    /**
-     *  Gets a value indicating whether expiry policy is set in this request.
-     *
-     * @return expiry policy flag value.
-     */
-    private boolean withExpiryPolicy() {
-        return (flags & FLAG_WITH_EXPIRY_POLICY) == FLAG_WITH_EXPIRY_POLICY;
     }
 
     /**

@@ -69,10 +69,6 @@ import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSq
 import org.apache.ignite.internal.processors.platform.client.cache.ClientCacheSqlQueryRequest;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxEndRequest;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxStartRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterChangeStateRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterIsActiveRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalChangeStateRequest;
-import org.apache.ignite.internal.processors.platform.client.cluster.ClientClusterWalGetStateRequest;
 
 /**
  * Thin client message parser.
@@ -216,19 +212,6 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
     /** Commit transaction. */
     private static final short OP_TX_END = 4001;
-
-    /* Cluster operations. */
-    /** */
-    private static final short OP_CLUSTER_IS_ACTIVE = 5000;
-
-    /** */
-    private static final short OP_CLUSTER_CHANGE_STATE = 5001;
-
-    /** */
-    private static final short OP_CLUSTER_CHANGE_WAL_STATE = 5002;
-
-    /** */
-    private static final short OP_CLUSTER_GET_WAL_STATE = 5003;
 
     /* Custom queries working through processors registry. */
     /** */
@@ -413,18 +396,6 @@ public class ClientMessageParser implements ClientListenerMessageParser {
 
             case OP_TX_END:
                 return new ClientTxEndRequest(reader);
-
-            case OP_CLUSTER_IS_ACTIVE:
-                return new ClientClusterIsActiveRequest(reader);
-
-            case OP_CLUSTER_CHANGE_STATE:
-                return new ClientClusterChangeStateRequest(reader);
-
-            case OP_CLUSTER_CHANGE_WAL_STATE:
-                return new ClientClusterWalChangeStateRequest(reader);
-
-            case OP_CLUSTER_GET_WAL_STATE:
-                return new ClientClusterWalGetStateRequest(reader);
 
             case OP_CUSTOM_QUERY:
                 return new ClientCustomQueryRequest(reader);

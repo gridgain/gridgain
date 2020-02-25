@@ -352,8 +352,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             cfg.WriteSynchronizationMode = (CacheWriteSynchronizationMode)reader.ReadInt();
             cfg.KeyConfiguration = reader.ReadCollectionRaw(r => new CacheKeyConfiguration(r));
             cfg.QueryEntities = reader.ReadCollectionRaw(r => new QueryEntity(r, srvVer));
-            if (srvVer.CompareTo(ClientSocket.Ver160) >= 0)
-                cfg.ExpiryPolicyFactory = ExpiryPolicySerializer.ReadPolicyFactory(reader);
 
             Debug.Assert(len == reader.Stream.Position - pos);
         }

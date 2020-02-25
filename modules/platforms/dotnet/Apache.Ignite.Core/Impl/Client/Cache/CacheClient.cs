@@ -41,37 +41,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
     /// </summary>
     internal sealed class CacheClient<TK, TV> : ICacheClient<TK, TV>, ICacheInternal
     {
-        /// <summary>
-        /// Additional flag values for cache operations.
-        /// </summary>
-        private enum ClientCacheRequestFlag : byte
-        {
-            /// <summary>
-            /// No flags
-            /// </summary>
-            None = 0,
-
-            /// <summary>
-            /// With keep binary flag.
-            /// Reserved for other thin clients.
-            /// </summary>
-            // ReSharper disable once ShiftExpressionRealShiftCountIsZero
-            // ReSharper disable once UnusedMember.Local
-            WithKeepBinary = 1 << 0,
-
-            /// <summary>
-            /// With transactional binary flag.
-            /// Reserved for IEP-34 Thin client: transactions support.
-            /// </summary>
-            // ReSharper disable once UnusedMember.Local
-            WithTransactional = 1 << 1,
-
-            /// <summary>
-            /// With expiration policy.
-            /// </summary>
-            WithExpiryPolicy = 1 << 2
-        }
-
         /** Scan query filter platform code: .NET filter. */
         private const byte FilterPlatformDotnet = 2;
 
