@@ -118,8 +118,6 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
             Map<KeyCacheObject, Map<UUID, VersionedValue>> data = targetNodesToData.remove(node.id());
 
             if (data != null && !data.isEmpty()) {
-                // TODO: 03.12.19 PartitionKeyVersion is used in order to prevent finishUnmarshal problem, cause actually we only need keyCacheObject,
-                // TODO: 03.12.19 consider using better wrapper here.
                 jobs.put(
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
@@ -135,12 +133,8 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         }
 
         if (!targetNodesToData.isEmpty()) {
-            // TODO: 03.12.19 Print warning that sort of affinity awareness is not possible, so that for all other data random node will be used.
             for (Map<KeyCacheObject, Map<UUID, VersionedValue>> data : targetNodesToData.values()) {
-                // TODO: 03.12.19 Use random node instead.
                 ClusterNode node = subgrid.iterator().next();
-                // TODO: 03.12.19 PartitionKeyVersion is used in order to prevent finishUnmarshal problem, cause actually we only need keyCacheObject,
-                // TODO: 03.12.19consider using better wrapper here.
                 jobs.put(
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(

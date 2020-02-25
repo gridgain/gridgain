@@ -212,8 +212,13 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                     handle((Recheck)workload);
                 else if (workload instanceof Repair)
                     handle((Repair)workload);
-                else
-                    log.error("Unsupported workload type: " + workload);
+                else {
+                    String err = "Unsupported workload type: " + workload;
+
+                    log.error(err);
+
+                    throw new IgniteException(err);
+                }
             }
 
             return new ExecutionResult<>(prepareResult());
@@ -539,30 +544,30 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
      */
     private class WorkProgress {
         /** Work progress print interval. */
-        private final long WORK_PROGRESS_PRINT_INTERVAL = getLong("WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
+        private final long workProgressPrintInterval = getLong("WORK_PROGRESS_PRINT_INTERVAL", 1000 * 60 * 3);
 
         /**
-         *
+         * The full amount of work.
          */
         private long total;
 
         /**
-         *
+         * The remaining amount of work.
          */
         private long remaining;
 
         /**
-         *
+         * Last print time.
          */
         private long printedTime;
 
         /**
-         *
+         * Prints progress to log.
          */
         public void printWorkProgress() {
             long currTimeMillis = System.currentTimeMillis();
 
-            if (currTimeMillis >= printedTime + WORK_PROGRESS_PRINT_INTERVAL) {
+            if (currTimeMillis >= printedTime + workProgressPrintInterval) {
                 log.info(String.format(WORK_PROGRESS_MSG, sesId, workProgress.getTotal(), workProgress.getRemaining()));
 
                 printedTime = currTimeMillis;
@@ -570,7 +575,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
 
         /**
-         *
+         * Add additional work.
          */
         public void assignWork() {
             total++;
@@ -578,21 +583,21 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         }
 
         /**
-         *
+         * Accept a unit of work.
          */
         public void completeWork() {
             remaining--;
         }
 
         /**
-         *
+         * The full amount of work.
          */
         public long getTotal() {
             return total;
         }
 
         /**
-         *
+         * The remaining amount of work.
          */
         public long getRemaining() {
             return remaining;

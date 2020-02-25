@@ -24,7 +24,7 @@ import org.apache.ignite.internal.processors.cache.checker.tasks.CollectPartitio
 /**
  * Describes batch workload for {@link CollectPartitionKeysByBatchTask} include the pagination.
  */
-public class Batch implements PipelineWorkload {
+public class Batch extends PipelineWorkload {
     /** Cache name. */
     private final String cacheName;
 
@@ -34,12 +34,6 @@ public class Batch implements PipelineWorkload {
     /** Lower key, uses for pagination. The first request should set this value to null. */
     private final KeyCacheObject lowerKey;
 
-    /** Session id. */
-    private final long sesId;
-
-    /** Workload chain id. */
-    private final UUID workloadChainId;
-
     /**
      * @param sesId Session id.
      * @param workloadChainId Workload chain id.
@@ -48,8 +42,8 @@ public class Batch implements PipelineWorkload {
      * @param lowerKey Lower key.
      */
     public Batch(long sesId, UUID workloadChainId, String cacheName, int partId, KeyCacheObject lowerKey) {
-        this.sesId = sesId;
-        this.workloadChainId = workloadChainId;
+        super(sesId, workloadChainId);
+
         this.cacheName = cacheName;
         this.partId = partId;
         this.lowerKey = lowerKey;
@@ -74,15 +68,5 @@ public class Batch implements PipelineWorkload {
      */
     public KeyCacheObject lowerKey() {
         return lowerKey;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long sessionId() {
-        return sesId;
-    }
-
-    /** {@inheritDoc} */
-    @Override public UUID workloadChainId() {
-        return workloadChainId;
     }
 }

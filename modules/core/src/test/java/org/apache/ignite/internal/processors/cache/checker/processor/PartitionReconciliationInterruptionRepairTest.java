@@ -179,7 +179,7 @@ public class PartitionReconciliationInterruptionRepairTest extends PartitionReco
         CountDownLatch waitInTask = new CountDownLatch(1);
         CountDownLatch waitOnProcessingBeforeAction = new CountDownLatch(1);
 
-        ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
+        ReconciliationEventListenerProvider.defaultListenerInstance((stage, workload) -> {
             if (firstRecheckFinished.getCount() == 0) {
                 try {
                     waitInTask.await();

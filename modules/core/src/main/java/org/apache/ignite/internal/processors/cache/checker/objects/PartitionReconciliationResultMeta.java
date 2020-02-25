@@ -111,7 +111,7 @@ public class PartitionReconciliationResultMeta extends PartitionReconciliationRe
     }
 
     /** @inheritDoc */
-    @Override public void print(Consumer<String> printer, boolean verbose) {
+    @Override public void print(Consumer<String> printer, boolean includeSensitive) {
         if (inconsistentKeysCnt != 0)
             printer.accept("\nINCONSISTENT KEYS: " + inconsistentKeysCount() + "\n\n");
 

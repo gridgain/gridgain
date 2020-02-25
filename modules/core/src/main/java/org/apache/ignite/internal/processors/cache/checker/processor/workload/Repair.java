@@ -25,7 +25,7 @@ import org.apache.ignite.internal.processors.cache.checker.processor.PipelineWor
 /**
  * Work container for repair stage.
  */
-public class Repair implements PipelineWorkload {
+public class Repair extends PipelineWorkload {
     /**
      * Cache name.
      */
@@ -38,12 +38,6 @@ public class Repair implements PipelineWorkload {
 
     /** Attempt number. */
     private int repairAttempt;
-
-    /** Session id. */
-    private long sesId;
-
-    /** Workload chain id. */
-    private final UUID workloadChainId;
 
     /**
      * Per-node values from recheck phase.
@@ -67,8 +61,8 @@ public class Repair implements PipelineWorkload {
         Map<KeyCacheObject, Map<UUID, VersionedValue>> data,
         int repairAttempt
     ) {
-        this.sesId = sesId;
-        this.workloadChainId = workloadChainId;
+        super(sesId, workloadChainId);
+
         this.cacheName = cacheName;
         this.partId = partId;
         this.data = data;
@@ -102,15 +96,5 @@ public class Repair implements PipelineWorkload {
      */
     public int repairAttempt() {
         return repairAttempt;
-    }
-
-    /** {@inheritDoc} */
-    @Override public long sessionId() {
-        return sesId;
-    }
-
-    /** {@inheritDoc} */
-    @Override public UUID workloadChainId() {
-        return workloadChainId;
     }
 }

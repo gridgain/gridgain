@@ -68,7 +68,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
     /**
      * Recheck request.
      */
-    private RecheckRequest recheckRequest;
+    private RecheckRequest recheckReq;
 
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
@@ -76,7 +76,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
-        recheckRequest = arg;
+        recheckReq = arg;
 
         for (ClusterNode node : subgrid)
             jobs.put(new CollectRecheckJob(arg), node);
@@ -104,7 +104,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
         List<ComputeJobResult> results) throws IgniteException {
         Map<KeyCacheObject, Map<UUID, VersionedValue>> res = new HashMap<>();
 
-        GridCacheContext<Object, Object> ctx = ignite.cachex(recheckRequest.cacheName()).context();
+        GridCacheContext<Object, Object> ctx = ignite.cachex(recheckReq.cacheName()).context();
 
         for (ComputeJobResult result : results) {
             if (result.getException() != null)
@@ -188,7 +188,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
                             recheckedKeys.add(new DataRow(ignite.localNode().id(), row.key(), row.version(), row.value(), updateCntr, recheckStartTime));
                     }
                     catch (IgniteCheckedException e) {
-                        String errMsg = "Recheck key [" + recheckKey + "] was skipped.";
+                        String errMsg = "Recheck key [key=" + recheckKey + "] was skipped.";
 
                         U.error(log, errMsg, e);
 

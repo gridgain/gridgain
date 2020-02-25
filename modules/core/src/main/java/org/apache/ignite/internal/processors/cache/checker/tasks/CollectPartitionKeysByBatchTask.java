@@ -229,12 +229,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
                 for (int i = 0; i < batchSize && cursor.next(); i++) {
                     CacheDataRow row = cursor.get();
 
-                    if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) != 0)
+                    if (lowerKey == null || KEY_COMPARATOR.compare(lowerKey, row.key()) != 0) {
                         partEntryHashRecords.add(new VersionedKey(
                             ignite.localNode().id(),
                             row.key(),
                             row.version()
                         ));
+                    }
                     else
                         i--;
                 }

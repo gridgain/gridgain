@@ -68,7 +68,7 @@ public class AbstractPipelineProcessor {
     protected final GridKernalContext ctx;
 
     /** Event listener that allows to track the execution of workload. */
-    protected volatile ReconciliationEventListener evtLsnr = ReconciliationEventListenerFactory.defaultListenerInstance();
+    protected volatile ReconciliationEventListener evtLsnr = ReconciliationEventListenerProvider.defaultListenerInstance();
 
     /** Error. */
     protected final AtomicReference<String> error = new AtomicReference<>();

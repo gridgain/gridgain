@@ -114,7 +114,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
         CountDownLatch waitToStartFirstLastRecheck = new CountDownLatch(1);
         CountDownLatch waitKeyReporation = new CountDownLatch(1);
 
-        ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
+        ReconciliationEventListenerProvider.defaultListenerInstance((stage, workload) -> {
             if (stage.equals(RESULT_READY) && workload instanceof RecheckRequest) {
                 int attempt = recheckAttempts.computeIfAbsent(workload.workloadChainId(), (key) -> new AtomicInteger(0)).incrementAndGet();
 
@@ -167,7 +167,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
     private void testRecheckCount(int attempts) {
         final ConcurrentMap<UUID, AtomicInteger> recheckAttempts = new ConcurrentHashMap<>();
 
-        ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
+        ReconciliationEventListenerProvider.defaultListenerInstance((stage, workload) -> {
             if (stage.equals(FINISHING) && workload instanceof RecheckRequest)
                 recheckAttempts.computeIfAbsent(workload.workloadChainId(), (key) -> new AtomicInteger(0)).incrementAndGet();
         });
