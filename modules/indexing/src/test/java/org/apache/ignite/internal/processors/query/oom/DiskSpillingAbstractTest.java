@@ -494,8 +494,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
                     for (int i = 0; i < iterations; i++) {
                         IgniteEx grid = fromClient() ? grid("client") : grid(0);
                         grid.cache(DEFAULT_CACHE_NAME)
-                            .query(new SqlFieldsQuery(sql)
-                                .setLazy(true))
+                            .query(new SqlFieldsQuery(sql))
                             .getAll();
                     }
                 }

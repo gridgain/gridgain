@@ -81,8 +81,6 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        GridTestUtils.setFieldValue(SqlFieldsQuery.class, "DFLT_LAZY", true);
-
         super.beforeTest();
 
         initGrid();
@@ -317,7 +315,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
      */
     private List<List<?>> runSql(String sql) {
         return grid(0).cache(DEFAULT_CACHE_NAME)
-            .query(new SqlFieldsQuery(sql).setLazy(true))
+            .query(new SqlFieldsQuery(sql))
             .getAll();
     }
 
@@ -338,8 +336,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
 
             List<List<?>> res = grid(0).cache(DEFAULT_CACHE_NAME)
                 .query(new SqlFieldsQueryEx(dml, false)
-                    .setMaxMemory(SMALL_MEM_LIMIT)
-                    .setLazy(true))
+                    .setMaxMemory(SMALL_MEM_LIMIT))
                 .getAll();
 
             List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
