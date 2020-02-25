@@ -104,7 +104,12 @@ public class VisorValidateIndexesTask extends VisorMultiNodeTask<VisorValidateIn
         /** {@inheritDoc} */
         @Override protected VisorValidateIndexesJobResult run(@Nullable VisorValidateIndexesTaskArg arg) throws IgniteException {
             try {
-                ValidateIndexesClosure clo = new ValidateIndexesClosure(arg.getCaches(), arg.getCheckFirst(), arg.getCheckThrough());
+                ValidateIndexesClosure clo = new ValidateIndexesClosure(
+                    arg.getCaches(),
+                    arg.getCheckFirst(),
+                    arg.getCheckThrough(),
+                    arg.сheckCrc()
+                );
 
                 ignite.context().resource().injectGeneric(clo);
 
