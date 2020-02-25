@@ -33,16 +33,6 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
         return false;
     }
 
-    /** {@inheritDoc} */
-    @Override protected boolean fromClient() {
-        return false;
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-    }
-
     /** */
     @Test
     public void testLogsWithOffloading() {
