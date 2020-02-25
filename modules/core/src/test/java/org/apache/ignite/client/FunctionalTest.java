@@ -16,37 +16,13 @@
 
 package org.apache.ignite.client;
 
-import java.lang.management.ManagementFactory;
-import java.util.AbstractMap.SimpleEntry;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
-import javax.management.MBeanServerInvocationHandler;
-import javax.management.ObjectName;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.cache.CacheKeyConfiguration;
-import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.CachePeekMode;
-import org.apache.ignite.cache.CacheRebalanceMode;
-import org.apache.ignite.cache.CacheWriteSynchronizationMode;
-import org.apache.ignite.cache.PartitionLossPolicy;
-import org.apache.ignite.cache.QueryEntity;
-import org.apache.ignite.cache.QueryIndex;
+import org.apache.ignite.cache.*;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.ClientConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
@@ -54,28 +30,44 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.transactions.TransactionConcurrency;
+import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import javax.management.MBeanServerInvocationHandler;
+import javax.management.ObjectName;
+import java.lang.management.ManagementFactory;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
-import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
+import static org.apache.ignite.transactions.TransactionIsolation.*;
 import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Thin client functional tests.
  */
-public class FunctionalTest {
+public class FunctionalTest extends GridCommonAbstractTest {
     /** Per test timeout */
     @Rule
     public Timeout globalTimeout = new Timeout((int) GridTestUtils.DFLT_TEST_TIMEOUT);
+
+    /**
+     * Ctor.
+     */
+    public FunctionalTest() {
+        super(false);
+    }
 
     /**
      * Tested API:
@@ -430,6 +422,282 @@ public class FunctionalTest {
     }
 
     /**
+     * Test PESSIMISTIC REPEATABLE_READ tx holds lock and other tx should be timed out.
+     */
+    @Test
+    public void testPessimisticRepeatableReadsTransactionHoldsLock() throws Exception{
+        testIsolationLevel(PESSIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     * Test PESSIMISTIC SERIALIZABLE tx holds lock and other tx should be timed out.
+     */
+    @Test
+    public void testPessimisticSerializableTransactionHoldsLock() throws Exception{
+        testIsolationLevel(PESSIMISTIC, SERIALIZABLE);
+    }
+
+    /**
+     * Test OPTIMISTIC SERIALIZABLE tx rolls backs if another TX commits.
+     */
+    @Test
+    public void testOptimitsticSerializableTransactionHoldsLock() throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, SERIALIZABLE)) {
+                Thread t = new Thread(() -> {
+                    try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
+                        cache.put(0, "value2");
+
+                        // Should block.
+                        tx2.commit();
+                    }
+                    catch (Exception ex) {
+                        fail();
+                    }
+                    finally {
+                        latch.countDown();
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                t.start();
+
+                latch.await();
+
+                cache.put(0, "value1");
+
+                t.join();
+
+                try {
+                    tx.commit();
+
+                    fail();
+                }
+                catch (ClientServerError ignored) {
+                    // No op
+                }
+            }
+
+            assertEquals("value2", cache.get(0));
+        }
+    }
+
+    /**
+     * Test OPTIMISTIC REPEATABLE_READ tx doesn't conflict with a regular cache put.
+     */
+    @Test
+    public void testOptimitsticRepeatableReadUpdatesValue() throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ)) {
+                Thread t = new Thread(() -> {
+                    try {
+                        assertEquals("value0", cache.get(0));
+
+                        cache.put(0, "value2");
+
+                        assertEquals("value2", cache.get(0));
+                    }
+                    catch (Exception ex) {
+                        fail();
+                    }
+                    finally {
+                        latch.countDown();
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                cache.put(0, "value1");
+
+                t.start();
+
+                latch.await();
+
+                t.join();
+
+                tx.commit();
+            }
+
+            assertEquals("value1", cache.get(0));
+        }
+    }
+
+    /**
+     * Test isolation level.
+     */
+    private void testIsolationLevel(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            CyclicBarrier barrier = new CyclicBarrier(2);
+
+            try (ClientTransaction tx = client.transactions().txStart(concurrency, isolation)) {
+                Thread t = new Thread(() -> {
+                    try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ, 500)) {
+                        cache.put(0, "value2");
+
+                        // Should block.
+                        tx2.commit();
+
+                        // Should not get here.
+                        fail();
+                    } catch (ClientServerError ex) {
+                        assertEquals(ClientStatus.TX_TIMED_OUT, ex.getCode());
+                    } catch (Exception ex) {
+                        // Should not get here.
+                        fail();
+                    } finally {
+                        try {
+                            barrier.await(2000, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException | InterruptedException | BrokenBarrierException ignore) {
+                            // No-op.
+                        }
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                t.start();
+
+                barrier.await(2000, TimeUnit.MILLISECONDS);
+
+                t.join();
+
+                tx.commit();
+            }
+
+            assertEquals("value0", cache.get(0));
+        }
+    }
+
+    /**
+     * Test tx commits when backup copy node shuts down.
+     */
+    @Test
+    public void testTxFailoverOnBackupCopy() throws Exception{
+        checkMissingBackupTxFailover(PESSIMISTIC, REPEATABLE_READ);
+        //checkMissingBackupTxFailover(PESSIMISTIC, SERIALIZABLE);
+        //checkMissingBackupTxFailover(PESSIMISTIC, READ_COMMITTED);
+        //checkMissingBackupTxFailover(OPTIMISTIC, REPEATABLE_READ);
+        //checkMissingBackupTxFailover(OPTIMISTIC, REPEATABLE_READ);
+    }
+
+    /**
+     * Check that removing backup copy for tx doesn't pervent it from commit.
+     */
+    private void checkMissingBackupTxFailover(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             Ignite ignite2 = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setBackups(1)
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            final CountDownLatch latch = new CountDownLatch(1);
+
+            try (ClientTransaction tx = client.transactions().txStart(concurrency, isolation)) {
+                Thread t = new Thread(() -> {
+                    try {
+
+                        Collection<ClusterNode> mapping = ignite.affinity("cache").mapKeyToPrimaryAndBackups(0);
+                        mapping.stream().skip(1).forEach(node -> {
+                            stopGrid(node.id().toString());
+                        });
+                    }
+                    catch (Exception ex) {
+                        fail();
+                    }
+                    finally {
+                        latch.countDown();
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                t.start();
+
+                latch.await();
+
+                String s = tx.toString();
+
+                cache.put(0, "value1");
+
+                t.join();
+
+                tx.commit();
+            }
+
+            assertEquals("value1", cache.get(0));
+        }
+    }
+
+    @Test
+    public void  testTransactionMessages() throws Exception {
+        try (Ignite ignite = Ignition.start(getConfigWithLogger());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+
+            cache.put(0, "value0");
+
+            // Test nested transactions is not possible.
+            try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED, 1000)) {
+                fail();
+            }
+        }
+    }
+
+    /** Listener log messages. */
+    private static ListeningTestLogger testLog;
+
+    private IgniteConfiguration getConfigWithLogger(){
+
+        IgniteConfiguration serverConfiguration = Config.getServerConfiguration();
+        testLog = new ListeningTestLogger(true, serverConfiguration.getGridLogger());
+
+        LogListener lsnr = LogListener.matches("").times(1).build();
+
+        testLog.registerListener(lsnr);
+
+
+        serverConfiguration.setGridLogger(testLog);
+        return serverConfiguration;
+    }
+
+    /**
      * Test transactions.
      */
     @Test
@@ -438,8 +706,8 @@ public class FunctionalTest {
              IgniteClient client = Ignition.startClient(getClientConfiguration())
         ) {
             ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
-                .setName("cache")
-                .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
             );
 
             cache.put(0, "value0");
@@ -546,7 +814,7 @@ public class FunctionalTest {
             ObjectName mbeanName = U.makeMBeanName(ignite.name(), "Clients", ClientListenerProcessor.class.getSimpleName());
 
             ClientProcessorMXBean mxBean = MBeanServerInvocationHandler.newProxyInstance(
-                ManagementFactory.getPlatformMBeanServer(), mbeanName, ClientProcessorMXBean.class, true);
+                    ManagementFactory.getPlatformMBeanServer(), mbeanName, ClientProcessorMXBean.class, true);
 
             try (ClientTransaction tx = client.transactions().txStart()) {
                 cache.put(1, "value6");
@@ -633,7 +901,7 @@ public class FunctionalTest {
                 // Operations: get, getAll, getAndPut, getAndRemove, getAndReplace.
                 assertEquals("value10", cache.get(2));
                 assertEquals(F.asMap(1, "value11", 2, "value10"),
-                    cache.getAll(new HashSet<>(Arrays.asList(1, 2))));
+                        cache.getAll(new HashSet<>(Arrays.asList(1, 2))));
                 assertEquals("value13", cache.getAndPut(4, "value14"));
                 assertEquals("value14", cache.getAndReplace(4, "value15"));
                 assertEquals("value15", cache.getAndRemove(4));
@@ -659,7 +927,7 @@ public class FunctionalTest {
             }
 
             assertEquals(F.asMap(0, "value8", 1, "value9"),
-                cache.getAll(new HashSet<>(Arrays.asList(0, 1))));
+                    cache.getAll(new HashSet<>(Arrays.asList(0, 1))));
             assertFalse(cache.containsKey(2));
 
             // Test concurrent transactions started by different threads.
@@ -760,7 +1028,7 @@ public class FunctionalTest {
                 t.join();
 
                 // New explicit transaction can be started after current transaction has been closed by another thread.
-                try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)){
+                try (ClientTransaction tx1 = client.transactions().txStart(PESSIMISTIC, READ_COMMITTED)) {
                     cache.put(0, "value23");
 
                     tx1.commit();
@@ -771,7 +1039,7 @@ public class FunctionalTest {
 
             // Test active transactions limit.
             int txLimit = ignite.configuration().getClientConnectorConfiguration().getThinClientConfiguration()
-                .getMaxActiveTxPerConnection();
+                    .getMaxActiveTxPerConnection();
 
             List<ClientTransaction> txs = new ArrayList<>(txLimit);
 

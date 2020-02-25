@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.platform.client.ClientRequest;
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.IgniteClientException;
+import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 
 /**
  * End the transaction request.
@@ -66,6 +67,9 @@ public class ClientTxEndRequest extends ClientRequest {
                 else
                     tx.rollback();
             }
+        }
+        catch (IgniteTxTimeoutCheckedException e){
+            throw new IgniteClientException(ClientStatus.TX_TIMED_OUT, e.getMessage(), e);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteClientException(ClientStatus.FAILED, e.getMessage(), e);
