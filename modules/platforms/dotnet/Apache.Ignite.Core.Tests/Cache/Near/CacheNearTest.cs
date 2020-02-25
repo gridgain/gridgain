@@ -312,6 +312,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             clientCache[key] = 3;
             Assert.AreEqual(3, serverCache.LocalPeek(key, CachePeekMode.NativeNear));
+
+            var nonPrimaryNodeCache = _grid2.GetCache<int, int>(CacheName);
+            Assert.AreEqual(0, nonPrimaryNodeCache.GetLocalSize(CachePeekMode.NativeNear));
         }
 
         /// <summary>
