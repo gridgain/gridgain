@@ -302,14 +302,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestPrimaryKeyOnServerNodeIsAddedToNearCacheAfterRemotePut()
         {
-            var clientCache = _grid.GetCache<int, int>(CacheName);
-            var serverCache = _client.GetCache<int, int>(CacheName);
+            var clientCache = _client.GetCache<int, int>(CacheName);
+            var serverCache = _grid.GetCache<int, int>(CacheName);
 
-            clientCache[1] = 2;
-            Assert.AreEqual(2, serverCache.LocalPeek(1, CachePeekMode.NativeNear));
+            var key = TestUtils.GetPrimaryKey(_grid, CacheName);
+
+            clientCache[key] = 2;
+            Assert.AreEqual(2, serverCache.LocalPeek(key, CachePeekMode.NativeNear));
             
-            clientCache[2] = 3;
-            Assert.AreEqual(3, serverCache.LocalPeek(2, CachePeekMode.NativeNear));
+            clientCache[key] = 3;
+            Assert.AreEqual(3, serverCache.LocalPeek(key, CachePeekMode.NativeNear));
         }
 
         /// <summary>
