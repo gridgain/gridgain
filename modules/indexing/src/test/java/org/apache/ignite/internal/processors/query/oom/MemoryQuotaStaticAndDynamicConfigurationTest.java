@@ -112,7 +112,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testOffloadingEnabledByDefault() throws Exception {
         initGrid(null, "100", true);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY id";
 
         checkQuery(Result.SUCCESS_WITH_OFFLOADING, qry);
 
@@ -142,7 +142,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
 
         awaitPartitionMapExchange();
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         grid(1).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
         grid(1).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
