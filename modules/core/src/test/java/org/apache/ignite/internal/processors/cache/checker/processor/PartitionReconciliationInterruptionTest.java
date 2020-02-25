@@ -101,6 +101,7 @@ public abstract class PartitionReconciliationInterruptionTest extends PartitionR
 
         cfg.setCacheConfiguration(ccfg);
         cfg.setConsistentId(name);
+        cfg.setActiveOnStart(false);
 
         return cfg;
     }
