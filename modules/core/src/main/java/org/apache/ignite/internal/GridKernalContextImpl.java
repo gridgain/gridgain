@@ -47,6 +47,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.managers.failover.GridFailoverManager;
 import org.apache.ignite.internal.managers.indexing.GridIndexingManager;
 import org.apache.ignite.internal.managers.loadbalancer.GridLoadBalancerManager;
+import org.apache.ignite.internal.managers.tracing.GridTracingManager;
 import org.apache.ignite.internal.processors.affinity.GridAffinityProcessor;
 import org.apache.ignite.internal.processors.authentication.IgniteAuthenticationProcessor;
 import org.apache.ignite.internal.processors.cache.CacheConflictResolutionManager;
@@ -92,7 +93,6 @@ import org.apache.ignite.internal.processors.subscription.GridInternalSubscripti
 import org.apache.ignite.internal.processors.task.GridTaskProcessor;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.processors.tracing.Tracing;
-import org.apache.ignite.internal.processors.tracing.TracingProcessor;
 import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.suggestions.GridPerformanceSuggestions;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
@@ -173,6 +173,10 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     @GridToStringExclude
     private GridEncryptionManager encryptionMgr;
 
+    /** */
+    @GridToStringExclude
+    private GridTracingManager tracingMgr;
+
     /*
      * Processors.
      * ==========
@@ -233,10 +237,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
     /** Global metastorage. */
     @GridToStringInclude
     private DistributedConfigurationProcessor distributedConfigurationProcessor;
-
-    /** Tracing. */
-    @GridToStringInclude
-    private TracingProcessor tracingProcessor;
 
     /** */
     @GridToStringInclude
@@ -609,6 +609,8 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             indexingMgr = (GridIndexingManager)comp;
         else if (comp instanceof GridEncryptionManager)
             encryptionMgr = (GridEncryptionManager)comp;
+        else if (comp instanceof GridTracingManager)
+            tracingMgr = (GridTracingManager) comp;
 
         /*
          * Processors.
@@ -637,8 +639,6 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
             distributedMetastorage = (DistributedMetaStorage)comp;
         else if (comp instanceof DistributedConfigurationProcessor)
             distributedConfigurationProcessor = (DistributedConfigurationProcessor)comp;
-        else if (comp instanceof TracingProcessor)
-            tracingProcessor = (TracingProcessor) comp;
         else if (comp instanceof GridTaskSessionProcessor)
             sesProc = (GridTaskSessionProcessor)comp;
         else if (comp instanceof GridPortProcessor)
@@ -808,7 +808,7 @@ public class GridKernalContextImpl implements GridKernalContext, Externalizable 
 
     /** {@inheritDoc} */
     @Override public Tracing tracing() {
-        return tracingProcessor;
+        return tracingMgr;
     }
 
     /** {@inheritDoc} */
