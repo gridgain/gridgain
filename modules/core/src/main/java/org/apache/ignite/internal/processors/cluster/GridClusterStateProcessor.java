@@ -76,6 +76,7 @@ import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.ChangeT
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.service.GridServiceProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
+import org.apache.ignite.internal.util.TransientSerializable;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
@@ -2239,9 +2240,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      */
     @Deprecated
     @GridInternal
+    @TransientSerializable(methodName = "transientSerializableFields")
     private static class ClientChangeGlobalStateComputeRequest implements IgniteRunnable {
         /** */
         private static final long serialVersionUID = 0L;
+
+        /** */
+        private static final IgniteProductVersion READ_ONLY_FLAG_SINCE = IgniteProductVersion.fromString("8.7.8");
 
         /** */
         private final boolean activate;
@@ -2287,6 +2292,22 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             catch (IgniteCheckedException ex) {
                 throw new IgniteException(ex);
             }
+        }
+
+        /**
+         * Excludes incompatible fields from serialization/deserialization process.
+         *
+         * @param ver Sender/Receiver node version.
+         * @return Array of excluded from serialization/deserialization fields.
+         */
+        @SuppressWarnings("unused")
+        private static String[] transientSerializableFields(IgniteProductVersion ver) {
+            ArrayList<String> transients = new ArrayList<>(1);
+
+            if (READ_ONLY_FLAG_SINCE.compareToIgnoreTimestamp(ver) >= 0)
+                transients.add("readOnly");
+
+            return transients.isEmpty() ? null : transients.toArray(new String[transients.size()]);
         }
     }
 
