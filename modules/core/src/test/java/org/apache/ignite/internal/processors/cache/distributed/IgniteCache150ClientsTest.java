@@ -35,7 +35,6 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
@@ -59,10 +58,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         cfg.setLocalHost("127.0.0.1");
         cfg.setNetworkTimeout(30_000);
         cfg.setConnectorConfiguration(null);
-        cfg.setPeerClassLoadingEnabled(false);
-        cfg.setTimeServerPortRange(200);
 
-        cfg.setDataStreamerThreadPoolSize(2);
+        cfg.setDataStreamerThreadPoolSize(1);
         cfg.setManagementThreadPoolSize(2);
         cfg.setPeerClassLoadingThreadPoolSize(1);
         cfg.setPublicThreadPoolSize(2);
@@ -70,7 +67,6 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         cfg.setSystemThreadPoolSize(2);
         cfg.setUtilityCachePoolSize(2);
 
-        ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSocketWriteTimeout(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setLocalPortRange(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
 
@@ -117,7 +113,6 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-21405")
     public void test150Clients() throws Exception {
         Ignite srv = startGrid(0);
 
@@ -134,46 +129,38 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture<?> fut = GridTestUtils.runMultiThreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
-                boolean cnt = false;
+                Ignite ignite = startGrid(idx.getAndIncrement());
 
-                try {
-                    Ignite ignite = startGrid(idx.getAndIncrement());
+                assertTrue(ignite.configuration().isClientMode());
+                assertTrue(ignite.cluster().localNode().isClient());
 
-                    assertTrue(ignite.configuration().isClientMode());
-                    assertTrue(ignite.cluster().localNode().isClient());
+                latch.countDown();
 
-                    latch.countDown();
+                log.info("Started [node=" + ignite.name() + ", left=" + latch.getCount() + ']');
 
-                    cnt = true;
+                ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-                    log.info("Started [node=" + ignite.name() + ", left=" + latch.getCount() + ']');
+                while (latch.getCount() > 0) {
+                    Thread.sleep(1000);
 
-                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
+                    IgniteCache<Object, Object> cache = ignite.cache(cacheNames.get(rnd.nextInt(0, CACHES)));
 
-                    while (latch.getCount() > 0) {
-                        Thread.sleep(1000);
+                    Integer key = rnd.nextInt(0, 100_000);
 
-                        IgniteCache<Object, Object> cache = ignite.cache(cacheNames.get(rnd.nextInt(0, CACHES)));
+                    cache.put(key, 0);
 
-                        Integer key = rnd.nextInt(0, 100_000);
-
-                        cache.put(key, 0);
-
-                        assertNotNull(cache.get(key));
-                    }
-
-                    return null;
+                    assertNotNull(cache.get(key));
                 }
-                finally {
-                    if (!cnt)
-                        latch.countDown();
-                }
+
+                return null;
             }
         }, CLIENTS, "start-client");
 
         fut.get(getTestTimeout());
 
         log.info("Started all clients.");
+
+        assertTrue("Clients start partially: " + latch.getCount(), latch.getCount() == 0);
 
         waitForTopology(CLIENTS + 1, (int)getTestTimeout());
 
