@@ -297,6 +297,22 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Tests that primary keys are always up-to-date in .NET Near Cache.
+        /// </summary>
+        [Test]
+        public void TestPrimaryKeyOnServerNodeIsAddedToNearCacheAfterRemotePut()
+        {
+            var clientCache = _grid.GetCache<int, int>(CacheName);
+            var serverCache = _client.GetCache<int, int>(CacheName);
+
+            clientCache[1] = 2;
+            Assert.AreEqual(2, serverCache.LocalPeek(1, CachePeekMode.NativeNear));
+            
+            clientCache[2] = 3;
+            Assert.AreEqual(3, serverCache.LocalPeek(2, CachePeekMode.NativeNear));
+        }
+
+        /// <summary>
         /// Tests that same near cache can be used with different sets of generic type parameters.
         /// </summary>
         [Test]
