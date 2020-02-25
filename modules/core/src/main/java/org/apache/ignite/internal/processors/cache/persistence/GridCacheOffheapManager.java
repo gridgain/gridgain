@@ -547,14 +547,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                             byte persistedPartStateId = io.getPartitionState(pageAddr);
 
-                            part.setState(GridDhtPartitionState.fromOrdinal(persistedPartStateId));
+                            GridDhtPartitionState persistedPartState =
+                                GridDhtPartitionState.fromOrdinal(persistedPartStateId);
+
+                            // "null" is for "-1" state, which means that the page is newly initialized.
+                            if (persistedPartState != null)
+                                part.setState(persistedPartState);
 
                             if (recoverState != null) {
-                                if (persistedPartStateId != (byte) recoverState.intValue()) {
-                                    io.setPartitionState(pageAddr, (byte)recoverState.intValue());
-
-                                    changed = true;
-                                }
+                                changed = io.setPartitionState(pageAddr, (byte)recoverState.intValue());
 
                                 updateState(part, recoverState);
 
