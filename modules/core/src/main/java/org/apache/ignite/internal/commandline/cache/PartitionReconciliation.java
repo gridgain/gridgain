@@ -355,7 +355,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         options
             .a("caches=[")
             .a(args.caches() == null ? "" : String.join(", ", args.caches()))
-            .a("], fix-mode=[" + args.repair)
+            .a("], repair=[" + args.repair)
             .a("], includeSensitive=[" + args.includeSensitive)
             .a("], parallelism=[" + args.parallelism)
             .a("], batch-size=[" + args.batchSize)
