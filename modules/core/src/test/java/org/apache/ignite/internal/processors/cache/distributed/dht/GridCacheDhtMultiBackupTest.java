@@ -19,6 +19,12 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import java.io.Serializable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.CacheRebalanceMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.CAX;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
@@ -38,13 +44,28 @@ public class GridCacheDhtMultiBackupTest extends GridCommonAbstractTest {
         super(false /* don't start grid. */);
     }
 
+    /** */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setCacheConfiguration(new CacheConfiguration()
+            .setName("partitioned")
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setAtomicityMode(CacheAtomicityMode.ATOMIC)
+            .setBackups(1)
+            .setRebalanceMode(CacheRebalanceMode.SYNC)
+            .setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC));
+
+        return cfg;
+    }
+
     /**
      * @throws Exception If failed
      */
     @Test
     public void testPut() throws Exception {
         try {
-            Ignite g = G.start("modules/core/src/test/config/example-cache.xml");
+            Ignite g = startGrid(0);
 
             if (g.cluster().nodes().size() < 5)
                 U.warn(log, "Topology is too small for this test. " +

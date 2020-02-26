@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.cache;
 
 import com.google.common.collect.ImmutableMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -361,7 +360,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
 
         assertEquals(0.0, cache.localMetrics().getAverageRemoveTime(), 0.0);
 
-        Set<Integer> keys = new HashSet<>(4, 1);
+        Set<Integer> keys = new TreeSet<>();
         keys.add(1);
         keys.add(2);
         keys.add(3);
@@ -1370,7 +1369,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     public void testInvokeAllMultipleKeysAvgTime() throws IgniteCheckedException {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        Set<Integer> keys = new HashSet<>();
+        Set<Integer> keys = new TreeSet<>();
         keys.add(1);
         keys.add(2);
 
@@ -1390,7 +1389,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     public void testInvokeAllAsyncMultipleKeysAvgTime() throws IgniteCheckedException {
         IgniteCache<Integer, Integer> cache = grid(0).cache(DEFAULT_CACHE_NAME);
 
-        Set<Integer> keys = new HashSet<>();
+        Set<Integer> keys = new TreeSet<>();
         keys.add(1);
         keys.add(2);
 

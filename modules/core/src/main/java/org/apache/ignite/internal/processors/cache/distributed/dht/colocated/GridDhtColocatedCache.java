@@ -310,6 +310,8 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
         if (keyCheck)
             validateCacheKeys(keys);
 
+        warnIfUnordered(keys, BulkOperation.GET);
+
         GridNearTxLocal tx = checkCurrentTx();
 
         final CacheOperationContext opCtx = ctx.operationContextPerCall();
@@ -587,7 +589,7 @@ public class GridDhtColocatedCache<K, V> extends GridDhtTransactionalCacheAdapte
 
                                     // Entry was not in memory or in swap, so we remove it from cache.
                                     if (v == null) {
-                                        GridCacheVersion obsoleteVer = context().versions().next();
+                                        GridCacheVersion obsoleteVer = nextVersion();
 
                                         if (isNew && entry.markObsoleteIfEmpty(obsoleteVer))
                                             removeEntry(entry);

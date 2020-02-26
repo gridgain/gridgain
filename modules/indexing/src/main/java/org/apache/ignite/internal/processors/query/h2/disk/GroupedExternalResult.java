@@ -19,10 +19,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
-import org.h2.store.DataHandler;
-import org.h2.value.CompareMode;
+import org.h2.engine.Session;
 import org.h2.value.Value;
 import org.h2.value.ValueRow;
 
@@ -36,18 +33,16 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     /** Chunks comparator. */
     private final Comparator<ExternalResultData.Chunk> chunkCmp;
 
+    /**  Comparator for values within {@link #chunkCmp}. */
+    private final Comparator<Value> cmp;
+
     /**
-     * @param ctx Kernel context.
-     * @param memTracker MemoryTracker.
-     * @param cmp Compare mode.
+     * @param ses Session.
      * @param initSize Initial size;
      */
-    GroupedExternalResult(GridKernalContext ctx,
-        H2MemoryTracker memTracker,
-        CompareMode cmp,
-        long initSize,
-        DataHandler hnd) {
-        super(ctx, memTracker, false, 0, Object.class, cmp, hnd);
+    public GroupedExternalResult(Session ses, long initSize) {
+        super(ses, false, 0, Object.class);
+        this.cmp = ses.getDatabase().getCompareMode();
         this.chunkCmp = new Comparator<ExternalResultData.Chunk>() {
             @Override public int compare(ExternalResultData.Chunk o1, ExternalResultData.Chunk o2) {
                 int c = cmp.compare((Value)o1.currentRow().getKey(), (Value)o2.currentRow().getKey());
@@ -79,7 +74,7 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
     /**
      * @param groups Groups to spill.
      */
-    void spillGroupsToDisk(Map<ValueRow, Object[]> groups) {
+    public void spillGroupsToDisk(Map<ValueRow, Object[]> groups) {
         size += groups.size();
 
         data.store(groups.entrySet());

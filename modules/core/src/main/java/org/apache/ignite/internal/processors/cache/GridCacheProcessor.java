@@ -609,6 +609,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             sharedCtx.time().addTimeoutObject(new PartitionDefferedDeleteQueueCleanupTask(
                 sharedCtx, Long.getLong(IGNITE_CACHE_REMOVED_ENTRIES_TTL, 10_000)));
 
+        // Notify shared managers.
+        for (GridCacheSharedManager mgr : sharedCtx.managers())
+            mgr.onKernalStart(active);
+
         // Escape if cluster inactive.
         if (!active)
             return;
@@ -2782,15 +2786,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         // Reserve at least 2 threads for system operations.
         int parallelismLvl = U.availableThreadCount(ctx, GridIoPolicy.SYSTEM_POOL, 2);
 
-        List<IgniteBiTuple<CacheGroupContext, Boolean>> grpToStop = exchActions.cacheGroupsToStop().stream()
+        List<IgniteBiTuple<CacheGroupContext, Boolean>> grpsToStop = exchActions.cacheGroupsToStop().stream()
             .filter(a -> cacheGrps.containsKey(a.descriptor().groupId()))
             .map(a -> F.t(cacheGrps.get(a.descriptor().groupId()), a.destroy()))
             .collect(Collectors.toList());
 
-        grpToStop.forEach(t -> sharedCtx.evict().onCacheGroupStopped(t.get1()));
+        grpsToStop.forEach(t -> sharedCtx.evict().onCacheGroupStopped(t.get1()));
 
         if (!exchActions.cacheStopRequests().isEmpty())
-            removeOffheapListenerAfterCheckpoint(grpToStop);
+            removeOffheapListenerAfterCheckpoint(grpsToStop);
 
         Map<Integer, List<ExchangeActions.CacheActionData>> cachesToStop = exchActions.cacheStopRequests().stream()
                 .collect(Collectors.groupingBy(action -> action.descriptor().groupId()));
@@ -2807,7 +2811,6 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                             gctx.preloader().pause();
 
                         try {
-
                             if (gctx != null) {
                                 final String msg = "Failed to wait for topology update, cache group is stopping.";
 
@@ -2855,11 +2858,11 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             throw new IgniteException(msg, e);
         }
 
-        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpToStop)
+        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop)
             stopCacheGroup(grp.get1().groupId());
 
         if (!sharedCtx.kernalContext().clientNode())
-            sharedCtx.database().onCacheGroupsStopped(grpToStop);
+            sharedCtx.database().onCacheGroupsStopped(grpsToStop);
 
         if (exchActions.deactivate())
             sharedCtx.deactivate();

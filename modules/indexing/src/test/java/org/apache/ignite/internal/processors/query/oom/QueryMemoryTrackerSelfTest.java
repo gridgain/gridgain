@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.oom;
 
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -35,8 +34,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager test for distributed queries.
  */
-@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
-public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
+public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return false;

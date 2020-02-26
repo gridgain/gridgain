@@ -72,4 +72,34 @@ public class SqlQueryMXBeanImpl implements SqlQueryMXBean {
     @Override public void setResultSetSizeThresholdMultiplier(int rsSizeThresholdMultiplier) {
         h2idx.longRunningQueries().setResultSetSizeThresholdMultiplier(rsSizeThresholdMultiplier);
     }
+
+    /** {@inheritDoc} */
+    @Override public String getSqlGlobalMemoryQuota() {
+        return h2idx.memoryManager().getGlobalQuota();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSqlGlobalMemoryQuota(String size) {
+        h2idx.memoryManager().setGlobalQuota(size);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getSqlQueryMemoryQuota() {
+        return h2idx.memoryManager().getQueryQuotaString();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSqlQueryMemoryQuota(String size) {
+        h2idx.memoryManager().setQueryQuota(size);
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean isSqlOffloadingEnabled() {
+        return h2idx.memoryManager().isOffloadingEnabled();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setSqlOffloadingEnabled(boolean enabled) {
+        h2idx.memoryManager().setOffloadingEnabled(enabled);
+    }
 }

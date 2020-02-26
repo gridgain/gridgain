@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.jdbc.thin;
 
 import java.sql.SQLException;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.jetbrains.annotations.Nullable;
 
@@ -518,4 +519,19 @@ public interface ConnectionProperties {
      * @param connTimeout Connection timeout in milliseconds.
      */
     public void setConnectionTimeout(@Nullable Integer connTimeout) throws SQLException;
+
+    /**
+     * Any JDBC features could be force disabled.
+     * See {@link JdbcThinFeature}.
+     * The string should contain enumeration of feature names, separated by the comma.
+     *
+     * @return disabled features.
+     */
+    public String disabledFeatures();
+
+    /**
+     * @param features Disabled features. See {@link JdbcThinFeature}.
+     *      The string should contain enumeration of feature names, separated by the comma.
+     */
+    public void disabledFeatures(String features);
 }
