@@ -17,29 +17,19 @@
 package org.apache.ignite.util;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.tree.SearchRow;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.lang.GridIterator;
-import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
-
-import javax.cache.Cache;
-import java.util.Iterator;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakCacheDataTree;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
@@ -92,7 +82,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
      */
     @Test
     public void testBrokenCacheDataTreeShouldFailValidation() {
-        breakCacheDataTree(crd, CACHE_NAME, 1);
+        breakCacheDataTreeOnCrd();
 
         injectTestSystemOut();
 
@@ -117,7 +107,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
      */
     @Test
     public void testBrokenCacheDataTreeShouldFailValidationWithCacheGroupInfo() {
-        breakCacheDataTree(crd, CACHE_NAME, 1);
+        breakCacheDataTreeOnCrd();
 
         injectTestSystemOut();
 
@@ -153,7 +143,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
 
         forceCheckpoint();
 
-        breakCacheDataTree(crd, CACHE_NAME, 1);
+        breakCacheDataTreeOnCrd();
 
         injectTestSystemOut();
 
@@ -162,69 +152,11 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
     }
 
     /**
-     * Removes some entries from a partition skipping index update. This effectively breaks the index.
+     * Removes some entries from a partition skipping index update.
+     * This effectively breaks the index.
      */
-    private void breakCacheDataTree(Ignite ig, String cacheName, int partId) {
-        IgniteEx ig0 = (IgniteEx)ig;
-        int cacheId = CU.cacheId(cacheName);
-
-        ScanQuery scanQry = new ScanQuery(partId);
-
-        GridCacheContext<Object, Object> ctx = ig0.context().cache().context().cacheContext(cacheId);
-
-        // Get current update counter
-        String grpName = ig0.context().cache().context().cacheContext(cacheId).config().getGroupName();
-        int cacheGrpId = grpName == null ? cacheName.hashCode() : grpName.hashCode();
-
-        GridDhtLocalPartition locPart = ctx.dht().topology().localPartition(partId);
-        IgniteCacheOffheapManager.CacheDataStore dataStore = ig0.context().cache().context().cache().cacheGroup(cacheGrpId).offheap().dataStore(locPart);
-
-        Iterator<Cache.Entry> it = ig.cache(cacheName).withKeepBinary().query(scanQry).iterator();
-
-        for (int i = 0; i < 5_000; i++) {
-            if (it.hasNext()) {
-                Cache.Entry entry = it.next();
-
-                if (i % 5 == 0) {
-                    // Do update
-                    GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ig0.context().cache().context().database();
-
-                    db.checkpointReadLock();
-
-                    try {
-                        IgniteCacheOffheapManager.CacheDataStore innerStore = U.field(dataStore, "delegate");
-
-                        // IgniteCacheOffheapManagerImpl.CacheDataRowStore
-                        Object rowStore = U.field(innerStore, "rowStore");
-
-                        // IgniteCacheOffheapManagerImpl.CacheDataTree
-                        Object dataTree = U.field(innerStore, "dataTree");
-
-                        CacheDataRow oldRow = U.invoke(
-                            dataTree.getClass(),
-                            dataTree,
-                            "remove",
-                            new SearchRow(cacheId, ctx.toCacheKeyObject(entry.getKey())));
-
-                        if (oldRow != null)
-                            U.invoke(rowStore.getClass(), rowStore, "removeRow", oldRow.link(), IoStatisticsHolderNoOp.INSTANCE);
-                    }
-                    catch (IgniteCheckedException e) {
-                        log.error("Failed to remove key skipping indexes: " + entry);
-
-                        e.printStackTrace();
-                    }
-                    finally {
-                        db.checkpointReadUnlock();
-                    }
-                }
-            }
-            else {
-                log.info("Early exit for index corruption, keys processed: " + i);
-
-                break;
-            }
-        }
+    private void breakCacheDataTreeOnCrd() {
+        breakCacheDataTree(log, crd.cachex(CACHE_NAME), 1, (i, entry) -> i % 5 == 0);
     }
 
     /**

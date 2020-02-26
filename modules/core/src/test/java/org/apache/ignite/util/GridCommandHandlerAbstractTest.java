@@ -102,6 +102,9 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     /** Enable automatic confirmation to avoid user interaction. */
     protected boolean autoConfirmation = true;
 
+    /** Last operation result. */
+    protected Object lastOperationResult;
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -237,6 +240,7 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
         testOut.reset();
 
         int exitCode = hnd.execute(args);
+        lastOperationResult = hnd.getLastOperationResult();
 
         // Flush all Logger handlers to make log data available to test.
         Logger logger = U.field(hnd, "logger");
