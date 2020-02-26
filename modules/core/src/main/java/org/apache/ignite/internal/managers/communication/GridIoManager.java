@@ -1144,7 +1144,11 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     ClusterNode node = ctx.discovery().node(nodeId);
 
-                    MarshallerUtils.jobSenderVersion(node.version());
+                    if (node == null)
+                        node = ctx.discovery().historicalNode(nodeId);
+
+                    if (node != null)
+                        MarshallerUtils.jobSenderVersion(node.version());
 
                     try {
                         processRegularMessage0(msg, nodeId);
