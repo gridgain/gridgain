@@ -620,20 +620,26 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // - check update from remote
         }
 
+        /// <summary>
+        /// Tests GetAll operation.
+        /// </summary>
+        /// <param name="async"></param>
         [Test]
-        public void TestGetAll()
+        public void TestGetAll([Values(true, false)] bool async)
         {
-            var clientCache = GetCache<int, Foo>(CacheTestMode.Client); 
+            var clientCache = GetCache<int, Foo>(CacheTestMode.Client);
             var serverCache = GetCache<int, Foo>(CacheTestMode.ServerRemote);
-            
+
             // One entry is in near cache, another is not.
             clientCache[1] = new Foo(1);
             serverCache[2] = new Foo(2);
 
-            var res = clientCache.GetAll(Enumerable.Range(1, 2));
+            var res = async 
+                ? clientCache.GetAllAsync(Enumerable.Range(1, 2)).Result 
+                : clientCache.GetAll(Enumerable.Range(1, 2));
 
             Assert.AreEqual(new[] {1, 2}, res.Select(x => x.Key));
-            
+
             // First entry is from near cache.
             Assert.AreSame(res.First().Value, clientCache.LocalPeek(1, CachePeekMode.NativeNear));
 
