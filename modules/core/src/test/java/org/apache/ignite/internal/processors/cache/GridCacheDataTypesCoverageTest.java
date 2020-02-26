@@ -50,7 +50,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.springframework.util.*;
 
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
