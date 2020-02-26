@@ -64,6 +64,7 @@ import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.errorMessage;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
+import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_PRINT_ERR_STACK_TRACE;
 import static org.apache.ignite.internal.commandline.CommonArgParser.getCommonOptions;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_PORT;
@@ -234,12 +235,12 @@ public class CommandHandler {
                 return EXIT_CODE_OK;
             }
 
+            printErrStackTrace = rawArgs.stream().anyMatch(CMD_PRINT_ERR_STACK_TRACE::equals);
+
             ConnectionAndSslParameters args = new CommonArgParser(logger).parseAndValidate(rawArgs.iterator());
 
             Command command = args.command();
             commandName = command.name();
-
-            printErrStackTrace = args.printErrStackTrace();
 
             GridClientConfiguration clientCfg = getClientConfiguration(args);
 

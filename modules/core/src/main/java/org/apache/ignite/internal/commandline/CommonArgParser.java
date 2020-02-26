@@ -194,8 +194,6 @@ public class CommonArgParser {
 
         boolean autoConfirmation = false;
 
-        boolean printErrorStackTrace = false;
-
         String sslProtocol = DFLT_SSL_PROTOCOL;
 
         String sslCipherSuites = "";
@@ -331,11 +329,6 @@ public class CommonArgParser {
 
                         break;
 
-                    case CMD_PRINT_ERR_STACK_TRACE:
-                        printErrorStackTrace = true;
-
-                        break;
-
                     default:
                         throw new IllegalArgumentException("Unexpected argument: " + str);
                 }
@@ -346,7 +339,7 @@ public class CommonArgParser {
             throw new IllegalArgumentException("No action was specified");
 
         return new ConnectionAndSslParameters(command.command(), host, port, user, pwd,
-                pingTimeout, pingInterval, autoConfirmation, printErrorStackTrace,
+                pingTimeout, pingInterval, autoConfirmation,
                 sslProtocol, sslCipherSuites,
                 sslKeyAlgorithm, sslKeyStorePath, sslKeyStorePassword, sslKeyStoreType,
                 sslTrustStorePath, sslTrustStorePassword, sslTrustStoreType);
