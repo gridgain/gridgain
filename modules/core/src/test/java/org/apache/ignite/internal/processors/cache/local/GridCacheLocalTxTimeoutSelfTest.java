@@ -16,12 +16,14 @@
 
 package org.apache.ignite.internal.processors.cache.local;
 
+import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -163,7 +165,10 @@ public class GridCacheLocalTxTimeoutSelfTest extends GridCommonAbstractTest {
 
             cache.put(1, "1");
 
-            Thread.sleep(100);
+            long endTime = System.currentTimeMillis() + 100;
+
+            while(U.currentTimeMillis() < endTime)
+                LockSupport.parkNanos(1000);
 
             cache.put(1, "2");
 
