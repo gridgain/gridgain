@@ -81,6 +81,24 @@ public class ValidateIndexesCheckSizeIssue extends VisorDataTransferObject {
         t = (Throwable)in.readObject();
     }
 
+    /**
+     * Return index size.
+     *
+     * @return Index size.
+     */
+    public long idxSize() {
+        return idxSize;
+    }
+
+    /**
+     * Return error.
+     *
+     * @return Error.
+     */
+    public Throwable err() {
+        return t;
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ValidateIndexesCheckSizeIssue.class, this) + ", " + t.getClass() + ": " + t.getMessage();
