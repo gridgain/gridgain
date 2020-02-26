@@ -1863,8 +1863,10 @@ namespace Apache.Ignite.Core.Impl.Cache
                 }
             }
 
+            var endPos = writer.Stream.Position;
             writer.Stream.Seek(pos);
             writer.WriteInt(count);
+            writer.Stream.Seek(endPos);
         }
     }
 }
