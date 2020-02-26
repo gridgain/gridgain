@@ -546,33 +546,10 @@ namespace Apache.Ignite.Core.Impl.Cache
                 ICollection<ICacheEntry<TK, TV>> res = null;
                 
                 return DoOutInOpX((int) CacheOp.GetAll,
-                    writer =>
-                    {
-                        var count = 0;
-                        var pos = writer.Stream.Position;
-                        writer.WriteInt(0);  // Reserve count.
-                        
-                        foreach (var key in keys)
-                        {
-                            TV val;
-                            if (_nearCache.TryGetValue(key, out val))
-                            {
-                                res = res ?? new List<ICacheEntry<TK, TV>>();
-                                res.Add(new CacheEntry<TK, TV>(key, val));
-                            }
-                            else
-                            {
-                                writer.WriteObjectDetached(key);
-                                count++;
-                            }
-                        }
-
-                        writer.Stream.Seek(pos);
-                        writer.WriteInt(count);
-                    },
+                    w => WriteKeysOrGetFromNear(w, keys, ref res),
                     (s, r) => r == True 
                         ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary), res) 
-                        : null,
+                        : res,
                     _readException);
             }
 
@@ -589,7 +566,18 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            return DoOutOpAsync(CacheOp.GetAllAsync, w => w.WriteEnumerable(keys), r => ReadGetAllDictionary(r));
+            if (CanUseNear)
+            {
+                ICollection<ICacheEntry<TK, TV>> res = null;
+                
+                return DoOutOpAsync(CacheOp.GetAllAsync, 
+                    w => WriteKeysOrGetFromNear(w, keys, ref res),
+                    r => ReadGetAllDictionary(r, res));
+            }
+
+            return DoOutOpAsync(CacheOp.GetAllAsync, 
+                w => w.WriteEnumerable(keys),
+                r => ReadGetAllDictionary(r));
         }
 
         /** <inheritdoc /> */
@@ -1850,6 +1838,33 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                 throw GetKeyNotFoundException(key);
             });
+        }
+
+        private void WriteKeysOrGetFromNear(BinaryWriter writer,
+            IEnumerable<TK> keys,
+            ref ICollection<ICacheEntry<TK, TV>> res)
+        {
+            var count = 0;
+            var pos = writer.Stream.Position;
+            writer.WriteInt(0); // Reserve count.
+
+            foreach (var key in keys)
+            {
+                TV val;
+                if (_nearCache.TryGetValue(key, out val))
+                {
+                    res = res ?? new List<ICacheEntry<TK, TV>>();
+                    res.Add(new CacheEntry<TK, TV>(key, val));
+                }
+                else
+                {
+                    writer.WriteObjectDetached(key);
+                    count++;
+                }
+            }
+
+            writer.Stream.Seek(pos);
+            writer.WriteInt(count);
         }
     }
 }
