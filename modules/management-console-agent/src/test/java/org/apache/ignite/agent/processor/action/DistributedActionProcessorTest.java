@@ -30,8 +30,6 @@ import org.junit.Test;
 
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.dto.action.ResponseError.INTERNAL_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.ResponseError.PARSE_ERROR_CODE;
 import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
@@ -62,8 +60,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             .setNodeIds(singleton(crdId));
 
         executeAction(req, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            List<TaskResponse> taskResults = taskResults(req.getId());
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
@@ -74,7 +71,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             return false;
         });
 
-        JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        JobResponse res = jobResult(req.getId());
 
         assertEquals(consistentId, res.getNodeConsistentId());
         assertEquals(crdId, UUID.fromString((String) res.getResult()));
@@ -91,8 +88,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             .setNodeIds(nonCrdNodeIds);
 
         executeAction(req, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            List<TaskResponse> taskResults = taskResults(req.getId());
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
@@ -108,7 +104,8 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             return false;
         });
 
-        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        List<JobResponse> responses = jobResults(req.getId());
+
         boolean responsesHasCorrectConsistentIds = nonCrdNodeConsistentIds.containsAll(
             responses
                 .stream()
@@ -129,8 +126,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             .setAction("IgniteTestActionController.nodeIdAction");
 
         executeAction(req, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            List<TaskResponse> taskResults = taskResults(req.getId());
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> completedTask = taskResults.stream().filter(r -> r.getStatus() == COMPLETED).findFirst();
@@ -146,7 +142,8 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             return false;
         });
 
-        List<JobResponse> responses = interceptor.getAllPayloads(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+        List<JobResponse> responses = jobResults(req.getId());
+        
         boolean responsesHasCorrectConsistentIds = allNodeConsistentIds.containsAll(
             responses
                 .stream()
@@ -168,8 +165,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
             .setArgument(5000);
 
         executeActionAndStopNode(req, 1000, 1, res -> {
-            List<TaskResponse> taskResults =
-                interceptor.getAllPayloads(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            List<TaskResponse> taskResults = taskResults(req.getId());
 
             Optional<TaskResponse> runningTask = taskResults.stream().filter(r -> r.getStatus() == RUNNING).findFirst();
             Optional<TaskResponse> failedTask = taskResults.stream().filter(r -> r.getStatus() == FAILED).findFirst();
@@ -199,8 +195,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
 
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getStatus() == FAILED && r.getError().getCode() == INTERNAL_ERROR_CODE;
         });
@@ -218,8 +213,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
         });
@@ -237,8 +231,7 @@ public class DistributedActionProcessorTest extends AbstractActionControllerTest
 
         executeAction(req, (res) -> {
             JobResponse r = F.first(res);
-            TaskResponse taskRes =
-                interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes.getStatus() == FAILED && r.getError().getCode() == PARSE_ERROR_CODE;
         });

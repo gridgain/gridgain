@@ -59,18 +59,13 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.client.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
-import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
-import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryEx;
 import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearLockResponse;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxFinishRequest;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.dumpprocessors.ToFileDumpProcessor;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxEntry;
@@ -98,6 +93,7 @@ import org.junit.Test;
 
 import static java.io.File.separatorChar;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLUSTER_NAME;
+import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -116,15 +112,18 @@ import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 
 /**
- * Command line handler test.
- * You can use this class if you need create nodes for each test.
- * If you not necessary create nodes for each test you can try use {@link GridCommandHandlerClusterByClassTest}
+ * Command line handler test. You can use this class if you need create nodes for each test. If you not necessary create
+ * nodes for each test you can try use {@link GridCommandHandlerClusterByClassTest}
  */
 public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAbstractTest {
-    /** */
+    /**
+     *
+     */
     protected static File defaultDiagnosticDir;
 
-    /** */
+    /**
+     *
+     */
     protected static File customDiagnosticDir;
 
     /** {@inheritDoc} */
@@ -223,7 +222,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--change-tag", newTag));
 
         //because cluster is inactive
-        assertContains(log, testOut.toString(),"Error has occurred during tag update:");
+        assertContains(log, testOut.toString(), "Error has occurred during tag update:");
 
         cl.cluster().active(true);
 
@@ -257,12 +256,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Test the deactivation command on the active and no cluster with checking
-     * the cluster name(which is set through the system property) in
-     * confirmation.
+     * Test the deactivation command on the active and no cluster with checking the cluster name(which is set through
+     * the system property) in confirmation.
      *
      * @throws Exception If failed.
-     * */
+     */
     @Test
     @WithSystemProperty(key = IGNITE_CLUSTER_NAME, value = "TEST_CLUSTER_NAME")
     public void testDeactivateWithCheckClusterNameInConfirmationBySystemProperty() throws Exception {
@@ -273,11 +271,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Test the deactivation command on the active and no cluster with checking
-     * the cluster name(default) in confirmation.
+     * Test the deactivation command on the active and no cluster with checking the cluster name(default) in
+     * confirmation.
      *
      * @throws Exception If failed.
-     * */
+     */
     @Test
     public void testDeactivateWithCheckClusterNameInConfirmationByDefault() throws Exception {
         IgniteEx igniteEx = startGrid(0);
@@ -290,12 +288,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Deactivating the cluster(active and not) with checking the cluster name
-     * in the confirmation.
+     * Deactivating the cluster(active and not) with checking the cluster name in the confirmation.
      *
      * @param igniteEx Node.
      * @param clusterName Cluster name to check in the confirmation message.
-     * */
+     */
     private void deactivateActiveOrNotClusterWithCheckClusterNameInConfirmation(
         IgniteEx igniteEx,
         String clusterName
@@ -309,12 +306,11 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Deactivating the cluster with checking the cluster name in the
-     * confirmation.
+     * Deactivating the cluster with checking the cluster name in the confirmation.
      *
      * @param igniteEx Node.
      * @param clusterName Cluster name to check in the confirmation message.
-     * */
+     */
     private void deactivateWithCheckClusterNameInConfirmation(IgniteEx igniteEx, String clusterName) {
         autoConfirmation = false;
         injectTestSystemOut();
@@ -410,6 +406,30 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_OK, execute("--baseline"));
 
         assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+    }
+
+    /**
+     * Test baseline collect works via control.sh when client node has the smallest order.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBaselineCollectWhenClientNodeHasSmallestOrder() throws Exception {
+        startGrid(0);
+
+        IgniteEx ignite = startClientGrid(1);
+        startGrid(2);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        stopGrid(0);
+        startGrid(0);
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline"));
+
+        assertEquals(2, ignite.cluster().currentBaselineTopology().size());
     }
 
     /**
@@ -1110,14 +1130,16 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         // Ignite instase 1 can be logged only in arguments list.
         boolean isInstanse1Found = Arrays.stream(testOutStr.split("\n"))
-                                        .filter(s -> s.contains("Arguments:"))
-                                        .noneMatch(s -> s.contains(getTestIgniteInstanceName() + "1"));
+            .filter(s -> s.contains("Arguments:"))
+            .noneMatch(s -> s.contains(getTestIgniteInstanceName() + "1"));
 
         assertContains(log, testOutStr, "Node not found for consistent ID:");
         assertFalse(testOutStr, isInstanse1Found);
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testIdleVerifyCheckCrcFailsOnNotIdleCluster() throws Exception {
         checkpointFreq = 100L;
@@ -1259,7 +1281,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
             checkExceptionMessageOnReport(unstableId);
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testCacheIdleVerifyCrcWithCorruptedPartition() throws Exception {
         testCacheIdleVerifyWithCorruptedPartition("--cache", "idle_verify", "--check-crc");
@@ -1270,7 +1294,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertContains(log, out, "See log for additional information.");
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testCacheIdleVerifyDumpCrcWithCorruptedPartition() throws Exception {
         testCacheIdleVerifyWithCorruptedPartition("--cache", "idle_verify", "--dump", "--check-crc");
@@ -1286,11 +1312,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         String outputStr = testOut.toString();
 
-        assertContains(log,outputStr, "idle_verify failed on 1 node.");
+        assertContains(log, outputStr, "idle_verify failed on 1 node.");
         assertContains(log, outputStr, "idle_verify check has finished, no conflicts have been found.");
     }
 
-    /** */
+    /**
+     *
+     */
     private void corruptPartition(File partitionsDir) throws IOException {
         ThreadLocalRandom rand = ThreadLocalRandom.current();
 
@@ -1307,7 +1335,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         }
     }
 
-    /** */
+    /**
+     *
+     */
     private void testCacheIdleVerifyWithCorruptedPartition(String... args) throws Exception {
         Ignite ignite = startGrids(2);
 
@@ -1387,9 +1417,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         GridCacheContext<Object, Object> cacheCtx = ignite.cachex(DEFAULT_CACHE_NAME).context();
 
-        corruptDataEntry(cacheCtx, 0, true, false);
+        corruptDataEntry(cacheCtx, 0, true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-        corruptDataEntry(cacheCtx, parts / 2, false, true);
+        corruptDataEntry(cacheCtx, parts / 2, false, true, new GridCacheVersion(0, 0, 0), "broken");
 
         assertEquals(
             EXIT_CODE_OK,
@@ -1454,7 +1484,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertContains(log, testOut.toString(), "MOVING partitions");
     }
 
-    /** */
+    /**
+     *
+     */
     @Test
     public void testCacheSequence() throws Exception {
         Ignite ignite = startGrid();
@@ -1712,7 +1744,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         }, 4, "tx-thread-" + testName);
     }
 
-    /** */
+    /**
+     *
+     */
     private static class IncrementClosure implements EntryProcessor<Long, Long, Void> {
         /** {@inheritDoc} */
         @Override public Void process(
@@ -1726,62 +1760,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Corrupts data entry.
      *
-     * @param ctx Context.
-     * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
      */
-    private void corruptDataEntry(
-        GridCacheContext<Object, Object> ctx,
-        Object key,
-        boolean breakCntr,
-        boolean breakData
-    ) {
-        int partId = ctx.affinity().partition(key);
-
-        try {
-            long updateCntr = ctx.topology().localPartition(partId).updateCounter();
-
-            Object valToPut = ctx.cache().keepBinary().get(key);
-
-            if (breakCntr)
-                updateCntr++;
-
-            if (breakData)
-                valToPut = valToPut.toString() + " broken";
-
-            // Create data entry
-            DataEntry dataEntry = new DataEntry(
-                ctx.cacheId(),
-                new KeyCacheObjectImpl(key, null, partId),
-                new CacheObjectImpl(valToPut, null),
-                GridCacheOperation.UPDATE,
-                new GridCacheVersion(),
-                new GridCacheVersion(),
-                0L,
-                partId,
-                updateCntr
-            );
-
-            GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ctx.shared().database();
-
-            db.checkpointReadLock();
-
-            try {
-                U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry, false);
-            }
-            finally {
-                db.checkpointReadUnlock();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /** */
     @Test
     public void testKillHangingLocalTransactions() throws Exception {
         Ignite ignite = startGridsMultiThreaded(2);
@@ -1850,8 +1830,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Verify that in case of setting baseline topology with offline node among others
-     * {@link IgniteException} is thrown.
+     * Verify that in case of setting baseline topology with offline node among others {@link IgniteException} is
+     * thrown.
      *
      * @throws Exception If failed.
      */

@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -38,11 +36,10 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
     private List<Map.Entry<ValueRow, Value[]>> rowBuff;
 
     /**
-     * @param ctx Kernal context.
-     * @param memTracker Memory tracker.
+     * @param ses Session.
      */
-    public PlainExternalResult(GridKernalContext ctx, H2MemoryTracker memTracker, Session ses) {
-        super(ctx, memTracker, false, 0, Value.class, null, ses.getDataHandler());
+    public PlainExternalResult(Session ses) {
+        super(ses, false, 0, Value.class);
     }
 
     /**

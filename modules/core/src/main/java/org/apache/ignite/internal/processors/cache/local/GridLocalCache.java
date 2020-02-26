@@ -317,6 +317,8 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
         if (keyCheck)
             validateCacheKeys(keys);
 
+        warnIfUnordered(keys, BulkOperation.GET);
+
         return getAllAsync0(ctx.cacheKeysView(keys),
             readThrough,
             checkTx,
