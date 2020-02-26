@@ -180,6 +180,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Volatile_3() throws Exception {
         testNodeLeftOnStableTopology(false, true, false, false);
     }
@@ -187,6 +188,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Volatile_4() throws Exception {
         testNodeLeftOnStableTopology(false, true, true, true);
     }
