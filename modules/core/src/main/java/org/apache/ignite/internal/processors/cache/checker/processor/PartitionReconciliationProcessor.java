@@ -72,16 +72,16 @@ import static org.apache.ignite.internal.processors.cache.verify.PartitionReconc
  */
 public class PartitionReconciliationProcessor extends AbstractPipelineProcessor {
     /** Session change message. */
-    public static final String SESSION_CHANGE_MSG = "Reconciliation session was changed.";
+    public static final String SESSION_CHANGE_MSG = "Reconciliation session has changed.";
 
     /** Topology change message. */
-    public static final String TOPOLOGY_CHANGE_MSG = "Topology was changed. Partition reconciliation task was stopped.";
+    public static final String TOPOLOGY_CHANGE_MSG = "Topology has changed. Partition reconciliation task was stopped.";
 
     /** Work progress message. */
     public static final String WORK_PROGRESS_MSG = "Partition reconciliation task [sesId=%s, total=%s, remaining=%s]";
 
     /** Start execution message. */
-    public static final String START_EXECUTION_MSG = "Partition reconciliation started [repair: %s, repairAlg: %s, " +
+    public static final String START_EXECUTION_MSG = "Partition reconciliation has started [repair: %s, repairAlg: %s, " +
         "batchSize: %s, recheckAttempts: %s, parallelismLevel: %s, caches: %s].";
 
     /** Error reason. */
@@ -170,7 +170,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                 Factory<?> expiryPlcFactory = cachex.configuration().getExpiryPolicyFactory();
                 if (expiryPlcFactory != null && !(expiryPlcFactory.create() instanceof EternalExpiryPolicy)) {
-                    log.warning("The cache '" + cache + "' was skipped because CacheConfiguration#setExpiryPolicyFactory exists.");
+                    log.warning("The cache '" + cache + "' was skipped because CacheConfiguration#setExpiryPolicyFactory is set.");
 
                     continue;
                 }
