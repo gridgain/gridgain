@@ -83,7 +83,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         LocalDateTime startTime = LocalDateTime.now();
-        long sesId = startTime.toEpochSecond(ZoneOffset.UTC);
+        long sesId = System.currentTimeMillis() / 1000;
 
         if (arg.parallelism() == 0) {
             int availableProcessors = Runtime.getRuntime().availableProcessors();
