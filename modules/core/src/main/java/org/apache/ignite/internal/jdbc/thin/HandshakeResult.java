@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.jdbc.thin;
 
 import java.util.EnumSet;
+import java.util.TimeZone;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
@@ -26,7 +27,6 @@ import org.apache.ignite.lang.IgniteProductVersion;
  * Handshake result.
  */
 class HandshakeResult {
-
     /** Ignite server version. */
     private IgniteProductVersion igniteVer;
 
@@ -37,7 +37,10 @@ class HandshakeResult {
     private ClientListenerProtocolVersion srvProtoVer;
 
     /** Features. */
-    private EnumSet<JdbcThinFeature> features;
+    private EnumSet<JdbcThinFeature> features = EnumSet.noneOf(JdbcThinFeature.class);
+
+    /** Server time zone. */
+    private TimeZone srvTz;
 
     /**
      * @return Ignite server version.
@@ -93,5 +96,19 @@ class HandshakeResult {
      */
     public EnumSet<JdbcThinFeature> features() {
         return features;
+    }
+
+    /**
+     * @return Server timezone
+     */
+    public TimeZone serverTimezone() {
+        return srvTz;
+    }
+
+    /**
+     * @param srvTz Server time zone.
+     */
+    public void serverTimezone(TimeZone srvTz) {
+        this.srvTz = srvTz;
     }
 }

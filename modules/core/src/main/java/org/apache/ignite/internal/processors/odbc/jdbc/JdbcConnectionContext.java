@@ -182,7 +182,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
         Boolean dataPageScanEnabled = null;
         Integer updateBatchSize = null;
         long maxMemory = 0L;
-        EnumSet<JdbcThinFeature> features = null;
+        EnumSet<JdbcThinFeature> features = EnumSet.noneOf(JdbcThinFeature.class);
 
         try {
             if (ver.compareTo(VER_2_8_0) >= 0) {
@@ -228,7 +228,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
             actx = authenticate(user, passwd);
         }
 
-        protoCtx = new JdbcProtocolContext(ver, features);
+        protoCtx = new JdbcProtocolContext(ver, features, null, false);
 
         parser = new JdbcMessageParser(ctx, protoCtx);
 

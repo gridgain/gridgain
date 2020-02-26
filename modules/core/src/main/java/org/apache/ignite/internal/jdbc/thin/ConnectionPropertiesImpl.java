@@ -25,6 +25,7 @@ import java.util.StringTokenizer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.processors.odbc.SqlStateCode;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.processors.query.NestedTxMode;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.apache.ignite.internal.util.typedef.F;
@@ -240,6 +241,25 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
             "Note: this property was introduced to get around a compatibility problem which appears when newer" +
             " clients try to fall back to protocol V2.8.0. Should not be used in general case.", false, false);
 
+    /** Disabled features. */
+    private StringProperty disabledFeatures = new StringProperty("disabledFeatures",
+        "Sets enumeration of features to force disable its.", null, null, false, new PropertyValidator() {
+        @Override public void validate(String val) throws SQLException {
+            if (val == null)
+                return;
+
+            String [] features = val.split("\\W+");
+
+            for (String f : features) {
+                try {
+                    JdbcThinFeature.valueOf(f.toUpperCase());
+                }
+                catch (IllegalArgumentException e) {
+                    throw new SQLException("Unknown feature: " + f);
+                }
+            }
+        }
+    });
 
     /** Properties array. */
     private final ConnectionProperty [] propsArray = {
@@ -258,7 +278,8 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
         qryMaxMemory,
         qryTimeout,
         connTimeout,
-        limitedV2_8_0Enabled
+        limitedV2_8_0Enabled,
+        disabledFeatures
     };
 
     /** {@inheritDoc} */
@@ -655,6 +676,16 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
     /** {@inheritDoc} */
     @Override public void setLimitedV2_8_0Enabled(boolean enabled) {
         limitedV2_8_0Enabled.setValue(enabled);
+    }
+
+    /** {@inheritDoc} */
+    @Override public String disabledFeatures() {
+        return disabledFeatures.value();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void disabledFeatures(String features) {
+        disabledFeatures.setValue(features);
     }
 
     /**
