@@ -30,6 +30,7 @@ import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -70,7 +71,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setLocalPortRange(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
 
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setJoinTimeout(0);
+        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setJoinTimeout(60_000);
+        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setClientReconnectDisabled(false);
 
         cfg.setClientFailureDetectionTimeout(200000);
         cfg.setClientMode(!igniteInstanceName.equals(getTestIgniteInstanceName(0)));
@@ -140,8 +142,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
 
                 ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-                while (latch.getCount() > 0) {
-                    Thread.sleep(1000);
+                while (latch.getCount() > 0 && idx.get() < CLIENTS) {
+                    U.sleep(1000);
 
                     IgniteCache<Object, Object> cache = ignite.cache(cacheNames.get(rnd.nextInt(0, CACHES)));
 
