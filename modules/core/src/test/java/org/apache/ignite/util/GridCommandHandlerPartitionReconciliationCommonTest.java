@@ -33,7 +33,7 @@ import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.checker.tasks.PartitionReconciliationProcessorTask;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -261,7 +261,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
         assertContains(log, testOut.toString(), "INCONSISTENT KEYS: 1");
 
         // Check console output.
-        assertContains(log, testOut.toString(), PartitionReconciliationResult.HIDDEN_DATA + " ver=[topVer=");
+        assertContains(log, testOut.toString(), AffectedEntryResult.HIDDEN_DATA + " ver=[topVer=");
 
         ClusterNode primaryNode = ignite(0).affinity(DEFAULT_CACHE_NAME).mapKeyToNode(INVALID_KEY);
 
@@ -276,7 +276,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
         String inconsistencyReport = new String(Files.readAllBytes(Paths.get(pathToReport)));
 
         // Check inconsistency report.
-        assertContains(log, inconsistencyReport, PartitionReconciliationResult.HIDDEN_DATA + " ver=[topVer=");
+        assertContains(log, inconsistencyReport, AffectedEntryResult.HIDDEN_DATA + " ver=[topVer=");
     }
 
     /**

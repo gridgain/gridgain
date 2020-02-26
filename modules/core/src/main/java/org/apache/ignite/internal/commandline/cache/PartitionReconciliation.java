@@ -40,7 +40,7 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -69,9 +69,8 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
  */
 public class PartitionReconciliation implements Command<PartitionReconciliation.Arguments> {
     /** Parallelism format error message. */
-    public static final String PARALLELISM_FORMAT_MESSAGE = "Invalid parallelism: %s. Integer value " +
-        "from 1 to 128 should be specified, or 0 (Runtime.getRuntime().availableProcessors() " +
-        "will be used in such case).";
+    public static final String PARALLELISM_FORMAT_MESSAGE = "Invalid parallelism: %s. The positive integer " +
+        "should be specified.";
 
     /** Batch size format error message. */
     public static final String BATCH_SIZE_FORMAT_MESSAGE = "Invalid batch size: %s" +
@@ -107,8 +106,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
 
         paramsDesc.put(PARALLELISM.toString(),
             "Maximum number of threads that can be involved in partition reconciliation activities on one node. " +
-                "Default value is " + PARALLELISM.defaultValue() + ", which means the value will be initialzed with " +
-                "Runtime.getRuntime().availableProcessors() of a server node.");
+                "Default value equals number of cores.");
 
         paramsDesc.put(BATCH_SIZE.toString(),
             "Amount of keys to retrieve within one job. Default value is " + BATCH_SIZE.defaultValue() + '.');
@@ -192,7 +190,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 .map(n -> String.format(strErrReason, n.nodeId(), n.consistentId()))
                 .collect(toList());
 
-            print(new ReconciliationResult(new PartitionReconciliationResult(), new HashMap<>(), errs), log::info);
+            print(new ReconciliationResult(new AffectedEntryResult(), new HashMap<>(), errs), log::info);
 
             throw new VisorIllegalStateException("There are server nodes not supported partition reconciliation.");
         }
@@ -277,7 +275,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                             throw new IllegalArgumentException(String.format(PARALLELISM_FORMAT_MESSAGE, strVal));
                         }
 
-                        if (parallelism < 0 || parallelism > 128)
+                        if (parallelism < 0)
                             throw new IllegalArgumentException(String.format(PARALLELISM_FORMAT_MESSAGE, strVal));
 
                         break;
@@ -406,7 +404,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
      * @param printer Printer.
      */
     private void print(ReconciliationResult res, Consumer<String> printer) {
-        PartitionReconciliationResult reconciliationRes = res.partitionReconciliationResult();
+        AffectedEntryResult reconciliationRes = res.partitionReconciliationResult();
 
         printer.accept(prepareHeaderMeta());
 

@@ -37,7 +37,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     /**
      * Result.
      */
-    private PartitionReconciliationResult res;
+    private AffectedEntryResult res;
 
     /**
      * Folders with local results.
@@ -61,7 +61,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
      * @param errors Errors.
      */
     public ReconciliationResult(
-        PartitionReconciliationResult partReconciliationRes,
+        AffectedEntryResult partReconciliationRes,
         Map<UUID, String> nodeIdToFolder,
         List<String> errors
     ) {
@@ -79,7 +79,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
 
     /** {@inheritDoc} */
     @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
-        res = (PartitionReconciliationResult)in.readObject();
+        res = (AffectedEntryResult)in.readObject();
 
         nodeIdToFolder = U.readMap(in);
 
@@ -89,7 +89,7 @@ public class ReconciliationResult extends IgniteDataTransferObject {
     /**
      * @return Result.
      */
-    public PartitionReconciliationResult partitionReconciliationResult() {
+    public AffectedEntryResult partitionReconciliationResult() {
         return res;
     }
 

@@ -25,7 +25,7 @@ import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
-import static org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult.HIDDEN_DATA;
+import static org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResult.HIDDEN_DATA;
 
 /**
  * Container for key value.

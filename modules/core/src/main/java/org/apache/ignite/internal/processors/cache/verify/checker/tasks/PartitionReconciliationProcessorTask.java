@@ -20,7 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,8 +38,8 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResultMeta;
+import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResultExtended;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -85,9 +84,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         LocalDateTime startTime = LocalDateTime.now();
         long sesId = System.currentTimeMillis() / 1000;
 
-        if (arg.parallelism() == 0) {
-            int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
 
+        if (arg.parallelism() == 0 || arg.parallelism() > availableProcessors) {
             U.warn(log, "Partition reconciliation [session=" + sesId + "] will be executed with " +
                 "[parallelism=" + availableProcessors + "] according to number of CPU cores of the local node" );
 
@@ -106,9 +105,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     @Override public ReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
         Map<UUID, String> nodeIdToFolder = new HashMap<>();
 
-        PartitionReconciliationResult res = localOutoutMode ?
-            new PartitionReconciliationResult() :
-            new PartitionReconciliationResultMeta();
+        AffectedEntryResult res = localOutoutMode ?
+            new AffectedEntryResult() :
+            new AffectedEntryResultExtended();
 
         List<String> errors = new ArrayList<>();
 
@@ -122,7 +121,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 continue;
             }
 
-            T2<String, ExecutionResult<PartitionReconciliationResult>> data = result.getData();
+            T2<String, ExecutionResult<AffectedEntryResult>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
             res.merge(data.get2().getRes());
@@ -189,7 +188,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ExecutionResult<PartitionReconciliationResult>> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<AffectedEntryResult>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
@@ -204,14 +203,14 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new T2<>(null, new ExecutionResult<>(new PartitionReconciliationResultMeta(), "The cache '" + cacheRegexp + "' doesn't exist."));
+                        return new T2<>(null, new ExecutionResult<>(new AffectedEntryResultExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
 
                     caches.addAll(acceptedCaches);
                 }
             }
 
             try {
-                ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(
+                ExecutionResult<AffectedEntryResult> reconciliationRes = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
                     caches,
@@ -227,7 +226,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
                 return new T2<>(
                     path,
-                    reconciliationTaskArg.locOutput() ? reconciliationRes : new ExecutionResult<>(new PartitionReconciliationResultMeta(
+                    reconciliationTaskArg.locOutput() ? reconciliationRes : new ExecutionResult<>(new AffectedEntryResultExtended(
                         reconciliationRes.getRes().inconsistentKeysCount(),
                         reconciliationRes.getRes().skippedEntriesCount(),
                         reconciliationRes.getRes().skippedEntriesCount()), reconciliationRes.getErrorMsg())
@@ -246,7 +245,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
          *
          * @return link to file with result.
          */
-        private String localPrint(PartitionReconciliationResult reconciliationRes) {
+        private String localPrint(AffectedEntryResult reconciliationRes) {
             if (reconciliationRes != null && !reconciliationRes.isEmpty()) {
                 try {
                     File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);

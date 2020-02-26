@@ -34,7 +34,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.DataRow;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedEntry;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
@@ -110,14 +110,14 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
             if (result.getException() != null)
                 return new ExecutionResult<>(result.getException().getMessage());
 
-            ExecutionResult<List<DataRow>> excRes = result.getData();
+            ExecutionResult<List<VersionedEntry>> excRes = result.getData();
 
             if (excRes.getErrorMsg() != null)
                 return new ExecutionResult<>(excRes.getErrorMsg());
 
-            List<DataRow> partKeys = excRes.getRes();
+            List<VersionedEntry> partKeys = excRes.getRes();
 
-            for (DataRow key : partKeys) {
+            for (VersionedEntry key : partKeys) {
                 try {
                     KeyCacheObject keyObj = unmarshalKey(key.getKey(), ctx);
                     res.computeIfAbsent(keyObj, k -> new HashMap<>()).put(
@@ -161,7 +161,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
         }
 
         /** {@inheritDoc} */
-        @Override protected ExecutionResult<List<DataRow>> execute0() {
+        @Override protected ExecutionResult<List<VersionedEntry>> execute0() {
             GridCacheContext<Object, Object> cctx = ignite.context().cache().cache(recheckReq.cacheName()).context();
 
             CacheGroupContext grpCtx = cctx.group();
@@ -172,7 +172,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
             part.reserve();
 
-            List<DataRow> recheckedKeys = new ArrayList<>();
+            List<VersionedEntry> recheckedKeys = new ArrayList<>();
 
             long updateCntr = part.updateCounter();
             long recheckStartTime = System.currentTimeMillis();
@@ -185,7 +185,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
                         CacheDataRow row = grpCtx.offheap().dataStore(part).find(cctx, key);
 
                         if (row != null)
-                            recheckedKeys.add(new DataRow(ignite.localNode().id(), row.key(), row.version(), row.value(), updateCntr, recheckStartTime));
+                            recheckedKeys.add(new VersionedEntry(ignite.localNode().id(), row.key(), row.version(), row.value(), updateCntr, recheckStartTime));
                     }
                     catch (IgniteCheckedException e) {
                         String errMsg = "Recheck key [key=" + recheckKey + "] was skipped.";

@@ -37,7 +37,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 /**
  * Result with lists of broken and fixed, skipped entries.
  */
-public class PartitionReconciliationResult extends IgniteDataTransferObject {
+public class AffectedEntryResult extends IgniteDataTransferObject {
     /**
      *
      */
@@ -56,13 +56,13 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     private Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches = new HashSet<>();
 
     /** Skipped entries. */
-    private Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
+    private Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
         skippedEntries = new HashMap<>();
 
     /**
      * Default constructor for externalization.
      */
-    public PartitionReconciliationResult() {
+    public AffectedEntryResult() {
     }
 
     /**
@@ -71,7 +71,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
      * @param skippedEntries Skipped entries.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public PartitionReconciliationResult(
+    public AffectedEntryResult(
         Map<UUID, String> nodesIdsToConsistentIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
@@ -87,7 +87,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
      * @param skippedCaches Skipped caches.
      * @param skippedEntries Skipped entries.
      */
-    public PartitionReconciliationResult(
+    public AffectedEntryResult(
         Map<UUID, String> nodesIdsToConsistentIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches,
@@ -248,7 +248,7 @@ public class PartitionReconciliationResult extends IgniteDataTransferObject {
     /**
      * Added outer value to this class.
      */
-    public void merge(PartitionReconciliationResult outer) {
+    public void merge(AffectedEntryResult outer) {
         assert outer != null;
 
         this.nodesIdsToConsistentIdsMap.putAll(outer.nodesIdsToConsistentIdsMap);
