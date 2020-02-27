@@ -42,7 +42,7 @@ public abstract class GroupByData {
      */
     protected GroupByData(Session ses) {
         this.ses = ses;
-        this.tracker = ses.queryMemoryTracker();
+        this.tracker = ses.memoryTracker();
 
         if (tracker == null)
             memReserved = -1;

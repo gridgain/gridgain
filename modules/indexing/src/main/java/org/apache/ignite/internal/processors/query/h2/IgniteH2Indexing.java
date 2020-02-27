@@ -546,9 +546,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
-                true,
-                memoryMgr.createQueryMemoryTracker(maxMem),
-                memoryMgr);
+                true);
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
@@ -577,7 +575,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             timeout,
                             cancel,
                             qryParams.dataPageScanEnabled(),
-                            qryInfo
+                            qryInfo,
+                            maxMem
                         );
 
                         return new H2FieldsIterator(rs, mvccTracker, conn, qryParams.pageSize(), log, IgniteH2Indexing.this, qryInfo);
@@ -808,8 +807,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         else
             ses.setQueryTimeout(0);
 
-        ses.setOffloadedToDisk(false);
-
         try {
             return stmt.executeQuery();
         }
@@ -858,10 +855,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,
-        final H2QueryInfo qryInfo
+        final H2QueryInfo qryInfo,
+        long maxMem
     ) throws IgniteCheckedException {
         return executeSqlQueryWithTimer(preparedStatementWithParams(conn, sql, params, false),
-            conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo);
+            conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo, maxMem);
     }
 
     /**
@@ -894,10 +892,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,
-        final H2QueryInfo qryInfo
+        final H2QueryInfo qryInfo,
+        long maxMem
     ) throws IgniteCheckedException {
-        if (qryInfo != null)
+        if (qryInfo != null) {
             longRunningQryMgr.registerQuery(qryInfo);
+
+            setupMemoryTracking(conn, maxMem, qryInfo.buildShortQueryInfoString());
+        }
 
         enableDataPageScan(dataPageScanEnabled);
 
@@ -923,6 +925,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (qryInfo != null)
                 longRunningQryMgr.unregisterQuery(qryInfo);
         }
+    }
+
+    /**
+     * @param conn Connection.
+     * @param maxMem Max memory.
+     * @param qryDesc Query descriptor.
+     */
+    public void setupMemoryTracking(H2PooledConnection conn, long maxMem, String qryDesc) {
+        Session s = H2Utils.session(conn);
+
+        s.groupByDataFactory(memoryMgr);
+
+        QueryMemoryTracker memTracker = memoryMgr.createQueryMemoryTracker(maxMem, qryDesc);
+
+        if (memTracker != null)
+            s.memoryTracker(memTracker);
     }
 
     /** {@inheritDoc} */
