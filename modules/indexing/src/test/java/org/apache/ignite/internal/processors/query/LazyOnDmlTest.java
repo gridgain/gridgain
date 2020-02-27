@@ -57,7 +57,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 @RunWith(Parameterized.class)
 public class LazyOnDmlTest extends AbstractIndexingCommonTest {
     /** Keys count. */
-    private static final int KEY_CNT = 10_000;
+    private static final int KEY_CNT = 3_000;
 
     /** Query local results. */
     static final List<H2ManagedLocalResult> localResults = Collections.synchronizedList(new ArrayList<>());
@@ -332,21 +332,22 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
 
             H2MemoryTracker memoryTracker = ses.queryMemoryTracker();
 
+            H2ManagedLocalResult res;
             if (memoryTracker != null) {
-                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
+                 res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
 
                         memoryTracker().released(memoryReserved());
                     }
                 };
-
-                localResults.add(res);
-
-                return res;
             }
+            else
+                res = new H2ManagedLocalResult(ses, null, expressions, visibleColCnt);
 
-            return new H2ManagedLocalResult(ses, null, expressions, visibleColCnt);
+            localResults.add(res);
+
+            return res;
         }
 
         /** {@inheritDoc} */
