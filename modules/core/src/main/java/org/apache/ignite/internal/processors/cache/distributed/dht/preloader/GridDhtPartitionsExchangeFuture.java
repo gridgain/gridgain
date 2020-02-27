@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
-import javax.cache.expiry.EternalExpiryPolicy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +40,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.cache.expiry.EternalExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -95,6 +95,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsStateValidator;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionStateValidationException;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
@@ -728,6 +729,33 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      */
     public GridDhtPartitionExchangeId exchangeId() {
         return exchId;
+    }
+
+    /**
+     * Returns a collection of partitions (per cache group) that did not pass validation by update counter or size.
+     *
+     * Please take into account that the following cache configurations disable partitions validation:
+     * <ul>
+     * <li> 3-rd party persistence.
+     * See {@link CacheConfiguration#isReadThrough()}, {@link CacheConfiguration#isWriteThrough()}
+     * and {@link CacheConfiguration#getCacheStoreFactory()}. </li>
+     *
+     * <li> Manual rebalancing. See {@link CacheConfiguration#getRebalanceDelay()}. </li>
+     *
+     * <li> Disabled rebalancing. See {@link CacheRebalanceMode#NONE}. </li>
+     *
+     * <li> Using expiry policies except {@link EternalExpiryPolicy}. </li>
+     *
+     * <li> When partition size validation is explicitly disabled with IGNITE_SKIP_PARTITION_SIZE_VALIDATION property. </li>
+     * </ul>
+     *
+     * @return Collection of partitions that did not pass validation for all caches that were checked.
+     */
+    public Map<Integer, Set<Integer>> invalidPartitions() {
+        assert isDone() :
+            "GridDhtPartitionsExchangeFuture must be done before calling ivalidPartitions method [fut=" + this + ']';
+
+        return validator.invalidPartitions();
     }
 
     /**
@@ -2654,6 +2682,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         newCrdFut = null;
         exchangeLocE = null;
         exchangeGlobalExceptions.clear();
+        validator.cleanUp();
         if (finishState != null)
             finishState.cleanUp();
     }
@@ -3949,7 +3978,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     try {
                         validator.validatePartitionCountersAndSizes(GridDhtPartitionsExchangeFuture.this, top, msgs);
                     }
-                    catch (IgniteCheckedException ex) {
+                    catch (PartitionStateValidationException ex) {
                         log.warning(String.format(PARTITION_STATE_FAILED_MSG, grpCtx.cacheOrGroupName(), ex.getMessage()));
                         // TODO: Handle such errors https://issues.apache.org/jira/browse/IGNITE-7833
                     }

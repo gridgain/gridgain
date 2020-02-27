@@ -19,6 +19,7 @@ package org.apache.ignite.internal.visor.checker;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
@@ -28,9 +29,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  * Partition reconciliation task arguments.
  */
 public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObject {
-    /**
-     *
-     */
+    /** */
     private static final long serialVersionUID = 0L;
 
     /** Caches. */
@@ -41,6 +40,16 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
     /** Print result to locOutput. */
     private boolean locOutput;
+
+    /** Flag indicates that only subset of partitions should be checked and repaired. */
+    private boolean fastCheck;
+
+    /**
+     * Collection of partitions whcih should be validated.
+     * This collection can be {@code null}, this means that all partitions should be validated/repaired.
+     * Mapping: Cache group id -> collection of partitions.
+     */
+    private Map<Integer, Set<Integer>> partsToRepair;
 
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     private boolean includeSensitive;
@@ -72,11 +81,35 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
     /**
      * Constructor.
+     *
+     * @param caches List of cache names to be checked.
+     * @param fastCheck If {@code true} then only partitions that did not pass validation
+     *                  during the last partition map exchange will be checked and repaired.
+     *                  Otherwise, all partitions will be taken into account.
+     * @param repair Flag indicates that an inconsistency should be fixed in accordance with {@code repairAlg} parameter.
+     * @param includeSensitive Flag indicates that the result should include sensitive information such as key and value.
+     * @param locOutput Flag indicates that the result is printed to the console.
+     * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
+     * @param batchSize Amount of keys to checked at one time.
+     * @param recheckAttempts Amount of potentially inconsistent keys recheck attempts.
+     * @param repairAlg Partition reconciliation repair algorithm to be used.
+     * @param recheckDelay Recheck delay in seconds.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public VisorPartitionReconciliationTaskArg(Set<String> caches, boolean repair, boolean includeSensitive, boolean locOutput,
-        int parallelism, int batchSize, int recheckAttempts, RepairAlgorithm repairAlg, int recheckDelay) {
+    public VisorPartitionReconciliationTaskArg(
+        Set<String> caches,
+        boolean fastCheck,
+        boolean repair,
+        boolean includeSensitive,
+        boolean locOutput,
+        int parallelism,
+        int batchSize,
+        int recheckAttempts,
+        RepairAlgorithm repairAlg,
+        int recheckDelay
+    ) {
         this.caches = caches;
+        this.fastCheck = fastCheck;
         this.includeSensitive = includeSensitive;
         this.locOutput = locOutput;
         this.repair = repair;
@@ -87,6 +120,26 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         this.recheckDelay = recheckDelay;
     }
 
+    /**
+     * Creates a new instance of VisorPartitionReconciliationTaskArg initialized the given builder.
+     *
+     * @param b Reconciliation arguments builder.
+     */
+    public VisorPartitionReconciliationTaskArg(Builder b) {
+        this(b.caches,
+             b.fastCheck,
+             b.repair,
+             b.includeSensitive,
+             b.locOutput,
+             b.parallelism,
+             b.batchSize,
+             b.recheckAttempts,
+             b.repairAlg,
+             b.recheckDelay);
+
+        partsToRepair = b.partsToRepair;
+    }
+
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeCollection(out, caches);
@@ -94,6 +147,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         out.writeBoolean(repair);
 
         out.writeBoolean(includeSensitive);
+
+        out.writeBoolean(fastCheck);
 
         out.writeBoolean(locOutput);
 
@@ -106,17 +161,20 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         U.writeEnum(out, repairAlg);
 
         out.writeInt(recheckDelay);
+
+        U.writeIntKeyMap(out, partsToRepair);
     }
 
     /** {@inheritDoc} */
-    @Override protected void readExternalData(byte protoVer, ObjectInput in)
-        throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
 
         caches = U.readSet(in);
 
         repair = in.readBoolean();
 
         includeSensitive = in.readBoolean();
+
+        fastCheck = in.readBoolean();
 
         locOutput = in.readBoolean();
 
@@ -129,6 +187,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         repairAlg = RepairAlgorithm.fromOrdinal(in.readByte());
 
         recheckDelay = in.readInt();
+
+        partsToRepair = U.readIntKeyMap(in);
     }
 
     /**
@@ -143,6 +203,21 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
      */
     public boolean repair() {
         return repair;
+    }
+
+    /**
+     * @return {@code true} if only partitions that did not pass validation during the last partition map exchange
+     * will be checked and repaired.
+     */
+    public boolean fastCheck() {
+        return fastCheck;
+    }
+
+    /**
+     * @return Collection of partitions that should be checked and repaired.
+     */
+    public Map<Integer, Set<Integer>> partitionsToRepair() {
+        return partsToRepair;
     }
 
     /**
@@ -207,6 +282,16 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         /** Print result to locOutput. */
         private boolean locOutput;
 
+        /** Flag indicates that only subset of partitions should be checked and repaired. */
+        private boolean fastCheck;
+
+        /**
+         * Collection of partitions whcih should be validated.
+         * This collection can be {@code null}, this means that all partitions should be validated/repaired.
+         * Mapping: Cache group id -> collection of partitions.
+         */
+        private Map<Integer, Set<Integer>> partsToRepair;
+
         /** If {@code true} - print data to result with sensitive information: keys and values. */
         private boolean includeSensitive;
 
@@ -236,6 +321,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             repair = false;
             locOutput = true;
             includeSensitive = true;
+            fastCheck = false;
             parallelism = 4;
             batchSize = 100;
             recheckAttempts = 2;
@@ -253,6 +339,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
             repair = cpFrom.repair;
             locOutput = cpFrom.locOutput;
             includeSensitive = cpFrom.includeSensitive;
+            fastCheck = cpFrom.fastCheck;
+            partsToRepair = cpFrom.partsToRepair;
             parallelism = cpFrom.parallelism;
             batchSize = cpFrom.batchSize;
             recheckAttempts = cpFrom.batchSize;
@@ -265,12 +353,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
          * Build metod.
          */
         public VisorPartitionReconciliationTaskArg build() {
-            return new VisorPartitionReconciliationTaskArg(
-                caches, repair, includeSensitive, locOutput, parallelism, batchSize, recheckAttempts, repairAlg, recheckDelay);
+            return new VisorPartitionReconciliationTaskArg(this);
         }
 
         /**
          * @param caches New caches.
+         * @return Builder for chaning.
          */
         public Builder caches(Set<String> caches) {
             this.caches = caches;
@@ -280,6 +368,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param repair New if  - Partition Reconciliation&Fix: update from Primary partition.
+         * @return Builder for chaning.
          */
         public Builder repair(boolean repair) {
             this.repair = repair;
@@ -288,7 +377,29 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
-         * @param locOutput New print result to locOutput.
+         * @param fastCheck Flag indicates that only partitions that did not pass validation
+         *                  during the last partition map exchange will be checked and repaired.
+         * @return Builder for chaning.
+         */
+        public Builder fastCheck(boolean fastCheck) {
+            this.fastCheck = fastCheck;
+
+            return this;
+        }
+
+        /**
+         * @param partsToRepair  Collection of partitions that should be checked and repaired.
+         * @return Builder for chaning.
+         */
+        public Builder partitionsToRepair(Map<Integer, Set<Integer>> partsToRepair) {
+            this.partsToRepair = partsToRepair;
+
+            return this;
+        }
+
+        /**
+         * @param locOutput The result will be primted to output if {@code locOutput} equals to {@code true}.
+         * @return Builder for chaning.
          */
         public Builder locOutput(boolean locOutput) {
             this.locOutput = locOutput;
@@ -297,7 +408,8 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         }
 
         /**
-         * @param includeSensitive New if  - print data to result with sensitive information: keys and values.
+         * @param includeSensitive If {@code true} then sensitive information is included into result.
+         * @return Builder for chaning.
          */
         public Builder includeSensitive(boolean includeSensitive) {
             this.includeSensitive = includeSensitive;
@@ -307,6 +419,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param parallelism Maximum number of threads that can be involved in reconciliation activities.
+         * @return Builder for chaning.
          */
         public Builder parallelism(int parallelism) {
             this.parallelism = parallelism;
@@ -316,6 +429,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param batchSize New amount of keys to retrieve within one job.
+         * @return Builder for chaning.
          */
         public Builder batchSize(int batchSize) {
             this.batchSize = batchSize;
@@ -325,6 +439,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param recheckAttempts New amount of potentially inconsistent keys recheck attempts.
+         * @return Builder for chaning.
          */
         public Builder recheckAttempts(int recheckAttempts) {
             this.recheckAttempts = recheckAttempts;
@@ -334,6 +449,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param repairAlg New specifies which fix algorithm to use: options  while repairing doubtful keys.
+         * @return Builder for chaning.
          */
         public Builder repairAlg(RepairAlgorithm repairAlg) {
             this.repairAlg = repairAlg;
@@ -343,6 +459,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         /**
          * @param recheckDelay Recheck delay seconds.
+         * @return Builder for chaning.
          */
         public Builder recheckDelay(int recheckDelay) {
             this.recheckDelay = recheckDelay;
