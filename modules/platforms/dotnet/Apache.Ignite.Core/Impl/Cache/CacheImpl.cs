@@ -1052,6 +1052,48 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /// <summary>
+        /// Internal async integer size routine.
+        /// </summary>
+        /// <param name="modes">peek modes</param>
+        /// <returns>Size.</returns>
+        private Task<int> SizeAsync0(params CachePeekMode[] modes)
+        {
+            int nativeNearSize;
+            bool onlyNativeNear;
+            var modes0 = EncodePeekModes(false, null, modes, out onlyNativeNear, out nativeNearSize);
+            
+            return DoOutOpAsync<int>(CacheOp.SizeAsync, w => w.WriteInt(modes0));
+        }
+        
+        /// <summary>
+        /// Internal async long size routine.
+        /// </summary>
+        /// <param name="part">Partition number</param>
+        /// <param name="modes">peek modes</param>
+        /// <returns>Size.</returns>
+        private Task<long> SizeAsync0(int? part, params CachePeekMode[] modes)
+        {
+            int nativeNearSize;
+            bool onlyNativeNear;
+            var modes0 = EncodePeekModes(false, part, modes, out onlyNativeNear, out nativeNearSize);
+
+            return DoOutOpAsync<long>(CacheOp.SizeLongAsync, writer =>
+            {
+                writer.WriteInt(modes0);
+                     
+                if (part != null)
+                {
+                    writer.WriteBoolean(true);
+                    writer.WriteInt((int) part);
+                }
+                else
+                {
+                    writer.WriteBoolean(false);   
+                }             
+            });
+        }
+
+        /// <summary>
         /// Encodes peek modes, includes native near check.
         /// </summary>
         private int EncodePeekModes(bool loc, int? part, CachePeekMode[] modes, out bool onlyNativeNear, out int size)
@@ -1088,48 +1130,6 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             return modes0;
-        }
-
-        /// <summary>
-        /// Internal async integer size routine.
-        /// </summary>
-        /// <param name="modes">peek modes</param>
-        /// <returns>Size.</returns>
-        private Task<int> SizeAsync0(params CachePeekMode[] modes)
-        {
-            // TODO
-            bool hasNativeNear;
-            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
-
-            return DoOutOpAsync<int>(CacheOp.SizeAsync, w => w.WriteInt(modes0));
-        }
-        
-        /// <summary>
-        /// Internal async long size routine.
-        /// </summary>
-        /// <param name="part">Partition number</param>
-        /// <param name="modes">peek modes</param>
-        /// <returns>Size.</returns>
-        private Task<long> SizeAsync0(int? part, params CachePeekMode[] modes)
-        {
-            // TODO
-            bool hasNativeNear;
-            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
-
-            return DoOutOpAsync<long>(CacheOp.SizeLongAsync, writer =>
-            {
-                writer.WriteInt(modes0);
-                     
-                if (part != null)
-                {
-                    writer.WriteBoolean(true);
-                    writer.WriteInt((int) part);
-                }
-                else
-                {
-                    writer.WriteBoolean(false);   
-                }             
-            });
         }
 
         /** <inheritdoc /> */
