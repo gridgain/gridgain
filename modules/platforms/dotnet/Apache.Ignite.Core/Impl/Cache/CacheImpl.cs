@@ -1003,6 +1003,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             bool hasNativeNear;
             var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+            var size = 0;
 
             if (hasNativeNear)
             {
@@ -1011,19 +1012,22 @@ namespace Apache.Ignite.Core.Impl.Cache
                     throw new InvalidOperationException(
                         string.Format("{0} can only be used to get local size", CachePeekMode.NativeNear));
                 }
-                
-                if (modes.Length == 1 && _nearCache != null)
-                {
-                    return _nearCache.GetSize();
-                }
 
-                // TODO
-                throw new NotImplementedException();
+                if (_nearCache != null)
+                {
+                    size += _nearCache.GetSize();
+                }
+                
+                if (modes.Length == 1)
+                {
+                    // Only native near - early exit.
+                    return size;
+                }
             }
 
             var op = loc ? CacheOp.SizeLoc : CacheOp.Size;
 
-            return (int) DoOutInOp((int) op, modes0); 
+            return (int) DoOutInOp((int) op, modes0) + size; 
         }
         
         /// <summary>
