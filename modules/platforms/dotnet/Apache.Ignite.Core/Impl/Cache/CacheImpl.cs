@@ -373,7 +373,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (CanUseNear && _nearCache.ContainsKey<TK, TV>(key))
+            TV _;
+            if (CanUseNear && _nearCache.TryGetValue(key, out _))
             {
                 return true;
             }
@@ -386,7 +387,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (CanUseNear && _nearCache.ContainsKey<TK, TV>(key))
+            TV _;
+            if (CanUseNear && _nearCache.TryGetValue(key, out _))
             {
                 return TaskRunner.FromResult(true);
             }
@@ -480,13 +482,12 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            return CanUseNear 
-                ? _nearCache.GetOrAdd(key, k => GetInternal(k)) 
-                : GetInternal(key);
-        }
+            TV val;
+            if (CanUseNear && _nearCache.TryGetValue(key, out val))
+            {
+                return val;
+            }
 
-        private TV GetInternal(TK key)
-        {
             return DoOutInOpX((int) CacheOp.Get,
                 w => w.Write(key),
                 (stream, res) =>

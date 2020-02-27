@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System;
     using System.Collections.Concurrent;
     using System.Diagnostics;
-    using System.Linq;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -94,21 +93,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             return false;
         }
 
-        public TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory)
-        {
-            TVal val;
-            if (TryGetValue(key, out val))
-            {
-                return val;
-            }
-
-            // The only code path that puts values into _map goes through Java callbacks (Update method).
-            // We can't call _map.GetOrAdd, because near entry may become evicted concurrently, causing stale data.
-            // If the following valueFactory() call causes NearCacheEntry to be created for the key,
-            // then _map will be updated in the background.
-            return valueFactory(key);
-        }
-
         /** <inheritdoc /> */
         public int GetSize()
         {
@@ -117,19 +101,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return 0;
             }
 
-            return _map.Count(e => IsValid(e.Value));
-        }
-
-        /** <inheritdoc /> */
-        public bool ContainsKey<TKey, TVal>(TKey key)
-        {
-            if (_stopped)
-            {
-                return false;
-            }
+            var count = 0;
             
-            object _;
-            return TryGetValue(key, out _);
+            foreach (var e in _map)
+            {
+                if (IsValid(e.Value))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         /** <inheritdoc /> */

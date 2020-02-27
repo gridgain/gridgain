@@ -43,14 +43,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
         bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
         
-        TVal GetOrAdd<TKey, TVal>(TKey key, Func<TKey, TVal> valueFactory);
-        
         /// <summary>
         /// Gets the size.
         /// </summary>
         int GetSize();
-
-        bool ContainsKey<TKey, TVal>(TKey key);
 
         /// <summary>
         /// Removes all mappings from the cache.
