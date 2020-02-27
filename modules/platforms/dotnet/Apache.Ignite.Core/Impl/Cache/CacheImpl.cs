@@ -559,7 +559,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     (s, r) => r == True 
                         ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary), res) 
                         : res,
-                    _readException);
+                    _readException) ?? res;
             }
 
             return DoOutInOpX((int) CacheOp.GetAll,
@@ -579,6 +579,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 ICollection<ICacheEntry<TK, TV>> res = null;
                 
+                // TODO: Avoid Java call when all keys are in near.
                 return DoOutOpAsync(CacheOp.GetAllAsync, 
                     w => WriteKeysOrGetFromNear(w, keys, ref res),
                     r => ReadGetAllDictionary(r, res));

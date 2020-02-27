@@ -635,6 +635,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
+        public void TestGetAllNearOnly()
+        {
+            // TODO: When all keys are in near, there is no Java call.
+        }
+
+        [Test]
         public void TestLocalPeek([Values(true, false)] bool client)
         {
             // TODO: Test in combination with other modes.
