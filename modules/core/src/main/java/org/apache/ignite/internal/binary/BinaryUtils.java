@@ -46,6 +46,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.binary.BinaryCollectionFactory;
@@ -1575,6 +1576,21 @@ public class BinaryUtils {
     }
 
     /**
+     * @param in Binary input stream.
+     * @return Type ID specified at the input stream
+     * @throws BinaryObjectException If failed.
+     */
+    public static int doReadTypeId(BinaryInputStream in)
+            throws BinaryObjectException {
+        int typeId = in.readInt();
+
+        if (typeId == GridBinaryMarshaller.UNREGISTERED_TYPE_ID)
+            doReadClassName(in);
+
+        return typeId;
+    }
+
+    /**
      * @return Value.
      */
     @SuppressWarnings("ConstantConditions")
@@ -2016,11 +2032,17 @@ public class BinaryUtils {
      * @return Value.
      * @throws BinaryObjectException In case of error.
      */
-    public static Object[] doReadObjectArray(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
+    public static Object doReadObjectArray(BinaryInputStream in, BinaryContext ctx, ClassLoader ldr,
         BinaryReaderHandlesHolder handles, boolean deserialize) throws BinaryObjectException {
         int hPos = positionForHandle(in);
 
-        Class compType = doReadClass(in, ctx, ldr, deserialize);
+        Class<?> compType = null;
+        int compTypeId = 0;
+
+        if (deserialize)
+            compType = doReadClass(in, ctx, ldr, deserialize);
+        else
+            compTypeId = doReadTypeId(in);
 
         int len = in.readInt();
 
@@ -2031,7 +2053,11 @@ public class BinaryUtils {
         for (int i = 0; i < len; i++)
             arr[i] = deserializeOrUnmarshal(in, ctx, ldr, handles, deserialize);
 
-        return arr;
+        boolean keepCompTypeId = !deserialize
+                && compTypeId != GridBinaryMarshaller.OBJECT
+                && compTypeId != GridBinaryMarshaller.UNREGISTERED_TYPE_ID;
+
+        return keepCompTypeId ? new BinaryObjectArray(compTypeId, arr) : arr;
     }
 
     /**

@@ -273,18 +273,20 @@ public class PlatformServices extends PlatformAbstractTarget {
                 String mthdName = reader.readString();
 
                 Object[] args;
+                ServiceProxyHolder svcProxy = (ServiceProxyHolder)arg;
 
                 if (reader.readBoolean()) {
                     args = new Object[reader.readInt()];
+                    boolean keepBinary = srvKeepBinary || svcProxy.isPlatformService();
 
                     for (int i = 0; i < args.length; i++)
-                        args[i] = reader.readObjectDetached(!srvKeepBinary);
+                        args[i] = reader.readObjectDetached(!keepBinary);
                 }
                 else
                     args = null;
 
                 try {
-                    Object result = ((ServiceProxyHolder)arg).invoke(mthdName, srvKeepBinary, args);
+                    Object result = svcProxy.invoke(mthdName, srvKeepBinary, args);
 
                     PlatformUtils.writeInvocationResult(writer, result, null);
                 }
@@ -555,6 +557,14 @@ public class PlatformServices extends PlatformAbstractTarget {
 
             this.proxy = proxy;
             serviceClass = clazz;
+        }
+
+        /**
+         * @return {@code true} if the target service is a {@link PlatformService} and {@code false} if the target
+         * service is a native Java service.
+         */
+        public boolean isPlatformService() {
+            return PlatformService.class.isAssignableFrom(serviceClass);
         }
 
         /**
