@@ -21,6 +21,7 @@ import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
@@ -34,6 +35,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
+import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
@@ -95,8 +97,7 @@ public class DistributedBaselineConfiguration {
         boolean persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
 
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
-        dfltEnabled = isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && !persistenceEnabled;
-
+        dfltEnabled = false;
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
@@ -107,7 +108,10 @@ public class DistributedBaselineConfiguration {
                 }
 
                 @Override public void onReadyToWrite() {
-                    if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE)) {
+                    if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) &&
+                        IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT)) {
+                        dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
+                        dfltEnabled = isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && !persistenceEnabled;
                         setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
                         setDefaultValue(baselineAutoAdjustTimeout, dfltTimeout, log);
                     }
