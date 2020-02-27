@@ -61,21 +61,21 @@ public class VersionedKey extends IgniteDataTransferObject {
     /**
      * @return Node ID.
      */
-    public UUID getNodeId() {
+    public UUID nodeId() {
         return nodeId;
     }
 
     /**
      * @return Key.
      */
-    public KeyCacheObject getKey() {
+    public KeyCacheObject key() {
         return key;
     }
 
     /**
      * @return Write version of current entry.
      */
-    public GridCacheVersion getVer() {
+    public GridCacheVersion ver() {
         return ver;
     }
 

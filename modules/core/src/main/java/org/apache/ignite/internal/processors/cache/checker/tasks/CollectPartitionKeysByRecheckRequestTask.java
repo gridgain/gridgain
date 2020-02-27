@@ -122,7 +122,7 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
                     KeyCacheObject keyObj = unmarshalKey(key.key(), ctx);
                     res.computeIfAbsent(keyObj, k -> new HashMap<>()).put(
                         key.nodeId(),
-                        new VersionedValue(key.getVal(), key.ver(), key.getUpdateCntr(), key.getRecheckStartTime())
+                        new VersionedValue(key.val(), key.ver(), key.updateCntr(), key.recheckStartTime())
                     );
                 }
                 catch (Exception e) {

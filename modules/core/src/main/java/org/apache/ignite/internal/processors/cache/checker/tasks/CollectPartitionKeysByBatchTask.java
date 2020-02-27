@@ -131,13 +131,13 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             for (VersionedKey partKeyVer : nodeRes.getRes()) {
                 try {
-                    KeyCacheObject key = unmarshalKey(partKeyVer.getKey(), ctx);
+                    KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
 
                     if (lastKey == null || KEY_COMPARATOR.compare(lastKey, key) < 0)
                         lastKey = key;
 
                     Map<UUID, GridCacheVersion> map = totalRes.computeIfAbsent(key, k -> new HashMap<>());
-                    map.put(partKeyVer.getNodeId(), partKeyVer.getVer());
+                    map.put(partKeyVer.nodeId(), partKeyVer.ver());
 
                     if (i == (results.size() - 1) && map.size() == results.size() && !hasConflict(map.values()))
                         totalRes.remove(key);

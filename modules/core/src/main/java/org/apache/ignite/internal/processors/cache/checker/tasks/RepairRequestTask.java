@@ -265,7 +265,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             for (Map.Entry<VersionedKey, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
-                    Object key = keyValue(ctx, dataEntry.getKey().getKey());
+                    Object key = keyValue(ctx, dataEntry.getKey().key());
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
                     UUID primaryUUID = primaryNodeId(ctx, key);
@@ -352,7 +352,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                     }
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, "Key [" + dataEntry.getKey().getKey() + "] was skipped during repair phase.",
+                    U.error(log, "Key [" + dataEntry.getKey().key() + "] was skipped during repair phase.",
                         e);
                 }
             }

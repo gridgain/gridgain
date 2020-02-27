@@ -333,11 +333,11 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
                         try {
                             keyCacheObj = unmarshalKey(
-                                dataEntry.getKey().getKey(),
+                                dataEntry.getKey().key(),
                                 ignite.cachex(workload.cacheName()).context());
                         }
                         catch (IgniteCheckedException e) {
-                            U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey().getKey() +
+                            U.error(log, "Unable to unmarshal key=[" + dataEntry.getKey().key() +
                                 "], key is skipped.");
 
                             continue;
@@ -382,8 +382,8 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
 
             for (VersionedKey keyVersion : skippedKeys.keySet()) {
                 try {
-                    byte[] bytes = keyVersion.getKey().valueBytes(ctx);
-                    String strVal = ConsistencyCheckUtils.objectStringView(ctx, keyVersion.getKey().value(ctx, false));
+                    byte[] bytes = keyVersion.key().valueBytes(ctx);
+                    String strVal = ConsistencyCheckUtils.objectStringView(ctx, keyVersion.key().value(ctx, false));
 
                     PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta> holder
                         = new PartitionReconciliationSkippedEntityHolder<>(
@@ -486,7 +486,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
                                 null);
                     }
 
-                    KeyCacheObject key = entry.getKey().getKey();
+                    KeyCacheObject key = entry.getKey().key();
 
                     key.finishUnmarshal(ctx, null);
 
@@ -568,7 +568,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
             long currTimeMillis = System.currentTimeMillis();
 
             if (currTimeMillis >= printedTime + workProgressPrintInterval) {
-                log.info(String.format(WORK_PROGRESS_MSG, sesId, workProgress.getTotal(), workProgress.getRemaining()));
+                log.info(String.format(WORK_PROGRESS_MSG, sesId, workProgress.total(), workProgress.remaining()));
 
                 printedTime = currTimeMillis;
             }
@@ -592,14 +592,14 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
         /**
          * The full amount of work.
          */
-        public long getTotal() {
+        public long total() {
             return total;
         }
 
         /**
          * The remaining amount of work.
          */
-        public long getRemaining() {
+        public long remaining() {
             return remaining;
         }
     }

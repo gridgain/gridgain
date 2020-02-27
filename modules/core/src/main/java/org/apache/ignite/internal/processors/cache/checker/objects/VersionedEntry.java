@@ -64,21 +64,21 @@ public class VersionedEntry extends IgniteDataTransferObject {
     /**
      * @return Entry value.
      */
-    public CacheObject getVal() {
+    public CacheObject val() {
         return val.value();
     }
 
     /**
      * @return Partition update counter for the moment of read from data store.
      */
-    public long getUpdateCntr() {
+    public long updateCntr() {
         return val.updateCounter();
     }
 
     /**
      * @return Recheck start time.
      */
-    public long getRecheckStartTime() {
+    public long recheckStartTime() {
         return val.recheckStartTime();
     }
 
@@ -99,20 +99,20 @@ public class VersionedEntry extends IgniteDataTransferObject {
      * @return Key of this entry.
      */
     public KeyCacheObject key() {
-        return key.getKey();
+        return key.key();
     }
 
     /**
      * @return Node ID.
      */
     public UUID nodeId() {
-        return key.getNodeId();
+        return key.nodeId();
     }
 
     /**
      * @return Write version of current entry.
      */
     public GridCacheVersion ver() {
-        return key.getVer();
+        return key.ver();
     }
 }
