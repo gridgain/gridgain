@@ -1536,7 +1536,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** <inheritdoc /> */
         public IEnumerable<ICacheEntry<TK, TV>> GetLocalEntries(CachePeekMode[] peekModes)
         {
-            // TODO: Merge with .NET Near Cache
+            // TODO: Merge with .NET Near Cache. How does it work with Java entries? Consistent with LocalSize?
             bool hasNativeNear;
             var encodedPeekModes = IgniteUtils.EncodePeekModes(peekModes, out hasNativeNear);
             

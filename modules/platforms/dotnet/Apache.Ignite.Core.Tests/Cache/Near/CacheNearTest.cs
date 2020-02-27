@@ -648,15 +648,37 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
-        public void TestLocalPeek()
+        public void TestLocalPeek([Values(true, false)] bool client)
         {
             // TODO: Test in combination with other modes.
         }
 
         [Test]
-        public void TestLocalSize()
+        public void TestGetLocalSize([Values(true, false)] bool client)
         {
             // TODO
+            var cache = GetCache<int, int>(client ? CacheTestMode.Client : CacheTestMode.ServerRemote);
+            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
+        }
+
+        [Test]
+        public void TestGetSizeWithNativeNearModeThrows([Values(true, false)] bool longMode, 
+            [Values(true, false)] bool async)
+        {
+            var cache = GetCache<int, int>(CacheTestMode.Client);
+            var modes = CachePeekMode.Primary | CachePeekMode.NativeNear;
+            
+            var action =
+                longMode
+                    ? async
+                        ? (Action) (() => cache.GetSizeLongAsync(modes))
+                        : () => cache.GetSizeLong(modes)
+                    : async
+                        ? (Action) (() => cache.GetSizeAsync(modes))
+                        : () => cache.GetSize(modes); 
+
+            var ex = Assert.Throws<InvalidOperationException>(() => action());
+            Assert.AreEqual("1", ex.Message);
         }
 
         [Test]
