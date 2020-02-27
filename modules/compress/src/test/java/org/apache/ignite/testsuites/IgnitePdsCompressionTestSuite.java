@@ -18,7 +18,7 @@ package org.apache.ignite.testsuites;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.ignite.testframework.junits.DynamicSuite;
+import org.apache.ignite.internal.processors.cache.persistence.db.wal.HistoricalRebalanceWithWalPageCompressionTest;
 import org.junit.runner.RunWith;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFAULT_DATA_STORAGE_PAGE_SIZE;
@@ -33,6 +33,8 @@ public class IgnitePdsCompressionTestSuite {
      */
     public static List<Class<?>> suite() {
         List<Class<?>> suite = new ArrayList<>();
+
+        suite.add(HistoricalRebalanceWithWalPageCompressionTest.class);
 
         enableCompressionByDefault();
         IgnitePdsTestSuite.addRealPageStoreTests(suite, null);
