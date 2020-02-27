@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -37,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import javax.cache.integration.CompletionListener;
@@ -95,8 +98,10 @@ import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtCacheAdapter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearCacheAdapter;
 import org.apache.ignite.internal.processors.cache.local.GridLocalCache;
@@ -1077,20 +1082,39 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                     .append("\n");
 
                 for (UUID nodeId : F.nodeIds(g0.context().discovery().allNodes())) {
-                    if (!nodeId.equals(g0.localNode().id()))
-                        sb.append(" nodeId=")
-                            .append(nodeId)
-                            .append(" part=")
-                            .append(p)
-                            .append(" counters=")
-                            .append(part == null ? "NA" : part.dataStore().partUpdateCounter())
-                            .append(" fullSize=")
-                            .append(part == null ? "NA" : part.fullSize())
-                            .append(" state=")
-                            .append(top.partitionState(nodeId, p))
-                            .append(" isAffNode=")
-                            .append(affNodes.contains(nodeId))
-                            .append("\n");
+                    if (!nodeId.equals(g0.localNode().id())) {
+                        top.readLock();
+
+                        // Peek to remote state directly to distinguish if a partition is EVICTED or yet not initialized.
+                        GridDhtPartitionFullMap map = U.field(top, "node2part");
+
+                        try {
+                            final GridDhtPartitionState rmtState = map.get(nodeId).get(p);
+
+                            if (rmtState != null) {
+                                sb.append(" nodeId=")
+                                    .append(nodeId)
+                                    .append(" part=")
+                                    .append(p)
+                                    .append(" state=")
+                                    .append(rmtState)
+                                    .append(" isAffNode=")
+                                    .append(affNodes.contains(nodeId))
+                                    .append("\n");
+                            }
+                            else {
+                                sb.append(" nodeId=")
+                                    .append(nodeId)
+                                    .append(" part=")
+                                    .append(p)
+                                    .append(" is null")
+                                    .append("\n");
+                            }
+                        }
+                        finally {
+                            top.readUnlock();
+                        }
+                    }
                 }
             }
 
@@ -2616,5 +2640,24 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         }
 
         return true;
+    }
+
+    /**
+     * Loads data into a cache using stream data source.
+     *
+     * @param ignite Ignite.
+     * @param cache Cache.
+     * @param stream Key-value source stream.
+     */
+    protected void load(IgniteEx ignite, String cache, Stream<Integer> stream) {
+        try (IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(cache)) {
+            final Iterator<Integer> it = stream.iterator();
+
+            while (it.hasNext()) {
+                Integer key = it.next();
+
+                s.addData(key, key);
+            }
+        }
     }
 }

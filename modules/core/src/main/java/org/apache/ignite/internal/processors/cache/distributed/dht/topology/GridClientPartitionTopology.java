@@ -1165,6 +1165,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
         Set<Integer> haveHist,
         GridDhtPartitionsExchangeFuture exchFut
     ) {
+        // TODO get rid of copypaste.
         Map<UUID, Set<Integer>> res = new HashMap<>();
 
         lock.writeLock().lock();

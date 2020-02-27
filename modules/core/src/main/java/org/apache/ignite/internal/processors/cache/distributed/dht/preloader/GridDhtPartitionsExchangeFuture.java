@@ -309,7 +309,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private volatile IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
 
     /** Reserved max available history for calculation of history supplier on coordinator. */
-    private volatile Map<Integer, Map<Integer, Long>> partHistReserved;
+    private volatile Map<Integer /** Group. */, Map<Integer /** Partition */, Long /** Counter. */ >> partHistReserved;
 
     /** */
     @GridToStringExclude
@@ -3336,13 +3336,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             }
         }
 
-        Map<Integer, Set<UUID>> ownersByUpdCounters = new HashMap<>(maxCntrs.size());
-        for (Map.Entry<Integer, CounterWithNodes> e : maxCntrs.entrySet())
+        Map<Integer, Set<UUID>> ownersByUpdCounters = U.newHashMap(maxCntrs.size());
+        Map<Integer, Long> partSizes = U.newHashMap(maxCntrs.size());
+
+        for (Map.Entry<Integer, CounterWithNodes> e : maxCntrs.entrySet()) {
             ownersByUpdCounters.put(e.getKey(), e.getValue().nodes);
 
-        Map<Integer, Long> partSizes = new HashMap<>(maxCntrs.size());
-        for (Map.Entry<Integer, CounterWithNodes> e : maxCntrs.entrySet())
             partSizes.put(e.getKey(), e.getValue().size);
+        }
 
         top.globalPartSizes(partSizes);
 
@@ -3702,7 +3703,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // Lost partition detection should be done after full message is prepared otherwise in case of IGNORE policy
             // lost partitions will be moved to OWNING state and after what send to other nodes resulting in
             // wrong lost state calculation (another possibility to consider - calculate lost state only on coordinator).
-            if (firstDiscoEvt.type() != EVT_DISCOVERY_CUSTOM_EVT && exchCtx.events().hasServerLeft())
+            if (firstDiscoEvt.type() != EVT_DISCOVERY_CUSTOM_EVT && (exchCtx.events().hasServerLeft() || exchCtx.events().hasServerJoin()))
                 detectLostPartitions(resTopVer);
 
             if (exchCtx.mergeExchanges()) {
@@ -4392,13 +4393,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         cctx.affinity().applyAffinityFromFullMessage(this, msg.idealAffinityDiff());
                     else
                         cctx.affinity().onServerJoinWithExchangeMergeProtocol(this, false);
-
-                    for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
-                        if (grp.isLocal() || cacheGroupStopping(grp.groupId()))
-                            continue;
-
-                        grp.topology().beforeExchange(this, true, false);
-                    }
                 }
             }
             else if (localJoinExchange() && !exchCtx.fetchAffinityOnJoin())

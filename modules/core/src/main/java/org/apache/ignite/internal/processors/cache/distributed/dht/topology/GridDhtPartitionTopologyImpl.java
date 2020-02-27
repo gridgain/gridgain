@@ -2087,6 +2087,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (node2part == null)
                     return false;
 
+                if (grp.cacheOrGroupName().equals("default") && discoEvt != null && discoEvt.type() == EventType.EVT_NODE_JOINED && discoEvt.topologyVersion() == 6) {
+                    System.out.println();
+                }
+
                 PartitionLossPolicy plc = grp.config().getPartitionLossPolicy();
 
                 assert plc != null;
@@ -2157,8 +2161,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 if (e.getKey().equals(ctx.localNodeId()))
                                     continue;
 
-                                if (e.getValue().get(part) != EVICTED)
+                                final GridDhtPartitionState cur = e.getValue().get(part);
+
+                                if (cur != EVICTED && cur != LOST) {
                                     e.getValue().put(part, LOST);
+
+                                    changed = true;
+                                }
                             }
                         }
                     }
@@ -2283,7 +2292,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         continue;
 
                     // Partition state should be mutated only on joining nodes if they are exists for the exchange.
-                    if (joinedNodes.isEmpty() && !maxCounterPartOwners.contains(locNodeId)) {
+                    if (!maxCounterPartOwners.contains(locNodeId)) {
                         rebalancePartition(part, !haveHist.contains(part), exchFut);
 
                         res.computeIfAbsent(locNodeId, n -> new HashSet<>()).add(part);
@@ -2297,9 +2306,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                     for (Map.Entry<UUID, GridDhtPartitionMap> remotes : node2part.entrySet()) {
                         UUID remoteNodeId = remotes.getKey();
-
-                        if (!joinedNodes.isEmpty() && !joinedNodes.contains(remoteNodeId))
-                            continue;
 
                         GridDhtPartitionMap partMap = remotes.getValue();
 
@@ -2585,8 +2591,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 node2part.put(locNodeId, map);
             }
-
-            map.updateSequence(updateSeq, affVer);
+            else
+                map.updateSequence(updateSeq, affVer);
 
             map.put(p, state);
 
