@@ -37,7 +37,7 @@ import org.junit.runners.Suite;
     ConnectionTest.class,
     ConnectToStartingNodeTest.class,
     AsyncChannelTest.class,
-    ThinClientTxBackupFailoverTests.class
+    ThinClientTxRollbackTests.class
 })
 public class ClientTestSuite {
     // No-op.
