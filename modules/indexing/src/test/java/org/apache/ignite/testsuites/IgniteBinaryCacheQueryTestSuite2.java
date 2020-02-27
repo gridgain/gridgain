@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlDistribut
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexMultiNodeSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCreateTableTemplateTest;
+import org.apache.ignite.internal.processors.query.LazyOnDmlTest;
 import org.apache.ignite.internal.processors.query.LocalQueryLazyTest;
 import org.apache.ignite.internal.processors.query.LongRunningQueryTest;
 import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest;
@@ -105,6 +106,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    LazyOnDmlTest.class,
+
     SqlInsertMergeImplicitColumnsTest.class,
     SqlMergeTest.class,
     SqlMergeOnClientNodeTest.class,
