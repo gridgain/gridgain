@@ -16,20 +16,14 @@
 
 package org.apache.ignite.util;
 
-import org.apache.ignite.Ignite;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
-import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
-import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.query.GridQueryProcessor;
-import org.apache.ignite.internal.util.lang.GridIterator;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakCacheDataTree;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakSqlIndex;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
@@ -125,7 +119,7 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
      */
     @Test
     public void testBrokenSqlIndexShouldFailValidation() throws Exception {
-        breakSqlIndex(crd, CACHE_NAME);
+        breakSqlIndexOnCrd();
 
         injectTestSystemOut();
 
@@ -153,41 +147,18 @@ public class GridCommandHandlerIndexingClusterByClassTest extends GridCommandHan
 
     /**
      * Removes some entries from a partition skipping index update.
-     * This effectively breaks the index.
      */
     private void breakCacheDataTreeOnCrd() {
         breakCacheDataTree(log, crd.cachex(CACHE_NAME), 1, (i, entry) -> i % 5 == 0);
     }
 
     /**
-     * Removes some entries from H2 trees skipping partition updates. This effectively breaks the index.
+     * Removes some entries from H2 trees skipping partition updates.
+     * This effectively breaks the index.
+     *
+     * @throws Exception If failed.
      */
-    private void breakSqlIndex(Ignite ig, String cacheName) throws Exception {
-        GridQueryProcessor qry = ((IgniteEx)ig).context().query();
-
-        GridCacheContext<Object, Object> ctx = ((IgniteEx)ig).cachex(cacheName).context();
-
-        GridDhtLocalPartition locPart = ctx.topology().localPartitions().get(0);
-
-        GridIterator<CacheDataRow> it = ctx.group().offheap().partitionIterator(locPart.id());
-
-        for (int i = 0; i < 500; i++) {
-            if (!it.hasNextX()) {
-                log.info("Early exit for index corruption, keys processed: " + i);
-
-                break;
-            }
-
-            CacheDataRow row = it.nextX();
-
-            ctx.shared().database().checkpointReadLock();
-
-            try {
-                qry.remove(ctx, row);
-            }
-            finally {
-                ctx.shared().database().checkpointReadUnlock();
-            }
-        }
+    private void breakSqlIndexOnCrd() throws Exception {
+        breakSqlIndex(crd.cachex(CACHE_NAME), 0, null);
     }
 }

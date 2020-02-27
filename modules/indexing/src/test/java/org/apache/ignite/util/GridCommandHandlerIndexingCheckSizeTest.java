@@ -30,6 +30,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg;
 import org.apache.ignite.internal.processors.cache.CacheObject;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesCheckSizeIssue;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesCheckSizeResult;
 import org.apache.ignite.internal.visor.verify.VisorValidateIndexesTaskResult;
@@ -48,6 +49,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakCacheDataTree;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.breakSqlIndex;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.organizationEntity;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.personEntity;
@@ -74,7 +76,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
     /**
      * Test checks that an error will be displayed checking cache size and
-     * index when the cache is broken.
+     * index when cache is broken.
      */
     @Test
     public void testCheckCacheSizeWhenBrokenCache() {
@@ -83,53 +85,13 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
         String cacheName = CACHE_NAME;
         IgniteEx node = crd;
 
-        breakCacheDataTree(
-            log,
-            node.cachex(cacheName),
-            1,
-            (i, entry) -> {
-                rmvEntryByTbl.computeIfAbsent(tableName(cacheName, entry), s -> new AtomicInteger()).incrementAndGet();
-                return true;
-            }
-        );
+        breakCacheDataTree(log, node.cachex(cacheName), 1, (i, entry) -> {
+            rmvEntryByTbl.computeIfAbsent(tableName(cacheName, entry), s -> new AtomicInteger()).incrementAndGet();
+            return true;
+        });
 
         assertEquals(rmvEntryByTbl.size(), 2);
-
-        injectTestSystemOut();
-
-        assertEquals(EXIT_CODE_OK, execute(CACHE.text(), VALIDATE_INDEXES.text(), cacheName));
-
-        String out = testOut.toString();
-        assertContains(log, out, "issues found (listed above)");
-        assertContains(log, out, "Size check");
-
-        Map<String, ValidateIndexesCheckSizeResult> valIdxCheckSizeResults =
-            ((VisorValidateIndexesTaskResult)lastOperationResult).results().get(node.localNode().id())
-                .checkSizeResult();
-
-        assertEquals(rmvEntryByTbl.size(), valIdxCheckSizeResults.size());
-
-        for (Map.Entry<String, AtomicInteger> rmvEntry : rmvEntryByTbl.entrySet()) {
-            ValidateIndexesCheckSizeResult checkSizeRes = valIdxCheckSizeResults.entrySet().stream()
-                .filter(e -> e.getKey().contains(rmvEntry.getKey()))
-                .map(Map.Entry::getValue)
-                .findAny()
-                .orElse(null);
-
-            assertNotNull(checkSizeRes);
-            assertEquals(ENTRY_CNT - rmvEntry.getValue().get(), checkSizeRes.cacheSize());
-
-            Collection<ValidateIndexesCheckSizeIssue> issues = checkSizeRes.issues();
-            assertFalse(issues.isEmpty());
-
-            issues.forEach(issue -> {
-                assertEquals(ENTRY_CNT, issue.idxSize());
-
-                Throwable err = issue.err();
-                assertNotNull(err);
-                assertEquals("Cache and index size not same.", err.getMessage());
-            });
-        }
+        validateCheckSizes(node, cacheName, rmvEntryByTbl, ai -> ENTRY_CNT - ai.get(), ai -> ENTRY_CNT);
     }
 
     /**
@@ -143,13 +105,147 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
         breakCacheDataTree(log, crd.cachex(cacheName), 1, null);
 
+        checkNoCheckSizeInCaseBrokenData(cacheName);
+    }
+
+    /**
+     * Test checks that an error will be displayed checking cache size and
+     * index when index is broken.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCheckCacheSizeWhenBrokenIdx() throws Exception {
+        Map<String, AtomicInteger> rmvIdxByTbl = new HashMap<>();
+
+        String cacheName = CACHE_NAME;
+
+        breakSqlIndex(crd.cachex(cacheName), 0, row -> {
+            rmvIdxByTbl.computeIfAbsent(tableName(cacheName, row), s -> new AtomicInteger()).incrementAndGet();
+            return true;
+        });
+
+        assertEquals(rmvIdxByTbl.size(), 2);
+        validateCheckSizes(crd, cacheName, rmvIdxByTbl, ai -> ENTRY_CNT, ai -> ENTRY_CNT - ai.get());
+    }
+
+    /**
+     * Test checks that cache size and index validation error will not be
+     * displayed if index is broken, because argument
+     * {@link ValidateIndexesCommandArg#NO_CHECK_SIZES} be used.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNoCheckCacheSizeWhenBrokenIdx() throws Exception {
+        String cacheName = CACHE_NAME;
+
+        breakSqlIndex(crd.cachex(cacheName), 1, null);
+
+        checkNoCheckSizeInCaseBrokenData(cacheName);
+    }
+
+    /**
+     * Check that if data is broken and option
+     * {@link ValidateIndexesCommandArg#NO_CHECK_SIZES} is enabled, size check
+     * will not take place.
+     *
+     * @param cacheName Cache size.
+     */
+    private void checkNoCheckSizeInCaseBrokenData(String cacheName) {
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute(CACHE.text(), VALIDATE_INDEXES.text(), NO_CHECK_SIZES.argName(), cacheName));
+        assertEquals(
+            EXIT_CODE_OK,
+            execute(CACHE.text(), VALIDATE_INDEXES.text(), NO_CHECK_SIZES.argName(), cacheName)
+        );
 
         String out = testOut.toString();
         assertContains(log, out, "issues found (listed above)");
         assertNotContains(log, out, "Size check");
+    }
+
+    /**
+     * Checking whether cache and index size check is correct.
+     *
+     * @param node Node.
+     * @param cacheName Cache name.
+     * @param rmvByTbl Number of deleted items per table.
+     * @param cacheSizeExp Function for getting expected cache size.
+     * @param idxSizeExp Function for getting expected index size.
+     */
+    private void validateCheckSizes(
+        IgniteEx node,
+        String cacheName,
+        Map<String, AtomicInteger> rmvByTbl,
+        Function<AtomicInteger, Integer> cacheSizeExp,
+        Function<AtomicInteger, Integer> idxSizeExp
+    ) {
+        requireNonNull(node);
+        requireNonNull(cacheName);
+        requireNonNull(rmvByTbl);
+        requireNonNull(cacheSizeExp);
+        requireNonNull(idxSizeExp);
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute(CACHE.text(), VALIDATE_INDEXES.text(), cacheName));
+
+        String out = testOut.toString();
+        assertContains(log, out, "issues found (listed above)");
+        assertContains(log, out, "Size check");
+
+        Map<String, ValidateIndexesCheckSizeResult> valIdxCheckSizeResults =
+            ((VisorValidateIndexesTaskResult)lastOperationResult).results().get(node.localNode().id())
+                .checkSizeResult();
+
+        assertEquals(rmvByTbl.size(), valIdxCheckSizeResults.size());
+
+        for (Map.Entry<String, AtomicInteger> rmvByTblEntry : rmvByTbl.entrySet()) {
+            ValidateIndexesCheckSizeResult checkSizeRes = valIdxCheckSizeResults.entrySet().stream()
+                .filter(e -> e.getKey().contains(rmvByTblEntry.getKey()))
+                .map(Map.Entry::getValue)
+                .findAny()
+                .orElse(null);
+
+            assertNotNull(checkSizeRes);
+            assertEquals((int)cacheSizeExp.apply(rmvByTblEntry.getValue()), checkSizeRes.cacheSize());
+
+            Collection<ValidateIndexesCheckSizeIssue> issues = checkSizeRes.issues();
+            assertFalse(issues.isEmpty());
+
+            issues.forEach(issue -> {
+                assertEquals((int)idxSizeExp.apply(rmvByTblEntry.getValue()), issue.idxSize());
+
+                Throwable err = issue.err();
+                assertNotNull(err);
+                assertEquals("Cache and index size not same.", err.getMessage());
+            });
+        }
+    }
+
+    /**
+     * Get table name for cache row.
+     *
+     * @param cacheName  Cache name.
+     * @param cacheDataRow Cache row.
+     */
+    private String tableName(String cacheName, CacheDataRow cacheDataRow) {
+        requireNonNull(cacheName);
+        requireNonNull(cacheDataRow);
+
+        try {
+            return crd.context().query().typeByValue(
+                cacheName,
+                crd.cachex(cacheName).context().cacheObjectContext(),
+                cacheDataRow.key(),
+                cacheDataRow.value(),
+                false
+            ).tableName();
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
     }
 
     /**

@@ -943,15 +943,17 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                     return new T2<>(null, 0L);
 
                 String cacheName = cacheCtx.name();
+                String tblName = idx.getTable().getName();
                 String idxName = idx.getName();
 
                 try {
-                    return new T2<>(null, ignite.context().query().getIndexing().indexSize(cacheName, idxName));
+                    long indexSize = ignite.context().query().getIndexing().indexSize(cacheName, tblName, idxName);
+                    return new T2<>(null, indexSize);
                 }
                 catch (Throwable t) {
                     Throwable idxSizeErr = new IgniteException("Index size calculation error [" +
                         cacheGrpInfo(cacheCtx.group()) + ", " + cacheInfo(cacheCtx) + ", tableName=" +
-                        idx.getTable().getName() + ", idxName=" + idxName + ", err=" + t.getMessage() + "]", t);
+                        tblName + ", idxName=" + idxName + ", err=" + t.getMessage() + "]", t);
 
                     error(log, idxSizeErr);
 

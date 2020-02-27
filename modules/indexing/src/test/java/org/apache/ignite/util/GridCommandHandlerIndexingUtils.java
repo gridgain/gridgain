@@ -24,6 +24,7 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import javax.cache.Cache.Entry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
@@ -46,6 +47,8 @@ import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDataba
 import org.apache.ignite.internal.processors.cache.tree.CacheDataRowStore;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
 import org.apache.ignite.internal.processors.cache.tree.SearchRow;
+import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.jetbrains.annotations.Nullable;
 
@@ -159,13 +162,13 @@ public class GridCommandHandlerIndexingUtils {
     }
 
     /**
-     * Deleting a row from the cache without updating indexes.
+     * Deleting a rows from the cache without updating indexes.
      *
      * @param log Logger.
      * @param internalCache Cache.
      * @param partId Partition number.
      * @param filter Entry filter.
-     * */
+     */
     static <K, V> void breakCacheDataTree(
         IgniteLogger log,
         IgniteInternalCache<K, V> internalCache,
@@ -217,6 +220,45 @@ public class GridCommandHandlerIndexingUtils {
             }
             finally {
                 db.checkpointReadUnlock();
+            }
+        }
+    }
+
+    /**
+     * Deleting records from the index bypassing cache.
+     *
+     * @param internalCache Cache.
+     * @param partId Partition number.
+     * @param filter Row filter.
+     * @throws Exception If failed.
+     */
+    static <K, V> void breakSqlIndex(
+        IgniteInternalCache<K, V> internalCache,
+        int partId,
+        @Nullable Predicate<CacheDataRow> filter
+    ) throws Exception {
+        requireNonNull(internalCache);
+
+        GridCacheContext<K, V> cacheCtx = internalCache.context();
+
+        GridDhtLocalPartition locPart = cacheCtx.topology().localPartitions().get(partId);
+        GridIterator<CacheDataRow> cacheDataGridIter = cacheCtx.group().offheap().partitionIterator(locPart.id());
+
+        GridQueryProcessor qryProcessor = internalCache.context().kernalContext().query();
+
+        while (cacheDataGridIter.hasNextX()){
+            CacheDataRow cacheDataRow = cacheDataGridIter.nextX();
+
+            if (nonNull(filter) && !filter.test(cacheDataRow))
+                continue;
+
+            cacheCtx.shared().database().checkpointReadLock();
+
+            try {
+                qryProcessor.remove(cacheCtx, cacheDataRow);
+            }
+            finally {
+                cacheCtx.shared().database().checkpointReadUnlock();
             }
         }
     }
