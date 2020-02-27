@@ -3148,7 +3148,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         ver0 = ver;
                     }
                     else {
-                        rmv = markObsolete0(cctx.versions().next(this.ver), true, null);
+                        rmv = markObsolete0(nextVersion(), true, null);
 
                         return null;
                     }
@@ -3618,7 +3618,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         return entryGetResult(this.val, ver, false);
 
                     if (newVer == null)
-                        newVer = cctx.versions().next();
+                        newVer = cctx.cache().nextVersion();
 
                     long ttl;
                     long expTime;
@@ -4681,7 +4681,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     return false;
 
                 if (checkExpired()) {
-                    rmv = markObsolete0(cctx.versions().next(this.ver), true, null);
+                    rmv = markObsolete0(nextVersion(), true, null);
 
                     return false;
                 }
@@ -5851,7 +5851,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     entry.deletedUnlocked(true);
             }
             else
-                entry.markObsolete0(cctx.versions().next(), true, null);
+                entry.markObsolete0(cctx.cache().nextVersion(), true, null);
 
             if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
                 cctx.events().addEvent(entry.partition(),
@@ -6224,7 +6224,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     entry.deletedUnlocked(true);
             }
             else
-                entry.markObsolete0(cctx.versions().next(), true, null);
+                entry.markObsolete0(cctx.cache().nextVersion(), true, null);
 
             if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
                 cctx.events().addEvent(entry.partition(),
