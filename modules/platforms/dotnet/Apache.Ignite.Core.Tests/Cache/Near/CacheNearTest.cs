@@ -659,19 +659,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestGetLocalSizeServer()
         {
-            // TODO: test combinations, bitwise and array
             var cache = GetCache<int, int>(CacheTestMode.ServerRemote);
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
 
-            foreach (var mode in new[]{CachePeekMode.All, CachePeekMode.Near, CachePeekMode.Primary, CachePeekMode.NativeNear})
-            {
-                Console.WriteLine(cache.GetLocalSize(mode));
-            }
-            
-            // Assert.AreEqual(100, cache.GetLocalSize());
-            // Assert.AreEqual(100, cache.GetLocalSize(CachePeekMode.All));
-            // Assert.AreEqual(100, cache.GetLocalSize(CachePeekMode.NativeNear));
-            // Assert.AreEqual(100, cache.GetLocalSize(CachePeekMode.Near));
+            var primary = cache.GetLocalSize(CachePeekMode.Primary);
+
+            Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.Near));
+            Assert.AreEqual(primary, cache.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.AreEqual(NearCacheMaxSize + primary, cache.GetLocalSize(CachePeekMode.Near | CachePeekMode.NativeNear));
+            Assert.AreEqual(NearCacheMaxSize + primary, cache.GetLocalSize(CachePeekMode.Near, CachePeekMode.NativeNear));
         }
 
         /// <summary>
