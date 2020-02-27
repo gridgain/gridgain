@@ -38,8 +38,8 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResultExtended;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
@@ -105,9 +105,9 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     @Override public ReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
         Map<UUID, String> nodeIdToFolder = new HashMap<>();
 
-        AffectedEntryResult res = localOutoutMode ?
-            new AffectedEntryResult() :
-            new AffectedEntryResultExtended();
+        ReconciliationAffectedEntries res = localOutoutMode ?
+            new ReconciliationAffectedEntries() :
+            new ReconciliationAffectedEntriesExtended();
 
         List<String> errors = new ArrayList<>();
 
@@ -121,13 +121,13 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 continue;
             }
 
-            T2<String, ExecutionResult<AffectedEntryResult>> data = result.getData();
+            T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
             res.merge(data.get2().getRes());
 
-            if (data.get2().getErrorMsg() != null)
-                errors.add(nodeId + " - " + data.get2().getErrorMsg());
+            if (data.get2().getErrorMessage() != null)
+                errors.add(nodeId + " - " + data.get2().getErrorMessage());
         }
 
         return new ReconciliationResult(res, nodeIdToFolder, errors);
@@ -188,7 +188,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ExecutionResult<AffectedEntryResult>> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
@@ -203,14 +203,14 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new T2<>(null, new ExecutionResult<>(new AffectedEntryResultExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
+                        return new T2<>(null, new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
 
                     caches.addAll(acceptedCaches);
                 }
             }
 
             try {
-                ExecutionResult<AffectedEntryResult> reconciliationRes = new PartitionReconciliationProcessor(
+                ExecutionResult<ReconciliationAffectedEntries> reconciliationRes = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
                     caches,
@@ -226,10 +226,10 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
                 return new T2<>(
                     path,
-                    reconciliationTaskArg.locOutput() ? reconciliationRes : new ExecutionResult<>(new AffectedEntryResultExtended(
+                    reconciliationTaskArg.locOutput() ? reconciliationRes : new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(
                         reconciliationRes.getRes().inconsistentKeysCount(),
                         reconciliationRes.getRes().skippedEntriesCount(),
-                        reconciliationRes.getRes().skippedEntriesCount()), reconciliationRes.getErrorMsg())
+                        reconciliationRes.getRes().skippedEntriesCount()), reconciliationRes.getErrorMessage())
                 );
             }
             catch (Exception e) {
@@ -245,7 +245,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
          *
          * @return link to file with result.
          */
-        private String localPrint(AffectedEntryResult reconciliationRes) {
+        private String localPrint(ReconciliationAffectedEntries reconciliationRes) {
             if (reconciliationRes != null && !reconciliationRes.isEmpty()) {
                 try {
                     File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);

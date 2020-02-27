@@ -98,21 +98,21 @@ public class VersionedEntry extends IgniteDataTransferObject {
     /**
      * @return Key of this entry.
      */
-    public KeyCacheObject getKey() {
+    public KeyCacheObject key() {
         return key.getKey();
     }
 
     /**
      * @return Node ID.
      */
-    public UUID getNodeId() {
+    public UUID nodeId() {
         return key.getNodeId();
     }
 
     /**
      * @return Write version of current entry.
      */
-    public GridCacheVersion getVer() {
+    public GridCacheVersion ver() {
         return key.getVer();
     }
 }

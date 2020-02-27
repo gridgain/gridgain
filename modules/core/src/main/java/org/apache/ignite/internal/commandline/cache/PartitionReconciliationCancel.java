@@ -33,7 +33,7 @@ import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.PART
 public class PartitionReconciliationCancel implements Command<Void> {
     /** {@inheritDoc} */
     @Override public void printUsage(Logger log) {
-        String desc = "Cancels of partition reconciliation command.";
+        String desc = "Cancels partition reconciliation command.";
 
         usageCache(log, PARTITION_RECONCILIATION_CANCEL, desc, new HashMap<>());
     }

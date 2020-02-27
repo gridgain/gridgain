@@ -40,7 +40,7 @@ import org.apache.ignite.internal.commandline.CommandArgIterator;
 import org.apache.ignite.internal.commandline.CommandLogger;
 import org.apache.ignite.internal.commandline.argument.CommandArgUtils;
 import org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg;
-import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.SB;
@@ -69,8 +69,10 @@ import static org.apache.ignite.internal.commandline.cache.argument.PartitionRec
  */
 public class PartitionReconciliation implements Command<PartitionReconciliation.Arguments> {
     /** Parallelism format error message. */
-    public static final String PARALLELISM_FORMAT_MESSAGE = "Invalid parallelism: %s. The positive integer " +
-        "should be specified.";
+    public static final String PARALLELISM_FORMAT_MESSAGE = "The positive integer should be specified, " +
+        "or 0 (number of cores on a server node will be used as parallelism in such case). " +
+        "If the given value is greater than the number of cores on a server node, " +
+        "the behavior will be equal to the case when 0 is specified.";
 
     /** Batch size format error message. */
     public static final String BATCH_SIZE_FORMAT_MESSAGE = "Invalid batch size: %s" +
@@ -190,7 +192,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                 .map(n -> String.format(strErrReason, n.nodeId(), n.consistentId()))
                 .collect(toList());
 
-            print(new ReconciliationResult(new AffectedEntryResult(), new HashMap<>(), errs), log::info);
+            print(new ReconciliationResult(new ReconciliationAffectedEntries(), new HashMap<>(), errs), log::info);
 
             throw new VisorIllegalStateException("There are server nodes not supported partition reconciliation.");
         }
@@ -404,7 +406,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
      * @param printer Printer.
      */
     private void print(ReconciliationResult res, Consumer<String> printer) {
-        AffectedEntryResult reconciliationRes = res.partitionReconciliationResult();
+        ReconciliationAffectedEntries reconciliationRes = res.partitionReconciliationResult();
 
         printer.accept(prepareHeaderMeta());
 

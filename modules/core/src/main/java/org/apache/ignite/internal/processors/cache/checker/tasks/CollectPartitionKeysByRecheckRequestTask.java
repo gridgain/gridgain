@@ -112,17 +112,17 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
             ExecutionResult<List<VersionedEntry>> excRes = result.getData();
 
-            if (excRes.getErrorMsg() != null)
-                return new ExecutionResult<>(excRes.getErrorMsg());
+            if (excRes.getErrorMessage() != null)
+                return new ExecutionResult<>(excRes.getErrorMessage());
 
             List<VersionedEntry> partKeys = excRes.getRes();
 
             for (VersionedEntry key : partKeys) {
                 try {
-                    KeyCacheObject keyObj = unmarshalKey(key.getKey(), ctx);
+                    KeyCacheObject keyObj = unmarshalKey(key.key(), ctx);
                     res.computeIfAbsent(keyObj, k -> new HashMap<>()).put(
-                        key.getNodeId(),
-                        new VersionedValue(key.getVal(), key.getVer(), key.getUpdateCntr(), key.getRecheckStartTime())
+                        key.nodeId(),
+                        new VersionedValue(key.getVal(), key.ver(), key.getUpdateCntr(), key.getRecheckStartTime())
                     );
                 }
                 catch (Exception e) {

@@ -37,7 +37,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 /**
  * Result with lists of broken and fixed, skipped entries.
  */
-public class AffectedEntryResult extends IgniteDataTransferObject {
+public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     /**
      *
      */
@@ -62,7 +62,7 @@ public class AffectedEntryResult extends IgniteDataTransferObject {
     /**
      * Default constructor for externalization.
      */
-    public AffectedEntryResult() {
+    public ReconciliationAffectedEntries() {
     }
 
     /**
@@ -71,7 +71,7 @@ public class AffectedEntryResult extends IgniteDataTransferObject {
      * @param skippedEntries Skipped entries.
      */
     @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-    public AffectedEntryResult(
+    public ReconciliationAffectedEntries(
         Map<UUID, String> nodesIdsToConsistentIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
@@ -87,7 +87,7 @@ public class AffectedEntryResult extends IgniteDataTransferObject {
      * @param skippedCaches Skipped caches.
      * @param skippedEntries Skipped entries.
      */
-    public AffectedEntryResult(
+    public ReconciliationAffectedEntries(
         Map<UUID, String> nodesIdsToConsistentIdsMap,
         Map<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys,
         Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches,
@@ -248,7 +248,7 @@ public class AffectedEntryResult extends IgniteDataTransferObject {
     /**
      * Added outer value to this class.
      */
-    public void merge(AffectedEntryResult outer) {
+    public void merge(ReconciliationAffectedEntries outer) {
         assert outer != null;
 
         this.nodesIdsToConsistentIdsMap.putAll(outer.nodesIdsToConsistentIdsMap);

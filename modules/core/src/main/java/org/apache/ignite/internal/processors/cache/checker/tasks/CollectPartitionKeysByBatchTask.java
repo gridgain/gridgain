@@ -126,8 +126,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             ExecutionResult<List<VersionedKey>> nodeRes = results.get(i).getData();
 
-            if (nodeRes.getErrorMsg() != null)
-                return new ExecutionResult<>(nodeRes.getErrorMsg());
+            if (nodeRes.getErrorMessage() != null)
+                return new ExecutionResult<>(nodeRes.getErrorMessage());
 
             for (VersionedKey partKeyVer : nodeRes.getRes()) {
                 try {

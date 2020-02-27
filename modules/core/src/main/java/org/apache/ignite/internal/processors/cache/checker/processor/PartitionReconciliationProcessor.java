@@ -40,7 +40,7 @@ import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.PartitionBatchRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
-import org.apache.ignite.internal.processors.cache.checker.objects.AffectedEntryResult;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
 import org.apache.ignite.internal.processors.cache.checker.objects.RecheckRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
@@ -161,7 +161,7 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      * @return Partition reconciliation result
      */
-    public ExecutionResult<AffectedEntryResult> execute() {
+    public ExecutionResult<ReconciliationAffectedEntries> execute() {
         log.info(String.format(START_EXECUTION_MSG, fixMode, repairAlg, batchSize, recheckAttempts, parallelismLevel, caches));
 
         try {
@@ -525,10 +525,10 @@ public class PartitionReconciliationProcessor extends AbstractPipelineProcessor 
     /**
      *
      */
-    private AffectedEntryResult prepareResult() {
+    private ReconciliationAffectedEntries prepareResult() {
         synchronized (inconsistentKeys) {
             synchronized (skippedEntries) {
-                return new AffectedEntryResult(
+                return new ReconciliationAffectedEntries(
                     ignite.cluster().nodes().stream().collect(Collectors.toMap(
                         ClusterNode::id,
                         n -> n.consistentId().toString())),

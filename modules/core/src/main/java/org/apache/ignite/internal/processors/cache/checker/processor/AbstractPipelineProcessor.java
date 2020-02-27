@@ -198,8 +198,8 @@ public class AbstractPipelineProcessor {
                     return;
                 }
 
-                if (res.getErrorMsg() != null) {
-                    error.compareAndSet(null, res.getErrorMsg());
+                if (res.getErrorMessage() != null) {
+                    error.compareAndSet(null, res.getErrorMessage());
 
                     return;
                 }

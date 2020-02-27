@@ -25,7 +25,7 @@ import java.util.function.Consumer;
  * Partition reconciliation result that contains only info about amount of inconsistent keys, skipped caches etc,
  * instead of full information. Used in case of non-console mode for console-scoped report.
  */
-public class AffectedEntryResultExtended extends AffectedEntryResult {
+public class ReconciliationAffectedEntriesExtended extends ReconciliationAffectedEntries {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -41,7 +41,7 @@ public class AffectedEntryResultExtended extends AffectedEntryResult {
     /**
      * Default constructor for externalization.
      */
-    public AffectedEntryResultExtended() {
+    public ReconciliationAffectedEntriesExtended() {
         // No-op
     }
 
@@ -52,7 +52,7 @@ public class AffectedEntryResultExtended extends AffectedEntryResult {
      * @param skippedCachesCnt Skipped caches count.
      * @param skippedEntriesCnt Skipped entries count.
      */
-    public AffectedEntryResultExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt) {
+    public ReconciliationAffectedEntriesExtended(int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt) {
         this.inconsistentKeysCnt = inconsistentKeysCnt;
         this.skippedCachesCnt = skippedCachesCnt;
         this.skippedEntriesCnt = skippedEntriesCnt;
@@ -100,8 +100,8 @@ public class AffectedEntryResultExtended extends AffectedEntryResult {
 
 
     /** @inheritDoc */
-    @Override public void merge(AffectedEntryResult outer) {
-        assert outer instanceof AffectedEntryResultExtended;
+    @Override public void merge(ReconciliationAffectedEntries outer) {
+        assert outer instanceof ReconciliationAffectedEntriesExtended;
 
         inconsistentKeysCnt += outer.inconsistentKeysCount();
 
