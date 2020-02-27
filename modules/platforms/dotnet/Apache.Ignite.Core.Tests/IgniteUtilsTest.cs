@@ -60,7 +60,7 @@ namespace Apache.Ignite.Core.Tests
         /// <summary>
         /// Convenience wrapper: returns tuple instead of using out.
         /// </summary>
-        private Tuple<int, bool> EncodePeekModes(params CachePeekMode[] modes)
+        private static Tuple<int, bool> EncodePeekModes(params CachePeekMode[] modes)
         {
             bool hasNativeNear;
             var encoded = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);

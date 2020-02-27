@@ -653,8 +653,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: Test in combination with other modes.
         }
 
+        /// <summary>
+        /// Tests local size on server node.
+        /// </summary>
         [Test]
-        public void TestGetLocalSize()
+        public void TestGetLocalSizeServer()
         {
             // TODO: test combinations, bitwise and array
             var cache = GetCache<int, int>(CacheTestMode.ServerRemote);
@@ -671,6 +674,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Assert.AreEqual(100, cache.GetLocalSize(CachePeekMode.Near));
         }
 
+        /// <summary>
+        /// Tests local size on client node.
+        /// </summary>
         [Test]
         public void TestGetLocalSizeClient()
         {
@@ -679,7 +685,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.AreEqual(0, cache.GetLocalSize());
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.Primary | CachePeekMode.Backup));
-            Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.All));
+            Assert.AreEqual(NearCacheMaxSize * 2, cache.GetLocalSize(CachePeekMode.All));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear, CachePeekMode.Primary));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear | CachePeekMode.Primary));
