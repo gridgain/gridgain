@@ -1015,6 +1015,8 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                 if (_nearCache != null)
                 {
+                    // Java-based near size is summed up with primary, backups, etc.
+                    // Same for .NET near cache, sum up with the rest.
                     size += _nearCache.GetSize();
                 }
                 
