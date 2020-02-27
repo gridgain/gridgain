@@ -112,6 +112,8 @@ public class GridDhtCache<K, V> extends GridDhtTransactionalCacheAdapter<K, V> {
         if (keyCheck)
             validateCacheKeys(keys);
 
+        warnIfUnordered(keys, BulkOperation.GET);
+
         return getAllAsync0(ctx.cacheKeysView(keys),
             null,
             readThrough,

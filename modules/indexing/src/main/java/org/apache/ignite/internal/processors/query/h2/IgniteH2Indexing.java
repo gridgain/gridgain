@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.io.File;
 import java.sql.BatchUpdateException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -228,12 +227,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
     }
-
-    /**
-     *  Spill directory path. Spill directory is used for the disk offloading
-     *  of intermediate results of the heavy queries.
-     */
-    public static final String DISK_SPILL_DIR = "tmp/spill";
 
     /** Default number of attempts to re-run DELETE and UPDATE queries in case of concurrent modifications of values. */
     private static final int DFLT_UPDATE_RERUN_ATTEMPTS = 4;
@@ -555,7 +548,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 true,
                 memoryMgr.createQueryMemoryTracker(maxMem),
-                ctx);
+                memoryMgr);
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
@@ -814,6 +807,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             ses.setQueryTimeout(timeoutMillis);
         else
             ses.setQueryTimeout(0);
+
+        ses.setOffloadedToDisk(false);
 
         try {
             return stmt.executeQuery();
@@ -1563,6 +1558,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
         fldsQry.setPageSize(pageSize);
         fldsQry.setLocal(true);
+        fldsQry.setLazy(U.isFlagSet(flags, GridH2QueryRequest.FLAG_LAZY));
 
         boolean loc = true;
 
@@ -1602,7 +1598,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
-            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
+            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS)
+            .setLazy(fldsQry.isLazy());
 
         QueryCursorImpl<List<?>> cur;
 
@@ -2149,45 +2146,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart() {
-        cleanSpillDirectory();
-    }
-
-    /**
-     * Cleans spill directory. Spill directory is used for disk
-     * offloading of the intermediate results of heavy queries.
-     */
-    private void cleanSpillDirectory() {
-        try {
-            File spillDir = U.resolveWorkDirectory(
-                ctx.config().getWorkDirectory(),
-                DISK_SPILL_DIR,
-                false);
-
-            File[] spillFiles = spillDir.listFiles();
-
-            if (spillFiles.length == 0)
-                return;
-
-            for (int i = 0; i < spillFiles.length; i++) {
-                try {
-                    File spillFile = spillFiles[i];
-
-                    String nodeId = spillFile.getName().split("_")[1]; // Spill name pattern: spill_nodeId_fileId.
-
-                    UUID nodeUuid = UUID.fromString(nodeId);
-
-                    if (!ctx.discovery().alive(nodeUuid))
-                        spillFile.delete();
-                }
-                catch (Exception e) {
-                    log.debug("Error on cleaning spill directory. " + X.getFullStackTrace(e));
-                }
-            }
-        }
-        catch (Exception e) {
-            log.warning("Failed to cleanup the temporary directory for intermediate " +
-                "SQL query results from the previous node run.", e);
-        }
+        memoryMgr.cleanSpillDirectory();
     }
 
     /**
@@ -2916,7 +2875,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setLocal(qryDesc.local())
             .setPageSize(qryParams.pageSize())
             .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
-            .setMaxMemory(qryParams.maxMemory());
+            .setMaxMemory(qryParams.maxMemory())
+            // On no MVCC mode we cannot use lazy mode when UPDATE query contains updated columns
+            // in WHERE condition because it may be cause of update one entry several times
+            // (when index for such columns is selected for scan):
+            // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
+            .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
 
         Iterable<List<?>> cur;
 
@@ -3043,7 +3007,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
                         .setLocal(qryDesc.local())
                         .setPageSize(qryParams.pageSize())
-                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS);
+                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS)
+                        // In MVCC mode we can use lazy mode always (when is set up) without dependency on
+                        // updated columns and WHERE condition.
+                        .setLazy(qryParams.lazy());
 
                     FieldsQueryCursor<List<?>> cur = executeSelectForDml(
                         qryDesc.schemaName(),
@@ -3083,6 +3050,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (distributedPlan.isReplicatedOnly())
                 flags |= GridH2QueryRequest.FLAG_REPLICATED;
+
+            if (qryParams.lazy())
+                flags |= GridH2QueryRequest.FLAG_LAZY;
 
             flags = GridH2QueryRequest.setDataPageScanEnabled(flags,
                 qryParams.dataPageScanEnabled());

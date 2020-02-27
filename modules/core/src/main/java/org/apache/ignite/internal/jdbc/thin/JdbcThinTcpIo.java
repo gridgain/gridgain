@@ -24,11 +24,14 @@ import java.net.Socket;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -222,7 +225,7 @@ public class JdbcThinTcpIo {
 
         srvProtoVer = handshakeRes.serverProtocolVersion();
 
-        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features());
+        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features(), handshakeRes.serverTimezone(), true);
     }
 
     /**
@@ -265,7 +268,7 @@ public class JdbcThinTcpIo {
             JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
         if (ver.compareTo(VER_2_8_2) >= 0)
-            writer.writeByteArray(JdbcThinFeature.allFeaturesAsBytes());
+            writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(enabledFeatures()));
 
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
@@ -313,6 +316,12 @@ public class JdbcThinTcpIo {
             }
 
             handshakeRes.serverProtocolVersion(ver);
+
+            if (handshakeRes.features().contains(JdbcThinFeature.TIME_ZONE)) {
+                String srvTzId = reader.readString();
+
+                handshakeRes.serverTimezone(TimeZone.getTimeZone(srvTzId));
+            }
 
             return handshakeRes;
         }
@@ -682,5 +691,20 @@ public class JdbcThinTcpIo {
      */
     public boolean connected() {
         return connected;
+    }
+
+    /** */
+    private EnumSet<JdbcThinFeature> enabledFeatures() {
+        EnumSet<JdbcThinFeature> features = JdbcThinFeature.allFeaturesAsEnumSet();
+
+        String disabledFeaturesStr = connProps.disabledFeatures();
+
+        if (Objects.isNull(disabledFeaturesStr))
+            return features;
+
+        for (String f : disabledFeaturesStr.split("\\W+"))
+            features.remove(JdbcThinFeature.valueOf(f.toUpperCase()));
+
+        return features;
     }
 }

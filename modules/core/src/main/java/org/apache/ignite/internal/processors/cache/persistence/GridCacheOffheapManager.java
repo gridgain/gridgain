@@ -2736,7 +2736,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
                         if (pendingTree.removex(row)) {
                             if (obsoleteVer == null)
-                                obsoleteVer = ctx.versions().next();
+                                obsoleteVer = cctx.cache().nextVersion();
 
                             GridCacheEntryEx e1 = cctx.cache().entryEx(row.key);
 
@@ -2788,6 +2788,21 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                     return;
 
                 delegate0.resetUpdateCounter();
+            }
+            catch (IgniteCheckedException e) {
+                throw new IgniteException(e);
+            }
+        }
+
+        /** {@inheritDoc} */
+        @Override public void resetInitialUpdateCounter() {
+            try {
+                CacheDataStore delegate0 = init0(true);
+
+                if (delegate0 == null)
+                    return;
+
+                delegate0.resetInitialUpdateCounter();
             }
             catch (IgniteCheckedException e) {
                 throw new IgniteException(e);

@@ -69,6 +69,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -303,7 +304,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         assert topVer != null;
 
-        return !AffinityTopologyVersion.NONE.equals(topVer);
+        return topVer.initialized();
     }
 
     /** {@inheritDoc} */
@@ -2349,14 +2350,16 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 lock.writeLock().unlock();
             }
 
+            List<List<ClusterNode>> ideal = ctx.affinity().affinity(groupId()).idealAssignmentRaw();
+
             for (Map.Entry<UUID, Set<Integer>> entry : addToWaitGroups.entrySet()) {
                 // Add to wait groups to ensure late assignment switch after all partitions are rebalanced.
                 for (Integer part : entry.getValue()) {
                     ctx.cache().context().affinity().addToWaitGroup(
                         groupId(),
                         part,
-                        entry.getKey(),
-                        topologyVersionFuture().initialVersion()
+                        topologyVersionFuture().initialVersion(),
+                        ideal.get(part)
                     );
                 }
             }
@@ -2412,6 +2415,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      * @param aff Affinity assignments.
      * @return {@code True} if there are local partitions need to be evicted.
      */
+    @SuppressWarnings("unchecked")
     private boolean checkEvictions(long updateSeq, AffinityAssignment aff) {
         if (!ctx.kernalContext().state().evictionsAllowed())
             return false;
@@ -2443,7 +2447,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 IgniteInternalFuture<?> rentFut = part.rent(false);
 
-                rentingFutures.add(rentFut);
+                if (rentFut != null)
+                    rentingFutures.add(rentFut);
 
                 updateSeq = updateLocal(part.id(), part.state(), updateSeq, aff.topologyVersion());
 
@@ -2474,7 +2479,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             IgniteInternalFuture<?> rentFut = part.rent(false);
 
-                            rentingFutures.add(rentFut);
+                            if (rentFut != null)
+                                rentingFutures.add(rentFut);
 
                             updateSeq = updateLocal(part.id(), part.state(), updateSeq, aff.topologyVersion());
 
@@ -2498,15 +2504,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         if (!rentingFutures.isEmpty()) {
             final AtomicInteger rentingPartitions = new AtomicInteger(rentingFutures.size());
 
-            for (IgniteInternalFuture<?> rentingFuture : rentingFutures) {
-                rentingFuture.listen(f -> {
+            IgniteInClosure c = new IgniteInClosure() {
+                @Override public void apply(Object o) {
                     int remaining = rentingPartitions.decrementAndGet();
 
                     if (remaining == 0) {
                         lock.writeLock().lock();
 
                         try {
-                            this.updateSeq.incrementAndGet();
+                            GridDhtPartitionTopologyImpl.this.updateSeq.incrementAndGet();
 
                             if (log.isDebugEnabled())
                                 log.debug("Partitions have been scheduled to resend [reason=" +
@@ -2518,8 +2524,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             lock.writeLock().unlock();
                         }
                     }
-                });
-            }
+                }
+            };
+
+            for (IgniteInternalFuture<?> rentingFuture : rentingFutures)
+                rentingFuture.listen(c);
         }
 
         return hasEvictedPartitions;
@@ -2753,10 +2762,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         }
     }
 
-    /**
-     * Pre-processes partition update counters before exchange.
-     */
-    @Override public void finalizeUpdateCounters() {
+    /** {@inheritDoc} */
+    @Override public void finalizeUpdateCounters(Set<Integer> parts) {
         // It is need to acquire checkpoint lock before topology lock acquiring.
         ctx.database().checkpointReadLock();
 
@@ -2766,8 +2773,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             lock.readLock().lock();
 
             try {
-                for (int i = 0; i < locParts.length(); i++) {
-                    GridDhtLocalPartition part = locParts.get(i);
+                for (int p : parts) {
+                    GridDhtLocalPartition part = locParts.get(p);
 
                     if (part != null && part.state().active()) {
                         // We need to close all gaps in partition update counters sequence. We assume this finalizing is

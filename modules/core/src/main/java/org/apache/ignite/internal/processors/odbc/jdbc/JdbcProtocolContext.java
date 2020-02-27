@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
 import java.util.EnumSet;
+import java.util.Objects;
+import java.util.TimeZone;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 
 import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_4_0;
@@ -33,14 +35,25 @@ public class JdbcProtocolContext {
     /** Features. */
     private final EnumSet<JdbcThinFeature> features;
 
+    /** Server timezone. */
+    private final TimeZone srvTz;
+
+    /** {@code true} on client side. */
+    private final boolean client;
+
     /**
      * @param ver Protocol version.
      * @param features Supported features.
+     * @param srvTz Server timezone.
      */
     public JdbcProtocolContext(ClientListenerProtocolVersion ver,
-        EnumSet<JdbcThinFeature> features) {
+        EnumSet<JdbcThinFeature> features, TimeZone srvTz, boolean client) {
+        assert Objects.nonNull(features);
+
         this.ver = ver;
         this.features = features;
+        this.srvTz = srvTz;
+        this.client = client;
     }
 
     /**
@@ -76,5 +89,19 @@ public class JdbcProtocolContext {
      */
     public EnumSet<JdbcThinFeature> features() {
         return features;
+    }
+
+    /**
+     * @return {@code true} on client side.
+     */
+    public boolean client() {
+        return client;
+    }
+
+    /**
+     * @return Server time zone.
+     */
+    public TimeZone serverTimeZone() {
+        return srvTz;
     }
 }

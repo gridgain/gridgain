@@ -3,3 +3,4 @@ org.apache.ignite.internal.processors.cache.persistence.wal.memtracker.PageMemor
 org.apache.ignite.internal.processors.configuration.distributed.TestDistibutedConfigurationPlugin
 org.apache.ignite.internal.processors.datastreamer.MultipleDataStreamersOnClientTest$TestDataStreamerPluginProvider
 org.apache.ignite.plugin.NodeValidationPluginProvider
+

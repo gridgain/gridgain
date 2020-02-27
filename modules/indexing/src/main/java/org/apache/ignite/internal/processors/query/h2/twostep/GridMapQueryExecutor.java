@@ -352,7 +352,7 @@ public class GridMapQueryExecutor {
                 reserved,
                 true,
                 h2.memoryManager().createQueryMemoryTracker(maxMem),
-                ctx);
+                h2.memoryManager());
 
             qryResults = new MapQueryResults(h2, reqId, qrys.size(), mainCctx, lazy, qctx);
 
