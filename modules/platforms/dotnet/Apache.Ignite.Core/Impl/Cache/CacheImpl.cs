@@ -1001,35 +1001,18 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private int Size0(bool loc, params CachePeekMode[] modes)
         {
-            bool hasNativeNear;
-            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
-            var size = 0;
-
-            if (hasNativeNear)
+            int nativeNearSize;
+            bool onlyNativeNear;
+            var modes0 = EncodePeekModes(loc, null, modes, out onlyNativeNear, out nativeNearSize);
+            
+            if (onlyNativeNear)
             {
-                if (!loc)
-                {
-                    throw new InvalidOperationException(
-                        string.Format("{0} can only be used to get local size", CachePeekMode.NativeNear));
-                }
-
-                if (_nearCache != null)
-                {
-                    // Java-based near size is summed up with primary, backups, etc.
-                    // Same for .NET near cache, sum up with the rest.
-                    size += _nearCache.GetSize();
-                }
-                
-                if (modes.Length == 1)
-                {
-                    // Only native near - early exit.
-                    return size;
-                }
+                return nativeNearSize;
             }
 
             var op = loc ? CacheOp.SizeLoc : CacheOp.Size;
 
-            return (int) DoOutInOp((int) op, modes0) + size; 
+            return (int) DoOutInOp((int) op, modes0) + nativeNearSize; 
         }
         
         /// <summary>
@@ -1041,34 +1024,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private long Size0(bool loc, int? part, params CachePeekMode[] modes)
         {
-            bool hasNativeNear;
-            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
-            var size = 0;
-
-            if (hasNativeNear)
+            int nativeNearSize;
+            bool onlyNativeNear;
+            var modes0 = EncodePeekModes(loc, part, modes, out onlyNativeNear, out nativeNearSize);
+            
+            if (onlyNativeNear)
             {
-                if (!loc)
-                {
-                    throw new InvalidOperationException(
-                        string.Format("{0} can only be used to get local size", CachePeekMode.NativeNear));
-                }
-
-                if (part != null)
-                {
-                    throw new InvalidOperationException(
-                        string.Format("{0} can not be used with `partition` argument", CachePeekMode.NativeNear));
-                }
-                
-                if (_nearCache != null)
-                {
-                    size += _nearCache.GetSize();
-                }
-
-                if (modes.Length == 1)
-                {
-                    // Only native near - early exit.
-                    return size;
-                }
+                return nativeNearSize;
             }
 
             var op = loc ? CacheOp.SizeLongLoc : CacheOp.SizeLong; 
@@ -1086,9 +1048,48 @@ namespace Apache.Ignite.Core.Impl.Cache
                 {
                     writer.WriteBoolean(false);   
                 }                     
-            }) + size;  
+            }) + nativeNearSize;  
         }
-        
+
+        /// <summary>
+        /// Encodes peek modes, includes native near check.
+        /// </summary>
+        private int EncodePeekModes(bool loc, int? part, CachePeekMode[] modes, out bool onlyNativeNear, out int size)
+        {
+            size = 0;
+            onlyNativeNear = false;
+            
+            bool hasNativeNear;
+            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+
+            if (hasNativeNear)
+            {
+                if (!loc)
+                {
+                    throw new InvalidOperationException(
+                        string.Format("{0} can only be used to get local size", CachePeekMode.NativeNear));
+                }
+
+                if (part != null)
+                {
+                    throw new InvalidOperationException(
+                        string.Format("{0} can not be used with `partition` argument", CachePeekMode.NativeNear));
+                }
+
+                if (_nearCache != null)
+                {
+                    size += _nearCache.GetSize();
+                }
+
+                if (modes.Length == 1)
+                {
+                    onlyNativeNear = true;
+                }
+            }
+
+            return modes0;
+        }
+
         /// <summary>
         /// Internal async integer size routine.
         /// </summary>
