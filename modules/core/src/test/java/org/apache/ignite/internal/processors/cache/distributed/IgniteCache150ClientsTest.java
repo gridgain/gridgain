@@ -122,6 +122,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
 
         final AtomicInteger idx = new AtomicInteger(1);
 
+        final AtomicInteger missed = new AtomicInteger();
+
         final CountDownLatch latch = new CountDownLatch(CLIENTS);
 
         final List<String> cacheNames = new ArrayList<>();
@@ -131,30 +133,39 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
 
         IgniteInternalFuture<?> fut = GridTestUtils.runMultiThreadedAsync(new Callable<Object>() {
             @Override public Object call() throws Exception {
-                Ignite ignite = startGrid(idx.getAndIncrement());
+                boolean cnt = false;
 
-                assertTrue(ignite.configuration().isClientMode());
-                assertTrue(ignite.cluster().localNode().isClient());
+                try {
+                    Ignite ignite = startGrid(idx.getAndIncrement());
 
-                latch.countDown();
+                    assertTrue(ignite.configuration().isClientMode());
+                    assertTrue(ignite.cluster().localNode().isClient());
 
-                log.info("Started [node=" + ignite.name() + ", left=" + latch.getCount() + ']');
+                    latch.countDown();
 
-                ThreadLocalRandom rnd = ThreadLocalRandom.current();
+                    cnt = true;
 
-                while (latch.getCount() > 0 && idx.get() < CLIENTS) {
-                    U.sleep(1000);
+                    log.info("Started [node=" + ignite.name() + ", left=" + latch.getCount() + ']');
 
-                    IgniteCache<Object, Object> cache = ignite.cache(cacheNames.get(rnd.nextInt(0, CACHES)));
+                    ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
-                    Integer key = rnd.nextInt(0, 100_000);
+                    while (latch.getCount() - missed.get() != 0) {
+                        U.sleep(1000);
 
-                    cache.put(key, 0);
+                        IgniteCache<Object, Object> cache = ignite.cache(cacheNames.get(rnd.nextInt(0, CACHES)));
 
-                    assertNotNull(cache.get(key));
+                        Integer key = rnd.nextInt(0, 100_000);
+
+                        cache.put(key, 0);
+
+                        assertNotNull(cache.get(key));
+                    }
+
+                    return null;
+                } finally {
+                    if (!cnt)
+                        missed.incrementAndGet();
                 }
-
-                return null;
             }
         }, CLIENTS, "start-client");
 
@@ -162,7 +173,7 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
 
         log.info("Started all clients.");
 
-        assertTrue("Clients start partially: " + latch.getCount(), latch.getCount() == 0);
+        assertTrue("Clients failed to start: " + missed.get(), missed.get() == 0);
 
         waitForTopology(CLIENTS + 1, (int)getTestTimeout());
 
