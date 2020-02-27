@@ -49,7 +49,7 @@ public class JdbcThinStatementTimeoutSelfTest extends JdbcThinAbstractSelfTest {
     /** URL. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1/";
 
-    /** Server thread pull size. */
+    /** Server thread pool size. */
     private static final int SERVER_THREAD_POOL_SIZE = 4;
 
     /** Connection. */
