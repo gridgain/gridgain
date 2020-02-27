@@ -1041,9 +1041,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private long Size0(bool loc, int? part, params CachePeekMode[] modes)
         {
-            // TODO: ???
             bool hasNativeNear;
             var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+            var size = 0;
 
             if (hasNativeNear)
             {
@@ -1059,13 +1059,16 @@ namespace Apache.Ignite.Core.Impl.Cache
                         string.Format("{0} can not be used with `partition` argument", CachePeekMode.NativeNear));
                 }
                 
-                if (modes.Length == 1 && _nearCache != null)
+                if (_nearCache != null)
                 {
-                    return _nearCache.GetSize();
+                    size += _nearCache.GetSize();
                 }
 
-                // TODO
-                throw new NotImplementedException();
+                if (modes.Length == 1)
+                {
+                    // Only native near - early exit.
+                    return size;
+                }
             }
 
             var op = loc ? CacheOp.SizeLongLoc : CacheOp.SizeLong; 
@@ -1083,7 +1086,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 {
                     writer.WriteBoolean(false);   
                 }                     
-            });  
+            }) + size;  
         }
         
         /// <summary>
