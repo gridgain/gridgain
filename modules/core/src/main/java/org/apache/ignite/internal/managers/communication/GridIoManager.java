@@ -1142,6 +1142,9 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     threadProcessingMessage(true, msgC);
 
+                    // The classes which use TransientSerializable must set a version of a node to ThreadLocal via
+                    // MarshallerUtils.jobSenderVersion(node.version()) that created a serializable object.
+                    // We forgot for communication messages.
                     ClusterNode node = ctx.discovery().node(nodeId);
 
                     if (node == null)
