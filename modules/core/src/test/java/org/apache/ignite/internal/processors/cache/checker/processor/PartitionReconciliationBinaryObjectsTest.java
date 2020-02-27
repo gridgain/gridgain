@@ -115,7 +115,7 @@ public class PartitionReconciliationBinaryObjectsTest extends PartitionReconcili
     /**
      *
      */
-    @Parameterized.Parameters(name = "atomicity = {0}, fixMode = {1}")
+    @Parameterized.Parameters(name = "atomicity = {0}, repair = {1}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
