@@ -17,7 +17,6 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
