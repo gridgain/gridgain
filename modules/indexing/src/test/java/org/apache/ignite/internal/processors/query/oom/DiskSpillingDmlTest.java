@@ -25,6 +25,8 @@ import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.junit.Assume;
 import org.junit.Test;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
@@ -96,6 +98,9 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
      */
     @Test
     public void testUpdatePlain() throws IOException {
+        // Ignored in lazy suite.
+        Assume.assumeFalse(GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY"));
+
         testUpdate("UPDATE person " +
             "SET age = age + 1 " +
             "WHERE age > 0");
@@ -107,6 +112,9 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
      */
     @Test
     public void testUpdateOrderBy() throws IOException {
+        // Ignored in lazy suite.
+        Assume.assumeFalse(GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY"));
+
         testUpdate("UPDATE person " +
             "SET age = age + 1 " +
             "WHERE id > 500 " +
@@ -175,6 +183,9 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
      */
     @Test
     public void testDeleteSimple() throws IOException {
+        // Ignored in lazy suite.
+        Assume.assumeFalse(GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY"));
+
         testDelete("DELETE FROM person " +
             "WHERE age > 10");
     }
@@ -235,7 +246,9 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
      * @throws IOException If failed.
      */
     @Test
-    public void testInsertSimple() throws IOException {
+    public void testInsertSimple() throws IOException {// Ignored in lazy suite.
+        Assume.assumeFalse(GridTestUtils.getFieldValue(SqlFieldsQuery.class, "DFLT_LAZY"));
+
         testInsert("INSERT INTO new_table (" + COLS + ") " +
             " SELECT * FROM person");
     }
@@ -323,8 +336,7 @@ public class DiskSpillingDmlTest extends DiskSpillingAbstractTest {
 
             List<List<?>> res = grid(0).cache(DEFAULT_CACHE_NAME)
                 .query(new SqlFieldsQueryEx(dml, false)
-                    .setMaxMemory(SMALL_MEM_LIMIT)
-                    .setLazy(false))
+                    .setMaxMemory(SMALL_MEM_LIMIT))
                 .getAll();
 
             List<WatchEvent<?>> dirEvts = watchKey.pollEvents();

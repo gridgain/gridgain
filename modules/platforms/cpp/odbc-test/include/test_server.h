@@ -42,7 +42,7 @@ public:
      * @param service Asio service.
      * @param responses Responses to provide to requests.
      */
-    TestServerSession(boost::asio::io_service& service, const std::vector<std::vector<int8_t>>& responses);
+    TestServerSession(boost::asio::io_service& service, const std::vector< std::vector<int8_t> >& responses);
 
     /**
      * Get socket.
@@ -98,10 +98,10 @@ private:
     boost::asio::ip::tcp::socket socket;
 
     // Received requests.
-    std::vector<std::vector<int8_t>> requests;
+    std::vector< std::vector<int8_t> > requests;
 
     // Responses to provide.
-    const std::vector<std::vector<int8_t>> responses;
+    const std::vector< std::vector<int8_t> > responses;
 
     // Number of requests answered.
     size_t requestsResponded;
@@ -186,10 +186,10 @@ private:
     boost::asio::ip::tcp::acceptor acceptor;
 
     // Reponses.
-    std::vector<std::vector<int8_t>> responses;
+    std::vector< std::vector<int8_t> > responses;
 
     // Sessions.
-    std::vector<boost::shared_ptr<TestServerSession>> sessions;
+    std::vector< boost::shared_ptr<TestServerSession> > sessions;
 
     // Server Thread.
     boost::shared_ptr<boost::thread> serverThread;
