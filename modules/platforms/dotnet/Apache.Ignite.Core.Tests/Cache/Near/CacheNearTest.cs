@@ -659,6 +659,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO
             var cache = GetCache<int, int>(client ? CacheTestMode.Client : CacheTestMode.ServerRemote);
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
+            
+            Assert.AreEqual(100, cache.GetLocalSize());
+            Assert.AreEqual(100, cache.GetLocalSize(CachePeekMode.All));
+            Assert.AreEqual(100, cache.GetLocalSize(CachePeekMode.All));
         }
 
         /// <summary>

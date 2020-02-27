@@ -220,17 +220,14 @@ namespace Apache.Ignite.Core.Impl
 
             foreach (var mode in modes)
             {
-                if (mode == CachePeekMode.NativeNear)
-                {
-                    // Skip .NET-only mode.
-                    hasNativeNear = true;
-                    continue;
-                }
-                
-                res |= (int)mode;
+                res |= (int) mode;
             }
 
-            return res;
+            // Clear NativeNear bit: Java does not understand it.
+            const int nativeNear = (int) CachePeekMode.NativeNear;
+            hasNativeNear = (res & nativeNear) == nativeNear;
+            
+            return res & ~nativeNear;
         }
     }
 }

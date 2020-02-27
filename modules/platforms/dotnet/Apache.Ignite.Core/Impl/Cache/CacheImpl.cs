@@ -1123,7 +1123,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     size += _nearCache.GetSize();
                 }
 
-                if (modes.Length == 1)
+                if (modes0 == 0)
                 {
                     onlyNativeNear = true;
                 }
