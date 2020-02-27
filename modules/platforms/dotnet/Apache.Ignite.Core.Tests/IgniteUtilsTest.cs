@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests
 {
     using System;
+    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Impl;
     using NUnit.Framework;
@@ -34,6 +35,26 @@ namespace Apache.Ignite.Core.Tests
         {
             Assert.AreEqual(Tuple.Create(0, false), EncodePeekModes(null));
             Assert.AreEqual(Tuple.Create(0, false), EncodePeekModes());
+
+            var allModes = Enum.GetValues(typeof(CachePeekMode)).Cast<CachePeekMode>().ToArray();
+            var allModesExceptNative = allModes
+                .Where(m => m != CachePeekMode.NativeNear).ToArray();
+            
+            foreach (var mode in allModesExceptNative)
+            {
+                var hasNativeNear = mode == CachePeekMode.All;
+                Assert.AreEqual(Tuple.Create((int) mode, hasNativeNear), EncodePeekModes(mode), mode.ToString());
+            }
+            
+            Assert.AreEqual(Tuple.Create(63, true), EncodePeekModes(allModes));
+            Assert.AreEqual(Tuple.Create(63, true), EncodePeekModes(allModesExceptNative));
+            
+            Assert.AreEqual(Tuple.Create(12, false), EncodePeekModes(CachePeekMode.Backup | CachePeekMode.Primary));
+            Assert.AreEqual(Tuple.Create(12, false), EncodePeekModes(CachePeekMode.Backup, CachePeekMode.Primary));
+            
+            Assert.AreEqual(Tuple.Create(8, false), EncodePeekModes(CachePeekMode.Backup));
+            Assert.AreEqual(Tuple.Create(8, true), EncodePeekModes(CachePeekMode.Backup | CachePeekMode.NativeNear));
+            Assert.AreEqual(Tuple.Create(8, true), EncodePeekModes(CachePeekMode.Backup, CachePeekMode.NativeNear));
         }
 
         /// <summary>
