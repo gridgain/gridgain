@@ -622,7 +622,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
             assert state != null;
 
-            part.restoreState(state == GridDhtPartitionState.EVICTED ? GridDhtPartitionState.RENTING : state);
+            part.restoreState(state == EVICTED ? RENTING : state);
         }
     }
 
