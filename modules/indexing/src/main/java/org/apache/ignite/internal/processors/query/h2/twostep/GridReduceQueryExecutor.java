@@ -507,9 +507,7 @@ public class GridReduceQueryExecutor {
                             null,
                             null,
                             null,
-                            true,
-                            h2.memoryManager().createQueryMemoryTracker(maxMem),
-                            h2.memoryManager());
+                            true);
 
                             H2Utils.setupConnection(conn, qctx, false, enforceJoinOrder);
 
@@ -531,7 +529,8 @@ public class GridReduceQueryExecutor {
                                 timeoutMillis,
                                 cancel,
                                 dataPageScanEnabled,
-                                qryInfo
+                                qryInfo,
+                                maxMem
                             );
 
                             resIter = new H2FieldsIterator(res, mvccTracker, conn, r.pageSize(), log, h2, qryInfo);
@@ -1059,8 +1058,14 @@ public class GridReduceQueryExecutor {
         List<List<?>> lists = new ArrayList<>(qry.mapQueries().size() + 1);
 
         for (int i = 0, mapQrys = qry.mapQueries().size(); i < mapQrys; i++) {
-            ResultSet rs =
-                h2.executeSqlQueryWithTimer(c, "SELECT PLAN FROM " + mergeTableIdentifier(i), null, 0, null, null, null);
+            ResultSet rs = h2.executeSqlQueryWithTimer(c,
+                "SELECT PLAN FROM " + mergeTableIdentifier(i),
+                null,
+                0,
+                null,
+                null,
+                null,
+                0);
 
             lists.add(F.asList(getPlan(rs)));
         }
@@ -1080,7 +1085,9 @@ public class GridReduceQueryExecutor {
             F.asList(rdc.parameters(params)),
             0,
             null,
-            null, null);
+            null,
+            null,
+            0);
 
         lists.add(F.asList(getPlan(rs)));
 
