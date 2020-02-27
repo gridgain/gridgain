@@ -661,12 +661,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
         }
 
+        /// <summary>
+        /// Tests that <see cref="CachePeekMode.NativeNear"/> can't be used with distributed GetSize overloads.
+        /// </summary>
         [Test]
         public void TestGetSizeWithNativeNearModeThrows([Values(true, false)] bool longMode, 
             [Values(true, false)] bool async)
         {
             var cache = GetCache<int, int>(CacheTestMode.Client);
-            var modes = CachePeekMode.Primary | CachePeekMode.NativeNear;
+            var modes = new[] {CachePeekMode.Primary, CachePeekMode.NativeNear};
             
             var action =
                 longMode
@@ -678,7 +681,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         : () => cache.GetSize(modes); 
 
             var ex = Assert.Throws<InvalidOperationException>(() => action());
-            Assert.AreEqual("1", ex.Message);
+            Assert.AreEqual("NativeNear can only be used to get local size", ex.Message);
         }
 
         [Test]
