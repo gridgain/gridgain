@@ -510,7 +510,13 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return TaskRunner.FromResult(val);
             }
 
-            return GetAsyncInternal(key);
+            return DoOutOpAsync(CacheOp.GetAsync, w => w.WriteObject(key), reader =>
+            {
+                if (reader != null)
+                    return reader.ReadObject<TV>();
+
+                throw GetKeyNotFoundException(key);
+            });
         }
 
         /** <inheritDoc /> */
@@ -1842,17 +1848,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return 0;
 
             return _ignite.HandleRegistry.Allocate(obj);
-        }
-        
-        private Task<TV> GetAsyncInternal(TK key)
-        {
-            return DoOutOpAsync(CacheOp.GetAsync, w => w.WriteObject(key), reader =>
-            {
-                if (reader != null)
-                    return reader.ReadObject<TV>();
-
-                throw GetKeyNotFoundException(key);
-            });
         }
 
         private void WriteKeysOrGetFromNear(BinaryWriter writer,
