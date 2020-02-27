@@ -110,13 +110,7 @@ public final class H2StatementCache {
     }
 
     /** */
-    public static byte queryFlags(
-        boolean distributedJoins,
-        boolean enforceJoinOrder
-        ) {
-        return (byte)(1 +
-            (distributedJoins ? 2 : 0) +
-            (enforceJoinOrder ? 4 : 0)
-        );
+    public static byte queryFlags(boolean distributedJoins, boolean enforceJoinOrder) {
+        return (byte)((distributedJoins ? 1 : 0) + (enforceJoinOrder ? 2 : 0));
     }
 }
