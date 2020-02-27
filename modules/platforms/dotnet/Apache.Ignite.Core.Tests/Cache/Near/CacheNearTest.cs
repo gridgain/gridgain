@@ -660,8 +660,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestGetLocalSizeServer()
         {
             var cache = GetCache<int, int>(CacheTestMode.ServerRemote);
-            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
+            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.All));
 
+            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
+            
             var primary = cache.GetLocalSize(CachePeekMode.Primary);
 
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.Near));
@@ -677,12 +680,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestGetLocalSizeClient()
         {
             var cache = GetCache<int, int>(CacheTestMode.Client);
+            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.All));
+            
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
 
             Assert.AreEqual(0, cache.GetLocalSize());
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.Primary | CachePeekMode.Backup));
-            Assert.AreEqual(NearCacheMaxSize * 2, cache.GetLocalSize(CachePeekMode.All));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.AreEqual(NearCacheMaxSize * 2, cache.GetLocalSize(CachePeekMode.All));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear, CachePeekMode.Primary));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear | CachePeekMode.Primary));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.Near));
