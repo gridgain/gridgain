@@ -22,7 +22,6 @@ import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.*;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.ClientConfiguration;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
@@ -30,8 +29,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
-import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
@@ -426,7 +423,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
      */
     @Test
     public void testPessimisticRepeatableReadsTransactionHoldsLock() throws Exception{
-        testIsolationLevel(PESSIMISTIC, REPEATABLE_READ);
+        testPessimisticTxLocking(REPEATABLE_READ);
     }
 
     /**
@@ -434,7 +431,61 @@ public class FunctionalTest extends GridCommonAbstractTest {
      */
     @Test
     public void testPessimisticSerializableTransactionHoldsLock() throws Exception{
-        testIsolationLevel(PESSIMISTIC, SERIALIZABLE);
+        testPessimisticTxLocking(SERIALIZABLE);
+    }
+
+    /**
+     * Test pessimistic tx holds the lock.
+     */
+    private void testPessimisticTxLocking(TransactionIsolation isolation) throws Exception {
+        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
+                    .setName("cache")
+                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            );
+            cache.put(0, "value0");
+
+            CyclicBarrier barrier = new CyclicBarrier(2);
+
+            try (ClientTransaction tx = client.transactions().txStart(PESSIMISTIC, isolation)) {
+                Thread t = new Thread(() -> {
+                    try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ, 500)) {
+                        cache.put(0, "value2");
+
+                        // Should block.
+                        tx2.commit();
+
+                        // Should not get here.
+                        fail();
+                    } catch (ClientServerError ex) {
+                        assertEquals(ClientStatus.TX_TIMED_OUT, ex.getCode());
+                    } catch (Exception ex) {
+                        // Should not get here.
+                        fail();
+                    } finally {
+                        try {
+                            barrier.await(2000, TimeUnit.MILLISECONDS);
+                        } catch (TimeoutException | InterruptedException | BrokenBarrierException ignore) {
+                            // No-op.
+                        }
+                    }
+                });
+
+                assertEquals("value0", cache.get(0));
+
+                t.start();
+
+                barrier.await(2000, TimeUnit.MILLISECONDS);
+
+                t.join();
+
+                tx.commit();
+            }
+
+            assertEquals("value0", cache.get(0));
+        }
     }
 
     /**
@@ -544,72 +595,6 @@ public class FunctionalTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Test isolation level.
-     */
-    private void testIsolationLevel(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
-        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
-             IgniteClient client = Ignition.startClient(getClientConfiguration())
-        ) {
-            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
-                    .setName("cache")
-                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            );
-            cache.put(0, "value0");
-
-            CyclicBarrier barrier = new CyclicBarrier(2);
-
-            try (ClientTransaction tx = client.transactions().txStart(concurrency, isolation)) {
-                Thread t = new Thread(() -> {
-                    try (ClientTransaction tx2 = client.transactions().txStart(OPTIMISTIC, REPEATABLE_READ, 500)) {
-                        cache.put(0, "value2");
-
-                        // Should block.
-                        tx2.commit();
-
-                        // Should not get here.
-                        fail();
-                    } catch (ClientServerError ex) {
-                        assertEquals(ClientStatus.TX_TIMED_OUT, ex.getCode());
-                    } catch (Exception ex) {
-                        // Should not get here.
-                        fail();
-                    } finally {
-                        try {
-                            barrier.await(2000, TimeUnit.MILLISECONDS);
-                        } catch (TimeoutException | InterruptedException | BrokenBarrierException ignore) {
-                            // No-op.
-                        }
-                    }
-                });
-
-                assertEquals("value0", cache.get(0));
-
-                t.start();
-
-                barrier.await(2000, TimeUnit.MILLISECONDS);
-
-                t.join();
-
-                tx.commit();
-            }
-
-            assertEquals("value0", cache.get(0));
-        }
-    }
-
-    /**
-     * Test tx commits when backup copy node shuts down.
-     */
-    @Test
-    public void testTxFailoverOnBackupCopy() throws Exception{
-        checkMissingBackupTxFailover(PESSIMISTIC, REPEATABLE_READ);
-        //checkMissingBackupTxFailover(PESSIMISTIC, SERIALIZABLE);
-        //checkMissingBackupTxFailover(PESSIMISTIC, READ_COMMITTED);
-        //checkMissingBackupTxFailover(OPTIMISTIC, REPEATABLE_READ);
-        //checkMissingBackupTxFailover(OPTIMISTIC, REPEATABLE_READ);
-    }
-
-    /**
      * Check that removing backup copy for tx doesn't pervent it from commit.
      */
     private void checkMissingBackupTxFailover(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
@@ -628,7 +613,6 @@ public class FunctionalTest extends GridCommonAbstractTest {
             try (ClientTransaction tx = client.transactions().txStart(concurrency, isolation)) {
                 Thread t = new Thread(() -> {
                     try {
-
                         Collection<ClusterNode> mapping = ignite.affinity("cache").mapKeyToPrimaryAndBackups(0);
                         mapping.stream().skip(1).forEach(node -> {
                             stopGrid(node.id().toString());
@@ -659,42 +643,6 @@ public class FunctionalTest extends GridCommonAbstractTest {
 
             assertEquals("value1", cache.get(0));
         }
-    }
-
-    @Test
-    public void  testTransactionMessages() throws Exception {
-        try (Ignite ignite = Ignition.start(getConfigWithLogger());
-             IgniteClient client = Ignition.startClient(getClientConfiguration())
-        ) {
-            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
-                    .setName("cache")
-                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            );
-
-            cache.put(0, "value0");
-
-            // Test nested transactions is not possible.
-            try (ClientTransaction tx = client.transactions().txStart(OPTIMISTIC, READ_COMMITTED, 1000)) {
-                fail();
-            }
-        }
-    }
-
-    /** Listener log messages. */
-    private static ListeningTestLogger testLog;
-
-    private IgniteConfiguration getConfigWithLogger(){
-
-        IgniteConfiguration serverConfiguration = Config.getServerConfiguration();
-        testLog = new ListeningTestLogger(true, serverConfiguration.getGridLogger());
-
-        LogListener lsnr = LogListener.matches("").times(1).build();
-
-        testLog.registerListener(lsnr);
-
-
-        serverConfiguration.setGridLogger(testLog);
-        return serverConfiguration;
     }
 
     /**
