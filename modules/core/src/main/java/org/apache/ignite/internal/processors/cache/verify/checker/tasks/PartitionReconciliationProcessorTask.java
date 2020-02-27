@@ -124,10 +124,10 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
             T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
-            res.merge(data.get2().getRes());
+            res.merge(data.get2().result());
 
-            if (data.get2().getErrorMessage() != null)
-                errors.add(nodeId + " - " + data.get2().getErrorMessage());
+            if (data.get2().errorMessage() != null)
+                errors.add(nodeId + " - " + data.get2().errorMessage());
         }
 
         return new ReconciliationResult(res, nodeIdToFolder, errors);
@@ -222,14 +222,14 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     reconciliationTaskArg.recheckDelay()
                 ).execute();
 
-                String path = localPrint(reconciliationRes.getRes());
+                String path = localPrint(reconciliationRes.result());
 
                 return new T2<>(
                     path,
                     reconciliationTaskArg.locOutput() ? reconciliationRes : new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(
-                        reconciliationRes.getRes().inconsistentKeysCount(),
-                        reconciliationRes.getRes().skippedEntriesCount(),
-                        reconciliationRes.getRes().skippedEntriesCount()), reconciliationRes.getErrorMessage())
+                        reconciliationRes.result().inconsistentKeysCount(),
+                        reconciliationRes.result().skippedEntriesCount(),
+                        reconciliationRes.result().skippedEntriesCount()), reconciliationRes.errorMessage())
                 );
             }
             catch (Exception e) {

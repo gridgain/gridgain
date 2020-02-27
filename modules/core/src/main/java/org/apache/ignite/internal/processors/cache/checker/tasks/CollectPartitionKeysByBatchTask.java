@@ -126,10 +126,10 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
 
             ExecutionResult<List<VersionedKey>> nodeRes = results.get(i).getData();
 
-            if (nodeRes.getErrorMessage() != null)
-                return new ExecutionResult<>(nodeRes.getErrorMessage());
+            if (nodeRes.errorMessage() != null)
+                return new ExecutionResult<>(nodeRes.errorMessage());
 
-            for (VersionedKey partKeyVer : nodeRes.getRes()) {
+            for (VersionedKey partKeyVer : nodeRes.result()) {
                 try {
                     KeyCacheObject key = unmarshalKey(partKeyVer.key(), ctx);
 

@@ -445,7 +445,7 @@ public class PartitionReconciliationProcessorTest {
 
                 evtLsnr.onEvent(ReconciliationEventListener.WorkLoadStage.RESULT_READY, arg);
 
-                lsnr.apply(res.getRes());
+                lsnr.apply(res.result());
 
                 evtLsnr.onEvent(ReconciliationEventListener.WorkLoadStage.FINISHING, arg);
             }

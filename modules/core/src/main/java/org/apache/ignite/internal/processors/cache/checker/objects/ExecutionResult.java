@@ -67,14 +67,14 @@ public class ExecutionResult<T> extends IgniteDataTransferObject {
     /**
      *
      */
-    public String getErrorMessage() {
+    public String errorMessage() {
         return errorMsg;
     }
 
     /**
      *
      */
-    public T getRes() {
+    public T result() {
         return res;
     }
 

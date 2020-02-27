@@ -198,15 +198,15 @@ public class AbstractPipelineProcessor {
                     return;
                 }
 
-                if (res.getErrorMessage() != null) {
-                    error.compareAndSet(null, res.getErrorMessage());
+                if (res.errorMessage() != null) {
+                    error.compareAndSet(null, res.errorMessage());
 
                     return;
                 }
 
                 evtLsnr.onEvent(RESULT_READY, arg);
 
-                lsnr.apply(res.getRes());
+                lsnr.apply(res.result());
 
                 evtLsnr.onEvent(FINISHING, arg);
             }

@@ -127,10 +127,10 @@ public class RepairRequestTaskTest {
 
         ExecutionResult<RepairResult> res = injectIgnite(repairJob(data, 5, 1), igniteMock).execute();
 
-        assertTrue(res.getRes().keysToRepair().isEmpty());
-        assertEquals(1, res.getRes().repairedKeys().size());
+        assertTrue(res.result().keysToRepair().isEmpty());
+        assertEquals(1, res.result().repairedKeys().size());
 
-        Map.Entry<VersionedKey, RepairMeta> entry = res.getRes()
+        Map.Entry<VersionedKey, RepairMeta> entry = res.result()
             .repairedKeys().entrySet().iterator().next();
         assertEquals(keyVers, entry.getValue().getPreviousValue());
 
@@ -171,10 +171,10 @@ public class RepairRequestTaskTest {
         ExecutionResult<RepairResult> res = injectIgnite(repairJob(data, 2, 1), igniteMock).execute();
 
         if (fixed) {
-            assertTrue(res.getRes().keysToRepair().isEmpty());
-            assertEquals(1, res.getRes().repairedKeys().size());
+            assertTrue(res.result().keysToRepair().isEmpty());
+            assertEquals(1, res.result().repairedKeys().size());
 
-            Map.Entry<VersionedKey, RepairMeta> entry = res.getRes()
+            Map.Entry<VersionedKey, RepairMeta> entry = res.result()
                 .repairedKeys().entrySet().iterator().next();
             assertEquals(keyVers, entry.getValue().getPreviousValue());
 
@@ -183,10 +183,10 @@ public class RepairRequestTaskTest {
             assertEquals(LATEST, repairMeta.repairAlg());
         }
         else {
-            assertTrue(res.getRes().repairedKeys().isEmpty());
-            assertEquals(1, res.getRes().keysToRepair().size());
+            assertTrue(res.result().repairedKeys().isEmpty());
+            assertEquals(1, res.result().keysToRepair().size());
 
-            Map.Entry<VersionedKey, Map<UUID, VersionedValue>> entry = res.getRes()
+            Map.Entry<VersionedKey, Map<UUID, VersionedValue>> entry = res.result()
                 .keysToRepair().entrySet().iterator().next();
 
             assertEquals(keyVers, entry.getValue());
@@ -212,10 +212,10 @@ public class RepairRequestTaskTest {
         final int lastAttempt = 3;
         ExecutionResult<RepairResult> res = injectIgnite(repairJob(data, 4, lastAttempt), igniteMock).execute();
 
-        assertTrue(res.getRes().keysToRepair().isEmpty());
-        assertEquals(1, res.getRes().repairedKeys().size());
+        assertTrue(res.result().keysToRepair().isEmpty());
+        assertEquals(1, res.result().repairedKeys().size());
 
-        Map.Entry<VersionedKey, RepairMeta> entry = res.getRes()
+        Map.Entry<VersionedKey, RepairMeta> entry = res.result()
             .repairedKeys().entrySet().iterator().next();
         assertEquals(keyVers, entry.getValue().getPreviousValue());
 

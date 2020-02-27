@@ -178,10 +178,10 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             ExecutionResult<RepairResult> excRes = result.getData();
 
-            if (excRes.getErrorMessage() != null)
-                return new ExecutionResult<>(excRes.getErrorMessage());
+            if (excRes.errorMessage() != null)
+                return new ExecutionResult<>(excRes.errorMessage());
 
-            RepairResult repairRes = excRes.getRes();
+            RepairResult repairRes = excRes.result();
 
             aggregatedRepairRes.keysToRepair().putAll(repairRes.keysToRepair());
             aggregatedRepairRes.repairedKeys().putAll(repairRes.repairedKeys());

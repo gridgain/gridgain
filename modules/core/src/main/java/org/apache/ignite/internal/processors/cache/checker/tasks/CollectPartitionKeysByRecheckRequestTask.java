@@ -112,10 +112,10 @@ public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter
 
             ExecutionResult<List<VersionedEntry>> excRes = result.getData();
 
-            if (excRes.getErrorMessage() != null)
-                return new ExecutionResult<>(excRes.getErrorMessage());
+            if (excRes.errorMessage() != null)
+                return new ExecutionResult<>(excRes.errorMessage());
 
-            List<VersionedEntry> partKeys = excRes.getRes();
+            List<VersionedEntry> partKeys = excRes.result();
 
             for (VersionedEntry key : partKeys) {
                 try {
