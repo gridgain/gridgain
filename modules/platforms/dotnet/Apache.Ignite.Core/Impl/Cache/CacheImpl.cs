@@ -590,6 +590,8 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             StartTxIfNeeded();
 
+            // TODO: Near Cache optimization on primary nodes:
+            // Near update comes from the same thread, we can use ThreadLocal to avoid extra deserialization
             DoOutOp(CacheOp.Put, key, val);
         }
 

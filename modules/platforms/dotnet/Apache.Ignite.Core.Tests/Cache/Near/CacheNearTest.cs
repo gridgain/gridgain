@@ -687,11 +687,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             Assert.AreEqual(0, cache.GetLocalSize());
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.Primary | CachePeekMode.Backup));
+            Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.Near));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear));
             Assert.AreEqual(NearCacheMaxSize * 2, cache.GetLocalSize(CachePeekMode.All));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear, CachePeekMode.Primary));
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.NativeNear | CachePeekMode.Primary));
-            Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.Near));
             Assert.AreEqual(NearCacheMaxSize * 2, cache.GetLocalSize(CachePeekMode.Near | CachePeekMode.NativeNear));
             Assert.AreEqual(NearCacheMaxSize * 2, cache.GetLocalSize(CachePeekMode.Near, CachePeekMode.NativeNear));
         }
