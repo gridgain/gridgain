@@ -1850,7 +1850,12 @@ namespace Apache.Ignite.Core.Impl.Cache
             return _ignite.HandleRegistry.Allocate(obj);
         }
 
-        private void WriteKeysOrGetFromNear(BinaryWriter writer,
+        /// <summary>
+        /// Enumerates provided keys, looking for near cache values.
+        /// Keys that are not in near cache are written to the writer.
+        /// If all keys are in near cache, returns <c>false</c> to cancel Java call.
+        /// </summary>
+        private bool WriteKeysOrGetFromNear(BinaryWriter writer,
             IEnumerable<TK> keys,
             ref ICollection<ICacheEntry<TK, TV>> res)
         {
@@ -1873,10 +1878,46 @@ namespace Apache.Ignite.Core.Impl.Cache
                 }
             }
 
+            if (count == 0)
+            {
+                return false;
+            }
+
             var endPos = writer.Stream.Position;
             writer.Stream.Seek(pos);
             writer.WriteInt(count);
             writer.Stream.Seek(endPos);
+
+            return true;
+        }
+
+        private bool WriteKeysNotInNear(BinaryWriter writer, IEnumerable<TK> keys)
+        {
+            var count = 0;
+            var pos = writer.Stream.Position;
+            writer.WriteInt(0); // Reserve count.
+
+            foreach (var key in keys)
+            {
+                TV _;
+                if (!_nearCache.TryGetValue(key, out _))
+                {
+                    writer.WriteObjectDetached(key);
+                    count++;
+                }
+            }
+
+            if (count == 0)
+            {
+                return false;
+            }
+
+            var endPos = writer.Stream.Position;
+            writer.Stream.Seek(pos);
+            writer.WriteInt(count);
+            writer.Stream.Seek(endPos);
+
+            return true;
         }
     }
 }
