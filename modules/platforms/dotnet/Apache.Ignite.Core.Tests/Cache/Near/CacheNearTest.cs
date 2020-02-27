@@ -659,18 +659,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestGetLocalSizeServer()
         {
-            var cache = GetCache<int, int>(CacheTestMode.ServerRemote);
+            var cache = GetCache<int, int>(CacheTestMode.ServerRemote, TestUtils.TestName);
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.All));
 
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => x));
-            
+
             var primary = cache.GetLocalSize(CachePeekMode.Primary);
 
             Assert.AreEqual(NearCacheMaxSize, cache.GetLocalSize(CachePeekMode.Near));
-            Assert.AreEqual(primary, cache.GetLocalSize(CachePeekMode.NativeNear));
-            Assert.AreEqual(NearCacheMaxSize + primary, cache.GetLocalSize(CachePeekMode.Near | CachePeekMode.NativeNear));
-            Assert.AreEqual(NearCacheMaxSize + primary, cache.GetLocalSize(CachePeekMode.Near, CachePeekMode.NativeNear));
+            Assert.AreEqual(NearCacheMaxSize + primary, cache.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.AreEqual(NearCacheMaxSize * 2 + primary,
+                cache.GetLocalSize(CachePeekMode.Near | CachePeekMode.NativeNear));
+            Assert.AreEqual(NearCacheMaxSize * 2 + primary,
+                cache.GetLocalSize(CachePeekMode.Near, CachePeekMode.NativeNear));
         }
 
         /// <summary>
@@ -679,7 +681,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestGetLocalSizeClient()
         {
-            var cache = GetCache<int, int>(CacheTestMode.Client);
+            var cache = GetCache<int, int>(CacheTestMode.Client, TestUtils.TestName);
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.All));
             
@@ -703,7 +705,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestGetSizeWithNativeNearModeThrows([Values(true, false)] bool longMode, 
             [Values(true, false)] bool async)
         {
-            var cache = GetCache<int, int>(CacheTestMode.Client);
+            var cache = GetCache<int, int>(CacheTestMode.Client, TestUtils.TestName);
             var modes = new[] {CachePeekMode.Primary, CachePeekMode.NativeNear};
             
             var action =
@@ -776,10 +778,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// </summary>
         private ICache<TK, TV> GetCache<TK, TV>(CacheTestMode mode, string name = CacheName)
         {
-            var nearConfiguration = _grid.GetCache<TK, TV>(name).GetConfiguration().NearConfiguration;
-            
-            // For server nodes we could just say GetCache - near is created automatically.
-            return GetIgnite(mode).GetOrCreateNearCache<TK, TV>(name, nearConfiguration);
+            var nearConfiguration = _grid.GetCache<TK, TV>(CacheName).GetConfiguration().NearConfiguration;
+            var cacheConfiguration = new CacheConfiguration {NearConfiguration = nearConfiguration, Name = name};
+
+            return GetIgnite(mode).GetOrCreateCache<TK, TV>(cacheConfiguration, nearConfiguration);
         }
 
         /// <summary>
