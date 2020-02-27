@@ -41,7 +41,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * and we can update <see cref="NearCacheEntry{T}.Version"/> atomically without locks. */
         private readonly Func<object> _affinityTopologyVersionFunc;
 
-        /** Generic map, used by default, should fit most use cases. */
+        /** Underlying map. */
         private readonly ConcurrentDictionary<TK, NearCacheEntry<TV>> _map = 
             new ConcurrentDictionary<TK, NearCacheEntry<TV>>();
 
