@@ -607,19 +607,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(actualValue, remoteCache[key].Bar, "Remote value");
         }
 
-        [Test]
-        public void TestNearCacheAllOperations()
-        {
-            // TODO: Can we split this test?
-            // Write ops:
-            // - check reference equality locally
-            // - check update remotely
-            // Read ops:
-            // - check reference equality after multiple calls
-            // - check update from local (reference equality)
-            // - check update from remote
-        }
-
         /// <summary>
         /// Tests GetAll operation.
         /// </summary>
@@ -653,6 +640,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: Test in combination with other modes.
         }
 
+        [Test]
+        public void TestContainsKey()
+        {
+            // TODO: how can we check that result is from near?
+        }
+
+        [Test]
+        public void TestContainsKeys()
+        {
+            // TODO: how can we check that result is from near?
+        }
+        
         /// <summary>
         /// Tests local size on server node.
         /// </summary>
