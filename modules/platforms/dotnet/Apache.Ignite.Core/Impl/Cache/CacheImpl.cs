@@ -553,13 +553,65 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 // Get what we can from Near Cache, and the rest from Java.
                 ICollection<ICacheEntry<TK, TV>> res = null;
-                
-                return DoOutInOpX((int) CacheOp.GetAll,
-                    w => WriteKeysOrGetFromNear(w, keys, ref res),
-                    (s, r) => r == True 
-                        ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary), res) 
-                        : res,
-                    _readException) ?? res;
+
+                using (var enumerator = keys.GetEnumerator())
+                {
+                    while (enumerator.MoveNext())
+                    {
+                        var key = enumerator.Current;
+                        
+                        TV val;
+                        if (_nearCache.TryGetValue(key, out val))
+                        {
+                            res = res ?? new List<ICacheEntry<TK, TV>>();
+                            res.Add(new CacheEntry<TK, TV>(key, val));
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                    if (!enumerator.MoveNext())
+                    {
+                        // All keys were resolved from near cache.
+                        return res;
+                    }
+                    
+                    // ReSharper disable AccessToDisposedClosure (operation is synchronous, not an issue).
+                    return DoOutInOpX((int) CacheOp.GetAll,
+                        w =>
+                        {
+                            var count = 1;
+                            var pos = w.Stream.Position;
+                            w.WriteInt(count); // Reserve count.
+                            
+                            w.WriteObjectDetached(enumerator.Current);
+
+                            while (enumerator.MoveNext())
+                            {
+                                TV val;
+                                if (_nearCache.TryGetValue(enumerator.Current, out val))
+                                {
+                                    res = res ?? new List<ICacheEntry<TK, TV>>();
+                                    res.Add(new CacheEntry<TK, TV>(enumerator.Current, val));
+                                }
+                                else
+                                {
+                                    w.WriteObjectDetached(enumerator.Current);
+                                    count++;
+                                }
+                            }
+                            
+                            w.Stream.Seek(pos);
+                            w.WriteInt(count);
+                        },
+                        (s, r) => r == True 
+                            ? ReadGetAllDictionary(Marshaller.StartUnmarshal(s, _flagKeepBinary), res) 
+                            : res,
+                        _readException);
+                    // ReSharper restore AccessToDisposedClosure
+                }
             }
 
             return DoOutInOpX((int) CacheOp.GetAll,
@@ -1860,6 +1912,9 @@ namespace Apache.Ignite.Core.Impl.Cache
             IEnumerable<TK> keys,
             ref ICollection<ICacheEntry<TK, TV>> res)
         {
+            // TODO: This is a bad approach - we have lots of overhead even when all keys come from Near.
+            // And that should be as fast as possible.
+
             var count = 0;
             var pos = writer.Stream.Position;
             writer.WriteInt(0); // Reserve count.
@@ -1873,35 +1928,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                     res.Add(new CacheEntry<TK, TV>(key, val));
                 }
                 else
-                {
-                    writer.WriteObjectDetached(key);
-                    count++;
-                }
-            }
-
-            if (count == 0)
-            {
-                return false;
-            }
-
-            var endPos = writer.Stream.Position;
-            writer.Stream.Seek(pos);
-            writer.WriteInt(count);
-            writer.Stream.Seek(endPos);
-
-            return true;
-        }
-
-        private bool WriteKeysNotInNear(BinaryWriter writer, IEnumerable<TK> keys)
-        {
-            var count = 0;
-            var pos = writer.Stream.Position;
-            writer.WriteInt(0); // Reserve count.
-
-            foreach (var key in keys)
-            {
-                TV _;
-                if (!_nearCache.TryGetValue(key, out _))
                 {
                     writer.WriteObjectDetached(key);
                     count++;
