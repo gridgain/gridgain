@@ -170,6 +170,8 @@ public class GridNioSslFilter extends GridNioFilterAdapter {
 
             sslMeta = new GridSslMeta();
 
+            sslMeta.sslEngine(engine);
+
             ses.addMeta(SSL_META.ordinal(), sslMeta);
 
             handshake = true;
