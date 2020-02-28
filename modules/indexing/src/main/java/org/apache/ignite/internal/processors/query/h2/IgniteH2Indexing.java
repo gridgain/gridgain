@@ -539,6 +539,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (mvccEnabled)
                 mvccSnapshot = mvccTracker.snapshot();
 
+            long maxMem = qryParams.maxMemory();
+
             final QueryContext qctx = new QueryContext(
                 0,
                 filter,

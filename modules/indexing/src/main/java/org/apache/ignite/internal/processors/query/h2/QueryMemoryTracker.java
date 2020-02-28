@@ -73,9 +73,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
     /** The number of files created by the query. */
     private volatile int filesCreated;
 
-    /** Query descriptor (for logging). */
-    private final String qryDesc;
-
     /**
      * Constructor.
      *
@@ -84,24 +81,20 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
      * @param quota Query memory limit in bytes.
      * @param blockSize Reservation block size.
      * @param offloadingEnabled Flag whether to fail when memory limit is exceeded.
-     * @param qryDesc Descriptor of the racked query.
      */
     public QueryMemoryTracker(
-        IgniteLogger log,
         H2MemoryTracker parent,
         long quota,
         long blockSize,
-        boolean offloadingEnabled,
-        String qryDesc
+        boolean offloadingEnabled
     ) {
         assert quota >= 0;
 
-        this.log = log;
+        this.log = null;
         this.offloadingEnabled = offloadingEnabled;
         this.parent = parent;
         this.quota = quota;
         this.blockSize = quota != 0 ? Math.min(quota, blockSize) : blockSize;
-        this.qryDesc = qryDesc;
     }
 
     /** {@inheritDoc} */
@@ -260,23 +253,16 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
         if (parent != null)
             parent.release(reservedFromParent);
 
-        if (log.isDebugEnabled()) {
-            log.debug("Query has been completed with memory metrics: [bytesAllocatedMax="  + maxReserved +
-                ", bytesOffloaded=" + totalWrittenOnDisk + ", filesCreated=" + filesCreated +
-                ", query=" + qryDesc + ']');
-        }
+//        if (log.isDebugEnabled()) {
+//            log.debug("Query has been completed with memory metrics: [bytesAllocatedMax="  + maxReserved +
+//                ", bytesOffloaded=" + totalWrittenOnDisk + ", filesCreated=" + filesCreated +
+//                ", query=" + qryDesc + ']');
+//        }
     }
 
     /** {@inheritDoc} */
     @Override public synchronized void incrementFilesCreated() {
         filesCreated++;
-    }
-
-    /**
-     * @return Query descriptor.
-     */
-    public String queryDescriptor() {
-        return qryDesc;
     }
 
     /** {@inheritDoc} */

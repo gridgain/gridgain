@@ -530,7 +530,7 @@ public class GridReduceQueryExecutor {
                             final PreparedStatement stmt = h2.preparedStatementWithParams(conn, rdc.query(),
                                 params0, false);
 
-                            ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
+                            ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId, qryId);
 
                             ResultSet res = h2.executeSqlQueryWithTimer(stmt, conn,
                                 rdc.query(),
@@ -1074,7 +1074,8 @@ public class GridReduceQueryExecutor {
                 0,
                 null,
                 null,
-                null
+                null,
+                0
             );
 
             lists.add(F.asList(getPlan(rs)));
@@ -1097,7 +1098,8 @@ public class GridReduceQueryExecutor {
             0,
             null,
             null,
-            null
+            null,
+            0
         );
 
         lists.add(F.asList(getPlan(rs)));

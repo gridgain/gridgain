@@ -155,7 +155,11 @@ public class GridQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
                 // NO-OP
             }
 
-            @Override public void close() throws Exception {
+            @Override public void incrementFilesCreated() {
+                // NO-OP
+            }
+
+            @Override public void close() {
                 // NO-OP
             }
         };

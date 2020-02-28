@@ -209,7 +209,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
                 ", query=" + "qryDesc" + ']');
         }
 
-        return new QueryMemoryTracker(log, this, maxQryMemory < 0 ? 0 : maxQryMemory, blockSize, offloadingEnabled, "qryDesc");
+        return new QueryMemoryTracker(this, maxQryMemory < 0 ? 0 : maxQryMemory, blockSize, offloadingEnabled);
     }
 
     /**

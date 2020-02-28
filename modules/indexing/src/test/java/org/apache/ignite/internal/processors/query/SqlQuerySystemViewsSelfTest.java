@@ -487,7 +487,7 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
      */
     private static class TestDummyMemoryTracker implements GridQueryMemoryTracker, H2MemoryTracker {
         /** {@inheritDoc} */
-        @Override public void close() throws Exception {
+        @Override public void close() {
             // NO-OP
         }
 
@@ -533,6 +533,10 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         /** {@inheritDoc} */
         @Override public void unswap(long size) {
+            // NO-OP
+        }
+
+        @Override public void incrementFilesCreated() {
             // NO-OP
         }
     }

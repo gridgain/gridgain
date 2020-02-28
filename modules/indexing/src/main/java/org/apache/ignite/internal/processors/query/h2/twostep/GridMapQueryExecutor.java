@@ -47,7 +47,6 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -243,7 +242,8 @@ public class GridMapQueryExecutor {
                 QUERY_POOL);
         }
 
-        onQueryRequest0(node,
+        onQueryRequest0(
+            node,
             req.requestId(),
             0,
             req.schemaName(),
@@ -261,7 +261,9 @@ public class GridMapQueryExecutor {
             lazy,
             req.mvccSnapshot(),
             dataPageScanEnabled,
-            req.maxMemory());
+            req.maxMemory(),
+            req.originalQryId()
+        );
     }
 
     /**
@@ -426,7 +428,8 @@ public class GridMapQueryExecutor {
                             timeout,
                             qryResults.queryCancel(qryIdx),
                             dataPageScanEnabled,
-                            qryInfo
+                            qryInfo,
+                            maxMem
                         );
 
                         if (evt) {

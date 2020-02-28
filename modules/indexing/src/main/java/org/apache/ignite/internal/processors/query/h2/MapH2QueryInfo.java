@@ -42,7 +42,7 @@ public class MapH2QueryInfo extends H2QueryInfo {
      */
     public MapH2QueryInfo(PreparedStatement stmt, String sql,
         ClusterNode node, long reqId, int segment, @Nullable Long originalQryId) {
-        super(QueryType.MAP, stmt, sql);
+        super(QueryType.MAP, stmt, sql, originalQryId);
 
         this.node = node;
         this.reqId= reqId;

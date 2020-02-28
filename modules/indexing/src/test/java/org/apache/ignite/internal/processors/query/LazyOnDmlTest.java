@@ -337,7 +337,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
 
-                        memoryTracker().released(memoryReserved());
+                        memoryTracker().release(memoryReserved());
                     }
                 };
 
