@@ -553,6 +553,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 // Get what we can from Near Cache, and the rest from Java.
                 ICollection<ICacheEntry<TK, TV>> res = null;
+                var allKeysAreNear = true;
 
                 using (var enumerator = keys.GetEnumerator())
                 {
@@ -568,13 +569,13 @@ namespace Apache.Ignite.Core.Impl.Cache
                         }
                         else
                         {
+                            allKeysAreNear = false;
                             break;
                         }
                     }
 
-                    if (!enumerator.MoveNext())
+                    if (allKeysAreNear)
                     {
-                        // All keys were resolved from near cache.
                         return res;
                     }
                     
