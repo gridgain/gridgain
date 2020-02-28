@@ -63,9 +63,7 @@ public class GridIndexRebuildWithMvccEnabledSelfTest extends GridIndexRebuildSel
 
         checkDataState(srv, false);
 
-        File cacheWorkDir = ((FilePageStoreManager)cc.context().shared().pageStore()).cacheWorkDir(cc.configuration());
-
-        File idxPath = cacheWorkDir.toPath().resolve("index.bin").toFile();
+        File idxPath = indexFile(cc);
 
         stopAllGrids();
 

@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
@@ -45,6 +46,9 @@ import static org.apache.ignite.internal.processors.cache.persistence.CacheDataR
  * Worker for creating/rebuilding indexes for cache per partition.
  */
 public class SchemaIndexCachePartitionWorker extends GridWorker {
+    /** Thread consumer for tests. */
+    @Nullable public static Consumer<? super Thread> THREAD_CONSUMER;
+
     /** Count of rows, being processed within a single checkpoint lock. */
     private static final int BATCH_SIZE = 1000;
 
@@ -110,6 +114,9 @@ public class SchemaIndexCachePartitionWorker extends GridWorker {
 
     /** {@inheritDoc} */
     @Override protected void body() throws InterruptedException, IgniteInterruptedCheckedException {
+        if (nonNull(THREAD_CONSUMER))
+            THREAD_CONSUMER.accept(Thread.currentThread());
+
         Throwable err = null;
 
         try {

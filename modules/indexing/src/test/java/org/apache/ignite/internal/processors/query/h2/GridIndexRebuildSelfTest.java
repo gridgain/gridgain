@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.io.File;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -31,12 +33,19 @@ import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.index.DynamicIndexAbstractSelfTest;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCachePartitionWorker;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
+
+import static java.lang.System.identityHashCode;
+import static java.util.Collections.newSetFromMap;
+import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Index rebuild after node restart test.
@@ -54,6 +63,12 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
     /** Latch to signal that rebuild may start. */
     private final CountDownLatch rebuildLatch = new CountDownLatch(1);
 
+    /** Thread pool size for build index. */
+    private Integer buildIdxThreadPoolSize;
+
+    /** GridQueryIndexing class. */
+    private Class<? extends GridQueryIndexing> qryIndexingCls = BlockingIndexing.class;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration commonConfiguration(int idx) throws Exception {
         IgniteConfiguration cfg =  super.commonConfiguration(idx);
@@ -61,6 +76,19 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         cfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration()
             .setMaxSize(300*1024L*1024L)
             .setPersistenceEnabled(true);
+
+        if (nonNull(buildIdxThreadPoolSize))
+            cfg.setBuildIndexThreadPoolSize(buildIdxThreadPoolSize);
+
+        return cfg;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration serverConfiguration(int idx) throws Exception {
+        IgniteConfiguration cfg = super.serverConfiguration(idx);
+
+        if (nonNull(qryIndexingCls))
+            GridQueryProcessor.idxCls = qryIndexingCls;
 
         return cfg;
     }
@@ -82,6 +110,8 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         stopAllGrids();
 
         cleanPersistenceDir();
+        SchemaIndexCachePartitionWorker.THREAD_CONSUMER = null;
+        GridQueryProcessor.idxCls = null;
     }
 
     /** {@inheritDoc} */
@@ -118,22 +148,11 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
     public void testIndexRebuild() throws Exception {
         IgniteEx srv = startServer();
 
-        execute(srv, "CREATE TABLE T(k int primary key, v int) WITH \"cache_name=T,wrap_value=false," +
-            "atomicity=transactional\"");
-
-        execute(srv, "CREATE INDEX IDX ON T(v)");
-
-        IgniteInternalCache cc = srv.cachex(CACHE_NAME);
-
-        assertNotNull(cc);
-
-        putData(srv, false);
+        IgniteInternalCache cc = createAndFillTableWithIndex(srv);
 
         checkDataState(srv, false);
 
-        File cacheWorkDir = ((FilePageStoreManager)cc.context().shared().pageStore()).cacheWorkDir(cc.configuration());
-
-        File idxPath = cacheWorkDir.toPath().resolve("index.bin").toFile();
+        File idxPath = indexFile(cc);
 
         stopAllGrids();
 
@@ -144,6 +163,77 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         putData(srv, true);
 
         checkDataState(srv, true);
+    }
+
+    /**
+     * Test checks that index rebuild uses the number of threads that specified
+     * in configuration.
+     *
+     * @throws Exception if failed.
+     * */
+    @Test
+    public void testCntThreadForRebuildIdx() throws Exception {
+        qryIndexingCls = null;
+
+        IgniteEx srv = startServer();
+
+        IgniteInternalCache internalCache = createAndFillTableWithIndex(srv);
+
+        File idxPath = indexFile(internalCache);
+
+        stopAllGrids();
+
+        assertTrue(U.delete(idxPath));
+
+        buildIdxThreadPoolSize = 4;
+        Set<Integer> identityThreads = newSetFromMap(new ConcurrentHashMap<>());
+        SchemaIndexCachePartitionWorker.THREAD_CONSUMER = thread -> identityThreads.add(identityHashCode(thread));
+
+        srv = startServer();
+        srv.cache(CACHE_NAME).indexReadyFuture().get();
+
+        assertEquals((int)buildIdxThreadPoolSize, identityThreads.size());
+    }
+
+    /**
+     * Creating a cache, table, index and populating data.
+     *
+     * @param node Node.
+     * @return Cache.
+     * @throws Exception if failed.
+     */
+    private IgniteInternalCache createAndFillTableWithIndex(IgniteEx node) throws Exception {
+        requireNonNull(node);
+
+        String cacheName = CACHE_NAME;
+
+        execute(node, "CREATE TABLE T(k int primary key, v int) WITH \"cache_name=" + cacheName +
+            ",wrap_value=false,atomicity=transactional\"");
+
+        execute(node, "CREATE INDEX IDX ON T(v)");
+
+        IgniteInternalCache cc = node.cachex(cacheName);
+
+        assertNotNull(cc);
+
+        putData(node, false);
+
+        return cc;
+    }
+
+    /**
+     * Get index file.
+     *
+     * @param internalCache Cache.
+     * @return Index file.
+     */
+    protected File indexFile(IgniteInternalCache internalCache) {
+        requireNonNull(internalCache);
+
+        File cacheWorkDir = ((FilePageStoreManager)internalCache.context().shared().pageStore())
+            .cacheWorkDir(internalCache.configuration());
+
+        return cacheWorkDir.toPath().resolve("index.bin").toFile();
     }
 
     /**
@@ -213,17 +303,9 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
      * @throws Exception if failed.
      */
     protected IgniteEx startServer() throws Exception {
-        // Have to do this for each starting node - see GridQueryProcessor ctor, it nulls
-        // idxCls static field on each call.
-        GridQueryProcessor.idxCls = BlockingIndexing.class;
-
-        IgniteConfiguration cfg = serverConfiguration(0);
-
-        IgniteEx res = startGrid(cfg);
-
-        res.active(true);
-
-        return res;
+        IgniteEx srvNode = startGrid(serverConfiguration(0));
+        srvNode.active(true);
+        return srvNode;
     }
 
     /**
