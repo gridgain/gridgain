@@ -17,10 +17,11 @@
 package org.apache.ignite.internal.processors.security.impl;
 
 import java.net.InetSocketAddress;
+import java.security.cert.Certificate;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,112 +40,64 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.plugin.security.SecurityPermissionSet;
 import org.apache.ignite.plugin.security.SecuritySubject;
 
+import static org.apache.ignite.plugin.security.SecurityPermissionSetBuilder.ALLOW_ALL;
 import static org.apache.ignite.plugin.security.SecuritySubjectType.REMOTE_NODE;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Security processor for test.
  */
-public class TestSecurityProcessor extends GridProcessorAdapter implements GridSecurityProcessor {
+public class TestCertificateSecurityProcessor extends GridProcessorAdapter implements GridSecurityProcessor {
     /** Permissions. */
-    public static final Map<SecurityCredentials, SecurityPermissionSet> PERMS = new ConcurrentHashMap<>();
-
-    /** Node security data. */
-    private final TestSecurityData nodeSecData;
+    public static final Map<String, SecurityPermissionSet> PERMS = new ConcurrentHashMap<>();
 
     /** Users security data. */
     private final Collection<TestSecurityData> predefinedAuthData;
 
-    /** Global authentication. */
-    private final boolean globalAuth;
-
-    /** Authorize records. */
-    private final List<AuthorizeRecord> authorizeRecords = new ArrayList<>();
-
-    /**
-     *
-     */
-    public static class AuthorizeRecord {
-        /**
-         *
-         */
-        private final String actName;
-
-        /** With permition. */
-        private final SecurityPermission withPermition;
-
-        /** Login. */
-        private final String login;
-
-        /**
-         * @param actName Action name.
-         * @param withPermition With permition.
-         * @param login Login.
-         */
-        public AuthorizeRecord(String actName, SecurityPermission withPermition, String login) {
-            this.actName = actName;
-            this.withPermition = withPermition;
-            this.login = login;
-        }
-
-        /**
-         *
-         */
-        public String getActName() {
-            return actName;
-        }
-
-        /**
-         *
-         */
-        public SecurityPermission getWithPermition() {
-            return withPermition;
-        }
-
-        /**
-         *
-         */
-        public String getLogin() {
-            return login;
-        }
-    }
-
     /**
      * Constructor.
      */
-    public TestSecurityProcessor(GridKernalContext ctx, TestSecurityData nodeSecData,
-        Collection<TestSecurityData> predefinedAuthData, boolean globalAuth) {
+    public TestCertificateSecurityProcessor(GridKernalContext ctx, Collection<TestSecurityData> predefinedAuthData) {
         super(ctx);
 
-        this.nodeSecData = nodeSecData;
         this.predefinedAuthData = predefinedAuthData.isEmpty()
             ? Collections.emptyList()
             : new ArrayList<>(predefinedAuthData);
-        this.globalAuth = globalAuth;
     }
 
     /** {@inheritDoc} */
     @Override public SecurityContext authenticateNode(ClusterNode node, SecurityCredentials cred) {
-        if (!PERMS.containsKey(cred))
-            return null;
-
         return new TestSecurityContext(
             new TestSecuritySubject()
                 .setType(REMOTE_NODE)
                 .setId(node.id())
                 .setAddr(new InetSocketAddress(F.first(node.addresses()), 0))
-                .setLogin(cred.getLogin())
-                .setPerms(PERMS.get(cred))
+                .setLogin("")
+                .setPerms(ALLOW_ALL)
         );
     }
 
     /** {@inheritDoc} */
     @Override public boolean isGlobalNodeAuthentication() {
-        return globalAuth;
+        return true;
     }
 
     /** {@inheritDoc} */
     @Override public SecurityContext authenticate(AuthenticationContext ctx) {
-        if (!PERMS.containsKey(ctx.credentials()))
+        Certificate[] certs = ctx.certificates();
+
+        assertNotNull(certs);
+
+        assertEquals(2, certs.length);
+
+        assertTrue(((X509Certificate)certs[0]).getSubjectDN().getName().matches("^CN=[a-z0-9]+$"));
+        assertTrue(((X509Certificate)certs[0]).getIssuerDN().getName().startsWith("C=RU, ST=SPb, L=SPb, O=Ignite, OU=Dev"));
+
+        String cn = ((X509Certificate)certs[0]).getSubjectDN().getName().substring(3);
+
+        if (!PERMS.containsKey(cn))
             return null;
 
         return new TestSecurityContext(
@@ -152,8 +105,8 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
                 .setType(ctx.subjectType())
                 .setId(ctx.subjectId())
                 .setAddr(ctx.address())
-                .setLogin(ctx.credentials().getLogin())
-                .setPerms(PERMS.get(ctx.credentials()))
+                .setLogin(cn)
+                .setPerms(PERMS.get(cn))
                 .setCerts(ctx.certificates())
         );
     }
@@ -172,8 +125,6 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     @Override public void authorize(String name, SecurityPermission perm, SecurityContext securityCtx)
         throws SecurityException {
 
-        authorizeRecords.add(new AuthorizeRecord(name, perm, (String)securityCtx.subject().login()));
-
         if (!((TestSecurityContext)securityCtx).operationAllowed(name, perm))
             throw new SecurityException("Authorization failed [perm=" + perm +
                 ", name=" + name +
@@ -185,13 +136,6 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
         // No-op.
     }
 
-    /**
-     *
-     */
-    public List<AuthorizeRecord> getAuthorizeRecords() {
-        return authorizeRecords;
-    }
-
     /** {@inheritDoc} */
     @Override public boolean enabled() {
         return true;
@@ -201,21 +145,17 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     @Override public void start() throws IgniteCheckedException {
         super.start();
 
-        PERMS.put(nodeSecData.credentials(), nodeSecData.getPermissions());
-
-        ctx.addNodeAttribute(IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS, nodeSecData.credentials());
+        ctx.addNodeAttribute(IgniteNodeAttributes.ATTR_SECURITY_CREDENTIALS, new SecurityCredentials("", ""));
 
         for (TestSecurityData data : predefinedAuthData)
-            PERMS.put(data.credentials(), data.getPermissions());
+            PERMS.put(data.credentials().getLogin().toString(), data.getPermissions());
     }
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
         super.stop(cancel);
 
-        PERMS.remove(nodeSecData.credentials());
-
         for (TestSecurityData data : predefinedAuthData)
-            PERMS.remove(data.credentials());
+            PERMS.remove(data.credentials().getLogin().toString());
     }
 }
