@@ -17,9 +17,13 @@ package org.apache.ignite.development.utils;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,7 +48,6 @@ import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
-import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListMetaIO;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.io.PagesListNodeIO;
@@ -56,6 +59,9 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMeta
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPagePayload;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
+import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
 import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.h2.database.io.H2ExtrasInnerIO;
@@ -68,8 +74,11 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.joining;
@@ -95,6 +104,9 @@ public class IgniteIndexReader implements AutoCloseable {
     private static final String META_TREE_NAME = "MetaTree";
 
     /** */
+    private static final String USAGE = "Usage: cache_with_index.bin_path_IN cache_with_index.bin_path_OUT pageSize";
+
+    /** */
     static {
         PageIO.registerH2(H2InnerIO.VERSIONS, H2LeafIO.VERSIONS, H2MvccInnerIO.VERSIONS, H2MvccLeafIO.VERSIONS);
 
@@ -115,10 +127,10 @@ public class IgniteIndexReader implements AutoCloseable {
     private final DataStorageConfiguration dsCfg;
 
     /** */
-    private final FilePageStoreFactory storeFactory;
+    private final FileVersionCheckingFactory storeFactory;
 
     /** */
-    private final LongAdderMetric allocatedTracker = new LongAdderMetric("n", "d");
+    private final LongAdderMetric allocationTracker = new LongAdderMetric("n", "d");
 
     /** */
     private final PrintStream outStream;
@@ -185,7 +197,7 @@ public class IgniteIndexReader implements AutoCloseable {
         if (idxFile == null)
             throw new RuntimeException("index.bin file not found");
 
-        idxStore = (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocatedTracker);
+        idxStore = (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocationTracker);
 
         pagesNum = (idxFile.length() - idxStore.headerSize()) / pageSize;
 
@@ -196,7 +208,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             // Some of array members will be null if node doesn't have all partition files locally.
             if (file != null)
-                partStores[i] = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, file, allocatedTracker);
+                partStores[i] = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, file, allocationTracker);
         }
     }
 
@@ -677,6 +689,152 @@ public class IgniteIndexReader implements AutoCloseable {
             if (store != null)
                 store.stop(false);
         }
+    }
+
+    public static void mai0n(String[] args) throws Exception {
+        if (args.length != 3) {
+            System.out.println(USAGE);
+
+            return;
+        }
+
+        try {
+            final String idxDirIn = args[0];
+            final String idxDirOut = args[1];
+
+            //copyFromStreamToFile(new File(idxDirIn + "/index.bin"), new File(idxDirOut + "/index.bin"));
+        }
+        catch (Exception e) {
+            System.err.println(e.getMessage());
+
+            System.err.println(USAGE);
+
+            e.printStackTrace();
+        }
+    }
+
+    /** */
+    private int copyFromStreamToFile(File idxIn, File idxOut) throws IOException, IgniteCheckedException {
+        ByteBuffer readBuf = GridUnsafe.allocateBuffer(pageSize);
+
+        try {
+            readBuf.order(ByteOrder.nativeOrder());
+
+            long readAddr = GridUnsafe.bufferAddress(readBuf);
+
+            ByteBuffer hdrBuf = headerBuffer(FLAG_IDX, pageSize);
+
+            try (FileChannel ch = FileChannel.open(idxOut.toPath(), WRITE, CREATE)) {
+                int hdrSize = hdrBuf.limit();
+
+                ch.write(hdrBuf, 0);
+
+                int pageCnt = 0;
+
+                FileChannel stream = new RandomAccessFile(idxIn, "r").getChannel();
+
+                while (readNextPage(readBuf, stream, pageSize)) {
+                    pageCnt++;
+
+                    readBuf.rewind();
+
+                    long pageId = PageIO.getPageId(readAddr);
+
+                    assert pageId != 0;
+
+                    int pageIdx = PageIdUtils.pageIndex(pageId);
+
+                    int crcSaved = PageIO.getCrc(readAddr);
+                    PageIO.setCrc(readAddr, 0);
+
+                    int calced = FastCrc.calcCrc(readBuf, pageSize);
+
+                    if (calced != crcSaved)
+                        throw new IgniteCheckedException("Snapshot corrupted");
+
+                    PageIO.setCrc(readAddr, crcSaved);
+
+                    readBuf.rewind();
+
+                    boolean changed = false;
+
+                    int pageType = PageIO.getType(readAddr);
+
+                    switch (pageType) {
+                        case PageIO.T_PAGE_UPDATE_TRACKING:
+                            PageHandler.zeroMemory(readAddr, TrackingPageIO.COMMON_HEADER_END,
+                                readBuf.capacity() - TrackingPageIO.COMMON_HEADER_END);
+
+                            changed = true;
+
+                            break;
+
+                        case PageIO.T_META:
+                        case PageIO.T_PART_META:
+                            PageMetaIO io = PageIO.getPageIO(pageType, PageIO.getVersion(readAddr));
+
+                            io.setLastAllocatedPageCount(readAddr, 0);
+                            io.setLastSuccessfulFullSnapshotId(readAddr, 0);
+                            io.setLastSuccessfulSnapshotId(readAddr, 0);
+                            io.setLastSuccessfulSnapshotTag(readAddr, 0);
+                            io.setNextSnapshotTag(readAddr, 1);
+                            io.setCandidatePageCount(readAddr, 0);
+
+                            changed = true;
+
+                            break;
+                    }
+
+                    if (changed) {
+                        PageIO.setCrc(readAddr, 0);
+
+                        int crc32 = FastCrc.calcCrc(readBuf, pageSize);
+
+                        PageIO.setCrc(readAddr, crc32);
+
+                        readBuf.rewind();
+                    }
+
+                    ch.write(readBuf, hdrSize + ((long)pageIdx) * pageSize);
+
+                    readBuf.rewind();
+                }
+
+                ch.force(true);
+
+                return pageCnt;
+            }
+        }
+        finally {
+            GridUnsafe.freeBuffer(readBuf);
+        }
+    }
+
+    /** */
+    private static boolean readNextPage(ByteBuffer buf, FileChannel ch, int pageSize) throws IOException {
+        assert buf.remaining() == pageSize;
+
+        do {
+            if (ch.read(buf) == -1)
+                break;
+        }
+        while (buf.hasRemaining());
+
+        if (!buf.hasRemaining() && PageIO.getPageId(buf) != 0)
+            return true; //pageSize bytes read && pageId != 0
+        else if (buf.remaining() == pageSize)
+            return false; //0 bytes read
+        else
+            // 1 <= readBytes < pageSize || readBytes == pagesIze && pageId != 0
+            throw new IgniteException("Corrupted page in partitionId " +
+                ", readByte=" + buf.position() + ", pageSize=" + pageSize + ", content=" + U.toHexString(buf));
+    }
+
+    /** */
+    private ByteBuffer headerBuffer(byte type, int pageSize) {
+        FilePageStore store = storeFactory.createPageStore(type, null, storeFactory.latestVersion(), allocationTracker);
+
+        return store.header(type, pageSize);
     }
 
     /**
