@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.query.schema;
 
+import org.apache.ignite.IgniteCheckedException;
+
 /**
  * Closure that internally applies given {@link SchemaIndexCacheVisitorClosure} to some set of entries.
  */
@@ -24,6 +26,7 @@ public interface SchemaIndexCacheVisitor {
      * Visit cache entries and pass them to closure.
      *
      * @param clo Closure.
+     * @throws IgniteCheckedException If failed.
      */
-    void visit(SchemaIndexCacheVisitorClosure clo);
+    public void visit(SchemaIndexCacheVisitorClosure clo) throws IgniteCheckedException;
 }

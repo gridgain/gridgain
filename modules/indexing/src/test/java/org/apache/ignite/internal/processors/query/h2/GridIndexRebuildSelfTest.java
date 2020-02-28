@@ -21,10 +21,8 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheOffheapManager;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
@@ -33,7 +31,6 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
-import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
@@ -234,23 +231,14 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         private boolean firstRbld = true;
 
         /** {@inheritDoc} */
-        @Override protected void rebuildIndexesFromHash0(
-            GridCacheContext cctx,
-            SchemaIndexCacheVisitorClosure clo,
-            GridFutureAdapter<Void> rebuildIdxFut
-        ) {
-            if (!firstRbld) {
-                try {
-                    U.await(INSTANCE.rebuildLatch);
-                }
-                catch (IgniteInterruptedCheckedException e) {
-                    throw new IgniteException(e);
-                }
-            }
+        @Override protected void rebuildIndexesFromHash0(GridCacheContext cctx, SchemaIndexCacheVisitorClosure clo)
+            throws IgniteCheckedException {
+            if (!firstRbld)
+                U.await(INSTANCE.rebuildLatch);
             else
                 firstRbld = false;
 
-            super.rebuildIndexesFromHash0(cctx, clo, rebuildIdxFut);
+            super.rebuildIndexesFromHash0(cctx, clo);
         }
     }
 }
