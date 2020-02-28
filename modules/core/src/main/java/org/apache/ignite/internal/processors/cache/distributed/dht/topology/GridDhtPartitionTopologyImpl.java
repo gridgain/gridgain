@@ -1481,9 +1481,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     }
                 }
 
-                boolean fullMapUpdated = (node2part == null);
+                boolean fullMapUpdated = node2part == null;
 
                 if (node2part != null) {
+                    // Merge maps.
                     for (GridDhtPartitionMap part : node2part.values()) {
                         GridDhtPartitionMap newPart = partMap.get(part.nodeId());
 
@@ -1564,6 +1565,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 node2part = partMap;
+
+                if (exchangeVer != null) {
+                    assert exchFut != null;
+
+                    boolean evt = !exchFut.localJoinExchange() && !exchFut.activateCluster();
+
+                    detectLostPartitions(exchangeVer, evt ? exchFut.events().lastEvent() : null);
+                }
 
                 if (exchangeVer == null && !grp.isReplicated() &&
                         (readyTopVer.initialized() && readyTopVer.compareTo(diffFromAffinityVer) >= 0)) {
@@ -2087,10 +2096,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (node2part == null)
                     return false;
 
-                if (grp.cacheOrGroupName().equals("default") && discoEvt != null && discoEvt.type() == EventType.EVT_NODE_JOINED && discoEvt.topologyVersion() == 6) {
-                    System.out.println();
-                }
-
                 PartitionLossPolicy plc = grp.config().getPartitionLossPolicy();
 
                 assert plc != null;
@@ -2110,6 +2115,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         for (GridDhtPartitionMap partMap : node2part.values()) {
                             if (partMap.get(part) == OWNING) {
                                 hasOwner = true;
+
                                 break;
                             }
                         }
@@ -2219,7 +2225,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 updateLocal(locPart.id(), locPart.state(), updSeq, resTopVer);
 
                                 // Reset counters to zero for triggering full rebalance.
-                                locPart.resetUpdateCounter();
+                                // TODO force full rebalance ?
+                                locPart.resetInitialUpdateCounter();
                             }
                         }
                     }
@@ -2292,20 +2299,23 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         continue;
 
                     // Partition state should be mutated only on joining nodes if they are exists for the exchange.
-                    if (!maxCounterPartOwners.contains(locNodeId)) {
+                    if (joinedNodes.isEmpty() && !maxCounterPartOwners.contains(locNodeId)) {
                         rebalancePartition(part, !haveHist.contains(part), exchFut);
 
                         res.computeIfAbsent(locNodeId, n -> new HashSet<>()).add(part);
                     }
                 }
 
-                // Then process remote partitions.
+                // Then process node maps.
                 for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {
                     int part = entry.getKey();
                     Set<UUID> maxCounterPartOwners = entry.getValue();
 
                     for (Map.Entry<UUID, GridDhtPartitionMap> remotes : node2part.entrySet()) {
                         UUID remoteNodeId = remotes.getKey();
+
+                        if (!joinedNodes.isEmpty() && !joinedNodes.contains(remoteNodeId))
+                            continue;
 
                         GridDhtPartitionMap partMap = remotes.getValue();
 
@@ -2343,6 +2353,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         U.warn(log, "Partitions have been scheduled for rebalancing due to outdated update counter "
                             + "[grp=" + grp.cacheOrGroupName()
+                            + ", initialVer=" + exchFut.initialVersion() // TODO output final version.
                             + ", nodeId=" + nodeId
                             + ", partsFull=" + S.compact(rebalancedParts)
                             + ", partsHistorical=" + S.compact(historical) + "]");

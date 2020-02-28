@@ -341,8 +341,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     }
 
     /**
-     * Adds historically rebalancing partitions to wait group.
-     * Not doing so could trigger late affinity switching before actual rebalancing will finish.
+     * Adds group partition to wait list.
+     * <p>
+     * Late affinity switch will be triggered as soons as wait list becomes empty.
      *
      * @param grpId Group id.
      * @param part Part.

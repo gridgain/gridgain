@@ -2352,9 +2352,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
                 }
 
-                boolean locNodeNotCrd = crd == null || !crd.isLocal();
-
-                if ((locNodeNotCrd && (serverNodeDiscoveryEvent() || localJoinExchange())) || exchCtx.exchangeFreeSwitch())
+                // TODO Indep calc - comment.
+                if (exchCtx.exchangeFreeSwitch())
                     detectLostPartitions(res);
 
                 Map<Integer, CacheGroupValidation> m = U.newHashMap(cctx.cache().cacheGroups().size());
@@ -3367,6 +3366,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param resTopVer Result topology version.
      */
     private void detectLostPartitions(AffinityTopologyVersion resTopVer) {
+        // TODO remove.
         AtomicInteger detected = new AtomicInteger();
 
         try {
@@ -3391,13 +3391,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException(e);
         }
 
-        if (detected.get() > 0) {
-            if (log.isDebugEnabled())
-                log.debug("Partitions have been scheduled to resend [reason=" +
-                    "Lost partitions detect on " + resTopVer + "]");
-
-            cctx.exchange().scheduleResendPartitions();
-        }
+//        if (detected.get() > 0) {
+//            if (log.isDebugEnabled())
+//                log.debug("Partitions have been scheduled to resend [reason=" +
+//                    "Lost partitions detect on " + resTopVer + "]");
+//
+//            cctx.exchange().scheduleResendPartitions();
+//        }
 
         timeBag.finishGlobalStage("Detect lost partitions");
     }
@@ -3694,17 +3694,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             IgniteProductVersion minVer = exchCtx.events().discoveryCache().minimumNodeVersion();
 
+            if (firstDiscoEvt.type() != EVT_DISCOVERY_CUSTOM_EVT)
+                detectLostPartitions(resTopVer);
+
             GridDhtPartitionsFullMessage msg = createPartitionsMessage(true,
                 minVer.compareToIgnoreTimestamp(PARTIAL_COUNTERS_MAP_SINCE) >= 0);
 
             if (!cctx.affinity().rebalanceRequired())
                 msg.rebalanced(true);
-
-            // Lost partition detection should be done after full message is prepared otherwise in case of IGNORE policy
-            // lost partitions will be moved to OWNING state and after what send to other nodes resulting in
-            // wrong lost state calculation (another possibility to consider - calculate lost state only on coordinator).
-            if (firstDiscoEvt.type() != EVT_DISCOVERY_CUSTOM_EVT && (exchCtx.events().hasServerLeft() || exchCtx.events().hasServerJoin()))
-                detectLostPartitions(resTopVer);
 
             if (exchCtx.mergeExchanges()) {
                 assert !centralizedAff;

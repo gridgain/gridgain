@@ -333,7 +333,9 @@ public interface GridDhtPartitionTopology {
      * This method should be called on topology coordinator after all partition messages are received.
      *
      * @param resTopVer Exchange result version.
-     * @param discoEvt Discovery event for which we detect lost partitions if {@link EventType#EVT_CACHE_REBALANCE_PART_DATA_LOST} event should be fired.
+     * @param discoEvt Discovery event for which we detect lost partitions if
+     * {@link EventType#EVT_CACHE_REBALANCE_PART_DATA_LOST} event should be fired.
+     *
      * @return {@code True} if partitions state got updated.
      */
     public boolean detectLostPartitions(AffinityTopologyVersion resTopVer, @Nullable DiscoveryEvent discoEvt);

@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
@@ -30,6 +31,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -124,14 +126,10 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         startGrid(2);
 
-        awaitPartitionMapExchange();
-
         //logCacheSize("DBG: server_2 ret");
         //printPartitionState(DEFAULT_CACHE_NAME, 0);
 
         startGrid(1);
-
-        awaitPartitionMapExchange();
 
         //logCacheSize("DBG: server_1 ret");
         //printPartitionState(DEFAULT_CACHE_NAME, 0);
@@ -168,21 +166,29 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         stopGrid(1);
 
-        crd.cache(DEFAULT_CACHE_NAME).put(part, 0);
+        final IgniteInternalCache<Object, Object> cachex = crd.cachex(DEFAULT_CACHE_NAME);
+
+        cachex.put(part, 0);
 
         stopGrid(2);
 
-        assertTrue(crd.cache(DEFAULT_CACHE_NAME).lostPartitions().contains(part));
+        final Collection<Integer> lostParts = crd.cache(DEFAULT_CACHE_NAME).lostPartitions();
 
-        startGrid(1);
+        assertEquals(PARTS_CNT, cachex.context().topology().localPartitions().size() + lostParts.size());
 
-        awaitPartitionMapExchange(); // Will assign new primaries on g1.
+        assertTrue(lostParts.contains(part));
 
-        startGrid(2);
+        final IgniteEx g1 = startGrid(1);
 
-        awaitPartitionMapExchange();
+        final Collection<Integer> g1LostParts = g1.cache(DEFAULT_CACHE_NAME).lostPartitions();
 
-        printPartitionState(DEFAULT_CACHE_NAME, 0);
+        assertEquals(lostParts, g1LostParts);
+
+        final IgniteEx g2 = startGrid(2);
+
+        final Collection<Integer> g2LostParts = g2.cache(DEFAULT_CACHE_NAME).lostPartitions();
+
+        assertEquals(lostParts, g2LostParts);
 
         crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 

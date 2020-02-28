@@ -1090,6 +1090,13 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
     }
 
     /**
+     * Reset partition initial update counter.
+     */
+    public void resetInitialUpdateCounter() {
+        store.resetInitialUpdateCounter();
+    }
+
+    /**
      * @return Total size of all caches.
      */
     public long fullSize() {

@@ -312,7 +312,7 @@ public class GridDhtPartitionDemander {
                 ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
 
                 if (!ctx.exchange().lastFinishedFuture().rebalanced())
-                ctx.exchange().scheduleResendPartitions();
+                     ctx.exchange().scheduleResendPartitions();
 
                 return null;
             }
