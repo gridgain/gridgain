@@ -28,30 +28,17 @@ public class GridSqlAlias extends GridSqlElement {
     /** */
     private final String alias;
 
-    /** */
-    private final boolean useAs;
-
     /**
      * @param alias Alias.
      * @param expr Expr.
      */
     public GridSqlAlias(String alias, GridSqlAst expr) {
-        this(alias, expr, false);
-    }
-
-    /**
-     * @param alias Alias.
-     * @param expr Expr.
-     * @param useAs Use 'AS' keyword.
-     */
-    public GridSqlAlias(String alias, GridSqlAst expr, boolean useAs) {
         super(new ArrayList<GridSqlAst>(1));
 
         addChild(expr);
 
         assert !F.isEmpty(alias): alias;
 
-        this.useAs = useAs;
         this.alias = alias;
     }
 
@@ -78,7 +65,7 @@ public class GridSqlAlias extends GridSqlElement {
 
         b.a(tbl ? ((GridSqlTable)child).getBeforeAliasSql(true) : child.getSQL());
 
-        b.a(useAs ? " AS " : " ");
+        b.a(" AS ");
         Parser.quoteIdentifier(b.impl(), alias, true);
 
         if (tbl)
