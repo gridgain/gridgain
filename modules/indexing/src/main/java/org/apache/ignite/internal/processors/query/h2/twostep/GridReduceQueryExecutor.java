@@ -516,16 +516,14 @@ public class GridReduceQueryExecutor {
 
                             GridCacheSqlQuery rdc = qry.reduceQuery();
 
-                            Collection<Object> params0 = F.asList(rdc.parameters(params));
+                            final PreparedStatement stmt = conn.prepareStatementNoCache(rdc.query());
 
-                            final PreparedStatement stmt = h2.preparedStatementWithParams(conn, rdc.query(),
-                                params0, false);
+                            H2Utils.bindParameters(stmt, F.asList(rdc.parameters(params)));
 
                             ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
 
                             ResultSet res = h2.executeSqlQueryWithTimer(stmt, conn,
                                 rdc.query(),
-                                F.asList(rdc.parameters(params)),
                                 timeoutMillis,
                                 cancel,
                                 dataPageScanEnabled,
@@ -1079,6 +1077,8 @@ public class GridReduceQueryExecutor {
         }
 
         GridCacheSqlQuery rdc = qry.reduceQuery();
+
+
 
         ResultSet rs = h2.executeSqlQueryWithTimer(c,
             "EXPLAIN " + rdc.query(),
