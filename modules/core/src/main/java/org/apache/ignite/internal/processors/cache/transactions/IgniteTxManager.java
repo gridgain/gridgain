@@ -38,14 +38,11 @@ import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.TransactionConfiguration;
-import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
-import org.apache.ignite.internal.managers.discovery.DiscoCache;
-import org.apache.ignite.internal.managers.eventstorage.DiscoveryEventListener;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.MvccTxRecord;
 import org.apache.ignite.internal.pagemem.wal.record.TxRecord;
@@ -322,26 +319,23 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             }
         };
 
-        cctx.gridEvents().addDiscoveryEventListener(
-            new DiscoveryEventListener() {
-                @Override public void onEvent(DiscoveryEvent evt, DiscoCache discoCache) {
-                    if (evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT) {
-                        UUID nodeId = evt.eventNode().id();
+        cctx.gridEvents().addDiscoveryEventListener((evt, discoCache) -> {
+                if (evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT) {
+                    UUID nodeId = evt.eventNode().id();
 
-                        // Wait some time in case there are some unprocessed messages from failed node.
-                        cctx.time().addTimeoutObject(
-                            new NodeFailureTimeoutObject(evt.eventNode(), cctx.coordinators().currentCoordinator()));
+                    // Wait some time in case there are some unprocessed messages from failed node.
+                    cctx.time().addTimeoutObject(
+                        new NodeFailureTimeoutObject(evt.eventNode(), cctx.coordinators().currentCoordinator()));
 
-                        for (TxDeadlockFuture fut : deadlockDetectFuts.values())
-                            fut.onNodeLeft(nodeId);
+                    for (TxDeadlockFuture fut : deadlockDetectFuts.values())
+                        fut.onNodeLeft(nodeId);
 
-                        for (Map.Entry<GridCacheVersion, Object> entry : completedVersHashMap.entrySet()) {
-                            Object obj = entry.getValue();
+                    for (Map.Entry<GridCacheVersion, Object> entry : completedVersHashMap.entrySet()) {
+                        Object obj = entry.getValue();
 
-                            if (obj instanceof GridCacheReturnCompletableWrapper &&
-                                nodeId.equals(((GridCacheReturnCompletableWrapper)obj).nodeId()))
-                                removeTxReturn(entry.getKey());
-                        }
+                        if (obj instanceof GridCacheReturnCompletableWrapper &&
+                            nodeId.equals(((GridCacheReturnCompletableWrapper)obj).nodeId()))
+                            removeTxReturn(entry.getKey());
                     }
                 }
             },
@@ -2997,6 +2991,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
                             && tx.mvccSnapshot() != null)
                             allTxFinFut.add(tx.finishFuture());
                     }
+
+                    if (tx.near() && tx.state() == ACTIVE && ((GridNearTxLocal)tx).mappings().get(evtNodeId) != null)
+                        tx.rollbackAsync();
                 }
 
                 if (allTxFinFut == null)
