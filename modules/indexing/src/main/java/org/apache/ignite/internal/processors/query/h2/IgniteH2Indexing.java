@@ -568,7 +568,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             stmt,
                             conn,
                             qry,
-                            args,
                             timeout,
                             cancel,
                             qryParams.dataPageScanEnabled(),
@@ -834,7 +833,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2Utils.bindParameters(stmt, params);
 
         return executeSqlQueryWithTimer(stmt,
-            conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo, maxMem);
+            conn, sql, timeoutMillis, cancel, dataPageScanEnabled, qryInfo, maxMem);
     }
 
     /**
@@ -852,7 +851,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param stmt Prepared statement for query.
      * @param conn Connection.
      * @param sql Sql query.
-     * @param params Parameters.
      * @param timeoutMillis Query timeout.
      * @param cancel Query cancel.
      * @param dataPageScanEnabled If data page scan is enabled.
@@ -863,7 +861,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         PreparedStatement stmt,
         H2PooledConnection conn,
         String sql,
-        @Nullable Collection<Object> params,
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,

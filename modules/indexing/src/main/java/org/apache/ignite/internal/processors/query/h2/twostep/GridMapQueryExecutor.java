@@ -412,7 +412,6 @@ public class GridMapQueryExecutor {
                             stmt,
                             conn,
                             sql,
-                            params0,
                             timeout,
                             qryResults.queryCancel(qryIdx),
                             dataPageScanEnabled,
