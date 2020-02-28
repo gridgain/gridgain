@@ -27,7 +27,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 /**
  * The data object describes a version of key stored at a node.
  */
-public class PartitionKeyVersion extends IgniteDataTransferObject {
+public class VersionedKey extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -38,12 +38,13 @@ public class PartitionKeyVersion extends IgniteDataTransferObject {
     private KeyCacheObject key;
 
     /** Version. */
-    private GridCacheVersion version;
+    private GridCacheVersion ver;
 
     /**
      * Default constructor.
      */
-    public PartitionKeyVersion() {
+    public VersionedKey() {
+        // No-op
     }
 
     /**
@@ -51,38 +52,38 @@ public class PartitionKeyVersion extends IgniteDataTransferObject {
      * @param key Key.
      * @param ver Version.
      */
-    public PartitionKeyVersion(UUID nodeId, KeyCacheObject key, GridCacheVersion ver) {
+    public VersionedKey(UUID nodeId, KeyCacheObject key, GridCacheVersion ver) {
         this.nodeId = nodeId;
         this.key = key;
-        this.version = ver;
+        this.ver = ver;
     }
 
     /**
      * @return Node ID.
      */
-    public UUID getNodeId() {
+    public UUID nodeId() {
         return nodeId;
     }
 
     /**
      * @return Key.
      */
-    public KeyCacheObject getKey() {
+    public KeyCacheObject key() {
         return key;
     }
 
     /**
      * @return Write version of current entry.
      */
-    public GridCacheVersion getVersion() {
-        return version;
+    public GridCacheVersion ver() {
+        return ver;
     }
 
     /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         out.writeObject(nodeId);
         out.writeObject(key);
-        out.writeObject(version);
+        out.writeObject(ver);
     }
 
     /** {@inheritDoc} */
@@ -90,6 +91,6 @@ public class PartitionKeyVersion extends IgniteDataTransferObject {
         ObjectInput in) throws IOException, ClassNotFoundException {
         nodeId = (UUID)in.readObject();
         key = (KeyCacheObject)in.readObject();
-        version = (GridCacheVersion)in.readObject();
+        ver = (GridCacheVersion)in.readObject();
     }
 }

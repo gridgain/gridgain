@@ -351,9 +351,7 @@ public class GridMapQueryExecutor {
                 distributedJoinCtx,
                 mvccSnapshot,
                 reserved,
-                true,
-                h2.memoryManager().createQueryMemoryTracker(maxMem),
-                h2.memoryManager());
+                true);
 
             qryResults = new MapQueryResults(h2, reqId, qrys.size(), mainCctx, lazy, qctx);
 
@@ -418,7 +416,8 @@ public class GridMapQueryExecutor {
                             timeout,
                             qryResults.queryCancel(qryIdx),
                             dataPageScanEnabled,
-                            qryInfo);
+                            qryInfo,
+                            maxMem);
 
                         if (evt) {
                             ctx.event().record(new CacheQueryExecutedEvent<>(
