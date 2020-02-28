@@ -330,7 +330,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
             if (system)
                 return new LocalResultImpl(ses, expressions, visibleColCnt);
 
-            H2MemoryTracker memoryTracker = ses.queryMemoryTracker();
+            H2MemoryTracker memoryTracker = ses.memoryTracker();
 
             H2ManagedLocalResult res;
             if (memoryTracker != null) {

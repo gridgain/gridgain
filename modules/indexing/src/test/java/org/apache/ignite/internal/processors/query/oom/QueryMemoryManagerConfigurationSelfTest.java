@@ -62,7 +62,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         // Assert tracking is not used by default.
         assertNull(tracker);
@@ -88,14 +88,14 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             5_000);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertTrackerState(tracker,
             10 * 1024,
             !DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             5_000);
 
-        tracker = memMgr.createQueryMemoryTracker(1_000);
+        tracker = memMgr.createQueryMemoryTracker(1_000, "");
 
         assertTrackerState(tracker,
             1_000,
@@ -164,11 +164,11 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertNull(tracker);
 
-        tracker = memMgr.createQueryMemoryTracker(10);
+        tracker = memMgr.createQueryMemoryTracker(10, "");
 
         assertTrackerState(tracker,
             10,
@@ -194,11 +194,11 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertNull(tracker);
 
-        tracker = memMgr.createQueryMemoryTracker(10);
+        tracker = memMgr.createQueryMemoryTracker(10, "");
 
         assertTrackerState(tracker,
             10,
@@ -222,7 +222,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(30);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(30, "");
 
         assertTrackerState(tracker,
             30,
@@ -247,7 +247,7 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
             DFLT_SQL_QUERY_OFFLOADING_ENABLED,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
-        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0);
+        QueryMemoryTracker tracker = memMgr.createQueryMemoryTracker(0, "");
 
         assertTrackerState(tracker,
             33,

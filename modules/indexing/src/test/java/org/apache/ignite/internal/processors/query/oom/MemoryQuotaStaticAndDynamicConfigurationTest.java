@@ -19,7 +19,6 @@ import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -181,13 +180,5 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
 
             memMgr.setOffloadingEnabled(enabled);
         }
-    }
-
-    /** */
-    private static QueryMemoryManager memoryManager(IgniteEx node) {
-        return ((IgniteH2Indexing)node.context()
-            .query()
-            .getIndexing())
-            .memoryManager();
     }
 }

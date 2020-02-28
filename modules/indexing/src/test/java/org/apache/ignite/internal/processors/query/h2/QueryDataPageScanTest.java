@@ -513,13 +513,14 @@ public class QueryDataPageScanTest extends GridCommonAbstractTest {
             int timeoutMillis,
             @Nullable GridQueryCancel cancel,
             Boolean dataPageScanEnabled,
-            final H2QueryInfo qryInfo
+            final H2QueryInfo qryInfo,
+            long maxMem
         ) throws IgniteCheckedException {
             callsCnt.incrementAndGet();
             assertEquals(expectedDataPageScanEnabled, dataPageScanEnabled);
 
             return super.executeSqlQueryWithTimer(stmt, conn, sql, params, timeoutMillis,
-                cancel, dataPageScanEnabled, qryInfo);
+                cancel, dataPageScanEnabled, qryInfo, maxMem);
         }
     }
 
