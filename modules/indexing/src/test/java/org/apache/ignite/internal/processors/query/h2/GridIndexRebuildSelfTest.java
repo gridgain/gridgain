@@ -179,20 +179,25 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
 
         IgniteInternalCache internalCache = createAndFillTableWithIndex(srv);
 
+        int partCnt = internalCache.configuration().getAffinity().partitions();
+        int idxThreadPoolSize = 4;
+
+        assertTrue(partCnt > idxThreadPoolSize);
+
         File idxPath = indexFile(internalCache);
 
         stopAllGrids();
 
         assertTrue(U.delete(idxPath));
 
-        buildIdxThreadPoolSize = 4;
+        buildIdxThreadPoolSize = idxThreadPoolSize;
         Set<Integer> identityThreads = newSetFromMap(new ConcurrentHashMap<>());
         SchemaIndexCachePartitionWorker.THREAD_CONSUMER = thread -> identityThreads.add(identityHashCode(thread));
 
         srv = startServer();
         srv.cache(CACHE_NAME).indexReadyFuture().get();
 
-        assertEquals((int)buildIdxThreadPoolSize, identityThreads.size());
+        assertEquals(idxThreadPoolSize, identityThreads.size());
     }
 
     /**
