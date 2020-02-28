@@ -37,7 +37,7 @@ import java.util.concurrent.CountDownLatch;
  * Thin client backup copy failover tests.
  */
 @RunWith(Parameterized.class)
-public class ThinClientTxRollbackTests extends GridCommonAbstractTest {
+public class ThinClientTxMissingBackupsFailover extends GridCommonAbstractTest {
     /**
      * @return List of test parameters.
      */
