@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerMessageParser;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
 import org.apache.ignite.internal.processors.platform.client.tx.ClientTxContext;
+import org.apache.ignite.internal.util.nio.GridNioSession;
 
 /**
  * Thin Client connection context.
@@ -146,7 +147,8 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
     }
 
     /** {@inheritDoc} */
-    @Override public void initializeFromHandshake(ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
+    @Override public void initializeFromHandshake(GridNioSession ses,
+        ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
         throws IgniteCheckedException {
         boolean hasMore;
 
@@ -167,7 +169,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
             }
         }
 
-        AuthorizationContext authCtx = authenticate(user, pwd);
+        AuthorizationContext authCtx = authenticate(ses.certificates(), user, pwd);
 
         currentVer = ver;
 
