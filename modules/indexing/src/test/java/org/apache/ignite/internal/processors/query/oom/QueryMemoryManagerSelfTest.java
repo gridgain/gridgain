@@ -146,7 +146,7 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     public static class TestH2LocalResultFactory extends H2LocalResultFactory {
         /** {@inheritDoc} */
         @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
-            assertNull(ses.queryMemoryTracker());
+            assertNull(ses.memoryTracker());
 
             return super.create(ses, expressions, visibleColCnt, system);
         }

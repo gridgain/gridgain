@@ -546,9 +546,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
-                true,
-                memoryMgr.createQueryMemoryTracker(maxMem),
-                memoryMgr);
+                true);
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
@@ -577,7 +575,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             timeout,
                             cancel,
                             qryParams.dataPageScanEnabled(),
-                            qryInfo
+                            qryInfo,
+                            maxMem
                         );
 
                         return new H2FieldsIterator(rs, mvccTracker, conn, qryParams.pageSize(), log, IgniteH2Indexing.this, qryInfo);
@@ -808,8 +807,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         else
             ses.setQueryTimeout(0);
 
-        ses.setOffloadedToDisk(false);
-
         try {
             return stmt.executeQuery();
         }
@@ -858,10 +855,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,
-        final H2QueryInfo qryInfo
+        final H2QueryInfo qryInfo,
+        long maxMem
     ) throws IgniteCheckedException {
         return executeSqlQueryWithTimer(preparedStatementWithParams(conn, sql, params, false),
-            conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo);
+            conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo, maxMem);
     }
 
     /**
@@ -894,10 +892,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,
-        final H2QueryInfo qryInfo
+        final H2QueryInfo qryInfo,
+        long maxMem
     ) throws IgniteCheckedException {
-        if (qryInfo != null)
+        if (qryInfo != null) {
             longRunningQryMgr.registerQuery(qryInfo);
+
+            setupMemoryTracking(conn, maxMem, qryInfo.buildShortQueryInfoString());
+        }
 
         enableDataPageScan(dataPageScanEnabled);
 
@@ -923,6 +925,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (qryInfo != null)
                 longRunningQryMgr.unregisterQuery(qryInfo);
         }
+    }
+
+    /**
+     * @param conn Connection.
+     * @param maxMem Max memory.
+     * @param qryDesc Query descriptor.
+     */
+    public void setupMemoryTracking(H2PooledConnection conn, long maxMem, String qryDesc) {
+        Session s = H2Utils.session(conn);
+
+        s.groupByDataFactory(memoryMgr);
+
+        QueryMemoryTracker memTracker = memoryMgr.createQueryMemoryTracker(maxMem, qryDesc);
+
+        if (memTracker != null)
+            s.memoryTracker(memTracker);
     }
 
     /** {@inheritDoc} */
@@ -1558,6 +1576,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
         fldsQry.setPageSize(pageSize);
         fldsQry.setLocal(true);
+        fldsQry.setLazy(U.isFlagSet(flags, GridH2QueryRequest.FLAG_LAZY));
 
         boolean loc = true;
 
@@ -1597,7 +1616,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
-            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
+            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS)
+            .setLazy(fldsQry.isLazy());
 
         QueryCursorImpl<List<?>> cur;
 
@@ -2873,7 +2893,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setLocal(qryDesc.local())
             .setPageSize(qryParams.pageSize())
             .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
-            .setMaxMemory(qryParams.maxMemory());
+            .setMaxMemory(qryParams.maxMemory())
+            // On no MVCC mode we cannot use lazy mode when UPDATE query contains updated columns
+            // in WHERE condition because it may be cause of update one entry several times
+            // (when index for such columns is selected for scan):
+            // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
+            .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
 
         Iterable<List<?>> cur;
 
@@ -3000,7 +3025,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
                         .setLocal(qryDesc.local())
                         .setPageSize(qryParams.pageSize())
-                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS);
+                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS)
+                        // In MVCC mode we can use lazy mode always (when is set up) without dependency on
+                        // updated columns and WHERE condition.
+                        .setLazy(qryParams.lazy());
 
                     FieldsQueryCursor<List<?>> cur = executeSelectForDml(
                         qryDesc.schemaName(),
@@ -3040,6 +3068,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (distributedPlan.isReplicatedOnly())
                 flags |= GridH2QueryRequest.FLAG_REPLICATED;
+
+            if (qryParams.lazy())
+                flags |= GridH2QueryRequest.FLAG_LAZY;
 
             flags = GridH2QueryRequest.setDataPageScanEnabled(flags,
                 qryParams.dataPageScanEnabled());

@@ -2259,6 +2259,20 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
     }
 
     /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDisabledFeatures() throws Exception {
+        assertInvalid(urlWithPartitionAwarenessProp + "&disabledFeatures=unknownFeature",
+            "Unknown feature: unknownFeature");
+
+        try (final Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp
+            + "&disabledFeatures=time_zone")) {
+            assertFalse(conn.isClosed());
+        }
+    }
+
+    /**
      * @return Savepoint.
      */
     private Savepoint getFakeSavepoint() {

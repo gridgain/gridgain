@@ -38,17 +38,31 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     private static String qry10Percent;
 
     /** {@inheritDoc} */
+    @Override protected boolean startClient() {
+        return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected boolean fromClient() {
+        return true;
+    }
+
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         initGrid("0", "50%", false);
 
-        String qry = "SELECT * FROM person p1 JOIN person p2 WHERE p1.id < ";
+        String qry = "SELECT listagg(p1.name), listagg(p1.name), listagg(p1.name), listagg(p1.name), " +
+            "listagg(p1.name), listagg(p1.name), listagg(p1.name), listagg(p1.name), " +
+            "listagg(p1.name), listagg(p1.name), listagg(p1.name), listagg(p1.name) " +
+            "FROM person p1 JOIN person p2 WHERE p1.id < ";
         int param = 0;
 
         // Find queries which consume 10%, 25%, 50% and more than 60% of heap.
         for (int i = PERS_CNT; i >= 0; i -= 100) {
             try {
-                grid(0).cache(DEFAULT_CACHE_NAME)
-                    .query(new SqlFieldsQuery(qry + i))
+                grid("client").cache(DEFAULT_CACHE_NAME)
+                    .query(new SqlFieldsQuery(qry + i )
+                    .setLazy(true))
                     .getAll();
 
                 param = i; // We found first value with memory consumption less than 60%.

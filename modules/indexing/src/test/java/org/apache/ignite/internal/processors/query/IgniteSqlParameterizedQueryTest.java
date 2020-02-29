@@ -89,7 +89,7 @@ public class IgniteSqlParameterizedQueryTest extends AbstractIndexingCommonTest 
      * method for create parametrized query and get first result
      * @param field name of field
      * @param val value
-     * @return fist searched object
+     * @return first searched object
      * @see Bookmark
      */
     private Object columnValue(String field, Object val) {

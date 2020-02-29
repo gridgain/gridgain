@@ -204,6 +204,8 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
+        checkMemoryManagerState();
+
         FileUtils.cleanDirectory(getWorkDir().toFile());
     }
 
@@ -461,14 +463,21 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
      */
     protected void checkMemoryManagerState() {
         for (Ignite node : G.allGrids()) {
-            IgniteH2Indexing h2 = (IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing();
+            QueryMemoryManager memoryManager = memoryManager((IgniteEx)node);
 
-            QueryMemoryManager memoryManager = h2.memoryManager();
-
-            assertEquals(memoryManager.memoryReserved(), 0);
+            assertEquals(0, memoryManager.memoryReserved());
         }
     }
 
+    /**
+     * @param node Node.
+     * @return Memory manager
+     */
+    protected QueryMemoryManager memoryManager(IgniteEx node) {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
+
+        return h2.memoryManager();
+    }
 
     /** */
     protected void checkQuery(Result res, String sql) {
@@ -488,26 +497,31 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
 
             multithreaded(() -> {
-                for (int i = 0; i < iterations; i++) {
-                    IgniteEx grid = fromClient() ? grid("client") : grid(0);
-                    grid.cache(DEFAULT_CACHE_NAME)
-                        .query(new SqlFieldsQuery(sql)
-                            .setLazy(false))
-                        .getAll();
+                try {
+                    for (int i = 0; i < iterations; i++) {
+                        IgniteEx grid = fromClient() ? grid("client") : grid(0);
+                        grid.cache(DEFAULT_CACHE_NAME)
+                            .query(new SqlFieldsQuery(sql))
+                            .getAll();
+                    }
                 }
-            } , threadNum);
+                catch (Exception e) {
+                    assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
+
+                    IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
+
+                    assertNotNull(sqlEx);
+
+                    if (res == Result.ERROR_GLOBAL_QUOTA)
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Global quota exceeded."));
+                    else
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Query quota exceeded."));
+                }
+
+            }, threadNum);
         }
         catch (Exception e) {
-            assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
-
-            IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
-
-            assertNotNull(sqlEx);
-
-            if (res == Result.ERROR_GLOBAL_QUOTA)
-                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Global quota exceeded."));
-            else
-                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Query quota exceeded."));
+            fail(X.getFullStackTrace(e));
         }
         finally {
             try {

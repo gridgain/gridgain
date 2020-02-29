@@ -19,7 +19,6 @@ import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -112,7 +111,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
     public void testOffloadingEnabledByDefault() throws Exception {
         initGrid(null, "100", true);
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY id";
 
         checkQuery(Result.SUCCESS_WITH_OFFLOADING, qry);
 
@@ -142,7 +141,7 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
 
         awaitPartitionMapExchange();
 
-        final String qry = "SELECT * FROM person";
+        final String qry = "SELECT * FROM person ORDER BY name";
 
         grid(1).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
         grid(1).cache(DEFAULT_CACHE_NAME).query(new SqlFieldsQuery(qry).setLocal(true)).getAll();
@@ -181,13 +180,5 @@ public class MemoryQuotaStaticAndDynamicConfigurationTest extends AbstractMemory
 
             memMgr.setOffloadingEnabled(enabled);
         }
-    }
-
-    /** */
-    private static QueryMemoryManager memoryManager(IgniteEx node) {
-        return ((IgniteH2Indexing)node.context()
-            .query()
-            .getIndexing())
-            .memoryManager();
     }
 }

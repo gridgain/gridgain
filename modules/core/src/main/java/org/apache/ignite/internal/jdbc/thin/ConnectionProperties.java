@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.jdbc.thin;
 
 import java.sql.SQLException;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.jetbrains.annotations.Nullable;
 
@@ -537,4 +538,19 @@ public interface ConnectionProperties {
      */
     @Deprecated
     public void setLimitedV2_8_0Enabled(boolean enabled);
+
+    /**
+     * Any JDBC features could be force disabled.
+     * See {@link JdbcThinFeature}.
+     * The string should contain enumeration of feature names, separated by the comma.
+     *
+     * @return disabled features.
+     */
+    public String disabledFeatures();
+
+    /**
+     * @param features Disabled features. See {@link JdbcThinFeature}.
+     *      The string should contain enumeration of feature names, separated by the comma.
+     */
+    public void disabledFeatures(String features);
 }

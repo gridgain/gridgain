@@ -468,7 +468,7 @@ public class H2Utils {
 
         H2QueryContext oldCtx = s.getQueryContext();
 
-        assert oldCtx == null || oldCtx == qctx || oldCtx.queryMemoryTracker() == null : oldCtx;
+        assert oldCtx == null || oldCtx == qctx || s.memoryTracker() == null : oldCtx;
 
         s.setQueryContext(qctx);
     }
@@ -485,7 +485,12 @@ public class H2Utils {
         if (s == null) // Connection has been closed concurrently.
             return;
 
-        U.closeQuiet(s.queryMemoryTracker());
+        H2MemoryTracker tracker = s.memoryTracker();
+
+        if (tracker != null)
+            tracker.close();
+
+        s.memoryTracker(null);
         s.setQueryContext(null);
     }
 
