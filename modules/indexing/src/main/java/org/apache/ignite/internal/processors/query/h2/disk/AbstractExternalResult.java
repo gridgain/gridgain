@@ -68,7 +68,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
         this.log = memMgr.log();
         this.data = memMgr.createExternalData(ses, useHashIdx, initSize, cls);
         this.parent = null;
-        this.memTracker = ses.queryMemoryTracker();
+        this.memTracker = ses.memoryTracker();
     }
 
     /**

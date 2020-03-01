@@ -140,6 +140,19 @@ public class H2QueryInfo {
     }
 
     /**
+     * @return Query description.
+     */
+    public String buildShortQueryInfoString() {
+        return "[type=" + type +
+            ", distributedJoin=" + distributedJoin +
+            ", enforceJoinOrder=" + enforceJoinOrder +
+            ", lazy=" + lazy +
+            ", schema=" + schema +
+            ", sql='" + sql +
+            ']';
+    }
+
+    /**
      * Query type.
      */
     public enum QueryType {

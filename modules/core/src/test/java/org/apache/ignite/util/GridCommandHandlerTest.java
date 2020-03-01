@@ -409,6 +409,30 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
+     * Test baseline collect works via control.sh when client node has the smallest order.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBaselineCollectWhenClientNodeHasSmallestOrder() throws Exception {
+        startGrid(0);
+
+        IgniteEx ignite = startClientGrid(1);
+        startGrid(2);
+
+        assertFalse(ignite.cluster().active());
+
+        ignite.cluster().active(true);
+
+        stopGrid(0);
+        startGrid(0);
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline"));
+
+        assertEquals(2, ignite.cluster().currentBaselineTopology().size());
+    }
+
+    /**
      * Test baseline collect works via control.sh
      *
      * @throws Exception If failed.

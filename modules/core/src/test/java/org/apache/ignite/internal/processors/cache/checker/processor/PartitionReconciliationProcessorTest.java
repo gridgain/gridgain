@@ -276,7 +276,7 @@ public class PartitionReconciliationProcessorTest {
         MockedProcessor processor = MockedProcessor.create(true);
         processor.useRealScheduler = true;
         processor.registerListener((stage, workload) -> {
-            if (stage.equals(ReconciliationEventListener.WorkLoadStage.STARTING))
+            if (stage.equals(ReconciliationEventListener.WorkLoadStage.RESULT_READY))
                 evtHist.add(workload.getClass().getName());
         });
 
@@ -443,11 +443,11 @@ public class PartitionReconciliationProcessorTest {
                 if (res == null)
                     throw new IllegalStateException("Please add result for: " + taskCls.getSimpleName());
 
-                evtLsnr.registerEvent(ReconciliationEventListener.WorkLoadStage.STARTING, arg);
+                evtLsnr.onEvent(ReconciliationEventListener.WorkLoadStage.RESULT_READY, arg);
 
-                lsnr.apply(res.getResult());
+                lsnr.apply(res.result());
 
-                evtLsnr.registerEvent(ReconciliationEventListener.WorkLoadStage.FINISHING, arg);
+                evtLsnr.onEvent(ReconciliationEventListener.WorkLoadStage.FINISHING, arg);
             }
             else
                 super.compute(taskCls, arg, lsnr);

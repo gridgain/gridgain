@@ -267,7 +267,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             if (system)
                 return new LocalResultImpl(ses, expressions, visibleColCnt);
 
-            H2MemoryTracker memoryTracker = ses.queryMemoryTracker();
+            H2MemoryTracker memoryTracker = ses.memoryTracker();
 
             if (memoryTracker != null) {
                 H2ManagedLocalResult res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
