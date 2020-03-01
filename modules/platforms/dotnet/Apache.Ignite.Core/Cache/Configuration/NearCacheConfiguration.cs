@@ -124,6 +124,8 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <returns>This instance for chaining.</returns>
         public NearCacheConfiguration EnablePlatformNearCache<TK, TV>(bool keepBinary = false)
         {
+            // TODO: This method is questionable.
+            // Think of a cleaner way to provide convenience API: extension method? Look at query entities.
             PlatformNearConfiguration = new PlatformNearCacheConfiguration
             {
                 KeepBinary = keepBinary,
