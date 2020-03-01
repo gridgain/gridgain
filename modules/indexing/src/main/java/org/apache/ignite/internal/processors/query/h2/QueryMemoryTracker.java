@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -30,6 +31,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTracker {
     /** Parent tracker. */
+    @GridToStringExclude
     private final H2MemoryTracker parent;
 
     /** Query memory limit. */
@@ -212,10 +214,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
         return totalWrittenOnDisk;
     }
 
-    @Override public long queryQuota() {
-        return quota;
-    }
-
     /**
      * @return Offloading enabled flag.
      */
@@ -288,6 +286,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
         filesCreated++;
     }
 
+    /** {@inheritDoc} */
     @Override public H2MemoryTracker createChildTracker() {
         checkClosed();
 
@@ -296,14 +295,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
         children.add(child);
 
         return child;
-    }
-
-    public String statString() {
-        return "[" +
-            "bytesAllocatedMax="  + maxReserved + ", " +
-            "bytesOffloadedTotal=" + totalWrittenOnDisk + ", " +
-            "filesCreated=" + filesCreated +
-            "]";
     }
 
     /** {@inheritDoc} */

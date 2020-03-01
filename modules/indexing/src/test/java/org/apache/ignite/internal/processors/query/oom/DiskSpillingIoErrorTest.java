@@ -153,7 +153,44 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
             if (--crashOnCreateCnt == 0)
                 throw new IOException("Test crash.");
 
-            return super.create(file, H2MemoryTracker.NO_OP_TRACKER, modes);
+            return super.create(file, NO_OP_TRACKER, modes);
         }
     }
+
+    /** */
+    private static final H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
+        /** {@inheritDoc} */
+        @Override public boolean reserve(long size) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void release(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public long reserved() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void swap(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void unswap(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void incrementFilesCreated() {
+        }
+
+        @Override public H2MemoryTracker createChildTracker() {
+            return null;
+        }
+    };
 }

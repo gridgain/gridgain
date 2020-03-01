@@ -307,17 +307,14 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (sort != null)
             rows.sort((o1, o2) -> sort.compare(o1.getValue(), o2.getValue()));
 
-        long swapped = data.store(rows);
-
-        memTracker.swap(swapped);
-        this.swapped += swapped;
+        data.store(rows);
 
         long delta = 0;
 
         for (Map.Entry<ValueRow, Value[]> row : rows)
-            delta += H2Utils.calculateMemoryDelta(row.getKey(), null, row.getValue());
+            delta += H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
 
-        memTracker.release(delta);
+        memTracker.release(-delta);
     }
 
     /** {@inheritDoc} */
@@ -330,8 +327,9 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             for (ExternalResultData.Chunk chunk : data.chunks())
                 chunk.reset();
         }
-        else
+        else {
             resQueue = sort == null ? new ArrayDeque<>() : new PriorityQueue<>(chunkCmp);
+        }
 
         // Init chunks.
         for (ExternalResultData.Chunk chunk : data.chunks()) {

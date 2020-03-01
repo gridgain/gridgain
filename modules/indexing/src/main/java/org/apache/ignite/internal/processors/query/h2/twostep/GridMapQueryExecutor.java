@@ -233,7 +233,7 @@ public class GridMapQueryExecutor {
                             req.mvccSnapshot(),
                             dataPageScanEnabled,
                             req.maxMemory(),
-                            req.originalQryId()
+                            req.runningQryId()
                         );
 
                         return null;
@@ -262,7 +262,7 @@ public class GridMapQueryExecutor {
             req.mvccSnapshot(),
             dataPageScanEnabled,
             req.maxMemory(),
-            req.originalQryId()
+            req.runningQryId()
         );
     }
 
@@ -286,6 +286,7 @@ public class GridMapQueryExecutor {
      * @param mvccSnapshot MVCC snapshot.
      * @param dataPageScanEnabled If data page scan is enabled.
      * @param maxMem Query memory limit.
+     * @param runningQryId Running query id.
      */
     private void onQueryRequest0(
         final ClusterNode node,
@@ -307,7 +308,7 @@ public class GridMapQueryExecutor {
         @Nullable final MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled,
         long maxMem,
-        @Nullable Long originalQryId
+        @Nullable Long runningQryId
     ) {
         // Prepare to run queries.
         GridCacheContext<?, ?> mainCctx = mainCacheContext(cacheIds);
@@ -418,7 +419,7 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, originalQryId);
+                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId);
 
                         ResultSet rs = h2.executeSqlQueryWithTimer(
                             stmt,

@@ -56,7 +56,5 @@ public interface GridQueryMemoryTracker extends AutoCloseable {
     public long totalWrittenOnDisk();
 
     /** {@inheritDoc} */
-    @Override void close();
-
-    public long queryQuota();
+    @Override public void close();
 }

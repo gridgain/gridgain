@@ -33,9 +33,6 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     /** Current size in rows. */
     protected int size;
 
-    /** */
-    protected long swapped = 0;
-
     /** Memory tracker. */
     protected final H2MemoryTracker memTracker;
 
@@ -43,7 +40,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     protected final QueryMemoryManager memMgr;
 
     /** Parent result. */
-    protected final AbstractExternalResult<?> parent;
+    protected final AbstractExternalResult parent;
 
     /** Child results count. Parent result is closed only when all children are closed. */
     private int childCnt;
@@ -55,32 +52,29 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     protected final ExternalResultData<T> data;
 
     /**
-     * @param ses Current session.
      * @param useHashIdx Whether to use hash index.
-     * @param initSize Initial result set size.
+     * @param initSize Initial size.
      * @param cls Class of stored data.
+     * @param useHashIdx Flag whether to use hash index.
+     * @param initSize Initial result set size.
      */
-    protected AbstractExternalResult(
-        Session ses,
+    protected AbstractExternalResult(Session ses,
         boolean useHashIdx,
         long initSize,
-        Class<T> cls
-    ) {
+        Class<T> cls) {
         memMgr = (QueryMemoryManager)ses.groupByDataFactory();
-
         assert memMgr != null;
-
-        log = memMgr.log();
-        data = memMgr.createExternalData(ses, useHashIdx, initSize, cls);
-        parent = null;
-        memTracker = ses.memoryTracker();
+        this.log = memMgr.log();
+        this.data = memMgr.createExternalData(ses, useHashIdx, initSize, cls);
+        this.parent = null;
+        this.memTracker = ses.memoryTracker();
     }
 
     /**
      * Used for {@link ResultInterface#createShallowCopy(org.h2.engine.SessionInterface)} only.
      * @param parent Parent result.
      */
-    protected AbstractExternalResult(AbstractExternalResult<?> parent) {
+    protected AbstractExternalResult(AbstractExternalResult parent) {
         memMgr = parent.memMgr;
         log = parent.log;
         size = parent.size;
@@ -123,8 +117,6 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
     /** */
     protected void onClose() {
         data.close();
-
-        memTracker.unswap(swapped);
     }
 
     /** */

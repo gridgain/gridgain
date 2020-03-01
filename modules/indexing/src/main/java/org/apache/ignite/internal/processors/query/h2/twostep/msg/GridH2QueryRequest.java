@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -162,9 +163,9 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** Memory available for query. */
     private long maxMem;
 
-    /** Memory available for query. */
+    /** Id of the query assigned by {@link RunningQueryManager}. */
     @GridDirectTransient
-    private long originalQryId;
+    private long runningQryId;
 
     /**
      * Required by {@link Externalizable}
@@ -193,7 +194,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         mvccSnapshot = req.mvccSnapshot;
         txReq = req.txReq;
         maxMem = req.maxMem;
-        originalQryId = req.originalQryId;
+        runningQryId = req.runningQryId;
     }
 
     /**
@@ -509,22 +510,22 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     }
 
     /**
-     * Return memory limit for query.
+     * Id of the query assigned by {@link RunningQueryManager}.
      *
-     * @return Memory size in bytes.
+     * @return Running query id.
      */
-    public long originalQryId() {
-        return originalQryId;
+    public long runningQryId() {
+        return runningQryId;
     }
 
     /**
-     * Sets memory limit for query.
+     * Sets id of the query assigned by {@link RunningQueryManager}.
      *
-     * @param originalQryId Memory size in bytes.
+     * @param runningQryId Running query id.
      * @return {@code this} for chaining.
      */
-    public GridH2QueryRequest originalQryId(long originalQryId) {
-        this.originalQryId = originalQryId;
+    public GridH2QueryRequest runningQryId(long runningQryId) {
+        this.runningQryId = runningQryId;
 
         return this;
     }

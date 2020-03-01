@@ -21,8 +21,11 @@ import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.Prepared;
 import org.h2.engine.Session;
@@ -31,8 +34,8 @@ import org.h2.engine.Session;
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.
  */
 public class H2QueryInfo {
-    /** Query id. */
-    private final Long originalQryId;
+    /** Query id assigned by {@link RunningQueryManager}. */
+    private final Long runningQryId;
 
     /** Type. */
     private final QueryType type;
@@ -56,20 +59,22 @@ public class H2QueryInfo {
     private final boolean lazy;
 
     /** Prepared statement. */
+    @GridToStringExclude
     private final Prepared stmt;
 
     /**
      * @param type Query type.
      * @param stmt Query statement.
      * @param sql Query statement.
+     * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
-    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, Long originalQryId) {
+    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, Long runningQryId) {
         try {
             assert stmt != null;
 
             this.type = type;
             this.sql = sql;
-            this.originalQryId = originalQryId;
+            this.runningQryId = runningQryId;
 
             beginTs = U.currentTimeMillis();
 
@@ -112,8 +117,9 @@ public class H2QueryInfo {
         printLogMessage(log, null, msg, additionalInfo);
     }
 
-    public Long originalQueryId() {
-        return originalQryId;
+    /** @return Query id assigned by {@link RunningQueryManager}. */
+    public Long runningQueryId() {
+        return runningQryId;
     }
 
     /**
@@ -145,6 +151,11 @@ public class H2QueryInfo {
         msgSb.append(']');
 
         LT.warn(log, msgSb.toString());
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(H2QueryInfo.class, this);
     }
 
     /**

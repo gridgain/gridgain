@@ -203,9 +203,8 @@ public class ExternalResultData<T> implements AutoCloseable {
      * Stores rows into the file.
      *
      * @param rows Rows to store.
-     * @return The total number of bytes written on disk.
      */
-    public long store(Collection<Map.Entry<ValueRow, T[]>> rows) {
+    public void store(Collection<Map.Entry<ValueRow, T[]>> rows) {
         long initFilePos = lastWrittenPos;
 
         setFilePosition(lastWrittenPos);
@@ -214,8 +213,6 @@ public class ExternalResultData<T> implements AutoCloseable {
             writeToFile(row);
 
         chunks.add(new Chunk(initFilePos, lastWrittenPos));
-
-        return lastWrittenPos - initFilePos;
     }
 
     /**

@@ -148,6 +148,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     private H2QueryContext qryContext;
     private H2MemoryTracker memoryTracker;
     private ManagedGroupByDataFactory groupByDataFactory;
+    private String qryDesc;
     /**
      * Tables marked for ANALYZE after the current transaction is committed.
      * Prevents us calling ANALYZE repeatedly in large transactions.
@@ -249,6 +250,20 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
      */
     public void memoryTracker(H2MemoryTracker memoryTracker) {
         this.memoryTracker = memoryTracker;
+    }
+
+    /**
+     * @return Query description.
+     */
+    public String queryDescription() {
+        return qryDesc;
+    }
+
+    /**
+     * @param qryDesc Query description.
+     */
+    public void queryDescription(String qryDesc) {
+        this.qryDesc = qryDesc;
     }
 
     /**

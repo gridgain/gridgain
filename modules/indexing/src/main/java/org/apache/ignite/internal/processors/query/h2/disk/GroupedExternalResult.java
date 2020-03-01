@@ -73,12 +73,11 @@ public class GroupedExternalResult extends AbstractExternalResult<Object>  {
 
     /**
      * @param groups Groups to spill.
-     * @return The total number of bytes written on disk.
      */
-    public long spillGroupsToDisk(Map<ValueRow, Object[]> groups) {
+    public void spillGroupsToDisk(Map<ValueRow, Object[]> groups) {
         size += groups.size();
 
-        return data.store(groups.entrySet());
+        data.store(groups.entrySet());
     }
 
     /** Invoked after all rows have been spilled to disk.*/

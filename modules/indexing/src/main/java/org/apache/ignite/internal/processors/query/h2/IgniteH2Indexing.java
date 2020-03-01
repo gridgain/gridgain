@@ -482,11 +482,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tbl != null && tbl.luceneIndex() != null) {
             Long qryId = runningQueryManager().register(qry, TEXT, schemaName, true, null, null);
 
+            Throwable failReason = null;
             try {
                 return tbl.luceneIndex().query(qry.toUpperCase(), filters);
             }
+            catch (Throwable t) {
+                failReason = t;
+
+                throw t;
+            }
             finally {
-                runningQueryManager().unregister(qryId, null);
+                runningQueryManager().unregister(qryId, failReason);
             }
         }
 
@@ -899,12 +905,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (qryInfo != null) {
             longRunningQryMgr.registerQuery(qryInfo);
 
-            setupMemoryTracking(conn, qryInfo, maxMem);
+            initSession(conn, qryInfo, maxMem);
         }
 
         enableDataPageScan(dataPageScanEnabled);
 
         try {
+            if (log.isDebugEnabled())
+                log.debug("Start execute query: " + qryInfo);
+
             ResultSet rs = executeSqlQuery(conn, stmt, timeoutMillis, cancel);
 
             if (qryInfo != null && qryInfo.time() > longRunningQryMgr.getTimeout())
@@ -933,12 +942,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param qryInfo Query info.
      * @param maxMem Max memory.
      */
-    public void setupMemoryTracking(H2PooledConnection conn, H2QueryInfo qryInfo, long maxMem) {
+    public void initSession(H2PooledConnection conn, H2QueryInfo qryInfo, long maxMem) {
         Session s = H2Utils.session(conn);
 
         s.groupByDataFactory(memoryMgr);
+        s.queryDescription(qryInfo.toString());
 
-        GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.originalQueryId());
+        GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
 
         H2MemoryTracker tracker = null;
 
@@ -1248,9 +1258,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 ", params=" + Arrays.deepToString(qryParams.arguments()) + "]", e);
         }
         finally {
-            if (failReason == null && log.isDebugEnabled())
-                log.debug("Users query completed");
-
             runningQryMgr.unregister(qryId, failReason);
         }
     }
@@ -1544,11 +1551,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Id of registered query or {@code null} if query wasn't registered.
      */
     private Long registerRunningQuery(QueryDescriptor qryDesc, QueryParameters qryParams, GridQueryCancel cancel) {
-        GridQueryMemoryTracker tracker = memoryMgr.createQueryMemoryTracker(
-            qryParams.maxMemory() < 0 ? memoryMgr.globalQuota() : qryParams.maxMemory()
-        );
+        final long maxMemory = qryParams.maxMemory();
 
-        Long qryId = runningQryMgr.register(
+        GridQueryMemoryTracker tracker = memoryMgr.createQueryMemoryTracker(maxMemory);
+
+        return runningQryMgr.register(
             qryDesc.sql(),
             GridCacheQueryType.SQL_FIELDS,
             qryDesc.schemaName(),
@@ -1556,14 +1563,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             tracker,
             cancel
         );
-
-        if (log.isDebugEnabled()) {
-            log.debug("Started query with memory tracking parameters [queryQuota=" + tracker.queryQuota() +
-                ", globalQuota=" + memoryMgr.getGlobalQuota() + ", offloadingEnabled=" + memoryMgr.getGlobalQuota() +
-                ", query=" + "qryDesc" + ']');
-        }
-
-        return qryId;
     }
 
     /**
@@ -2163,7 +2162,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         runningQryMgr = new RunningQueryManager(ctx);
 
         mapQryExec = new GridMapQueryExecutor();
-        rdcQryExec = new GridReduceQueryExecutor(runningQryMgr);
+        rdcQryExec = new GridReduceQueryExecutor();
 
         mapQryExec.start(ctx, this);
         rdcQryExec.start(ctx, this);

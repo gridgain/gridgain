@@ -176,8 +176,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /**
      * Query memory tracker factory method.
      *
-     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#qryQuota}  will be used.
-     * Note: Negative values are reserved for disable memory tracking.
+     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#qryQuota} will be used.
      *
      * @param maxQryMemory Query memory limit in bytes.
      * @return Query memory tracker.
@@ -186,22 +185,26 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (maxQryMemory == 0)
             maxQryMemory = qryQuota;
 
+        if (maxQryMemory < 0)
+            maxQryMemory = 0;
+
         long globalQuota0 = globalQuota;
 
-        if (maxQryMemory == 0 && globalQuota0 == 0) {
-            if (log.isDebugEnabled())
-                log.debug("No memory quota configured for the query: "  + "qryDesc");
-        }
-        else if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
+        if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
             if (log.isInfoEnabled()) {
-                LT.info(log, "Max query memory can't exceed SQL memory pool size. Will be reduced down to: " +
-                    globalQuota0);
+                log.info("Query memory quota cannot exceed global memory quota." +
+                    " It will be reduced to the size of global quota: : " + globalQuota0);
             }
 
             maxQryMemory = globalQuota0;
         }
 
-        return new QueryMemoryTracker(this, maxQryMemory < 0 ? 0 : maxQryMemory, blockSize, offloadingEnabled);
+        QueryMemoryTracker tracker = new QueryMemoryTracker(this, maxQryMemory, blockSize, offloadingEnabled);
+
+        if (log.isDebugEnabled())
+            log.debug("Memory tracker created: " + tracker);
+
+        return tracker;
     }
 
     /**
@@ -226,11 +229,12 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     public void setGlobalQuota(String newGlobalQuota) {
         long globalQuota0 = U.parseBytes(newGlobalQuota);
+        long heapSize = Runtime.getRuntime().maxMemory();
 
         A.ensure(
-            Runtime.getRuntime().maxMemory() > globalQuota0,
-            "Sql global memory quota can't be more than heap memory max size: heapSize="
-                + Runtime.getRuntime().maxMemory() + ", quotaSize=" + globalQuota0
+            heapSize > globalQuota0,
+            "Sql global memory quota can't be more than heap size: heapSize="
+                + heapSize + ", quotaSize=" + globalQuota0
         );
 
         A.ensure(globalQuota0 >= 0, "Sql global memory quota must be >= 0: quotaSize=" + globalQuota0);
@@ -454,7 +458,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
             metrics.trackQueryOffloaded();
 
             if (log.isInfoEnabled())
-                LT.info(log, "Started offloading for query: "/* + tracker.queryDescriptor()*/);
+                LT.info(log, "Started offloading for query: " + ses.queryDescription());
         }
 
         return new ExternalResultData<T>(log,

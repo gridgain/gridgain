@@ -58,7 +58,6 @@ import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.IgniteSQLMapStepException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
-import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.H2FieldsIterator;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -126,9 +125,6 @@ public class GridReduceQueryExecutor {
     /** */
     private IgniteLogger log;
 
-    /** */
-    private final RunningQueryManager runningQryMgr;
-
     /** Generator of ids for query requests. */
     private final AtomicLong qryReqIdGen = new AtomicLong();
 
@@ -159,13 +155,6 @@ public class GridReduceQueryExecutor {
 
     /** Partition mapper. */
     private ReducePartitionMapper mapper;
-
-    /**
-     * @param runningQryMgr Running query manager.
-     */
-    public GridReduceQueryExecutor(RunningQueryManager runningQryMgr) {
-        this.runningQryMgr = runningQryMgr;
-    }
 
     /**
      * @param ctx Context.
@@ -456,7 +445,7 @@ public class GridReduceQueryExecutor {
                         .timeout(timeoutMillis)
                         .schemaName(schemaName)
                         .maxMemory(maxMem)
-                        .originalQryId(qryId);
+                        .runningQryId(qryId);
 
                     if (mvccTracker != null)
                         req.mvccSnapshot(mvccTracker.snapshot());

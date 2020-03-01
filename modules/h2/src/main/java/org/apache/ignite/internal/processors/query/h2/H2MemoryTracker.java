@@ -61,45 +61,11 @@ public interface H2MemoryTracker extends AutoCloseable {
      */
     public void incrementFilesCreated();
 
+    /**
+     * Creates child tracker that uses resources of current tracker.
+     */
     public H2MemoryTracker createChildTracker();
 
     /** {@inheritDoc} */
     @Override public void close();
-
-    /** */
-    public H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
-        /** {@inheritDoc} */
-        @Override public boolean reserve(long size) {
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void release(long size) {
-        }
-
-        /** {@inheritDoc} */
-        @Override public long reserved() {
-            return -1;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void swap(long size) {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void unswap(long size) {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void close() {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void incrementFilesCreated() {
-        }
-
-        @Override public H2MemoryTracker createChildTracker() {
-            return null;
-        }
-    };
 }
