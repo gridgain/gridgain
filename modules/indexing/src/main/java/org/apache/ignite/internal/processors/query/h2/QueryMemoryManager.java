@@ -182,22 +182,22 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Query memory tracker.
      */
     public GridQueryMemoryTracker createQueryMemoryTracker(long maxQryMemory) {
-        if (maxQryMemory == 0)
-            maxQryMemory = qryQuota;
-
-        if (maxQryMemory < 0)
-            maxQryMemory = 0;
-
         long globalQuota0 = globalQuota;
 
         if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
             if (log.isInfoEnabled()) {
-                log.info("Query memory quota cannot exceed global memory quota." +
+                LT.info(log, "Query memory quota cannot exceed global memory quota." +
                     " It will be reduced to the size of global quota: : " + globalQuota0);
             }
 
             maxQryMemory = globalQuota0;
         }
+
+        if (maxQryMemory == 0)
+            maxQryMemory = Math.min(qryQuota, globalQuota0);
+
+        if (maxQryMemory < 0)
+            maxQryMemory = 0;
 
         QueryMemoryTracker tracker = new QueryMemoryTracker(this, maxQryMemory, blockSize, offloadingEnabled);
 
@@ -310,8 +310,10 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         return offloadingEnabled;
     }
 
-    /** {@inheritDoc} */
-    @Override public long reserved() {
+    /**
+     * @return Bytes reserved by all queries.
+     */
+    public long reserved() {
         return reserved.get();
     }
 
@@ -343,7 +345,18 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         // NO-OP
     }
 
+    /** {@inheritDoc} */
     @Override public H2MemoryTracker createChildTracker() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long writtenOnDisk() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onChildClosed(H2MemoryTracker child) {
         throw new UnsupportedOperationException();
     }
 

@@ -165,7 +165,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
 
     /** Id of the query assigned by {@link RunningQueryManager}. */
     @GridDirectTransient
-    private long runningQryId;
+    private Long runningQryId;
 
     /**
      * Required by {@link Externalizable}
@@ -514,7 +514,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      *
      * @return Running query id.
      */
-    public long runningQryId() {
+    public Long runningQryId() {
         return runningQryId;
     }
 
@@ -524,7 +524,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      * @param runningQryId Running query id.
      * @return {@code this} for chaining.
      */
-    public GridH2QueryRequest runningQryId(long runningQryId) {
+    public GridH2QueryRequest runningQryId(Long runningQryId) {
         this.runningQryId = runningQryId;
 
         return this;

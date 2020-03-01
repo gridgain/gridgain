@@ -36,11 +36,11 @@ public interface H2MemoryTracker extends AutoCloseable {
     public void release(long size);
 
     /**
-     * Reserved memory.
+     * Written on disk memory.
      *
      * @return Reserved memory in bytes.
      */
-    public long reserved();
+    public long writtenOnDisk();
 
     /**
      * Tracks swapping on disk.
@@ -65,6 +65,13 @@ public interface H2MemoryTracker extends AutoCloseable {
      * Creates child tracker that uses resources of current tracker.
      */
     public H2MemoryTracker createChildTracker();
+
+    /**
+     * Callback to release resources allocated for child tracker.
+     *
+     * @param child Child whose resources should be released.
+     */
+    public void onChildClosed(H2MemoryTracker child);
 
     /** {@inheritDoc} */
     @Override public void close();

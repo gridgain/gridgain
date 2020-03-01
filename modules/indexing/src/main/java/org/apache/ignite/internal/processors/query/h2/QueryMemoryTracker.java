@@ -276,6 +276,8 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
 
         if (parent != null)
             parent.release(reservedFromParent);
+
+        onChildClosed(this);
     }
 
     /** {@inheritDoc} */
@@ -295,6 +297,11 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
         children.add(child);
 
         return child;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onChildClosed(H2MemoryTracker child) {
+        children.remove(child);
     }
 
     /** {@inheritDoc} */

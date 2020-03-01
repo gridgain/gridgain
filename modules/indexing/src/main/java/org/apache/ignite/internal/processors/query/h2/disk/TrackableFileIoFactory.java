@@ -55,7 +55,7 @@ public class TrackableFileIoFactory {
     public FileIO create(File file, H2MemoryTracker tracker, OpenOption... modes) throws IOException {
         FileIO delegate = delegateFactory.create(file, modes);
 
-        return new TrackableFileIO(delegate, metrics, tracker);
+        return new TrackableFileIO(delegate, metrics, tracker.createChildTracker());
     }
 
     /**
@@ -150,6 +150,22 @@ public class TrackableFileIoFactory {
 
             if (tracker != null)
                 tracker.swap(written);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void clear() throws IOException {
+            super.clear();
+
+            tracker.unswap(tracker.writtenOnDisk());
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() throws IOException {
+            super.close();
+
+            tracker.unswap(tracker.writtenOnDisk());
+
+            tracker.close();
         }
     }
 }

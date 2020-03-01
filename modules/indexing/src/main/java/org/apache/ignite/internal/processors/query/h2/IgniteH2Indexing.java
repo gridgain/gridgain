@@ -1551,16 +1551,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Id of registered query or {@code null} if query wasn't registered.
      */
     private Long registerRunningQuery(QueryDescriptor qryDesc, QueryParameters qryParams, GridQueryCancel cancel) {
-        final long maxMemory = qryParams.maxMemory();
-
-        GridQueryMemoryTracker tracker = memoryMgr.createQueryMemoryTracker(maxMemory);
-
         return runningQryMgr.register(
             qryDesc.sql(),
             GridCacheQueryType.SQL_FIELDS,
             qryDesc.schemaName(),
             qryDesc.local(),
-            tracker,
+            memoryMgr.createQueryMemoryTracker(qryParams.maxMemory()),
             cancel
         );
     }
