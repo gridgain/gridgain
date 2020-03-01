@@ -235,7 +235,7 @@ public class CommandHandler {
                 return EXIT_CODE_OK;
             }
 
-            printErrStackTrace = rawArgs.stream().anyMatch(CMD_PRINT_ERR_STACK_TRACE::equals);
+            printErrStackTrace = F.exist(rawArgs, CMD_PRINT_ERR_STACK_TRACE::equalsIgnoreCase);
 
             ConnectionAndSslParameters args = new CommonArgParser(logger).parseAndValidate(rawArgs.iterator());
 
