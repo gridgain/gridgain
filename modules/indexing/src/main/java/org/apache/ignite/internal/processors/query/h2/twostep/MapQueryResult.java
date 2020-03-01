@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.tree.CacheDataTree;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.H2QueryFetchSizeInterceptor;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
@@ -282,6 +283,11 @@ class MapQueryResult {
             res.close();
 
         ses.setQueryContext(null);
+
+        H2MemoryTracker tracker = ses.memoryTracker();
+
+        if (tracker != null)
+            tracker.close();
 
         conn.close();
     }

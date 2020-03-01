@@ -20,7 +20,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 /**
- * No-op implementation of Management Console Agent, throws exception on usage attempt.
+ * No-op implementation of Control Center agent, throws exception on usage attempt.
  */
 public abstract class ManagementConsoleProcessorAdapter extends GridProcessorAdapter {
     /** Management configuration instance. */

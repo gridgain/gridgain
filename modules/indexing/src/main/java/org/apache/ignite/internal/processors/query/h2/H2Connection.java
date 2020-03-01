@@ -21,8 +21,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -124,20 +124,24 @@ public class H2Connection implements AutoCloseable {
      *
      * @param sql SQL.
      * @return Prepared statement.
-     * @throws SQLException If failed.
      */
-    PreparedStatement prepareStatement(String sql) throws SQLException {
-        PreparedStatement stmt = cachedPreparedStatement(sql);
+    PreparedStatement prepareStatement(String sql, byte qryFlags) {
+        try {
+            PreparedStatement stmt = cachedPreparedStatement(sql, qryFlags);
 
-        if (stmt == null) {
-            H2CachedStatementKey key = new H2CachedStatementKey(schema, sql);
+            if (stmt == null) {
+                H2CachedStatementKey key = new H2CachedStatementKey(schema, sql, qryFlags);
 
-            stmt = prepareStatementNoCache(sql);
+                stmt = prepareStatementNoCache(sql);
 
-            statementCache.put(key, stmt);
+                statementCache.put(key, stmt);
+            }
+
+            return stmt;
         }
-
-        return stmt;
+        catch (SQLException e) {
+            throw new IgniteSQLException("Failed to parse query. " + e.getMessage(), IgniteQueryErrorCode.PARSING, e);
+        }
     }
 
     /**
@@ -147,8 +151,8 @@ public class H2Connection implements AutoCloseable {
      * @return Prepared statement or {@code null}.
      * @throws SQLException On error.
      */
-    private @Nullable PreparedStatement cachedPreparedStatement(String sql) throws SQLException {
-        H2CachedStatementKey key = new H2CachedStatementKey(schema, sql);
+    private @Nullable PreparedStatement cachedPreparedStatement(String sql, byte qryFlags) throws SQLException {
+        H2CachedStatementKey key = new H2CachedStatementKey(schema, sql, qryFlags);
 
         PreparedStatement stmt = statementCache.get(key);
 
@@ -162,7 +166,7 @@ public class H2Connection implements AutoCloseable {
                 stmt.unwrap(JdbcStatement.class).isCancelled() ||  // Cancelled.
                 GridSqlQueryParser.prepared(stmt).needRecompile() // Outdated (schema has been changed concurrently).
         ) {
-            statementCache.remove(schema, sql);
+            statementCache.remove(schema, sql, qryFlags);
 
             return null;
         }
@@ -175,23 +179,14 @@ public class H2Connection implements AutoCloseable {
      *
      * @param sql SQL.
      * @return Prepared statement.
-     * @throws SQLException If failed.
      */
-    PreparedStatement prepareStatementNoCache(String sql) throws SQLException {
-        boolean insertHack = GridH2Table.insertHackRequired(sql);
-
-        if (insertHack) {
-            GridH2Table.insertHack(true);
-
-            try {
-                return conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-            }
-            finally {
-                GridH2Table.insertHack(false);
-            }
-        }
-        else
+    PreparedStatement prepareStatementNoCache(String sql) {
+        try {
             return conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+        }
+        catch (SQLException e) {
+            throw new IgniteSQLException("Failed to parse query. " + e.getMessage(), IgniteQueryErrorCode.PARSING, e);
+        }
     }
 
     /** {@inheritDoc} */

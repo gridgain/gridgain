@@ -39,8 +39,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static java.util.Collections.singleton;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionJobResponseDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
 import static org.apache.ignite.agent.dto.action.Status.COMPLETED;
 import static org.apache.ignite.agent.dto.action.Status.FAILED;
 import static org.apache.ignite.agent.dto.action.Status.RUNNING;
@@ -277,7 +275,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             );
 
         executeAction(req, (res) -> {
-            TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             return taskRes != null && taskRes.getStatus() == RUNNING;
         });
@@ -296,7 +294,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
 
         assertWithPoll(
             () -> {
-                JobResponse res = interceptor.getPayload(buildActionJobResponseDest(cluster.id(), req.getId()), JobResponse.class);
+                JobResponse res = jobResult(req.getId());
                 return res != null && res.getStatus() == FAILED;
             }
         );
@@ -371,7 +369,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 );
 
             executeAction(req, (res) -> {
-                TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+                TaskResponse taskRes = taskResult(req.getId());
 
                 return taskRes != null && taskRes.getStatus() == RUNNING;
             });
@@ -383,7 +381,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             .setArgument(1);
 
         executeAction(req, (res) -> {
-            TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 3) {
                 boolean isAllResponsesNotEmpty = res.stream()
@@ -428,7 +426,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             );
 
         executeAction(qryReq, (res) -> {
-            TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), qryReq.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(qryReq.getId());
 
             return taskRes != null && taskRes.getStatus() == RUNNING;
         });
@@ -439,7 +437,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
             .setArgument(1);
 
         executeAction(req, (res) -> {
-            TaskResponse taskRes = interceptor.getPayload(buildActionTaskResponseDest(cluster.id(), req.getId()), TaskResponse.class);
+            TaskResponse taskRes = taskResult(req.getId());
 
             if (taskRes != null && taskRes.getStatus() == COMPLETED && taskRes.getJobCount() == 3) {
 

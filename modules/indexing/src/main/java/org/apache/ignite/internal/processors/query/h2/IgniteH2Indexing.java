@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.io.File;
 import java.sql.BatchUpdateException;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -158,6 +157,7 @@ import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridEmptyCloseableIterator;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.IgniteUtils;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.lang.IgniteInClosure2X;
@@ -166,8 +166,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.internal.util.worker.GridWorker;
-import org.apache.ignite.internal.util.worker.GridWorkerFuture;
 import org.apache.ignite.lang.IgniteBiClosure;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
@@ -190,7 +188,11 @@ import org.h2.util.JdbcUtils;
 import org.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static java.util.Collections.singletonList;
+import static java.util.Objects.isNull;
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MVCC_TX_SIZE_CACHING_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccCachingManager.TX_SIZE_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.mvcc.MvccUtils.checkActive;
@@ -225,12 +227,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2ExtrasInnerIO.register();
         H2ExtrasLeafIO.register();
     }
-
-    /**
-     *  Spill directory path. Spill directory is used for the disk offloading
-     *  of intermediate results of the heavy queries.
-     */
-    public static final String DISK_SPILL_DIR = "tmp/spill";
 
     /** Default number of attempts to re-run DELETE and UPDATE queries in case of concurrent modifications of values. */
     private static final int DFLT_UPDATE_RERUN_ATTEMPTS = 4;
@@ -283,7 +279,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     private QueryParser parser;
 
     /** Memory manager */
-    private QueryMemoryManager memoryManager;
+    private QueryMemoryManager memoryMgr;
 
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
@@ -550,9 +546,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 null,
                 mvccSnapshot,
                 null,
-                true,
-                maxMem < 0 ? null : memoryManager.createQueryMemoryTracker(maxMem),
-                ctx);
+                true);
 
             return new GridQueryFieldsResultAdapter(select.meta(), null) {
                 @Override public GridCloseableIterator<List<?>> iterator() throws IgniteCheckedException {
@@ -564,12 +558,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         List<Object> args = F.asList(qryParams.arguments());
 
-                        PreparedStatement stmt = preparedStatementWithParams(
-                            conn,
-                            qry,
-                            args,
-                            true
-                        );
+                        PreparedStatement stmt = conn.prepareStatement(qry, H2StatementCache.queryFlags(qryDesc));
+
+                        H2Utils.bindParameters(stmt, args);
 
                         H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry);
 
@@ -577,11 +568,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             stmt,
                             conn,
                             qry,
-                            args,
                             timeout,
                             cancel,
                             qryParams.dataPageScanEnabled(),
-                            qryInfo
+                            qryInfo,
+                            maxMem
                         );
 
                         return new H2FieldsIterator(rs, mvccTracker, conn, qryParams.pageSize(), log, IgniteH2Indexing.this, qryInfo);
@@ -621,7 +612,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (tx != null) {
             int remaining = (int)tx.remainingTime();
 
-            return remaining > 0 && qryTimeout > 0 ? Math.min(remaining, qryTimeout) : Math.max(remaining, qryTimeout);
+            return remaining > 0 && qryTimeout > 0 ? min(remaining, qryTimeout) : max(remaining, qryTimeout);
         }
 
         return qryTimeout;
@@ -765,32 +756,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /**
-     * Prepares sql statement.
-     *
-     * @param conn Connection.
-     * @param sql Sql.
-     * @param params Params.
-     * @param useStmtCache If {@code true} use stmt cache.
-     * @return Prepared statement with set parameters.
-     * @throws IgniteCheckedException If failed.
-     */
-    public PreparedStatement preparedStatementWithParams(H2PooledConnection conn, String sql, Collection<Object> params,
-        boolean useStmtCache) throws IgniteCheckedException {
-        final PreparedStatement stmt;
-
-        try {
-            stmt = useStmtCache ? conn.prepareStatement(sql) : conn.prepareStatementNoCache(sql);
-
-            H2Utils.bindParameters(stmt, params);
-
-            return stmt;
-        }
-        catch (SQLException e) {
-            throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
-        }
-    }
-
-    /**
      * Executes sql query statement.
      *
      * @param conn Connection,.
@@ -860,10 +825,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,
-        final H2QueryInfo qryInfo
+        final H2QueryInfo qryInfo,
+        long maxMem
     ) throws IgniteCheckedException {
-        return executeSqlQueryWithTimer(preparedStatementWithParams(conn, sql, params, false),
-            conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo);
+        PreparedStatement stmt = conn.prepareStatementNoCache(sql);
+
+        H2Utils.bindParameters(stmt, params);
+
+        return executeSqlQueryWithTimer(stmt,
+            conn, sql, timeoutMillis, cancel, dataPageScanEnabled, qryInfo, maxMem);
     }
 
     /**
@@ -881,7 +851,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param stmt Prepared statement for query.
      * @param conn Connection.
      * @param sql Sql query.
-     * @param params Parameters.
      * @param timeoutMillis Query timeout.
      * @param cancel Query cancel.
      * @param dataPageScanEnabled If data page scan is enabled.
@@ -892,14 +861,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         PreparedStatement stmt,
         H2PooledConnection conn,
         String sql,
-        @Nullable Collection<Object> params,
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,
-        final H2QueryInfo qryInfo
+        final H2QueryInfo qryInfo,
+        long maxMem
     ) throws IgniteCheckedException {
-        if (qryInfo != null)
+        if (qryInfo != null) {
             longRunningQryMgr.registerQuery(qryInfo);
+
+            setupMemoryTracking(conn, maxMem, qryInfo.buildShortQueryInfoString());
+        }
 
         enableDataPageScan(dataPageScanEnabled);
 
@@ -925,6 +897,22 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (qryInfo != null)
                 longRunningQryMgr.unregisterQuery(qryInfo);
         }
+    }
+
+    /**
+     * @param conn Connection.
+     * @param maxMem Max memory.
+     * @param qryDesc Query descriptor.
+     */
+    public void setupMemoryTracking(H2PooledConnection conn, long maxMem, String qryDesc) {
+        Session s = H2Utils.session(conn);
+
+        s.groupByDataFactory(memoryMgr);
+
+        QueryMemoryTracker memTracker = memoryMgr.createQueryMemoryTracker(maxMem, qryDesc);
+
+        if (memTracker != null)
+            s.memoryTracker(memTracker);
     }
 
     /** {@inheritDoc} */
@@ -1560,6 +1548,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         fldsQry.setTimeout(timeout, TimeUnit.MILLISECONDS);
         fldsQry.setPageSize(pageSize);
         fldsQry.setLocal(true);
+        fldsQry.setLazy(U.isFlagSet(flags, GridH2QueryRequest.FLAG_LAZY));
 
         boolean loc = true;
 
@@ -1599,7 +1588,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setEnforceJoinOrder(fldsQry.isEnforceJoinOrder())
             .setLocal(fldsQry.isLocal())
             .setPageSize(fldsQry.getPageSize())
-            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS);
+            .setTimeout(fldsQry.getTimeout(), TimeUnit.MILLISECONDS)
+            .setLazy(fldsQry.isLazy());
 
         QueryCursorImpl<List<?>> cur;
 
@@ -1949,15 +1939,19 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
+        assert nonNull(cctx);
+
         // No data in fresh in-memory cache.
         if (!cctx.group().persistenceEnabled())
             return null;
 
         IgnitePageStoreManager pageStore = cctx.shared().pageStore();
 
-        assert pageStore != null;
+        assert nonNull(pageStore);
 
         SchemaIndexCacheVisitorClosure clo;
+
+        String cacheName = cctx.name();
 
         if (!pageStore.hasIndexStore(cctx.groupId())) {
             // If there are no index store, rebuild all indexes.
@@ -1967,10 +1961,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             // Otherwise iterate over tables looking for missing indexes.
             IndexRebuildPartialClosure clo0 = new IndexRebuildPartialClosure(cctx);
 
-            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cctx.name())) {
-                assert tblDesc.table() != null;
+            for (H2TableDescriptor tblDesc : schemaMgr.tablesForCache(cacheName)) {
+                GridH2Table tbl = tblDesc.table();
 
-                tblDesc.table().collectIndexesForPartialRebuild(clo0);
+                assert nonNull(tbl);
+
+                tbl.collectIndexesForPartialRebuild(clo0);
             }
 
             if (clo0.hasIndexes())
@@ -1980,40 +1976,31 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         }
 
         // Closure prepared, do rebuild.
-        final GridWorkerFuture<?> fut = new GridWorkerFuture<>();
+        markIndexRebuild(cacheName, true);
 
-        markIndexRebuild(cctx.name(), true);
+        GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
 
-        if (cctx.group().metrics() != null)
-            cctx.group().metrics().setIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
+        rebuildCacheIdxFut.listen(fut -> {
+            Throwable err = fut.error();
 
-        GridWorker worker = new GridWorker(ctx.igniteInstanceName(), "index-rebuild-worker-" + cctx.name(), log) {
-            @Override protected void body() {
+            if (isNull(err)) {
                 try {
-                    rebuildIndexesFromHash0(cctx, clo);
-
-                    markIndexRebuild(cctx.name(), false);
-
-                    fut.onDone();
+                    markIndexRebuild(cacheName, false);
                 }
-                catch (Exception e) {
-                    fut.onDone(e);
-                }
-                catch (Throwable e) {
-                    U.error(log, "Failed to rebuild indexes for cache: " + cctx.name(), e);
+                catch (Throwable t) {
+                    err = t;
 
-                    fut.onDone(e);
-
-                    throw e;
+                    rebuildCacheIdxFut.onDone(t);
                 }
             }
-        };
 
-        fut.setWorker(worker);
+            if (nonNull(err))
+                U.error(log, "Failed to rebuild indexes for cache: " + cacheName, err);
+        });
 
-        ctx.getExecutorService().execute(worker);
+        rebuildIndexesFromHash0(cctx, clo, rebuildCacheIdxFut);
 
-        return fut;
+        return rebuildCacheIdxFut;
     }
 
     /**
@@ -2021,13 +2008,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      *
      * @param cctx Cache context.
      * @param clo Closure.
-     * @throws IgniteCheckedException If failed.
+     * @param rebuildIdxFut Future for rebuild indexes.
      */
-    protected void rebuildIndexesFromHash0(GridCacheContext cctx, SchemaIndexCacheVisitorClosure clo)
-        throws IgniteCheckedException {
-        SchemaIndexCacheVisitor visitor = new SchemaIndexCacheVisitorImpl(cctx);
-
-        visitor.visit(clo);
+    protected void rebuildIndexesFromHash0(
+        GridCacheContext cctx,
+        SchemaIndexCacheVisitorClosure clo,
+        GridFutureAdapter<Void> rebuildIdxFut
+    ) {
+        new SchemaIndexCacheVisitorImpl(cctx, null, rebuildIdxFut).visit(clo);
     }
 
     /**
@@ -2078,7 +2066,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Reduce query executor.
      */
     public QueryMemoryManager memoryManager() {
-        return memoryManager;
+        return memoryMgr;
     }
 
     /** {@inheritDoc} */
@@ -2111,7 +2099,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();
 
-        memoryManager = new QueryMemoryManager(ctx, 0); //TODO: GG-18629: Get global_memory_quota value from configuration.
+        memoryMgr = new QueryMemoryManager(ctx);
 
         mapQryExec = new GridMapQueryExecutor();
         rdcQryExec = new GridReduceQueryExecutor();
@@ -2148,45 +2136,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** {@inheritDoc} */
     @Override public void onKernalStart() {
-        cleanSpillDirectory();
-    }
-
-    /**
-     * Cleans spill directory. Spill directory is used for disk
-     * offloading of the intermediate results of heavy queries.
-     */
-    private void cleanSpillDirectory() {
-        try {
-            File spillDir = U.resolveWorkDirectory(
-                ctx.config().getWorkDirectory(),
-                DISK_SPILL_DIR,
-                false);
-
-            File[] spillFiles = spillDir.listFiles();
-
-            if (spillFiles.length == 0)
-                return;
-
-            for (int i = 0; i < spillFiles.length; i++) {
-                try {
-                    File spillFile = spillFiles[i];
-
-                    String nodeId = spillFile.getName().split("_")[1]; // Spill name pattern: spill_nodeId_fileId.
-
-                    UUID nodeUuid = UUID.fromString(nodeId);
-
-                    if (!ctx.discovery().alive(nodeUuid))
-                        spillFile.delete();
-                }
-                catch (Exception e) {
-                    log.debug("Error on cleaning spill directory. " + X.getFullStackTrace(e));
-                }
-            }
-        }
-        catch (Exception e) {
-            log.warning("Failed to cleanup the temporary directory for intermediate " +
-                "SQL query results from the previous node run.", e);
-        }
+        memoryMgr.cleanSpillDirectory();
     }
 
     /**
@@ -2315,8 +2265,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (locNode != null) {
             assert locNodeHnd != null;
 
-            if (specialize != null)
+            if (specialize != null) {
                 msg = specialize.apply(locNode, msg);
+
+                if (msg instanceof GridCacheQueryMarshallable)
+                    ((GridCacheQueryMarshallable)msg).marshall(marshaller);
+            }
 
             if (runLocParallel) {
                 final ClusterNode finalLocNode = locNode;
@@ -2355,17 +2309,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Serializer.
      */
     private JavaObjectSerializer h2Serializer() {
-        return new JavaObjectSerializer() {
-            @Override public byte[] serialize(Object obj) throws Exception {
-                return U.marshal(marshaller, obj);
-            }
-
-            @Override public Object deserialize(byte[] bytes) throws Exception {
-                ClassLoader clsLdr = ctx != null ? U.resolveClassLoader(ctx.config()) : null;
-
-                return U.unmarshal(marshaller, bytes, clsLdr);
-            }
-        };
+        return new H2JavaObjectSerializer(ctx);
     }
 
     /**
@@ -2391,7 +2335,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         cmdProc.stop();
 
-        memoryManager.close();
+        memoryMgr.close();
 
         if (log.isDebugEnabled())
             log.debug("Cache query index stopped.");
@@ -2912,7 +2856,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             .setLocal(qryDesc.local())
             .setPageSize(qryParams.pageSize())
             .setTimeout(qryParams.timeout(), TimeUnit.MILLISECONDS)
-            .setMaxMemory(qryParams.maxMemory());
+            .setMaxMemory(qryParams.maxMemory())
+            // On no MVCC mode we cannot use lazy mode when UPDATE query contains updated columns
+            // in WHERE condition because it may be cause of update one entry several times
+            // (when index for such columns is selected for scan):
+            // e.g. : UPDATE test SET val = val + 1 WHERE val >= ?
+            .setLazy(qryParams.lazy() && plan.canSelectBeLazy());
 
         Iterable<List<?>> cur;
 
@@ -3039,7 +2988,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                         .setEnforceJoinOrder(qryDesc.enforceJoinOrder())
                         .setLocal(qryDesc.local())
                         .setPageSize(qryParams.pageSize())
-                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS);
+                        .setTimeout((int)timeout, TimeUnit.MILLISECONDS)
+                        // In MVCC mode we can use lazy mode always (when is set up) without dependency on
+                        // updated columns and WHERE condition.
+                        .setLazy(qryParams.lazy());
 
                     FieldsQueryCursor<List<?>> cur = executeSelectForDml(
                         qryDesc.schemaName(),
@@ -3079,6 +3031,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
             if (distributedPlan.isReplicatedOnly())
                 flags |= GridH2QueryRequest.FLAG_REPLICATED;
+
+            if (qryParams.lazy())
+                flags |= GridH2QueryRequest.FLAG_LAZY;
 
             flags = GridH2QueryRequest.setDataPageScanEnabled(flags,
                 qryParams.dataPageScanEnabled());
@@ -3150,5 +3105,17 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      */
     public LongRunningQueryManager longRunningQueries() {
         return longRunningQryMgr;
+    }
+
+    /** {@inheritDoc} */
+    @Override public long indexSize(String schemaName, String idxName) throws IgniteCheckedException {
+        GridH2Table tbl = schemaMgr.dataTableForIndex(schemaName, idxName);
+
+        if (tbl == null)
+            return 0;
+
+        H2TreeIndex idx = (H2TreeIndex)tbl.userIndex(idxName);
+
+        return idx == null ? 0 : idx.size();
     }
 }

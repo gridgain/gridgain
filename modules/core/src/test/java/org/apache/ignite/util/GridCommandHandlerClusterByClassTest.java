@@ -39,7 +39,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteSystemProperties;
@@ -53,13 +52,8 @@ import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.CommandList;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
-import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.GridCacheOperation;
-import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
-import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
@@ -82,6 +76,7 @@ import static java.util.Arrays.stream;
 import static java.util.Objects.nonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
+import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
@@ -93,6 +88,8 @@ import static org.apache.ignite.internal.commandline.CommandList.WAL;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
+import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
 import static org.apache.ignite.testframework.GridTestUtils.LOCAL_DATETIME_REGEXP;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertMatches;
@@ -324,6 +321,10 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     /** */
     @Test
     public void testCacheHelp() throws Exception {
+        Set<String> skippedCommands = new HashSet<>();
+        skippedCommands.add(RECHECK_DELAY.toString());
+        skippedCommands.add(LOCAL_OUTPUT.toString());
+
         injectTestSystemOut();
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "help"));
@@ -338,14 +339,14 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
                 if (args != null)
                     for (Enum<? extends CommandArg> arg : args.getEnumConstants())
-                        assertTrue(cmd + " " + arg, output.contains(arg.toString()));
-
+                        if (!skippedCommands.contains(arg.toString()))
+                            assertTrue(cmd + " " + arg, output.contains(arg.toString()));
             }
             else
                 assertContains(log, output, CommandHandler.UTILITY_NAME);
         }
 
-        checkHelp(output, "org.apache.ignite.util/control.sh_cache_help.output");
+        checkHelp(output, "org.apache.ignite.util/" + getClass().getSimpleName() + "_cache_help.output");
     }
 
     /** */
@@ -376,7 +377,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         assertNotContains(log, testOutStr, "Control.sh");
 
-        checkHelp(testOutStr, "org.apache.ignite.util/control.sh_help.output");
+        checkHelp(testOutStr, "org.apache.ignite.util/" + getClass().getSimpleName() + "_help.output");
     }
 
     /**
@@ -495,9 +496,9 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         GridCacheContext<Object, Object> cacheCtx = ignite.cachex(DEFAULT_CACHE_NAME).context();
 
-        corruptDataEntry(cacheCtx, 1, true, false);
+        corruptDataEntry(cacheCtx, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-        corruptDataEntry(cacheCtx, 1 + cacheCtx.config().getAffinity().partitions() / 2, false, true);
+        corruptDataEntry(cacheCtx, 1 + cacheCtx.config().getAffinity().partitions() / 2, false, true, new GridCacheVersion(0, 0, 0), "broken");
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
@@ -758,7 +759,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
                 assertContains(log, testOut.toString(), outputExp);
             }
-        } else
+        }
+        else
             assertContains(log, testOut.toString(), outputExp);
     }
 
@@ -827,9 +829,9 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         GridCacheContext<Object, Object> cacheCtx = ignite.cachex(DEFAULT_CACHE_NAME).context();
 
-        corruptDataEntry(cacheCtx, 0, true, false);
+        corruptDataEntry(cacheCtx, 0, true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-        corruptDataEntry(cacheCtx, cacheCtx.config().getAffinity().partitions() / 2, false, true);
+        corruptDataEntry(cacheCtx, cacheCtx.config().getAffinity().partitions() / 2, false, true, new GridCacheVersion(0, 0, 0), "broken");
 
         String resReport = null;
 
@@ -885,20 +887,23 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         assertNotNull(storedSysCacheCtx);
 
         corruptDataEntry(storedSysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("sq0",
-            "default-ds-group"), true, false);
+            "default-ds-group"), true, false, new GridCacheVersion(0, 0, 0), "broken");
 
         corruptDataEntry(storedSysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("sq" + parts / 2,
-            "default-ds-group"), false, true);
+            "default-ds-group"), false, true, new GridCacheVersion(0, 0, 0), "broken");
 
-        CacheGroupContext memorySysCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId("default-volatile-ds-group"));
+        CacheGroupContext memoryVolatileCacheCtx = ignite.context().cache().cacheGroup(CU.cacheId(
+            "default-volatile-ds-group@volatileDsMemPlc"));
 
-        assertNotNull(memorySysCacheCtx);
+        assertNotNull(memoryVolatileCacheCtx);
+        assertEquals("volatileDsMemPlc", memoryVolatileCacheCtx.dataRegion().config().getName());
+        assertEquals(false, memoryVolatileCacheCtx.dataRegion().config().isPersistenceEnabled());
 
-        corruptDataEntry(memorySysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s0",
-            "default-volatile-ds-group"), true, false);
+        corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s0",
+            "default-volatile-ds-group@volatileDsMemPlc"), true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-        corruptDataEntry(memorySysCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s" + parts / 2,
-            "default-volatile-ds-group"), false, true);
+        corruptDataEntry(memoryVolatileCacheCtx.caches().get(0), new GridCacheInternalKeyImpl("s" + parts / 2,
+            "default-volatile-ds-group@volatileDsMemPlc"), false, true, new GridCacheVersion(0, 0, 0), "broken");
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify", "--dump", "--cache-filter", "SYSTEM"));
 
@@ -909,7 +914,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
             U.log(log, dumpWithConflicts);
 
-            assertContains(log, dumpWithConflicts, "found 4 conflict partitions: [counterConflicts=2, " +
+            // Non-persistent caches do not have counter conflicts
+            assertContains(log, dumpWithConflicts, "found 3 conflict partitions: [counterConflicts=1, " +
                 "hashConflicts=2]");
         }
         else
@@ -1482,66 +1488,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Corrupts data entry.
-     *
-     * @param ctx Context.
-     * @param key Key.
-     * @param breakCntr Break counter.
-     * @param breakData Break data.
-     */
-    private void corruptDataEntry(
-        GridCacheContext<Object, Object> ctx,
-        Object key,
-        boolean breakCntr,
-        boolean breakData
-    ) {
-        int partId = ctx.affinity().partition(key);
-
-        try {
-            long updateCntr = ctx.topology().localPartition(partId).updateCounter();
-
-            Object valToPut = ctx.cache().keepBinary().get(key);
-
-            if (breakCntr)
-                updateCntr++;
-
-            if (breakData)
-                valToPut = valToPut.toString() + " broken";
-
-            // Create data entry
-            DataEntry dataEntry = new DataEntry(
-                ctx.cacheId(),
-                new KeyCacheObjectImpl(key, null, partId),
-                new CacheObjectImpl(valToPut, null),
-                GridCacheOperation.UPDATE,
-                new GridCacheVersion(),
-                new GridCacheVersion(),
-                0L,
-                partId,
-                updateCntr
-            );
-
-            GridCacheDatabaseSharedManager db = (GridCacheDatabaseSharedManager)ctx.shared().database();
-
-            db.checkpointReadLock();
-
-            try {
-                U.invoke(GridCacheDatabaseSharedManager.class, db, "applyUpdate", ctx, dataEntry, false);
-            }
-            finally {
-                db.checkpointReadUnlock();
-            }
-        }
-        catch (IgniteCheckedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Test is that when the --help control.sh command is executed, output
-     * will contain non-experimental commands. In case system property
-     * {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} =
-     * {@code true}.
+     * Test is that when the --help control.sh command is executed, output will contain non-experimental commands. In
+     * case system property {@link IgniteSystemProperties#IGNITE_ENABLE_EXPERIMENTAL_COMMAND} = {@code true}.
      */
     @Test
     @WithSystemProperty(key = IGNITE_ENABLE_EXPERIMENTAL_COMMAND, value = "true")

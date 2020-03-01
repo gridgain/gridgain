@@ -19,6 +19,7 @@ package org.apache.ignite.internal;
 import java.util.BitSet;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 
@@ -60,6 +61,9 @@ public enum IgniteFeatures {
 
     /** Support of cluster read-only mode. */
     CLUSTER_READ_ONLY_MODE(9),
+
+    /** Support of suspend/resume operations for pessimistic transactions. */
+    SUSPEND_RESUME_PESSIMISTIC_TX(10),
 
     /** Distributed metastorage. */
     DISTRIBUTED_METASTORAGE(11),
@@ -108,11 +112,17 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /***/
+    /** */
     MANAGEMENT_CONSOLE(28),
 
-    /** Long operations dump timeout. */
-    LONG_OPERATIONS_DUMP_TIMEOUT(30);
+    /** Distributed change timeout for dump long operations. */
+    DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30),
+
+    /** Cluster has task to get value from cache by key value. */
+    WC_GET_CACHE_VALUE(31),
+
+    /** Partition reconciliation utility. */
+    PARTITION_RECONCILIATION(34);
 
     /**
      * Unique feature identifier.
@@ -222,8 +232,12 @@ public enum IgniteFeatures {
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
                 continue;
 
-            // Add only when management console is enabled.
+            // Add only when Control Center is enabled.
             if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
+                continue;
+
+            // Add only when scheduling is disabled.
+            if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
                 continue;
 
             final int featureId = value.getFeatureId();

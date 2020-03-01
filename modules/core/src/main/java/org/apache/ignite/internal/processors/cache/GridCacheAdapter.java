@@ -38,6 +38,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -107,6 +109,7 @@ import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException
 import org.apache.ignite.internal.transactions.IgniteTxRollbackCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxTimeoutCheckedException;
 import org.apache.ignite.internal.transactions.TransactionCheckedException;
+import org.apache.ignite.internal.util.GridSerializableMap;
 import org.apache.ignite.internal.util.future.GridEmbeddedFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
@@ -126,6 +129,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiInClosure;
@@ -162,6 +166,7 @@ import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 
 /**
  * Adapter for different cache implementations.
@@ -1068,7 +1073,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
             if (cnt == 0)
                 cnt = 1; // Still perform cleanup since there could be entries in swap.
 
-            GridCacheVersion obsoleteVer = ctx.versions().next();
+            GridCacheVersion obsoleteVer = nextVersion();
 
             List<GridCacheClearAllRunnable<K, V>> res = new ArrayList<>(cnt);
 
@@ -1276,7 +1281,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7952
         MvccUtils.verifyMvccOperationSupport(ctx, "Clear");
 
-        GridCacheVersion obsoleteVer = ctx.versions().next();
+        GridCacheVersion obsoleteVer = nextVersion();
 
         for (KeyCacheObject key : keys) {
             GridCacheEntryEx e = peekEx(key);
@@ -2181,6 +2186,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (keyCheck)
             validateCacheKeys(keys);
 
+        warnIfUnordered(keys, BulkOperation.INVOKE);
+
         final boolean statsEnabled = ctx.statisticsEnabled();
 
         final long start = statsEnabled ? System.nanoTime() : 0L;
@@ -2270,6 +2277,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (keyCheck)
             validateCacheKeys(keys);
 
+        warnIfUnordered(keys, BulkOperation.INVOKE);
+
         final boolean statsEnabled = ctx.statisticsEnabled();
 
         final long start = statsEnabled ? System.nanoTime() : 0L;
@@ -2320,6 +2329,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (keyCheck)
             validateCacheKeys(map.keySet());
 
+        warnIfUnordered(map, BulkOperation.INVOKE);
+
         final boolean statsEnabled = ctx.statisticsEnabled();
 
         final long start = statsEnabled ? System.nanoTime() : 0L;
@@ -2364,6 +2375,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         if (keyCheck)
             validateCacheKeys(map.keySet());
+
+        warnIfUnordered(map, BulkOperation.INVOKE);
 
         final boolean statsEnabled = ctx.statisticsEnabled();
 
@@ -2510,6 +2523,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (keyCheck)
             validateCacheKeys(m.keySet());
 
+        warnIfUnordered(m, BulkOperation.PUT);
+
         putAll0(m);
 
         if (statsEnabled)
@@ -2540,6 +2555,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         if (keyCheck)
             validateCacheKeys(m.keySet());
+
+        warnIfUnordered(m, BulkOperation.PUT);
 
         return putAllAsync0(m);
     }
@@ -2698,6 +2715,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (keyCheck)
             validateCacheKeys(keys);
 
+        warnIfUnordered(keys, BulkOperation.REMOVE);
+
         removeAll0(keys);
 
         if (statsEnabled)
@@ -2737,6 +2756,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         if (keyCheck)
             validateCacheKeys(keys);
+
+        warnIfUnordered(keys, BulkOperation.REMOVE);
 
         IgniteInternalFuture<Object> fut = removeAllAsync0(keys);
 
@@ -3009,6 +3030,8 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
         if (keyCheck)
             validateCacheKeys(keys);
+
+        warnIfUnordered(keys, BulkOperation.LOCK);
 
         //TODO: IGNITE-9324: add explicit locks support.
         MvccUtils.verifyMvccOperationSupport(ctx, "Lock");
@@ -3578,6 +3601,29 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
     }
 
     /**
+     * Gets next grid cache version.
+     *
+     * @return Next version based on given topology version.
+     */
+    public GridCacheVersion nextVersion() {
+        return ctx.topology().initialized() ?
+            ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion()) :
+            ctx.versions().next(ctx.kernalContext().discovery().topologyVersion());
+    }
+
+    /**
+     * Gets next grid cache version.
+     *
+     * @param dataCenterId Data center id.
+     * @return Next version based on given topology version.
+     */
+    public GridCacheVersion nextVersion(byte dataCenterId) {
+        return ctx.topology().initialized() ?
+            ctx.versions().next(ctx.topology().readyTopologyVersion().topologyVersion(), dataCenterId) :
+            ctx.versions().next(ctx.kernalContext().discovery().topologyVersion());
+    }
+
+    /**
      * @param keepBinary Keep binary flag.
      * @param p Optional predicate.
      * @return Distributed ignite cache iterator.
@@ -4108,7 +4154,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         if (keyCheck)
             validateCacheKey(key);
 
-        GridCacheVersion obsoleteVer = ctx.versions().next();
+        GridCacheVersion obsoleteVer = nextVersion();
 
         ctx.shared().database().checkpointReadLock();
 
@@ -4143,7 +4189,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7956
         MvccUtils.verifyMvccOperationSupport(ctx, "Evict");
 
-        return evictx(key, ctx.versions().next(), CU.empty0());
+        return evictx(key, nextVersion(), CU.empty0());
     }
 
     /** {@inheritDoc} */
@@ -4159,7 +4205,7 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         //TODO IGNITE-7956
         MvccUtils.verifyMvccOperationSupport(ctx, "Evict");
 
-        GridCacheVersion obsoleteVer = ctx.versions().next();
+        GridCacheVersion obsoleteVer = nextVersion();
 
         try {
             ctx.evicts().batchEvict(keys, obsoleteVer);
@@ -4306,6 +4352,86 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
 
                 keyCheck = false;
             }
+        }
+    }
+
+    /**
+     * Checks that given map is sorted or otherwise constant order, or processed inside deadlock-detecting transaction.
+     *
+     * Issues developer warning otherwise.
+     *
+     * @param m Map to examine.
+     */
+    protected void warnIfUnordered(Map<?, ?> m, BulkOperation op) {
+        if (m == null || m.size() <= 1)
+            return;
+
+        if (m instanceof SortedMap || m instanceof GridSerializableMap)
+            return;
+
+        Transaction tx = ctx.kernalContext().cache().transactions().tx();
+
+        if (tx != null && !op.canBlockTx(tx.concurrency(), tx.isolation()))
+            return;
+
+        LT.warn(log, "Unordered map " + m.getClass().getName() +
+            " is used for " + op.title() + " operation on cache " + name() + ". " +
+            "This can lead to a distributed deadlock. Switch to a sorted map like TreeMap instead.");
+    }
+
+    /**
+     * Checks that given collection is sorted set, or processed inside deadlock-detecting transaction.
+     *
+     * Issues developer warning otherwise.
+     *
+     * @param coll Collection to examine.
+     */
+    protected void warnIfUnordered(Collection<?> coll, BulkOperation op) {
+        if (coll == null || coll.size() <= 1)
+            return;
+
+        if (coll instanceof SortedSet || coll instanceof GridCacheAdapter.KeySet)
+            return;
+
+        // To avoid false positives, once removeAll() is called, cache will never issue Remove All warnings.
+        if (ctx.lastRemoveAllJobFut().get() != null && op == BulkOperation.REMOVE)
+            return;
+
+        Transaction tx = ctx.kernalContext().cache().transactions().tx();
+
+        if (op == BulkOperation.GET && tx == null)
+            return;
+
+        if (tx != null && !op.canBlockTx(tx.concurrency(), tx.isolation()))
+            return;
+
+        LT.warn(log, "Unordered collection " + coll.getClass().getName() +
+            " is used for " + op.title() + " operation on cache " + name() + ". " +
+            "This can lead to a distributed deadlock. Switch to a sorted set like TreeSet instead.");
+    }
+
+    /** */
+    protected enum BulkOperation {
+        GET,
+        PUT,
+        INVOKE,
+        REMOVE,
+        LOCK;
+
+        /** */
+        public String title() {
+            return name().toLowerCase() + "All";
+        }
+
+        /** */
+        public boolean canBlockTx(TransactionConcurrency concurrency, TransactionIsolation isolation) {
+            if (concurrency == OPTIMISTIC && isolation == SERIALIZABLE)
+                return false;
+
+            if (this == GET && concurrency == PESSIMISTIC && isolation == READ_COMMITTED)
+                return false;
+
+            return true;
         }
     }
 

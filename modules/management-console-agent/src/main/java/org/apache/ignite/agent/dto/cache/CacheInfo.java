@@ -17,7 +17,6 @@
 package org.apache.ignite.agent.dto.cache;
 
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.lang.IgniteUuid;
 
 /**
  * DTO for cache info.
@@ -26,14 +25,17 @@ public class CacheInfo {
     /** Cache name. */
     private String name;
 
-    /** Deployment id. */
-    private IgniteUuid deploymentId;
+    /** Cache ID. */
+    private int cacheId;
 
     /** Created by sql. */
     private boolean createdBySql;
 
     /** Cache group. */
     private String grp;
+
+    /** System cache. */
+    private boolean sysCache;
 
     /**
      * @return Cache name.
@@ -53,18 +55,18 @@ public class CacheInfo {
     }
 
     /**
-     * @return Deployment id.
+     * @return Cache ID.
      */
-    public IgniteUuid getDeploymentId() {
-        return deploymentId;
+    public int getCacheId() {
+        return cacheId;
     }
 
     /**
-     * @param deploymentId Deployment id.
+     * @param cacheId Cache ID.
      * @return {@code This} for chaining method calls.
      */
-    public CacheInfo setDeploymentId(IgniteUuid deploymentId) {
-        this.deploymentId = deploymentId;
+    public CacheInfo setCacheId(int cacheId) {
+        this.cacheId = cacheId;
 
         return this;
     }
@@ -99,6 +101,23 @@ public class CacheInfo {
      */
     public CacheInfo setGroup(String grp) {
         this.grp = grp;
+
+        return this;
+    }
+    
+    /**
+     * @return {@code True} if system cache.
+     */
+    public boolean isSystemCache() {
+        return sysCache;
+    }
+
+    /**
+     * @param sysCache System cache.
+     * @return {@code This} for chaining method calls.
+     */
+    public CacheInfo setSystemCache(boolean sysCache) {
+        this.sysCache = sysCache;
 
         return this;
     }

@@ -16,11 +16,13 @@
 
 package org.apache.ignite.internal.processors.odbc.jdbc;
 
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -36,6 +38,7 @@ import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.F;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
 import static org.apache.ignite.internal.jdbc.thin.JdbcThinUtils.nullableBooleanFromByte;
 
 /**
@@ -66,14 +69,14 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Version 2.8.1: adds query memory quotas.*/
     static final ClientListenerProtocolVersion VER_2_8_1 = ClientListenerProtocolVersion.create(2, 8, 1);
 
+    /** Version 2.8.2: adds features flags support.*/
+    static final ClientListenerProtocolVersion VER_2_8_2 = ClientListenerProtocolVersion.create(2, 8, 2);
+
     /** Current version. */
-    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_1;
+    private static final ClientListenerProtocolVersion CURRENT_VER = VER_2_8_2;
 
     /** Supported versions. */
     private static final Set<ClientListenerProtocolVersion> SUPPORTED_VERS = new HashSet<>();
-
-    /** Session. */
-    private final GridNioSession ses;
 
     /** Shutdown busy lock. */
     private final GridSpinBusyLock busyLock;
@@ -90,11 +93,15 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /** Request handler. */
     private JdbcRequestHandler handler = null;
 
+    /** Current protocol context. */
+    private JdbcProtocolContext protoCtx;
+
     /** Last reported affinity topology version. */
     private AtomicReference<AffinityTopologyVersion> lastAffinityTopVer = new AtomicReference<>();
 
     static {
         SUPPORTED_VERS.add(CURRENT_VER);
+        SUPPORTED_VERS.add(VER_2_8_1);
         SUPPORTED_VERS.add(VER_2_8_0);
         SUPPORTED_VERS.add(VER_2_7_0);
         SUPPORTED_VERS.add(VER_2_5_0);
@@ -106,17 +113,15 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
     /**
      * Constructor.
-     *  @param ctx Kernal Context.
-     * @param ses Session.
+     * @param ctx Kernal Context.
      * @param busyLock Shutdown busy lock.
      * @param connId Connection ID.
      * @param maxCursors Maximum allowed cursors.
      */
-    public JdbcConnectionContext(GridKernalContext ctx, GridNioSession ses, GridSpinBusyLock busyLock, long connId,
+    public JdbcConnectionContext(GridKernalContext ctx, GridSpinBusyLock busyLock, long connId,
         int maxCursors) {
         super(ctx, connId);
 
-        this.ses = ses;
         this.busyLock = busyLock;
         this.maxCursors = maxCursors;
 
@@ -134,7 +139,8 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     }
 
     /** {@inheritDoc} */
-    @Override public void initializeFromHandshake(ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
+    @Override public void initializeFromHandshake(GridNioSession ses,
+        ClientListenerProtocolVersion ver, BinaryReaderExImpl reader)
         throws IgniteCheckedException {
         assert SUPPORTED_VERS.contains(ver): "Unsupported JDBC protocol version.";
 
@@ -178,10 +184,20 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             updateBatchSize = JdbcUtils.readNullableInteger(reader);
 
-            if (ver.compareTo(VER_2_8_1) >= 0){
+            if (ver.compareTo(VER_2_8_1) >= 0) {
                 if (reader.readBoolean())
                     maxMemory = reader.readLong();
             }
+        }
+
+        EnumSet<JdbcThinFeature> features = null;
+
+        if (ver.compareTo(VER_2_8_2) >= 0) {
+            byte [] cliFeatures = reader.readByteArray();
+
+            features = JdbcThinFeature.enumSet(cliFeatures);
+
+            features.retainAll(JdbcThinFeature.allFeaturesAsEnumSet());
         }
 
         if (ver.compareTo(VER_2_5_0) >= 0) {
@@ -198,10 +214,12 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 throw new IgniteCheckedException("Handshake error: " + e.getMessage(), e);
             }
 
-            actx = authenticate(user, passwd);
+            actx = authenticate(ses.certificates(), user, passwd);
         }
 
-        parser = new JdbcMessageParser(ctx, ver);
+        protoCtx = new JdbcProtocolContext(ver, features, null, false);
+
+        parser = new JdbcMessageParser(ctx, protoCtx);
 
         ClientListenerResponseSender sender = new ClientListenerResponseSender() {
             @Override public void send(ClientListenerResponse resp) {
@@ -215,6 +233,14 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
                 }
             }
         };
+
+        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, false) && maxMemory != 0L) {
+            log.warning("Memory quotas per connection is disabled." +
+                " To enable it please set Ignite system property \"" + IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA
+                + "\" to \"true\"");
+
+            maxMemory = 0L;
+        }
 
         handler = new JdbcRequestHandler(busyLock, sender, maxCursors, maxMemory, distributedJoins, enforceJoinOrder,
             collocated, replicatedOnly, autoCloseCursors, lazyExec, skipReducerOnUpdate, nestedTxMode,
@@ -259,5 +285,12 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
             return changed ? newVer : null;
         }
+    }
+
+    /**
+     * @return Binary context.
+     */
+    public JdbcProtocolContext protocolContext() {
+        return protoCtx;
     }
 }

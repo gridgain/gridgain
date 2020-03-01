@@ -21,9 +21,15 @@ import java.nio.file.OpenOption;
 import java.util.List;
 import javax.cache.CacheException;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
+import org.apache.ignite.internal.metric.SqlMemoryStatisticsHolder;
 import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.apache.ignite.internal.processors.query.h2.disk.TrackableFileIoFactory;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -47,13 +53,17 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {super.beforeTest();
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         initGrid();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         destroyGrid();
+
+        super.afterTest();
     }
 
     /**
@@ -91,10 +101,12 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
      * @param crashOnCreateCnt The number of file which creation will induce the IO error.
      */
     private void checkSpillFilesCleanedOnFileCreation(int crashOnCreateCnt) {
-        // Set broken file factory.
-        BrokenIoFactory ioFactory = new BrokenIoFactory(crashOnCreateCnt);
+        QueryMemoryManager memMgr = ((IgniteH2Indexing)grid(0).context().query().getIndexing()).memoryManager();
 
-        GridTestUtils.setFieldValue(grid(0).context().query(), "fileIOFactory", ioFactory);
+        // Set broken file factory.
+        BrokenIoFactory ioFactory = new BrokenIoFactory(crashOnCreateCnt, grid(0).context().metric(), memMgr);
+
+        GridTestUtils.setFieldValue(memMgr, "fileIOFactory", ioFactory);
 
         FieldsQueryCursor<List<?>> cur = grid(0).cache(DEFAULT_CACHE_NAME)
             .query(new SqlFieldsQueryEx(
@@ -117,28 +129,31 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
 
         // Check spill files were deleted.
         assertWorkDirClean();
+
+        checkMemoryManagerState();
     }
 
     /**
      * Broken IO factory.
      */
-    private static class BrokenIoFactory extends AsyncFileIOFactory {
+    private static class BrokenIoFactory extends TrackableFileIoFactory {
         /** The number of file which creation will induce the IO error. */
         private int crashOnCreateCnt;
 
         /**
          * @param crashOnCreateCnt The number of file which creation will induce the IO error.
          */
-        BrokenIoFactory(int crashOnCreateCnt) {
+        BrokenIoFactory(int crashOnCreateCnt, GridMetricManager metric, QueryMemoryManager memMgr) {
+            super(new AsyncFileIOFactory(), new SqlMemoryStatisticsHolder(memMgr, metric));
             this.crashOnCreateCnt = crashOnCreateCnt;
         }
 
         /** {@inheritDoc} */
-        @Override public FileIO create(File file, OpenOption... modes) throws IOException {
+        @Override public FileIO create(File file, H2MemoryTracker tracker, OpenOption... modes) throws IOException {
             if (--crashOnCreateCnt == 0)
                 throw new IOException("Test crash.");
 
-            return super.create(file, modes);
+            return super.create(file, H2MemoryTracker.NO_OP_TRACKER, modes);
         }
     }
 }

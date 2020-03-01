@@ -33,7 +33,6 @@ import org.apache.ignite.failure.NoOpFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.vm.TcpDiscoveryVmIpFinder;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -41,7 +40,7 @@ import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
 import static org.awaitility.Awaitility.with;
 
 /**
- * Tests for management console span messages processor.
+ * Tests for Control Center span messages processor.
  */
 public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstractTest {
     /**
@@ -93,7 +92,6 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
      * 3. Verify the messages from 1st node were sent to GMC
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-26233")
     public void shouldSendSpansFromFirstNodeWithTracing_And_NoSpansFromSecondNodeWithDisabledTracing() throws Exception {
         IgniteEx ignite = startGrid(0);
 
@@ -120,9 +118,10 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
      * 3. Verify the messages from 2nd node were sent to GMC
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-26233")
-    public void shouldSendSpansFromSecondNodeWithTracing_And_NoSpansFromFirstNodeWithDisabledTracing() throws Exception {
-        IgniteEx ignite = (IgniteEx) startGrid(getTestIgniteInstanceName(0) + "without-tracing", getIgniteConfigurationWithoutTracing());
+    public void shouldSendSpansFromSecondNodeWithTracing_And_NoSpansFromFirstNodeWithDisabledTracing()
+        throws Exception {
+        IgniteEx ignite = (IgniteEx) startGrid(getTestIgniteInstanceName(0) + "without-tracing",
+            getIgniteConfigurationWithoutTracing());
 
         changeManagementConsoleConfig(ignite);
 
@@ -152,15 +151,16 @@ public class ManagementConsoleSpanMessagesProcessorTest extends AgentCommonAbstr
      * 8. Verify no new messages sent to GMC during 2 seconds
      */
     @Test
-    @Ignore("https://ggsystems.atlassian.net/browse/GG-26233")
     public void shouldNotSendSpansWithDisabledTracingOnAllNodes() throws Exception {
-        IgniteEx ignite = (IgniteEx) startGrid(getTestIgniteInstanceName(0) + "without-tracing", getIgniteConfigurationWithoutTracing());
+        IgniteEx ignite = (IgniteEx) startGrid(getTestIgniteInstanceName(0) + "without-tracing",
+            getIgniteConfigurationWithoutTracing());
 
         changeManagementConsoleConfig(ignite);
 
         IgniteCluster cluster = ignite.cluster();
 
-        IgniteEx ignite_2 = (IgniteEx) startGrid(getTestIgniteInstanceName(1) + "without-tracing", getIgniteConfigurationWithoutTracing());
+        IgniteEx ignite_2 = (IgniteEx) startGrid(getTestIgniteInstanceName(1) + "without-tracing",
+            getIgniteConfigurationWithoutTracing());
 
         assertWithPoll(spanListIsEmpty(cluster.id()));
 
