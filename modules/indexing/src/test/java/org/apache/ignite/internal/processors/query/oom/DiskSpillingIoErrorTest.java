@@ -168,6 +168,10 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
         @Override public void release(long size) {
         }
 
+        @Override public long writtenOnDisk() {
+            return -1;
+        }
+
         /** {@inheritDoc} */
         @Override public long reserved() {
             return -1;
@@ -189,8 +193,13 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
         @Override public void incrementFilesCreated() {
         }
 
+        /** {@inheritDoc} */
         @Override public H2MemoryTracker createChildTracker() {
             return null;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onChildClosed(H2MemoryTracker child) {
         }
     };
 }

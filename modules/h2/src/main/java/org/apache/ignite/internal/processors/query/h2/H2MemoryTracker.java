@@ -43,6 +43,13 @@ public interface H2MemoryTracker extends AutoCloseable {
     public long writtenOnDisk();
 
     /**
+     * Reserved memory.
+     *
+     * @return Reserved memory in bytes.
+     */
+    public long reserved();
+
+    /**
      * Tracks swapping on disk.
      *
      * @param size Amount of bytes written on disk.

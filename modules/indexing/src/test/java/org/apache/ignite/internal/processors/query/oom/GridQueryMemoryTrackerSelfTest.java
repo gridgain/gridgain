@@ -143,6 +143,10 @@ public class GridQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
                 reserved -= size;
             }
 
+            @Override public long writtenOnDisk() {
+                return 0;
+            }
+
             @Override public long reserved() {
                 return reserved;
             }
@@ -161,6 +165,10 @@ public class GridQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
 
             @Override public H2MemoryTracker createChildTracker() {
                 return null;
+            }
+
+            @Override public void onChildClosed(H2MemoryTracker child) {
+
             }
 
             @Override public void close() {

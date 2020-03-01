@@ -313,7 +313,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /**
      * @return Bytes reserved by all queries.
      */
-    public long reserved() {
+    @Override public long reserved() {
         return reserved.get();
     }
 

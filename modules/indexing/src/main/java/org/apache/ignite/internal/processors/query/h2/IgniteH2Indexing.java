@@ -948,7 +948,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         s.groupByDataFactory(memoryMgr);
         s.queryDescription(qryInfo.toString());
 
-        GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
+        GridRunningQueryInfo runningQryInfo = null;
+
+        if (qryInfo.runningQueryId() != null)
+            runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
 
         H2MemoryTracker tracker = null;
 
