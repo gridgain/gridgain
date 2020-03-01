@@ -158,7 +158,7 @@ public class CommonArgParser {
         list.add(optional(CMD_PASSWORD, "PASSWORD"));
         list.add(optional(CMD_PING_INTERVAL, "PING_INTERVAL"));
         list.add(optional(CMD_PING_TIMEOUT, "PING_TIMEOUT"));
-        list.add(optional(CMD_PRINT_ERR_STACK_TRACE, "PRINT_ERR_STACK_TRACE"));
+        list.add(optional(CMD_PRINT_ERR_STACK_TRACE));
         list.add(optional(CMD_SSL_PROTOCOL, "SSL_PROTOCOL[, SSL_PROTOCOL_2, ..., SSL_PROTOCOL_N]"));
         list.add(optional(CMD_SSL_CIPHER_SUITES, "SSL_CIPHER_1[, SSL_CIPHER_2, ..., SSL_CIPHER_N]"));
         list.add(optional(CMD_SSL_KEY_ALGORITHM, "SSL_KEY_ALGORITHM"));
