@@ -61,11 +61,13 @@ public interface H2MemoryTracker extends AutoCloseable {
      */
     public void incrementFilesCreated();
 
+    public H2MemoryTracker createChildTracker();
+
     /** {@inheritDoc} */
     @Override public void close();
 
     /** */
-    H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
+    public H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
         /** {@inheritDoc} */
         @Override public boolean reserve(long size) {
             return false;
@@ -94,6 +96,10 @@ public interface H2MemoryTracker extends AutoCloseable {
 
         /** {@inheritDoc} */
         @Override public void incrementFilesCreated() {
+        }
+
+        @Override public H2MemoryTracker createChildTracker() {
+            return null;
         }
     };
 }

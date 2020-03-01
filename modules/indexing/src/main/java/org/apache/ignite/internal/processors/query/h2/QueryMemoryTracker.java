@@ -16,7 +16,8 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import org.apache.ignite.IgniteLogger;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -28,9 +29,6 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTracker {
-    /** Logger. */
-    private final IgniteLogger log;
-
     /** Parent tracker. */
     private final H2MemoryTracker parent;
 
@@ -70,13 +68,15 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
     /** Close flag to prevent tracker reuse. */
     private Boolean closed = Boolean.FALSE;
 
+    /** Children. */
+    private final Queue<QueryMemoryTracker> children = new ConcurrentLinkedQueue<>();
+
     /** The number of files created by the query. */
     private volatile int filesCreated;
 
     /**
      * Constructor.
      *
-     * @param log Logger.
      * @param parent Parent memory tracker.
      * @param quota Query memory limit in bytes.
      * @param blockSize Reservation block size.
@@ -90,7 +90,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
     ) {
         assert quota >= 0;
 
-        this.log = null;
         this.offloadingEnabled = offloadingEnabled;
         this.parent = parent;
         this.quota = quota;
@@ -213,6 +212,10 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
         return totalWrittenOnDisk;
     }
 
+    @Override public long queryQuota() {
+        return quota;
+    }
+
     /**
      * @return Offloading enabled flag.
      */
@@ -222,6 +225,16 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
 
     /** {@inheritDoc} */
     @Override public synchronized void swap(long size) {
+        assert size >= 0;
+
+        if (size == 0)
+            return;
+
+        checkClosed();
+
+        if (parent != null)
+            parent.swap(size);
+
         writtenOnDisk += size;
         totalWrittenOnDisk += size;
         maxWrittenOnDisk = Math.max(maxWrittenOnDisk, writtenOnDisk);
@@ -229,6 +242,16 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
 
     /** {@inheritDoc} */
     @Override public synchronized void unswap(long size) {
+        assert size >= 0;
+
+        if (size == 0)
+            return;
+
+        checkClosed();
+
+        if (parent != null)
+            parent.unswap(size);
+
         writtenOnDisk -= size;
     }
 
@@ -246,23 +269,41 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
         if (closed)
             return;
 
+        for (QueryMemoryTracker child : children)
+            child.close();
+
         closed = true;
 
         reserved = 0;
 
         if (parent != null)
             parent.release(reservedFromParent);
-
-//        if (log.isDebugEnabled()) {
-//            log.debug("Query has been completed with memory metrics: [bytesAllocatedMax="  + maxReserved +
-//                ", bytesOffloaded=" + totalWrittenOnDisk + ", filesCreated=" + filesCreated +
-//                ", query=" + qryDesc + ']');
-//        }
     }
 
     /** {@inheritDoc} */
     @Override public synchronized void incrementFilesCreated() {
+        if (parent != null)
+            parent.incrementFilesCreated();
+
         filesCreated++;
+    }
+
+    @Override public H2MemoryTracker createChildTracker() {
+        checkClosed();
+
+        QueryMemoryTracker child = new QueryMemoryTracker(this, quota, blockSize, offloadingEnabled);
+
+        children.add(child);
+
+        return child;
+    }
+
+    public String statString() {
+        return "[" +
+            "bytesAllocatedMax="  + maxReserved + ", " +
+            "bytesOffloadedTotal=" + totalWrittenOnDisk + ", " +
+            "filesCreated=" + filesCreated +
+            "]";
     }
 
     /** {@inheritDoc} */

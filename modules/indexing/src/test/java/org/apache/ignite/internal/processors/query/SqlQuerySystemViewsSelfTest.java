@@ -539,5 +539,9 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
         @Override public void incrementFilesCreated() {
             // NO-OP
         }
+
+        @Override public H2MemoryTracker createChildTracker() {
+            return null;
+        }
     }
 }

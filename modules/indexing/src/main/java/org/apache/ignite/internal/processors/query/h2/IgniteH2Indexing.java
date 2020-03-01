@@ -940,11 +940,15 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         GridRunningQueryInfo runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.originalQueryId());
 
-        GridQueryMemoryTracker tracker = runningQryInfo != null
-            ? runningQryInfo.memoryTracker() : memoryMgr.createQueryMemoryTracker(maxMem);
+        H2MemoryTracker tracker = null;
 
-        if (tracker != null)
-            s.memoryTracker((H2MemoryTracker)tracker);
+        if (runningQryInfo != null)
+            tracker = ((H2MemoryTracker)runningQryInfo.memoryTracker()).createChildTracker();
+
+        if (tracker == null)
+            tracker = (H2MemoryTracker)memoryMgr.createQueryMemoryTracker(maxMem);
+
+        s.memoryTracker(tracker);
     }
 
     /** {@inheritDoc} */
@@ -1244,6 +1248,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 ", params=" + Arrays.deepToString(qryParams.arguments()) + "]", e);
         }
         finally {
+            if (failReason == null && log.isDebugEnabled())
+                log.debug("Users query completed");
+
             runningQryMgr.unregister(qryId, failReason);
         }
     }
@@ -1537,16 +1544,26 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @return Id of registered query or {@code null} if query wasn't registered.
      */
     private Long registerRunningQuery(QueryDescriptor qryDesc, QueryParameters qryParams, GridQueryCancel cancel) {
-        return runningQryMgr.register(
+        GridQueryMemoryTracker tracker = memoryMgr.createQueryMemoryTracker(
+            qryParams.maxMemory() < 0 ? memoryMgr.globalQuota() : qryParams.maxMemory()
+        );
+
+        Long qryId = runningQryMgr.register(
             qryDesc.sql(),
             GridCacheQueryType.SQL_FIELDS,
             qryDesc.schemaName(),
             qryDesc.local(),
-            memoryMgr.createQueryMemoryTracker(
-                qryParams.maxMemory() < 0 ? memoryMgr.globalQuota() : qryParams.maxMemory()
-            ),
+            tracker,
             cancel
         );
+
+        if (log.isDebugEnabled()) {
+            log.debug("Started query with memory tracking parameters [queryQuota=" + tracker.queryQuota() +
+                ", globalQuota=" + memoryMgr.getGlobalQuota() + ", offloadingEnabled=" + memoryMgr.getGlobalQuota() +
+                ", query=" + "qryDesc" + ']');
+        }
+
+        return qryId;
     }
 
     /**

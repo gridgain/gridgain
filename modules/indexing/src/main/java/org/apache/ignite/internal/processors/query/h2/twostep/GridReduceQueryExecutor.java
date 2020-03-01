@@ -455,7 +455,8 @@ public class GridReduceQueryExecutor {
                         .flags(queryFlags(qry, enforceJoinOrder, lazy, dataPageScanEnabled))
                         .timeout(timeoutMillis)
                         .schemaName(schemaName)
-                        .maxMemory(maxMem);
+                        .maxMemory(maxMem)
+                        .originalQryId(qryId);
 
                     if (mvccTracker != null)
                         req.mvccSnapshot(mvccTracker.snapshot());

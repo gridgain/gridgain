@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query;
 /**
  * Interface to retrieve information about memory and disk utilization.
  */
-public interface GridQueryMemoryTracker {
+public interface GridQueryMemoryTracker extends AutoCloseable {
     /**
      * Number of bytes reserved at the current moment.
      *
@@ -54,4 +54,9 @@ public interface GridQueryMemoryTracker {
      * @return Total number of bytes written on disk.
      */
     public long totalWrittenOnDisk();
+
+    /** {@inheritDoc} */
+    @Override void close();
+
+    public long queryQuota();
 }

@@ -180,7 +180,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * Note: Negative values are reserved for disable memory tracking.
      *
      * @param maxQryMemory Query memory limit in bytes.
-     * @param qryDesc Query descriptor.
      * @return Query memory tracker.
      */
     public GridQueryMemoryTracker createQueryMemoryTracker(long maxQryMemory) {
@@ -193,20 +192,13 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
             if (log.isDebugEnabled())
                 log.debug("No memory quota configured for the query: "  + "qryDesc");
         }
-
-        if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
+        else if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
             if (log.isInfoEnabled()) {
                 LT.info(log, "Max query memory can't exceed SQL memory pool size. Will be reduced down to: " +
                     globalQuota0);
             }
 
             maxQryMemory = globalQuota0;
-        }
-
-        if (log.isDebugEnabled()) {
-            log.debug("Started query with memory tracking parameters [queryQuota=" + maxQryMemory +
-                ", globalQuota=" + globalQuota0 + ", offloadingEnabled=" + offloadingEnabled +
-                ", query=" + "qryDesc" + ']');
         }
 
         return new QueryMemoryTracker(this, maxQryMemory < 0 ? 0 : maxQryMemory, blockSize, offloadingEnabled);
@@ -326,12 +318,12 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
 
     /** {@inheritDoc} */
     @Override public void swap(long size) {
-        throw new UnsupportedOperationException();
+        // NO-OP
     }
 
     /** {@inheritDoc} */
     @Override public void unswap(long size) {
-        throw new UnsupportedOperationException();
+        // NO-OP
     }
 
     /** {@inheritDoc} */
@@ -344,7 +336,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
 
     /** {@inheritDoc} */
     @Override public void incrementFilesCreated() {
-        throw new AssertionError("Should not be called.");
+        // NO-OP
+    }
+
+    @Override public H2MemoryTracker createChildTracker() {
+        throw new UnsupportedOperationException();
     }
 
     /**

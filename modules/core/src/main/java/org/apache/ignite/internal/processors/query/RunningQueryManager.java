@@ -29,8 +29,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
@@ -63,6 +63,14 @@ public class RunningQueryManager {
         }
 
         @Override public long totalWrittenOnDisk() {
+            return -1;
+        }
+
+        @Override public void close() {
+            // NO-OP
+        }
+
+        @Override public long queryQuota() {
             return -1;
         }
     };
@@ -176,6 +184,9 @@ public class RunningQueryManager {
         // Attempt to unregister query twice.
         if (qry == null)
             return;
+
+        if (qry.memoryTracker() != null)
+            qry.memoryTracker().close();
 
         //We need to collect query history and metrics only for SQL queries.
         if (isSqlQuery(qry)) {

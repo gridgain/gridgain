@@ -159,6 +159,10 @@ public class GridQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
                 // NO-OP
             }
 
+            @Override public H2MemoryTracker createChildTracker() {
+                return null;
+            }
+
             @Override public void close() {
                 // NO-OP
             }
@@ -199,5 +203,45 @@ public class GridQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
 
         //noinspection ThrowableNotThrown
         GridTestUtils.assertThrows(log, () -> tracker.reserve(42L), IgniteException.class, "Test exception");
+    }
+
+    @Test
+    public void testChildTracker() {
+        long blockSize = 256L;
+        long quota = 3 * blockSize + 16;
+
+        QueryMemoryTracker parent = new QueryMemoryTracker(null, quota, 0, true);
+        QueryMemoryTracker child = (QueryMemoryTracker)parent.createChildTracker();
+
+        assertTrue(child.reserve(42L)); // first block from parent
+
+        verifyTrackers(child, parent);
+
+        assertTrue(child.reserve(42L)); // same block since 42 * 2 < blockSize
+
+        verifyTrackers(child, parent);
+
+        assertTrue(child.reserve(500L)); // reservation size is big enoght, so reservation
+        // from parent should be equal to previos size + required bytes
+
+        verifyTrackers(child, parent);
+
+        assertTrue(child.reserve(42L)); // another block but reduced just to fit the quota
+
+        verifyTrackers(child, parent);
+
+        child.release(200); // here reservation from parent should shrink
+                                 // so resulting size will be equal to actual reservation size
+
+        verifyTrackers(child, parent);
+
+    }
+
+    private void verifyTrackers(QueryMemoryTracker exp, QueryMemoryTracker act) {
+        assertEquals("reserved", exp.reserved(), act.reserved());
+        assertEquals("maxReserved", exp.maxReserved(), act.maxReserved());
+        assertEquals("writtenOnDisk", exp.writtenOnDisk(), act.writtenOnDisk());
+        assertEquals("maxWrittenOnDisk", exp.maxWrittenOnDisk(), act.maxWrittenOnDisk());
+        assertEquals("totalWrittenOnDisk", exp.totalWrittenOnDisk(), act.totalWrittenOnDisk());
     }
 }
