@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.AbstractMap;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -37,7 +36,6 @@ import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
-
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
 /**
