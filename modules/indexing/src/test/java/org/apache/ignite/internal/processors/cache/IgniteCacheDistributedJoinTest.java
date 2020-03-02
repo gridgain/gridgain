@@ -238,6 +238,7 @@ public class IgniteCacheDistributedJoinTest extends GridCommonAbstractTest {
             "JOIN PERSON P6 ON P1.ID = P6.ID " +
             "JOIN PERSON P7 ON P1.ID = P7.ID " +
             "JOIN PERSON P8 ON P1.ID = P8.ID " +
+            "JOIN PERSON P9 ON P1.ID = P9.ID " +
             "ORDER BY P1.NAME")
             .setDistributedJoins(true).setEnforceJoinOrder(false);
         List<List<?>> res = queryProcessor(ignite).querySqlFields(selectQuery, true).getAll();
