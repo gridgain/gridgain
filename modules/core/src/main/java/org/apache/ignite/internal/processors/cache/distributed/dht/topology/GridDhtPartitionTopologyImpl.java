@@ -2112,11 +2112,23 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     if (!lost) {
                         boolean hasOwner = false;
 
+                        // Detect if all owners are left.
                         for (GridDhtPartitionMap partMap : node2part.values()) {
                             if (partMap.get(part) == OWNING) {
                                 hasOwner = true;
 
                                 break;
+                            }
+                        }
+
+                        // Spread existing LOST state on all data nodes.
+                        if (hasOwner) {
+                            for (GridDhtPartitionMap partMap : node2part.values()) {
+                                if (partMap.get(part) == LOST) {
+                                    hasOwner = false;
+
+                                    break;
+                                }
                             }
                         }
 

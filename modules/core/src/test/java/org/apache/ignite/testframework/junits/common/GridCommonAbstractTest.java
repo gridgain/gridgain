@@ -100,6 +100,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopolo
 import org.apache.ignite.internal.processors.cache.distributed.dht.colocated.GridDhtColocatedCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.IgniteDhtDemandedPartitionsMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -114,7 +115,6 @@ import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.PA;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -1014,19 +1014,11 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                         String.valueOf(U.<Object>field(f, "topVer")) : "[unknown] may be it is finished future"))
                     .append("\n");
 
-                Map<UUID, T2<Long, Collection<Integer>>> remaining = U.field(f, "remaining");
+                Map<UUID, IgniteDhtDemandedPartitionsMap> remaining = U.field(f, "remaining");
 
-                sb.append("remaining:");
-
-                if (remaining.isEmpty())
-                    sb.append("empty\n");
-                else
-                    for (Map.Entry<UUID, T2<Long, Collection<Integer>>> e : remaining.entrySet())
-                        sb.append("\nuuid=").append(e.getKey())
-                            .append(" startTime=").append(e.getValue().getKey())
-                            .append(" parts=").append(Arrays.toString(e.getValue().getValue().toArray()))
-                            .append("\n");
-
+                sb.append("remaining: ");
+                sb.append(remaining.toString());
+                sb.append("\n");
             }
             catch (Throwable e) {
                 log.error(e.getMessage());

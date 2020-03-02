@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -31,7 +32,12 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -50,6 +56,8 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         cfg.setFailureDetectionTimeout(100000000L);
         cfg.setClientFailureDetectionTimeout(100000000L);
@@ -93,6 +101,73 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         stopAllGrids();
 
         cleanPersistenceDir();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testPartitionConsistencyOnSupplierRestart() throws Exception {
+        int entryCnt = PARTS_CNT * 200;
+
+        IgniteEx crd = (IgniteEx)startGridsMultiThreaded(2);
+
+        crd.cluster().active(true);
+
+        IgniteCache<Integer, String> cache0 = crd.cache(DEFAULT_CACHE_NAME);
+
+        for (int i = 0; i < entryCnt / 2; i++)
+            cache0.put(i, String.valueOf(i));
+
+        forceCheckpoint();
+
+        stopGrid(1);
+
+        for (int i = entryCnt / 2; i < entryCnt; i++)
+            cache0.put(i, String.valueOf(i));
+
+        final IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(1));
+
+        final TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
+
+        spi1.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode node, Message msg) {
+                if (msg instanceof GridDhtPartitionDemandMessage) {
+                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage)msg;
+
+                    return msg0.groupId() == CU.cacheId(DEFAULT_CACHE_NAME);
+                }
+
+                return false;
+            }
+        });
+
+        startGrid(cfg);
+
+        spi1.waitForBlocked(1);
+
+        // Cancellation of rebalancing because a supplier has left.
+        stopGrid(0);
+
+        awaitPartitionMapExchange();
+
+        final Collection<Integer> lostParts = grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions();
+
+        assertEquals(PARTS_CNT, lostParts.size());
+
+        final IgniteEx g0 = startGrid(0);
+
+        final Collection<Integer> lostParts2 = g0.cache(DEFAULT_CACHE_NAME).lostPartitions();
+
+        assertEquals(PARTS_CNT, lostParts2.size());
+
+        spi1.stopBlock();
+
+        g0.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
 
     @Test
