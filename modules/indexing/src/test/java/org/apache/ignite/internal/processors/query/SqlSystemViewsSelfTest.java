@@ -275,7 +275,7 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
             {"2584860", "TST1", "2584860", "TST1", "TST1", "VALUECLASS", "TST1_INDEX", "BTREE", "\"KEY\" ASC, \"_KEY\" ASC", "false", "false", "10"},
             {"2584860", "TST1", "2584860", "TST1", "TST1", "VALUECLASS", "__SCAN_", "SCAN", "null", "false", "false", "null"},
-            {"2584860", "TST1", "2584860", "TST1", "TST1", "VALUECLASS", "_key_PK", "BTREE", "\"_KEY\" ASC", "true", "true", "10"},
+            {"2584860", "TST1", "2584860", "TST1", "TST1", "VALUECLASS", "_key_PK", "BTREE", "\"_KEY\" ASC", "true", "true", "5"},
             {"2584860", "TST1", "2584860", "TST1", "TST1", "VALUECLASS", "_key_PK_hash", "HASH", "\"_KEY\" ASC", "false", "true", "null"},
         };
 

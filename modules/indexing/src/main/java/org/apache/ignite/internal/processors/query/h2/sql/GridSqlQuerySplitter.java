@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor;
@@ -288,7 +289,6 @@ public class GridSqlQuerySplitter {
             boolean allCollocated = true;
 
             for (GridCacheSqlQuery mapSqlQry : splitter.mapSqlQrys) {
-
                 Prepared prepared0 = prepare(
                     conn,
                     H2Utils.context(conn.connection()),
@@ -308,6 +308,7 @@ public class GridSqlQuerySplitter {
 
         List<Integer> cacheIds = H2Utils.collectCacheIds(idx, null, splitter.tbls);
         boolean mvccEnabled = H2Utils.collectMvccEnabled(idx, cacheIds);
+        boolean replicatedOnly = splitter.mapSqlQrys.stream().noneMatch(GridCacheSqlQuery::isPartitioned);
 
         H2Utils.checkQuery(idx, cacheIds, splitter.tbls);
 
@@ -321,6 +322,7 @@ public class GridSqlQuerySplitter {
             splitter.skipMergeTbl,
             explain,
             distributedJoins,
+            replicatedOnly,
             splitter.extractor.mergeMapQueries(splitter.mapSqlQrys),
             cacheIds,
             mvccEnabled,
@@ -1881,13 +1883,12 @@ public class GridSqlQuerySplitter {
      * @param qry Parsed query.
      * @param enforceJoinOrder Enforce join order.
      * @return Optimized prepared command.
-     * @throws SQLException If failed.
      */
-    public static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
-        boolean enforceJoinOrder) throws SQLException {
+    private static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
+        boolean enforceJoinOrder) throws SQLException, IgniteCheckedException {
         H2Utils.setupConnection(c, qctx, distributedJoins, enforceJoinOrder);
 
-        try (PreparedStatement s = c.prepareStatement(qry)) {
+        try (PreparedStatement s = c.prepareStatement(qry, H2StatementCache.queryFlags(distributedJoins, enforceJoinOrder))) {
             return GridSqlQueryParser.prepared(s);
         }
     }

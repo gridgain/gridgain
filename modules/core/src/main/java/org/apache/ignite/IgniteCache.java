@@ -592,7 +592,7 @@ public interface IgniteCache<K, V> extends javax.cache.Cache<K, V> {
         Object... args) throws TransactionException;
 
     /**
-     * Asynchronously version of the {@link #invokeAll(Map, Object...)} method.
+     * Asynchronous version of the {@link #invokeAll(Map, Object...)} method.
      *
      * @param map Map containing keys and entry processors to be applied to values.
      * @param args Additional arguments to pass to the {@link EntryProcessor}.

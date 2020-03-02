@@ -19,31 +19,79 @@ package org.apache.ignite.internal.processors.query.h2;
 /**
  * Memory tracker.
  */
-public abstract class H2MemoryTracker implements AutoCloseable {
+public interface H2MemoryTracker extends AutoCloseable {
     /**
      * Check allocated size is less than query memory pool threshold.
      *
      * @param size Allocated size in bytes.
      * @return {@code True} if memory limit is not exceeded. {@code False} otherwise.
      */
-    public abstract boolean reserved(long size);
+    public boolean reserved(long size);
 
     /**
      * Memory release callback.
      *
      * @param size Released memory size in bytes.
      */
-    public abstract void released(long size);
+    public void released(long size);
 
     /**
      * Reserved memory.
      *
      * @return  Reserved memory in bytes.
      */
-    public abstract long memoryReserved();
+    public long memoryReserved();
 
     /**
      * @return Max memory limit.
      */
-    public abstract long memoryLimit();
+    public long memoryLimit();
+
+    /**
+     * Increments the counter of created offloading files.
+     */
+    public void incrementFilesCreated();
+
+    /**
+     * Updates the counter of bytes written to disk.
+     *
+     * @param written Number of bytes.
+     */
+    public void addTotalWrittenOnDisk(long written);
+
+    /** {@inheritDoc} */
+    @Override public void close();
+
+    H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
+        /** {@inheritDoc} */
+        @Override public boolean reserved(long size) {
+            return false; 
+        }
+
+        /** {@inheritDoc} */
+        @Override public void released(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public long memoryReserved() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long memoryLimit() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void incrementFilesCreated() {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void addTotalWrittenOnDisk(long written) {
+        }
+    };
 }

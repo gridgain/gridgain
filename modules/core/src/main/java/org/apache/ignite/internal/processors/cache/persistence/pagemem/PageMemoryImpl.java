@@ -1109,7 +1109,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     /**
      * @return Total pages can be placed in all segments.
      */
-    public long totalPages() {
+    @Override public long totalPages() {
         if (segments == null)
             return 0;
 
@@ -1148,8 +1148,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
 
-            seg.dirtyPages = new GridConcurrentHashSet<>();
-            seg.dirtyPagesCntr.set(0);
+            seg.resetDirtyPages();
         }
 
         safeToUpdate.set(true);
@@ -1307,9 +1306,8 @@ public class PageMemoryImpl implements PageMemoryEx {
         try {
             long tmpRelPtr = PageHeader.tempBufferPointer(absPtr);
 
-            boolean success = clearCheckpoint(fullId);
-
-            assert success : "Page was pin when we resolve abs pointer, it can not be evicted";
+            if (!clearCheckpoint(fullId))
+                return;
 
             if (tmpRelPtr != INVALID_REL_PTR) {
                 PageHeader.tempBufferPointer(absPtr, INVALID_REL_PTR);
@@ -2125,6 +2123,15 @@ public class PageMemoryImpl implements PageMemoryEx {
          */
         private long borrowOrAllocateFreePage(long pageId) {
             return pool.borrowOrAllocateFreePage(PageIdUtils.tag(pageId));
+        }
+
+        /**
+         * Clear dirty pages collection and reset counter.
+         */
+        private void resetDirtyPages() {
+            dirtyPages = new GridConcurrentHashSet<>();
+
+            dirtyPagesCntr.set(0);
         }
 
         /**

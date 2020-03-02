@@ -47,6 +47,7 @@ import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
 import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.springframework.messaging.simp.stomp.ConnectionLostException;
@@ -70,13 +71,13 @@ import static org.apache.ignite.internal.IgniteFeatures.TRACING;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
- * Management console agent.
+ * Control Center agent.
  */
 public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
-    /** Management Console configuration meta storage prefix. */
+    /** Control Center configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
-    /** Topic management console. */
+    /** Topic of Control Center configuration. */
     public static final String TOPIC_MANAGEMENT_CONSOLE = "mgmt-console-topic";
 
     /** Discovery event on restart agent. */
@@ -141,7 +142,6 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     @Override public void onKernalStart(boolean active) {
         this.metaStorage = ctx.distributedMetastorage();
         this.evtsExporter = new EventsExporter(ctx);
-        this.spanExporter = new SpanExporter(ctx);
         this.metricExporter = new MetricsExporter(ctx);
         this.actDispatcher = new ActionDispatcher(ctx);
 
@@ -327,7 +327,15 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      */
     private void connect() {
         if (!cfg.isEnabled()) {
-            log.info("Skip start Management Console agent on coordinator, because it was disabled in configuration");
+            log.info("Control Center agent was not started on coordinator, because it was disabled in configuration");
+            log.info("You can use control script to enable Control Center agent");
+
+            return;
+        }
+
+        if (F.isEmpty(cfg.getConsoleUris())) {
+            log.info("Control Center agent  was not started on coordinator, because the server URI was not set");
+            log.info("You can use control script to setup server URI");
 
             return;
         }

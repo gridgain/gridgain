@@ -1432,14 +1432,13 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             this.partId = partId;
             this.rowStore = rowStore;
             this.dataTree = dataTree;
-            if (grp.mvccEnabled())
-                pCntr = new PartitionMvccTxUpdateCounterImpl(grp);
-            else if (grp.hasAtomicCaches() || !grp.persistenceEnabled())
-                pCntr = new PartitionAtomicUpdateCounterImpl();
-            else {
-                pCntr = ctx.logger(PartitionTxUpdateCounterDebugWrapper.class).isDebugEnabled() ?
-                    new PartitionTxUpdateCounterDebugWrapper(grp, partId) : new PartitionTxUpdateCounterImpl(grp);
-            }
+
+            PartitionUpdateCounter delegate = grp.mvccEnabled() ? new PartitionUpdateCounterMvccImpl(grp) :
+                grp.persistenceEnabled() ? new PartitionUpdateCounterTrackingImpl(grp) :
+                    new PartitionUpdateCounterVolatileImpl(grp);
+
+            pCntr = ctx.logger(PartitionUpdateCounterDebugWrapper.class).isDebugEnabled() ?
+                new PartitionUpdateCounterDebugWrapper(partId, delegate) : delegate;
         }
 
         /**
@@ -1582,7 +1581,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 U.error(log, "Failed to update partition counter. " +
                     "Most probably a node with most actual data is out of topology or data streamer is used " +
                     "in preload mode (allowOverride=false) concurrently with cache transactions [grpName=" +
-                    grp.name() + ", partId=" + partId + ']', e);
+                    grp.cacheOrGroupName() + ", partId=" + partId + ']', e);
 
                 if (failNodeOnPartitionInconsistency)
                     ctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
@@ -2966,6 +2965,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         /** {@inheritDoc} */
         @Override public void resetUpdateCounter() {
             pCntr.reset();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void resetInitialUpdateCounter() {
+            pCntr.resetInitialCounter();
         }
 
         /** {@inheritDoc} */

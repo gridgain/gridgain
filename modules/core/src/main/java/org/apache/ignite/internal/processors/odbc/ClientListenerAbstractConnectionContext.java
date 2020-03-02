@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.odbc;
 
+import java.security.cert.Certificate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -85,9 +86,10 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
      * @return Auth context.
      * @throws IgniteCheckedException If failed.
      */
-    protected AuthorizationContext authenticate(String user, String pwd) throws IgniteCheckedException {
+    protected AuthorizationContext authenticate(Certificate[] certificates, String user, String pwd)
+        throws IgniteCheckedException {
         if (ctx.security().enabled())
-            authCtx = authenticateExternal(user, pwd).authorizationContext();
+            authCtx = authenticateExternal(certificates, user, pwd).authorizationContext();
         else if (ctx.authentication().enabled()) {
             if (F.isEmpty(user))
                 throw new IgniteAccessControlException("Unauthenticated sessions are prohibited.");
@@ -106,7 +108,8 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     /**
      * Do 3-rd party authentication.
      */
-    private AuthenticationContext authenticateExternal(String user, String pwd) throws IgniteCheckedException {
+    private AuthenticationContext authenticateExternal(Certificate[] certificates, String user, String pwd)
+        throws IgniteCheckedException {
         SecurityCredentials cred = new SecurityCredentials(user, pwd);
 
         AuthenticationContext authCtx = new AuthenticationContext();
@@ -115,6 +118,7 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
         authCtx.subjectId(UUID.randomUUID());
         authCtx.nodeAttributes(Collections.emptyMap());
         authCtx.credentials(cred);
+        authCtx.certificates(certificates);
 
         secCtx = ctx.security().authenticate(authCtx);
 

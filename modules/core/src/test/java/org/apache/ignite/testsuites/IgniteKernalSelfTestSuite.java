@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cluster.GridAddressResolverSelfTest
 import org.apache.ignite.internal.processors.cluster.GridUpdateNotifierSelfTest;
 import org.apache.ignite.internal.processors.port.GridPortProcessorSelfTest;
 import org.apache.ignite.internal.util.GridStartupWithUndefinedIgniteHomeSelfTest;
+import org.apache.ignite.internal.util.IgniteUtilsWorkDirectoryTest;
 import org.apache.ignite.spi.communication.GridCacheMessageSelfTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -86,6 +87,7 @@ import org.junit.runners.Suite;
     GridPortProcessorSelfTest.class,
     GridHomePathSelfTest.class,
     GridStartupWithUndefinedIgniteHomeSelfTest.class,
+    IgniteUtilsWorkDirectoryTest.class,
     GridVersionSelfTest.class,
     GridListenActorSelfTest.class,
     GridNodeLocalSelfTest.class,

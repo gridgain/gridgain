@@ -23,7 +23,7 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
- * Metrics request message. Sent from Management Console agent to any arbitrary node to request latest metrics.
+ * Metrics request message. Sent from Control Center agent to any arbitrary node to request latest metrics.
  */
 public class MetricRequest implements Message {
     /** */

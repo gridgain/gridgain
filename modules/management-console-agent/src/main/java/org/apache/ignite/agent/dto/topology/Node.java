@@ -35,7 +35,7 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
  * DTO for node info.
  */
 public class Node {
-    /** Set of attributes required by Management Console. */
+    /** Set of attributes required by Control Center. */
     private static final Set<String> ATTRS = Stream.of(
         ATTR_IPS,
         ATTR_MACS,

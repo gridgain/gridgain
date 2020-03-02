@@ -20,16 +20,21 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.failure.StopNodeFailureHandler;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteKernal;
+import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -39,6 +44,7 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
@@ -52,6 +58,19 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * initial objects that were added but should not be counted along with keys defined in tests.
      */
     private static final int INITIAL_UPDATES_COUNT = 3;
+
+    /** String exceeding max length of metastorage key. */
+    private static final String LONG_KEY;
+
+    /** **/
+    private TcpDiscoverySpi customTcpDiscoverySpi = null;
+
+    static {
+        String template = "012345678901234567890123456789";
+
+        // Two templates - 60 bytes. Key is considered as long if it is shorter than 62 bytes.
+        LONG_KEY = template + template + "01";
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -69,8 +88,18 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         DiscoverySpi discoSpi = cfg.getDiscoverySpi();
 
-        if (discoSpi instanceof TcpDiscoverySpi)
+        if (discoSpi instanceof TcpDiscoverySpi) {
+            if (customTcpDiscoverySpi != null)
+                cfg.setDiscoverySpi(
+                    customTcpDiscoverySpi
+                        .setIpFinder(((TcpDiscoverySpi)cfg.getDiscoverySpi()).getIpFinder())
+                );
+
             ((TcpDiscoverySpi)discoSpi).setNetworkTimeout(1000);
+        }
+
+        if (igniteInstanceName.contains("client"))
+            cfg.setClientMode(true);
 
         return cfg;
     }
@@ -119,6 +148,164 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         metastorage.remove("key");
 
         assertNull(metastorage.read("key"));
+    }
+
+    /**
+     * Test verifies that Distributed Metastorage on client is not operational until client connects to some cluster.
+     *
+     * After successful join DMS on client becomes operational.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-27178")
+    public void testDistributedMetastorageOperationsOnClient() throws Exception {
+        String clientName = "client0";
+
+        String key = "key";
+        String value = "value";
+
+        IgniteInternalFuture<IgniteEx> clFut = GridTestUtils.runAsync(() -> startGrid(clientName));
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                IgniteKernal clientGrid = IgnitionEx.gridx(clientName);
+
+                return clientGrid != null && clientGrid.context().distributedMetastorage() != null;
+            }
+            catch (Exception ignored) {
+                return false;
+            }
+        }, 20_000);
+
+        IgniteKernal cl0 = IgnitionEx.gridx("client0");
+
+        final DistributedMetaStorage clDms = cl0.context().distributedMetastorage();
+
+        assertNotNull(clDms);
+
+        // DMS on client blocks if client is not connected to the cluster
+        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
+            try {
+                clDms.write(key, value);
+            }
+            catch (IgniteCheckedException ignored) {
+                // No-op.
+            }
+        });
+
+        GridTestUtils.assertThrows(null, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                fut.get(1000);
+
+                return null;
+            }
+        }, IgniteFutureTimeoutCheckedException.class, null);
+
+        startGrid(0);
+
+        clFut.get();
+
+        DistributedMetaStorage clDms0 = cl0.context().distributedMetastorage();
+
+        GridTestUtils.waitForCondition(() -> {
+            try {
+                return clDms0.read(key) != null;
+            }
+            catch (IgniteCheckedException ignored) {
+                return false;
+            }
+        }, 20_000);
+
+        assertEquals(value, clDms0.read(key));
+    }
+
+    /**
+     * Verifies that DistributedMetastorage doesn't allow writes of too long keys (exceeding 64 bytes limit).
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLongKeyOnWrite() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
+
+        GridTestUtils.assertThrowsAnyCause(null,
+            new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    metastorage.write(LONG_KEY, "randomValue");
+
+                    return null;
+                }
+            },
+            IgniteCheckedException.class,
+            "Key is too long."
+        );
+
+        GridTestUtils.assertThrowsAnyCause(null,
+            new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    metastorage.writeAsync(LONG_KEY, "randomValue");
+
+                    return null;
+                }
+            },
+            IgniteCheckedException.class,
+            "Key is too long."
+        );
+    }
+
+    /**
+     * Verifies that DistributedMetastorage doesn't allow writes of too long keys (exceeding 64 bytes limit).
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testLongKeyOnCas() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        ignite.cluster().active(true);
+
+        DistributedMetaStorage metastorage = ignite.context().distributedMetastorage();
+
+        GridTestUtils.assertThrowsAnyCause(null,
+            new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    metastorage.compareAndSet(LONG_KEY, "randomValue", "newRandomValue");
+
+                    return null;
+                }
+            },
+            IgniteCheckedException.class,
+            "Key is too long."
+        );
+
+        GridTestUtils.assertThrowsAnyCause(null,
+            new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    metastorage.compareAndSetAsync(LONG_KEY, "randomValue", "newRandomValue");
+
+                    return null;
+                }
+            },
+            IgniteCheckedException.class,
+            "Key is too long."
+        );
+
+        GridTestUtils.assertThrowsAnyCause(null,
+            new Callable<Object>() {
+                @Override public Object call() throws Exception {
+                    metastorage.compareAndRemove(LONG_KEY, "randomValue");
+
+                    return null;
+                }
+            },
+            IgniteCheckedException.class,
+            "Key is too long."
+        );
     }
 
     /**
