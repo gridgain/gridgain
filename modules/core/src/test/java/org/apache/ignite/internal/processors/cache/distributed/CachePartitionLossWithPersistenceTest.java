@@ -227,6 +227,8 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
     }
 
+    /**
+     */
     @Test
     public void testDataLost2() throws Exception {
         IgniteEx crd = startGrids(2);
@@ -265,7 +267,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         assertEquals(lostParts, g1LostParts);
 
-        // Block rebalancing from g2 to g1.
+        // Block rebalancing from g2 to g1 to ensure a primary partition is in moving state.
         TestRecordingCommunicationSpi.spi(g1).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
             @Override public boolean apply(ClusterNode node, Message msg) {
                 return msg instanceof GridDhtPartitionDemandMessage;
@@ -282,7 +284,10 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         TestRecordingCommunicationSpi.spi(g1).waitForBlocked();
 
+        // Try put to moving partition. Due to forced reassignment g2 should be a primary for {@code part}.
         cachex.put(part, 1);
+
+        TestRecordingCommunicationSpi.spi(g1).stopBlock();
 
         awaitPartitionMapExchange();
 

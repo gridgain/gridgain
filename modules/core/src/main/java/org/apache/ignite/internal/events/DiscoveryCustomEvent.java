@@ -20,6 +20,7 @@ import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.managers.discovery.DiscoveryCustomMessage;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.DynamicCacheChangeBatch;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -114,6 +115,12 @@ public class DiscoveryCustomEvent extends DiscoveryEvent {
             SnapshotDiscoveryMessage snapMsg = (SnapshotDiscoveryMessage) msg;
 
             return snapMsg.needExchange() && snapMsg.needAssignPartitions();
+        }
+
+        if (msg instanceof DynamicCacheChangeBatch) {
+            DynamicCacheChangeBatch cacheMsg = (DynamicCacheChangeBatch) msg;
+
+            return cacheMsg.exchangeActions() != null && !cacheMsg.exchangeActions().cachesToResetLostPartitions().isEmpty();
         }
 
         return false;
