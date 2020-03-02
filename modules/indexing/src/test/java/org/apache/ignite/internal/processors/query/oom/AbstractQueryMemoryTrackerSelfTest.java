@@ -274,7 +274,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
 
-                        memoryTracker().release(memoryReserved());
+//                        memoryTracker().release(memoryReserved());
                     }
                 };
 

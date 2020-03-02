@@ -68,7 +68,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
     private volatile long totalWrittenOnDisk;
 
     /** Close flag to prevent tracker reuse. */
-    private Boolean closed = Boolean.FALSE;
+    private volatile Boolean closed = Boolean.FALSE;
 
     /** Children. */
     private final Queue<QueryMemoryTracker> children = new ConcurrentLinkedQueue<>();
@@ -261,7 +261,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTrack
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized void close() {
+    @Override public void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
         if (closed)

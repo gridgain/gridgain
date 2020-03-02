@@ -130,6 +130,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
 
         log = ctx.log(QueryMemoryManager.class);
 
+        setGlobalQuota(ctx.config().getSqlGlobalMemoryQuota());
         setQueryQuota(ctx.config().getSqlQueryMemoryQuota());
 
         offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
