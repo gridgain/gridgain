@@ -151,6 +151,7 @@ import org.apache.ignite.internal.processors.failure.FailureProcessor;
 import org.apache.ignite.internal.processors.job.GridJobProcessor;
 import org.apache.ignite.internal.processors.jobmetrics.GridJobMetricsProcessor;
 import org.apache.ignite.internal.processors.localtask.DurableBackgroundTasksProcessor;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.marshaller.GridMarshallerMappingProcessor;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -1160,7 +1161,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 startProcessor(new GridTaskSessionProcessor(ctx));
                 startProcessor(new GridJobProcessor(ctx));
                 startProcessor(new GridTaskProcessor(ctx));
-                startProcessor((GridProcessor)SCHEDULE.createOptional(ctx));
+                startProcessor(SCHEDULE.createOptional(ctx));
                 startProcessor(new GridRestProcessor(ctx));
                 startProcessor(new DataStreamProcessor(ctx));
                 startProcessor(new GridContinuousProcessor(ctx));
@@ -1172,7 +1173,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                     startProcessor(new DistributedMetaStorageImpl(ctx));
 
                 startProcessor(new DistributedConfigurationProcessor(ctx));
-                startProcessor(MANAGEMENT_CONSOLE.createOptional(ctx));
+                startProcessor(createComponent(ManagementConsoleProcessor.class, ctx));
                 startProcessor(new DurableBackgroundTasksProcessor(ctx));
 
                 // Start transactional data replication processor.
@@ -4253,8 +4254,11 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
         if (cls.equals(TransactionalDrProcessor.class))
             return (T)new NoOpTransactionalDrProcessor(ctx);
 
-        if(cls.equals(GridSecurityProcessor.class))
+        if (cls.equals(GridSecurityProcessor.class))
             return null;
+
+        if (cls.equals(ManagementConsoleProcessor.class))
+            return MANAGEMENT_CONSOLE.createOptional(ctx);
 
         Class<T> implCls = null;
 
@@ -4422,7 +4426,7 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
                 try {
                     reconnectDone.get();
                 }
-                catch (IgniteCheckedException ignote) {
+                catch (IgniteCheckedException ignored) {
                     // No-op.
                 }
             }

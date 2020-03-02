@@ -41,11 +41,11 @@ import org.apache.ignite.agent.processor.metrics.MetricsProcessor;
 import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
+import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
 import org.apache.ignite.internal.util.typedef.F;
@@ -69,14 +69,15 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.events.EventType.EVT_NODE_SEGMENTED;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_ID_AND_TAG;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteFeatures.TRACING;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
 /**
  * Control Center agent.
  */
-public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapter {
+public class ManagementConsoleAgent extends GridProcessorAdapter implements ManagementConsoleProcessor {
     /** Control Center configuration meta storage prefix. */
     private static final String MANAGEMENT_CFG_META_STORAGE_PREFIX = "mgmt-console-cfg";
 
@@ -86,8 +87,11 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** Discovery event on restart agent. */
     private static final int[] EVTS_DISCOVERY = new int[] {EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_SEGMENTED};
 
+    /** Management configuration instance. */
+    private ManagementConfiguration cfg = new ManagementConfiguration();
+
     /** Websocket manager. */
-    private WebSocketManager mgr;
+    protected WebSocketManager mgr;
 
     /** Cluster processor. */
     private ClusterInfoProcessor clusterProc;
@@ -125,7 +129,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /** Session registry. */
     private SessionRegistry sesRegistry;
 
-    /** Active server uri. */
+    /** Active server URI. */
     private String curSrvUri;
 
     /** If first connection error after successful connection. */
@@ -137,23 +141,23 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     /**
      * @param ctx Kernal context.
      */
-    public ManagementConsoleProcessor(GridKernalContext ctx) {
+    public ManagementConsoleAgent(GridKernalContext ctx) {
         super(ctx);
     }
 
     /** {@inheritDoc} */
     @Override public void onKernalStart(boolean active) {
         if (isManagementConsoleFeaturesEnabled()) {
-            this.metaStorage = ctx.distributedMetastorage();
-            this.evtsExporter = new EventsExporter(ctx);
-            this.metricExporter = new MetricsExporter(ctx);
-            this.actDispatcher = new ActionDispatcher(ctx);
+            metaStorage = ctx.distributedMetastorage();
+            evtsExporter = new EventsExporter(ctx);
+            metricExporter = new MetricsExporter(ctx);
+            actDispatcher = new ActionDispatcher(ctx);
 
             if (isTracingEnabled())
-                this.spanExporter = new SpanExporter(ctx);
+                spanExporter = new SpanExporter(ctx);
             else
                 U.quietAndWarn(log, "Current Ignite configuration does not support tracing functionality" +
-                    " and management console agent will not collect traces" +
+                    " and control center agent will not collect traces" +
                     " (consider adding ignite-opencensus module to classpath).");
 
             // Connect to backend if local node is a coordinator or await coordinator change event.
@@ -198,7 +202,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      *  Stop agent.
      */
     private void disconnect() {
-        log.info("Stopping Management Console agent.");
+        log.info("Stopping Control Center agent.");
 
         U.shutdownNow(getClass(), connectPool, log);
 
@@ -210,7 +214,12 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
         disconnected.set(false);
 
-        U.quietAndInfo(log, "Management console agent stopped.");
+        U.quietAndInfo(log, "Control Center agent stopped.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public ManagementConfiguration configuration() {
+        return cfg;
     }
 
     /** {@inheritDoc} */
@@ -221,7 +230,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
             if (oldCfg.isEnabled() != cfg.isEnabled())
                 cfg = oldCfg.setEnabled(cfg.isEnabled());
 
-            super.configuration(cfg);
+            this.cfg = cfg;
 
             writeToMetaStorage(cfg);
 
@@ -263,7 +272,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
      * @return {@code True} if tracing is enable.
      */
     boolean isTracingEnabled() {
-        return IgniteFeatures.nodeSupports(ctx, ctx.grid().localNode(), TRACING);
+        return nodeSupports(ctx, ctx.grid().localNode(), TRACING);
     }
 
     /**
@@ -275,7 +284,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /**
-     * Start agent on local node if this is coordinator node.
+     * Start agent on a local node if it is a coordinator node.
      */
     private void launchAgentListener(DiscoveryEvent evt, DiscoCache discoCache) {
         if (isLocalNodeCoordinator(ctx.discovery()) && agentStarted.compareAndSet(false, true)) {
@@ -288,7 +297,7 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /**
-     * @param uris Management Console Server URIs.
+     * @param uris Control Center Server URIs.
      */
     private String nextUri(List<String> uris, String cur) {
         int idx = uris.indexOf(cur);
@@ -333,10 +342,10 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
                     )
                 ) {
                     if (disconnected.compareAndSet(false, true))
-                        log.error("Failed to establish websocket connection with Management Console: " + curSrvUri);
+                        log.error("Failed to establish websocket connection with Control Center: " + curSrvUri);
                 }
                 else
-                    log.error("Failed to establish websocket connection with Management Console: " + curSrvUri, e);
+                    log.error("Failed to establish websocket connection with Control Center: " + curSrvUri, e);
             }
         }
     }
@@ -359,14 +368,14 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
             return;
         }
 
-        log.info("Starting Management Console agent on coordinator");
+        log.info("Starting Control Center agent on coordinator");
 
-        this.mgr = new WebSocketManager(ctx);
-        this.sesRegistry = new SessionRegistry(ctx);
-        this.clusterProc = new ClusterInfoProcessor(ctx, mgr);
-        this.metricProc = new MetricsProcessor(ctx, mgr);
-        this.distributedActProc = new DistributedActionProcessor(ctx);
-        this.cacheProc = new CacheChangesProcessor(ctx, mgr);
+        mgr = new WebSocketManager(ctx);
+        sesRegistry = new SessionRegistry(ctx);
+        clusterProc =  createClusterInfoProcessor();
+        metricProc = new MetricsProcessor(ctx, mgr);
+        distributedActProc = new DistributedActionProcessor(ctx);
+        cacheProc = new CacheChangesProcessor(ctx, mgr);
 
         evtsExporter.addGlobalEventListener();
 
@@ -421,6 +430,13 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
     }
 
     /**
+     * @return Cluster info processor.
+     */
+    protected ClusterInfoProcessor createClusterInfoProcessor() {
+        return new ClusterInfoProcessor(ctx, mgr);
+    }
+
+    /**
      * Session handler for sending cluster info to backend.
      */
     private class AfterConnectedSessionHandler extends StompSessionHandlerAdapter {
@@ -430,15 +446,15 @@ public class ManagementConsoleProcessor extends ManagementConsoleProcessorAdapte
 
             U.quietAndInfo(log, "");
 
-            U.quietAndInfo(log, "Found Management Console that can be used to monitor your cluster: " + curSrvUri);
+            U.quietAndInfo(log, "Found Control Center that can be used to monitor your cluster: " + curSrvUri);
 
             U.quietAndInfo(log, "");
 
             U.quietAndInfo(log, "Open link in browser to monitor your cluster: " +
                     monitoringUri(curSrvUri, cluster.id()));
 
-            U.quietAndInfo(log, "If you already using Management Console, you can add cluster manually by it's ID: "
-                + cluster.id());
+            U.quietAndInfo(log, "If you are already using Control Center, you can add the cluster manually" +
+                " by its ID: " + cluster.id());
 
             clusterProc.sendInitialState();
 
