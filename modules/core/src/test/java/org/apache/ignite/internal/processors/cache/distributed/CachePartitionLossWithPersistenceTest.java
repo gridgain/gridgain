@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
@@ -76,6 +78,8 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         );
 
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
+            setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL).
+            setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC).
             setPartitionLossPolicy(READ_WRITE_SAFE).
             setBackups(1).
             setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
@@ -228,16 +232,18 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         IgniteEx crd = startGrids(2);
         crd.cluster().active(true);
 
-        final List<Integer> moving = movingKeysAfterJoin(grid(1), DEFAULT_CACHE_NAME, PARTS_CNT);
-
         startGrid(2);
         resetBaselineTopology();
         awaitPartitionMapExchange();
 
-        // Find a lost partition.
-        int part = moving.stream().filter(
-            p -> !crd.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(p).
-                contains(crd.localNode())).findFirst().orElseThrow(AssertionError::new);
+        // Find a lost partition which is primary for g1.
+        int part = IntStream.range(0, PARTS_CNT).boxed().filter(new Predicate<Integer>() {
+            @Override public boolean test(Integer p) {
+                final List<ClusterNode> nodes = new ArrayList<>(crd.affinity(DEFAULT_CACHE_NAME).mapPartitionToPrimaryAndBackups(p));
+
+                return nodes.get(0).equals(grid(1).localNode()) && nodes.get(1).equals(grid(2).localNode());
+            }
+        }).findFirst().orElseThrow(AssertionError::new);
 
         stopGrid(1);
 
@@ -259,6 +265,13 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         assertEquals(lostParts, g1LostParts);
 
+        // Block rebalancing from g2 to g1.
+        TestRecordingCommunicationSpi.spi(g1).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode node, Message msg) {
+                return msg instanceof GridDhtPartitionDemandMessage;
+            }
+        });
+
         final IgniteEx g2 = startGrid(2);
 
         final Collection<Integer> g2LostParts = g2.cache(DEFAULT_CACHE_NAME).lostPartitions();
@@ -266,6 +279,10 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         assertEquals(lostParts, g2LostParts);
 
         crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+
+        TestRecordingCommunicationSpi.spi(g1).waitForBlocked();
+
+        cachex.put(part, 1);
 
         awaitPartitionMapExchange();
 
