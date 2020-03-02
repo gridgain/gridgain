@@ -20,7 +20,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.cache.*;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.client.thin.ClientServerError;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
@@ -30,7 +29,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.mxbean.ClientProcessorMXBean;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
 import org.junit.Rule;
 import org.junit.Test;
@@ -584,57 +582,6 @@ public class FunctionalTest extends GridCommonAbstractTest {
                 t.start();
 
                 latch.await();
-
-                t.join();
-
-                tx.commit();
-            }
-
-            assertEquals("value1", cache.get(0));
-        }
-    }
-
-    /**
-     * Check that removing backup copy for tx doesn't pervent it from commit.
-     */
-    private void checkMissingBackupTxFailover(TransactionConcurrency concurrency, TransactionIsolation isolation) throws Exception {
-        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
-             Ignite ignite2 = Ignition.start(Config.getServerConfiguration());
-             IgniteClient client = Ignition.startClient(getClientConfiguration())) {
-            ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
-                    .setName("cache")
-                    .setBackups(1)
-                    .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            );
-            cache.put(0, "value0");
-
-            final CountDownLatch latch = new CountDownLatch(1);
-
-            try (ClientTransaction tx = client.transactions().txStart(concurrency, isolation)) {
-                Thread t = new Thread(() -> {
-                    try {
-                        Collection<ClusterNode> mapping = ignite.affinity("cache").mapKeyToPrimaryAndBackups(0);
-                        mapping.stream().skip(1).forEach(node -> {
-                            stopGrid(node.id().toString());
-                        });
-                    }
-                    catch (Exception ex) {
-                        fail();
-                    }
-                    finally {
-                        latch.countDown();
-                    }
-                });
-
-                assertEquals("value0", cache.get(0));
-
-                t.start();
-
-                latch.await();
-
-                String s = tx.toString();
-
-                cache.put(0, "value1");
 
                 t.join();
 
