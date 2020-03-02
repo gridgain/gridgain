@@ -18,7 +18,7 @@ package org.apache.ignite.internal.processors.query.oom;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
@@ -32,14 +32,14 @@ public class DiskSpillingMemoryTrackerTest extends DiskSpillingAbstractTest {
     public void testOffloadedDataTrackedByMemoryTracker() {
         IgniteEx ignite = grid(0);
 
-        final List<GridQueryMemoryTracker> trackers = new ArrayList<>();
+        final List<GridQueryMemoryMetricProvider> trackers = new ArrayList<>();
 
         GridTestUtils.setFieldValue(
             ignite.context().query().getIndexing(),
             "memoryMgr",
             new QueryMemoryManager(ignite.context()) {
-                @Override public GridQueryMemoryTracker createQueryMemoryTracker(long maxQryMemory) {
-                    GridQueryMemoryTracker tracker = super.createQueryMemoryTracker(maxQryMemory);
+                @Override public GridQueryMemoryMetricProvider createQueryMemoryTracker(long maxQryMemory) {
+                    GridQueryMemoryMetricProvider tracker = super.createQueryMemoryTracker(maxQryMemory);
 
                     trackers.add(tracker);
 
@@ -55,7 +55,7 @@ public class DiskSpillingMemoryTrackerTest extends DiskSpillingAbstractTest {
         assertFalse(trackers.isEmpty());
 
         // offloading should not happen
-        for (GridQueryMemoryTracker tr : trackers) {
+        for (GridQueryMemoryMetricProvider tr : trackers) {
             assertEquals(0, tr.maxWrittenOnDisk());
             assertEquals(0, tr.totalWrittenOnDisk());
         }
@@ -78,7 +78,7 @@ public class DiskSpillingMemoryTrackerTest extends DiskSpillingAbstractTest {
         // at least one query should be offloaded
         assertFalse(trackers.isEmpty());
 
-        for (GridQueryMemoryTracker tr : trackers)
+        for (GridQueryMemoryMetricProvider tr : trackers)
             assertTrue(tr.maxWrittenOnDisk() <= tr.totalWrittenOnDisk());
     }
 }

@@ -28,7 +28,7 @@ import org.junit.Test;
 /**
  * Grid query memory tracker tests.
  */
-public class GridQueryMemoryTrackerSelfTest extends GridCommonAbstractTest {
+public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTest {
     /**
      * Ensure initial state is all zeros.
      */

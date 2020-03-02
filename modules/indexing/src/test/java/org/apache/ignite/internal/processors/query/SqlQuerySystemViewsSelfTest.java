@@ -179,8 +179,8 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
             ignite.context().query().getIndexing(),
             "memoryMgr",
             new QueryMemoryManager(ignite.context()) {
-                @Override public GridQueryMemoryTracker createQueryMemoryTracker(long maxQryMemory) {
-                    return new TestDummyMemoryTracker() {
+                @Override public GridQueryMemoryMetricProvider createQueryMemoryTracker(long maxQryMemory) {
+                    return new TestDummyMemoryMetricProvider() {
                         @Override public long maxReserved() {
                             return base * mul.get();
                         }
@@ -303,8 +303,8 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
             ignite.context().query().getIndexing(),
             "memoryMgr",
             new QueryMemoryManager(ignite.context()) {
-                @Override public GridQueryMemoryTracker createQueryMemoryTracker(long maxQryMemory) {
-                    return new TestDummyMemoryTracker() {
+                @Override public GridQueryMemoryMetricProvider createQueryMemoryTracker(long maxQryMemory) {
+                    return new TestDummyMemoryMetricProvider() {
                         @Override public long reserved() {
                             return reserved;
                         }
@@ -344,8 +344,8 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
             ignite.context().query().getIndexing(),
             "memoryMgr",
             new QueryMemoryManager(ignite.context()) {
-                @Override public GridQueryMemoryTracker createQueryMemoryTracker(long maxQryMemory) {
-                    return new TestDummyMemoryTracker() {
+                @Override public GridQueryMemoryMetricProvider createQueryMemoryTracker(long maxQryMemory) {
+                    return new TestDummyMemoryMetricProvider() {
                         @Override public long writtenOnDisk() {
                             return written;
                         }
@@ -485,7 +485,7 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
     /**
      * Dummy tracker that tracks nothing and returns zeros.
      */
-    private static class TestDummyMemoryTracker implements GridQueryMemoryTracker, H2MemoryTracker {
+    private static class TestDummyMemoryMetricProvider implements GridQueryMemoryMetricProvider, H2MemoryTracker {
         /** {@inheritDoc} */
         @Override public void close() {
             // NO-OP

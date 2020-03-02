@@ -29,7 +29,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOF
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
-import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.disk.ExternalResultData;
 import org.apache.ignite.internal.processors.query.h2.disk.GroupedExternalResult;
@@ -182,7 +182,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @param maxQryMemory Query memory limit in bytes.
      * @return Query memory tracker.
      */
-    public GridQueryMemoryTracker createQueryMemoryTracker(long maxQryMemory) {
+    public GridQueryMemoryMetricProvider createQueryMemoryTracker(long maxQryMemory) {
         long globalQuota0 = globalQuota;
 
         if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {

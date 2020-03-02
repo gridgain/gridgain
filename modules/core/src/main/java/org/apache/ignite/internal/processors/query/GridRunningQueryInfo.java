@@ -48,7 +48,7 @@ public class GridRunningQueryInfo {
     private final boolean loc;
 
     /** */
-    private final GridQueryMemoryTracker memTracker;
+    private final GridQueryMemoryMetricProvider memTracker;
 
     /** */
     private final QueryRunningFuture fut = new QueryRunningFuture();
@@ -74,7 +74,7 @@ public class GridRunningQueryInfo {
         long startTime,
         GridQueryCancel cancel,
         boolean loc,
-        GridQueryMemoryTracker memTracker
+        GridQueryMemoryMetricProvider memTracker
     ) {
         this.id = id;
         this.nodeId = nodeId;
@@ -130,7 +130,7 @@ public class GridRunningQueryInfo {
     }
 
     /** */
-    public GridQueryMemoryTracker memoryTracker() {
+    public GridQueryMemoryMetricProvider memoryTracker() {
         return memTracker;
     }
 

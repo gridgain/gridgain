@@ -102,7 +102,7 @@ import org.apache.ignite.internal.processors.query.GridQueryFieldMetadata;
 import org.apache.ignite.internal.processors.query.GridQueryFieldsResult;
 import org.apache.ignite.internal.processors.query.GridQueryFieldsResultAdapter;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
-import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.GridQueryProperty;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
@@ -2668,7 +2668,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (info == null)
             return null;
 
-        final GridQueryMemoryTracker memTracker = info.memoryTracker();
+        final GridQueryMemoryMetricProvider memTracker = info.memoryTracker();
 
         assert memTracker == null || memTracker instanceof H2MemoryTracker : "Memory tracker either should be null" +
             " or should be instance of " + H2MemoryTracker.class.getName() + ", but it is " + memTracker.getClass().getName();

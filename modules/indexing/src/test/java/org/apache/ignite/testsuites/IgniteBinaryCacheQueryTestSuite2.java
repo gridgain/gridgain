@@ -92,7 +92,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingPersistenceTe
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueriesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueryParallelismTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingWithBaselineTest;
-import org.apache.ignite.internal.processors.query.oom.GridQueryMemoryTrackerSelfTest;
+import org.apache.ignite.internal.processors.query.oom.GridQueryMemoryMetricProviderSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryQuotaDynamicConfigurationTest;
@@ -222,7 +222,7 @@ import org.junit.runners.Suite;
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,
 
-    GridQueryMemoryTrackerSelfTest.class,
+    GridQueryMemoryMetricProviderSelfTest.class,
 
     SqlPartOfComplexPkLookupTest.class,
 

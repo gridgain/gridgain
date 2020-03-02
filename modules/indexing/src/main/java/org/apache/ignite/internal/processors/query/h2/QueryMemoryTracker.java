@@ -19,7 +19,7 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
-import org.apache.ignite.internal.processors.query.GridQueryMemoryTracker;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -29,7 +29,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  *
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
-public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryTracker {
+public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetricProvider {
     /** Parent tracker. */
     @GridToStringExclude
     private final H2MemoryTracker parent;

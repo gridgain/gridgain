@@ -33,6 +33,7 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.cache.query.GridCacheQueryType.SQL;
@@ -45,12 +46,12 @@ public class RunningQueryManager {
     /** Name of the MetricRegistry which metrics measure stats of queries initiated by user. */
     public static final String SQL_USER_QUERIES_REG_NAME = "sql.queries.user";
 
-    /** Dummy memory tracker that returns only -1's. */
-    // This tracker used to highlight that query has no tracker at all.
+    /** Dummy memory metric provider that returns only -1's. */
+    // This provider used to highlight that query has no tracker at all.
     // It could be intentionally in case of streaming or text queries
     // and occasionally in case of uncounted circumstances
     // that requires followed investigation
-    private static final GridQueryMemoryTracker DUMMY_TRACKER = new GridQueryMemoryTracker() {
+    private static final GridQueryMemoryMetricProvider DUMMY_TRACKER = new GridQueryMemoryMetricProvider() {
         @Override public long reserved() {
             return -1;
         }
@@ -69,10 +70,6 @@ public class RunningQueryManager {
 
         @Override public long totalWrittenOnDisk() {
             return -1;
-        }
-
-        @Override public void close() {
-            // NO-OP
         }
     };
 
@@ -149,7 +146,7 @@ public class RunningQueryManager {
      * @return Id of registered query.
      */
     public Long register(String qry, GridCacheQueryType qryType, String schemaName, boolean loc,
-        @Nullable GridQueryMemoryTracker memTracker, @Nullable GridQueryCancel cancel) {
+        @Nullable GridQueryMemoryMetricProvider memTracker, @Nullable GridQueryCancel cancel) {
         Long qryId = qryIdGen.incrementAndGet();
 
         GridRunningQueryInfo run = new GridRunningQueryInfo(
@@ -194,12 +191,13 @@ public class RunningQueryManager {
         if (qry == null)
             return;
 
-        if (qry.memoryTracker() != null)
-            qry.memoryTracker().close();
+        if (qry.memoryTracker() instanceof AutoCloseable)
+            U.closeQuiet((AutoCloseable)qry.memoryTracker());
 
         if (log.isDebugEnabled()) {
             log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
-                "[id=" + qryId + ", tracker=" + qry.memoryTracker() + ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
+                "[id=" + qryId + ", tracker=" + qry.memoryTracker() +
+                ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
         }
 
         //We need to collect query history and metrics only for SQL queries.
