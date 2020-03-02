@@ -16,65 +16,52 @@
 
 package org.apache.ignite.internal.processors.query;
 
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.ignite.cache.query.QueryCancelledException;
 
 /**
  * Holds query cancel state.
  */
 public class GridQueryCancel {
-    /** No-op runnable indicating cancelled state. */
-    private static final QueryCancellable CANCELLED = () -> {
-        // No-op.
-    };
+    /** */
+    private final List<QueryCancellable> cancelActions = new ArrayList<>(3);
 
     /** */
-    private static final AtomicReferenceFieldUpdater<GridQueryCancel, QueryCancellable> STATE_UPDATER =
-        AtomicReferenceFieldUpdater.newUpdater(GridQueryCancel.class, QueryCancellable.class, "clo");
-
-    /** */
-    private volatile QueryCancellable clo;
+    private boolean canceled;
 
     /**
-     * Sets a cancel closure.
+     * Adds a cancel action.
      *
      * @param clo Clo.
      */
-    public void set(QueryCancellable clo) throws QueryCancelledException {
+    public synchronized void add(QueryCancellable clo) throws QueryCancelledException {
         assert clo != null;
 
-        while(true) {
-            QueryCancellable tmp = this.clo;
+        if (canceled)
+            throw new QueryCancelledException();
 
-            if (tmp == CANCELLED)
-                throw new QueryCancelledException();
-
-            if (STATE_UPDATER.compareAndSet(this, tmp, clo))
-                return;
-        }
+        cancelActions.add(clo);
     }
 
     /**
      * Executes cancel closure.
      */
-    public void cancel() {
-        while(true) {
-            QueryCancellable tmp = clo;
+    public synchronized void cancel() {
+        if (canceled)
+            return;
 
-            if (STATE_UPDATER.compareAndSet(this, tmp, CANCELLED)) {
-                if (tmp != null)
-                    tmp.doCancel();
+        canceled = true;
 
-                return;
-            }
-        }
+        for (QueryCancellable action : cancelActions)
+            action.doCancel();
     }
 
     /**
      * Stops query execution if a user requested cancel.
      */
-    public void checkCancelled() throws QueryCancelledException {
-        if (clo == CANCELLED)
+    public synchronized void checkCancelled() throws QueryCancelledException {
+        if (canceled)
             throw new QueryCancelledException();
     }
 }

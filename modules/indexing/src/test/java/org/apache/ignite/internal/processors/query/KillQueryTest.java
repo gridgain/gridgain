@@ -25,6 +25,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -77,7 +78,6 @@ import org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2QueryReq
 import org.apache.ignite.internal.processors.query.schema.message.SchemaProposeDiscoveryMessage;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpiCustomMessage;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.ipfinder.TcpDiscoveryIpFinder;
@@ -633,47 +633,51 @@ public class KillQueryTest extends GridCommonAbstractTest {
     }
 
     /**
+     *
      */
     @Test
-    public void testDbg() throws Exception {
-        IgniteInternalFuture cancelRes = cancel(1, asyncCancel);
+    public void testCancelBeforeIteratorObtained() throws Exception {
+        FieldsQueryCursor<List<?>>  cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer"), false);
 
-        GridTestUtils.runAsync(() -> {
-            try {
-                stmt.setFetchSize(1);
-
-                ResultSet rs = stmt.executeQuery("select * from Integer");
-
-                while(true) {
-                    U.sleep(1000);
-
-                    System.out.println("+++ next");
-
-                    rs.next();
-                }
-            }
-            catch (Exception e) {
-                log.error("Exception", e);
-            }
-
-            }
-        );
-
-        U.sleep(2000);
-
-        System.out.println("+++ " + ignite.context().query().runningQueries(-1));
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
 
         ignite.context().query()
-            .querySqlFields(createKillQuery(ignite.context().localNodeId(), 1, false), false).getAll();
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
 
-        while (true) {
-            System.out.println("+++ " + ignite.context().query().runningQueries(-1));
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterIteratorObtained() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false).setPageSize(10), false);
 
-            U.sleep(2000);
+        cur.iterator();
 
-            ignite.context().query()
-                .querySqlFields(createKillQuery(ignite.context().localNodeId(), 1, false), false).getAll();
-        }
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        ignite.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterResultSetPartiallyRead() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false).setPageSize(10), false);
+
+        Iterator<List<?>> it = cur.iterator();
+
+        it.next();
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        ignite.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
     }
 
     /**
