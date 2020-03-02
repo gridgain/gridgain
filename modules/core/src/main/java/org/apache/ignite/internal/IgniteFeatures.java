@@ -228,10 +228,6 @@ public enum IgniteFeatures {
             if (INDEXING == value && !ctx.query().moduleEnabled())
                 continue;
 
-            // Add only when scheduling is disabled.
-            if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
-                continue;
-
             // Add only when tracing is enabled.
             if (TRACING == value && !IgniteComponentType.TRACING.inClassPath())
                 continue;
