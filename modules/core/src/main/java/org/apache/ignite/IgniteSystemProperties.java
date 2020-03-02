@@ -988,6 +988,15 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DISABLE_WAL_DURING_REBALANCING = "IGNITE_DISABLE_WAL_DURING_REBALANCING";
 
     /**
+     * When property is set {@code true} each next exchange will try to compare with previous.
+     * If last rebalance equivalent with new possible one, new rebalance does not trigger.
+     * Set the property {@code false} and each exchange will try to trigger new rebalance.
+     *
+     * Default is {@code false}.
+     */
+    public static final String IGNITE_REBALANCE_SCHEDULING_OPTIMIZATION = "IGNITE_REBALANCE_SCHEDULING_OPTIMIZATION";
+
+    /**
      * Sets timeout for TCP client recovery descriptor reservation.
      */
     public static final String IGNITE_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT =

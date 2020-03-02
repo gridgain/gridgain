@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -1647,6 +1648,9 @@ public class GridDhtPartitionDemander {
          * @return {@code True} when future compared with other, {@code False} otherwise.
          */
         public boolean compatibleWith(GridDhtPreloaderAssignments otherAssignments) {
+            if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_REBALANCE_SCHEDULING_OPTIMIZATION, false))
+                return false;
+
             if (isInitial() || !allNodesSupports(ctx.kernalContext(), otherAssignments.keySet(), TX_TRACKING_UPDATE_COUNTER))
                 return false;
 
