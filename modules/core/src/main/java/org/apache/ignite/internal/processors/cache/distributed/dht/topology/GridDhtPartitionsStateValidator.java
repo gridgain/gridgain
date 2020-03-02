@@ -36,6 +36,7 @@ import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.jetbrains.annotations.Nullable;
+
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
 /**
@@ -81,9 +82,7 @@ public class GridDhtPartitionsStateValidator {
                 ignoringNodes.add(evt.eventNode().id());
         }
 
-        AffinityTopologyVersion topVer = fut.context().events().topologyVersion();
-
-        Map<Integer, Map<UUID, Long>> resultUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
+        Map<Integer, Map<UUID, Long>> resUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
 
         // For sizes validation ignore also nodes which are not able to send cache sizes.
         for (UUID id : messages.keySet()) {
@@ -96,17 +95,18 @@ public class GridDhtPartitionsStateValidator {
 
         if (!cctx.cache().cacheGroup(top.groupId()).mvccEnabled()) { // TODO: Remove "if" clause in IGNITE-9451.
             // Validate cache sizes.
-            Map<Integer, Map<UUID, Long>> resultSize = validatePartitionsSizes(top, messages, ignoringNodes);
+            Map<Integer, Map<UUID, Long>> resSize = validatePartitionsSizes(top, messages, ignoringNodes);
 
-            if (!resultUpdCnt.isEmpty() && resultSize.isEmpty())
-                error.append("Partitions update counters are inconsistent for ").append(fold(topVer, resultUpdCnt));
+            AffinityTopologyVersion topVer = fut.context().events().topologyVersion();
 
-            else if (!resultUpdCnt.isEmpty() && !resultSize.isEmpty())
+            if (!resUpdCnt.isEmpty() && resSize.isEmpty())
+                error.append("Partitions update counters are inconsistent for ").append(fold(topVer, resUpdCnt));
+            else if (!resUpdCnt.isEmpty() && !resSize.isEmpty()) {
                 error.append("Partitions cache size and update counters are inconsistent for ")
-                    .append(fold(topVer, resultUpdCnt, resultSize));
-
-            else if (resultUpdCnt.isEmpty() && !resultSize.isEmpty())
-                error.append("Partitions cache sizes are inconsistent for ").append(fold(topVer, resultSize));
+                    .append(fold(topVer, resUpdCnt, resSize));
+            }
+            else if (resUpdCnt.isEmpty() && !resSize.isEmpty())
+                error.append("Partitions cache sizes are inconsistent for ").append(fold(topVer, resSize));
         }
 
         if (error.length() > 0)
@@ -341,9 +341,13 @@ public class GridDhtPartitionsStateValidator {
      * Folds given maps of invalid partition states to string (Both PartitionCounters and Size) representation
      * in the following format:
      * Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
+     * input parameters are maps of invalid partition update counters and sizes,
+     * return value is String in the following format:
+     * Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
      */
     private String fold(AffinityTopologyVersion topVer, Map<Integer, Map<UUID, Long>> invalidPartitionsCounters,
-        Map<Integer, Map<UUID, Long>> invalidPartitionsSize) { SB sb = new SB();
+        Map<Integer, Map<UUID, Long>> invalidPartitionsSize) {
+        SB sb = new SB();
 
         NavigableMap<Integer, Map<UUID, IgnitePair<Long>>> sortedAllPartitions = new TreeMap<>();
 

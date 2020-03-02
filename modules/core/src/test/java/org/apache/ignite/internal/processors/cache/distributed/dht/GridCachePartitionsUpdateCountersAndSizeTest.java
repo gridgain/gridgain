@@ -28,7 +28,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- *
+ *For testing that partitions state validation works correctly and show partition size
  */
 public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbstractTest {
     /** Cache name. */
@@ -51,10 +51,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
             .setAffinity(new RendezvousAffinityFunction(false, 32))
         );
 
-       // cfg.setCommunicationSpi(new SingleMessageInterceptorCommunicationSpi(2));
-
-        if (clientMode)
-            cfg.setClientMode(true);
+        cfg.setClientMode(clientMode);
 
         if (igniteInstanceName.endsWith("0"))
             cfg.setGridLogger(testLog);
@@ -70,8 +67,6 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
     /** {@inheritDoc */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
-
-        clientMode = false;
     }
 
     /**
@@ -80,9 +75,9 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
      * Start three-nodes grid,
      * arguments: cnt - partition counters are inconsistent(boolean)
      *           size - partition size are inconsistent(boolean)
+     * @throws Exception If failed.
      */
     private void startThreeNodesGrid(boolean cnt, boolean size) throws Exception {
-
         LogListener lsnrCnt = SizeCounterLogListener.matches(Pattern.compile
             ("Partitions update counters are inconsistent for")).build();
 
@@ -106,14 +101,16 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
         for (int i = 0; i < 1000; i++)
             ignite.cache(CACHE_NAME).put(i, i);
 
-        if (cnt)
+        if (cnt) {
             // Modify update counter for some partition.
             ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).updateCounter(100500L);
+        }
 
-        if (size)
+        if (size) {
             // Modify update size for some partition.
             ignite.cachex(CACHE_NAME).context().topology().localPartitions().get(0).dataStore()
                 .clear(ignite.cachex(CACHE_NAME).context().cacheId());
+        }
 
         // Trigger exchange.
         startGrid(3);
@@ -178,7 +175,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
     }
 
     /**
-     *  Overraided class LogListener.
+     *  Overraided class LogListener for find specific patterns.
      * @throws Exception If failed.
      */
     private static class SizeCounterLogListener extends LogListener {
