@@ -98,6 +98,8 @@ public class DistributedBaselineConfiguration {
 
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
         dfltEnabled = false;
+        boolean clientMode = !ctx.config().isClientMode();
+
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
@@ -109,7 +111,7 @@ public class DistributedBaselineConfiguration {
 
                 @Override public void onReadyToWrite() {
                     if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) &&
-                        IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT)) {
+                        IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT) && clientMode) {
                         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
                         dfltEnabled = isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && !persistenceEnabled;
                         setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
@@ -139,7 +141,7 @@ public class DistributedBaselineConfiguration {
     private <T extends Serializable> void setDefaultValue(DistributedProperty<T> property, T value, IgniteLogger log) {
         if (property.get() == null) {
             try {
-                property.propagateAsync(value)
+                property.propagateAsync(null, value)
                     .listen((IgniteInClosure<IgniteInternalFuture<?>>)future -> {
                         if (future.error() != null)
                             log.error("Cannot set default value of '" + property.getName() + '\'', future.error());
