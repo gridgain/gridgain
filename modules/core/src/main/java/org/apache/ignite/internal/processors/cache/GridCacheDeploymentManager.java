@@ -691,7 +691,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
             }
 
             if (dep != null) {
-                checkDeployment(dep, deployable);
+                checkDeploymentIsCorrect(dep, deployable);
 
                 deployable.prepare(dep);
             }
@@ -701,13 +701,14 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
         }
     }
 
-    private void checkDeployment(GridDeploymentInfoBean deployment, GridCacheDeployable deployable) throws IgnitePeerToPeerClassLoadingException {
+    private void checkDeploymentIsCorrect(GridDeploymentInfoBean deployment, GridCacheDeployable deployable)
+        throws IgnitePeerToPeerClassLoadingException {
         if (deployment.participants() == null
             && !cctx.localNode().id().equals(deployment.classLoaderId().globalId())) {
             throw new IgnitePeerToPeerClassLoadingException("Could not use deployment to prepare deployable, " +
                 "because local node id does not correspond with class loader id, and there are no more participants, " +
-                "localNodeId=" + cctx.localNode().id() + ", classLoaderId=" + deployment.classLoaderId() +
-                ", participants=null, deployment=" + deployment + ", deployable=" + deployable);
+                "localNodeId=" + cctx.localNode().id() + ", deployment=" + deployment + ", deployable=" + deployable +
+                ", locDep=" + locDep.get());
         }
     }
 
