@@ -559,8 +559,6 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             else {
                                 int stateId = io.getPartitionState(pageAddr);
 
-                                changed = (stateId == EVICTED.ordinal());
-
                                 updateState(part, stateId);
 
                                 if (log.isDebugEnabled())
