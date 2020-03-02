@@ -26,7 +26,7 @@ import org.apache.ignite.testframework.GridTestNode;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
-import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
