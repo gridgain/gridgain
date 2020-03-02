@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsCacheEntriesExpirationTest;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes;
 import org.apache.ignite.internal.processors.cache.persistence.IgnitePdsTaskCancelingTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.IgnitePdsPartitionPreloadTest;
@@ -49,9 +50,10 @@ public class IgnitePdsMvccTestSuite4 {
         // Skip classes that already contains Mvcc tests
         ignoredTests.add(IgnitePdsPartitionPreloadTest.class);
 
-        // Skip irrelevant test
+        // Skip tests irrelevant or incompatible with MVCC feature
         ignoredTests.add(FileDownloaderTest.class);
         ignoredTests.add(IgnitePdsTaskCancelingTest.class);
+        ignoredTests.add(IgnitePdsCacheEntriesExpirationTest.class);
 
         // TODO https://issues.apache.org/jira/browse/IGNITE-11937
         ignoredTests.add(IgnitePdsContinuousRestartTestWithSharedGroupAndIndexes.class);
