@@ -32,7 +32,7 @@
         <property name="localHost" value="127.0.0.1"/>
 
         <!-- Set query quota to 512b. -->
-        <property name="sqlQueryMemoryQuota" value="512"/>
+        <property name="sqlQueryMemoryQuota" value="1024"/>
 
         <property name="discoverySpi">
             <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
