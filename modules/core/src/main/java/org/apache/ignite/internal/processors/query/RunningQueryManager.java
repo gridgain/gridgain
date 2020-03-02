@@ -199,7 +199,7 @@ public class RunningQueryManager {
 
         if (log.isDebugEnabled()) {
             log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
-                "[id=" + qryId + ", tracker=" + qry.memoryTracker() + ", failReason=" + failReason.getMessage() + ']');
+                "[id=" + qryId + ", tracker=" + qry.memoryTracker() + ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
         }
 
         //We need to collect query history and metrics only for SQL queries.
