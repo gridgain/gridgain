@@ -1171,7 +1171,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
         try {
             assert node2part != null && node2part.valid() : "Invalid node-to-partitions map [topVer1=" + topVer +
-                ", topVer2=" + this.readyTopVer +
+                ", topVer2=" + readyTopVer +
                 ", node=" + ctx.igniteInstanceName() +
                 ", grp=" + grp.cacheOrGroupName() +
                 ", node2part=" + node2part + ']';
@@ -1226,6 +1226,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 for (UUID nodeId : diffIds) {
                     if (affIds.contains(nodeId)) {
+                        // TODO do we need this ?
                         U.warn(log, "Node from diff is affinity node, skipping it [grp=" + grp.cacheOrGroupName() +
                             ", node=" + nodeId + ']');
 
@@ -1756,7 +1757,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 try {
                     GridDhtPartitionState state = part.state();
 
-                    if (!reserve || state == EVICTED || state == RENTING)
+                    if (!reserve || state == EVICTED || state == RENTING || state == LOST)
                         continue;
 
                     long updCntr = cntrMap.updateCounter(part.id());
@@ -2166,10 +2167,17 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             if (locPart.state() == LOST)
                                 continue;
 
+                            final GridDhtPartitionState prevState = locPart.state();
+
                             boolean marked = plc == PartitionLossPolicy.IGNORE ? locPart.own() : locPart.markLost();
 
-                            if (marked)
+                            if (marked) {
                                 updateLocal(locPart.id(), locPart.state(), updSeq, resTopVer);
+
+                                // If a partition was lost during rebalancing reset it's counter to force demander mode.
+                                if (prevState == MOVING)
+                                    locPart.resetUpdateCounter();
+                            }
 
                             changed |= marked;
                         }
@@ -2303,7 +2311,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {
                     int part = entry.getKey();
-                    Set<UUID> maxCounterPartOwners = entry.getValue();
+                    Set<UUID> maxCntrPartOwners = entry.getValue();
 
                     GridDhtLocalPartition locPart = localPartition(part);
 
@@ -2311,7 +2319,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         continue;
 
                     // Partition state should be mutated only on joining nodes if they are exists for the exchange.
-                    if (joinedNodes.isEmpty() && !maxCounterPartOwners.contains(locNodeId)) {
+                    if (joinedNodes.isEmpty() && !maxCntrPartOwners.contains(locNodeId)) {
                         rebalancePartition(part, !haveHist.contains(part), exchFut);
 
                         res.computeIfAbsent(locNodeId, n -> new HashSet<>()).add(part);
@@ -2321,7 +2329,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 // Then process node maps.
                 for (Map.Entry<Integer, Set<UUID>> entry : ownersByUpdCounters.entrySet()) {
                     int part = entry.getKey();
-                    Set<UUID> maxCounterPartOwners = entry.getValue();
+                    Set<UUID> maxCntrPartOwners = entry.getValue();
 
                     for (Map.Entry<UUID, GridDhtPartitionMap> remotes : node2part.entrySet()) {
                         UUID remoteNodeId = remotes.getKey();
@@ -2336,7 +2344,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         if (state != OWNING)
                             continue;
 
-                        if (!maxCounterPartOwners.contains(remoteNodeId)) {
+                        if (!maxCntrPartOwners.contains(remoteNodeId)) {
                             partMap.put(part, MOVING);
 
                             partMap.updateSequence(partMap.updateSequence() + 1, partMap.topologyVersion());

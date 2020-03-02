@@ -150,7 +150,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         spi1.waitForBlocked(1);
 
-        // Cancellation of rebalancing because a supplier has left.
+        // Will cause a cancellation of rebalancing because a supplier has left.
         stopGrid(0);
 
         awaitPartitionMapExchange();
