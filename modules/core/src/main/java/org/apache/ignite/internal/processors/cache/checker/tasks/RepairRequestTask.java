@@ -38,7 +38,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionKeyVersion;
+import org.apache.ignite.internal.processors.cache.checker.objects.VersionedKey;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairRequest;
 import org.apache.ignite.internal.processors.cache.checker.objects.RepairResult;
 import org.apache.ignite.internal.processors.cache.checker.objects.VersionedValue;
@@ -118,12 +118,10 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
             Map<KeyCacheObject, Map<UUID, VersionedValue>> data = targetNodesToData.remove(node.id());
 
             if (data != null && !data.isEmpty()) {
-                // TODO: 03.12.19 PartitionKeyVersion is used in order to prevent finishUnmarshal problem, cause actually we only need keyCacheObject,
-                // TODO: 03.12.19 consider using better wrapper here.
                 jobs.put(
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
-                            entry -> new PartitionKeyVersion(null, entry.getKey(), null),
+                            entry -> new VersionedKey(null, entry.getKey(), null),
                             Map.Entry::getValue)),
                         arg.cacheName(),
                         repairReq.repairAlg(),
@@ -135,16 +133,12 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         }
 
         if (!targetNodesToData.isEmpty()) {
-            // TODO: 03.12.19 Print warning that sort of affinity awareness is not possible, so that for all other data random node will be used.
             for (Map<KeyCacheObject, Map<UUID, VersionedValue>> data : targetNodesToData.values()) {
-                // TODO: 03.12.19 Use random node instead.
                 ClusterNode node = subgrid.iterator().next();
-                // TODO: 03.12.19 PartitionKeyVersion is used in order to prevent finishUnmarshal problem, cause actually we only need keyCacheObject,
-                // TODO: 03.12.19consider using better wrapper here.
                 jobs.put(
                     new RepairJob(data.entrySet().stream().collect(
                         Collectors.toMap(
-                            entry -> new PartitionKeyVersion(null, entry.getKey(), null),
+                            entry -> new VersionedKey(null, entry.getKey(), null),
                             Map.Entry::getValue)),
                         arg.cacheName(),
                         repairReq.repairAlg(),
@@ -184,10 +178,10 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
 
             ExecutionResult<RepairResult> excRes = result.getData();
 
-            if (excRes.getErrorMessage() != null)
-                return new ExecutionResult<>(excRes.getErrorMessage());
+            if (excRes.errorMessage() != null)
+                return new ExecutionResult<>(excRes.errorMessage());
 
-            RepairResult repairRes = excRes.getResult();
+            RepairResult repairRes = excRes.result();
 
             aggregatedRepairRes.keysToRepair().putAll(repairRes.keysToRepair());
             aggregatedRepairRes.repairedKeys().putAll(repairRes.repairedKeys());
@@ -216,7 +210,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         private IgniteLogger log;
 
         /** Partition key. */
-        private final Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data;
+        private final Map<VersionedKey, Map<UUID, VersionedValue>> data;
 
         /** Cache name. */
         private String cacheName;
@@ -244,7 +238,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
          * @param partId Partition Id.
          */
         @SuppressWarnings("AssignmentOrReturnOfFieldWithMutableType")
-        public RepairJob(Map<PartitionKeyVersion, Map<UUID, VersionedValue>> data, String cacheName,
+        public RepairJob(Map<VersionedKey, Map<UUID, VersionedValue>> data, String cacheName,
             RepairAlgorithm repairAlg, int repairAttempt, AffinityTopologyVersion startTopVer, int partId) {
             this.data = data;
             this.cacheName = cacheName;
@@ -255,10 +249,11 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
         }
 
         /** {@inheritDoc} */
-        @SuppressWarnings("unchecked") @Override public ExecutionResult<RepairResult> execute() throws IgniteException {
-            Map<PartitionKeyVersion, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
+        @SuppressWarnings("unchecked")
+        @Override public ExecutionResult<RepairResult> execute() throws IgniteException {
+            Map<VersionedKey, Map<UUID, VersionedValue>> keysToRepairWithNextAttempt = new HashMap<>();
 
-            Map<PartitionKeyVersion, RepairMeta> repairedKeys =
+            Map<VersionedKey, RepairMeta> repairedKeys =
                 new HashMap<>();
 
             GridCacheContext ctx = ignite.cachex(cacheName).context();
@@ -268,9 +263,9 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
             final int rmvQueueMaxSize = 32;
             final int ownersNodesSize = owners(ctx);
 
-            for (Map.Entry<PartitionKeyVersion, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
+            for (Map.Entry<VersionedKey, Map<UUID, VersionedValue>> dataEntry : data.entrySet()) {
                 try {
-                    Object key = keyValue(ctx, dataEntry.getKey().getKey());
+                    Object key = keyValue(ctx, dataEntry.getKey().key());
                     Map<UUID, VersionedValue> nodeToVersionedValues = dataEntry.getValue();
 
                     UUID primaryUUID = primaryNodeId(ctx, key);
@@ -357,7 +352,7 @@ public class RepairRequestTask extends ComputeTaskAdapter<RepairRequest, Executi
                     }
                 }
                 catch (IgniteCheckedException e) {
-                    U.error(log, "Key [" + dataEntry.getKey().getKey() + "] was skipped during repair phase.",
+                    U.error(log, "Key [" + dataEntry.getKey().key() + "] was skipped during repair phase.",
                         e);
                 }
             }

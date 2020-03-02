@@ -425,7 +425,7 @@ public class HashJoinIndex extends BaseIndex {
         hashTbl = new HashMap<>();
 
         // Don't use ignorecase on build.
-        H2MemoryTracker memTracker = ses.queryMemoryTracker();
+        H2MemoryTracker memTracker = ses.memoryTracker();
 
         while (cur.next()) {
             Row r = cur.get();
@@ -509,9 +509,9 @@ public class HashJoinIndex extends BaseIndex {
         hashTbl = null;
 
         if (memoryReserved > 0) {
-            assert session.queryMemoryTracker() != null;
+            assert session.memoryTracker() != null;
 
-            session.queryMemoryTracker().released(memoryReserved);
+            session.memoryTracker().released(memoryReserved);
 
             memoryReserved = 0;
         }

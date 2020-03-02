@@ -813,6 +813,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
         authCtx.subjectId(req.clientId());
         authCtx.nodeAttributes(Collections.<String, Object>emptyMap());
         authCtx.address(req.address());
+        authCtx.certificates(req.certificates());
 
         SecurityCredentials creds = credentials(req);
 

@@ -1018,6 +1018,10 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * Compare two plans are prepare plan by H2:
+     * - the first for original SQL query,
+     * - the second for SQL string is created by the AST that is parsed result of the GridSqlQueryParser.
+     *
      * @param qry Query.
      */
     private void checkQuery(String qry) throws Exception {
@@ -1025,11 +1029,10 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
 
         GridSqlStatement gQry = new GridSqlQueryParser(false, log).parse(prepared);
 
-        String res = gQry.getSQL();
+        Prepared preparedTwice = parse(gQry.getSQL());
 
-        System.out.println(normalizeSql(res));
-
-        assertSqlEquals(U.firstNotNull(prepared.getPlanSQL(true), prepared.getSQL()), res);
+        assertSqlEquals(U.firstNotNull(prepared.getPlanSQL(true), prepared.getSQL()),
+            U.firstNotNull(preparedTwice.getPlanSQL(true), preparedTwice.getSQL()));
     }
 
     @QuerySqlFunction
