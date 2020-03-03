@@ -19,13 +19,12 @@ package org.apache.ignite.internal.processors.cache.transactions;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.testframework.ThrowUp;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
@@ -34,6 +33,7 @@ import org.junit.Test;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxManager.NODE_LEFT_ROLLBACK_MSG;
+import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
@@ -87,6 +87,8 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         partPrimaryNode = startGrid(PART_PRIMARY_NODE_ID);
         nearNode = startGrid(NEAR_NODE_ID);
 
@@ -104,8 +106,6 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
 
             grid(PART_PRIMARY_NODE_ID).close();
         });
-
-        super.beforeTest();
     }
 
     /** {@inheritDoc} */
@@ -135,15 +135,13 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
 
             long t2 = System.currentTimeMillis();
 
-            assertTrue(t2 - t1 < 1000); // Interrupted immediately!
+            assertTrue(t2 - t1 < TX_TIMEOUT / 100); // Interrupted immediately!
 
-            try {
+            assertThrows(log, () -> {
                 tx.commit();
 
                 fail("Transaction should rolled back.");
-            }
-            catch (TransactionRollbackException ignore) {
-            }
+            }, TransactionRollbackException.class, null);
         }
 
         primaryNodeStoppedFut.get();
@@ -172,7 +170,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
     /**
      *
      */
-    private void doTestOperationAfterRollback(ThrowUp<Exception> operation) throws Exception {
+    private void doTestOperationAfterRollback(GridTestUtils.RunnableX operation) throws Exception {
         final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
 
         nearNode.cache(DEFAULT_CACHE_NAME).put(nearKey, 10);
@@ -184,20 +182,15 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
 
             stopPartPrimaryNode.countDown();
 
-            try {
-                operation.run();
-            }
-            catch (Exception e) {
-                assertEquals(String.format(NODE_LEFT_ROLLBACK_MSG, partPrimaryNodeId, partPrimaryNodeConsistentId), e.getMessage());
-            }
+            Thread.sleep(500);
 
-            try {
+            assertThrows(log, operation, TransactionRollbackException.class, String.format(NODE_LEFT_ROLLBACK_MSG, partPrimaryNodeId, partPrimaryNodeConsistentId));
+
+            assertThrows(log, () -> {
                 tx.commit();
 
                 fail("Transaction should rolled back.");
-            }
-            catch (ClusterTopologyException ignore) {
-            }
+            }, TransactionRollbackException.class, null);
         }
 
         primaryNodeStoppedFut.get();
