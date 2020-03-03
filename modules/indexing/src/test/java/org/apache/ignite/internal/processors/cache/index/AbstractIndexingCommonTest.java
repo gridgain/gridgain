@@ -56,5 +56,4 @@ public class AbstractIndexingCommonTest extends GridCommonAbstractTest {
             fail("There are not closed connections. See the log above.");
         }
     }
-
 }
