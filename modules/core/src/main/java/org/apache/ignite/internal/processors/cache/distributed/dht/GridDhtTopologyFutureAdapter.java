@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
@@ -37,7 +36,7 @@ import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.OperationType.WRITE;
-import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.DEFAULT_VOLATILE_DS_GROUP_NAME;
+import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
  *
@@ -100,8 +99,9 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
 
-        if (cctx.shared().readOnlyMode() && opType == WRITE && !isSystemCache(cctx.name())
-            && cctx.group().groupId() != CU.cacheId(DEFAULT_VOLATILE_DS_GROUP_NAME)) {
+        if (cctx.shared().readOnlyMode() && opType == WRITE && !isSystemCache(cctx.name()) &&
+            (cctx.group().dataRegion() == null ||
+            !VOLATILE_DATA_REGION_NAME.equals(cctx.group().dataRegion().config().getName()))) {
             return new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in " +
                 "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
         }

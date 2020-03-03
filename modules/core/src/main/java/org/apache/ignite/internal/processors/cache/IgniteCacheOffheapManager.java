@@ -1065,6 +1065,11 @@ public interface IgniteCacheOffheapManager {
         public void resetUpdateCounter();
 
         /**
+         * Reset the initial value of the partition counter.
+         */
+        void resetInitialUpdateCounter();
+
+        /**
          * Partition storage.
          */
         public PartitionMetaStorage<SimpleDataRow> partStorage();
