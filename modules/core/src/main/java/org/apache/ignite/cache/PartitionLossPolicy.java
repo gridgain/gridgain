@@ -22,8 +22,11 @@ import org.apache.ignite.IgniteCache;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Partition loss policy. Defines how cache will behave in a case when one or more partitions are lost
+ * Partition loss policy. Defines how a cache will behave in a case when one or more partitions are lost
  * because of a node(s) failure.
+ * <p>
+ * A partition is considered <em>lost</em> if all owning nodes had left a topology
+ * and returned later (or maybe only subset of owners).
  * <p>
  * All <code>*_SAFE</code> policies prevent a user from interaction with partial data in lost partitions until
  * {@link Ignite#resetLostPartitions(Collection)} method is called. <code>*_ALL</code> policies allow working with

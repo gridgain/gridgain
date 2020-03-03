@@ -50,10 +50,14 @@ import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
  * one owner left. <p> Expected result: no assertions are triggered.
  */
 public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTest {
+    /** */
     public static final int WAIT = 2_000;
 
     /** */
     private static final int PARTS_CNT = 32;
+
+    /** */
+    private PartitionLossPolicy plc;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {

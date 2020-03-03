@@ -2169,20 +2169,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             final GridDhtPartitionState prevState = locPart.state();
 
-                            boolean marked = plc == PartitionLossPolicy.IGNORE ? locPart.own() : locPart.markLost();
-
-                            if (marked) {
+                            if (locPart.markLost()) {
                                 updateLocal(locPart.id(), locPart.state(), updSeq, resTopVer);
 
                                 // If a partition was lost during rebalancing reset it's counter to force demander mode.
                                 if (prevState == MOVING)
                                     locPart.resetUpdateCounter();
-                            }
 
-                            changed |= marked;
+                                changed = true;
+                            }
                         }
                         // Update map for remote node.
-                        else if (plc != PartitionLossPolicy.IGNORE) {
+                        else {
                             for (Map.Entry<UUID, GridDhtPartitionMap> e : node2part.entrySet()) {
                                 if (e.getKey().equals(ctx.localNodeId()))
                                     continue;
@@ -2205,7 +2203,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         + ", plc=" + plc + ", topVer=" + resTopVer + "]");
                 }
 
-                if (lostParts != null && plc != PartitionLossPolicy.IGNORE)
+                if (lostParts != null)
                     grp.needsRecovery(true);
 
                 return changed;

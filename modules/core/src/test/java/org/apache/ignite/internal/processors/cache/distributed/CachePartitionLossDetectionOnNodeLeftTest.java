@@ -18,26 +18,30 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.PartitionLossPolicy;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
-import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
 
 /**
  * Tests if lost partitions are same on left nodes after other owners removal.
  */
 public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstractTest {
+    /** */
+    private PartitionLossPolicy lossPlc;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -47,7 +51,8 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
             setAtomicityMode(TRANSACTIONAL).
             setCacheMode(PARTITIONED).
-            setPartitionLossPolicy(IGNORE). // If default will ever change...
+            setPartitionLossPolicy(lossPlc).
+            setAffinity(new RendezvousAffinityFunction(false, 32)).
             setBackups(0));
 
         cfg.setIncludeEventTypes(EventType.EVTS_ALL);
@@ -55,59 +60,100 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         return cfg;
     }
 
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
+
     /**
-     *
+     * Test correct partition loss detection for merged exchanges.
      */
     @Test
-    public void testPartitionLossDetectionOnNodeLeft() throws Exception {
-        try {
-            final Ignite srv0 = startGrids(5);
+    public void testPartitionLossDetectionOnNodeLeft_Safe_Merge() throws Exception {
+        doTestPartitionLossDetectionOnNodeLeft(PartitionLossPolicy.READ_WRITE_SAFE, true);
+    }
 
-            List<Integer> lost0 = Collections.synchronizedList(new ArrayList<>());
-            List<Integer> lost1 = Collections.synchronizedList(new ArrayList<>());
+    /**
+     * Test correct partition loss detection for merged exchanges.
+     *
+     * @param lossPlc Loss policy.
+     * @param merge {@code True} to merge exchanges.
+     */
+    private void doTestPartitionLossDetectionOnNodeLeft(PartitionLossPolicy lossPlc, boolean merge) throws Exception {
+        this.lossPlc = lossPlc;
 
-            grid(0).events().localListen(evt -> {
-                lost0.add(((CacheRebalancingEvent)evt).partition());
+        final Ignite srv0 = startGrids(5);
 
-                return true;
-            }, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
+        List<Integer> lostEvt0 = Collections.synchronizedList(new ArrayList<>());
+        List<Integer> lostEvt1 = Collections.synchronizedList(new ArrayList<>());
 
-            grid(1).events().localListen(evt -> {
-                lost1.add(((CacheRebalancingEvent)evt).partition());
+        grid(0).events().localListen(evt -> {
+            lostEvt0.add(((CacheRebalancingEvent)evt).partition());
 
-                return true;
-            }, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
+            return true;
+        }, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
 
-            awaitPartitionMapExchange();
+        grid(1).events().localListen(evt -> {
+            lostEvt1.add(((CacheRebalancingEvent)evt).partition());
 
-            mergeExchangeWaitVersion(srv0, 8, null);
+            return true;
+        }, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
 
-            int[] p2 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(2).localNode());
-            int[] p3 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(3).localNode());
-            int[] p4 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(4).localNode());
+        awaitPartitionMapExchange();
 
-            List<Integer> expLostParts = new ArrayList<>();
+        mergeExchangeWaitVersion(srv0, 8, null);
 
-            for (int i = 0; i < p2.length; i++)
-                expLostParts.add(p2[i]);
-            for (int i = 0; i < p3.length; i++)
-                expLostParts.add(p3[i]);
-            for (int i = 0; i < p4.length; i++)
-                expLostParts.add(p4[i]);
+        int[] p2 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(2).localNode());
+        int[] p3 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(3).localNode());
+        int[] p4 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(4).localNode());
 
-            Collections.sort(expLostParts);
+        List<Integer> expLostParts = new ArrayList<>();
 
-            stopGrid(getTestIgniteInstanceName(4), true, false);
-            stopGrid(getTestIgniteInstanceName(3), true, false);
-            stopGrid(getTestIgniteInstanceName(2), true, false);
+        for (int i = 0; i < p2.length; i++)
+            expLostParts.add(p2[i]);
+        for (int i = 0; i < p3.length; i++)
+            expLostParts.add(p3[i]);
+        for (int i = 0; i < p4.length; i++)
+            expLostParts.add(p4[i]);
 
+        Collections.sort(expLostParts);
+
+        stopGrid(getTestIgniteInstanceName(4), true, !merge);
+        stopGrid(getTestIgniteInstanceName(3), true, !merge);
+        stopGrid(getTestIgniteInstanceName(2), true, !merge);
+
+        if (merge)
             waitForReadyTopology(internalCache(1, DEFAULT_CACHE_NAME).context().topology(), new AffinityTopologyVersion(8, 0));
 
-            assertEquals("Node0", S.compact(expLostParts), S.compact(lost0));
-            assertEquals("Node1", S.compact(expLostParts), S.compact(lost1));
+        printPartitionState(DEFAULT_CACHE_NAME, 0);
+
+        if (lossPlc != PartitionLossPolicy.IGNORE) {
+            assertEquals(new HashSet<>(expLostParts), grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions());
+            assertEquals(new HashSet<>(expLostParts), grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions());
+
+            srv0.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
         }
-        finally {
-            stopAllGrids();
+        else {
+            assertTrue(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+            assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
         }
+
+        // Event must be fired only once for any mode.
+        assertEquals("Node0", expLostParts, lostEvt0);
+        assertEquals("Node1", expLostParts, lostEvt1);
+
+        assertTrue(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+        assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
     }
 }

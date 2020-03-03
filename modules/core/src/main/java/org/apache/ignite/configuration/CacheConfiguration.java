@@ -194,7 +194,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
     public static final int DFLT_CONCURRENT_LOAD_ALL_THRESHOLD = 5;
 
     /** Default partition loss policy. */
-    public static final PartitionLossPolicy DFLT_PARTITION_LOSS_POLICY = PartitionLossPolicy.IGNORE;
+    public static final PartitionLossPolicy DFLT_PARTITION_LOSS_POLICY = PartitionLossPolicy.READ_WRITE_SAFE;
 
     /** Default query parallelism. */
     public static final int DFLT_QUERY_PARALLELISM = 1;
@@ -2033,6 +2033,9 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @see PartitionLossPolicy
      */
     public CacheConfiguration<K, V> setPartitionLossPolicy(PartitionLossPolicy partLossPlc) {
+        if (partLossPlc == PartitionLossPolicy.IGNORE)
+            return this;
+
         this.partLossPlc = partLossPlc;
 
         return this;

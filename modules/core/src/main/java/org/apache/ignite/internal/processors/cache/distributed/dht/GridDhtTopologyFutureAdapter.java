@@ -108,7 +108,8 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         if (grp.needsRecovery() && !recovery) {
             if (opType == WRITE && (lossPlc == READ_ONLY_SAFE || lossPlc == READ_ONLY_ALL))
                 return new IgniteCheckedException(
-                    "Failed to write to cache (cache is moved to a read-only state): " + cctx.name());
+                    "Failed to write to the cache (the cache is moved to a read-only state according to " +
+                        "configured data loss policy): " + cctx.name());
         }
 
         CacheGroupValidation validation = grpValidRes.get(grp.groupId());
