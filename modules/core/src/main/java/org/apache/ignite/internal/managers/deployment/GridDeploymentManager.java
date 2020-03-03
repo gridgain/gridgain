@@ -311,6 +311,12 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
             return locStore.explicitDeploy(cls, clsLdr);
     }
 
+    /**
+     * Checks and logs possibly incorrect deployments.
+     * @param deployment Deployment.
+     * @param store Store name.
+     * @return Deployment.
+     */
     private GridDeployment checkDeployment(GridDeployment deployment, String store) {
         if (deployment != null
             && deployment.participants() == null

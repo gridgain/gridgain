@@ -33,7 +33,6 @@ import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.compute.ComputeJobAdapter;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskSplitAdapter;
-import org.apache.ignite.configuration.DeploymentMode;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
@@ -59,23 +58,34 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
+import static org.apache.ignite.configuration.DeploymentMode.SHARED;
+
 /**
  *
  */
 public class ClassLoaderClusterFailTest extends GridCommonAbstractTest implements Serializable {
-    /** */
+    /** Test predicate class name. */
     private static final String PREDICATE_NAME = "org.apache.ignite.tests.p2p.P2PTestPredicate";
 
-    /** */
-    private final IgniteUuid incorrectClsLdrId = IgniteUuid.fromUuid(UUID.randomUUID());
+    /** Flag that allows to test the check on receiving message. */
+    private boolean spoilMsgOnSnd = false;
 
-    /** */
-    private boolean spoilMessageOnSend = false;
-
-    /** */
+    /** Flag that allows to test the check while preparing message on sender. */
     private boolean spoilDeploymentBeforePrepare = false;
 
     /** */
+    private static final String CACHE_NAME = "cache";
+
+    /** */
+    private static final String CLIENT_PREFIX = "client";
+
+    /** */
+    private static final String CLIENT_1 = CLIENT_PREFIX + "1";
+
+    /** */
+    private static final String CLIENT_2 = CLIENT_PREFIX + "2";
+
+    /** Container for exception that can be thrown inside of job. */
     private static AtomicReference<Throwable> exceptionThrown = new AtomicReference<>(null);
 
     /** {@inheritDoc} */
@@ -83,9 +93,9 @@ public class ClassLoaderClusterFailTest extends GridCommonAbstractTest implement
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg
-            .setClientMode(igniteInstanceName.startsWith("client"))
+            .setClientMode(igniteInstanceName.startsWith(CLIENT_PREFIX))
             .setPeerClassLoadingEnabled(true)
-            .setDeploymentMode(DeploymentMode.SHARED)
+            .setDeploymentMode(SHARED)
             .setCommunicationSpi(new TestCommunicationSpi())
             .setMarshaller(new OptimizedMarshaller());
 
@@ -106,40 +116,46 @@ public class ClassLoaderClusterFailTest extends GridCommonAbstractTest implement
         super.afterTest();
     }
 
-    /** */
+    /**
+     *
+     * @param spoilDeploymentBeforePrepare Test the check on preparing message.
+     * @param spoilMsgOnSnd Test the check on receiving message.
+     * @param eExp Exception expected.
+     * @throws Exception If failed.
+     */
     private void doTest(
         boolean spoilDeploymentBeforePrepare,
-        boolean spoilMessageOnSend,
-        Class<? extends Throwable> exceptionExpected
+        boolean spoilMsgOnSnd,
+        Class<? extends Throwable> eExp
     ) throws Exception {
         this.spoilDeploymentBeforePrepare = spoilDeploymentBeforePrepare;
-        this.spoilMessageOnSend = spoilMessageOnSend;
+        this.spoilMsgOnSnd = spoilMsgOnSnd;
         this.exceptionThrown.set(null);
 
         IgniteEx crd = (IgniteEx)startGridsMultiThreaded(1);
 
-        IgniteCache<Integer, Integer> cache = crd.getOrCreateCache("cache");
+        crd.getOrCreateCache(CACHE_NAME);
 
-        IgniteEx client1 = (IgniteEx)startGrid("client1");
-        IgniteEx client2 = (IgniteEx)startGrid("client2");
+        IgniteEx client1 = startGrid(CLIENT_1);
+        IgniteEx client2 = startGrid(CLIENT_2);
 
         awaitPartitionMapExchange();
 
-        GridDeploymentManager deploymentManager = client2.context().deploy();
+        GridDeploymentManager deploymentMgr = client2.context().deploy();
 
-        GridDeploymentStore store = GridTestUtils.getFieldValue(deploymentManager, "locStore");
+        GridDeploymentStore store = GridTestUtils.getFieldValue(deploymentMgr, "locStore");
 
-        GridTestUtils.setFieldValue(deploymentManager, "locStore", new GridDeploymentTestStore(store));
+        GridTestUtils.setFieldValue(deploymentMgr, "locStore", new GridDeploymentTestStore(store));
 
         client1.compute(client1.cluster().forRemotes()).execute(new P2PDeploymentLongRunningTask(), null);
 
+        if (exceptionThrown.get() != null)
+            exceptionThrown.get().printStackTrace();
+
         assertTrue(
             "Wrong exception: " + exceptionThrown.get(),
-            exceptionThrown.get() == null && exceptionExpected == null
-                || X.hasCause(exceptionThrown.get(), exceptionExpected)
+            exceptionThrown.get() == null && eExp == null || X.hasCause(exceptionThrown.get(), eExp)
         );
-
-        doSleep(4000);
     }
 
     /** */
@@ -173,7 +189,7 @@ public class ClassLoaderClusterFailTest extends GridCommonAbstractTest implement
         /** {@inheritDoc} */
         @Override public void sendMessage(ClusterNode node, Message msg, IgniteInClosure<IgniteException> ackC)
             throws IgniteSpiException {
-            if (spoilMessageOnSend && msg instanceof GridIoMessage) {
+            if (spoilMsgOnSnd && msg instanceof GridIoMessage) {
                 GridIoMessage ioMsg = (GridIoMessage)msg;
 
                 Message m = ioMsg.message();
@@ -252,8 +268,11 @@ public class ClassLoaderClusterFailTest extends GridCommonAbstractTest implement
 
         /** {@inheritDoc} */
         @Override public GridDeployment explicitDeploy(Class<?> cls, ClassLoader clsLdr) throws IgniteCheckedException {
-            if (spoilDeploymentBeforePrepare)
-                return new GridTestDeployment(DeploymentMode.SHARED, this.getClass().getClassLoader(), incorrectClsLdrId, "0", PREDICATE_NAME, false);
+            if (spoilDeploymentBeforePrepare) {
+                IgniteUuid ldrId = IgniteUuid.fromUuid(UUID.randomUUID());
+
+                return new GridTestDeployment(SHARED, getClass().getClassLoader(), ldrId, "0", PREDICATE_NAME, false);
+            }
             else
                 return store.explicitDeploy(cls, clsLdr);
         }
@@ -273,7 +292,7 @@ public class ClassLoaderClusterFailTest extends GridCommonAbstractTest implement
     /**
      *
      */
-    public class P2PDeploymentLongRunningTask extends ComputeTaskSplitAdapter<Object, Object> implements Serializable {
+    public static class P2PDeploymentLongRunningTask extends ComputeTaskSplitAdapter<Object, Object> {
         /** {@inheritDoc} */
         @Override protected Collection<? extends ComputeJob> split(int gridSize, Object arg) throws IgniteException {
             IntFunction<ComputeJobAdapter> f = i -> new ComputeJobAdapter() {
@@ -284,10 +303,8 @@ public class ClassLoaderClusterFailTest extends GridCommonAbstractTest implement
                 /** {@inheritDoc} */
                 @Override public Object execute() {
                     try {
-                        Thread.sleep(3000);
-
-                        if (ignite.configuration().getIgniteInstanceName().equals("client2")) {
-                            IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache("cache");
+                        if (ignite.configuration().getIgniteInstanceName().equals(CLIENT_2)) {
+                            IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
 
                             Class<IgniteBiPredicate> cls = (Class<IgniteBiPredicate>)getExternalClassLoader().loadClass(PREDICATE_NAME);
 

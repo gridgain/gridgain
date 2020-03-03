@@ -16,44 +16,25 @@
 package org.apache.ignite.tests.p2p;
 
 import java.io.Serializable;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
-import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.internal.processors.cache.GridCacheDeployable;
 import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteBiPredicate;
-import org.apache.ignite.resources.IgniteInstanceResource;
 
+/**
+ * Test predicate for scan queries in p2p deployment tests.
+ */
 public class P2PTestPredicate extends GridCacheIdMessage implements GridCacheDeployable, IgniteBiPredicate, Serializable {
-    @IgniteInstanceResource
-    Ignite ignite;
-
+    /** {@inheritDoc} */
     @Override public boolean addDeploymentInfo() {
         return true;
     }
 
+    /** {@inheritDoc} */
     @Override public boolean apply(Object o, Object o2) {
-
-        Thread thread = new Thread(() -> {
-            try {
-                //Thread.sleep(2000);
-            }
-            catch (Exception e) {
-                e.printStackTrace();
-            }
-            X.println("!!! Executing scan query inside of predicate.");
-
-            IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache("cache");
-
-            cache.query(new ScanQuery<IgniteBiPredicate, Integer>(new P2PTestPredicate2()));
-        });
-        thread.start();
-
         return false;
-        //throw new RuntimeException("!!!test");
     }
 
+    /** {@inheritDoc} */
     @Override public short directType() {
         return 0;
     }
