@@ -99,11 +99,9 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
 
         rowBuff.add(new IgniteBiTuple<>(null, row));
 
-        if (reserveMemory) {
-            long delta = H2Utils.calculateMemoryDelta(null, null, row);
+        long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-            memTracker.reserve(delta);
-        }
+        memTracker.reserve(delta);
 
         size++;
     }

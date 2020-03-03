@@ -31,21 +31,11 @@ public abstract class GroupByData {
     protected final Session ses;
 
     /**
-     * Memory reserved in bytes.
-     *
-     * Note: Poison value '-1' means memory tracking is disabled.
-     */
-    protected long memReserved;
-
-    /**
      * @param ses Session.
      */
     protected GroupByData(Session ses) {
         this.ses = ses;
-        this.tracker = ses.memoryTracker();
-
-        if (tracker == null)
-            memReserved = -1;
+        tracker = ses.memoryTracker();
     }
 
     /**
@@ -109,9 +99,6 @@ public abstract class GroupByData {
      * @param row New row.
      */
     protected void onGroupChanged(ValueRow groupKey, Object[] old, Object[] row) {
-        if (!trackable())
-            return;
-
         assert old != null || row != null;
 
         long size;
@@ -134,16 +121,5 @@ public abstract class GroupByData {
             tracker.reserve(size);
         else
             tracker.release(-size);
-
-        memReserved += size;
-    }
-
-    /**
-     * @return {@code True} if memory tracker available, {@code False} otherwise.
-     */
-    boolean trackable() {
-        assert memReserved == -1 || tracker != null;
-
-        return memReserved != -1;
     }
 }

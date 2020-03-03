@@ -16,13 +16,16 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -110,6 +113,8 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         reserved += size;
         maxReserved = Math.max(maxReserved, reserved);
 
+//        System.out.println(">>> RESERVED: " + size + " " + hashCode() + " " + toString());
+
         if (parent != null && reserved > reservedFromParent) {
             if (!reserveFromParent())
                 return false; // Offloading.
@@ -171,6 +176,12 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         checkClosed();
 
         reserved -= size;
+
+//        if (Thread.currentThread().getName().endsWith("3%"))
+//        System.out.println(">>> RELEASED: " + size + " " + hashCode() + " " + toString());
+
+        if (reserved < 0)
+            System.out.println(">>> SPOTTED: " + hashCode());
 
         assert reserved >= 0 : "Try to free more memory that ever be reserved: [reserved=" + (reserved + size) +
             ", toFree=" + size + ']';
@@ -315,6 +326,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** */
     private class ChildMemoryTracker implements H2MemoryTracker {
 
+        private AtomicReference<Thread> thread = new AtomicReference<>();
         /** */
         private long reserved;
 
@@ -328,7 +340,12 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public boolean reserve(long size) {
             checkClosed();
 
+            assert thread.compareAndSet(null, Thread.currentThread()) || thread.get().equals(Thread.currentThread()) : "concurrent access";
+
             reserved += size;
+
+            if (reserved == 1000 && size > 0)
+                System.out.println();
 
             return QueryMemoryTracker.this.reserve(size);
         }
@@ -337,9 +354,14 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public void release(long size) {
             checkClosed();
 
-            QueryMemoryTracker.this.release(size);
+            assert thread.compareAndSet(null, Thread.currentThread()) || thread.get().equals(Thread.currentThread()) : "concurrent access";
 
             reserved -= size;
+
+            if (reserved < 0)
+                assert false : "reserved";
+
+            QueryMemoryTracker.this.release(size);
         }
 
         /** {@inheritDoc} */
@@ -404,6 +426,8 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
             reserved = 0;
             writtenOnDisk = 0;
+
+            QueryMemoryTracker.this.onChildClosed(this);
         }
 
         /** */

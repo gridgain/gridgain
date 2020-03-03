@@ -195,6 +195,8 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
+        FileUtils.cleanDirectory(getWorkDir().toFile());
+
         checkSortOrder = false;
         checkGroupsSpilled = false;
         listAggs = null;
