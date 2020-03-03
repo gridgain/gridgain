@@ -24,7 +24,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 /**
- * Test cases to ensure that ofloaded data properly tracked by memory tracker.
+ * Test cases to ensure that offloaded data properly tracked by memory tracker.
  */
 public class DiskSpillingMemoryTrackerTest extends DiskSpillingAbstractTest {
     /** */
