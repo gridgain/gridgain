@@ -32,10 +32,7 @@ import org.junit.Test;
  */
 public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbstractTest {
     /** Cache name. */
-    private static final String CACHE_NAME = "cache";
-
-    /** */
-    private boolean clientMode;
+    private static final String CACHE_NAME = "cacheTest";
 
     /** */
     private ListeningTestLogger testLog = new ListeningTestLogger(false, log());
@@ -50,8 +47,6 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
             .setBackups(2)
             .setAffinity(new RendezvousAffinityFunction(false, 32))
         );
-
-        cfg.setClientMode(clientMode);
 
         if (igniteInstanceName.endsWith("0"))
             cfg.setGridLogger(testLog);
@@ -180,15 +175,19 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
      */
     private static class SizeCounterLogListener extends LogListener {
 
+        /** {@inheritDoc */
         @Override public boolean check() {
+
             return false;
         }
 
+        /** {@inheritDoc */
         @Override public void reset() {
 
         }
 
         // Search specific string pattern and add value of counters and sizes to arrays
+        /** {@inheritDoc */
         @Override public void accept(String s) {
             HashSet<Long> setCnt = new HashSet<>();
             HashSet<Long> setSize = new HashSet<>();
