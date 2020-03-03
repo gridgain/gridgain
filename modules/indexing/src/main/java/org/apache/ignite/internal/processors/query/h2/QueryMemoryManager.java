@@ -357,6 +357,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     }
 
     /** {@inheritDoc} */
+    @Override public long totalWrittenOnDisk() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
     @Override public void onChildClosed(H2MemoryTracker child) {
         throw new UnsupportedOperationException();
     }
@@ -473,11 +478,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
         H2MemoryTracker tracker = ses.memoryTracker();
 
-        if (tracker.writtenOnDisk() == 0) {
+        if (tracker.totalWrittenOnDisk() == 0) {
             metrics.trackQueryOffloaded();
 
             if (log.isInfoEnabled())
-                LT.info(log, "Started offloading for query: " + ses.queryDescription());
+                LT.info(log, "Offloading started for query: " + ses.queryDescription());
         }
 
         return new ExternalResultData<T>(log,

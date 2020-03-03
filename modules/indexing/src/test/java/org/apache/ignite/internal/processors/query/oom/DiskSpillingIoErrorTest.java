@@ -167,7 +167,13 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
         @Override public void release(long size) {
         }
 
+        /** {@inheritDoc} */
         @Override public long writtenOnDisk() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long totalWrittenOnDisk() {
             return -1;
         }
 

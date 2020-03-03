@@ -147,6 +147,10 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
                 return 0;
             }
 
+            @Override public long totalWrittenOnDisk() {
+                return 0;
+            }
+
             @Override public long reserved() {
                 return reserved;
             }

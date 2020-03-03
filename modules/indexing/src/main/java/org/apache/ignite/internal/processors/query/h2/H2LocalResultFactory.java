@@ -33,6 +33,8 @@ public class H2LocalResultFactory extends LocalResultFactory {
 
         H2MemoryTracker memoryTracker = ses.memoryTracker();
 
+        assert memoryTracker != null : "Session has no memory tracker";
+
         return new H2ManagedLocalResult(ses, memoryTracker.createChildTracker(), expressions, visibleColCnt);
     }
 

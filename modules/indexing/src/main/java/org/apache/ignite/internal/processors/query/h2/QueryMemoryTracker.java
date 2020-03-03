@@ -16,16 +16,13 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -113,8 +110,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         reserved += size;
         maxReserved = Math.max(maxReserved, reserved);
 
-//        System.out.println(">>> RESERVED: " + size + " " + hashCode() + " " + toString());
-
         if (parent != null && reserved > reservedFromParent) {
             if (!reserveFromParent())
                 return false; // Offloading.
@@ -177,12 +172,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         reserved -= size;
 
-//        if (Thread.currentThread().getName().endsWith("3%"))
-//        System.out.println(">>> RELEASED: " + size + " " + hashCode() + " " + toString());
-
-        if (reserved < 0)
-            System.out.println(">>> SPOTTED: " + hashCode());
-
         assert reserved >= 0 : "Try to free more memory that ever be reserved: [reserved=" + (reserved + size) +
             ", toFree=" + size + ']';
 
@@ -204,27 +193,27 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long reserved() {
+    @Override public long reserved() {
         return reserved;
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long maxReserved() {
+    @Override public long maxReserved() {
         return maxReserved;
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long writtenOnDisk() {
+    @Override public long writtenOnDisk() {
         return writtenOnDisk;
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long maxWrittenOnDisk() {
+    @Override public long maxWrittenOnDisk() {
         return maxWrittenOnDisk;
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized long totalWrittenOnDisk() {
+    @Override public long totalWrittenOnDisk() {
         return totalWrittenOnDisk;
     }
 
@@ -325,13 +314,14 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
     /** */
     private class ChildMemoryTracker implements H2MemoryTracker {
-
-        private AtomicReference<Thread> thread = new AtomicReference<>();
         /** */
         private long reserved;
 
         /** */
         private long writtenOnDisk;
+
+        /** */
+        private long totalWrittenOnDisk;
 
         /** */
         private final AtomicBoolean closed = new AtomicBoolean();
@@ -340,12 +330,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public boolean reserve(long size) {
             checkClosed();
 
-            assert thread.compareAndSet(null, Thread.currentThread()) || thread.get().equals(Thread.currentThread()) : "concurrent access";
-
             reserved += size;
-
-            if (reserved == 1000 && size > 0)
-                System.out.println();
 
             return QueryMemoryTracker.this.reserve(size);
         }
@@ -354,12 +339,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public void release(long size) {
             checkClosed();
 
-            assert thread.compareAndSet(null, Thread.currentThread()) || thread.get().equals(Thread.currentThread()) : "concurrent access";
-
             reserved -= size;
-
-            if (reserved < 0)
-                assert false : "reserved";
 
             QueryMemoryTracker.this.release(size);
         }
@@ -367,6 +347,11 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** {@inheritDoc} */
         @Override public long writtenOnDisk() {
             return writtenOnDisk;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long totalWrittenOnDisk() {
+            return totalWrittenOnDisk;
         }
 
         /** {@inheritDoc} */
@@ -381,6 +366,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
             QueryMemoryTracker.this.swap(size);
 
             writtenOnDisk += size;
+            totalWrittenOnDisk += size;
         }
 
         /** {@inheritDoc} */
@@ -426,6 +412,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
             reserved = 0;
             writtenOnDisk = 0;
+            totalWrittenOnDisk = 0;
 
             QueryMemoryTracker.this.onChildClosed(this);
         }

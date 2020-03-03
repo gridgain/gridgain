@@ -35,7 +35,7 @@ public abstract class GroupByData {
      */
     protected GroupByData(Session ses) {
         this.ses = ses;
-        tracker = ses.memoryTracker().createChildTracker();
+        tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
     }
 
     /**
@@ -99,6 +99,9 @@ public abstract class GroupByData {
      * @param row New row.
      */
     protected void onGroupChanged(ValueRow groupKey, Object[] old, Object[] row) {
+        if (tracker == null)
+            return;
+
         assert old != null || row != null;
 
         long size;
@@ -119,7 +122,7 @@ public abstract class GroupByData {
 
         if (size > 0)
             tracker.reserve(size);
-        else
+        else if (size < 0)
             tracker.release(-size);
     }
 }

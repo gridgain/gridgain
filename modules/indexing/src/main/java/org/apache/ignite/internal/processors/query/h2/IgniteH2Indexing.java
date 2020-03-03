@@ -1029,7 +1029,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
         }
 
-        Long qryId = registerRunningQuery(qryDesc, qryParams,null);
+        Long qryId = registerRunningQuery(qryDesc, qryParams, null);
 
         CommandResult res = null;
 

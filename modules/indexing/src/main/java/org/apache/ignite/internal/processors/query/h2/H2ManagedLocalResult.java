@@ -52,7 +52,7 @@ public class H2ManagedLocalResult implements LocalResult {
     private boolean limitsWereApplied;
     private boolean distinct;
     private int[] distinctIndexes;
-    private volatile boolean closed;
+    private boolean closed;
     private boolean containsLobs;
     private Boolean containsNull;
 

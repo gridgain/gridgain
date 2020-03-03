@@ -38,9 +38,16 @@ public interface H2MemoryTracker extends AutoCloseable {
     /**
      * Written on disk memory.
      *
-     * @return Reserved memory in bytes.
+     * @return Amount of bytes written on disk.
      */
     public long writtenOnDisk();
+
+    /**
+     * Written on disk total.
+     *
+     * @return Amount of bytes written on disk in total.
+     */
+    public long totalWrittenOnDisk();
 
     /**
      * Reserved memory.
@@ -70,6 +77,8 @@ public interface H2MemoryTracker extends AutoCloseable {
 
     /**
      * Creates child tracker that uses resources of current tracker.
+     *
+     * Note: created tracker is not thread-safe
      */
     public H2MemoryTracker createChildTracker();
 
