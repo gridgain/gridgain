@@ -161,7 +161,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** {@inheritDoc} */
     @Override public boolean rebalanceRequired(GridDhtPartitionsExchangeFuture exchFut) {
-        if (ctx.kernalContext().clientNode())
+        if (ctx.kernalContext().clientNode() || !grp.rebalanceEnabled())
             return false; // No-op.
 
         if (exchFut.resetLostPartitionFor(grp.cacheOrGroupName()))
