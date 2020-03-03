@@ -61,9 +61,9 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        destroyGrid();
-
         super.afterTest();
+
+        destroyGrid();
     }
 
     /**
@@ -108,15 +108,14 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
 
         GridTestUtils.setFieldValue(memMgr, "fileIOFactory", ioFactory);
 
-        FieldsQueryCursor<List<?>> cur = grid(0).cache(DEFAULT_CACHE_NAME)
+        try (FieldsQueryCursor<List<?>> cur = grid(0).cache(DEFAULT_CACHE_NAME)
             .query(new SqlFieldsQueryEx(
                 "SELECT id, name, code, depId FROM person WHERE depId >= 0 " +
                     " EXCEPT " +
                     "SELECT id, name, code, depId FROM person WHERE depId > 5 ", null)
                 .setMaxMemory(SMALL_MEM_LIMIT)
-                .setLazy(true));
+                .setLazy(true))) {
 
-        try {
             cur.iterator();
 
             fail("Exception is not thrown.");
@@ -195,11 +194,16 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
 
         /** {@inheritDoc} */
         @Override public H2MemoryTracker createChildTracker() {
-            return null;
+            return NO_OP_TRACKER;
         }
 
         /** {@inheritDoc} */
         @Override public void onChildClosed(H2MemoryTracker child) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean closed() {
+            return false;
         }
     };
 }

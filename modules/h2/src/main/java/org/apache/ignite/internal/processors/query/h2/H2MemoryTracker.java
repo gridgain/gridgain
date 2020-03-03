@@ -80,6 +80,13 @@ public interface H2MemoryTracker extends AutoCloseable {
      */
     public void onChildClosed(H2MemoryTracker child);
 
+    /**
+     * Whether current tracker was closed or not.
+     *
+     * @return {@code true} if current tracker was closed.
+     */
+    public boolean closed();
+
     /** {@inheritDoc} */
     @Override public void close();
 }

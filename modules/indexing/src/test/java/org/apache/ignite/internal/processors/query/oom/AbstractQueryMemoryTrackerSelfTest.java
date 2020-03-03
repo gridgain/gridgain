@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -103,6 +104,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         maxMem = MB;
         useJdbcV2GlobalQuotaCfg = false;
 
+        for (H2ManagedLocalResult res : localResults)
+            U.closeQuiet(res.memoryTracker());
+
         localResults.clear();
 
         resetMemoryManagerState(grid(0));
@@ -113,6 +117,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        for (H2ManagedLocalResult res : localResults)
+            U.closeQuiet(res.memoryTracker());
+
         checkMemoryManagerState(grid(0));
 
         if (startClient())
@@ -290,5 +297,9 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         @Override public LocalResult create() {
             throw new NotImplementedException();
         }
+    }
+
+    protected long reservedByResult(int resultInd) {
+        return localResults.get(resultInd).memoryTracker().reserved();
     }
 }

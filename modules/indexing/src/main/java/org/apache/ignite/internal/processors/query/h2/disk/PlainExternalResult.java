@@ -79,7 +79,7 @@ public class PlainExternalResult extends AbstractExternalResult<Value> implement
             return size;
 
         for (Value[] row : rows)
-            addRowToBuffer(row, false); // Memory is already reserved in LocalResult.
+            addRowToBuffer(row, true); // Memory is already reserved in LocalResult.
 
         if (needToSpill())
             spillRows();

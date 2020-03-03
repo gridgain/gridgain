@@ -195,7 +195,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         }
 
         if (maxQryMemory == 0)
-            maxQryMemory = Math.min(qryQuota, globalQuota0);
+            maxQryMemory = globalQuota0 > 0 ? Math.min(qryQuota, globalQuota0) : qryQuota;
 
         if (maxQryMemory < 0)
             maxQryMemory = 0;
@@ -361,6 +361,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         throw new UnsupportedOperationException();
     }
 
+    /** {@inheritDoc} */
+    @Override public boolean closed() {
+        throw new UnsupportedOperationException();
+    }
+
     /**
      * @return Global quota.
      */
@@ -466,9 +471,9 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Created external data (offload file wrapper).
      */
     public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
-        QueryMemoryTracker tracker = (QueryMemoryTracker)ses.memoryTracker();
+        H2MemoryTracker tracker = ses.memoryTracker();
 
-        if (tracker.totalWrittenOnDisk() == 0) {
+        if (tracker.writtenOnDisk() == 0) {
             metrics.trackQueryOffloaded();
 
             if (log.isInfoEnabled())

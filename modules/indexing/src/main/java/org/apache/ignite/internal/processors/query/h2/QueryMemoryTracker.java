@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -68,10 +69,12 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     private volatile long totalWrittenOnDisk;
 
     /** Close flag to prevent tracker reuse. */
-    private volatile Boolean closed = Boolean.FALSE;
+    private volatile boolean closed;
+
+    private AtomicBoolean closing = new AtomicBoolean();
 
     /** Children. */
-    private final Queue<QueryMemoryTracker> children = new ConcurrentLinkedQueue<>();
+    private final Queue<H2MemoryTracker> children = new ConcurrentLinkedQueue<>();
 
     /** The number of files created by the query. */
     private volatile int filesCreated;
@@ -254,9 +257,9 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     }
 
     /**
-     * @return {@code True} if closed, {@code False} otherwise.
+     * @return {@code true} if closed, {@code false} otherwise.
      */
-    public synchronized boolean closed() {
+    @Override public boolean closed() {
         return closed;
     }
 
@@ -264,10 +267,10 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
-        if (closed)
+        if (!closing.compareAndSet(false, true))
             return;
 
-        for (QueryMemoryTracker child : children)
+        for (H2MemoryTracker child : children)
             child.close();
 
         closed = true;
@@ -292,7 +295,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public H2MemoryTracker createChildTracker() {
         checkClosed();
 
-        QueryMemoryTracker child = new QueryMemoryTracker(this, quota, blockSize, offloadingEnabled);
+        H2MemoryTracker child = new ChildMemoryTracker();
 
         children.add(child);
 
@@ -307,5 +310,106 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(QueryMemoryTracker.class, this);
+    }
+
+    /** */
+    private class ChildMemoryTracker implements H2MemoryTracker {
+
+        /** */
+        private long reserved;
+
+        /** */
+        private long writtenOnDisk;
+
+        /** */
+        private final AtomicBoolean closed = new AtomicBoolean();
+
+        /** {@inheritDoc} */
+        @Override public boolean reserve(long size) {
+            checkClosed();
+
+            reserved += size;
+
+            return QueryMemoryTracker.this.reserve(size);
+        }
+
+        /** {@inheritDoc} */
+        @Override public void release(long size) {
+            checkClosed();
+
+            QueryMemoryTracker.this.release(size);
+
+            reserved -= size;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long writtenOnDisk() {
+            return writtenOnDisk;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long reserved() {
+            return reserved;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void swap(long size) {
+            checkClosed();
+
+            QueryMemoryTracker.this.swap(size);
+
+            writtenOnDisk += size;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void unswap(long size) {
+            checkClosed();
+
+            QueryMemoryTracker.this.unswap(size);
+
+            writtenOnDisk -= size;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void incrementFilesCreated() {
+            checkClosed();
+
+            QueryMemoryTracker.this.incrementFilesCreated();
+        }
+
+        /** {@inheritDoc} */
+        @Override public H2MemoryTracker createChildTracker() {
+            checkClosed();
+
+            return QueryMemoryTracker.this.createChildTracker();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onChildClosed(H2MemoryTracker child) {
+            QueryMemoryTracker.this.onChildClosed(child);
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean closed() {
+            return QueryMemoryTracker.this.closed();
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+            if (!closed.compareAndSet(false, true))
+                return;
+
+            QueryMemoryTracker.this.release(reserved);
+            QueryMemoryTracker.this.unswap(writtenOnDisk);
+
+            reserved = 0;
+            writtenOnDisk = 0;
+        }
+
+        /** */
+        private void checkClosed() {
+            if (closed.get())
+                throw new IllegalStateException("Memory tracker has been closed concurrently.");
+        }
     }
 }

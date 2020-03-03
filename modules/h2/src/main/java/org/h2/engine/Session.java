@@ -975,6 +975,16 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
             try {
                 database.checkPowerOff();
 
+                H2MemoryTracker tracker = memoryTracker;
+                if (tracker != null) {
+                    try {
+                        tracker.close();
+                    }
+                    catch (Exception ignored) {
+                        // no-op
+                    }
+                }
+
                 // release any open table locks
                 rollback();
 

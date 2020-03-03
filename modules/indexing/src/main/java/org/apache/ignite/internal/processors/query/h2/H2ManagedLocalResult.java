@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeMap;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.h2.api.ErrorCode;
 import org.h2.engine.Session;
 import org.h2.engine.SessionInterface;
 import org.h2.expression.Expression;
@@ -50,7 +52,7 @@ public class H2ManagedLocalResult implements LocalResult {
     private boolean limitsWereApplied;
     private boolean distinct;
     private int[] distinctIndexes;
-    private boolean closed;
+    private volatile boolean closed;
     private boolean containsLobs;
     private Boolean containsNull;
 
@@ -59,9 +61,6 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** Query memory tracker. */
     private H2MemoryTracker memTracker;
-
-    /** Reserved memory. */
-    private long memReserved;
 
     /**
      * Construct a local result object.
@@ -106,12 +105,18 @@ public class H2ManagedLocalResult implements LocalResult {
 
         boolean hasMemory = true;
 
-        if (memory < 0)
-            memTracker.release(-memory);
-        else
-            hasMemory = memTracker.reserve(memory);
+        try {
+            if (memory < 0)
+                memTracker.release(-memory);
+            else
+                hasMemory = memTracker.reserve(memory);
+        }
+        catch (Exception e) {
+            if (memTracker.closed())
+                throw DbException.get(ErrorCode.STATEMENT_WAS_CANCELED);
 
-        memReserved += memory;
+            throw e;
+        }
 
         return hasMemory;
     }
@@ -381,7 +386,7 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.clear();
         }
 
-        memReserved = 0;
+        memTracker.release(memTracker.reserved());
     }
 
     /** {@inheritDoc} */
@@ -533,12 +538,6 @@ public class H2ManagedLocalResult implements LocalResult {
         return !closed;
     }
 
-    /** */
-    public long memoryReserved() {
-        return memReserved;
-    }
-
-
     /** {@inheritDoc} */
     @Override public void close() {
         if (!closed) {
@@ -614,11 +613,6 @@ public class H2ManagedLocalResult implements LocalResult {
         // ignore
     }
 
-    /** */
-    public long memoryAllocated() {
-        return memReserved;
-    }
-
     /**
      * @return Memory tracker.
      */
@@ -633,7 +627,6 @@ public class H2ManagedLocalResult implements LocalResult {
         distinctRows = null;
         rows = null;
 
-        if (memTracker != null)
-            memTracker.release(memReserved);
+        U.closeQuiet(memTracker);
     }
 }

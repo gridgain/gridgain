@@ -136,7 +136,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             if (distinct && containsRowWithOrderCheck(row))
                 continue;
 
-            addRowToBuffer(row, false); // Memory is already reserved in LocalResult.
+            addRowToBuffer(row, true); // Memory is already reserved in LocalResult.
 
             size++;
         }

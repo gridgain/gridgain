@@ -41,6 +41,7 @@ import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonT
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.result.LocalResult;
@@ -171,6 +172,9 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
             "UNION ALL " +
             "SELECT 31, 24, 'TWO-FOUR'");
 
+        for (H2ManagedLocalResult res : localResults)
+            U.closeQuiet(res.memoryTracker());
+
         localResults.clear();
     }
 
@@ -208,6 +212,9 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
 
         }
         finally {
+            for (H2ManagedLocalResult res : localResults)
+                U.closeQuiet(res.memoryTracker());
+
             localResults.clear();
         }
     }
@@ -336,8 +343,6 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
                 H2ManagedLocalResult res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
-
-                        memoryTracker().release(memoryReserved());
                     }
                 };
 

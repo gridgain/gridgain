@@ -171,6 +171,10 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
 
             }
 
+            @Override public boolean closed() {
+                return false;
+            }
+
             @Override public void close() {
                 // NO-OP
             }
