@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlDistribut
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexMultiNodeSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlSegmentedIndexSelfTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCreateTableTemplateTest;
+import org.apache.ignite.internal.processors.query.LazyOnDmlTest;
 import org.apache.ignite.internal.processors.query.LocalQueryLazyTest;
 import org.apache.ignite.internal.processors.query.LongRunningQueryTest;
 import org.apache.ignite.internal.processors.query.SqlIndexConsistencyAfterInterruptAtomicCacheOperationTest;
@@ -70,6 +71,7 @@ import org.apache.ignite.internal.processors.query.SqlQueriesTopologyMappingTest
 import org.apache.ignite.internal.processors.query.SqlTwoCachesInGroupWithSameEntryTest;
 import org.apache.ignite.internal.processors.query.h2.CacheQueryEntityWithDateTimeApiFieldsTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
+import org.apache.ignite.internal.processors.query.h2.StatementCacheTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CacheQueryMemoryLeakTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.CreateTableWithDateKeySelfTest;
 import org.apache.ignite.internal.processors.query.h2.twostep.DisappearedCacheCauseRetryMessageSelfTest;
@@ -83,6 +85,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingBasicTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingDmlTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingGlobalQuotaTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingIoErrorTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingLoggingTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingMultipleIndexesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingMultipleNodesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingPersistenceTest;
@@ -105,6 +108,9 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    StatementCacheTest.class,
+    LazyOnDmlTest.class,
+
     SqlInsertMergeImplicitColumnsTest.class,
     SqlMergeTest.class,
     SqlMergeOnClientNodeTest.class,
@@ -210,6 +216,7 @@ import org.junit.runners.Suite;
     DiskSpillingIoErrorTest.class,
     DiskSpillingDmlTest.class,
     SqlStatisticOffloadingTest.class,
+    DiskSpillingLoggingTest.class,
 
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,

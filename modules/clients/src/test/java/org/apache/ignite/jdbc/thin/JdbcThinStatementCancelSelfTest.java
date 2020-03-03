@@ -65,7 +65,7 @@ public class JdbcThinStatementCancelSelfTest extends JdbcThinAbstractSelfTest {
     /** Max table rows. */
     private static final int MAX_ROWS = 10000;
 
-    /** Server thread pull size. */
+    /** Server thread pool size. */
     private static final int SERVER_THREAD_POOL_SIZE = 4;
 
     /** Cancellation processing timeout. */
