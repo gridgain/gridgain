@@ -37,6 +37,7 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.h2.api.AggregateFunction;
 import org.h2.jdbc.JdbcSQLSyntaxErrorException;
 import org.junit.Test;
+import org.locationtech.jts.util.Assert;
 
 /**
  * Tests for registration custom aggregation functions.
@@ -85,6 +86,7 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
 
         loadCacheWithoutNullValues(cache);
 
+        //check with grouping by
         List<List<?>> rows = cache.query(new SqlFieldsQuery(
             "select companyId,FIRSTVALUE(NAME,AGE), LASTVALUE(UPPER(NAME),AGE) from \"cache\".Person group by companyId")
             .setCollocated(true)).getAll();
@@ -99,6 +101,18 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
             assertEquals("name" + companyId, youngest);
             assertEquals("name9".toUpperCase() + companyId, oldest);
         }
+
+        //check without grouping by
+        rows = cache.query(new SqlFieldsQuery(
+            "select FIRSTVALUE(NAME,AGE), LASTVALUE(UPPER(NAME),AGE) from \"cache\".Person where companyId = 1")
+            .setCollocated(true)).getAll();
+
+        assertEquals(1, rows.size());
+
+        List<?> row = rows.get(0);
+
+        assertEquals("name1", row.get(0));
+        assertEquals("NAME91", row.get(1));
     }
 
     /**
