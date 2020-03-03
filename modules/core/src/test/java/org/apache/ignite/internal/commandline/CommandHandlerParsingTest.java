@@ -589,9 +589,6 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "-1"),
             "--cache", "partition-reconciliation", "--parallelism", "-1");
 
-        assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "129"),
-            "--cache", "partition-reconciliation", "--parallelism", "129");
-
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "8"));
 
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "1"));
@@ -602,10 +599,10 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("The batch size should be specified.",
             "--cache", "partition-reconciliation", "--batch-size");
 
-        assertParseArgsThrows("Invalid batch size: abc. Int value greater than zero should be used.",
+        assertParseArgsThrows("Invalid batch size: abc. Integer value greater than zero should be used.",
             "--cache", "partition-reconciliation", "--batch-size", "abc");
 
-        assertParseArgsThrows("Invalid batch size: 0. Int value greater than zero should be used.",
+        assertParseArgsThrows("Invalid batch size: 0. Integer value greater than zero should be used.",
             "--cache", "partition-reconciliation", "--batch-size", "0");
 
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--batch-size", "10"));
@@ -614,10 +611,10 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("The recheck attempts should be specified.",
             "--cache", "partition-reconciliation", "--recheck-attempts");
 
-        assertParseArgsThrows("Invalid recheck attempts: abc. Int value between 1 and 5 should be used.",
+        assertParseArgsThrows("Invalid recheck attempts: abc. Integer value between 1 (inclusive) and 5 (exclusive) should be used.",
             "--cache", "partition-reconciliation", "--recheck-attempts", "abc");
 
-        assertParseArgsThrows("Invalid recheck attempts: 6. Int value between 1 and 5 should be used.",
+        assertParseArgsThrows("Invalid recheck attempts: 6. Integer value between 1 (inclusive) and 5 (exclusive) should be used.",
             "--cache", "partition-reconciliation", "--recheck-attempts", "6");
 
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--recheck-attempts", "1"));
@@ -628,10 +625,10 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("The recheck delay should be specified.",
             "--cache", "partition-reconciliation", "--recheck-delay");
 
-        assertParseArgsThrows("Invalid recheck delay: abc. Int value between 0 and 100 should be used.",
+        assertParseArgsThrows("Invalid recheck delay: abc. Integer value between 0 (inclusive) and 100 (exclusive) should be used.",
             "--cache", "partition-reconciliation", "--recheck-delay", "abc");
 
-        assertParseArgsThrows("Invalid recheck delay: 101. Int value between 0 and 100 should be used.",
+        assertParseArgsThrows("Invalid recheck delay: 101. Integer value between 0 (inclusive) and 100 (exclusive) should be used.",
             "--cache", "partition-reconciliation", "--recheck-delay", "101");
 
         parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--recheck-delay", "0"));

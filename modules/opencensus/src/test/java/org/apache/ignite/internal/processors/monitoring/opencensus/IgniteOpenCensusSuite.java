@@ -22,7 +22,8 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     OpenCensusMetricExporterSpiTest.class,
-    OpenCensusTracingSpiTest.class
+    OpenCensusTracingSpiTest.class,
+    MixedTracingSpiTest.class
 })
 /**
  * Suite to test OpenCensus integration.

@@ -71,7 +71,7 @@ public class H2ManagedGroupByData extends GroupByData {
 
     /** */
     private void createExtGroupByData() {
-        QueryMemoryManager memMgr = (QueryMemoryManager)ses.getQueryContext().groupByDataFactory();
+        QueryMemoryManager memMgr = (QueryMemoryManager)ses.groupByDataFactory();
 
         sortedExtRes = memMgr.createGroupedExternalResult(ses, size);
     }
