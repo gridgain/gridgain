@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -24,21 +25,37 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
 
 /**
  * Tests if lost partitions are same on left nodes after other owners removal.
  */
 public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstractTest {
+    /** */
+    private static final int PARTS_CNT = 32;
+
+    /** */
+    private boolean persistence;
+
     /** */
     private PartitionLossPolicy lossPlc;
 
@@ -52,10 +69,21 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
             setAtomicityMode(TRANSACTIONAL).
             setCacheMode(PARTITIONED).
             setPartitionLossPolicy(lossPlc).
-            setAffinity(new RendezvousAffinityFunction(false, 32)).
+            setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)).
             setBackups(0));
 
         cfg.setIncludeEventTypes(EventType.EVTS_ALL);
+
+        DataStorageConfiguration dsCfg = new DataStorageConfiguration();
+        dsCfg.setWalSegmentSize(4 * 1024 * 1024);
+        dsCfg.setWalMode(WALMode.LOG_ONLY);
+
+        final int size = 50 * 1024 * 1024;
+
+        DataRegionConfiguration drCfg = new DataRegionConfiguration();
+        drCfg.setName("default").setInitialSize(size).setMaxSize(size).setPersistenceEnabled(true);
+
+        dsCfg.setDefaultDataRegionConfiguration(drCfg);
 
         return cfg;
     }
@@ -76,21 +104,60 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         cleanPersistenceDir();
     }
 
-    /**
-     * Test correct partition loss detection for merged exchanges.
-     */
+    /** */
     @Test
-    public void testPartitionLossDetectionOnNodeLeft_Safe_Merge() throws Exception {
-        doTestPartitionLossDetectionOnNodeLeft(PartitionLossPolicy.READ_WRITE_SAFE, true);
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
+    public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_Default() throws Exception {
+        /** In this mode the assignment for volatile caches computed ignoring BLT. */
+        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, false, true);
     }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_BLT_Auto() throws Exception {
+        /** In this mode the assignment for volatile caches computed according to BLT and BLT is immediately changed
+         * after nodes has left. */
+        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, false, true);
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+    public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_BLT_Manual() throws Exception {
+        /** In this mode the assignment for volatile caches computed according to BLT and BLT is changed
+         * manually after nodes has left. */
+        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, true, true);
+    }
+
+//
+//    /** */
+//    @Test
+//    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+//    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+//    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+//    public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_ChangeBLT() throws Exception {
+//        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, false);
+//    }
 
     /**
      * Test correct partition loss detection for merged exchanges.
      *
+     * @param merge {@code True} to enable persistence.
      * @param lossPlc Loss policy.
      * @param merge {@code True} to merge exchanges.
+     * @param resetBaseline {@code True} to reset baseline after nodes are left.
      */
-    private void doTestPartitionLossDetectionOnNodeLeft(PartitionLossPolicy lossPlc, boolean merge) throws Exception {
+    private void doTestPartitionLossDetectionOnNodeLeft (
+        boolean persistence,
+        PartitionLossPolicy lossPlc,
+        boolean merge,
+        boolean resetBaseline,
+        boolean expectPartitionsMoved
+    ) throws Exception {
+        this.persistence = persistence;
         this.lossPlc = lossPlc;
 
         final Ignite srv0 = startGrids(5);
@@ -133,20 +200,38 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         stopGrid(getTestIgniteInstanceName(3), true, !merge);
         stopGrid(getTestIgniteInstanceName(2), true, !merge);
 
+        if (resetBaseline)
+            resetBaselineTopology();
+
         if (merge)
             waitForReadyTopology(internalCache(1, DEFAULT_CACHE_NAME).context().topology(), new AffinityTopologyVersion(8, 0));
-
-        printPartitionState(DEFAULT_CACHE_NAME, 0);
 
         if (lossPlc != PartitionLossPolicy.IGNORE) {
             assertEquals(new HashSet<>(expLostParts), grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions());
             assertEquals(new HashSet<>(expLostParts), grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions());
 
             srv0.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
+
+            awaitPartitionMapExchange();
         }
         else {
             assertTrue(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
             assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+        }
+
+        if (expectPartitionsMoved && lossPlc != PartitionLossPolicy.IGNORE) {
+            final GridDhtPartitionTopology top0 = grid(0).cachex(DEFAULT_CACHE_NAME).context().topology();
+            final GridDhtPartitionTopology top1 = grid(1).cachex(DEFAULT_CACHE_NAME).context().topology();
+
+            for (int p = 0; p < PARTS_CNT; p++) {
+                final GridDhtLocalPartition p0 = top0.localPartition(p);
+                if (p0 != null)
+                    assertTrue(p0.state() != GridDhtPartitionState.LOST || expLostParts.contains(p));
+
+                final GridDhtLocalPartition p1 = top1.localPartition(p);
+                if (p1 != null)
+                    assertTrue(p1.state() != GridDhtPartitionState.LOST || expLostParts.contains(p));
+            }
         }
 
         // Event must be fired only once for any mode.
@@ -155,5 +240,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         assertTrue(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
         assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+
+        srv0.cluster().active(false);
     }
 }
