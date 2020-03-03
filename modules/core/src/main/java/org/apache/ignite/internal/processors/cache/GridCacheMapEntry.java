@@ -5088,14 +5088,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        lockEntry();
-
-        try {
-            return S.toString(GridCacheMapEntry.class, this);
-        }
-        finally {
-            unlockEntry();
-        }
+        return S.toString(GridCacheMapEntry.class, this);
     }
 
     /** */
