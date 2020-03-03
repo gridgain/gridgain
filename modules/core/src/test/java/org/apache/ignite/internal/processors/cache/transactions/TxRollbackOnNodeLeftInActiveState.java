@@ -208,7 +208,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      */
     private void assertThatLocalTransactionExecuting(IgniteEx node) {
         final Collection<IgniteInternalTx> txs = node.context().cache().context().tm().activeTransactions();
-        assertTrue(txs.size() > 0);
+        assertFalse(txs.isEmpty());
 
         final IgniteInternalTx locTx = txs.iterator().next();
 
