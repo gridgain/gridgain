@@ -365,10 +365,8 @@ public class CommandHandler {
 
             Duration diff = Duration.between(startTime, endTime);
 
-            if (printErrStackTrace && nonNull(err)) {
-                logger.info("Error stack trace:");
-                logger.info(X.getFullStackTrace(err));
-            }
+            if (printErrStackTrace && nonNull(err))
+                logger.info("Error stack trace:" + System.lineSeparator() + X.getFullStackTrace(err));
 
             logger.info("Control utility has completed execution at: " + endTime);
             logger.info("Execution time: " + diff.toMillis() + " ms");
