@@ -137,11 +137,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
 
             assertTrue(t2 - t1 < TX_TIMEOUT / 100); // Interrupted immediately!
 
-            assertThrows(log, () -> {
-                tx.commit();
-
-                fail("Transaction should rolled back.");
-            }, TransactionRollbackException.class, null);
+            assertThrows(log, tx::commit, TransactionRollbackException.class, null);
         }
 
         primaryNodeStoppedFut.get();
@@ -167,9 +163,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
         );
     }
 
-    /**
-     *
-     */
+    /** */
     private void doTestOperationAfterRollback(GridTestUtils.RunnableX operation) throws Exception {
         final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
 
@@ -186,11 +180,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
 
             assertThrows(log, operation, TransactionRollbackException.class, String.format(NODE_LEFT_ROLLBACK_MSG, partPrimaryNodeId, partPrimaryNodeConsistentId));
 
-            assertThrows(log, () -> {
-                tx.commit();
-
-                fail("Transaction should rolled back.");
-            }, TransactionRollbackException.class, null);
+            assertThrows(log, tx::commit, TransactionRollbackException.class, null);
         }
 
         primaryNodeStoppedFut.get();
