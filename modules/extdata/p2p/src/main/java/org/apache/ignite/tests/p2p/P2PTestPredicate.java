@@ -24,6 +24,9 @@ import org.apache.ignite.lang.IgniteBiPredicate;
  * Test predicate for scan queries in p2p deployment tests.
  */
 public class P2PTestPredicate extends GridCacheIdMessage implements GridCacheDeployable, IgniteBiPredicate, Serializable {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /** {@inheritDoc} */
     @Override public boolean addDeploymentInfo() {
         return true;

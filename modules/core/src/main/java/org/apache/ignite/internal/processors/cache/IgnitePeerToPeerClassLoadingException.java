@@ -22,6 +22,9 @@ import org.apache.ignite.IgniteCheckedException;
  */
 public class IgnitePeerToPeerClassLoadingException extends IgniteCheckedException {
     /** */
+    private static final long serialVersionUID = 0L;
+
+    /** */
     public IgnitePeerToPeerClassLoadingException(String s) {
         super(s);
     }
