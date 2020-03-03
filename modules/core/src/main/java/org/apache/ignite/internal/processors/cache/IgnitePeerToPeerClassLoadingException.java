@@ -17,7 +17,11 @@ package org.apache.ignite.internal.processors.cache;
 
 import org.apache.ignite.IgniteCheckedException;
 
+/**
+ * This exception is thrown in communication-related cases when it is impossible to load class from any peer.
+ */
 public class IgnitePeerToPeerClassLoadingException extends IgniteCheckedException {
+    /** */
     public IgnitePeerToPeerClassLoadingException(String s) {
         super(s);
     }
