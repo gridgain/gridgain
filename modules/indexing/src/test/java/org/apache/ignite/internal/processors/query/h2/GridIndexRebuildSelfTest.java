@@ -166,13 +166,35 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
     }
 
     /**
+     * Test checks that index rebuild will be with default pool size.
+     *
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testDefaultCntThreadForRebuildIdx() throws Exception {
+        checkCntThreadForRebuildIdx(IgniteConfiguration.DFLT_BUILD_IDX_THREAD_POOL_SIZE);
+    }
+
+    /**
      * Test checks that index rebuild uses the number of threads that specified
      * in configuration.
      *
      * @throws Exception if failed.
-     * */
+     */
     @Test
-    public void testCntThreadForRebuildIdx() throws Exception {
+    public void testCustomCntThreadForRebuildIdx() throws Exception {
+        checkCntThreadForRebuildIdx(6);
+    }
+
+    /**
+     * Check that index rebuild uses the number of threads
+     * that specified in configuration.
+     *
+     * @param buildIdxThreadCnt Thread pool size for build index,
+     *      after restart node.
+     * @throws Exception if failed.
+     */
+    private void checkCntThreadForRebuildIdx(int buildIdxThreadCnt) throws Exception {
         qryIndexingCls = null;
 
         IgniteEx srv = startServer();
@@ -180,9 +202,8 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         IgniteInternalCache internalCache = createAndFillTableWithIndex(srv);
 
         int partCnt = internalCache.configuration().getAffinity().partitions();
-        int idxThreadPoolSize = 4;
 
-        assertTrue(partCnt > idxThreadPoolSize);
+        assertTrue(partCnt > buildIdxThreadCnt);
 
         File idxPath = indexFile(internalCache);
 
@@ -190,14 +211,14 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
 
         assertTrue(U.delete(idxPath));
 
-        buildIdxThreadPoolSize = idxThreadPoolSize;
+        buildIdxThreadPoolSize = buildIdxThreadCnt;
         Set<Integer> identityThreads = newSetFromMap(new ConcurrentHashMap<>());
         SchemaIndexCachePartitionWorker.THREAD_CONSUMER = thread -> identityThreads.add(identityHashCode(thread));
 
         srv = startServer();
         srv.cache(CACHE_NAME).indexReadyFuture().get();
 
-        assertEquals(idxThreadPoolSize, identityThreads.size());
+        assertEquals(buildIdxThreadCnt, identityThreads.size());
     }
 
     /**
