@@ -99,8 +99,15 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
         this.statCache = statCache;
     }
 
+    private static final boolean DISABLE_PAGE_STATS=Boolean.getBoolean("DISABLE_PAGE_STATS");
+
     /** {@inheritDoc} */
     @Override public void trackLogicalRead(long pageAddr) {
+
+        if(DISABLE_PAGE_STATS){
+            return;
+        }
+
         IndexPageType idxPageType = PageIO.deriveIndexPageType(pageAddr);
 
         switch (idxPageType) {
@@ -127,6 +134,11 @@ public class IoStatisticsHolderIndex implements IoStatisticsHolder {
 
     /** {@inheritDoc} */
     @Override public void trackPhysicalAndLogicalRead(long pageAddr) {
+
+        if(DISABLE_PAGE_STATS){
+            return;
+        }
+
         IndexPageType idxPageType = PageIO.deriveIndexPageType(pageAddr);
 
         switch (idxPageType) {

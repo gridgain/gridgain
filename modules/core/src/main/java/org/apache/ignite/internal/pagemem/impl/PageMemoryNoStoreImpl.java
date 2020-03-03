@@ -494,13 +494,24 @@ public class PageMemoryNoStoreImpl implements PageMemory {
         }
     }
 
+
     /** {@inheritDoc} */
     @Override public long readLock(int cacheId, long pageId, long page) {
         assert started;
 
-        if (rwLock.readLock(page + LOCK_OFFSET, PageIdUtils.tag(pageId)))
+
+        if (rwLock.readLock(page + LOCK_OFFSET, PageIdUtils.tag(pageId))) {
+
+//            if(TRACK){
+//                end=System.nanoTime();
+//                cnt++;
+//                sum+=end-start;
+//            }
+
+
             return page + PAGE_OVERHEAD;
 
+        }
         return 0L;
     }
 
@@ -508,8 +519,12 @@ public class PageMemoryNoStoreImpl implements PageMemory {
     @Override public long readLockForce(int cacheId, long pageId, long page) {
         assert started;
 
-        if (rwLock.readLock(page + LOCK_OFFSET, -1))
+
+        if (rwLock.readLock(page + LOCK_OFFSET, -1)) {
+
+
             return page + PAGE_OVERHEAD;
+        }
 
         return 0L;
     }
