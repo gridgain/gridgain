@@ -2033,9 +2033,6 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @see PartitionLossPolicy
      */
     public CacheConfiguration<K, V> setPartitionLossPolicy(PartitionLossPolicy partLossPlc) {
-        if (partLossPlc == PartitionLossPolicy.IGNORE)
-            return this;
-
         this.partLossPlc = partLossPlc;
 
         return this;

@@ -300,22 +300,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                 else {
                     List<ClusterNode> picked = remoteOwners(p, topVer);
 
-                    if (picked.isEmpty()) {
-                        changed |= top.own(part);
-
-                        if (grp.eventRecordable(EVT_CACHE_REBALANCE_PART_DATA_LOST)) {
-                            grp.addRebalanceEvent(p,
-                                EVT_CACHE_REBALANCE_PART_DATA_LOST,
-                                exchId.eventNode(),
-                                exchId.event(),
-                                exchId.eventTimestamp());
-                        }
-
-                        if (log.isDebugEnabled())
-                            log.debug("Owning partition as there are no other owners: " + part);
-                    }
-                    else {
+                    if (!picked.isEmpty()) {
                         ClusterNode n = null;
+
+                        // TODO not fair round robin.
                         try {
                             n = picked.get(p % picked.size());
                         }

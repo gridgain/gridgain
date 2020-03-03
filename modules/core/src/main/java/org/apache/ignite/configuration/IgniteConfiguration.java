@@ -2654,8 +2654,10 @@ public class IgniteConfiguration {
      * Sets flag indicating whether the cluster will be active on start. This value should be the same on all
      * nodes in the cluster.
      * <p>
-     * This flag is ignored when {@link DataStorageConfiguration} is present:
+     * This flag is ignored when {@link DataStorageConfiguration} has at least one configured persistent region:
      * cluster is always inactive on start when Ignite Persistence is enabled.
+     * <p>
+     * Setting this to {@code false} will enable baseline topology for in-memory caches.
      *
      * @param activeOnStart Active on start flag value.
      * @return {@code this} instance.

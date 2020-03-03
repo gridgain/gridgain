@@ -2136,31 +2136,32 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         if (!hasOwner) {
                             lost = true;
 
-                            if (lostParts == null)
-                                lostParts = new TreeSet<>();
+                            // Do not detect and record lost partition in IGNORE mode.
+                            if (plc != PartitionLossPolicy.IGNORE) {
+                                if (lostParts == null)
+                                    lostParts = new TreeSet<>();
 
-                            lostParts.add(part);
+                                lostParts.add(part);
 
-                            if (discoEvt != null) {
-                                if (recentlyLost == null)
-                                    recentlyLost = new HashSet<>();
+                                if (discoEvt != null) {
+                                    if (recentlyLost == null)
+                                        recentlyLost = new HashSet<>();
 
-                                recentlyLost.add(part);
+                                    recentlyLost.add(part);
 
-                                if (grp.eventRecordable(EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST)) {
-                                    grp.addRebalanceEvent(part,
-                                        EVT_CACHE_REBALANCE_PART_DATA_LOST,
-                                        discoEvt.eventNode(),
-                                        discoEvt.type(),
-                                        discoEvt.timestamp());
+                                    if (grp.eventRecordable(EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST)) {
+                                        grp.addRebalanceEvent(part,
+                                            EVT_CACHE_REBALANCE_PART_DATA_LOST,
+                                            discoEvt.eventNode(),
+                                            discoEvt.type(),
+                                            discoEvt.timestamp());
+                                    }
                                 }
                             }
                         }
                     }
 
                     if (lost) {
-                        long updSeq = updateSeq.incrementAndGet();
-
                         GridDhtLocalPartition locPart = localPartition(part, resTopVer, false, true);
 
                         if (locPart != null) {
@@ -2169,18 +2170,21 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             final GridDhtPartitionState prevState = locPart.state();
 
-                            if (locPart.markLost()) {
+                            changed = plc == PartitionLossPolicy.IGNORE && !grp.persistenceEnabled() ?
+                                locPart.own() : locPart.markLost();
+
+                            if (changed) {
+                                long updSeq = updateSeq.incrementAndGet();
+
                                 updateLocal(locPart.id(), locPart.state(), updSeq, resTopVer);
 
                                 // If a partition was lost during rebalancing reset it's counter to force demander mode.
                                 if (prevState == MOVING)
                                     locPart.resetUpdateCounter();
-
-                                changed = true;
                             }
                         }
                         // Update map for remote node.
-                        else {
+                        else if (plc != PartitionLossPolicy.IGNORE) {
                             for (Map.Entry<UUID, GridDhtPartitionMap> e : node2part.entrySet()) {
                                 if (e.getKey().equals(ctx.localNodeId()))
                                     continue;
@@ -2198,12 +2202,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 if (recentlyLost != null) {
-                    U.warn(log, "Detected lost partitions [grp=" + grp.cacheOrGroupName()
+                    U.warn(log, "Detected lost partitions" + (plc == PartitionLossPolicy.IGNORE ? " (will ignore)" : "") + " [grp=" + grp.cacheOrGroupName()
                         + ", parts=" + S.compact(recentlyLost)
                         + ", plc=" + plc + ", topVer=" + resTopVer + "]");
                 }
 
-                if (lostParts != null)
+                if (lostParts != null && plc != PartitionLossPolicy.IGNORE)
                     grp.needsRecovery(true);
 
                 return changed;
@@ -2250,6 +2254,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     }
                 }
 
+                // TODO do we need this ? LOST partitions are subject for eviction on afiinity change.
                 checkEvictions(updSeq, grp.affinity().readyAffinity(resTopVer));
 
                 lostParts = null;

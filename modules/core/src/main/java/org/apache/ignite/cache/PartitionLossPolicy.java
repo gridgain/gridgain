@@ -65,9 +65,10 @@ public enum PartitionLossPolicy {
     READ_WRITE_ALL,
 
     /**
-     * If partition is lost, reset it's state and do not clear intermediate data. The result of reading from
-     * a previously lost and not cleared partition is undefined and may be different on different nodes in the
-     * cluster.
+     * If partition was lost silently ignore it and allow further operations with a partition.
+     * Partition loss events are not fired using this mode.
+     * Usable only for in-memory caches when baseline is disabled.
+     * Ignored for persistent mode, instead READ_WRITE_SAFE is used.
      */
     IGNORE;
 
