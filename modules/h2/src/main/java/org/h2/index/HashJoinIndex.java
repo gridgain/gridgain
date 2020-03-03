@@ -69,8 +69,8 @@ public class HashJoinIndex extends BaseIndex {
     /** Filter index condition. */
     private ArrayList<IndexCondition> filterIdxCond;
 
-    /** Memory reserved for index data. */
-    private long memoryReserved;
+    /** Memory tracker. */
+    private H2MemoryTracker tracker;
 
     /**
      * @param tbl Table to build temporary hash join index.
@@ -425,7 +425,7 @@ public class HashJoinIndex extends BaseIndex {
         hashTbl = new HashMap<>();
 
         // Don't use ignorecase on build.
-        H2MemoryTracker memTracker = ses.memoryTracker();
+        tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
 
         while (cur.next()) {
             Row r = cur.get();
@@ -439,14 +439,13 @@ public class HashJoinIndex extends BaseIndex {
 
                 List<Row> keyRows = hashTbl.get(key);
 
-                if (memTracker != null) {
+                if (tracker != null) {
                     int size = keyRows != null ? 0 :
                         40 /*HashMap entry*/ + key.getMemory() + Constants.MEMORY_ARRAY;
 
                     size += Constants.MEMORY_POINTER + r.getMemory();
 
-                    memTracker.reserve(size);
-                    memoryReserved += size;
+                    tracker.reserve(size);
                 }
 
                 if (keyRows == null) {
@@ -508,12 +507,15 @@ public class HashJoinIndex extends BaseIndex {
     public void clearHashTable(Session session) {
         hashTbl = null;
 
-        if (memoryReserved > 0) {
-            assert session.memoryTracker() != null;
+        if (tracker != null) {
+            try {
+                tracker.close();
+            }
+            catch (Exception ignored) {
+                // no-op
+            }
 
-            session.memoryTracker().release(memoryReserved);
-
-            memoryReserved = 0;
+            tracker = null;
         }
     }
 

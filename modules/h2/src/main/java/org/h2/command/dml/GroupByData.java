@@ -35,7 +35,7 @@ public abstract class GroupByData {
      */
     protected GroupByData(Session ses) {
         this.ses = ses;
-        tracker = ses.memoryTracker();
+        tracker = ses.memoryTracker().createChildTracker();
     }
 
     /**
