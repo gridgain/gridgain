@@ -131,6 +131,18 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
         stopAllGrids();
     }
 
+    @Test
+    //@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
+    public void dummyTest() throws Exception {
+        IgniteEx ig = startGrid(0);
+        IgniteEx ig2 = startGrid(2);
+
+        startClient(1);
+
+        ig.cluster().active(true);
+
+    }
+
     /**
      * @throws Exception If failed.
      */

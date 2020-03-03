@@ -201,7 +201,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
 
         client = true;
 
-        startGrid(nodesCnt);
+        startGrid(nodesCnt).cluster().active(true);
 
         awaitPartitionMapExchange();
 
