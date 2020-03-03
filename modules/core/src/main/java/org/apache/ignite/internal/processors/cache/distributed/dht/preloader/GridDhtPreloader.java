@@ -172,10 +172,12 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
         RebalanceFuture rebalanceFuture = (RebalanceFuture)rebalanceFuture();
 
-        if (rebalanceFuture.isInitial())
+        if (rebalanceFuture.isInitial() && !rebalanceFuture.isDone())
             return true;
 
-        AffinityTopologyVersion rebTopVer = rebalanceFuture.topologyVersion();
+        AffinityTopologyVersion rebTopVer = rebalanceFuture.isInitial() ?
+            grp.affinity().cachedVersions().stream().skip(grp.affinity().cachedVersions().size() - 2).findFirst().get() :
+            rebalanceFuture.topologyVersion();
 
         TransactionalDrProcessor txDrProc = ctx.kernalContext().txDr();
 
