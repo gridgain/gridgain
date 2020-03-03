@@ -766,7 +766,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
             assert rs.next();
 
-            IgniteInternalFuture cancelRes = cancel(3, asyncCancel, sql);
+            IgniteInternalFuture cancelRes = cancel(3, asyncCancel, sql, "select 100 from Integer");
 
             GridTestUtils.assertThrows(log, () -> {
                 // Executes multiple long running query

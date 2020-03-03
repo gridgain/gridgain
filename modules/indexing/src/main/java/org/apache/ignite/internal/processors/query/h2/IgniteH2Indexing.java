@@ -1283,10 +1283,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (select.forUpdate() && inTx)
                 iter = lockSelectedRows(iter, mvccCctx, timeout, qryParams.pageSize());
 
-            QueryCursorImpl<List<?>> cursor =
+            RegisteredQueryCursor<List<?>> cursor =
                 new RegisteredQueryCursor<>(iter, cancel, runningQueryManager(), qryParams.lazy(), qryId);
 
-            cancel.add(cursor::close);
+            cancel.add(cursor::cancel);
 
             cursor.fieldsMeta(select.meta());
 
