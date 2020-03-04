@@ -989,7 +989,7 @@ public final class IgniteSystemProperties {
 
     /**
      * When property is set {@code true} each next exchange will try to compare with previous.
-     * If last rebalance equivalent with new possible one, new rebalance does not trigger.
+     * If last rebalance is equivalent with new possible one, new rebalance does not trigger.
      * Set the property {@code false} and each exchange will try to trigger new rebalance.
      *
      * Default is {@code false}.

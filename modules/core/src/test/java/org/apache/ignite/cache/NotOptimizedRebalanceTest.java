@@ -182,7 +182,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
     private String futInfoString(IgniteInternalFuture<Boolean> rebalanceFuture) {
         return "Fut: " + rebalanceFuture
             + " is done: " + rebalanceFuture.isDone()
-            + " result: " + (rebalanceFuture.isDone() ? rebalanceFuture.result() : "NoN");
+            + " result: " + (rebalanceFuture.isDone() ? rebalanceFuture.result() : "None");
     }
 
     /**
