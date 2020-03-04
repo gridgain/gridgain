@@ -17,18 +17,16 @@
 package org.apache.ignite.internal.jdbc2;
 
 import java.util.UUID;
-import org.apache.ignite.IgniteJdbcDriver;
 import org.apache.ignite.lang.IgniteCallable;
 
 /**
- * Task for SQL queries execution through {@link IgniteJdbcDriver}.
- * The query can contains several SQL statements.
+ * Task for close query cursor on remote node.
  */
 class JdbcCloseCursorTask implements IgniteCallable<Void> {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
 
-    /** Lazy query execution flag. */
+    /** Cursor ID to close. */
     private final UUID curId;
 
     /**
