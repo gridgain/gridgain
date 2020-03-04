@@ -27,6 +27,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Test;
 
@@ -36,6 +37,7 @@ import static org.apache.ignite.internal.processors.cache.transactions.IgniteTxM
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.apache.ignite.testframework.GridTestUtils.runAsync;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
 import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
 
 /**
@@ -148,9 +150,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      */
     @Test
     public void testNewTransactionWillNotProducedOnPutRepeatableRead() throws Exception {
-        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
-            .put(nearKey, 1243)
-        );
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).put(nearKey, 1243), REPEATABLE_READ);
     }
 
     /**
@@ -158,19 +158,17 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      */
     @Test
     public void testNewTransactionWillNotProducedOnRemoveRepeatableRead() throws Exception {
-        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
-            .remove(nearKey)
-        );
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).remove(nearKey), REPEATABLE_READ);
     }
 
     /**
      * Test #1  If a primary node for a transaction key left, a transaction must rollback imminently.
      */
     @Test
-    public void testFastRollbackAfterNodeLeftRepeatableCommitted() throws Exception {
+    public void testFastRollbackAfterNodeLeftReadCommitted() throws Exception {
         final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
 
-        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, TX_TIMEOUT, 10)) {
+        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, READ_COMMITTED, TX_TIMEOUT, 10)) {
             nearNode.cache(DEFAULT_CACHE_NAME).put(k, k);
 
             assertThatLocalTransactionExecuting(partPrimaryNode);
@@ -195,29 +193,28 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
      */
     @Test
-    public void testNewTransactionWillNotProducedOnPutRepeatableCommitted() throws Exception {
-        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
-            .put(nearKey, 1243)
-        );
+    public void testNewTransactionWillNotProducedOnPutReadCommitted() throws Exception {
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).put(nearKey, 1243), READ_COMMITTED);
     }
 
     /**
      * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
      */
     @Test
-    public void testNewTransactionWillNotProducedOnRemoveRepeatableCommitted() throws Exception {
-        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
-            .remove(nearKey)
-        );
+    public void testNewTransactionWillNotProducedOnRemoveReadCommitted() throws Exception {
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).remove(nearKey), READ_COMMITTED);
     }
 
-    /** */
-    private void doTestOperationAfterRollback(GridTestUtils.RunnableX operation) throws Exception {
+    /**
+     * Does common logic of test.
+     */
+    private void doTestOperationAfterRollback(GridTestUtils.RunnableX operation,
+        TransactionIsolation isolation) throws Exception {
         final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
 
         nearNode.cache(DEFAULT_CACHE_NAME).put(nearKey, 10);
 
-        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, TX_TIMEOUT, 10)) {
+        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, isolation, TX_TIMEOUT, 10)) {
             nearNode.cache(DEFAULT_CACHE_NAME).put(k, k);
 
             assertThatLocalTransactionExecuting(partPrimaryNode);
