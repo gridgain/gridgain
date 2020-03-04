@@ -38,15 +38,29 @@ import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
 import java.util.AbstractMap.SimpleEntry;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
-import static org.apache.ignite.transactions.TransactionIsolation.*;
+import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED;
+import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_READ;
+import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
 import static org.junit.Assert.assertArrayEquals;
 
 /**
@@ -547,7 +561,7 @@ public class FunctionalTest extends GridCommonAbstractTest {
      */
     @Test
     public void testOptimitsticRepeatableReadUpdatesValue() throws Exception {
-        try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
+        try (Ignite ignored = Ignition.start(Config.getServerConfiguration());
              IgniteClient client = Ignition.startClient(getClientConfiguration())
         ) {
             ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
