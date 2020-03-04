@@ -463,14 +463,21 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
      */
     protected void checkMemoryManagerState() {
         for (Ignite node : G.allGrids()) {
-            IgniteH2Indexing h2 = (IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing();
-
-            QueryMemoryManager memoryManager = h2.memoryManager();
+            QueryMemoryManager memoryManager = memoryManager((IgniteEx)node);
 
             assertEquals(0, memoryManager.memoryReserved());
         }
     }
 
+    /**
+     * @param node Node.
+     * @return Memory manager
+     */
+    protected QueryMemoryManager memoryManager(IgniteEx node) {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
+
+        return h2.memoryManager();
+    }
 
     /** */
     protected void checkQuery(Result res, String sql) {

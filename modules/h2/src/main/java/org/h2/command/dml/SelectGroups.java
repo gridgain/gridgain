@@ -429,7 +429,7 @@ public abstract class SelectGroups {
      * @param aggrs Aggregates to cleanup.
      */
     public static void cleanupAggregates(Object[] aggrs, Session session) {
-        if (aggrs == null || session.queryMemoryTracker() == null)
+        if (aggrs == null || session.memoryTracker() == null)
             return;
 
         for (Object agg : aggrs) {

@@ -321,7 +321,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     private void createExternalResult(boolean forcePlainResult) {
-        QueryMemoryManager memMgr = (QueryMemoryManager)session.getQueryContext().groupByDataFactory();
+        QueryMemoryManager memMgr = (QueryMemoryManager)session.groupByDataFactory();
         if (forcePlainResult)
             external = memMgr.createPlainExternalResult(session);
         else {
