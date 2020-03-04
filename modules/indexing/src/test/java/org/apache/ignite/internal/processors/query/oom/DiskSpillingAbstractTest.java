@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -438,7 +440,13 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
     /** */
     protected Path getWorkDir() {
-        Path workDir = Paths.get(grid(0).configuration().getWorkDirectory(), DISK_SPILL_DIR);
+        Path workDir;
+        try {
+            workDir = Paths.get(U.defaultWorkDirectory(), DISK_SPILL_DIR);
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteException(ex);
+        }
 
         workDir.toFile().mkdir();
         return workDir;
