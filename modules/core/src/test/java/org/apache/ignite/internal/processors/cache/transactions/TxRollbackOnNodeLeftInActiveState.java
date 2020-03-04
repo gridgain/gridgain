@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -122,27 +123,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      */
     @Test
     public void testFastRollbackAfterNodeLeftRepeatableRead() throws Exception {
-        final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
-
-        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, TX_TIMEOUT, 10)) {
-            nearNode.cache(DEFAULT_CACHE_NAME).put(k, k);
-
-            assertThatLocalTransactionExecuting(partPrimaryNode);
-
-            stopPartPrimaryNode.countDown();
-
-            long t1 = System.currentTimeMillis();
-
-            ((TransactionProxyImpl)tx).tx().finishFuture().get(); // Shouldn't wait here until timeout.
-
-            long t2 = System.currentTimeMillis();
-
-            assertTrue(t2 - t1 < TX_TIMEOUT / 100); // Interrupted immediately!
-
-            assertThrows(log, tx::commit, TransactionRollbackException.class, null);
-        }
-
-        primaryNodeStoppedFut.get();
+        doTestCheckFastTransactionInterruptionAfterNodeLeft(REPEATABLE_READ);
     }
 
     /**
@@ -166,9 +147,33 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      */
     @Test
     public void testFastRollbackAfterNodeLeftReadCommitted() throws Exception {
+        doTestCheckFastTransactionInterruptionAfterNodeLeft(READ_COMMITTED);
+    }
+
+    /**
+     * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
+     */
+    @Test
+    public void testNewTransactionWillNotProducedOnPutReadCommitted() throws Exception {
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).put(nearKey, 1243), READ_COMMITTED);
+    }
+
+    /**
+     * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
+     */
+    @Test
+    public void testNewTransactionWillNotProducedOnRemoveReadCommitted() throws Exception {
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).remove(nearKey), READ_COMMITTED);
+    }
+
+    /**
+     * Checks that time of waiting on {@link IgniteInternalFuture<IgniteInternalTx>} less than timeout.
+     */
+    private void doTestCheckFastTransactionInterruptionAfterNodeLeft(
+        TransactionIsolation isolation) throws IgniteCheckedException {
         final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
 
-        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, READ_COMMITTED, TX_TIMEOUT, 10)) {
+        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, isolation, TX_TIMEOUT, 10)) {
             nearNode.cache(DEFAULT_CACHE_NAME).put(k, k);
 
             assertThatLocalTransactionExecuting(partPrimaryNode);
@@ -187,22 +192,6 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
         }
 
         primaryNodeStoppedFut.get();
-    }
-
-    /**
-     * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
-     */
-    @Test
-    public void testNewTransactionWillNotProducedOnPutReadCommitted() throws Exception {
-        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).put(nearKey, 1243), READ_COMMITTED);
-    }
-
-    /**
-     * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
-     */
-    @Test
-    public void testNewTransactionWillNotProducedOnRemoveReadCommitted() throws Exception {
-        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME).remove(nearKey), READ_COMMITTED);
     }
 
     /**
