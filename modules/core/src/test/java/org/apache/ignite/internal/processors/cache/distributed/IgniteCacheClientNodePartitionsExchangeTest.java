@@ -23,10 +23,10 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.cache.CacheServerNotFoundException;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -41,9 +41,9 @@ import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.GridCacheAdapter;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsSingleMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -51,7 +51,6 @@ import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -68,8 +67,6 @@ public class IgniteCacheClientNodePartitionsExchangeTest extends GridCommonAbstr
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
 
         cfg.setClientMode(client);
 
@@ -110,35 +107,27 @@ public class IgniteCacheClientNodePartitionsExchangeTest extends GridCommonAbstr
 
         ignite0.close();
 
-        waitForTopologyUpdate(2, 4);
+        waitForTopologyUpdate(2, 3);
 
-        GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                ignite1.cache(DEFAULT_CACHE_NAME).get(1);
+        GridTestUtils.assertThrowsWithCause((Callable<Void>)() -> {
+            ignite1.cache(DEFAULT_CACHE_NAME).get(1);
 
-                return null;
-            }
-        }, CacheServerNotFoundException.class, null);
+            return null;
+        }, IgniteClientDisconnectedException.class);
 
-        GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                ignite2.cache(DEFAULT_CACHE_NAME).get(1);
+        GridTestUtils.assertThrowsWithCause((Callable<Void>)() -> {
+            ignite2.cache(DEFAULT_CACHE_NAME).get(1);
 
-                return null;
-            }
-        }, CacheServerNotFoundException.class, null);
+            return null;
+        }, IgniteClientDisconnectedException.class);
 
         ignite1.close();
 
-        waitForTopologyUpdate(1, 5);
+        GridTestUtils.assertThrowsWithCause((Callable<Void>)() -> {
+            ignite2.cache(DEFAULT_CACHE_NAME).get(1);
 
-        GridTestUtils.assertThrows(log, new Callable<Void>() {
-            @Override public Void call() throws Exception {
-                ignite2.cache(DEFAULT_CACHE_NAME).get(1);
-
-                return null;
-            }
-        }, CacheServerNotFoundException.class, null);
+            return null;
+        }, IgniteClientDisconnectedException.class);
     }
 
     /**

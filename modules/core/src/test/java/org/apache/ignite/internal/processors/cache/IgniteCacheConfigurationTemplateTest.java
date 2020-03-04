@@ -20,6 +20,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheExistsException;
@@ -29,7 +30,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -58,8 +58,6 @@ public class IgniteCacheConfigurationTemplateTest extends GridCommonAbstractTest
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
 
         if (addTemplate) {
             CacheConfiguration dfltCfg = new CacheConfiguration("*");
@@ -235,23 +233,29 @@ public class IgniteCacheConfigurationTemplateTest extends GridCommonAbstractTest
         addTemplate = true;
         clientMode = true;
 
-        Ignite ignite0 = startGrid(0);
+        AtomicReference<Ignite> ignite0 = new AtomicReference<>();
+
+        GridTestUtils.runAsync(() -> GridTestUtils.suppressException(() -> ignite0.set(startGrid(0))));
 
         checkNoTemplateCaches(0);
+
+        doSleep(3000);
 
         addTemplate = false;
         clientMode = false;
 
         Ignite ignite1 = startGrid(1);
 
+        GridTestUtils.waitForCondition(() -> ignite0.get() != null, 5_000);
+
         checkGetOrCreate(ignite1, "org.apache.ignite.test.cache1", 4);
         checkGetOrCreate(ignite1, "org.apache.ignite.test.cache1", 4);
 
         checkGetOrCreate(ignite1, "org.apache.ignite1", 3);
         checkGetOrCreate(ignite1, "org.apache.ignite1", 3);
 
-        checkGetOrCreate(ignite0, "org.apache.ignite1", 3);
-        checkGetOrCreate(ignite0, "org.apache.ignite1", 3);
+        checkGetOrCreate(ignite0.get(), "org.apache.ignite1", 3);
+        checkGetOrCreate(ignite0.get(), "org.apache.ignite1", 3);
     }
 
     /**

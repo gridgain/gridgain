@@ -16,8 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
+import javax.cache.Cache;
+import javax.cache.CacheException;
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.EntryProcessorResult;
+import javax.cache.processor.MutableEntry;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,15 +46,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
-import javax.cache.Cache;
-import javax.cache.CacheException;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.expiry.TouchedExpiryPolicy;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.EntryProcessorResult;
-import javax.cache.processor.MutableEntry;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -94,7 +94,6 @@ import org.apache.ignite.resources.ServiceResource;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.apache.ignite.transactions.Transaction;
@@ -211,8 +210,6 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
-
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
 
         cfg.setIncludeEventTypes(
             EVT_CACHE_OBJECT_READ,
@@ -6003,8 +6000,11 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
             }
         };
 
+        //Local listener should be set on client if it exists(grid1 == isClient).
+        int jcacheId = gridCount() > 1 && Boolean.TRUE.equals(grid(1).configuration().isClientMode()) ? 1 : 0;
+
         try {
-            IgniteCache<String, Integer> cache = jcache(0);
+            IgniteCache<String, Integer> cache = jcache(jcacheId);
 
             List<String> keys = primaryKeysForCache(cache, 2);
 
@@ -6013,7 +6013,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
             cache.put(keys.get(0), 0);
             cache.put(keys.get(1), 1);
 
-            grid(0).events().localListen(lsnr, EVT_CACHE_OBJECT_LOCKED, EVT_CACHE_OBJECT_UNLOCKED);
+            grid(jcacheId).events().localListen(lsnr, EVT_CACHE_OBJECT_LOCKED, EVT_CACHE_OBJECT_UNLOCKED);
 
             try (Transaction tx = transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
                 Integer val0;
@@ -6046,7 +6046,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
                         return lockEvtCnt.get() == 0;
 
                     if (cacheMode() == PARTITIONED && nearEnabled()) {
-                        if (!grid(0).configuration().isClientMode())
+                        if (!grid(jcacheId).configuration().isClientMode())
                             return lockEvtCnt.get() == 4;
                     }
 
@@ -6055,7 +6055,7 @@ public abstract class GridCacheAbstractFullApiSelfTest extends GridCacheAbstract
             }, 15000));
         }
         finally {
-            grid(0).events().stopLocalListen(lsnr, EVT_CACHE_OBJECT_LOCKED, EVT_CACHE_OBJECT_UNLOCKED);
+            grid(jcacheId).events().stopLocalListen(lsnr, EVT_CACHE_OBJECT_LOCKED, EVT_CACHE_OBJECT_UNLOCKED);
         }
     }
 

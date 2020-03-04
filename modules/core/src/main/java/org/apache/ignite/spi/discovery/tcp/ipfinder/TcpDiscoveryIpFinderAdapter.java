@@ -101,8 +101,6 @@ public abstract class TcpDiscoveryIpFinderAdapter implements TcpDiscoveryIpFinde
      */
     @Deprecated
     protected boolean discoveryClientMode() {
-        boolean clientMode;
-
         Ignite ignite0 = ignite;
 
         if (ignite0 != null) { // Can be null if used in tests without starting Ignite.
@@ -111,12 +109,10 @@ public abstract class TcpDiscoveryIpFinderAdapter implements TcpDiscoveryIpFinde
             if (!(discoSpi instanceof TcpDiscoverySpi))
                 throw new IgniteSpiException("TcpDiscoveryIpFinder should be used with TcpDiscoverySpi: " + discoSpi);
 
-            clientMode = ignite0.configuration().isClientMode() && !((TcpDiscoverySpi)discoSpi).isForceServerMode();
+            return ignite0.configuration().isClientMode();
         }
-        else
-            clientMode = false;
 
-        return clientMode;
+        return false;
     }
 
     /**

@@ -43,7 +43,6 @@ import org.apache.ignite.internal.managers.communication.GridCommunicationSendMe
 import org.apache.ignite.internal.managers.deployment.DeploymentRequestOfUnknownClassProcessingTest;
 import org.apache.ignite.internal.managers.deployment.GridDeploymentManagerStopSelfTest;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAliveCacheSelfTest;
-import org.apache.ignite.internal.managers.discovery.GridDiscoveryManagerAttributesSelfTest;
 import org.apache.ignite.internal.managers.discovery.IgniteTopologyPrintFormatSelfTest;
 import org.apache.ignite.internal.managers.events.GridEventStorageManagerSelfTest;
 import org.apache.ignite.internal.processors.cluster.BaselineAutoAdjustInMemoryTest;
@@ -77,8 +76,6 @@ import org.junit.runners.Suite;
     GridCacheMessageSelfTest.class,
     GridDeploymentManagerStopSelfTest.class,
     GridManagerStopSelfTest.class,
-    GridDiscoveryManagerAttributesSelfTest.RegularDiscovery.class,
-    GridDiscoveryManagerAttributesSelfTest.ClientDiscovery.class,
     GridDiscoveryManagerAliveCacheSelfTest.class,
     GridDiscoveryEventSelfTest.class,
     GridPortProcessorSelfTest.class,

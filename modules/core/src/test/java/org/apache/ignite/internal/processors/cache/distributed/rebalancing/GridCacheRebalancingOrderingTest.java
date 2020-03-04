@@ -16,6 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.EntryProcessorResult;
+import javax.cache.processor.MutableEntry;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashMap;
@@ -29,10 +33,6 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.EntryProcessorResult;
-import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteEvents;
@@ -116,12 +116,10 @@ public class GridCacheRebalancingOrderingTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        if (isFirstGrid(igniteInstanceName)) {
+        if (igniteInstanceName.endsWith("1")) {
             cfg.setClientMode(true);
 
             assert cfg.getDiscoverySpi() instanceof TcpDiscoverySpi : cfg.getDiscoverySpi();
-
-            ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
         }
         else
             cfg.setServiceConfiguration(getServiceConfiguration());

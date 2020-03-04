@@ -25,7 +25,6 @@ import org.apache.ignite.internal.managers.GridManagerAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
@@ -51,11 +50,6 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
 
         if (igniteInstanceName.endsWith("client"))
             cfg.setClientMode(true);
-
-        if (igniteInstanceName.endsWith("client_force_server")) {
-            cfg.setClientMode(true);
-            ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
-        }
 
         return cfg;
     }
@@ -179,63 +173,6 @@ public class IgniteTopologyPrintFormatSelfTest extends GridCommonAbstractTest {
             @Override public boolean apply(String s) {
                 return s.contains("Topology snapshot [ver=4, locNode=" + nodeId8 + ", servers=2, clients=2,")
                     || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 2"));
-            }
-        }));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testForceServerAndClientLogs() throws Exception {
-        MockLogger log = new MockLogger();
-
-        log.setLevel(Level.INFO);
-
-        doForceServerAndClientTest(log);
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testForceServerAndClientDebugLogs() throws Exception {
-        MockLogger log = new MockLogger();
-
-        log.setLevel(Level.DEBUG);
-
-        doForceServerAndClientTest(log);
-    }
-
-    /**
-     * @param log Log.
-     * @throws Exception If failed.
-     */
-    private void doForceServerAndClientTest(MockLogger log) throws Exception {
-        String nodeId8;
-
-        try {
-            Ignite server = startGrid("server");
-
-            nodeId8 = U.id8(server.cluster().localNode().id());
-
-            setLogger(log, server);
-
-            Ignite server1 = startGrid("server1");
-            Ignite client1 = startGrid("first client");
-            Ignite client2 = startGrid("second client");
-            Ignite forceServClnt3 = startGrid("third client_force_server");
-
-            waitForDiscovery(server, server1, client1, client2, forceServClnt3);
-        }
-        finally {
-            stopAllGrids();
-        }
-
-        assertTrue(F.forAny(log.logs(), new IgnitePredicate<String>() {
-            @Override public boolean apply(String s) {
-                return s.contains("Topology snapshot [ver=5, locNode=" + nodeId8 + ", servers=2, clients=3,")
-                    || (s.contains(">>> Number of server nodes: 2") && s.contains(">>> Number of client nodes: 3"));
             }
         }));
     }

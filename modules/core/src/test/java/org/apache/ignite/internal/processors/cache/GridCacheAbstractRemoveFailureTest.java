@@ -16,10 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.cache.CacheException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -27,7 +29,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteException;
@@ -45,13 +46,11 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ATOMIC_CACHE_DELETE_HISTORY_SIZE;
@@ -84,6 +83,9 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
     /** Start delay. */
     private static final T2<Integer, Integer> START_DELAY = new T2<>(2000, 5000);
 
+    /****/
+    protected int clientNodeId = GRID_CNT - 1;
+
     /** */
     private static String sizePropVal;
 
@@ -91,9 +93,7 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
-
-        if (testClientNode() && getTestIgniteInstanceName(0).equals(igniteInstanceName))
+        if (testClientNode() && getTestIgniteInstanceName(clientNodeId).equals(igniteInstanceName))
             cfg.setClientMode(true);
 
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
@@ -187,9 +187,9 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
     private void putAndRemove(long duration,
         final TransactionConcurrency txConcurrency,
         final TransactionIsolation txIsolation) throws Exception {
-        assertEquals(testClientNode(), (boolean) grid(0).configuration().isClientMode());
+        assertEquals(testClientNode(), (boolean) grid(clientNodeId).configuration().isClientMode());
 
-        grid(0).destroyCache(DEFAULT_CACHE_NAME);
+        grid(clientNodeId).destroyCache(DEFAULT_CACHE_NAME);
 
         CacheConfiguration<Integer, Integer> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME);
 
@@ -203,7 +203,7 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
         ccfg.setAtomicityMode(atomicityMode());
         ccfg.setNearConfiguration(nearCache());
 
-        final IgniteCache<Integer, Integer> sndCache0 = grid(0).createCache(ccfg);
+        final IgniteCache<Integer, Integer> sndCache0 = grid(clientNodeId).createCache(ccfg);
 
         final AtomicBoolean stop = new AtomicBoolean();
 
@@ -394,7 +394,11 @@ public abstract class GridCacheAbstractRemoveFailureTest extends GridCommonAbstr
                 while (!stop.get()) {
                     U.sleep(random(KILL_DELAY.get1(), KILL_DELAY.get2()));
 
-                    killAndRestart(stop, random(1, GRID_CNT + 1));
+                    int nodeToKill;
+
+                    while((nodeToKill = random(0, GRID_CNT + 1)) == clientNodeId);
+
+                    killAndRestart(stop, nodeToKill);
 
                     CyclicBarrier barrier = cmp.get();
 

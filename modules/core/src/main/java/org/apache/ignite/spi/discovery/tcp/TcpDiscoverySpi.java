@@ -16,6 +16,10 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocketFactory;
 import java.io.BufferedOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
@@ -41,10 +45,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLException;
-import javax.net.ssl.SSLServerSocketFactory;
-import javax.net.ssl.SSLSocketFactory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
@@ -417,9 +417,6 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     protected TcpDiscoveryImpl impl;
 
     /** */
-    private boolean forceSrvMode;
-
-    /** */
     private boolean clientReconnectDisabled;
 
     /** */
@@ -544,7 +541,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
      */
     @Deprecated
     public boolean isForceServerMode() {
-        return forceSrvMode;
+        return false;
     }
 
     /**
@@ -560,8 +557,6 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
     @IgniteSpiConfiguration(optional = true)
     @Deprecated
     public TcpDiscoverySpi setForceServerMode(boolean forceSrvMode) {
-        this.forceSrvMode = forceSrvMode;
-
         return this;
     }
 
@@ -2132,7 +2127,7 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
 
         initFailureDetectionTimeout();
 
-        if (!forceSrvMode && (Boolean.TRUE.equals(ignite.configuration().isClientMode()))) {
+        if (Boolean.TRUE.equals(ignite.configuration().isClientMode())) {
             if (ackTimeout == 0)
                 ackTimeout = DFLT_ACK_TIMEOUT_CLIENT;
 

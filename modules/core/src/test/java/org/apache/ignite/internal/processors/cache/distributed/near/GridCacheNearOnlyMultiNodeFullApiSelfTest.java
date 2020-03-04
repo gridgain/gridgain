@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.near;
 
+import javax.cache.expiry.Duration;
+import javax.cache.expiry.ExpiryPolicy;
+import javax.cache.expiry.TouchedExpiryPolicy;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -26,9 +29,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.expiry.TouchedExpiryPolicy;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteTransactions;
@@ -84,6 +84,13 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
         }
     }
 
+    /** {@inheritDoc} */
+    @Override protected boolean isRemoteJvm(String igniteInstanceName) {
+        return isMultiJvm()
+            && !igniteInstanceName.equals(getTestIgniteInstanceName(0))
+            && !igniteInstanceName.equals(getTestIgniteInstanceName(1));
+    }
+
     /**
      * @return If client node has near cache.
      */
@@ -95,7 +102,7 @@ public class GridCacheNearOnlyMultiNodeFullApiSelfTest extends GridCachePartitio
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        if (cnt.getAndIncrement() == 0 || (cnt.get() > gridCount() && cnt.get() % gridCount() == 0)) {
+        if (cnt.getAndIncrement() == 1 || (cnt.get() > gridCount() && cnt.get() % gridCount() == 0)) {
             info("Use grid '" + igniteInstanceName + "' as near-only.");
 
             cfg.setClientMode(true);

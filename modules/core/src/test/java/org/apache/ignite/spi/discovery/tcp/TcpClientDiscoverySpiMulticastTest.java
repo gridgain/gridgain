@@ -41,9 +41,6 @@ import static org.apache.ignite.events.EventType.EVT_CLIENT_NODE_RECONNECTED;
  */
 public class TcpClientDiscoverySpiMulticastTest extends GridCommonAbstractTest {
     /** */
-    private boolean forceSrv;
-
-    /** */
     private ThreadLocal<Boolean> client = new ThreadLocal<>();
 
     /** */
@@ -67,11 +64,8 @@ public class TcpClientDiscoverySpiMulticastTest extends GridCommonAbstractTest {
 
         client.set(null);
 
-        if (clientFlag != null && clientFlag) {
+        if (clientFlag != null && clientFlag)
             cfg.setClientMode(true);
-
-            spi.setForceServerMode(forceSrv);
-        }
         else {
             Integer port = discoPort.get();
 
@@ -159,16 +153,6 @@ public class TcpClientDiscoverySpiMulticastTest extends GridCommonAbstractTest {
     /**
      * @throws Exception If failed.
      */
-    @Test
-    public void testJoinWithMulticastForceServer() throws Exception {
-        forceSrv = true;
-
-        joinWithMulticast();
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
     private void joinWithMulticast() throws Exception {
         Ignite ignite0 = startGrid(0);
 
@@ -180,7 +164,7 @@ public class TcpClientDiscoverySpiMulticastTest extends GridCommonAbstractTest {
 
         assertTrue(ignite1.configuration().isClientMode());
 
-        assertSpi(ignite1, !forceSrv);
+        assertSpi(ignite1, true);
 
         assertTrue(ignite1.configuration().isClientMode());
 

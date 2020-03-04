@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -44,8 +43,6 @@ public class IgniteSqlDefaultValueTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration c = super.getConfiguration(gridName);
-
-        ((TcpDiscoverySpi)c.getDiscoverySpi()).setForceServerMode(true);
 
         if (gridName.equals(NODE_CLIENT))
             c.setClientMode(true);

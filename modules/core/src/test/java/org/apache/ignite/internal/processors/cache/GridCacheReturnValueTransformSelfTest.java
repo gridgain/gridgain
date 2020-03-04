@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.MutableEntry;
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -23,13 +25,10 @@ import java.io.ObjectOutput;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -64,8 +63,6 @@ public class GridCacheReturnValueTransformSelfTest extends GridCommonAbstractTes
         ccfg.setAtomicityMode(atomicityMode);
 
         cfg.setCacheConfiguration(ccfg);
-
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
 
         if (!cache)
             cfg.setClientMode(true);

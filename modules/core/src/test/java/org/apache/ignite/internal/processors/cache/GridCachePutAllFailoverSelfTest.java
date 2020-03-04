@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import com.google.common.collect.ImmutableMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -31,6 +30,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import com.google.common.collect.ImmutableMap;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCompute;
@@ -230,12 +230,12 @@ public class GridCachePutAllFailoverSelfTest extends GridCommonAbstractTest {
 
         Collection<Integer> testKeys = generateTestKeys();
 
-        final Ignite master = startGrid(MASTER);
-
         List<Ignite> workers = new ArrayList<>(workerCnt);
 
         for (int i = 1; i <= workerCnt; i++)
             workers.add(startGrid("worker" + i));
+
+        final Ignite master = startGrid(MASTER);
 
         info("Master: " + master.cluster().localNode().id());
 
@@ -429,12 +429,12 @@ public class GridCachePutAllFailoverSelfTest extends GridCommonAbstractTest {
 
         Collection<Integer> testKeys = generateTestKeys();
 
-        final Ignite master = startGrid(MASTER);
-
         List<Ignite> workers = new ArrayList<>(workerCnt);
 
         for (int i = 1; i <= workerCnt; i++)
             workers.add(startGrid("worker" + i));
+
+        final Ignite master = startGrid(MASTER);
 
         info("Master: " + master.cluster().localNode().id());
 
@@ -666,7 +666,6 @@ public class GridCachePutAllFailoverSelfTest extends GridCommonAbstractTest {
         TcpDiscoverySpi discoverySpi = (TcpDiscoverySpi)cfg.getDiscoverySpi();
 
         discoverySpi.setAckTimeout(60000);
-        discoverySpi.setForceServerMode(true);
 
         cfg.setDiscoverySpi(discoverySpi);
 

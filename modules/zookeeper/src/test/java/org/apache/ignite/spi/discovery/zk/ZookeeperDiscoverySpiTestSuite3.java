@@ -16,7 +16,6 @@
 
 package org.apache.ignite.spi.discovery.zk;
 
-import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDataStructuresTest;
 import org.apache.ignite.internal.processors.cache.datastructures.partitioned.GridCachePartitionedNodeRestartTxSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.partitioned.GridCachePartitionedSequenceApiSelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.replicated.GridCacheReplicatedSequenceApiSelfTest;
@@ -39,7 +38,6 @@ import org.junit.runners.Suite;
     GridCacheReplicatedNodeRestartSelfTest.class,
     GridEventConsumeSelfTest.class,
     GridCachePartitionedNodeRestartTxSelfTest.class,
-    IgniteClientDataStructuresTest.class,
     GridCacheReplicatedSequenceApiSelfTest.class,
     GridCachePartitionedSequenceApiSelfTest.class,
     GridCacheAtomicMultiJvmFullApiSelfTest.class,

@@ -37,7 +37,6 @@ import org.apache.ignite.internal.processors.cache.eviction.fifo.FifoEvictionPol
 import org.apache.ignite.internal.processors.cache.eviction.lru.LruEvictionPolicyFactorySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.lru.LruEvictionPolicySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.lru.LruNearEvictionPolicySelfTest;
-import org.apache.ignite.internal.processors.cache.eviction.lru.LruNearOnlyNearEvictionPolicySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionDataStreamerTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionMetricTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionPagesRecyclingAndReusingTest;
@@ -71,7 +70,6 @@ public class IgniteCacheEvictionSelfTestSuite {
         GridTestUtils.addTestIfNeeded(suite, SortedEvictionPolicyFactorySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, LruEvictionPolicyFactorySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, LruNearEvictionPolicySelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, LruNearOnlyNearEvictionPolicySelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheNearEvictionSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheAtomicNearEvictionSelfTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, GridCacheEvictionFilterSelfTest.class, ignoredTests);

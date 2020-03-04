@@ -66,7 +66,6 @@ import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -150,10 +149,8 @@ public abstract class GridCacheAbstractDataStructuresFailoverSelfTest extends Ig
 
         cfg.setCacheConfiguration(ccfg);
 
-        if (client) {
+        if (client)
             cfg.setClientMode(client);
-            ((TcpDiscoverySpi)(cfg.getDiscoverySpi())).setForceServerMode(true);
-        }
 
         return cfg;
     }

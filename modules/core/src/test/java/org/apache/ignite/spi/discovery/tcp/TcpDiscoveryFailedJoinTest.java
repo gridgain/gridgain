@@ -74,11 +74,8 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
 
         cfg.setDiscoverySpi(discoSpi);
 
-        if (gridName.contains("client")) {
+        if (gridName.contains("client"))
             cfg.setClientMode(true);
-
-            discoSpi.setForceServerMode(gridName.contains("server"));
-        }
 
         if (gridName.contains("failingNode")) {
             GridQueryProcessor.idxCls = FailingIndexing.class;
@@ -134,9 +131,6 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
 
         assertStartFailed("server-47503");
 
-        // Client in server mode.
-        assertStartFailed("client_server-47503");
-
         // Regular client starts normally.
         startGrid("client-47503");
     }
@@ -153,9 +147,6 @@ public class TcpDiscoveryFailedJoinTest extends GridCommonAbstractTest {
         startGrid("server-47502");
 
         assertStartFailed("server-47503");
-
-        // Client in server mode.
-        assertStartFailed("client_server-47503");
 
         // Regular client starts normally.
         startGrid("client-47503");

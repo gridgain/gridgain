@@ -16,17 +16,17 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import javax.cache.Cache;
+import javax.cache.CacheException;
+import javax.cache.processor.EntryProcessor;
+import javax.cache.processor.EntryProcessorException;
+import javax.cache.processor.MutableEntry;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
-import javax.cache.Cache;
-import javax.cache.CacheException;
-import javax.cache.processor.EntryProcessor;
-import javax.cache.processor.EntryProcessorException;
-import javax.cache.processor.MutableEntry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -39,7 +39,6 @@ import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -66,11 +65,8 @@ public class IgniteCacheNearRestartRollbackSelfTest extends GridCommonAbstractTe
 
         cfg.setCacheConfiguration(cacheConfiguration(igniteInstanceName));
 
-        if (getTestIgniteInstanceName(3).equals(igniteInstanceName)) {
+        if (getTestIgniteInstanceName(3).equals(igniteInstanceName))
             cfg.setClientMode(true);
-
-            ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
-        }
 
         TcpCommunicationSpi commSpi = new TcpCommunicationSpi();
 

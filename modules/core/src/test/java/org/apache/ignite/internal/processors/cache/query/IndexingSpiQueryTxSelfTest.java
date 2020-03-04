@@ -16,10 +16,10 @@
 
 package org.apache.ignite.internal.processors.cache.query;
 
+import javax.cache.Cache;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.Callable;
-import javax.cache.Cache;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteTransactions;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -30,7 +30,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
 import org.apache.ignite.internal.transactions.IgniteTxHeuristicCheckedException;
 import org.apache.ignite.spi.IgniteSpiAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingSpi;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -54,7 +53,6 @@ public class IndexingSpiQueryTxSelfTest extends GridCacheAbstractSelfTest {
     @SuppressWarnings("unchecked")
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
 
         cfg.setClientMode("client".equals(igniteInstanceName));
         cfg.setIndexingSpi(new MyBrokenIndexingSpi());

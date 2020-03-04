@@ -28,7 +28,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.GridCacheAbstractSelfTest;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.MvccFeatureChecker;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,13 +78,11 @@ public abstract class GridCacheClientModesAbstractSelfTest extends GridCacheAbst
 
         int cnt = gridCnt.incrementAndGet();
 
-        if ((cnt == gridCount() && isClientStartedLast()) || (cnt == 1 && !isClientStartedLast())) {
+        if ((cnt == gridCount() && isClientStartedLast()) || (cnt == 2 && !isClientStartedLast())) {
             cfg.setClientMode(true);
 
             nearOnlyIgniteInstanceName = igniteInstanceName;
         }
-
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
 
         return cfg;
     }

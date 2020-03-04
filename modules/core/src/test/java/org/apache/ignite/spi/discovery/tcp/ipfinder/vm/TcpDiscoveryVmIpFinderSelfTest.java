@@ -220,13 +220,13 @@ public class TcpDiscoveryVmIpFinderSelfTest
 
         Ignition.start(config("client4", true, true));
 
-        assertEquals(3 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
+        assertEquals(2 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
 
         Ignition.stop("client1", true);
         Ignition.stop("client2", true);
         Ignition.stop("client3", true);
 
-        assertEquals(3 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
+        assertEquals(2 * srvSize, sharedStaticIpFinder.getRegisteredAddresses().size());
 
         Ignition.stop("client4", true);
 
@@ -262,7 +262,6 @@ public class TcpDiscoveryVmIpFinderSelfTest
 
         TcpDiscoverySpi disco = new TcpDiscoverySpi();
 
-        disco.setForceServerMode(forceServerMode);
         disco.setIpFinder(sharedStaticIpFinder);
 
         cfg.setDiscoverySpi(disco);

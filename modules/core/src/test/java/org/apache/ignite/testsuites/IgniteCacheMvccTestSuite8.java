@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.eviction.fifo.FifoEvictionPol
 import org.apache.ignite.internal.processors.cache.eviction.lru.LruEvictionPolicyFactorySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.lru.LruEvictionPolicySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.lru.LruNearEvictionPolicySelfTest;
-import org.apache.ignite.internal.processors.cache.eviction.lru.LruNearOnlyNearEvictionPolicySelfTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionDataStreamerTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionMetricTest;
 import org.apache.ignite.internal.processors.cache.eviction.paged.PageEvictionPagesRecyclingAndReusingTest;
@@ -73,7 +72,6 @@ public class IgniteCacheMvccTestSuite8 {
 
         // Skip classes that already contains Mvcc tests
         ignoredTests.add(LruNearEvictionPolicySelfTest.class);
-        ignoredTests.add(LruNearOnlyNearEvictionPolicySelfTest.class);
         ignoredTests.add(RandomLruPageEvictionMultinodeTest.class);
         ignoredTests.add(RandomLruNearEnabledPageEvictionMultinodeTest.class);
         ignoredTests.add(PageEvictionDataStreamerTest.class);

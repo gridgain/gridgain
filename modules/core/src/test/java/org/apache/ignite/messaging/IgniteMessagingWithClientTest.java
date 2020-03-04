@@ -30,7 +30,6 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -51,11 +50,8 @@ public class IgniteMessagingWithClientTest extends GridCommonAbstractTest implem
 
         cfg.setMarshaller(new BinaryMarshaller());
 
-        if (igniteInstanceName.equals(getTestIgniteInstanceName(2))) {
+        if (igniteInstanceName.equals(getTestIgniteInstanceName(2)))
             cfg.setClientMode(true);
-
-            ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
-        }
 
         return cfg;
     }

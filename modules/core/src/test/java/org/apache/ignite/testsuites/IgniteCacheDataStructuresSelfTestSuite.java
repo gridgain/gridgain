@@ -21,7 +21,6 @@ import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueue
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueClientDisconnectTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheQueueMultiNodeConsistencySelfTest;
 import org.apache.ignite.internal.processors.cache.datastructures.GridCacheSetRebalanceTest;
-import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDataStructuresTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteClientDiscoveryDataStructuresTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructureUniqueNameTest;
 import org.apache.ignite.internal.processors.cache.datastructures.IgniteDataStructureWithJobTest;
@@ -180,7 +179,6 @@ import org.junit.runners.Suite;
     IgniteDataStructureUniqueNameTest.class,
     //suite.addTest(new JUnit4TestAdapter(IgniteDataStructuresNoClassOnServerTest.class,
 
-    IgniteClientDataStructuresTest.class,
     IgniteClientDiscoveryDataStructuresTest.class,
 
     IgnitePartitionedQueueNoBackupsTest.class,

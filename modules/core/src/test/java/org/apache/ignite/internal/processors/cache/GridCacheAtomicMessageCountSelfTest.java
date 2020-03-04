@@ -33,7 +33,6 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -50,11 +49,12 @@ public class GridCacheAtomicMessageCountSelfTest extends GridCommonAbstractTest 
     /** Client mode flag. */
     private boolean client;
 
+    /** **/
+    private int clientNodeId = 1;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
 
         CacheConfiguration cCfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
 
@@ -62,7 +62,7 @@ public class GridCacheAtomicMessageCountSelfTest extends GridCommonAbstractTest 
         cCfg.setBackups(1);
         cCfg.setWriteSynchronizationMode(FULL_SYNC);
 
-        if (idx == 0 && client)
+        if (idx == clientNodeId && client)
             cfg.setClientMode(true);
 
         idx++;
@@ -100,12 +100,12 @@ public class GridCacheAtomicMessageCountSelfTest extends GridCommonAbstractTest 
 
         startGrids(4);
 
-        ignite(0).cache(DEFAULT_CACHE_NAME);
+        ignite(clientNodeId).cache(DEFAULT_CACHE_NAME);
 
         try {
             awaitPartitionMapExchange();
 
-            TestCommunicationSpi commSpi = (TestCommunicationSpi)grid(0).configuration().getCommunicationSpi();
+            TestCommunicationSpi commSpi = (TestCommunicationSpi)grid(clientNodeId).configuration().getCommunicationSpi();
 
             commSpi.registerMessage(GridNearAtomicSingleUpdateRequest.class);
             commSpi.registerMessage(GridNearAtomicFullUpdateRequest.class);
@@ -119,23 +119,26 @@ public class GridCacheAtomicMessageCountSelfTest extends GridCommonAbstractTest 
             int expDhtCnt = 0;
 
             for (int i = 0; i < putCnt; i++) {
-                ClusterNode locNode = grid(0).localNode();
+                ClusterNode locNode = grid(clientNodeId).localNode();
 
-                Affinity<Object> affinity = ignite(0).affinity(DEFAULT_CACHE_NAME);
+                Affinity<Object> affinity = ignite(clientNodeId).affinity(DEFAULT_CACHE_NAME);
 
                 if (affinity.isPrimary(locNode, i))
                     expDhtCnt++;
                 else
                     expNearSingleCnt++;
 
-                jcache(0).put(i, i);
+                jcache(clientNodeId).put(i, i);
             }
 
             assertEquals(expNearCnt, commSpi.messageCount(GridNearAtomicFullUpdateRequest.class));
             assertEquals(expNearSingleCnt, commSpi.messageCount(GridNearAtomicSingleUpdateRequest.class));
             assertEquals(expDhtCnt, commSpi.messageCount(GridDhtAtomicSingleUpdateRequest.class));
 
-            for (int i = 1; i < 4; i++) {
+            for (int i = 0; i < 4; i++) {
+                if(i == clientNodeId)
+                    continue;
+
                 commSpi = (TestCommunicationSpi)grid(i).configuration().getCommunicationSpi();
 
                 assertEquals(0, commSpi.messageCount(GridNearAtomicSingleUpdateRequest.class));

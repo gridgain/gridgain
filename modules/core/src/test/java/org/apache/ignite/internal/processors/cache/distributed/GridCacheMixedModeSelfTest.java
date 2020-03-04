@@ -21,7 +21,6 @@ import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -35,11 +34,9 @@ public class GridCacheMixedModeSelfTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
-
         cfg.setCacheConfiguration(cacheConfiguration(igniteInstanceName));
 
-        if (F.eq(igniteInstanceName, getTestIgniteInstanceName(0)))
+        if (F.eq(igniteInstanceName, getTestIgniteInstanceName(1)))
             cfg.setClientMode(true);
 
         return cfg;

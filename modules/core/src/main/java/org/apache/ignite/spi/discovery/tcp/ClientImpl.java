@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.discovery.tcp;
 
+import javax.net.ssl.SSLException;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,7 +50,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.net.ssl.SSLException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteClientDisconnectedException;
@@ -296,9 +296,6 @@ class ClientImpl extends TcpDiscoveryImpl {
 
         sockReader = new SocketReader();
         sockReader.start();
-
-        if (spi.ipFinder.isShared() && spi.isForceServerMode())
-            registerLocalNodeAddress();
 
         msgWorker = new MessageWorker(log);
 

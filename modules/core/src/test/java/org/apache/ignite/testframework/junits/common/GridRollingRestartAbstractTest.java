@@ -16,6 +16,8 @@
 
 package org.apache.ignite.testframework.junits.common;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -24,9 +26,6 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.assertions.AlwaysAssertion;
 import org.apache.ignite.testframework.assertions.Assertion;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
 
 /**
  * Base class for tests which use a {@link RollingRestartThread} to stop and start
@@ -84,12 +83,10 @@ public abstract class GridRollingRestartAbstractTest extends GridCommonAbstractT
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        if (isFirstGrid(igniteInstanceName)) {
+        if (igniteInstanceName.endsWith("1")) {
             cfg.setClientMode(true);
 
             assert cfg.getDiscoverySpi() instanceof TcpDiscoverySpi;
-
-            ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setForceServerMode(true);
         }
 
         cfg.setCacheConfiguration(getCacheConfiguration());

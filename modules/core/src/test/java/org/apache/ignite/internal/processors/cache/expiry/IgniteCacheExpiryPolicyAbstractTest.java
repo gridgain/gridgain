@@ -16,15 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.expiry;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import javax.cache.Cache;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
@@ -35,6 +26,15 @@ import javax.cache.expiry.ExpiryPolicy;
 import javax.cache.expiry.ModifiedExpiryPolicy;
 import javax.cache.processor.EntryProcessor;
 import javax.cache.processor.MutableEntry;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CachePeekMode;
@@ -52,7 +52,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
-import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -1127,8 +1126,6 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
 
         IgniteConfiguration clientCfg = getConfiguration("client").setClientMode(true);
 
-        ((TcpDiscoverySpi)clientCfg.getDiscoverySpi()).setForceServerMode(false);
-
         Ignite client = startGrid("client", clientCfg);
 
         IgniteCache<Object, Object> cache = client.cache(DEFAULT_CACHE_NAME);
@@ -1164,8 +1161,6 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
         startGridsMultiThreaded(gridCount());
 
         IgniteConfiguration clientCfg = getConfiguration("client").setClientMode(true);
-
-        ((TcpDiscoverySpi)clientCfg.getDiscoverySpi()).setForceServerMode(false);
 
         Ignite client = startGrid("client", clientCfg);
 
