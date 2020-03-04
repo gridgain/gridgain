@@ -17,26 +17,34 @@
 package org.apache.ignite.internal.processors.platform.client.cache;
 
 import org.apache.ignite.binary.BinaryRawReader;
-import org.apache.ignite.internal.processors.platform.client.ClientConnectionContext;
-import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 
 /**
- * Cache clear request.
+ * Cache data manipulation request.
  */
-public class ClientCacheClearRequest extends ClientCacheDataRequest {
+class ClientCacheDataRequest extends ClientCacheRequest {
+    /** Transaction ID. Only available if request was made under a transaction. */
+    private final int txId;
+
     /**
      * Constructor.
      *
      * @param reader Reader.
      */
-    public ClientCacheClearRequest(BinaryRawReader reader) {
+    ClientCacheDataRequest(BinaryRawReader reader) {
         super(reader);
+
+        txId = isTransactional() ? reader.readInt() : 0;
+    }
+
+    /**
+     * Gets transaction ID.
+     */
+    public int txId() {
+        return txId;
     }
 
     /** {@inheritDoc} */
-    @Override public ClientResponse process(ClientConnectionContext ctx) {
-        cache(ctx).clear();
-
-        return super.process(ctx);
+    @Override public boolean isTransactional() {
+        return super.isTransactional();
     }
 }

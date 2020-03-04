@@ -264,6 +264,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(14, client.MaxOpenCursorsPerConnection);
             Assert.AreEqual(15, client.ThreadPoolSize);
             Assert.AreEqual(19, client.IdleTimeout.TotalSeconds);
+            Assert.AreEqual(20, client.ThinClientConfiguration.MaxActiveTxPerConnection);
 
             var pers = cfg.PersistentStoreConfiguration;
 
@@ -924,7 +925,10 @@ namespace Apache.Ignite.Core.Tests
                     OdbcEnabled = false,
                     JdbcEnabled = false,
                     ThreadPoolSize = 7,
-                    IdleTimeout = TimeSpan.FromMinutes(5)
+                    IdleTimeout = TimeSpan.FromMinutes(5),
+                    ThinClientConfiguration = new ThinClientConfiguration {
+                        MaxActiveTxPerConnection = 8
+                    }
                 },
                 PersistentStoreConfiguration = new PersistentStoreConfiguration
                 {

@@ -103,6 +103,7 @@
     <Compile Include="Log\LocalDateTimeProvider.cs" />
     <Compile Include="Ssl\ISslContextFactory.cs" />
     <Compile Include="Configuration\ClientConnectorConfiguration.cs" />
+    <Compile Include="Configuration\ThinClientConfiguration.cs" />
     <Compile Include="Datastream\DataStreamerDefaults.cs" />
     <Compile Include="IDataRegionMetrics.cs" />
     <Compile Include="IDataStorageMetrics.cs" />
