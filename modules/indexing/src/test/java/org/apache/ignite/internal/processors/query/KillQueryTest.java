@@ -638,7 +638,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
     @Test
     public void testCancelBeforeIteratorObtained() throws Exception {
         FieldsQueryCursor<List<?>>  cur = ignite.context().query()
-            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer"), false);
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false), false);
 
         Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
 
@@ -652,7 +652,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
     @Test
     public void testCancelAfterIteratorObtained() throws Exception {
         FieldsQueryCursor<List<?>> cur = ignite.context().query()
-            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false).setPageSize(10), false);
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false), false);
 
         cur.iterator();
 
@@ -668,7 +668,7 @@ public class KillQueryTest extends GridCommonAbstractTest {
     @Test
     public void testCancelAfterResultSetPartiallyRead() throws Exception {
         FieldsQueryCursor<List<?>> cur = ignite.context().query()
-            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false).setPageSize(10), false);
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false), false);
 
         Iterator<List<?>> it = cur.iterator();
 
@@ -680,6 +680,173 @@ public class KillQueryTest extends GridCommonAbstractTest {
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
     }
 
+    /**
+     *
+     */
+    @Test
+    public void testCancelBeforeIteratorObtainedLazy() throws Exception {
+        FieldsQueryCursor<List<?>>  cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(true), false);
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        ignite.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterIteratorObtainedLazy() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(true), false);
+
+        cur.iterator();
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        ignite.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterResultSetPartiallyReadLazy() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(true), false);
+
+        Iterator<List<?>> it = cur.iterator();
+
+        it.next();
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        ignite.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelBeforeIteratorObtainedKillFromClient() throws Exception {
+        FieldsQueryCursor<List<?>>  cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false), false);
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        IgniteEx client = grid(NODES_COUNT - 1);
+
+        assert client.context().clientNode();
+
+        client.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterIteratorObtainedKillFromClient() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false), false);
+
+        cur.iterator();
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        IgniteEx client = grid(NODES_COUNT - 1);
+
+        assert client.context().clientNode();
+
+        client.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterResultSetPartiallyReadKillFromClient() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(false), false);
+
+        Iterator<List<?>> it = cur.iterator();
+
+        it.next();
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        IgniteEx client = grid(NODES_COUNT - 1);
+
+        assert client.context().clientNode();
+
+        client.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelBeforeIteratorObtainedLazyKillFromClient() throws Exception {
+        FieldsQueryCursor<List<?>>  cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(true), false);
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        IgniteEx client = grid(NODES_COUNT - 1);
+
+        assert client.context().clientNode();
+
+        client.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterIteratorObtainedLazyKillFromClient() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(true), false);
+
+        cur.iterator();
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        IgniteEx client = grid(NODES_COUNT - 1);
+
+        assert client.context().clientNode();
+
+        client.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testCancelAfterResultSetPartiallyReadLazyKillFromClient() throws Exception {
+        FieldsQueryCursor<List<?>> cur = ignite.context().query()
+            .querySqlFields(new SqlFieldsQuery("select * from \"default\".Integer").setLazy(true), false);
+
+        Iterator<List<?>> it = cur.iterator();
+
+        it.next();
+
+        Long qryId = ignite.context().query().runningQueries(-1).iterator().next().id();
+
+        IgniteEx client = grid(NODES_COUNT - 1);
+
+        assert client.context().clientNode();
+
+        client.context().query()
+            .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+    }
     /**
      * Trying to cancel long running query if partition pruning does it job. It's important to set {@link
      * IgniteSystemProperties#IGNITE_SQL_MAX_EXTRACTED_PARTS_FROM_BETWEEN} bigger than partitions count {@link
@@ -880,7 +1047,6 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
             Assert.fail("Failed to wait for query to be in running queries list exactly one time " +
                 "[select=" + select + ", node=" + ignite.localNode().id() + ", timeout=" + TIMEOUT + "ms].");
-
         }
 
         SqlFieldsQuery killQry = createKillQuery(findOneRunningQuery(select, ignite), asyncCancel);
