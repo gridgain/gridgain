@@ -73,6 +73,11 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
     /** */
     private volatile InvalidContext<T> invalidCtx;
 
+    public PageLockTracker() {
+        name=null;
+        pages=null;
+    }
+
     /**
      *
      */
@@ -85,6 +90,10 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** */
     public void onBeforeWriteLock0(int structureId, long pageId, long page) {
+
+        if(true)
+            return;
+
         this.nextOp = BEFORE_WRITE_LOCK;
         this.nextOpStructureId = structureId;
         this.nextOpPageId = pageId;
@@ -92,6 +101,10 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** */
     public void onBeforeReadLock0(int structureId, long pageId, long page) {
+
+        if(true)
+            return;
+
         this.nextOp = BEFORE_READ_LOCK;
         this.nextOpStructureId = structureId;
         this.nextOpPageId = pageId;
@@ -99,6 +112,10 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** {@inheritDoc} */
     @Override public void onBeforeWriteLock(int structureId, long pageId, long page) {
+
+        if(true)
+            return;
+
         if (isInvalid())
             return;
 
@@ -114,6 +131,10 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** {@inheritDoc} */
     @Override public void onWriteLock(int structureId, long pageId, long page, long pageAddr) {
+
+        if(true)
+            return;
+
         if (checkFailedLock(pageAddr) || isInvalid())
             return;
 
@@ -129,6 +150,10 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** {@inheritDoc} */
     @Override public void onWriteUnlock(int structureId, long pageId, long page, long pageAddr) {
+
+        if(true)
+            return;
+
         if (isInvalid())
             return;
 
@@ -144,6 +169,9 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** {@inheritDoc} */
     @Override public void onBeforeReadLock(int structureId, long pageId, long page) {
+        if(true)
+            return;
+
         if (isInvalid())
             return;
 
@@ -159,6 +187,9 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** {@inheritDoc} */
     @Override public void onReadLock(int structureId, long pageId, long page, long pageAddr) {
+        if(true)
+            return;
+
         if (checkFailedLock(pageAddr) ||isInvalid())
             return;
 
@@ -174,6 +205,10 @@ public abstract class PageLockTracker<T extends PageLockDump> implements PageLoc
 
     /** {@inheritDoc} */
     @Override public void onReadUnlock(int structureId, long pageId, long page, long pageAddr) {
+
+        if(true)
+            return;
+
         if (isInvalid())
             return;
 

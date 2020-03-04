@@ -19,8 +19,10 @@ package org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagel
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.PageLockTrackerManager.MemoryCalculator;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.log.LockLog;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.LockStack;
+import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.stack.PageLockStackSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.store.HeapPageMetaInfoStore;
 import org.apache.ignite.internal.processors.cache.persistence.diagnostic.pagelocktracker.store.OffHeapPageMetaInfoStore;
+import org.apache.ignite.lang.IgniteFuture;
 
 import static java.lang.String.valueOf;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PAGE_LOCK_TRACKER_CAPACITY;
@@ -97,6 +99,110 @@ public final class LockTrackerFactory {
         String name,
         MemoryCalculator memCalc
     ) {
+//        return new PageLockTracker<PageLockStackSnapshot>(){
+//
+//            @Override public void onWriteLock0(int structureId, long pageId, long page, long pageAddr) {
+//
+//            }
+//
+//            @Override public void onWriteUnlock0(int structureId, long pageId, long page, long pageAddr) {
+//
+//            }
+//
+//            @Override public void onReadLock0(int structureId, long pageId, long page, long pageAddr) {
+//
+//            }
+//
+//            @Override public void onReadUnlock0(int structureId, long pageId, long page, long pageAddr) {
+//
+//            }
+//
+//            @Override protected PageLockStackSnapshot snapshot() {
+//                return null;
+//            }
+//
+//            @Override public void onBeforeWriteLock0(int structureId, long pageId, long page) {
+////                super.onBeforeWriteLock0(structureId, pageId, page);
+//            }
+//
+//            @Override public void onBeforeReadLock0(int structureId, long pageId, long page) {
+////                super.onBeforeReadLock0(structureId, pageId, page);
+//            }
+//
+//            @Override public void onBeforeWriteLock(int structureId, long pageId, long page) {
+////                super.onBeforeWriteLock(structureId, pageId, page);
+//            }
+//
+//            @Override public void onWriteLock(int structureId, long pageId, long page, long pageAddr) {
+////                super.onWriteLock(structureId, pageId, page, pageAddr);
+//            }
+//
+//            @Override public void onWriteUnlock(int structureId, long pageId, long page, long pageAddr) {
+////                super.onWriteUnlock(structureId, pageId, page, pageAddr);
+//            }
+//
+//            @Override public void onBeforeReadLock(int structureId, long pageId, long page) {
+////                super.onBeforeReadLock(structureId, pageId, page);
+//            }
+//
+//            @Override public void onReadLock(int structureId, long pageId, long page, long pageAddr) {
+////                super.onReadLock(structureId, pageId, page, pageAddr);
+//            }
+//
+//            @Override public void onReadUnlock(int structureId, long pageId, long page, long pageAddr) {
+////                super.onReadUnlock(structureId, pageId, page, pageAddr);
+//            }
+//
+//            @Override public boolean isInvalid() {
+////                return super.isInvalid();
+//                return false;
+//            }
+//
+//            @Override public InvalidContext<PageLockStackSnapshot> invalidContext() {
+////                return super.invalidContext();
+//                return null;
+//            }
+//
+//            @Override protected void free() {
+////                super.free();
+//            }
+//
+//            @Override protected void invalid(String msg) {
+////                super.invalid(msg);
+//            }
+//
+//            @Override public long operationsCounter() {
+////                return super.operationsCounter();
+//                return 0;
+//            }
+//
+//            @Override public int heldLocksNumber() {
+////                return super.heldLocksNumber();
+//                return 0;
+//            }
+//
+//            @Override protected boolean validateOperation(int structureId, long pageId, int op) {
+////                return super.validateOperation(structureId, pageId, op);
+//            }
+//
+//            @Override public synchronized boolean acquireSafePoint() {
+////                return super.acquireSafePoint();
+//            }
+//
+//            @Override public synchronized boolean releaseSafePoint() {
+////                return super.releaseSafePoint();
+//            }
+//
+//            @Override public synchronized PageLockStackSnapshot dump() {
+////                return super.dump();
+//                return null;
+//            }
+//
+//            @Override public IgniteFuture<PageLockStackSnapshot> dumpSync() {
+////                return super.dumpSync();
+//                return null;
+//            }
+//        };
         switch (type) {
             case HEAP_STACK:
                 return new LockStack(name, new HeapPageMetaInfoStore(size, memCalc), memCalc);

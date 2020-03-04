@@ -33,7 +33,7 @@ import org.apache.ignite.internal.util.worker.GridWorker;
  * </ul>
  * <b>Note</b>: this class is intended for internal use only.
  */
-public class IgniteThread extends Thread {
+public class IgniteThread extends io.netty.util.concurrent.FastThreadLocalThread {
     /** Index for unassigned thread. */
     public static final int GRP_IDX_UNASSIGNED = -1;
 
@@ -244,4 +244,7 @@ public class IgniteThread extends Thread {
     @Override public String toString() {
         return S.toString(IgniteThread.class, this, "name", getName());
     }
+
+
+
 }

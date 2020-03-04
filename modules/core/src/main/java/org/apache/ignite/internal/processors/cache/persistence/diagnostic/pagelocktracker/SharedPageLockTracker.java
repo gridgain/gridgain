@@ -184,31 +184,49 @@ public class SharedPageLockTracker implements LifecycleAware, PageLockListener, 
 
     /** {@inheritDoc} */
     @Override public void onBeforeWriteLock(int structureId, long pageId, long page) {
+        if(true){
+            return;
+        }
         lockTracker.get().onBeforeWriteLock(structureId, pageId, page);
     }
 
     /** {@inheritDoc} */
     @Override public void onWriteLock(int structureId, long pageId, long page, long pageAddr) {
+        if(true){
+            return;
+        }
         lockTracker.get().onWriteLock(structureId, pageId, page, pageAddr);
     }
 
     /** {@inheritDoc} */
     @Override public void onWriteUnlock(int structureId, long pageId, long page, long pageAddr) {
+        if(true){
+            return;
+        }
         lockTracker.get().onWriteUnlock(structureId, pageId, page, pageAddr);
     }
 
     /** {@inheritDoc} */
     @Override public void onBeforeReadLock(int structureId, long pageId, long page) {
+        if(true){
+            return;
+        }
         lockTracker.get().onBeforeReadLock(structureId, pageId, page);
     }
 
     /** {@inheritDoc} */
     @Override public void onReadLock(int structureId, long pageId, long page, long pageAddr) {
+        if(true){
+            return;
+        }
         lockTracker.get().onReadLock(structureId, pageId, page, pageAddr);
     }
 
     /** {@inheritDoc} */
     @Override public void onReadUnlock(int structureId, long pageId, long page, long pageAddr) {
+        if(true){
+            return;
+        }
         lockTracker.get().onReadUnlock(structureId, pageId, page, pageAddr);
     }
 

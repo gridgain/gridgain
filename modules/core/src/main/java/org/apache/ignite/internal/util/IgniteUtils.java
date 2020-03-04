@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.util;
 
+import io.netty.util.concurrent.FastThreadLocal;
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import javax.management.DynamicMBean;
@@ -571,8 +572,14 @@ public abstract class IgniteUtils {
     /** Empty local Ignite name. */
     public static final String LOC_IGNITE_NAME_EMPTY = new String();
 
-    /** Local Ignite name thread local. */
-    private static final ThreadLocal<String> LOC_IGNITE_NAME = new ThreadLocal<String>() {
+//    /** Local Ignite name thread local. */
+//    private static final ThreadLocal<String> LOC_IGNITE_NAME = new ThreadLocal<String>() {
+//        @Override protected String initialValue() {
+//            return LOC_IGNITE_NAME_EMPTY;
+//        }
+//    };
+
+    private static final FastThreadLocal<String> LOC_IGNITE_NAME = new FastThreadLocal<String>(){
         @Override protected String initialValue() {
             return LOC_IGNITE_NAME_EMPTY;
         }

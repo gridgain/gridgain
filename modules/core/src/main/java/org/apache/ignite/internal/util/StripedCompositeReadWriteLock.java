@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.util;
 
+import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -36,7 +38,7 @@ public class StripedCompositeReadWriteLock implements ReadWriteLock {
     private static final AtomicInteger IDX_GEN = new AtomicInteger();
 
     /** Index. */
-    private static final ThreadLocal<Integer> IDX = new ThreadLocal<Integer>() {
+    private static final FastThreadLocal<Integer> IDX = new FastThreadLocal<Integer>() {
         @Override protected Integer initialValue() {
             return IDX_GEN.incrementAndGet();
         }
