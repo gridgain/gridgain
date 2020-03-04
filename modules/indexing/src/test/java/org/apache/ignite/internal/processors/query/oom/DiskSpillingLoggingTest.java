@@ -37,11 +37,11 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
     @Test
     public void testLogsWithOffloading() {
         LogListener logLsnr = LogListener
-            .matches("Started query with memory tracking parameters")
-            .andMatches("Started offloading for query")
+            .matches("Users query started")
+            .andMatches("Offloading started for query")
             .andMatches("Created spill file")
             .andMatches("Deleted spill file")
-            .andMatches("Query has been completed with memory metrics")
+            .andMatches("User's query completed")
             .build();
 
         testLog(grid(0)).registerListener(logLsnr);
@@ -59,10 +59,10 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
 
     /** */
     @Test
-    public void testLogsNoOffloading() {
+    public void testLogsNoOffloading() throws InterruptedException {
         LogListener logLsnr = LogListener
-            .matches("Started query with memory tracking parameters")
-            .andMatches("Query has been completed with memory metrics")
+            .matches("Users query started")
+            .andMatches("User's query completed")
             .build();
 
         testLog(grid(0)).registerListener(logLsnr);
@@ -75,27 +75,7 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
             "SELECT depId, code, age, COUNT(*), SUM(salary),  LISTAGG(uuid) " +
                 "FROM person GROUP BY age, depId, code ");
 
-        assertTrue(logLsnr.check());
-    }
-
-    /** */
-    @Test
-    public void testLogsNoMemoryTracking() {
-        LogListener logLsnr = LogListener
-            .matches("No memory quota configured for the query.")
-            .build();
-
-        testLog(grid(0)).registerListener(logLsnr);
-
-        setGlobalQuota("0");
-        setDefaultQueryQuota(0);
-        setOffloadingEnabled(false);
-
-        checkQuery(Result.SUCCESS_NO_OFFLOADING,
-            "SELECT depId, code, age, COUNT(*), SUM(salary),  LISTAGG(uuid) " +
-                "FROM person GROUP BY age, depId, code ");
-
-        assertTrue(logLsnr.check());
+        assertTrue(logLsnr.check(5_000));
     }
 
     /** */
@@ -139,6 +119,7 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
         ListeningTestLogger testLog = new ListeningTestLogger(true, log);
 
         GridTestUtils.setFieldValue(memoryManager(node), "log", testLog);
+        GridTestUtils.setFieldValue(runningQueryManager(node), "log", testLog);
 
         return testLog;
     }

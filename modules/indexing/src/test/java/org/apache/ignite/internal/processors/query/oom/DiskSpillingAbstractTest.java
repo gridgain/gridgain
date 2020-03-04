@@ -40,6 +40,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
@@ -487,6 +488,16 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
         IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
 
         return h2.memoryManager();
+    }
+
+    /**
+     * @param node Node.
+     * @return Running query manager.
+     */
+    protected RunningQueryManager runningQueryManager(IgniteEx node) {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
+
+        return h2.runningQueryManager();
     }
 
     /** */

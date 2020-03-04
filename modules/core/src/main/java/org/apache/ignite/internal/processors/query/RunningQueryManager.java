@@ -114,7 +114,7 @@ public class RunningQueryManager {
      * @param ctx Context.
      */
     public RunningQueryManager(GridKernalContext ctx) {
-        log = ctx.log(getClass());
+        log = ctx.log(RunningQueryManager.class);
         locNodeId = ctx.localNodeId();
         histSz = ctx.config().getSqlQueryHistorySize();
 
@@ -166,7 +166,7 @@ public class RunningQueryManager {
         assert preRun == null : "Running query already registered [prev_qry=" + preRun + ", newQry=" + run + ']';
 
         if (log.isDebugEnabled()) {
-            log.debug("Start new user's query [id=" + qryId + ", type=" + qryType + ", local=" + loc +
+            log.debug("Users query started [id=" + qryId + ", type=" + qryType + ", local=" + loc +
                 ", qry=" + qry + ']');
         }
 
