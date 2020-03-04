@@ -47,7 +47,6 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 /**
  * Tests for "wait for backups on shutdown" flag.
  */
-@WithSystemProperty(key = IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN, value = "true")
 public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTest {
     /** Key to store list of gracefully stopping nodes within metastore. */
     private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
@@ -717,6 +716,8 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
             ccfgs[i - 1] = ccfg;
         }
+
+        cfg.setWaitForBackupsOnShutdown(true);
 
         cfg.setCacheConfiguration(ccfgs);
 

@@ -603,6 +603,12 @@ public class IgniteConfiguration {
     /** Sql initial config. */
     private SqlConfiguration sqlCfg = new SqlConfiguration();
 
+    /** Graceful shutdown waits for tasks to complete. */
+    private boolean gracefulShutdown;
+
+    /** Prevent node loss by waiting until backup factor is sufficient. */
+    private boolean waitForBackupsOnShutdown;
+
     /**
      * Creates valid grid configuration with all default values.
      */
@@ -665,6 +671,7 @@ public class IgniteConfiguration {
         execCfgs = cfg.getExecutorConfiguration();
         failureDetectionTimeout = cfg.getFailureDetectionTimeout();
         failureHnd = cfg.getFailureHandler();
+        gracefulShutdown = cfg.isGracefulShutdown();
         igniteHome = cfg.getIgniteHome();
         igniteInstanceName = cfg.getIgniteInstanceName();
         igniteWorkDir = cfg.getWorkDirectory();
@@ -722,6 +729,7 @@ public class IgniteConfiguration {
         userAttrs = cfg.getUserAttributes();
         utilityCacheKeepAliveTime = cfg.getUtilityCacheKeepAliveTime();
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
+        waitForBackupsOnShutdown = cfg.isWaitForBackupsOnShutdown();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
         envType = cfg.getEnvironmentType();
@@ -3390,11 +3398,64 @@ public class IgniteConfiguration {
     /**
      * Sets flag indicating whether the user authentication is enabled for cluster.
      *
-     * @param authEnabled User authentication enabled flag. {@code true} enab
+     * @param authEnabled User authentication enabled flag. {@code true} enables authentication.
      * @return {@code this} for chaining.
      */
     public IgniteConfiguration setAuthenticationEnabled(boolean authEnabled) {
         this.authEnabled = authEnabled;
+
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if running jobs will be allowed to complete during node stop.
+     * Default value is false; jobs will be cancelled.
+     *
+     * @return {@code true} if running jobs will be allowed to complete during node stop.
+     *     Otherwise returns {@code false}.
+     */
+    public boolean isGracefulShutdown() {
+        return gracefulShutdown;
+    }
+
+    /**
+     * Sets flag indicating that all running jobs will be allowed to complete during node stop. Otherwise,
+     * they will be cancelled by calling {@link ComputeJob#cancel()} method.
+     *
+     * @param gracefulShutdown Graceful shutdown flag.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setGracefulShutdown(boolean gracefulShutdown) {
+        this.gracefulShutdown = gracefulShutdown;
+
+        return this;
+    }
+
+    /**
+     * Returns {@code true} if node will wait until all of its data is backed up by other nodes before shutting down.
+     * Default value is false; no waiting in case of imminent potential data loss.
+     *
+     * Can be overriden by {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN}, in which case, value of
+     * this flag will be ignored.
+     *
+     * @return {@code true} if node will wait until all of its data is backed up by other nodes before shutting down.
+     *     Otherwise returns {@code false}.
+     */
+    public boolean isWaitForBackupsOnShutdown() {
+        return waitForBackupsOnShutdown;
+    }
+
+    /**
+     * Sets flag indicating that node will wait until all of its data is backed up by other nodes before shutting down.
+     *
+     * Can be overriden by {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN}, in which case, setting
+     * this flag will have no effect.
+     *
+     * @param waitForBackupsOnShutdown Wait for backups flag.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setWaitForBackupsOnShutdown(boolean waitForBackupsOnShutdown) {
+        this.waitForBackupsOnShutdown = waitForBackupsOnShutdown;
 
         return this;
     }
