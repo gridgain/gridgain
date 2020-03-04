@@ -166,7 +166,7 @@ public class RunningQueryManager {
         assert preRun == null : "Running query already registered [prev_qry=" + preRun + ", newQry=" + run + ']';
 
         if (log.isDebugEnabled()) {
-            log.debug("Users query started [id=" + qryId + ", type=" + qryType + ", local=" + loc +
+            log.debug("User's query started [id=" + qryId + ", type=" + qryType + ", local=" + loc +
                 ", qry=" + qry + ']');
         }
 

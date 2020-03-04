@@ -266,7 +266,7 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
             dirEvts = watchKey.pollEvents();
 
             // Check files have been created but deleted later.
-//            assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
+            assertFalse("Disk events is empty for on-disk query. ", dirEvts.isEmpty());
 
             assertWorkDirClean();
             checkMemoryManagerState();

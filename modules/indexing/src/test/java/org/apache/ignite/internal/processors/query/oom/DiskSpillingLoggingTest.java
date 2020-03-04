@@ -37,7 +37,7 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
     @Test
     public void testLogsWithOffloading() {
         LogListener logLsnr = LogListener
-            .matches("Users query started")
+            .matches("User's query started")
             .andMatches("Offloading started for query")
             .andMatches("Created spill file")
             .andMatches("Deleted spill file")
@@ -59,9 +59,9 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
 
     /** */
     @Test
-    public void testLogsNoOffloading() throws InterruptedException {
+    public void testLogsNoOffloading() {
         LogListener logLsnr = LogListener
-            .matches("Users query started")
+            .matches("User's query started")
             .andMatches("User's query completed")
             .build();
 
@@ -75,7 +75,7 @@ public class DiskSpillingLoggingTest extends DiskSpillingAbstractTest {
             "SELECT depId, code, age, COUNT(*), SUM(salary),  LISTAGG(uuid) " +
                 "FROM person GROUP BY age, depId, code ");
 
-        assertTrue(logLsnr.check(5_000));
+        assertTrue(logLsnr.check());
     }
 
     /** */

@@ -126,7 +126,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         assertTrue(3000 > rowCnt);
 
         Map<H2MemoryTracker, Long> collect = localResults.stream().collect(
-            Collectors.toMap(H2ManagedLocalResult::memoryTracker, this::reservedByResult, Long::sum));
+            Collectors.toMap(H2ManagedLocalResult::memoryTracker, H2ManagedLocalResult::memoryReserved, Long::sum));
         assertTrue(collect.values().stream().allMatch(s -> s < maxMem));
     }
 
@@ -138,7 +138,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(localResults.stream().allMatch(r -> reservedByResult(r) < maxMem));
+        assertTrue(localResults.stream().allMatch(r -> r.memoryReserved() < maxMem));
     }
 
     /** {@inheritDoc} */
@@ -186,7 +186,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertTrue(localResults.stream().allMatch(r -> reservedByResult(r) < maxMem));
+        assertTrue(localResults.stream().allMatch(r -> r.memoryReserved() < maxMem));
     }
 
     /** {@inheritDoc} */
@@ -197,7 +197,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         checkQueryExpectOOM("select * from K ORDER BY K.grp", true);
 
         assertEquals(5, localResults.size());
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> reservedByResult(r) + 1000 > maxMem));
+        assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         assertTrue(maxMem > localResults.get(4).memoryReserved());
         // Map
         assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(H2ManagedLocalResult::getRowCount).sum());
@@ -261,7 +261,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
 
         assertEquals(5, localResults.size());
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> reservedByResult(r) + 1000 > maxMem));
+        assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         // Map
         assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
         // Reduce
@@ -274,7 +274,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         execQuery("select K.grp, avg(K.id), min(K.id), sum(K.id) from K GROUP BY K.grp", false); // Tiny local result.
 
         assertEquals(5, localResults.size());
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> reservedByResult(r) + 1000 > maxMem));
+        assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         // Map
         assertEquals(100, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
         // Reduce
@@ -301,7 +301,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
         assertEquals(5, localResults.size());
         // Map
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> reservedByResult(r) + 1000 > maxMem));
+        assertFalse(localResults.stream().limit(4).anyMatch(r ->  + 1000 > maxMem));
         // Reduce
         assertTrue(maxMem > localResults.get(4).memoryReserved());
         assertTrue(8000 > localResults.get(4).getRowCount());
@@ -363,7 +363,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         checkQueryExpectOOM("select DISTINCT K.id from K", true);
 
         assertEquals(4, localResults.size());
-        assertFalse(localResults.stream().allMatch(r -> reservedByResult(r) + 1000 > maxMem));
+        assertFalse(localResults.stream().allMatch(r -> r.memoryReserved() + 1000 > maxMem));
         assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
@@ -380,10 +380,5 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
         assertEquals(1, localResults.size());
         assertEquals(0, localResults.get(0).memoryReserved());
         assertEquals(0, localResults.get(0).getRowCount());
-    }
-
-    /** */
-    protected long reservedByResult(H2ManagedLocalResult res) {
-        return res.memoryTracker().reserved();
     }
 }

@@ -51,7 +51,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.KB;
 /**
  * Query memory manager.
  */
-public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFactory{
+public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFactory {
     /**
      *  Spill directory path. Spill directory is used for the disk offloading
      *  of intermediate results of the heavy queries.
@@ -89,7 +89,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     private volatile long globalQuota;
 
     /** String representation of global quota. */
-    private String globalQuotaStr;
+    private volatile String globalQuotaStr;
 
     /**
      * Default query memory limit.
@@ -100,7 +100,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     private volatile long qryQuota;
 
     /** String representation of query quota. */
-    private String qryQuotaStr;
+    private volatile String qryQuotaStr;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -188,7 +188,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
             if (log.isInfoEnabled()) {
                 LT.info(log, "Query memory quota cannot exceed global memory quota." +
-                    " It will be reduced to the size of global quota: : " + globalQuota0);
+                    " It will be reduced to the size of global quota: " + globalQuota0);
             }
 
             maxQryMemory = globalQuota0;
@@ -228,7 +228,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      *
      * @param newGlobalQuota New global query quota.
      */
-    public void setGlobalQuota(String newGlobalQuota) {
+    public synchronized void setGlobalQuota(String newGlobalQuota) {
         long globalQuota0 = U.parseBytes(newGlobalQuota);
         long heapSize = Runtime.getRuntime().maxMemory();
 
@@ -262,7 +262,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      *
      * @param newQryQuota New per-query quota.
      */
-    public void setQueryQuota(String newQryQuota) {
+    public synchronized void setQueryQuota(String newQryQuota) {
         long qryQuota0 = U.parseBytes(newQryQuota);
 
         A.ensure(qryQuota0 >= 0, "Sql query memory quota must be >= 0: quotaSize=" + qryQuota0);
