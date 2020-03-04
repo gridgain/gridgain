@@ -119,7 +119,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      * Test #1  If a primary node for a transaction key left, a transaction must rollback imminently.
      */
     @Test
-    public void testFastRollbackAfterNodeLeft() throws Exception {
+    public void testFastRollbackAfterNodeLeftRepeatableRead() throws Exception {
         final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
 
         try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, TX_TIMEOUT, 10)) {
@@ -147,7 +147,7 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
      */
     @Test
-    public void testNewTransactionWillNotProducedOnPut() throws Exception {
+    public void testNewTransactionWillNotProducedOnPutRepeatableRead() throws Exception {
         doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
             .put(nearKey, 1243)
         );
@@ -157,7 +157,55 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
      * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
      */
     @Test
-    public void testNewTransactionWillNotProducedOnRemove() throws Exception {
+    public void testNewTransactionWillNotProducedOnRemoveRepeatableRead() throws Exception {
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
+            .remove(nearKey)
+        );
+    }
+
+    /**
+     * Test #1  If a primary node for a transaction key left, a transaction must rollback imminently.
+     */
+    @Test
+    public void testFastRollbackAfterNodeLeftRepeatableCommitted() throws Exception {
+        final Integer k = primaryKey(partPrimaryNode.cache(DEFAULT_CACHE_NAME));
+
+        try (Transaction tx = nearNode.transactions().txStart(PESSIMISTIC, REPEATABLE_READ, TX_TIMEOUT, 10)) {
+            nearNode.cache(DEFAULT_CACHE_NAME).put(k, k);
+
+            assertThatLocalTransactionExecuting(partPrimaryNode);
+
+            stopPartPrimaryNode.countDown();
+
+            long t1 = System.currentTimeMillis();
+
+            ((TransactionProxyImpl)tx).tx().finishFuture().get(); // Shouldn't wait here until timeout.
+
+            long t2 = System.currentTimeMillis();
+
+            assertTrue(t2 - t1 < TX_TIMEOUT / 100); // Interrupted immediately!
+
+            assertThrows(log, tx::commit, TransactionRollbackException.class, null);
+        }
+
+        primaryNodeStoppedFut.get();
+    }
+
+    /**
+     * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
+     */
+    @Test
+    public void testNewTransactionWillNotProducedOnPutRepeatableCommitted() throws Exception {
+        doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
+            .put(nearKey, 1243)
+        );
+    }
+
+    /**
+     * Test #2 After auto rollback a cache modification operation doesn't lead to a new transaction.
+     */
+    @Test
+    public void testNewTransactionWillNotProducedOnRemoveRepeatableCommitted() throws Exception {
         doTestOperationAfterRollback(() -> nearNode.cache(DEFAULT_CACHE_NAME)
             .remove(nearKey)
         );
