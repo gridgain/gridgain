@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.function.Predicate;
 import org.apache.ignite.spi.IgniteSpiAdapter;
+import org.apache.ignite.spi.IgniteSpiContext;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
@@ -51,20 +52,7 @@ public abstract class PushMetricsExporterAdapter extends IgniteSpiAdapter implem
 
     /** {@inheritDoc} */
     @Override public void spiStart(@Nullable String igniteInstanceName) throws IgniteSpiException {
-        execSvc = Executors.newSingleThreadScheduledExecutor(new IgniteThreadFactory(igniteInstanceName,
-            "push-metrics-exporter"));
-
-        fut = execSvc.scheduleWithFixedDelay(() -> {
-            try {
-                export();
-            }
-            catch (Exception e) {
-                log.error("Metrics export error. " +
-                    "This exporter will be stopped [spiClass=" + getClass() + ",name=" + getName() + ']', e);
-
-                throw e;
-            }
-        }, period, period, MILLISECONDS);
+        // No-op.
     }
 
     /** {@inheritDoc} */
@@ -102,5 +90,25 @@ public abstract class PushMetricsExporterAdapter extends IgniteSpiAdapter implem
     /** {@inheritDoc} */
     @Override public void setExportFilter(Predicate<ReadOnlyMetricRegistry> filter) {
         this.filter = filter;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
+        super.onContextInitialized0(spiCtx);
+
+        execSvc = Executors.newSingleThreadScheduledExecutor(new IgniteThreadFactory(igniteInstanceName,
+                "push-metrics-exporter"));
+
+        fut = execSvc.scheduleWithFixedDelay(() -> {
+            try {
+                export();
+            }
+            catch (Exception e) {
+                log.error("Metrics export error. " +
+                        "This exporter will be stopped [spiClass=" + getClass() + ",name=" + getName() + ']', e);
+
+                throw e;
+            }
+        }, period, period, MILLISECONDS);
     }
 }
