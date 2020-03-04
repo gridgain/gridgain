@@ -45,9 +45,7 @@ import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -94,20 +92,20 @@ public class IgniteIndexReaderTest {
 
     /** Common part of regexp for single index output validation. */
     private static final String CHECK_IDX_PTRN_COMMON =
-        "Index tree: I \\[idxName=[\\-_0-9]{1,20}_%s##H2Tree.0, pageId=[0-9a-f]{16}\\]" +
-            LINE_DELIM + "-- Page stat:" +
-            LINE_DELIM + "([0-9a-zA-Z]{1,50}: [0-9]{1,5}" +
-            LINE_DELIM + "){%s,1000}-- Count of items found in leaf pages: %s" +
+        "<FROM_ROOT> Index tree: I \\[idxName=[\\-_0-9]{1,20}_%s##H2Tree.0, pageId=[0-9a-f]{16}\\]" +
+            LINE_DELIM + "<FROM_ROOT> -- Page stat:" +
+            LINE_DELIM + "<FROM_ROOT> ([0-9a-zA-Z]{1,50}: [0-9]{1,5}" +
+            LINE_DELIM + "<FROM_ROOT> ){%s,1000}-- Count of items found in leaf pages: %s" +
             LINE_DELIM;
 
     /** Regexp to validate output of correct index. */
     private static final String CHECK_IDX_PTRN_CORRECT =
-        CHECK_IDX_PTRN_COMMON + "No errors occurred while traversing.";
+        CHECK_IDX_PTRN_COMMON + "<FROM_ROOT> No errors occurred while traversing.";
 
     /** Regexp to validate output of corrupted index. */
     private static final String CHECK_IDX_PTRN_WITH_ERRORS =
-        CHECK_IDX_PTRN_COMMON + "-- Errors:" +
-            LINE_DELIM + "Page id=[0-9]{1,30}, exceptions:" +
+        CHECK_IDX_PTRN_COMMON + "<FROM_ROOT> -- Errors:" +
+            LINE_DELIM + "<FROM_ROOT> Page id=[0-9]{1,30}, exceptions:" +
             LINE_DELIM + "class.*?Exception.*";
 
     /** Work directory, containing cache group directories. */

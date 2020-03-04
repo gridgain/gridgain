@@ -79,6 +79,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.joining;
@@ -93,8 +94,14 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.partId;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
+import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getPageIO;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getType;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO.getVersion;
+import static org.apache.ignite.internal.util.GridUnsafe.allocateBuffer;
+import static org.apache.ignite.internal.util.GridUnsafe.bufferAddress;
+import static org.apache.ignite.internal.util.GridUnsafe.cleanDirectBuffer;
+import static org.apache.ignite.internal.util.GridUnsafe.freeBuffer;
+import static org.apache.ignite.internal.util.GridUnsafe.reallocateBuffer;
 
 /**
  * Offline reader for index files.
@@ -272,71 +279,77 @@ public class IgniteIndexReader implements AutoCloseable {
 
         ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Reading pages sequentially", pagesNum);
 
-        for (int i = 0; i < pagesNum; i++) {
-            ByteBuffer buf = GridUnsafe.allocateBuffer(pageSize);
+        ByteBuffer buf = allocateBuffer(pageSize);
 
-            try {
-                progressPrinter.printProgress();
+        long addr = bufferAddress(buf);
 
-                long addr = GridUnsafe.bufferAddress(buf);
+        try {
+            for (int i = 0; i < pagesNum; i++) {
+                try {
+                    buf.rewind();
 
-                long pageId = PageIdUtils.pageId(INDEX_PARTITION, FLAG_IDX, i);
+                    progressPrinter.printProgress();
 
-                //We got int overflow here on sber dataset.
-                final long off = (long)i * pageSize + idxStore.headerSize();
+                    long pageId = PageIdUtils.pageId(INDEX_PARTITION, FLAG_IDX, i);
 
-                idxStore.readByOffset(off, buf, false);
+                    //We got int overflow here on sber dataset.
+                    final long off = (long)i * pageSize + idxStore.headerSize();
 
-                PageIO io = PageIO.getPageIO(addr);
+                    idxStore.readByOffset(off, buf, false);
 
-                pageClasses.merge(io.getClass(), 1L, (oldVal, newVal) -> ++oldVal);
+                    PageIO io = PageIO.getPageIO(addr);
 
-                if (io instanceof PageMetaIO) {
-                    PageMetaIO pageMetaIO = (PageMetaIO)io;
+                    pageClasses.merge(io.getClass(), 1L, (oldVal, newVal) -> ++oldVal);
 
-                    treeInfo = traverseAllTrees(normalizePageId(pageMetaIO.getTreeRoot(addr)));
+                    if (io instanceof PageMetaIO) {
+                        PageMetaIO pageMetaIO = (PageMetaIO)io;
 
-                    treeInfo.forEach((name, info) -> {
-                        info.innerPageIds.forEach(id -> {
-                            Class cls = name.equals(META_TREE_NAME)
-                                ? IndexStorageImpl.MetaStoreInnerIO.class
-                                : H2ExtrasInnerIO.class;
+                        TreeTraversalInfo metaTreeInfo = traverseTree(normalizePageId(pageMetaIO.getTreeRoot(addr)), true);
 
-                            pageIoIds.computeIfAbsent(cls, k -> new HashSet<>()).add(id);
+                        treeInfo = traverseAllTrees(metaTreeInfo);
+
+                        treeInfo.forEach((name, info) -> {
+                            info.innerPageIds.forEach(id -> {
+                                Class cls = name.equals(META_TREE_NAME)
+                                    ? IndexStorageImpl.MetaStoreInnerIO.class
+                                    : H2ExtrasInnerIO.class;
+
+                                pageIoIds.computeIfAbsent(cls, k -> new HashSet<>()).add(id);
+                            });
+
+                            pageIoIds.computeIfAbsent(BPlusMetaIO.class, k -> new HashSet<>()).add(info.rootPageId);
                         });
+                    }
+                    else if (io instanceof PagesListMetaIO)
+                        pageListsInfo.set(getPageListsMetaInfo(pageId));
+                    else {
+                        ofNullable(pageIoIds.get(io.getClass())).ifPresent((pageIds) -> {
+                            if (!pageIds.contains(pageId)) {
+                                boolean foundInList =
+                                    (pageListsInfo.get() != null && pageListsInfo.get().allPages.contains(pageId));
 
-                        pageIoIds.computeIfAbsent(BPlusMetaIO.class, k -> new HashSet<>()).add(info.rootPageId);
-                    });
+                                throw new IgniteException(
+                                    "Possibly orphan " + io.getClass().getSimpleName() + " page, pageId=" + pageId +
+                                        (foundInList ? ", it has been found in page list." : "")
+                                );
+                            }
+                        });
+                    }
+                } catch (Throwable e) {
+                    String err = "Exception occurred on step " + i + ": " + e.getMessage();
+
+                    errors.add(new IgniteException(err, e));
                 }
-                else if (io instanceof PagesListMetaIO)
-                    pageListsInfo.set(getPageListsMetaInfo(pageId));
-                else {
-                    ofNullable(pageIoIds.get(io.getClass())).ifPresent((pageIds) -> {
-                        if (!pageIds.contains(pageId)) {
-                            boolean foundInList =
-                                (pageListsInfo.get() != null && pageListsInfo.get().allPages.contains(pageId));
-
-                            throw new IgniteException(
-                                "Possibly orphan " + io.getClass().getSimpleName() + " page, pageId=" + pageId +
-                                    (foundInList ? ", it has been found in page list." : "")
-                            );
-                        }
-                    });
-                }
-            } catch (Throwable e) {
-                String err = "Exception occurred on step " + i + ": " + e.getMessage();
-
-                errors.add(new IgniteException(err, e));
             }
-            finally {
-                GridUnsafe.freeBuffer(buf);
-            }
+        }
+        finally {
+            freeBuffer(buf);
         }
 
         if (treeInfo == null)
             printErr("No tree meta info found.");
         else
-            printTraversalResults(treeInfo);
+            printTraversalResults("<FROM_ROOT> ", treeInfo);
 
         if (pageListsInfo.get() == null)
             printErr("No page lists meta info found.");
@@ -376,40 +389,44 @@ public class IgniteIndexReader implements AutoCloseable {
 
         long nextMetaId = metaPageListId;
 
-        while(nextMetaId != 0) {
-            ByteBuffer buf = GridUnsafe.allocateBuffer(pageSize);
+        ByteBuffer buf = allocateBuffer(pageSize);
 
-            try {
-                long addr = GridUnsafe.bufferAddress(buf);
+        long addr = bufferAddress(buf);
 
-                idxStore.read(nextMetaId, buf, false);
+        try {
+            while (nextMetaId != 0) {
+                try {
+                    buf.rewind();
 
-                PagesListMetaIO io = PageIO.getPageIO(addr);
+                    idxStore.read(nextMetaId, buf, false);
 
-                Map<Integer, GridLongList> data = new HashMap<>();
+                    PagesListMetaIO io = PageIO.getPageIO(addr);
 
-                io.getBucketsData(addr, data);
+                    Map<Integer, GridLongList> data = new HashMap<>();
 
-                final long fNextMetaId = nextMetaId;
+                    io.getBucketsData(addr, data);
 
-                data.forEach((k, v) -> {
-                    List<Long> listIds = LongStream.of(v.array()).map(IgniteIndexReader::normalizePageId).boxed().collect(toList());
+                    final long fNextMetaId = nextMetaId;
 
-                    listIds.forEach(listId -> allPages.addAll(getPageList(listId, pageListStat)));
+                    data.forEach((k, v) -> {
+                        List<Long> listIds = LongStream.of(v.array()).map(IgniteIndexReader::normalizePageId).boxed().collect(toList());
 
-                    bucketsData.put(new IgniteBiTuple<>(fNextMetaId, k), listIds);
-                });
+                        listIds.forEach(listId -> allPages.addAll(getPageList(listId, pageListStat)));
 
-                nextMetaId = io.getNextMetaPageId(addr);
+                        bucketsData.put(new IgniteBiTuple<>(fNextMetaId, k), listIds);
+                    });
+
+                    nextMetaId = io.getNextMetaPageId(addr);
+                }
+                catch (Exception e) {
+                    errors.put(nextMetaId, e);
+
+                    nextMetaId = 0;
+                }
             }
-            catch (Exception e) {
-                errors.put(nextMetaId, e);
-
-                nextMetaId = 0;
-            }
-            finally {
-                GridUnsafe.freeBuffer(buf);
-            }
+        }
+        finally {
+            freeBuffer(buf);
         }
 
         return new PageListsInfo(bucketsData, allPages, pageListStat, errors);
@@ -426,25 +443,27 @@ public class IgniteIndexReader implements AutoCloseable {
 
         long nextNodeId = pageListStartId;
 
-        while(nextNodeId != 0) {
-            ByteBuffer buf = GridUnsafe.allocateBuffer(pageSize);
+        ByteBuffer nodeBuf = allocateBuffer(pageSize);
+        ByteBuffer pageBuf = allocateBuffer(pageSize);
 
-            try {
-                long addr = GridUnsafe.bufferAddress(buf);
+        long nodeAddr = bufferAddress(nodeBuf);
+        long pageAddr = bufferAddress(pageBuf);
 
-                idxStore.read(nextNodeId, buf, false);
+        try {
+            while (nextNodeId != 0) {
+                try {
+                    nodeBuf.rewind();
 
-                PagesListNodeIO io = PageIO.getPageIO(addr);
+                    idxStore.read(nextNodeId, nodeBuf, false);
 
-                for (int i = 0; i < io.getCount(addr); i++) {
-                    long pageId = normalizePageId(io.getAt(addr, i));
+                    PagesListNodeIO io = PageIO.getPageIO(nodeAddr);
 
-                    res.add(pageId);
+                    for (int i = 0; i < io.getCount(nodeAddr); i++) {
+                        pageBuf.rewind();
 
-                    ByteBuffer pageBuf = GridUnsafe.allocateBuffer(pageSize);
+                        long pageId = normalizePageId(io.getAt(nodeAddr, i));
 
-                    try {
-                        long pageAddr = GridUnsafe.bufferAddress(pageBuf);
+                        res.add(pageId);
 
                         idxStore.read(pageId, pageBuf, false);
 
@@ -452,33 +471,28 @@ public class IgniteIndexReader implements AutoCloseable {
 
                         pageStat.computeIfAbsent(pageIO.getClass(), k -> new AtomicLong(0)).incrementAndGet();
                     }
-                    finally {
-                        GridUnsafe.freeBuffer(pageBuf);
-                    }
-                }
 
-                nextNodeId = io.getNextId(addr);
+                    nextNodeId = io.getNextId(nodeAddr);
+                }
+                catch (IgniteCheckedException e) {
+                    throw new IgniteException(e.getMessage(), e);
+                }
             }
-            catch (IgniteCheckedException e) {
-                throw new IgniteException(e.getMessage(), e);
-            }
-            finally {
-                GridUnsafe.freeBuffer(buf);
-            }
+        }
+        finally {
+            freeBuffer(nodeBuf);
+            freeBuffer(pageBuf);
         }
 
         return res;
     }
-
     /**
      * Traverse all trees in file and return their info.
-     * @param metaTreeRootPageId Meta tree root id.
+     * @param metaTreeTraversalInfo Meta tree info.
      * @return Index trees info.
      */
-    private Map<String, TreeTraversalInfo> traverseAllTrees(long metaTreeRootPageId) {
+    private Map<String, TreeTraversalInfo> traverseAllTrees(TreeTraversalInfo metaTreeTraversalInfo) {
         Map<String, TreeTraversalInfo> treeInfos = new HashMap<>();
-
-        TreeTraversalInfo metaTreeTraversalInfo = traverseTree(metaTreeRootPageId, true);
 
         treeInfos.put(META_TREE_NAME, metaTreeTraversalInfo);
 
@@ -501,7 +515,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * Prints traversal info.
      * @param treeInfos Tree traversal info.
      */
-    private void printTraversalResults(Map<String, TreeTraversalInfo> treeInfos) {
+    private void printTraversalResults(String prefix, Map<String, TreeTraversalInfo> treeInfos) {
         print("\nTree traversal results: ");
 
         Map<Class, AtomicLong> totalStat = new HashMap<>();
@@ -509,23 +523,23 @@ public class IgniteIndexReader implements AutoCloseable {
         AtomicInteger totalErr = new AtomicInteger(0);
 
         treeInfos.forEach((idxName, validationInfo) -> {
-            print("-----");
-            print("Index tree: " + idxName);
-            print("-- Page stat:");
+            print(prefix + "-----");
+            print(prefix + "Index tree: " + idxName);
+            print(prefix + "-- Page stat:");
 
             validationInfo.ioStat.forEach((cls, cnt) -> {
-                print(cls.getSimpleName() + ": " + cnt.get());
+                print(prefix + cls.getSimpleName() + ": " + cnt.get());
 
                 totalStat.computeIfAbsent(cls, k -> new AtomicLong(0)).addAndGet(cnt.get());
             });
 
-            print("-- Count of items found in leaf pages: " + validationInfo.itemsCnt);
+            print(prefix + "-- Count of items found in leaf pages: " + validationInfo.itemsCnt);
 
             if (!validationInfo.errors.isEmpty()) {
-                print("-- Errors:");
+                print(prefix + "-- Errors:");
 
                 validationInfo.errors.forEach((id, errors) -> {
-                    print("Page id=" + id + ", exceptions:");
+                    print(prefix + "Page id=" + id + ", exceptions:");
 
                     errors.forEach(this::printStackTrace);
 
@@ -533,18 +547,18 @@ public class IgniteIndexReader implements AutoCloseable {
                 });
             }
             else
-                print("No errors occurred while traversing.");
+                print(prefix + "No errors occurred while traversing.");
         });
 
-        print("---");
-        print("Total page stat collected during trees traversal:");
+        print(prefix + "---");
+        print(prefix + "Total page stat collected during trees traversal:");
 
-        totalStat.forEach((cls, cnt) -> print(cls.getSimpleName() + ": " + cnt.get()));
+        totalStat.forEach((cls, cnt) -> print(prefix + cls.getSimpleName() + ": " + cnt.get()));
 
         print("");
-        print("Total trees: " + treeInfos.keySet().size());
-        print("Total pages found in trees: " + totalStat.values().stream().mapToLong(AtomicLong::get).sum());
-        print("Total errors during trees traversal: " + totalErr.get());
+        print(prefix + "Total trees: " + treeInfos.keySet().size());
+        print(prefix + "Total pages found in trees: " + totalStat.values().stream().mapToLong(AtomicLong::get).sum());
+        print(prefix + "Total errors during trees traversal: " + totalErr.get());
         print("------------------");
     }
 
@@ -623,6 +637,76 @@ public class IgniteIndexReader implements AutoCloseable {
             : new TreeTraversalInfo(ioStat, errors, innerPageIds, rootPageId, idxItemsCnt.get());
     }
 
+    private TreeTraversalInfo traverseTreeByLvls(long rootPageId, boolean isMetaTree) throws IgniteCheckedException {
+        /*Map<String, TreeTraversalInfo> res = new HashMap<>();
+
+        ByteBuffer buf = allocateBuffer(pageSize);
+        try {
+            for (IndexStorageImpl.IndexItem indexItem : indexItems(metaTreeRootPageId)) {
+                Map<Class, AtomicLong> ioStat = new HashMap<>();
+                AtomicLong cnt = new AtomicLong();
+
+                buf = reallocateBuffer(buf, pageSize);
+                idxStore.read(indexItem.pageId(), buf, false);
+
+                long addr = bufferAddress(buf);
+                PageIO io = getPageIO(addr);
+
+                ioStat.computeIfAbsent(io.getClass(), cls -> new AtomicLong()).incrementAndGet();
+
+                if (!BPlusMetaIO.class.isInstance(io))
+                    continue;
+
+                BPlusMetaIO bPlusMetaIO = (BPlusMetaIO)io;
+                int lvlCnt = bPlusMetaIO.getLevelsCount(addr);
+
+                ByteBuffer pageBuf = allocateBuffer(pageSize);
+                try {
+                    for (int i = 0; i < lvlCnt; i++) {
+                        long pageId = bPlusMetaIO.getFirstPageId(addr, i);
+
+                        while (pageId != 0) {
+                            pageBuf = reallocateBuffer(pageBuf, pageSize);
+                            idxStore.read(pageId, pageBuf, false);
+
+                            long pageAddr = bufferAddress(pageBuf);
+                            PageIO pageIO = getPageIO(pageAddr);
+
+                            ioStat.computeIfAbsent(pageIO.getClass(), cls -> new AtomicLong()).incrementAndGet();
+
+                            if (!BPlusIO.class.isInstance(pageIO))
+                                continue;
+
+                            BPlusIO bPlusIO = (BPlusIO)pageIO;
+
+                            if (bPlusIO.isLeaf())
+                                cnt.addAndGet(bPlusIO.getCount(pageAddr));
+
+                            pageId = bPlusIO.getForward(pageAddr);
+                        }
+                    }
+                }
+                finally {
+                    freeBuffer(pageBuf);
+                }
+
+                res.put(
+                    indexItem.toString(),
+                    new TreeTraversalInfo(ioStat, emptyMap(), null, indexItem.pageId(), cnt.get())
+                );
+            }
+        }
+        catch (IgniteCheckedException e) {
+            e.printStackTrace();
+            return null;
+        }
+        finally {
+            freeBuffer(buf);
+        }
+        return res;*/
+        return null;
+    }
+
     /**
      * Gets tree node and all its children.
      * @param pageId Page id, where tree node is located.
@@ -637,12 +721,12 @@ public class IgniteIndexReader implements AutoCloseable {
         PageIOProcessor ioProcessor;
 
         try {
-            final ByteBuffer buf = GridUnsafe.allocateBuffer(pageSize);
+            final ByteBuffer buf = allocateBuffer(pageSize);
 
             try {
                 nodeCtx.store.read(pageId, buf, false);
 
-                final long addr = GridUnsafe.bufferAddress(buf);
+                final long addr = bufferAddress(buf);
 
                 final PageIO io = PageIO.getPageIO(addr);
 
@@ -658,7 +742,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 pageContent = ioProcessor.getContent(io, addr, pageId, nodeCtx);
             }
             finally {
-                GridUnsafe.freeBuffer(buf);
+                freeBuffer(buf);
             }
 
             return ioProcessor.getNode(pageContent, pageId, nodeCtx);
