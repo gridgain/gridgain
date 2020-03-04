@@ -43,6 +43,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 
 /**
@@ -57,7 +58,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     private static final int PARTS_CNT = 32;
 
     /** */
-    private PartitionLossPolicy plc;
+    private PartitionLossPolicy lossPlc;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -84,7 +85,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         cfg.setCacheConfiguration(new CacheConfiguration(DEFAULT_CACHE_NAME).
             setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL).
             setWriteSynchronizationMode(CacheWriteSynchronizationMode.FULL_SYNC).
-            setPartitionLossPolicy(READ_WRITE_SAFE).
+            setPartitionLossPolicy(lossPlc).
             setBackups(1).
             setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
 
@@ -115,7 +116,23 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
      *
      */
     @Test
-    public void testPartitionConsistencyOnSupplierRestart() throws Exception {
+    public void testPartitionConsistencyOnSupplierRestart_Unsafe() throws Exception {
+        // Should behave same as for READ_WRITE_SAFE policy.
+        doTestPartitionConsistencyOnSupplierRestart(IGNORE);
+    }
+
+    /**
+     *
+     */
+    @Test
+    public void testPartitionConsistencyOnSupplierRestart_Safe() throws Exception {
+        doTestPartitionConsistencyOnSupplierRestart(READ_WRITE_SAFE);
+    }
+
+    /** */
+    private void doTestPartitionConsistencyOnSupplierRestart(PartitionLossPolicy lossPlc) throws Exception {
+        this.lossPlc = lossPlc;
+
         int entryCnt = PARTS_CNT * 200;
 
         IgniteEx crd = (IgniteEx)startGridsMultiThreaded(2);
@@ -178,63 +195,13 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
 
-    @Test
-    public void testDataLost() throws Exception {
-        IgniteEx crd = startGrids(3);
-        crd.cluster().active(true);
-
-        //printPartitionState(DEFAULT_CACHE_NAME, 0);
-
-        grid(2).close();
-
-        awaitPartitionMapExchange();
-
-        //printPartitionState(DEFAULT_CACHE_NAME, 0);
-
-        //logCacheSize("DBG: server_3 left");
-
-        final int keys = 1_000;
-
-        load(crd, DEFAULT_CACHE_NAME, IntStream.range(0, keys).boxed());
-
-        //logCacheSize("DBG: 100k loaded");
-
-        //printPartitionState(DEFAULT_CACHE_NAME, 0);
-
-        grid(1).close();
-        doSleep(WAIT);
-
-        //logCacheSize("DBG: server_2 left");
-        //printPartitionState(DEFAULT_CACHE_NAME, 0);
-
-        startGrid(2);
-
-        //logCacheSize("DBG: server_2 ret");
-        //printPartitionState(DEFAULT_CACHE_NAME, 0);
-
-        startGrid(1);
-
-        //logCacheSize("DBG: server_1 ret");
-        //printPartitionState(DEFAULT_CACHE_NAME, 0);
-
-        //doSleep(WAIT + 5_000);
-        //logCacheSize("DBG: all servers are up");
-
-        crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
-
-        //doSleep(WAIT + 5_000);
-
-        awaitPartitionMapExchange();
-
-        //logCacheSize("DBG: after reset loss parts");
-
-        assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
-    }
-
     /**
+     *
      */
     @Test
-    public void testDataLost2() throws Exception {
+    public void testConsistencyAfterResettingLostPartitions() throws Exception {
+        lossPlc = READ_WRITE_SAFE;
+
         IgniteEx crd = startGrids(2);
         crd.cluster().active(true);
 

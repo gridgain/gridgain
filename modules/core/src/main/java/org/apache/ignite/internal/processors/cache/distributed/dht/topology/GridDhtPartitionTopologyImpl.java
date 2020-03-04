@@ -2099,6 +2099,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 PartitionLossPolicy plc = grp.config().getPartitionLossPolicy();
 
+                // Ignore IGNORE for persistent caches.
+                if (grp.persistenceEnabled() && plc == PartitionLossPolicy.IGNORE)
+                    plc = PartitionLossPolicy.READ_WRITE_SAFE;
+
                 assert plc != null;
 
                 int parts = grp.affinity().partitions();
@@ -2170,15 +2174,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             final GridDhtPartitionState prevState = locPart.state();
 
-                            changed = plc == PartitionLossPolicy.IGNORE && !grp.persistenceEnabled() ?
-                                locPart.own() : locPart.markLost();
+                            changed = plc == PartitionLossPolicy.IGNORE ? locPart.own() : locPart.markLost();
 
                             if (changed) {
                                 long updSeq = updateSeq.incrementAndGet();
 
                                 updateLocal(locPart.id(), locPart.state(), updSeq, resTopVer);
 
-                                // If a partition was lost during rebalancing reset it's counter to force demander mode.
+                                // If a partition was lost while rebalancing reset it's counter to force demander mode.
                                 if (prevState == MOVING)
                                     locPart.resetUpdateCounter();
                             }
@@ -2272,9 +2275,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public Collection<Integer> lostPartitions() {
-        if (grp.config().getPartitionLossPolicy() == PartitionLossPolicy.IGNORE)
-            return Collections.emptySet();
-
         lock.readLock().lock();
 
         try {

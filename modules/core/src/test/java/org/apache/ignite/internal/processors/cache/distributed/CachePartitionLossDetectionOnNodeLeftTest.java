@@ -121,7 +121,6 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      */
     @Test
     public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_NoBLT() throws Exception {
-
         doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, false, true);
     }
 
@@ -250,6 +249,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         }
 
         if (lossPlc == PartitionLossPolicy.IGNORE) {
+            // Events should not be fired for IGNORE policy.
             assertTrue(lostEvt0.isEmpty());
             assertTrue(lostEvt1.isEmpty());
         }

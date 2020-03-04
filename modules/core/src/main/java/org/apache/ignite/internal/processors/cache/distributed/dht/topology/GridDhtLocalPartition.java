@@ -1138,7 +1138,9 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     // Do not clear fresh rows in case of partition reloading.
                     // This is required because normal updates are possible to moving partition which is currently cleared.
-                    if (row.version().compareTo(clearVer) >= 0 && state() == MOVING)
+                    // We can clean OWNING partition if it has been reset from lost state.
+                    // In this case new updates must be preserved.
+                    if (row.version().compareTo(clearVer) >= 0 && (state() == MOVING || state() == OWNING))
                         continue;
 
                     if (grp.sharedGroup() && (hld == null || hld.cctx.cacheId() != row.cacheId()))
