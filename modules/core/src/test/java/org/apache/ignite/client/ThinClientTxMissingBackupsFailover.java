@@ -62,12 +62,12 @@ public class ThinClientTxMissingBackupsFailover extends GridCommonAbstractTest {
     public TransactionIsolation isolation;
 
     /**
-     * Check that removing backup copy for tx doesn't pervent it from commit.
+     * Check that removing backup copy for tx doesn't prevent it from being committed.
      */
     @Test
     public void testMissingBackupTxFailover() throws Exception {
         try (Ignite ignite = Ignition.start(Config.getServerConfiguration());
-             Ignite ignite2 = Ignition.start(Config.getServerConfiguration());
+             Ignite ignored = Ignition.start(Config.getServerConfiguration());
              IgniteClient client = Ignition.startClient(getClientConfiguration())) {
             ClientCache<Integer, String> cache = client.createCache(new ClientCacheConfiguration()
                     .setName("cache")
