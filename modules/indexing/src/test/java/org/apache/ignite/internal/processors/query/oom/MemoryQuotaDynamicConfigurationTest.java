@@ -19,11 +19,9 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
@@ -59,27 +57,21 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
         setGlobalQuota(GLOBAL_QUOTA);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
-        assertTrue(reservedByResult(0) < GLOBAL_QUOTA);
+        assertTrue(localResults.get(0).memoryReserved() < GLOBAL_QUOTA);
 
-        for (H2ManagedLocalResult res : localResults)
-            U.closeQuiet(res.memoryTracker());
-
-        localResults.clear();
+        clearResults();
 
         setGlobalQuota(0);
         execQuery("select * from K ORDER BY K.indexed", false);
         assertEquals(2, localResults.size());
-        assertTrue(reservedByResult(0) > GLOBAL_QUOTA);
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
 
-        for (H2ManagedLocalResult res : localResults)
-            U.closeQuiet(res.memoryTracker());
-
-        localResults.clear();
+        clearResults();
 
         setGlobalQuota(GLOBAL_QUOTA);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
-        assertTrue(reservedByResult(0) < GLOBAL_QUOTA);
+        assertTrue(localResults.get(0).memoryReserved() < GLOBAL_QUOTA);
     }
 
     /**  */
@@ -91,49 +83,37 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
         // All quotas turned off, nothing should happen.
         execQuery("select * from K ORDER BY K.indexed", false);
         assertEquals(2, localResults.size());
-        assertTrue(reservedByResult(0) > GLOBAL_QUOTA);
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
 
-        for (H2ManagedLocalResult res : localResults)
-            U.closeQuiet(res.memoryTracker());
-
-        localResults.clear();
+        clearResults();
 
         // Default query quota is set to 100, we expect exception.
         setDefaultQueryQuota(100);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
 
-        for (H2ManagedLocalResult res : localResults)
-            U.closeQuiet(res.memoryTracker());
-
-        localResults.clear();
+        clearResults();
 
         // Turn on offloading, expect no error.
         setOffloadingEnabled(true);
         execQuery("select * from K ORDER BY K.indexed", false);
         assertEquals(2, localResults.size());
-        assertTrue(reservedByResult(0) < 100);
+        assertTrue(localResults.get(0).memoryReserved() < 100);
 
-        for (H2ManagedLocalResult res : localResults)
-            U.closeQuiet(res.memoryTracker());
-
-        localResults.clear();
+        clearResults();
 
         // Turn off offloading, expect error.
         setOffloadingEnabled(false);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
 
-        for (H2ManagedLocalResult res : localResults)
-            U.closeQuiet(res.memoryTracker());
-
-        localResults.clear();
+        clearResults();
 
         // Turn off quota, expect no error.
         setDefaultQueryQuota(0);
         execQuery("select * from K ORDER BY K.indexed", false);
         assertEquals(2, localResults.size());
-        assertTrue(reservedByResult(0) > GLOBAL_QUOTA);
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
     }
 
     /** */

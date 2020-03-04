@@ -818,6 +818,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             return stmt.executeQuery();
         }
         catch (SQLException e) {
+            if (X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class))
+                cancel.checkCancelled();
+
             // Throw special exception.
             if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                 throw new QueryCancelledException();

@@ -126,7 +126,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
      */
     private void checkClosed() {
         if (closed)
-            throw new IllegalStateException("Memory tracker has been closed concurrently.");
+            throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
     }
 
     /**
@@ -330,9 +330,19 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public boolean reserve(long size) {
             checkClosed();
 
+            boolean res;
+            try {
+                res = QueryMemoryTracker.this.reserve(size);
+            }
+            catch (IgniteSQLException ex) {
+                reserved += size;
+
+                throw ex;
+            }
+
             reserved += size;
 
-            return QueryMemoryTracker.this.reserve(size);
+            return res;
         }
 
         /** {@inheritDoc} */
@@ -399,7 +409,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         /** {@inheritDoc} */
         @Override public boolean closed() {
-            return QueryMemoryTracker.this.closed();
+            return closed.get();
         }
 
         /** {@inheritDoc} */
@@ -420,7 +430,17 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         /** */
         private void checkClosed() {
             if (closed.get())
-                throw new IllegalStateException("Memory tracker has been closed concurrently.");
+                throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
+        }
+    }
+
+    /** Exception thrown when try to track memory with closed tracker. */
+    public static class TrackerWasClosedException extends RuntimeException {
+        /**
+         * @param msg Message.
+         */
+        public TrackerWasClosedException(String msg) {
+            super(msg);
         }
     }
 }

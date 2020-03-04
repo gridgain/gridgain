@@ -280,8 +280,6 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                 H2ManagedLocalResult res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
-
-//                        memoryTracker().release(memoryReserved());
                     }
                 };
 
@@ -299,7 +297,13 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         }
     }
 
-    protected long reservedByResult(int resultInd) {
-        return localResults.get(resultInd).memoryTracker().reserved();
+    /**
+     *
+     */
+    protected void clearResults() {
+        for (LocalResult res : localResults)
+            U.closeQuiet(res);
+
+        localResults.clear();
     }
 }

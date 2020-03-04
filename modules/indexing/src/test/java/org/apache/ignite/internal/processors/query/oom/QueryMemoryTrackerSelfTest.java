@@ -23,7 +23,6 @@ import javax.cache.CacheException;
 import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.X;
@@ -44,7 +43,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
     /** {@inheritDoc} */
     @Test
     @Override public void testUnionOfSmallDataSetsWithLargeResult() {
-        maxMem = 2 * MB;
+        maxMem = 3 * MB;
 
         // OOM on reducer.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
@@ -54,12 +53,12 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
         assertEquals(5, localResults.size());
 
         // Map side
-        assertTrue(maxMem > reservedByResult(0) + reservedByResult(1));
+        assertTrue(maxMem > localResults.get(0).memoryReserved() + localResults.get(1).memoryReserved());
         assertEquals(1000, localResults.get(0).getRowCount());
         assertEquals(1000, localResults.get(1).getRowCount());
 
         // Reduce side
-        assertTrue(maxMem > reservedByResult(3) + reservedByResult(4));
+        assertTrue(maxMem > localResults.get(3).memoryReserved() + localResults.get(4).memoryReserved());
         assertEquals(1000, localResults.get(3).getRowCount());
         assertEquals(1000, localResults.get(4).getRowCount());
         assertTrue(2000 > localResults.get(2).getRowCount());
@@ -112,7 +111,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
 
         // Result on reduce side.
         assertEquals(1, localResults.size());
-        assertEquals(0, reservedByResult(0));
+        assertEquals(0, localResults.get(0).memoryReserved());
         assertEquals(0, localResults.get(0).getRowCount());
     }
 
@@ -123,7 +122,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > reservedByResult(0));
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -159,7 +158,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
         checkQueryExpectOOM("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > reservedByResult(0));
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -170,7 +169,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
         checkQueryExpectOOM("select K.indexed, sum(K.grp) from K GROUP BY K.indexed", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > reservedByResult(0));
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -192,7 +191,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
         checkQueryExpectOOM("select K.grp_indexed, count(DISTINCT k.name) from K GROUP BY K.grp_indexed", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem > reservedByResult(0));
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 

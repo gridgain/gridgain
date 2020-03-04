@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeMap;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.h2.api.ErrorCode;
 import org.h2.engine.Session;
 import org.h2.engine.SessionInterface;
 import org.h2.expression.Expression;
@@ -62,6 +61,9 @@ public class H2ManagedLocalResult implements LocalResult {
     /** Query memory tracker. */
     private H2MemoryTracker memTracker;
 
+    /** Reserved memory. */
+    private long memReserved;
+
     /**
      * Construct a local result object.
      */
@@ -84,7 +86,7 @@ public class H2ManagedLocalResult implements LocalResult {
         this.visibleColumnCount = visibleColCnt;
         rowId = -1;
         this.expressions = expressions;
-        this.memTracker = memTracker;
+        this.memTracker = memTracker != null ? memTracker.createChildTracker() : null;
     }
 
     /**
@@ -105,18 +107,12 @@ public class H2ManagedLocalResult implements LocalResult {
 
         boolean hasMemory = true;
 
-        try {
-            if (memory < 0)
-                memTracker.release(-memory);
-            else
-                hasMemory = memTracker.reserve(memory);
-        }
-        catch (Exception e) {
-            if (memTracker.closed())
-                throw DbException.get(ErrorCode.STATEMENT_WAS_CANCELED);
+        if (memory < 0)
+            memTracker.release(-memory);
+        else
+            hasMemory = memTracker.reserve(memory);
 
-            throw e;
-        }
+        memReserved += memory;
 
         return hasMemory;
     }
@@ -387,6 +383,8 @@ public class H2ManagedLocalResult implements LocalResult {
         }
 
         memTracker.release(memTracker.reserved());
+
+        memReserved = 0;
     }
 
     /** {@inheritDoc} */
@@ -536,6 +534,11 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public boolean needToClose() {
         return !closed;
+    }
+
+    /** */
+    public long memoryReserved() {
+        return memReserved;
     }
 
     /** {@inheritDoc} */
