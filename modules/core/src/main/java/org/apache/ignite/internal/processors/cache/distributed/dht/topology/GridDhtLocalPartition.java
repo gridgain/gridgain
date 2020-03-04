@@ -725,25 +725,6 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             }
         }
 
-        // Try fast eviction.
-        if (freeAndEmpty(state) && !grp.queriesEnabled() && !groupReserved()) {
-            if (partState == RENTING && casState(state, EVICTED) || clearingRequested) {
-                clearFuture.finish();
-
-                if (state() == EVICTED && markForDestroy()) {
-                    updateSeqOnDestroy = updateSeq;
-
-                    destroy();
-                }
-
-                if (log.isDebugEnabled() && evictionRequested)
-                    log.debug("Partition has been fast evicted [grp=" + grp.cacheOrGroupName()
-                        + ", p=" + id + ", state=" + state() + "]");
-
-                return;
-            }
-        }
-
         ctx.evict().evictPartitionAsync(grp, this, EVICTION);
     }
 
