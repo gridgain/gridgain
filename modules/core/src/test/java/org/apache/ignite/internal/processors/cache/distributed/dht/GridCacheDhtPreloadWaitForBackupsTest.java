@@ -53,6 +53,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
     private CacheRebalanceMode rebalanceMode;
 
     /** */
+    private boolean clientNodes;
+
+    /** */
     public GridCacheDhtPreloadWaitForBackupsTest() {
         super(false);
     }
@@ -88,6 +91,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         atomicityMode = CacheAtomicityMode.ATOMIC;
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         rebalanceMode = CacheRebalanceMode.SYNC;
+        clientNodes = false;
 
         nodeLeavesRebalanceCompletes();
     }
@@ -101,6 +105,21 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         atomicityMode = CacheAtomicityMode.TRANSACTIONAL;
         synchronizationMode = CacheWriteSynchronizationMode.FULL_SYNC;
         rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = false;
+
+        nodeLeavesRebalanceCompletes();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNodeLeavesRebalanceCompletesClientNode() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.FULL_ASYNC;
+        rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = true;
 
         nodeLeavesRebalanceCompletes();
     }
@@ -110,6 +129,12 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      */
     @Test
     public void testNodeForceShutdown() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = false;
+
         startGrids(2);
 
         if (persistenceEnabled())
@@ -141,6 +166,12 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      */
     @Test
     public void testShutdownWithoutBackups() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = false;
+
         startGrids(2);
 
         if (persistenceEnabled())
@@ -239,6 +270,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             cfg.setDataStorageConfiguration(new DataStorageConfiguration().setWalMode(LOG_ONLY)
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration().setPersistenceEnabled(true)));
         }
+
+        if (clientNodes && (igniteInstanceName.endsWith("2") || igniteInstanceName.endsWith("3")))
+            cfg.setClientMode(true);
 
         return cfg;
     }
