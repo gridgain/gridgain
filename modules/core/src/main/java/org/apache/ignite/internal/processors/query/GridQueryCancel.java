@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.QueryCancelledException;
 
 /**
@@ -53,8 +54,22 @@ public class GridQueryCancel {
 
         canceled = true;
 
-        for (QueryCancellable action : cancelActions)
-            action.doCancel();
+        IgniteException ex = null;
+
+        for (QueryCancellable action : cancelActions) {
+            try {
+                action.doCancel();
+            }
+            catch (Exception e) {
+                if (ex == null)
+                    ex = new IgniteException(e);
+                else
+                    ex.addSuppressed(e);
+            }
+        }
+
+        if (ex != null)
+            throw ex;
     }
 
     /**
