@@ -54,7 +54,7 @@ public class LogRegFromSparkThroughPMMLExample {
         System.out.println();
         System.out.println(">>> Logistic regression model loaded from PMML over partitioned dataset usage example started.");
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             IgniteCache<Integer, Vector> dataCache = null;
@@ -65,7 +65,7 @@ public class LogRegFromSparkThroughPMMLExample {
 
                 dataCache = new SandboxMLCache(ignite).fillCacheWith(MLSandboxDatasets.TWO_CLASSED_IRIS);
 
-                String path = IgniteUtils.resolveIgnitePath("examples/src/main/resources/models/spark/iris.pmml")
+                String path = IgniteUtils.resolveIgnitePath("examples-ml/src/main/resources/models/spark/iris.pmml")
                     .toPath().toAbsolutePath().toString();
                 LogisticRegressionModel mdl = PMMLParser.load(path);
 

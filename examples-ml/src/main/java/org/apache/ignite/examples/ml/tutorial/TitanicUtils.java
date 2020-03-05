@@ -45,7 +45,7 @@ public class TitanicUtils {
     public static IgniteCache<Integer, Vector> readPassengers(Ignite ignite)
         throws FileNotFoundException {
         IgniteCache<Integer, Vector> cache = getCache(ignite);
-        Scanner scanner = new Scanner(IgniteUtils.resolveIgnitePath("examples/src/main/resources/datasets/titanic.csv"));
+        Scanner scanner = new Scanner(IgniteUtils.resolveIgnitePath("examples-ml/src/main/resources/datasets/titanic.csv"));
 
         int cnt = 0;
         while (scanner.hasNextLine()) {
@@ -85,7 +85,7 @@ public class TitanicUtils {
     public static IgniteCache<Integer, Vector> readPassengersWithoutNulls(Ignite ignite)
         throws FileNotFoundException {
         IgniteCache<Integer, Vector> cache = getCache(ignite);
-        Scanner scanner = new Scanner(IgniteUtils.resolveIgnitePath("examples/src/main/resources/datasets/titanic_without_nulls.csv"));
+        Scanner scanner = new Scanner(IgniteUtils.resolveIgnitePath("examples-ml/src/main/resources/datasets/titanic_without_nulls.csv"));
 
         int cnt = 0;
         while (scanner.hasNextLine()) {

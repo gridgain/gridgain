@@ -40,20 +40,20 @@ import org.apache.ignite.ml.xgboost.parser.XGModelParser;
  */
 public class XGBoostModelParserExample {
     /** Test model resource name. */
-    private static final String TEST_MODEL_RES = "examples/src/main/resources/models/xgboost/agaricus-model.txt";
+    private static final String TEST_MODEL_RES = "examples-ml/src/main/resources/models/xgboost/agaricus-model.txt";
 
     /** Test data. */
-    private static final String TEST_DATA_RES = "examples/src/main/resources/datasets/agaricus-test-data.txt";
+    private static final String TEST_DATA_RES = "examples-ml/src/main/resources/datasets/agaricus-test-data.txt";
 
     /** Test expected results. */
-    private static final String TEST_ER_RES = "examples/src/main/resources/datasets/agaricus-test-expected-results.txt";
+    private static final String TEST_ER_RES = "examples-ml/src/main/resources/datasets/agaricus-test-expected-results.txt";
 
     /** Parser. */
     private static final XGModelParser parser = new XGModelParser();
 
     /** Run example. */
     public static void main(String... args) throws ExecutionException, InterruptedException, FileNotFoundException {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             File mdlRsrc = IgniteUtils.resolveIgnitePath(TEST_MODEL_RES);
             if (mdlRsrc == null)
                 throw new IllegalArgumentException("File not found [resource_path=" + TEST_MODEL_RES + "]");

@@ -39,7 +39,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
  */
 public class DecisionTreeFromSparkExample {
     /** Path to Spark DT model. */
-    public static final String SPARK_MDL_PATH = IgniteUtils.resolveIgnitePath("examples/src/main/resources/models/spark/serialized/dt")
+    public static final String SPARK_MDL_PATH = IgniteUtils.resolveIgnitePath("examples-ml/src/main/resources/models/spark/serialized/dt")
         .toPath().toAbsolutePath().toString();
 
     /** Run example. */
@@ -47,7 +47,7 @@ public class DecisionTreeFromSparkExample {
         System.out.println();
         System.out.println(">>> Decision Tree model loaded from Spark through serialization over partitioned dataset usage example started.");
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             IgniteCache<Integer, Vector> dataCache = null;

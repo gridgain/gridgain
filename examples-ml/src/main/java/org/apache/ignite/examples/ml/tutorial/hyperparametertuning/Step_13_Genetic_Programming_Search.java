@@ -71,7 +71,7 @@ import org.apache.ignite.ml.tree.DecisionTreeNode;
 public class Step_13_Genetic_Programming_Search {
     /** Run example. */
     public static void main(String[] args) {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
 

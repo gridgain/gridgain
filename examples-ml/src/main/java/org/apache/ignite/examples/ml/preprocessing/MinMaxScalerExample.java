@@ -51,7 +51,7 @@ import org.apache.ignite.ml.preprocessing.minmaxscaling.MinMaxScalerTrainer;
 public class MinMaxScalerExample {
     /** Run example. */
     public static void main(String[] args) throws Exception {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> MinMax preprocessing example started.");
 
             IgniteCache<Integer, Vector> data = null;

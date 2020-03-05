@@ -44,10 +44,10 @@ import org.apache.ignite.ml.genetic.parameter.GAGridConstants;
  * -DGENRES=Action,Comedy}</p>
  * <p>
  * Remote nodes should always be started with special configuration file which enables P2P class loading: {@code
- * 'ignite.{sh|bat} examples/config/example-ignite.xml'}.</p>
+ * 'ignite.{sh|bat} examples-ml/config/example-ignite.xml'}.</p>
  * <p>
  * Alternatively you can run ExampleNodeStartup in another JVM which will start node with
- * {@code examples/config/example-ignite.xml} configuration.</p>
+ * {@code examples-ml/config/example-ignite.xml} configuration.</p>
  */
 public class MovieGAExample {
     /**
@@ -103,7 +103,7 @@ public class MovieGAExample {
         // Set fitness function.
         gaCfg.setFitnessFunction(function);
 
-        try(Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try(Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             MovieTerminateCriteria termCriteria = new MovieTerminateCriteria(ignite, System.out::println);
 
             gaCfg.setTerminateCriteria(termCriteria);

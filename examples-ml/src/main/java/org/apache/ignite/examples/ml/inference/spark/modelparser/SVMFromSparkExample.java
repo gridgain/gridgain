@@ -38,14 +38,14 @@ import org.apache.ignite.ml.svm.SVMLinearClassificationModel;
  */
 public class SVMFromSparkExample {
     /** Path to Spark SVM model. */
-    public static final String SPARK_MDL_PATH = "examples/src/main/resources/models/spark/serialized/svm";
+    public static final String SPARK_MDL_PATH = "examples-ml/src/main/resources/models/spark/serialized/svm";
 
     /** Run example. */
     public static void main(String[] args) throws FileNotFoundException {
         System.out.println();
         System.out.println(">>> SVM model loaded from Spark through serialization over partitioned dataset usage example started.");
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             IgniteCache<Integer, Vector> dataCache = null;

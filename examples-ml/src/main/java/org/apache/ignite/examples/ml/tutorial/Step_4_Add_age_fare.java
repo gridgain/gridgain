@@ -50,7 +50,7 @@ public class Step_4_Add_age_fare {
         System.out.println();
         System.out.println(">>> Tutorial step 4 (add age and fare) example started.");
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
 

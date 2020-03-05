@@ -53,7 +53,7 @@ public class Step_5_Scaling {
         System.out.println();
         System.out.println(">>> Tutorial step 5 (scaling) example started.");
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
 

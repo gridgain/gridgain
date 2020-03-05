@@ -68,7 +68,7 @@ import org.apache.ignite.ml.structures.LabeledVector;
 public class AlgorithmSpecificDatasetExample {
     /** Run example. */
     public static void main(String[] args) throws Exception {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Algorithm Specific Dataset example started.");
 
             IgniteCache<Integer, Vector> persons = null;

@@ -68,7 +68,7 @@ public class Step_8_CV {
         System.out.println();
         System.out.println(">>> Tutorial step 8 (cross-validation) example started.");
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
 

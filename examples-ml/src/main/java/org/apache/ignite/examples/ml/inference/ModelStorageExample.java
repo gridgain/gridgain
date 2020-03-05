@@ -43,7 +43,7 @@ import org.apache.ignite.ml.inference.storage.model.ModelStorageFactory;
 public class ModelStorageExample {
     /** Run example. */
     public static void main(String... args) throws IOException, ClassNotFoundException {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite-ml.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite-ml.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             ModelStorage storage = new ModelStorageFactory().getModelStorage(ignite);

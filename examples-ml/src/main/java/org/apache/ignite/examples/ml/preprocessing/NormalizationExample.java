@@ -47,7 +47,7 @@ import org.apache.ignite.ml.preprocessing.normalization.NormalizationTrainer;
 public class NormalizationExample {
     /** Run example. */
     public static void main(String[] args) throws Exception {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Normalization example started.");
 
             IgniteCache<Integer, Vector> data = null;

@@ -56,7 +56,7 @@ public class Step_7_Split_train_test {
         System.out.println();
         System.out.println(">>> Tutorial step 7 (split to train and test) example started.");
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
 

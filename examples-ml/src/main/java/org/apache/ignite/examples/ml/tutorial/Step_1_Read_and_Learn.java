@@ -45,7 +45,7 @@ public class Step_1_Read_and_Learn {
         System.out.println();
         System.out.println(">>> Tutorial step 1 (read and learn) example started.");
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengersWithoutNulls(ignite);
 

@@ -52,7 +52,7 @@ public class Step_3_Categorial {
         System.out.println();
         System.out.println(">>> Tutorial step 3 (categorial) example started.");
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
 

@@ -37,13 +37,13 @@ import org.tensorflow.Tensor;
  */
 public class TensorFlowLocalInferenceExample {
     /** Path to the directory with saved TensorFlow model. */
-    private static final String MODEL_PATH = "examples/src/main/resources/models/mnist_tf_model";
+    private static final String MODEL_PATH = "examples-ml/src/main/resources/models/mnist_tf_model";
 
     /** Path to the MNIST images data. */
-    private static final String MNIST_IMG_PATH = "examples/src/main/resources/datasets/t10k-images-idx3-ubyte";
+    private static final String MNIST_IMG_PATH = "examples-ml/src/main/resources/datasets/t10k-images-idx3-ubyte";
 
     /** Path to the MNIST labels data. */
-    private static final String MNIST_LBL_PATH = "examples/src/main/resources/datasets/t10k-labels-idx1-ubyte";
+    private static final String MNIST_LBL_PATH = "examples-ml/src/main/resources/datasets/t10k-labels-idx1-ubyte";
 
     /** Run example. */
     public static void main(String[] args) throws IOException {

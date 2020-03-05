@@ -57,7 +57,7 @@ public class TrainingWithCustomPreprocessorsExample {
      * @throws Exception Exception.
      */
     public static void main(String[] args) throws Exception {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             IgniteCache<Integer, Vector> trainingSet = new SandboxMLCache(ignite)
                 .fillCacheWith(MLSandboxDatasets.BOSTON_HOUSE_PRICES);
 

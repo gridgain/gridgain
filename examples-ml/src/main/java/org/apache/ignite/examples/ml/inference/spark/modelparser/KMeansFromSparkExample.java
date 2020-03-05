@@ -40,14 +40,14 @@ import org.apache.ignite.ml.structures.LabeledVector;
  */
 public class KMeansFromSparkExample {
     /** Path to Spark KMeans model. */
-    public static final String SPARK_MDL_PATH = "examples/src/main/resources/models/spark/serialized/kmeans";
+    public static final String SPARK_MDL_PATH = "examples-ml/src/main/resources/models/spark/serialized/kmeans";
 
     /** Run example. */
     public static void main(String[] args) throws FileNotFoundException {
         System.out.println();
         System.out.println(">>> K-means model loaded from Spark through serialization over partitioned dataset usage example started.");
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             IgniteCache<Integer, Vector> dataCache = null;

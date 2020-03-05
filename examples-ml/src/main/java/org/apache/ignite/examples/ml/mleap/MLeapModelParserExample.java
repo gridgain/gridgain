@@ -38,14 +38,14 @@ import org.apache.ignite.ml.mleap.MLeapModelParser;
  */
 public class MLeapModelParserExample {
     /** Test model resource name. */
-    private static final String TEST_MODEL_RES = "examples/src/main/resources/models/mleap/airbnb.model.rf.zip";
+    private static final String TEST_MODEL_RES = "examples-ml/src/main/resources/models/mleap/airbnb.model.rf.zip";
 
     /** Parser. */
     private static final MLeapModelParser parser = new MLeapModelParser();
 
     /** Run example. */
     public static void main(String... args) throws ExecutionException, InterruptedException {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             File mdlRsrc = IgniteUtils.resolveIgnitePath(TEST_MODEL_RES);
             if (mdlRsrc == null)
                 throw new IllegalArgumentException("File not found [resource_path=" + TEST_MODEL_RES + "]");

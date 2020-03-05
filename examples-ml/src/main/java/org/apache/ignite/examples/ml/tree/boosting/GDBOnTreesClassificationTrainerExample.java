@@ -47,7 +47,7 @@ public class GDBOnTreesClassificationTrainerExample {
         System.out.println();
         System.out.println(">>> GDB classification trainer example started.");
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             // Create cache with training data.

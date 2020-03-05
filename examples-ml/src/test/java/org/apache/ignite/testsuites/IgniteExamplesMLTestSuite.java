@@ -87,7 +87,7 @@ public class IgniteExamplesMLTestSuite {
     /** */
     public static Ignite getTestIgnite(String someString) {
         if (igniteProxy == null) {
-            localIgnite = Ignition.start("examples/config/example-ignite-ml.xml");
+            localIgnite = Ignition.start("examples-ml/config/example-ignite-ml.xml");
             InvocationHandler handler = new InvocationHandler() {
                 @Override public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
                     if (method.getName().equals("close"))

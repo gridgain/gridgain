@@ -15,4 +15,4 @@ Starting Remote Nodes
 =====================
 
 Remote nodes for examples should always be started with special configuration file which enables P2P
-class loading: `examples/config/example-ignite.xml`. To run a remote node in IDE use `ExampleNodeStartup` class.
+class loading: `examples-ml/config/example-ignite.xml`. To run a remote node in IDE use `ExampleNodeStartup` class.

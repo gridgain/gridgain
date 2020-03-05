@@ -53,7 +53,7 @@ public class Step_3_Categorial_with_One_Hot_Encoder {
         System.out.println();
         System.out.println(">>> Tutorial step 3 (categorial with One-hot encoder) example started.");
 
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             try {
                 IgniteCache<Integer, Vector> dataCache = TitanicUtils.readPassengers(ignite);
 

@@ -40,17 +40,17 @@ public class DecisionTreeClassificationTrainerSQLTableExample {
     private static final String DUMMY_CACHE_NAME = "dummy_cache";
 
     /** Training data. */
-    private static final String TRAIN_DATA_RES = "examples/src/main/resources/datasets/titanik_train.csv";
+    private static final String TRAIN_DATA_RES = "examples-ml/src/main/resources/datasets/titanik_train.csv";
 
     /** Test data. */
-    private static final String TEST_DATA_RES = "examples/src/main/resources/datasets/titanik_test.csv";
+    private static final String TEST_DATA_RES = "examples-ml/src/main/resources/datasets/titanik_test.csv";
 
     /** Run example. */
     public static void main(String[] args) {
         System.out.println(">>> Decision tree classification trainer example started.");
 
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             // Dummy cache is required to perform SQL queries.

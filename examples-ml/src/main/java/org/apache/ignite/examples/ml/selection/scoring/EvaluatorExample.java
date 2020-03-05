@@ -50,7 +50,7 @@ public class EvaluatorExample {
         System.out.println();
         System.out.println(">>> kNN multi-class classification algorithm over cached dataset usage example started.");
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             IgniteCache<Integer, Vector> dataCache = null;

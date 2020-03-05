@@ -51,10 +51,10 @@ import org.apache.ignite.ml.structures.LabeledVector;
  * You can change the test data used in this example and re-run it to explore this functionality further.</p>
  * <p>
  * Remote nodes should always be started with special configuration file which enables P2P class loading: {@code
- * 'ignite.{sh|bat} examples/config/example-ignite.xml'}.</p>
+ * 'ignite.{sh|bat} examples-ml/config/example-ignite.xml'}.</p>
  * <p>
  * Alternatively you can run {@link ExampleNodeStartup} in another JVM which will start node with {@code
- * examples/config/example-ignite.xml} configuration.</p>
+ * examples-ml/config/example-ignite.xml} configuration.</p>
  */
 public class MLPTrainerExample {
     /**
@@ -67,7 +67,7 @@ public class MLPTrainerExample {
         System.out.println(">>> Distributed multilayer perceptron example started.");
 
         // Start ignite grid.
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");
 
             // Create cache with training data.

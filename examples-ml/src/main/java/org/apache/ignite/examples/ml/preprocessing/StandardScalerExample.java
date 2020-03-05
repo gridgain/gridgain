@@ -42,7 +42,7 @@ import org.apache.ignite.ml.preprocessing.standardscaling.StandardScalerTrainer;
 public class StandardScalerExample {
     /** Run example. */
     public static void main(String[] args) throws Exception {
-        try (Ignite ignite = Ignition.start("examples/config/example-ignite.xml")) {
+        try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Standard scaler example started.");
 
             IgniteCache<Integer, Vector> data = null;
