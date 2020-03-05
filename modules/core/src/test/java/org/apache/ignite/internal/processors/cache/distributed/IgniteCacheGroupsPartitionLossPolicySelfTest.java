@@ -37,14 +37,13 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
 /**
- *
+ * Tests partition loss policies working for in-memory groups with multiple caches and disabled baseline.
  */
 public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbstractTest {
     /** */
@@ -135,9 +134,10 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     /**
      * @throws Exception if failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-5078")
     @Test
     public void testIgnore() throws Exception {
+        partLossPlc = PartitionLossPolicy.IGNORE;
+
         prepareTopology();
 
         String cacheName = ThreadLocalRandom.current().nextBoolean() ? CACHE_1 : CACHE_2;
@@ -346,8 +346,11 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         ignite(3).close();
 
-        for (CountDownLatch latch : partLost)
-            assertTrue("Failed to wait for partition LOST event", latch.await(10, TimeUnit.SECONDS));
+        // Events are disabled for IGNORE mode.
+        if (partLossPlc != PartitionLossPolicy.IGNORE) {
+            for (CountDownLatch latch : partLost)
+                assertTrue("Failed to wait for partition LOST event", latch.await(10, TimeUnit.SECONDS));
+        }
 
         return part;
     }

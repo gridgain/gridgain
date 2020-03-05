@@ -36,7 +36,7 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ScanQuery;
-import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -49,21 +49,15 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestDelayingCommunicationSpi;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
-import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -93,8 +87,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         params.add(new Object[]{TRANSACTIONAL});
 
-//        if (!MvccFeatureChecker.forcedMvcc())
-//            params.add(new Object[]{ATOMIC});
+        if (!MvccFeatureChecker.forcedMvcc())
+            params.add(new Object[]{ATOMIC});
 
         return params;
     }
@@ -368,7 +362,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(false, asList(3, 2, 1), asList(0, 4), 0));
+        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 2, 1), asList(0, 4), 0));
     }
 
     /**
@@ -454,23 +448,9 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     /**
      * @throws Exception if failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-5078")
     @Test
     public void testIgnore() throws Exception {
         partLossPlc = PartitionLossPolicy.IGNORE;
-
-        checkIgnore(killSingleNode);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-5078,https://issues.apache.org/jira/browse/IGNITE-10041")
-    @Test
-    public void testIgnoreWithPersistence() throws Exception {
-        partLossPlc = PartitionLossPolicy.IGNORE;
-
-        isPersistenceEnabled = true;
 
         checkIgnore(killSingleNode);
     }
@@ -493,19 +473,39 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     /**
      * @throws Exception if failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-10041")
     @Test
-    public void testIgnoreKillThreeNodesWithPersistence() throws Exception {
-        partLossPlc = PartitionLossPolicy.IGNORE;
+    public void testResetLostPartitionsWithNoOwners() throws Exception {
+        partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+
+        backups = 1;
 
         isPersistenceEnabled = true;
 
-        // TODO aliveNodes should include node 4, but it fails due to https://issues.apache.org/jira/browse/IGNITE-5078.
-        // TODO need to add 4 to the aliveNodes after IGNITE-5078 is fixed.
-        // TopologyChanger onlyCrdIsAlive = new TopologyChanger(false, Arrays.asList(1, 2, 3), Arrays.asList(0, 4), 0);
-        TopologyChanger onlyCrdIsAlive = new TopologyChanger(false, asList(1, 2, 3), singletonList(0), 0);
+        final TopologyChanger changer = new TopologyChanger(false, asList(3, 2, 1), asList(0, 4), 0);
 
-        checkIgnore(onlyCrdIsAlive);
+        final List<Integer> lostParts = changer.changeTopology();
+
+        assertFalse(lostParts.isEmpty());
+
+        final GridDhtPartitionTopology top = grid(4).cachex(DEFAULT_CACHE_NAME).context().topology();
+
+        try {
+            grid(4).resetLostPartitions(singletonList(DEFAULT_CACHE_NAME));
+
+            fail();
+        }
+        catch (ClusterTopologyException ignored) {
+            // Expected.
+        }
+
+        try {
+            grid(0).resetLostPartitions(singletonList(DEFAULT_CACHE_NAME));
+
+            fail();
+        }
+        catch (ClusterTopologyException ignored) {
+            // Expected.
+        }
     }
 
     /**
@@ -1013,14 +1013,17 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
             Thread.sleep(5_000L);
 
-            for (Map<Integer, Semaphore> map : lostMap) {
-                for (Map.Entry<Integer, Semaphore> entry : map.entrySet())
-                    assertTrue("Failed to wait for partition LOST event for partition: " + entry.getKey(), entry.getValue().tryAcquire(1));
-            }
+            // Events are not triggered in IGNORE mode.
+            if (partLossPlc != PartitionLossPolicy.IGNORE) {
+                for (Map<Integer, Semaphore> map : lostMap) {
+                    for (Map.Entry<Integer, Semaphore> entry : map.entrySet())
+                        assertTrue("Failed to wait for partition LOST event for partition: " + entry.getKey(), entry.getValue().tryAcquire(1));
+                }
 
-            for (Map<Integer, Semaphore> map : lostMap) {
-                for (Map.Entry<Integer, Semaphore> entry : map.entrySet())
-                    assertFalse("Partition LOST event raised twice for partition: " + entry.getKey(), entry.getValue().tryAcquire(1));
+                for (Map<Integer, Semaphore> map : lostMap) {
+                    for (Map.Entry<Integer, Semaphore> entry : map.entrySet())
+                        assertFalse("Partition LOST event raised twice for partition: " + entry.getKey(), entry.getValue().tryAcquire(1));
+                }
             }
 
             return parts;
