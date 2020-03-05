@@ -17,9 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.io.File;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.LongStream;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -35,15 +36,12 @@ import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.query.GridQueryIndexing;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
-import org.apache.ignite.internal.processors.query.schema.SchemaIndexCachePartitionWorker;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCursor;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.junit.Test;
 
-import static java.lang.System.identityHashCode;
-import static java.util.Collections.newSetFromMap;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
 
@@ -110,7 +108,6 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         stopAllGrids();
 
         cleanPersistenceDir();
-        SchemaIndexCachePartitionWorker.THREAD_CONSUMER = null;
         GridQueryProcessor.idxCls = null;
     }
 
@@ -212,13 +209,16 @@ public class GridIndexRebuildSelfTest extends DynamicIndexAbstractSelfTest {
         assertTrue(U.delete(idxPath));
 
         buildIdxThreadPoolSize = buildIdxThreadCnt;
-        Set<Integer> identityThreads = newSetFromMap(new ConcurrentHashMap<>());
-        SchemaIndexCachePartitionWorker.THREAD_CONSUMER = thread -> identityThreads.add(identityHashCode(thread));
 
         srv = startServer();
         srv.cache(CACHE_NAME).indexReadyFuture().get();
 
-        assertEquals(buildIdxThreadCnt, identityThreads.size());
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+
+        long buildIdxRunnerCnt = LongStream.of(threadMXBean.getAllThreadIds()).mapToObj(threadMXBean::getThreadInfo)
+            .filter(threadInfo -> threadInfo.getThreadName().startsWith("build-idx-runner")).count();
+
+        assertEquals(buildIdxThreadCnt, buildIdxRunnerCnt);
     }
 
     /**
