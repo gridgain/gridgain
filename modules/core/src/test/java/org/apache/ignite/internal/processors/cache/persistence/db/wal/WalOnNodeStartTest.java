@@ -97,6 +97,8 @@ public class WalOnNodeStartTest extends GridCommonAbstractTest {
 
         ignite = startGrid(0);
 
+        awaitPartitionMapExchange();
+
         ignite.cluster().active(false);
 
         String walPath = ignite.configuration().getDataStorageConfiguration().getWalPath();
