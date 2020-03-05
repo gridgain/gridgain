@@ -16,14 +16,17 @@
 
 package org.apache.ignite.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import javax.cache.Cache;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.internal.IgniteEx;
@@ -39,6 +42,8 @@ import org.apache.ignite.util.GridCommandHandlerIndexingUtils.Person;
 import org.junit.Test;
 
 import static java.lang.String.valueOf;
+import static java.util.Arrays.asList;
+import static java.util.Collections.emptyMap;
 import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
@@ -66,12 +71,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        Map<QueryEntity, Function<Random, Object>> qryEntities = new HashMap<>();
-
-        qryEntities.put(personEntity(), rand -> new Person(rand.nextInt(), valueOf(rand.nextLong())));
-        qryEntities.put(organizationEntity(), rand -> new Organization(rand.nextInt(), valueOf(rand.nextLong())));
-
-        createAndFillCache(client, CACHE_NAME, GROUP_NAME, qryEntities, ENTRY_CNT);
+        createAndFillCache(client, CACHE_NAME, GROUP_NAME, queryEntities(), ENTRY_CNT);
     }
 
     /**
@@ -143,6 +143,79 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
         breakSqlIndex(crd.cachex(cacheName), 1, null);
 
         checkNoCheckSizeInCaseBrokenData(cacheName);
+    }
+
+    /**
+     * Test that checks that there will be no errors when executing command
+     * "validate_indexes" with/without "--no-check-sizes" on the cache without
+     * {@link QueryEntity}.
+     */
+    @Test
+    public void testNoErrorOnCacheWithoutQueryEntity() {
+        String cacheName = DEFAULT_CACHE_NAME;
+
+        createAndFillCache(crd, cacheName, GROUP_NAME, emptyMap(), 0);
+
+        try (IgniteDataStreamer<Object, Object> streamer = crd.dataStreamer(cacheName)) {
+            for (int i = 0; i < ENTRY_CNT; i++)
+                streamer.addData(i, new Person(i, "p_" + i));
+
+            streamer.flush();
+        }
+
+        execVIWithNoErrCheck(cacheName, false);
+        execVIWithNoErrCheck(cacheName, true);
+    }
+
+    /**
+     * Test that checks that there will be no errors when executing command
+     * "validate_indexes" with/without "--no-check-sizes" on the empty cache
+     * with {@link QueryEntity}.
+     */
+    @Test
+    public void testNoErrorOnEmptyCacheWithQueryEntity() {
+        String cacheName = DEFAULT_CACHE_NAME;
+
+        createAndFillCache(crd, cacheName, GROUP_NAME, queryEntities(), 0);
+
+        execVIWithNoErrCheck(cacheName, false);
+        execVIWithNoErrCheck(cacheName, true);
+    }
+
+    /**
+     * Creating {@link QueryEntity}'s with filling functions.
+     *
+     * @return {@link QueryEntity}'s with filling functions.
+     */
+    private Map<QueryEntity, Function<Random, Object>> queryEntities() {
+        Map<QueryEntity, Function<Random, Object>> qryEntities = new HashMap<>();
+
+        qryEntities.put(personEntity(), rand -> new Person(rand.nextInt(), valueOf(rand.nextLong())));
+        qryEntities.put(organizationEntity(), rand -> new Organization(rand.nextInt(), valueOf(rand.nextLong())));
+
+        return qryEntities;
+    }
+
+    /**
+     * Executing "validate_indexes" command with verify that there are
+     * no errors in result.
+     *
+     * @param cacheName Cache name.
+     * @param noCheckSizes Add argument "--no-check-sizes".
+     */
+    private void execVIWithNoErrCheck(String cacheName, boolean noCheckSizes) {
+        List<String> cmdWithArgs = new ArrayList<>(asList(CACHE.text(), VALIDATE_INDEXES.text(), cacheName));
+
+        if (noCheckSizes)
+            cmdWithArgs.add(NO_CHECK_SIZES.argName());
+
+        injectTestSystemOut();
+
+        assertEquals(EXIT_CODE_OK, execute(cmdWithArgs));
+
+        String out = testOut.toString();
+        assertNotContains(log, out, "issues found (listed above)");
+        assertNotContains(log, out, "Size check");
     }
 
     /**

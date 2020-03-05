@@ -292,8 +292,11 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
                 continue;
             }
-            else if (NO_CHECK_SIZES == arg)
+            else if (NO_CHECK_SIZES == arg) {
                 checkSizes = false;
+
+                continue;
+            }
 
             try {
                 nodeId = UUID.fromString(nextArg);
