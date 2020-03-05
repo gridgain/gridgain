@@ -703,6 +703,7 @@ public class GridCacheDeploymentManager<K, V> extends GridCacheSharedManagerAdap
 
     /**
      * Checks if given deployment is correct to prepare a message.
+     *
      * @param deployment Deployment.
      * @param deployable Deployable message.
      * @throws IgnitePeerToPeerClassLoadingException If deployment is incorrect.

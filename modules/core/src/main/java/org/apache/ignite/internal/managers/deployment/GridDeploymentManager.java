@@ -313,6 +313,7 @@ public class GridDeploymentManager extends GridManagerAdapter<DeploymentSpi> {
 
     /**
      * Checks and logs possibly incorrect deployments.
+     *
      * @param deployment Deployment.
      * @param store Store name.
      * @return Deployment.
