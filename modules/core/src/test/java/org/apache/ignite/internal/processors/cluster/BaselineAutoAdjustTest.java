@@ -258,6 +258,46 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
      * @throws Exception if failed.
      */
     @Test
+    public void testBaselineAutoAdjustWithDaemonNode() throws Exception {
+        IgniteEx ignite0 = startGrid(0);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
+        ignite0.cluster().active(true);
+
+        ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
+
+        startGrid(getConfiguration().setDaemon(true));
+
+        doSleep(autoAdjustTimeout);
+
+        assertTrue(isCurrentBaselineFromOneNode(ignite0));
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testBaselineAutoAdjustNotWorkingNonActivatedCluster() throws Exception {
+        IgniteEx ignite0 = startGrid(0);
+
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
+
+        ignite0.cluster().active(true);
+
+        ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
+
+        ignite0.cluster().active(false);
+
+        doSleep(autoAdjustTimeout);
+
+        assertTrue(isCurrentBaselineFromOneNode(ignite0));
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
     public void testBaselineAutoAdjustAfterNodeJoin() throws Exception {
         IgniteEx ignite0 = startGrid(0);
 
