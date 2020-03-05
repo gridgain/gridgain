@@ -69,7 +69,7 @@
         </dependency>
 
         <dependency>
-            <groupId>org.jetbrains</groupId>	
+            <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>${jetbrains.annotations.version}</version>
         </dependency>
@@ -224,7 +224,7 @@
             <artifactId>commons-lang3</artifactId>
             <version>${commons.lang3.version}</version>
             <scope>test</scope>
-        </dependency>     
+        </dependency>
     </dependencies>
 
     <build>
