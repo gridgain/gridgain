@@ -340,12 +340,10 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * Folds given maps of invalid partition states to string (Both PartitionCounters and Size) representation
-     * in the following format:
-     * Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
-     * input parameters are maps of invalid partition update counters and sizes,
-     * return value is String in the following format:
-     * Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
+     * @param topVer Topology version.
+     * @param invalidPartitionsCounters Invalid partitions counters map.
+     * @param invalidPartitionsSize Invalid partitions size map.
+     * @return value is String in the following format: Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
      */
     private String fold(AffinityTopologyVersion topVer, Map<Integer, Map<UUID, Long>> invalidPartitionsCounters,
         Map<Integer, Map<UUID, Long>> invalidPartitionsSize) {
@@ -378,8 +376,8 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * fillMapForPartition given maps of UUID and values (for PartitionCounters or PartitionSize)
-     * and set pairs (cnt, size)
+     * @param sourceMap PartitionCounters or PartitionSize
+     * @param resultMap  result map with pair of values
      */
     private void fillMapForPartition(Map<UUID, Long> sourceMap,
         Map<UUID, IgnitePair<Long>> resultMap, boolean isFirst) {

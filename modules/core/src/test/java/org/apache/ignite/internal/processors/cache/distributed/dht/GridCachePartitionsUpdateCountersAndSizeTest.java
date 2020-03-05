@@ -28,7 +28,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- *For testing that partitions state validation works correctly and always show partition size and update counters
+ * Class for testing GridDhtPartitionsStateValidator works correctly and always show partition size and update counters.
  */
 public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbstractTest {
     /** Cache name. */
