@@ -35,9 +35,15 @@ namespace Apache.Ignite.Benchmarks
         // ReSharper disable once RedundantAssignment
         public static void Main(string[] args)
         {
+#if (DEBUG)
+            throw new Exception("Don't run benchmarks in Debug mode");
+#endif
+#pragma warning disable 162
+            // ReSharper disable HeuristicUnreachableCode
+
             args = new[] {
                 //typeof(GetAllBenchmark).FullName,
-                typeof(ScanQueryBenchmark).FullName,
+                typeof(GetBenchmark).FullName,
                 //typeof(ThinClientGetAllBenchmark).FullName,
                 //typeof(ThinClientGetAllBinaryBenchmark).FullName,
                 "-ConfigPath", GetConfigPath(),
@@ -89,10 +95,7 @@ namespace Apache.Ignite.Benchmarks
             }
 
             benchmark.Run();
-
-#if (DEBUG)
-            Console.ReadLine();
-#endif
+#pragma warning restore 162
         }
 
         /// <summary>
