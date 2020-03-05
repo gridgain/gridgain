@@ -88,9 +88,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /** Global memory quota. */
     private volatile long globalQuota;
 
-    /** String representation of global quota. */
-    private volatile String globalQuotaStr;
-
     /**
      * Default query memory limit.
      *
@@ -98,9 +95,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * treated as separate Map query.
      */
     private volatile long qryQuota;
-
-    /** String representation of query quota. */
-    private volatile String qryQuotaStr;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -241,7 +235,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         A.ensure(globalQuota0 >= 0, "Sql global memory quota must be >= 0: quotaSize=" + globalQuota0);
 
         globalQuota = globalQuota0;
-        globalQuotaStr = newGlobalQuota;
 
         if (log.isInfoEnabled()) {
             log.info("SQL query global quota was set to " + globalQuota +  ". Current memory tracking parameters: " +
@@ -254,7 +247,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Current global query quota.
      */
     public String getGlobalQuota() {
-        return globalQuotaStr;
+        return String.valueOf(globalQuota);
     }
 
     /**
@@ -268,7 +261,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         A.ensure(qryQuota0 >= 0, "Sql query memory quota must be >= 0: quotaSize=" + qryQuota0);
 
         qryQuota = U.parseBytes(newQryQuota);
-        qryQuotaStr = newQryQuota;
 
         if (log.isInfoEnabled()) {
             log.info("SQL query memory quota was set to " + qryQuota +  ". Current memory tracking parameters: " +
@@ -286,7 +278,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Current query quota.
      */
     public String getQueryQuotaString() {
-        return qryQuotaStr;
+        return String.valueOf(qryQuota);
     }
 
     /**

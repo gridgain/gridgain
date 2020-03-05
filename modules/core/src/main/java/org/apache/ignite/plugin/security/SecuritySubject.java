@@ -18,6 +18,7 @@ package org.apache.ignite.plugin.security;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
+import java.security.cert.Certificate;
 import java.util.UUID;
 
 /**
@@ -51,6 +52,15 @@ public interface SecuritySubject extends Serializable {
      * @return Subject connection address.
      */
     public InetSocketAddress address();
+
+    /**
+     * Gets subject client certificates, or {@code null} if SSL were not used or client certificate checking not enabled.
+     *
+     * @return Subject client certificates.
+     */
+    public default Certificate[] certificates() {
+        return null;
+    }
 
     /**
      * Authorized permission set for the subject.

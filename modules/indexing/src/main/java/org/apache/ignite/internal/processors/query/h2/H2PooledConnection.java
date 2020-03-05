@@ -18,8 +18,8 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
@@ -79,10 +79,9 @@ public class H2PooledConnection implements AutoCloseable {
      *
      * @param sql SQL.
      * @return Prepared statement.
-     * @throws SQLException If failed.
      */
-    public PreparedStatement prepareStatement(String sql) throws SQLException {
-        return delegate.prepareStatement(sql);
+    public PreparedStatement prepareStatement(String sql, byte qryFlags) throws IgniteCheckedException {
+        return delegate.prepareStatement(sql, qryFlags);
     }
 
     /**
@@ -90,9 +89,8 @@ public class H2PooledConnection implements AutoCloseable {
      *
      * @param sql SQL.
      * @return Prepared statement.
-     * @throws SQLException If failed.
      */
-    public PreparedStatement prepareStatementNoCache(String sql) throws SQLException {
+    public PreparedStatement prepareStatementNoCache(String sql) throws IgniteCheckedException {
         return delegate.prepareStatementNoCache(sql);
     }
 

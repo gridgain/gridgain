@@ -19,7 +19,7 @@ package org.apache.ignite.agent.action.controller;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.agent.ManagementConsoleProcessor;
+import org.apache.ignite.agent.ManagementConsoleAgent;
 import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.action.annotation.ActionController;
@@ -48,7 +48,7 @@ public class SecurityActionsController {
     public SecurityActionsController(GridKernalContext ctx) {
         this.ctx = ctx;
         this.log = ctx.log(SecurityActionsController.class);
-        this.registry = ((ManagementConsoleProcessor)ctx.managementConsole()).sessionRegistry();
+        this.registry = ((ManagementConsoleAgent)ctx.managementConsole()).sessionRegistry();
     }
 
     /**
