@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.AbstractMap;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -104,7 +105,6 @@ public class GridDhtPartitionsStateValidator {
 
         if (!cctx.cache().cacheGroup(top.groupId()).mvccEnabled()) { // TODO: Remove "if" clause in IGNITE-9451.
             // Validate cache sizes.
-
             if (!resUpdCnt.isEmpty() && resSize.isEmpty())
                 error.append("Partitions update counters are inconsistent for ").append(fold(topVer, resUpdCnt));
             else if (resUpdCnt.isEmpty() && !resSize.isEmpty())

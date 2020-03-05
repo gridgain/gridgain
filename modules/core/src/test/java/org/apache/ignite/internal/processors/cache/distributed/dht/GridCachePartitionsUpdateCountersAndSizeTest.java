@@ -28,13 +28,13 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- *For testing that partitions state validation works correctly and show partition size
+ *For testing that partitions state validation works correctly and always show partition size and update counters
  */
 public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cacheTest";
 
-    /** */
+    /** Listener for parsing patterns in log*/
     private ListeningTestLogger testLog = new ListeningTestLogger(false, log());
 
     /** {@inheritDoc */
@@ -70,7 +70,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
      * Start three-nodes grid,
      * arguments: cnt - partition counters are inconsistent(boolean)
      *           size - partition size are inconsistent(boolean)
-     * @throws Exception If failed.
+     *@throws Exception If failed.
      */
     private void startThreeNodesGrid(boolean cnt, boolean size) throws Exception {
         LogListener lsnrCnt = SizeCounterLogListener.matches(Pattern.compile
