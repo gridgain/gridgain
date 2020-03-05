@@ -16,9 +16,10 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -31,6 +32,16 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetricProvider {
+    /** Closing updater. */
+    private static final AtomicIntegerFieldUpdater<QueryMemoryTracker> CLOSING_UPDATER
+        = AtomicIntegerFieldUpdater.newUpdater(QueryMemoryTracker.class, "state");
+
+    /** Tracker is not closed and not in the middle of the closing process. */
+    private static final int NORMALLY_OPERATING_STATE = 0;
+
+    /** Tracker is closed or in the middle of the closing process. */
+    private static final int CLOSING_OR_CLOSED_STATE = 1;
+
     /** Parent tracker. */
     @GridToStringExclude
     private final H2MemoryTracker parent;
@@ -71,10 +82,11 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** Close flag to prevent tracker reuse. */
     private volatile boolean closed;
 
-    private AtomicBoolean closing = new AtomicBoolean();
+    /** State of the tracker. Can be equal {@link #NORMALLY_OPERATING_STATE} or {@link #CLOSING_OR_CLOSED_STATE}*/
+    private volatile int state;
 
     /** Children. */
-    private final Queue<H2MemoryTracker> children = new ConcurrentLinkedQueue<>();
+    private final List<H2MemoryTracker> children = new ArrayList<>();
 
     /** The number of files created by the query. */
     private volatile int filesCreated;
@@ -267,11 +279,15 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
-        if (!closing.compareAndSet(false, true))
+        if (!CLOSING_UPDATER.compareAndSet(this, NORMALLY_OPERATING_STATE, CLOSING_OR_CLOSED_STATE))
             return;
 
-        for (H2MemoryTracker child : children)
-            child.close();
+        synchronized (this) {
+            for (H2MemoryTracker child : children)
+                child.close();
+
+            children.clear();
+        }
 
         closed = true;
 
@@ -279,8 +295,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         if (parent != null)
             parent.release(reservedFromParent);
-
-        onChildClosed(this);
     }
 
     /** {@inheritDoc} */
@@ -292,7 +306,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     }
 
     /** {@inheritDoc} */
-    @Override public H2MemoryTracker createChildTracker() {
+    @Override public synchronized H2MemoryTracker createChildTracker() {
         checkClosed();
 
         H2MemoryTracker child = new ChildMemoryTracker();
@@ -303,8 +317,9 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     }
 
     /** {@inheritDoc} */
-    @Override public void onChildClosed(H2MemoryTracker child) {
-        children.remove(child);
+    @Override public synchronized void onChildClosed(H2MemoryTracker child) {
+        if (state != CLOSING_OR_CLOSED_STATE)
+            children.remove(child);
     }
 
     /** {@inheritDoc} */

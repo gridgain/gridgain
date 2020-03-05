@@ -155,11 +155,11 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
 
     /** {@inheritDoc} */
     @Override public void cleanup(Session ses) {
-        if (values != null && tracker != null) {
+        if (values != null)
             values = null;
 
+        if (tracker != null)
             tracker.release(tracker.reserved());
-        }
     }
 
     /** */

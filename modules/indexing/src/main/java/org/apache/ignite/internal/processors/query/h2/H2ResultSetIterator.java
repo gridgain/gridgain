@@ -163,10 +163,10 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
                     return false;
             }
             catch (SQLException e) {
-                if (X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class) && canceled)
+                if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                     throw new QueryCancelledException();
 
-                if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                if (canceled && X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class))
                     throw new QueryCancelledException();
 
                 throw new IgniteSQLException(e);
