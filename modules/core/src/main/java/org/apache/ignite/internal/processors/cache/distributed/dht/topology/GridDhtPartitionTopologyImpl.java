@@ -1567,11 +1567,12 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 node2part = partMap;
 
-                if (exchangeVer != null) {
+                if (exchangeVer != null && exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT) {
                     assert exchFut != null;
 
                     boolean evt = !exchFut.localJoinExchange() && !exchFut.activateCluster();
 
+                    // TODO fixme this is called on joining client.
                     detectLostPartitions(exchangeVer, evt ? exchFut.events().lastEvent() : null);
                 }
 
@@ -2194,7 +2195,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                                 final GridDhtPartitionState cur = e.getValue().get(part);
 
-                                if (cur != EVICTED && cur != LOST) {
+                                // If node is owning a partition apply LOST state.
+                                if (cur != null && cur != EVICTED && cur != LOST) {
                                     e.getValue().put(part, LOST);
 
                                     changed = true;

@@ -36,24 +36,34 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestDelayingCommunicationSpi;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCache;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.MvccFeatureChecker;
@@ -83,8 +93,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         params.add(new Object[]{TRANSACTIONAL});
 
-        if (!MvccFeatureChecker.forcedMvcc())
-            params.add(new Object[]{ATOMIC});
+//        if (!MvccFeatureChecker.forcedMvcc())
+//            params.add(new Object[]{ATOMIC});
 
         return params;
     }
@@ -116,6 +126,9 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
+        cfg.setFailureDetectionTimeout(10000000L);
+        cfg.setClientFailureDetectionTimeout(10000000L);
+
         cfg.setCommunicationSpi(new TestDelayingCommunicationSpi() {
             /** {@inheritDoc} */
             @Override protected boolean delayMessage(Message msg, GridIoMessage ioMsg) {
@@ -136,7 +149,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
                         .setPersistenceEnabled(isPersistenceEnabled)
-                ));
+                ).setWalSegmentSize(4 * 1024 * 1024).setWalMode(WALMode.LOG_ONLY));
 
         cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
@@ -163,6 +176,9 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
+        // TODO test is needed for logged LOST state.
+        cleanPersistenceDir();
+
         delayPartExchange.set(false);
 
         partLossPlc = PartitionLossPolicy.IGNORE;
@@ -174,11 +190,11 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
-
-        super.afterTest();
     }
 
     /**
@@ -352,7 +368,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 2, 1), asList(0, 4), 0));
+        checkLostPartition(true, true, new TopologyChanger(false, asList(3, 2, 1), asList(0, 4), 0));
     }
 
     /**
@@ -923,6 +939,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
          */
         private List<Integer> changeTopology() throws Exception {
             startGrids(4);
+
+            TestRecordingCommunicationSpi.spi(grid(0)).record(GridDhtPartitionsFullMessage.class);
 
             if (isPersistenceEnabled)
                 grid(0).cluster().active(true);

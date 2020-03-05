@@ -49,6 +49,7 @@ import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVer
 
 /**
  * Tests if lost partitions are same on left nodes after other owners removal.
+ * TODO persistent mode shoud be moved to cache7 suite.
  */
 public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstractTest {
     /** */
@@ -70,9 +71,6 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         // Enable baseline for volatile caches.
         if (enableBaseline)
             cfg.setActiveOnStart(false);
-
-        cfg.setFailureDetectionTimeout(100000000L);
-        cfg.setClientFailureDetectionTimeout(100000000L);
 
         cfg.setConsistentId(igniteInstanceName);
 

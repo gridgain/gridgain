@@ -66,9 +66,6 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
-        cfg.setFailureDetectionTimeout(100000000L);
-        cfg.setClientFailureDetectionTimeout(100000000L);
-
         cfg.setConsistentId(igniteInstanceName);
         cfg.setClientMode(igniteInstanceName.startsWith("client"));
 

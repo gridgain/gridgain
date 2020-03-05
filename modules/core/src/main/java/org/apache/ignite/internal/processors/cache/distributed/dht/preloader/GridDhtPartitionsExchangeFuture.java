@@ -2352,7 +2352,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
                 }
 
-                // TODO Indep calc - comment.
+                // TODO Independent calc - comment.
                 if (exchCtx.exchangeFreeSwitch())
                     detectLostPartitions(res);
 

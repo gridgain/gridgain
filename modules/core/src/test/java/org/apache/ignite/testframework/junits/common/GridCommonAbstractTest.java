@@ -1081,7 +1081,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                         GridDhtPartitionFullMap map = U.field(top, "node2part");
 
                         try {
-                            final GridDhtPartitionState rmtState = map.get(nodeId).get(p);
+                            final GridDhtPartitionMap nodeMap = map.get(nodeId);
+
+                            if (nodeMap == null)
+                                continue; // Skip client node.
+
+                            final GridDhtPartitionState rmtState = nodeMap.get(p);
 
                             if (rmtState != null) {
                                 sb.append(" nodeId=")

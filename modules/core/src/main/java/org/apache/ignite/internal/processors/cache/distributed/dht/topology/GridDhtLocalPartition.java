@@ -551,13 +551,14 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             synchronized (this) {
                 GridDhtPartitionState prevState = state();
 
-                boolean update = this.state.compareAndSet(state, setPartState(state, toState));
+                boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
-                if (update) {
+                if (updated) {
                     assert toState != EVICTED || reservations() == 0 : this;
 
                     try {
-                        ctx.wal().log(new PartitionMetaStateRecord(grp.groupId(), id, toState, 0));
+                        // Log lost partitions as owning. TODO do not log if OWNING -> LOST.
+                        ctx.wal().log(new PartitionMetaStateRecord(grp.groupId(), id, toState == LOST ? OWNING : toState, 0));
                     }
                     catch (IgniteCheckedException e) {
                         U.error(log, "Failed to log partition state change to WAL.", e);
@@ -570,15 +571,15 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                             + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");
                 }
 
-                return update;
+                return updated;
             }
         }
         else {
             GridDhtPartitionState prevState = state();
 
-            boolean update = this.state.compareAndSet(state, setPartState(state, toState));
+            boolean updated = this.state.compareAndSet(state, setPartState(state, toState));
 
-            if (update) {
+            if (updated) {
                 assert toState != EVICTED || reservations() == 0 : this;
 
                 if (log.isDebugEnabled())
@@ -586,7 +587,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                         + ", p=" + id + ", prev=" + prevState + ", to=" + toState + "]");
             }
 
-            return update;
+            return updated;
         }
     }
 
