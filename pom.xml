@@ -106,7 +106,7 @@
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
                 <module>examples</module>
-                <module>modules/ml/examples</module>
+                <module>examples-ml</module>
                 <module>modules/benchmarks</module>
                 <module>modules/compatibility</module>
                 <module>modules/geospatial</module>
@@ -656,7 +656,7 @@
             <id>examples</id>
             <modules>
                 <module>examples</module>
-                <module>modules/ml/examples</module>
+                <module>examples-ml</module>
             </modules>
         </profile>
 
