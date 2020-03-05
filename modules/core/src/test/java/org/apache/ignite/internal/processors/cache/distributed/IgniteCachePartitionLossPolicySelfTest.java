@@ -487,8 +487,6 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         assertFalse(lostParts.isEmpty());
 
-        final GridDhtPartitionTopology top = grid(4).cachex(DEFAULT_CACHE_NAME).context().topology();
-
         try {
             grid(4).resetLostPartitions(singletonList(DEFAULT_CACHE_NAME));
 
@@ -507,6 +505,31 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
             // Expected.
         }
     }
+
+    /**
+     * @throws Exception if failed.
+     *
+     * TODO FIXME not working.
+     */
+    @Test
+    public void testLostPartitionsAddDataNode() throws Exception {
+        partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+
+        backups = 1;
+
+        isPersistenceEnabled = true;
+
+        final TopologyChanger changer = new TopologyChanger(false, asList(3, 2, 1), asList(0, 4), 0);
+
+        final List<Integer> lostParts = changer.changeTopology();
+
+        assertFalse(lostParts.isEmpty());
+
+        final IgniteEx g5 = startGrid(5);
+
+        resetBaselineTopology();
+
+        awaitPartitionMapExchange();    }
 
     /**
      * @param topChanger topology changer.
