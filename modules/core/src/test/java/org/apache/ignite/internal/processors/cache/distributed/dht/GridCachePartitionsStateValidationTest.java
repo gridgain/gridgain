@@ -16,11 +16,11 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.HashMap;
-import java.util.Collections;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,7 +50,6 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
@@ -67,9 +66,6 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
     /** */
     private boolean clientMode;
 
-    /** */
-    private ListeningTestLogger testLog = new ListeningTestLogger(false, log());
-
     /** {@inheritDoc */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -77,17 +73,14 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         cfg.setConsistentId(igniteInstanceName);
 
         cfg.setCacheConfiguration(new CacheConfiguration(CACHE_NAME)
-                .setBackups(1)
-                .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setBackups(1)
+            .setAffinity(new RendezvousAffinityFunction(false, 32))
         );
 
         cfg.setCommunicationSpi(new SingleMessageInterceptorCommunicationSpi(2));
 
         if (clientMode)
             cfg.setClientMode(true);
-
-        if (igniteInstanceName.endsWith("0"))
-            cfg.setGridLogger(testLog);
 
         return cfg;
     }
