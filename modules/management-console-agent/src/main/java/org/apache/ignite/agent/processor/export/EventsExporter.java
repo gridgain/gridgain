@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.internal.visor.util.VisorEventMapper;
 
-import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.events.EventType.EVTS_CACHE_LIFECYCLE;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
 import static org.apache.ignite.events.EventType.EVTS_DISCOVERY;
@@ -57,21 +57,21 @@ public class EventsExporter extends GridProcessorAdapter {
      * Adds local event listener.
      */
     public void addLocalEventListener() {
-        this.ctx.event().enableEvents(LOCAL_EVT_TYPES);
-        this.ctx.event().addLocalEventListener(lsnr, LOCAL_EVT_TYPES);
+        ctx.event().enableEvents(LOCAL_EVT_TYPES);
+        ctx.event().addLocalEventListener(lsnr, LOCAL_EVT_TYPES);
     }
 
     /**
      * Adds global event listener.
      */
     public void addGlobalEventListener() {
-        this.ctx.event().enableEvents(GLOBAL_EVT_TYPES);
-        this.ctx.event().addLocalEventListener(lsnr, GLOBAL_EVT_TYPES);
+        ctx.event().enableEvents(GLOBAL_EVT_TYPES);
+        ctx.event().addLocalEventListener(lsnr, GLOBAL_EVT_TYPES);
     }
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) {
-        this.ctx.event().removeLocalEventListener(lsnr, concat(LOCAL_EVT_TYPES, GLOBAL_EVT_TYPES));
+        ctx.event().removeLocalEventListener(lsnr, concat(LOCAL_EVT_TYPES, GLOBAL_EVT_TYPES));
     }
 
     /**

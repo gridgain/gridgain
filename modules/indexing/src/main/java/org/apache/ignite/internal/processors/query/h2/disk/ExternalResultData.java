@@ -28,14 +28,14 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.h2.api.ErrorCode;
 import org.h2.message.DbException;
 import org.h2.store.Data;
-import org.h2.value.CompareMode;
 import org.h2.store.DataHandler;
+import org.h2.value.CompareMode;
 import org.h2.value.Value;
 import org.h2.value.ValueNull;
 import org.h2.value.ValueRow;
@@ -81,7 +81,7 @@ public class ExternalResultData<T> implements AutoCloseable {
     private final FileIO fileIo;
 
     /** IO factory. */
-    private final FileIOFactory fileIOFactory;
+    private final TrackableFileIoFactory fileIOFactory;
 
     /** Hash index for fast lookup of the distinct rows. RowKey -> Row address in the row store. */
     private final ExternalResultHashIndex hashIdx;
@@ -120,16 +120,18 @@ public class ExternalResultData<T> implements AutoCloseable {
      * @param cls Class of stored data.
      * @param cmp Comparator for rows.
      * @param hnd Data handler.
+     * @param tracker Memory tracker.
      */
     public ExternalResultData(IgniteLogger log,
         String workDir,
-        FileIOFactory fileIOFactory,
+        TrackableFileIoFactory fileIOFactory,
         UUID locNodeId,
         boolean useHashIdx,
         long initSize,
         Class<T> cls,
         CompareMode cmp,
-        DataHandler hnd) {
+        DataHandler hnd,
+        H2MemoryTracker tracker) {
         this.log = log;
         this.cls = cls;
         this.cmp = cmp;
@@ -145,7 +147,7 @@ public class ExternalResultData<T> implements AutoCloseable {
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(file, CREATE_NEW, READ, WRITE);
+                fileIo = fileIOFactory.create(file, tracker, CREATE_NEW, READ, WRITE);
             }
 
             if (log.isDebugEnabled())
@@ -155,7 +157,8 @@ public class ExternalResultData<T> implements AutoCloseable {
 
             writeBuff = Data.create(hnd, DEFAULT_ROW_SIZE, false);
 
-            hashIdx = useHashIdx ? new ExternalResultHashIndex(fileIOFactory, file, this, initSize) : null;
+            hashIdx = useHashIdx ?
+                new ExternalResultHashIndex(fileIOFactory, file, this, initSize, tracker) : null;
         }
         catch (IgniteCheckedException | IgniteException | IOException e) {
             U.closeQuiet(this);
@@ -178,7 +181,7 @@ public class ExternalResultData<T> implements AutoCloseable {
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(file, READ);
+                fileIo = fileIOFactory.create(file, H2MemoryTracker.NO_OP_TRACKER, READ);
             }
 
             writeBuff = parent.writeBuff;

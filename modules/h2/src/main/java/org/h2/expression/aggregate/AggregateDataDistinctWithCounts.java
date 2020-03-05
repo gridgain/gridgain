@@ -58,7 +58,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
             values.put(v, a);
 
             H2MemoryTracker memTracker;
-            if ((memTracker = ses.queryMemoryTracker()) != null) {
+            if ((memTracker = ses.memoryTracker()) != null) {
                 long size = Constants.MEMORY_OBJECT;
 
                 size += v.getMemory();
@@ -98,7 +98,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
     /** {@inheritDoc} */
     @Override public void cleanup(Session ses) {
         H2MemoryTracker memTracker;
-        if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
+        if (values != null && (memTracker = ses.memoryTracker()) != null) {
             values = null;
 
             memTracker.released(memReserved);

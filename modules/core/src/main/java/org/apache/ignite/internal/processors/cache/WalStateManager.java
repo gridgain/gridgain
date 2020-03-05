@@ -406,7 +406,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
      * in OWNING state if such feature is enabled.
      *
      * @param topVer Topology version.
-     * @param changedBaseline The exchange is caused by Baseline Topology change.
+     * @param exchFut Exchange future.
      */
     public void changeLocalStatesOnExchangeDone(AffinityTopologyVersion topVer, GridDhtPartitionsExchangeFuture exchFut) {
         if (exchFut.changedBaseline()
@@ -495,7 +495,7 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
         if (F.isEmpty(groupsToEnable))
             return;
 
-        grpId = groupsToEnable.stream().findFirst().get();
+        grpId = F.first(groupsToEnable);
 
         CacheGroupContext grp = cctx.cache().cacheGroup(grpId);
 

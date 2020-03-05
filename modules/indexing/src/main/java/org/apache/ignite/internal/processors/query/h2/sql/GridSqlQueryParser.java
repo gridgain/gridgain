@@ -657,7 +657,7 @@ public class GridSqlQueryParser {
             String alias = ALIAS.get(filter);
 
             if (alias != null)
-                res = new GridSqlAlias(alias, res, false);
+                res = new GridSqlAlias(alias, res);
 
             h2ObjToGridObj.put(filter, res);
         }
@@ -2139,14 +2139,16 @@ public class GridSqlQueryParser {
                 expCol.getColumnName());
         }
 
-        if (expression instanceof Alias)
+        if (expression instanceof Alias) {
             return new GridSqlAlias(expression.getAlias(),
-                parseExpression(expression.getNonAliasExpression(), calcTypes), true);
+                parseExpression(expression.getNonAliasExpression(), calcTypes));
+        }
 
-        if (expression instanceof ValueExpression)
+        if (expression instanceof ValueExpression) {
             // == comparison is legit, see ValueExpression#getSQL()
             return expression == ValueExpression.getDefault() ? GridSqlKeyword.DEFAULT :
                 new GridSqlConst(expression.getValue(null));
+        }
 
         if (expression instanceof BinaryOperation) {
             BinaryOperation operation = (BinaryOperation)expression;
@@ -2274,7 +2276,7 @@ public class GridSqlQueryParser {
                     for (int i = 0; i < cols.length; i++) {
                         GridSqlElement arg = parseExpression(args[i], calcTypes);
 
-                        GridSqlAlias alias = new GridSqlAlias(cols[i].getName(), arg, false);
+                        GridSqlAlias alias = new GridSqlAlias(cols[i].getName(), arg);
 
                         alias.resultType(fromColumn(cols[i]));
 
