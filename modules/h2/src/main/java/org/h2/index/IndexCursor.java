@@ -18,6 +18,7 @@ import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.Table;
 import org.h2.table.TableFilter;
+import org.h2.util.IOUtils;
 import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 import org.h2.value.ValueNull;
@@ -135,6 +136,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 if ((isStart || isEnd) && !canUseIndexFor(inColumn)) {
                     inColumn = null;
                     inList = null;
+                    IOUtils.closeSilently(inResult);
                     inResult = null;
                 }
             }
@@ -296,6 +298,7 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
     @Override
     public void close() throws Exception {
+        IOUtils.closeSilently(inResult);
         if (cursor instanceof AutoCloseable)
             ((AutoCloseable)cursor).close();
     }

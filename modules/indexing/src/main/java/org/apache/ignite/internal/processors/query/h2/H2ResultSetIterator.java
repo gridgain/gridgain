@@ -184,15 +184,15 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
                     page.add(row);
                 }
                 catch (SQLException e) {
-                    if (X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class) && canceled)
-                        throw new QueryCancelledException();
-
                     close();
 
                     if (e.getCause() instanceof IgniteSQLException)
                         throw (IgniteSQLException)e.getCause();
 
                     if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                        throw new QueryCancelledException();
+
+                    if (canceled && X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class))
                         throw new QueryCancelledException();
 
                     throw new IgniteSQLException(e);
