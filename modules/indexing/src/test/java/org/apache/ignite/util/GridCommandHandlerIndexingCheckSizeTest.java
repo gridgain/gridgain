@@ -183,6 +183,53 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     }
 
     /**
+     * Test checks that there will be no errors if there are entries without
+     * {@link QueryEntity} in cache.
+     */
+    @Test
+    public void testNoErrorOnCacheWithEntryWithoutQueryEntity() {
+        String cacheName = CACHE_NAME;
+
+        int cacheSize = crd.cachex(cacheName).size();
+
+        try (IgniteDataStreamer<Object, Object> streamer = crd.dataStreamer(cacheName)) {
+            for (int i = cacheSize; i < cacheSize + ENTRY_CNT; i++)
+                streamer.addData(i, i);
+
+            streamer.flush();
+        }
+
+        execVIWithNoErrCheck(cacheName, false);
+        execVIWithNoErrCheck(cacheName, true);
+    }
+
+    /**
+     * Test checks that there will be no errors if there are entries without
+     * {@link QueryEntity} in cache, and also if there are null values.
+     */
+    @Test
+    public void testNoErrorOnCacheWithEntryWithoutQueryEntityAndWithNullValues() {
+        String cacheName = CACHE_NAME;
+
+        int cacheSize = crd.cachex(cacheName).size();
+
+        try (IgniteDataStreamer<Object, Object> streamer = crd.dataStreamer(cacheName)) {
+            int i = cacheSize;
+
+            for (; i < cacheSize + (ENTRY_CNT - 10); i++)
+                streamer.addData(i, i);
+
+            for (; i < cacheSize + ENTRY_CNT; i++)
+                streamer.addData(i, null);
+
+            streamer.flush();
+        }
+
+        execVIWithNoErrCheck(cacheName, false);
+        execVIWithNoErrCheck(cacheName, true);
+    }
+
+    /**
      * Creating {@link QueryEntity}'s with filling functions.
      *
      * @return {@link QueryEntity}'s with filling functions.
