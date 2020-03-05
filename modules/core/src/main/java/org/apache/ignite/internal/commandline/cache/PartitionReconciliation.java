@@ -180,8 +180,8 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     ) throws GridClientException {
         VisorPartitionReconciliationTaskArg taskArg = new VisorPartitionReconciliationTaskArg(
             args.caches,
-            args.repair,
             args.fastCheck,
+            args.repair,
             args.includeSensitive,
             args.locOutput,
             args.parallelism,
@@ -222,7 +222,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
         Set<String> cacheNames = null;
         boolean repair = false;
         boolean fastCheck = false;
-        boolean verbose = (boolean)INCLUDE_SENSITIVE.defaultValue();
+        boolean includeSensitive = (boolean)INCLUDE_SENSITIVE.defaultValue();
         boolean locOutput = (boolean)LOCAL_OUTPUT.defaultValue();
         int parallelism = (int)PARALLELISM.defaultValue();
         int batchSize = (int)BATCH_SIZE.defaultValue();
@@ -275,7 +275,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
                         break;
 
                     case INCLUDE_SENSITIVE:
-                        verbose = true;
+                        includeSensitive = true;
 
                         break;
 
@@ -351,7 +351,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
             cacheNames,
             repair,
             fastCheck,
-            verbose,
+            includeSensitive,
             locOutput,
             parallelism,
             batchSize,
