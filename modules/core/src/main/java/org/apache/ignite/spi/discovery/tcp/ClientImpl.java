@@ -1148,7 +1148,7 @@ class ClientImpl extends TcpDiscoveryImpl {
                 try {
                     InputStream in = sockStream.stream();
 
-                    assert sock.getKeepAlive() && sock.getTcpNoDelay() : "Socket didn't configure properly:" +
+                    assert sock.getKeepAlive() && sock.getTcpNoDelay() : "Socket wasn't configured properly:" +
                         " KeepAlive " + sock.getKeepAlive() +
                         " TcpNoDelay " + sock.getTcpNoDelay();
 
@@ -1579,7 +1579,7 @@ class ClientImpl extends TcpDiscoveryImpl {
 
                         InputStream in = sockStream.stream();
 
-                        assert sock.getKeepAlive() && sock.getTcpNoDelay() : "Socket didn't configure properly:" +
+                        assert sock.getKeepAlive() && sock.getTcpNoDelay() : "Socket wasn't configured properly:" +
                             " KeepAlive " + sock.getKeepAlive() +
                             " TcpNoDelay " + sock.getTcpNoDelay();
 
