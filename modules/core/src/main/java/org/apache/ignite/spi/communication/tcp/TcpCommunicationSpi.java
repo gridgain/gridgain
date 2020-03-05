@@ -58,6 +58,7 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.AddressResolver;
+import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -149,7 +150,7 @@ import org.apache.ignite.spi.IgniteSpiTimeoutObject;
 import org.apache.ignite.spi.TimeoutStrategy;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.ConnectionFailedException;
+import org.apache.ignite.spi.communication.tcp.internal.ClientUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.HandshakeException;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
@@ -315,8 +316,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     /** */
     public static final String ATTR_PAIRED_CONN = "comm.tcp.pairedConnection";
 
-    /** */
-    public static final String ATTR_UNREACHABLE = "comm.tcp.unreachable";
+    /** Attribute with information of {@link EnvironmentType environment} local node is started in. */
+    public static final String ATTR_ENVIRONMENT_TYPE = "comm.enrivonment.type";
 
     /** Default port which node sets listener to (value is <tt>47100</tt>). */
     public static final int DFLT_PORT = 47100;
@@ -735,8 +736,6 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                         if (reserved) {
                             try {
-                                log.info(String.format("<!> connected(%s, %s, %s, %s)", recoveryDesc, ses, msg0.received(), !hasShmemClient));
-
                                 GridTcpNioCommunicationClient client =
                                     connected(recoveryDesc, ses, rmtNode, msg0.received(), true, !hasShmemClient);
 
@@ -2239,6 +2238,14 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             throw new IgniteSpiException("Failed to initialize TCP server: " + locHost, e);
         }
 
+        EnvironmentType envType = ignite.configuration().getEnvironmentType();
+
+        if (usePairedConnections) {
+            if (envType.equals(EnvironmentType.VIRTUALIZED))
+                throw new IgniteSpiException("Node using paired connections " +
+                    "is not allowed to start in virtualized environment.");
+        }
+
         // Set local node attributes.
         try {
             IgniteBiTuple<Collection<String>, Collection<String>> addrs = U.resolveLocalAddresses(locHost);
@@ -2254,7 +2261,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), boundTcpShmemPort >= 0 ? boundTcpShmemPort : null);
             res.put(createSpiAttributeName(ATTR_EXT_ADDRS), extAddrs);
             res.put(createSpiAttributeName(ATTR_PAIRED_CONN), usePairedConnections);
-            res.put(createSpiAttributeName(ATTR_UNREACHABLE), true);
+            res.put(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE), envType);
 
             return res;
         }
@@ -2985,12 +2992,6 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 if (stopping)
                     throw new IgniteSpiException("Node is stopping.");
 
-                if (isUnreachable(node) && !getSpiContext().localNode().isClient()) {
-                    log.info("<!> node " + nodeId + " is unreachable from node " + getLocalNode().id());
-                    log.info("<!> " + connIdx + " / " + (curClients == null ? "null" : curClients.length));
-                    throw new ConnectionFailedException("", null, nodeId, connIdx);
-                }
-
                 // Do not allow concurrent connects.
                 GridFutureAdapter<GridCommunicationClient> fut = new ConnectFuture();
 
@@ -3035,6 +3036,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                         fut.onDone(client0);
                     }
                     catch (Throwable e) {
+                        if (e instanceof ClientUnreachableException)
+                            throw e;
+
                         fut.onDone(e);
 
                         if (e instanceof Error)
@@ -3099,11 +3103,6 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 // Client has just been closed by idle worker. Help it and try again.
                 removeNodeClient(nodeId, client);
         }
-    }
-
-    /** */
-    public boolean isUnreachable(ClusterNode node) {
-        return Boolean.TRUE.equals(node.attribute(createSpiAttributeName(ATTR_UNREACHABLE))) && node.isClient();
     }
 
     /**
@@ -3468,9 +3467,15 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             );
         }
 
+        int failedAddrs = 0;
+        int skippedAddrs = 0;
+
         for (InetSocketAddress addr : addrs) {
-            if (addr.isUnresolved())
+            if (addr.isUnresolved()) {
+                failedAddrs++;
+
                 continue;
+            }
 
             TimeoutStrategy connTimeoutStgy = new ExponentialBackoffTimeoutStrategy(
                 totalTimeout,
@@ -3487,6 +3492,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                         log.debug("Skipping local address [addr=" + addr +
                             ", locAddrs=" + node.attribute(createSpiAttributeName(ATTR_ADDRS)) +
                             ", node=" + node + ']');
+
+                    skippedAddrs++;
+
                     break;
                 }
 
@@ -3699,6 +3707,19 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                         break;
                     }
 
+                    //inverse communication protocol works only for client nodes
+                    if (node.isClient() && isNodeUnreachableException(e)) {
+                        //for client nodes in virtualized environments inverse protocol is triggered after first failed connection
+                        if ((startedInVirtualizedEnvironment(node) && failedAddrs == 1)) {
+                            GridFutureAdapter<GridCommunicationClient> fut = clientFuts.get(
+                                new ConnectionKey(node.id(), connIdx, -1));
+
+                            throw new ClientUnreachableException("", null, node.id(), connIdx, fut);
+                        }
+                        else
+                            failedAddrs++;
+                    }
+
                     if (isRecoverableException(e))
                         U.sleep(DFLT_RECONNECT_DELAY);
                     else {
@@ -3727,6 +3748,12 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
             if (ses != null)
                 break;
+        }
+
+        if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrs)) {
+            GridFutureAdapter<GridCommunicationClient> fut = clientFuts.get(new ConnectionKey(node.id(), connIdx, -1));
+
+            throw new ClientUnreachableException("", null, node.id(), connIdx, fut);
         }
 
         if (ses == null)
@@ -3810,6 +3837,16 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             HandshakeException.class,
             IgniteSpiOperationTimeoutException.class
         );
+    }
+
+    /**
+     * Checks if exception indicates that client is unreachable.
+     *
+     * @param e Exception to check.
+     * @return {@code True} if exception shows that client is unreachable, {@code false} otherwise.
+     */
+    private boolean isNodeUnreachableException(Exception e) {
+        return e instanceof SocketTimeoutException;
     }
 
     /** */
@@ -4166,6 +4203,16 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         }
 
         return false;
+    }
+
+    /**
+     * @param node Node.
+     * @return {@code True} if remote node is
+     */
+    private boolean startedInVirtualizedEnvironment(ClusterNode node) {
+        EnvironmentType envType = node.attribute(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
+
+        return envType != null && envType.equals(EnvironmentType.VIRTUALIZED);
     }
 
     /**

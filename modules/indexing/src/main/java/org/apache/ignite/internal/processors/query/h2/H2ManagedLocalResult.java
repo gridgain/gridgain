@@ -19,10 +19,6 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeMap;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.disk.PlainExternalResult;
-import org.apache.ignite.internal.processors.query.h2.disk.SortedExternalResult;
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.h2.engine.Session;
 import org.h2.engine.SessionInterface;
 import org.h2.expression.Expression;
@@ -67,8 +63,6 @@ public class H2ManagedLocalResult implements LocalResult {
     /** Reserved memory. */
     private long memReserved;
 
-    private GridKernalContext ctx;
-
     /**
      * Construct a local result object.
      */
@@ -92,14 +86,6 @@ public class H2ManagedLocalResult implements LocalResult {
         rowId = -1;
         this.expressions = expressions;
         this.memTracker = memTracker;
-
-        if (ses != null && ses.getQueryContext() != null) {
-            QueryContext qctx = (QueryContext)ses.getQueryContext();
-
-            ctx = qctx.context();
-
-            assert memTracker == null || ctx != null; // Context should be set when we track memory.
-        }
     }
 
     /**
@@ -335,14 +321,14 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     private void createExternalResult(boolean forcePlainResult) {
-        assert ctx != null;
-
+        QueryMemoryManager memMgr = (QueryMemoryManager)session.groupByDataFactory();
         if (forcePlainResult)
-            external = new PlainExternalResult(ctx, memTracker, session);
-        else
+            external = memMgr.createPlainExternalResult(session);
+        else {
             external = distinct || distinctIndexes != null || sort != null ?
-                new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker,
-                    rowCount) : new PlainExternalResult(ctx, memTracker, session);
+                memMgr.createSortedExternalResult(session, distinct, distinctIndexes, visibleColumnCount, sort, rowCount)
+                : memMgr.createPlainExternalResult(session);
+        }
     }
 
     /** {@inheritDoc} */

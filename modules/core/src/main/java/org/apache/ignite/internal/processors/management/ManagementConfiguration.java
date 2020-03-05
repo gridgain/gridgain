@@ -90,86 +90,86 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @return Server URI.
+     * @return Control Center URI.
      */
     public List<String> getConsoleUris() {
         return consoleUris;
     }
 
     /**
-     * @param srvUri URI.
+     * @param consoleUris URI.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setConsoleUris(List<String> srvUri) {
-        this.consoleUris = srvUri;
+    public ManagementConfiguration setConsoleUris(List<String> consoleUris) {
+        this.consoleUris = consoleUris;
 
         return this;
     }
 
     /**
-     * @return Server key store.
+     * @return Control Center key store.
      */
     public String getConsoleKeyStore() {
         return consoleKeyStore;
     }
 
     /**
-     * @param srvKeyStore Server key store.
+     * @param consoleKeyStore Control Center key store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setConsoleKeyStore(String srvKeyStore) {
-        this.consoleKeyStore = srvKeyStore;
+    public ManagementConfiguration setConsoleKeyStore(String consoleKeyStore) {
+        this.consoleKeyStore = consoleKeyStore;
 
         return this;
     }
 
     /**
-     * @return Server key store password.
+     * @return Control Center key store password.
      */
     public String getConsoleKeyStorePassword() {
         return consoleKeyStorePass;
     }
 
     /**
-     * @param srvKeyStorePass Server key store password.
+     * @param consoleKeyStorePass Control Center key store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setConsoleKeyStorePassword(String srvKeyStorePass) {
-        this.consoleKeyStorePass = srvKeyStorePass;
+    public ManagementConfiguration setConsoleKeyStorePassword(String consoleKeyStorePass) {
+        this.consoleKeyStorePass = consoleKeyStorePass;
 
         return this;
     }
 
     /**
-     * @return Server trust store.
+     * @return Control Center trust store.
      */
     public String getConsoleTrustStore() {
         return consoleTrustStore;
     }
 
     /**
-     * @param srvTrustStore Path to server trust store.
+     * @param consoleTrustStore Path to Control Center trust store.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setConsoleTrustStore(String srvTrustStore) {
-        this.consoleTrustStore = srvTrustStore;
+    public ManagementConfiguration setConsoleTrustStore(String consoleTrustStore) {
+        this.consoleTrustStore = consoleTrustStore;
 
         return this;
     }
 
     /**
-     * @return Server trust store password.
+     * @return Control Center trust store password.
      */
     public String getConsoleTrustStorePassword() {
         return consoleTrustStorePass;
     }
 
     /**
-     * @param srvTrustStorePass Server trust store password.
+     * @param consoleTrustStorePass Console trust store password.
      * @return {@code this} for chaining.
      */
-    public ManagementConfiguration setConsoleTrustStorePassword(String srvTrustStorePass) {
-        this.consoleTrustStorePass = srvTrustStorePass;
+    public ManagementConfiguration setConsoleTrustStorePassword(String consoleTrustStorePass) {
+        this.consoleTrustStorePass = consoleTrustStorePass;
 
         return this;
     }
@@ -199,10 +199,11 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @param sesTimeout Session timeout in milliseconds.
+     * @param securitySesTimeout Session timeout in milliseconds.
      */
-    public ManagementConfiguration setSecuritySessionTimeout(long sesTimeout) {
-        this.securitySesTimeout = sesTimeout;
+    public ManagementConfiguration setSecuritySessionTimeout(long securitySesTimeout) {
+        this.securitySesTimeout = securitySesTimeout;
+
         return this;
     }
 
@@ -214,10 +215,11 @@ public class ManagementConfiguration extends IgniteDataTransferObject {
     }
 
     /**
-     * @param sesExpirationTimeout Session expiration timeout.
+     * @param securitySesExpirationTimeout Session expiration timeout.
      */
-    public ManagementConfiguration setSecuritySessionExpirationTimeout(long sesExpirationTimeout) {
-        this.securitySesExpirationTimeout = sesExpirationTimeout;
+    public ManagementConfiguration setSecuritySessionExpirationTimeout(long securitySesExpirationTimeout) {
+        this.securitySesExpirationTimeout = securitySesExpirationTimeout;
+
         return this;
     }
 

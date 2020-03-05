@@ -75,7 +75,6 @@ import org.apache.ignite.internal.util.typedef.CX1;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.GPR;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -106,7 +105,7 @@ import static org.apache.ignite.transactions.TransactionIsolation.REPEATABLE_REA
  */
 public final class DataStructuresProcessor extends GridProcessorAdapter implements IgniteChangeGlobalStateSupport {
     /** DataRegionConfiguration name reserved for volatile caches. */
-    public static final String VOLATILE_DATA_REGION_NAME = "volatileMemPlc";
+    public static final String VOLATILE_DATA_REGION_NAME = "volatileDsMemPlc";
 
     /** */
     public static final String DEFAULT_VOLATILE_DS_GROUP_NAME = "default-volatile-ds-group";
@@ -362,8 +361,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
      * @return {@code True} if group name is reserved to store data structures.
      */
     public static boolean isReservedGroup(@Nullable String grpName) {
-        return DEFAULT_DS_GROUP_NAME.equals(grpName) ||
-            DEFAULT_VOLATILE_DS_GROUP_NAME.equals(grpName);
+        return grpName != null &&
+            (DEFAULT_DS_GROUP_NAME.equals(grpName) ||
+            grpName.startsWith(DEFAULT_VOLATILE_DS_GROUP_NAME));
     }
 
     /**
@@ -518,10 +518,9 @@ public final class DataStructuresProcessor extends GridProcessorAdapter implemen
         final String grpName;
 
         if (type.isVolatile()) {
-            if (CU.isPersistenceEnabled(ctx.config()))
-                dataRegionName = VOLATILE_DATA_REGION_NAME;
+            dataRegionName = VOLATILE_DATA_REGION_NAME;
 
-            grpName = DEFAULT_VOLATILE_DS_GROUP_NAME;
+            grpName = DEFAULT_VOLATILE_DS_GROUP_NAME + "@" + dataRegionName;
         } else if (cfg.getGroupName() != null)
             grpName = cfg.getGroupName();
         else

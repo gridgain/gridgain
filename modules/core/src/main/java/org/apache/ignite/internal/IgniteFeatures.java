@@ -21,6 +21,7 @@ import java.util.Collection;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
+import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
@@ -116,7 +117,7 @@ public enum IgniteFeatures {
     /** */
     TRACING(26),
 
-    /***/
+    /** */
     MANAGEMENT_CONSOLE(28),
 
     /** Distributed change timeout for dump long operations. */
@@ -126,7 +127,10 @@ public enum IgniteFeatures {
     WC_GET_CACHE_VALUE(31),
 
     /** */
-    INVERSE_TCP_CONNECTION(32);
+    INVERSE_TCP_CONNECTION(32),
+
+    /** Partition reconciliation utility. */
+    PARTITION_RECONCILIATION(34);
 
     /**
      * Unique feature identifier.
@@ -253,6 +257,10 @@ public enum IgniteFeatures {
 
             // Add only when Control Center is enabled.
             if (MANAGEMENT_CONSOLE == value && !IgniteComponentType.MANAGEMENT_CONSOLE.inClassPath())
+                continue;
+
+            // Add only when scheduling is disabled.
+            if (WC_SCHEDULING_NOT_AVAILABLE == value && !(ctx.schedule() instanceof IgniteNoopScheduleProcessor))
                 continue;
 
             final int featureId = value.getFeatureId();

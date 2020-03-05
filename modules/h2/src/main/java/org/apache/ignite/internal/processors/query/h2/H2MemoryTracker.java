@@ -46,4 +46,52 @@ public interface H2MemoryTracker extends AutoCloseable {
      * @return Max memory limit.
      */
     public long memoryLimit();
+
+    /**
+     * Increments the counter of created offloading files.
+     */
+    public void incrementFilesCreated();
+
+    /**
+     * Updates the counter of bytes written to disk.
+     *
+     * @param written Number of bytes.
+     */
+    public void addTotalWrittenOnDisk(long written);
+
+    /** {@inheritDoc} */
+    @Override public void close();
+
+    H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
+        /** {@inheritDoc} */
+        @Override public boolean reserved(long size) {
+            return false; 
+        }
+
+        /** {@inheritDoc} */
+        @Override public void released(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public long memoryReserved() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long memoryLimit() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void incrementFilesCreated() {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void addTotalWrittenOnDisk(long written) {
+        }
+    };
 }

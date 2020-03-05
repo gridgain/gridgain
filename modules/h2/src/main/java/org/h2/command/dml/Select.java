@@ -21,6 +21,7 @@ import org.h2.expression.Expression;
 import org.h2.expression.ExpressionColumn;
 import org.h2.expression.ExpressionVisitor;
 import org.h2.expression.Parameter;
+import org.h2.expression.ValueExpression;
 import org.h2.expression.Wildcard;
 import org.h2.expression.analysis.DataAnalysisOperation;
 import org.h2.expression.analysis.Window;
@@ -52,6 +53,7 @@ import org.h2.util.ColumnNamer;
 import org.h2.util.StringUtils;
 import org.h2.util.Utils;
 import org.h2.value.Value;
+import org.h2.value.ValueBoolean;
 import org.h2.value.ValueNull;
 import org.h2.value.ValueRow;
 
@@ -1547,7 +1549,10 @@ public class Select extends Query {
                 } while (f != null);
             }
         }
-        if (condition != null) {
+        if (condition != null
+            && !(condition.isConstant()
+                && condition instanceof ValueExpression
+                && ValueBoolean.TRUE.equals(((ValueExpression)condition).getValue(null)))) {
             builder.append("\nWHERE ");
             condition.getUnenclosedSQL(builder, alwaysQuote);
         }

@@ -25,7 +25,7 @@ import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.visor.event.VisorGridEvent;
 import org.apache.ignite.lang.IgniteBiPredicate;
 
-import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
@@ -47,7 +47,7 @@ public class ManagementConsoleMessagesProcessor extends GridProcessorAdapter {
     public ManagementConsoleMessagesProcessor(GridKernalContext ctx) {
         super(ctx);
 
-        this.snd = new RetryableSender(ctx);
+        snd = new RetryableSender(ctx);
 
         ctx.grid().message().localListen(TOPIC_MANAGEMENT_CONSOLE, lsnr);
     }

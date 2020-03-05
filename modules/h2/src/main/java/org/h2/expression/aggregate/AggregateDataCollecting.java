@@ -70,7 +70,7 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
             values = c = distinct ? new TreeSet<>(ses.getDatabase().getCompareMode()) : new ArrayList<Value>();
         }
         H2MemoryTracker memTracker;
-        if (c.add(v) && (memTracker = ses.queryMemoryTracker()) != null) {
+        if (c.add(v) && (memTracker = ses.memoryTracker()) != null) {
             long size = distinct ? 40 /* TreeMap.Entry */ : Constants.MEMORY_POINTER;
 
             size += v.getMemory();
@@ -154,7 +154,7 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
     /** {@inheritDoc} */
     @Override public void cleanup(Session ses) {
         H2MemoryTracker memTracker;
-        if (values != null && (memTracker = ses.queryMemoryTracker()) != null) {
+        if (values != null && (memTracker = ses.memoryTracker()) != null) {
             values = null;
 
             memTracker.released(memReserved);
