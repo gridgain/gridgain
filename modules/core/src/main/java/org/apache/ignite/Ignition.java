@@ -195,7 +195,7 @@ public class Ignition {
      *      {@code false} otherwise (if it was not started).
      */
     public static boolean stop(boolean cancel) {
-        return IgnitionEx.stop(cancel);
+        return IgnitionEx.stop(cancel, null);
     }
 
     /**
@@ -218,7 +218,7 @@ public class Ignition {
      *      not found).
      */
     public static boolean stop(String name, boolean cancel) {
-        return IgnitionEx.stop(name, cancel, false);
+        return IgnitionEx.stop(name, cancel, null, false);
     }
 
     /**
@@ -237,7 +237,7 @@ public class Ignition {
      *      up to the actual job to exit from execution
      */
     public static void stopAll(boolean cancel) {
-        IgnitionEx.stopAll(cancel);
+        IgnitionEx.stopAll(cancel, null);
     }
 
     /**
