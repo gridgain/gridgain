@@ -150,7 +150,7 @@ import org.apache.ignite.spi.IgniteSpiTimeoutObject;
 import org.apache.ignite.spi.TimeoutStrategy;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.ClientUnreachableException;
+import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.HandshakeException;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
@@ -3036,7 +3036,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                         fut.onDone(client0);
                     }
                     catch (Throwable e) {
-                        if (e instanceof ClientUnreachableException)
+                        if (e instanceof NodeUnreachableException)
                             throw e;
 
                         fut.onDone(e);
@@ -3714,7 +3714,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                             GridFutureAdapter<GridCommunicationClient> fut = clientFuts.get(
                                 new ConnectionKey(node.id(), connIdx, -1));
 
-                            throw new ClientUnreachableException("", null, node.id(), connIdx, fut);
+                            throw new NodeUnreachableException("", null, node.id(), connIdx, fut);
                         }
                         else
                             failedAddrs++;
@@ -3753,7 +3753,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrs)) {
             GridFutureAdapter<GridCommunicationClient> fut = clientFuts.get(new ConnectionKey(node.id(), connIdx, -1));
 
-            throw new ClientUnreachableException("", null, node.id(), connIdx, fut);
+            throw new NodeUnreachableException("", null, node.id(), connIdx, fut);
         }
 
         if (ses == null)

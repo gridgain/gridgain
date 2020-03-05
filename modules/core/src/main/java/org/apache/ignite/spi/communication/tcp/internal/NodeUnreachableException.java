@@ -21,8 +21,10 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.jetbrains.annotations.Nullable;
 
-/** */
-public class ClientUnreachableException extends IgniteSpiException {
+/**
+ *
+ */
+public class NodeUnreachableException extends IgniteSpiException {
     /** Serial version uid. */
     private static final long serialVersionUID = 0L;
     /** */
@@ -30,10 +32,10 @@ public class ClientUnreachableException extends IgniteSpiException {
     /** */
     public final int connIdx;
     /** */
-    public final GridFutureAdapter fut;
+    public transient GridFutureAdapter fut;
 
     /** */
-    public ClientUnreachableException(String msg, @Nullable Throwable cause, UUID nodeId, int connIdx, GridFutureAdapter fut) {
+    public NodeUnreachableException(String msg, @Nullable Throwable cause, UUID nodeId, int connIdx, GridFutureAdapter fut) {
         super(msg, cause);
         this.nodeId = nodeId;
         this.connIdx = connIdx;

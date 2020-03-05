@@ -109,7 +109,7 @@ import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.communication.CommunicationListener;
 import org.apache.ignite.spi.communication.CommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.ClientUnreachableException;
+import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestMessage;
@@ -1810,22 +1810,23 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         ClusterNode node,
         GridIoMessage ioMsg,
         IgniteInClosure<IgniteException> ackC
-    ) throws ClientUnreachableException {
+    ) throws NodeUnreachableException {
         TcpCommunicationSpi tcpCommSpi = getTcpCommSpi();
 
         try {
             tcpCommSpi.sendMessage(node, ioMsg, ackC);
         }
-        catch (ClientUnreachableException e) {
+        catch (NodeUnreachableException e) {
             if (!ctx.clientNode()) {
                 invConnHandler.handleInverseConnection(node, e);
 
-                try {
-                    tcpCommSpi.sendMessage(node, ioMsg, ackC);
-                }
-                catch (ClientUnreachableException ex) {
-                    throw new IgniteSpiException(ex);
-                }
+                tcpCommSpi.sendMessage(node, ioMsg, ackC);
+            }
+            else {
+                log.error("Client node failed to establish connection to server node " + node.id() +
+                    ", server node unreachable.");
+
+                ctx.failure().process(new FailureContext(FailureType.CRITICAL_ERROR, e));
             }
         }
     }
@@ -3458,10 +3459,29 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
     }
 
     /**
+     * Responsible for handling network situation where server cannot open connection to client and
+     * has to ask client to establish a connection to specific server.
      *
+     * This includes the following steps:
+     * <ol>
+     *     <li>
+     *         Server tries to send regular communication message to unreachable client,
+     *         detects that client is unreachagle and directs special discovery message to it.
+     *         After that it wait for client to reply.
+     *     </li>
+     *     <li>
+     *         Client receives discovery message and sends special communication message in response.
+     *         This action opens communication channel between client and server that can be used by both sides.
+     *     </li>
+     *     <li>
+     *         Server on receiving comm message sends original communication message to the client.
+     *     </li>
+     * </ol>
      */
     private final class TcpCommunicationInverseConnectionHandler {
-        /** */
+        /**
+         * Map contains futures for threads to wait until inverse connection response arrives.
+         */
         private Map<ConnectionKey, GridFutureAdapter<?>> connMap = new ConcurrentHashMap<>();
 
         /** */
@@ -3499,7 +3519,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         }
 
         public void handleInverseConnection(ClusterNode node,
-            ClientUnreachableException e) {
+            NodeUnreachableException e) {
             if (!inverseTcpConnectionFeatureIsSupported(node))
                 throw new IgniteSpiException(e);
 
