@@ -252,9 +252,6 @@ public class JdbcResultSet implements ResultSet {
 
     /** {@inheritDoc} */
     @Override public void close() throws SQLException {
-        if (uuid != null)
-            stmt.resSets.remove(this);
-
         closeInternal();
     }
 

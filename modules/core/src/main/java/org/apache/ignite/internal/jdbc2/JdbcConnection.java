@@ -114,7 +114,7 @@ public class JdbcConnection implements Connection {
     private static final IgniteProductVersion MULTIPLE_STATEMENTS_TASK_V2_SUPPORTED_SINCE =
         IgniteProductVersion.fromString("8.7.8");
 
-    /** Multiple statements V2 task supported since version. */
+    /** Close remote cursor task is supported since version. {@link JdbcCloseCursorTask}*/
     private static final IgniteProductVersion CLOSE_CURSOR_TASK_SUPPORTED_SINCE =
         IgniteProductVersion.fromString("8.7.12");
 
@@ -904,7 +904,7 @@ public class JdbcConnection implements Connection {
     }
 
     /**
-     * @return {@code true} if multiple statements allowed, {@code false} otherwise.
+     * @return {@code true} if close remote cursor is supported.
      */
     boolean isCloseCursorTaskSupported() {
         return U.isOldestNodeVersionAtLeast(CLOSE_CURSOR_TASK_SUPPORTED_SINCE, ignite.cluster().nodes());

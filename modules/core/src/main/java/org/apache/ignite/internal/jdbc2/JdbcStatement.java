@@ -64,10 +64,7 @@ public class JdbcStatement implements Statement {
     /** Fetch size. */
     private int fetchSize = DFLT_FETCH_SIZE;
 
-    /** Result sets. */
-    final Set<JdbcResultSet> resSets = new HashSet<>();
-
-    /** Fields indexes. */
+     /** Fields indexes. */
     Map<String, Integer> fieldsIdxs = new HashMap<>();
 
     /** Batch of statements. */
@@ -239,14 +236,6 @@ public class JdbcStatement implements Statement {
      * @throws SQLException On error.
      */
     void closeInternal() throws SQLException {
-        for (Iterator<JdbcResultSet> it = resSets.iterator(); it.hasNext(); ) {
-            JdbcResultSet rs = it.next();
-
-            rs.closeInternal();
-
-            it.remove();
-        }
-
         closeResults();
 
         closed = true;
@@ -698,5 +687,4 @@ public class JdbcStatement implements Statement {
             curRes = 0;
         }
     }
-
 }

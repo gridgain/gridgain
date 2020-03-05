@@ -93,7 +93,7 @@ public class JdbcCursorLeaksTest extends AbstractIndexingCommonTest {
      * @throws Exception On error.
      */
     @Test
-    public void test0() throws Exception {
+    public void testSingleQuery() throws Exception {
         checkQuery("SELECT 1");
     }
 
@@ -101,7 +101,7 @@ public class JdbcCursorLeaksTest extends AbstractIndexingCommonTest {
      * @throws Exception On error.
      */
     @Test
-    public void test1() throws Exception {
+    public void testMultipleStatement0() throws Exception {
         // Skip the test when multiple statement not allowed
         if (!multipleStatement)
             return;
@@ -113,7 +113,7 @@ public class JdbcCursorLeaksTest extends AbstractIndexingCommonTest {
      * @throws Exception On error.
      */
     @Test
-    public void test2() throws Exception {
+    public void testMultipleStatement1() throws Exception {
         // Skip the test when multiple statement not allowed
         if (!multipleStatement)
             return;
