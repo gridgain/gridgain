@@ -719,6 +719,7 @@ public class IgniteConfiguration {
         sqlGlobalMemoryQuota = cfg.getSqlGlobalMemoryQuota();
         sqlQueryMemoryQuota = cfg.getSqlQueryMemoryQuota();
         sqlOffloadingEnabled = cfg.isSqlOffloadingEnabled();
+        envType = cfg.getEnvironmentType();
     }
 
     /**

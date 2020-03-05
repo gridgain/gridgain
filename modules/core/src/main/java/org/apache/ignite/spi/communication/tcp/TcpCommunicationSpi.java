@@ -3467,12 +3467,12 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             );
         }
 
-        int failedAddrs = 0;
+        Set<InetSocketAddress> failedAddrsSet = new HashSet<>();
         int skippedAddrs = 0;
 
         for (InetSocketAddress addr : addrs) {
             if (addr.isUnresolved()) {
-                failedAddrs++;
+                failedAddrsSet.add(addr);
 
                 continue;
             }
@@ -3709,15 +3709,18 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
                     //inverse communication protocol works only for client nodes
                     if (node.isClient() && isNodeUnreachableException(e)) {
+                        failedAddrsSet.add(addr);
+
                         //for client nodes in virtualized environments inverse protocol is triggered after first failed connection
-                        if ((startedInVirtualizedEnvironment(node) && failedAddrs == 1)) {
+                        if ((startedInVirtualizedEnvironment(node) && failedAddrsSet.size() == 1)) {
                             GridFutureAdapter<GridCommunicationClient> fut = clientFuts.get(
                                 new ConnectionKey(node.id(), connIdx, -1));
 
-                            throw new NodeUnreachableException("", null, node.id(), connIdx, fut);
+                            String msg = "Failed to connect to address " + addr + " of node " + node.id() +
+                                "; inverse connection will be requested.";
+
+                            throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
                         }
-                        else
-                            failedAddrs++;
                     }
 
                     if (isRecoverableException(e))
@@ -3750,7 +3753,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 break;
         }
 
-        if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrs)) {
+        if (ses == null && node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
             GridFutureAdapter<GridCommunicationClient> fut = clientFuts.get(new ConnectionKey(node.id(), connIdx, -1));
 
             throw new NodeUnreachableException("", null, node.id(), connIdx, fut);
