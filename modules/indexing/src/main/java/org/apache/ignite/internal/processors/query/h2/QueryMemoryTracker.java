@@ -18,7 +18,6 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
@@ -32,8 +31,8 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  * Track query memory usage and throws an exception if query tries to allocate memory over limit.
  */
 public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetricProvider {
-    /** Closing updater. */
-    private static final AtomicIntegerFieldUpdater<QueryMemoryTracker> CLOSING_UPDATER
+    /** State updater. */
+    private static final AtomicIntegerFieldUpdater<QueryMemoryTracker> STATE_UPDATER
         = AtomicIntegerFieldUpdater.newUpdater(QueryMemoryTracker.class, "state");
 
     /** Tracker is not closed and not in the middle of the closing process. */
@@ -279,7 +278,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
-        if (!CLOSING_UPDATER.compareAndSet(this, NORMALLY_OPERATING_STATE, CLOSING_OR_CLOSED_STATE))
+        if (!STATE_UPDATER.compareAndSet(this, NORMALLY_OPERATING_STATE, CLOSING_OR_CLOSED_STATE))
             return;
 
         synchronized (this) {
@@ -309,7 +308,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public synchronized H2MemoryTracker createChildTracker() {
         checkClosed();
 
-        H2MemoryTracker child = new ChildMemoryTracker();
+        H2MemoryTracker child = new ChildMemoryTracker(this);
 
         children.add(child);
 
@@ -328,7 +327,14 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     }
 
     /** */
-    private class ChildMemoryTracker implements H2MemoryTracker {
+    private static class ChildMemoryTracker implements H2MemoryTracker {
+        /** State updater. */
+        private static final AtomicIntegerFieldUpdater<ChildMemoryTracker> STATE_UPDATER
+            = AtomicIntegerFieldUpdater.newUpdater(ChildMemoryTracker.class, "state");
+
+        /** */
+        private final H2MemoryTracker parent;
+
         /** */
         private long reserved;
 
@@ -339,7 +345,14 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         private long totalWrittenOnDisk;
 
         /** */
-        private final AtomicBoolean closed = new AtomicBoolean();
+        private volatile int state;
+
+        /**
+         * @param parent Parent.
+         */
+        public ChildMemoryTracker(H2MemoryTracker parent) {
+            this.parent = parent;
+        }
 
         /** {@inheritDoc} */
         @Override public boolean reserve(long size) {
@@ -347,7 +360,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
             boolean res;
             try {
-                res = QueryMemoryTracker.this.reserve(size);
+                res = parent.reserve(size);
             }
             catch (IgniteSQLException ex) {
                 reserved += size;
@@ -366,7 +379,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
             reserved -= size;
 
-            QueryMemoryTracker.this.release(size);
+            parent.release(size);
         }
 
         /** {@inheritDoc} */
@@ -388,7 +401,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public void swap(long size) {
             checkClosed();
 
-            QueryMemoryTracker.this.swap(size);
+            parent.swap(size);
 
             writtenOnDisk += size;
             totalWrittenOnDisk += size;
@@ -398,7 +411,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public void unswap(long size) {
             checkClosed();
 
-            QueryMemoryTracker.this.unswap(size);
+            parent.unswap(size);
 
             writtenOnDisk -= size;
         }
@@ -407,44 +420,44 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         @Override public void incrementFilesCreated() {
             checkClosed();
 
-            QueryMemoryTracker.this.incrementFilesCreated();
+            parent.incrementFilesCreated();
         }
 
         /** {@inheritDoc} */
         @Override public H2MemoryTracker createChildTracker() {
             checkClosed();
 
-            return QueryMemoryTracker.this.createChildTracker();
+            return parent.createChildTracker();
         }
 
         /** {@inheritDoc} */
         @Override public void onChildClosed(H2MemoryTracker child) {
-            QueryMemoryTracker.this.onChildClosed(child);
+            parent.onChildClosed(child);
         }
 
         /** {@inheritDoc} */
         @Override public boolean closed() {
-            return closed.get();
+            return state == CLOSING_OR_CLOSED_STATE;
         }
 
         /** {@inheritDoc} */
         @Override public void close() {
-            if (!closed.compareAndSet(false, true))
+            if (!STATE_UPDATER.compareAndSet(this, NORMALLY_OPERATING_STATE, CLOSING_OR_CLOSED_STATE))
                 return;
 
-            QueryMemoryTracker.this.release(reserved);
-            QueryMemoryTracker.this.unswap(writtenOnDisk);
+            parent.release(reserved);
+            parent.unswap(writtenOnDisk);
 
             reserved = 0;
             writtenOnDisk = 0;
             totalWrittenOnDisk = 0;
 
-            QueryMemoryTracker.this.onChildClosed(this);
+            parent.onChildClosed(this);
         }
 
         /** */
         private void checkClosed() {
-            if (closed.get())
+            if (state == CLOSING_OR_CLOSED_STATE)
                 throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
         }
     }
