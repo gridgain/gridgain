@@ -22,7 +22,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.agent.ManagementConsoleProcessor;
+import org.apache.ignite.agent.ManagementConsoleAgent;
 import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.Request;
 import org.apache.ignite.agent.dto.action.TaskResponse;
@@ -77,8 +77,9 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
     /** {@inheritDoc} */
     @Override public ComputeJobResultPolicy result(ComputeJobResult res, List<ComputeJobResult> rcvd) throws IgniteException {
         JobResponse jobRes = res.getData();
+
         DistributedActionProcessor proc =
-            ((ManagementConsoleProcessor)ignite.context().managementConsole()).distributedActionProcessor();
+            ((ManagementConsoleAgent)ignite.context().managementConsole()).distributedActionProcessor();
 
         if (res.getException() != null || jobRes.getStatus() == FAILED)
             hasFailedJobs = true;
@@ -86,10 +87,7 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
         if (res.getException() == null)
             proc.sendJobResponse(jobRes);
         else {
-            log.error(
-                String.format("Failed to execute job, send response with error: [reqId=%s]", reqId),
-                res.getException()
-            );
+            log.error("Failed to execute the job, will send response with error to request: " + reqId, res.getException());
 
             proc.sendJobResponse(convertToErrorJobResponse(reqId, consistentId, res.getException()));
         }
@@ -102,11 +100,12 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
         reqId = arg.getId();
         jobCnt = subgrid.size();
         consistentId = String.valueOf(ignite.localNode().consistentId());
-        DistributedActionProcessor proc =
-            ((ManagementConsoleProcessor)ignite.context().managementConsole()).distributedActionProcessor();
 
         Map<ExecuteActionJob, ClusterNode> map = subgrid.stream()
             .collect(Collectors.toMap(n -> new ExecuteActionJob(arg), identity()));
+
+        DistributedActionProcessor proc =
+            ((ManagementConsoleAgent)ignite.context().managementConsole()).distributedActionProcessor();
 
         proc.sendTaskResponse(
             new TaskResponse()
@@ -160,7 +159,7 @@ public class ExecuteActionTask extends ComputeTaskAdapter<Request, TaskResponse>
 
             jobCtx.holdcc();
 
-            ManagementConsoleProcessor agent = (ManagementConsoleProcessor)ignite.context().managementConsole();
+            ManagementConsoleAgent agent = (ManagementConsoleAgent)ignite.context().managementConsole();
 
             agent.actionDispatcher().dispatch(req)
                 .thenApply(IgniteFuture::get)

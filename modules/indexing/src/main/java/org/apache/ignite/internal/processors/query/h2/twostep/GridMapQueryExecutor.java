@@ -48,6 +48,7 @@ import org.apache.ignite.internal.processors.cache.query.CacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
@@ -350,9 +351,7 @@ public class GridMapQueryExecutor {
                 distributedJoinCtx,
                 mvccSnapshot,
                 reserved,
-                true,
-                h2.memoryManager().createQueryMemoryTracker(maxMem),
-                ctx);
+                true);
 
             qryResults = new MapQueryResults(h2, reqId, qrys.size(), mainCctx, lazy, qctx);
 
@@ -401,14 +400,9 @@ public class GridMapQueryExecutor {
                         String sql = qry.query();
                         Collection<Object> params0 = F.asList(qry.parameters(params));
 
-                        PreparedStatement stmt;
-
-                        try {
-                            stmt = conn.prepareStatement(sql);
-                        }
-                        catch (SQLException e) {
-                            throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
-                        }
+                        PreparedStatement stmt = conn.prepareStatement(sql, H2StatementCache.queryFlags(
+                            distributedJoins,
+                            enforceJoinOrder));
 
                         H2Utils.bindParameters(stmt, params0);
 
@@ -418,11 +412,11 @@ public class GridMapQueryExecutor {
                             stmt,
                             conn,
                             sql,
-                            params0,
                             timeout,
                             qryResults.queryCancel(qryIdx),
                             dataPageScanEnabled,
-                            qryInfo);
+                            qryInfo,
+                            maxMem);
 
                         if (evt) {
                             ctx.event().record(new CacheQueryExecutedEvent<>(

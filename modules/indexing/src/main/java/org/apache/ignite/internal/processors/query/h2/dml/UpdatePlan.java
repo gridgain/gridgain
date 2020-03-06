@@ -92,6 +92,9 @@ public final class UpdatePlan {
     /** Additional info for distributed update. */
     private final DmlDistributedPlanInfo distributed;
 
+    /** Additional info for distributed update. */
+    private final boolean canSelectBeLazy;
+
     /**
      * Constructor.
      *
@@ -124,7 +127,8 @@ public final class UpdatePlan {
         List<List<DmlArgument>> rows,
         int rowsNum,
         @Nullable FastUpdate fastUpdate,
-        @Nullable DmlDistributedPlanInfo distributed
+        @Nullable DmlDistributedPlanInfo distributed,
+        boolean canSelectBeLazy
     ) {
         this.colNames = colNames;
         this.colTypes = colTypes;
@@ -144,6 +148,7 @@ public final class UpdatePlan {
         this.isLocSubqry = isLocSubqry;
         this.fastUpdate = fastUpdate;
         this.distributed = distributed;
+        this.canSelectBeLazy = canSelectBeLazy;
     }
 
     /**
@@ -176,7 +181,8 @@ public final class UpdatePlan {
             null,
             0,
             fastUpdate,
-            distributed
+            distributed,
+            true
         );
     }
 
@@ -596,6 +602,13 @@ public final class UpdatePlan {
             default:
                 throw new UnsupportedOperationException(String.valueOf(mode()));
         }
+    }
+
+    /**
+     * @return {@code true} is the SELECT query may be executed in lazy mode.
+     */
+    public boolean canSelectBeLazy() {
+        return canSelectBeLazy;
     }
 
     /**

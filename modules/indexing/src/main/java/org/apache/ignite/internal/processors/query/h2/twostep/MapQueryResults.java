@@ -17,10 +17,8 @@
 package org.apache.ignite.internal.processors.query.h2.twostep;
 
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.jetbrains.annotations.Nullable;
@@ -198,17 +196,6 @@ class MapQueryResults {
 
         if (lazy)
             releaseQueryContext();
-
-        H2MemoryTracker tracker = qctx.queryMemoryTracker();
-
-        if (tracker != null) {
-            try {
-                tracker.close();
-            }
-            catch (Exception e) {
-                throw new IgniteException(e);
-            }
-        }
     }
 
     /**
