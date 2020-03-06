@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.dml.AllColumnsForPlan;
@@ -36,6 +37,9 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     /** Const function. */
     private final CostFunction constFunc;
 
+    /** Logger. */
+    private final IgniteLogger log;
+
     /**
      * Constructor.
      *
@@ -47,6 +51,8 @@ public abstract class H2IndexCostedBase extends BaseIndex {
     protected H2IndexCostedBase(GridH2Table tbl, String name, IndexColumn[] cols, IndexType type) {
         super(tbl, 0, name, cols, type);
 
+        log = tbl.rowDescriptor().context().logger("H2Index");
+
         CostFunctionType costFuncType;
 
         try {
@@ -56,7 +62,7 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     CostFunctionType.LAST.name()));
         }
         catch (Exception e) {
-            U.warn(null, "Invalid cost function: "
+            U.warn(log, "Invalid cost function: "
                 + IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION), e);
 
             costFuncType = CostFunctionType.LAST;

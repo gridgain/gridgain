@@ -21,7 +21,10 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
@@ -34,9 +37,29 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
     /** Keys count. */
     private static final int OBJ_CNT = 1_000;
 
+    /** Test logger. */
+    private static ListeningTestLogger testLog = new ListeningTestLogger(false, log);
+
+    /** Logger listener. */
+    private LogListener logLsnr;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setGridLogger(testLog);
+    }
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
+
+        testLog.clearListeners();
+
+        logLsnr = LogListener
+            .matches("Invalid cost function: INVALID_COST_FUNC")
+            .build();
+
+        testLog.registerListener(logLsnr);
 
         startGrid();
 
@@ -74,7 +97,6 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @Test
     public void testDefault() {
@@ -85,7 +107,6 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @WithSystemProperty(key = IGNITE_INDEX_COST_FUNCTION, value = "LAST")
     @Test
@@ -97,7 +118,6 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @WithSystemProperty(key = IGNITE_INDEX_COST_FUNCTION, value = "COMPATIBLE_8_7_12")
     @Test
@@ -109,7 +129,6 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @WithSystemProperty(key = IGNITE_INDEX_COST_FUNCTION, value = "COMPATIBLE_8_7_6")
     @Test
@@ -118,6 +137,14 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
             "EXPLAIN SELECT * FROM TEST WHERE V0=0 AND V1=0").getAll().get(0).get(0);
 
         assertTrue("Invalid plan: " + plan, plan.contains("PUBLIC.IDX_V0_V1"));
+    }
+
+    /**
+     */
+    @WithSystemProperty(key = IGNITE_INDEX_COST_FUNCTION, value = "INVALID_COST_FUNC")
+    @Test
+    public void testInvalidCostFunctionName() {
+        assertTrue(logLsnr.check());
     }
 
     /**
