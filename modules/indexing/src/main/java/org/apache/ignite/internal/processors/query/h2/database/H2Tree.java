@@ -227,12 +227,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
 
             unwrappedPk = metaInfo.useUnwrappedPk();
 
-            cols = (unwrappedPk ? unwrappedCols : wrappedCols).toArray(H2Utils.EMPTY_COLUMNS);
+            IndexColumn[] cols0 = (unwrappedPk ? unwrappedCols : wrappedCols).toArray(H2Utils.EMPTY_COLUMNS);
 
             inlineSize = metaInfo.inlineSize();
 
             List<InlineIndexColumn> inlineIdxs0 = getAvailableInlineColumns(affinityKey, cacheName, idxName, log, pk,
-                table, cols, factory, metaInfo.inlineObjectHash());
+                table, cols0, factory, metaInfo.inlineObjectHash());
 
             // IOs must be set before calling inlineObjectSupported(),
             // because IOs will be used to traverse the tree.
@@ -246,6 +246,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             inlineIdxs = inlineObjSupported ? inlineIdxs0 : inlineIdxs0.stream()
                 .filter(ih -> ih.type() != Value.JAVA_OBJECT)
                 .collect(Collectors.toList());
+
+            cols = new IndexColumn[inlineIdxs.size()];
+
+            for (int i = 0, j = 0; i < cols0.length && j < inlineIdxs.size(); i++) {
+                if (cols0[i].column.getColumnId() == inlineIdxs.get(j).columnIndex())
+                    cols[j++] = cols0[i];
+            }
+
+            assert cols.length == inlineIdxs.size() : "Columns count doesnt match inline" +
+                " columns count: colsSize=" + cols.length + ", inlineColsSize=" + inlineIdxs.size();
 
             if (!metaInfo.flagsSupported())
                 upgradeMetaPage(inlineObjSupported);
