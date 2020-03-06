@@ -1283,7 +1283,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         CheckpointMetricsTracker tracker
     ) throws IgniteCheckedException {
         assert absPtr != 0;
-        assert PageHeader.isAcquired(absPtr);
+        assert PageHeader.isAcquired(absPtr) || !isInCheckpoint(fullId);
 
         // Exception protection flag.
         // No need to write if exception occurred.
@@ -1299,16 +1299,23 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             buf.clear();
 
-            pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);
+            if (isInCheckpoint(fullId))
+                pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);
+
+            return;
+        }
+
+        if (!clearCheckpoint(fullId)) {
+            rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
+
+            if (!pageSingleAcquire)
+                PageHeader.releasePage(absPtr);
 
             return;
         }
 
         try {
             long tmpRelPtr = PageHeader.tempBufferPointer(absPtr);
-
-            if (!clearCheckpoint(fullId))
-                return;
 
             if (tmpRelPtr != INVALID_REL_PTR) {
                 PageHeader.tempBufferPointer(absPtr, INVALID_REL_PTR);
@@ -1346,7 +1353,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         finally {
             rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
-            if (canWrite){
+            if (canWrite) {
                 buf.rewind();
 
                 pageStoreWriter.writePage(fullId, buf, tag);
