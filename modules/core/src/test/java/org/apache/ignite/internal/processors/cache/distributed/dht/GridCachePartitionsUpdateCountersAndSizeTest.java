@@ -28,16 +28,16 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
- * Class for testing GridDhtPartitionsStateValidator works correctly and always show partition size and update counters.
+ * Test correct behaviour of {@link org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsStateValidator} class.
  */
 public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbstractTest {
     /** Cache name. */
     private static final String CACHE_NAME = "cacheTest";
 
-    /** Listener for parsing patterns in log*/
+    /** Listener for parsing patterns in log. */
     private ListeningTestLogger testLog = new ListeningTestLogger(false, log());
 
-    /** {@inheritDoc */
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -54,12 +54,12 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
         return cfg;
     }
 
-    /** {@inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         stopAllGrids();
     }
 
-    /** {@inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
     }
@@ -70,7 +70,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
      * Start three-nodes grid,
      * arguments: cnt - partition counters are inconsistent(boolean)
      *           size - partition size are inconsistent(boolean)
-     *@throws Exception If failed.
+     * @throws Exception If failed.
      */
     private void startThreeNodesGrid(boolean cnt, boolean size) throws Exception {
         LogListener lsnrCnt = SizeCounterLogListener.matches(Pattern.compile
@@ -175,26 +175,27 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
      */
     private static class SizeCounterLogListener extends LogListener {
 
-        /** {@inheritDoc */
+        /** {@inheritDoc} */
         @Override public boolean check() {
 
             return false;
         }
 
-        /** {@inheritDoc */
+        /** {@inheritDoc} */
         @Override public void reset() {
 
         }
 
-        // Search specific string pattern and add value of counters and sizes to arrays
-        /** {@inheritDoc */
+        // Search specific string pattern and add value of counters and sizes to arrays/
+        /** {@inheritDoc} */
         @Override public void accept(String s) {
             HashSet<Long> setCnt = new HashSet<>();
             HashSet<Long> setSize = new HashSet<>();
 
             int typeInconsistence = 0; //for Cnt 1, for Size 2, for Both 3, no inconsisctence 0.
 
-            if (s.matches("Partitions update counters are inconsistent for Part (\\[0-2]): " +
+
+            if (s.matches("Partitions update counters are inconsistent for Part 0: " +
                 "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|100500) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|100500) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|100500) ]")) {
@@ -204,7 +205,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                     setCnt.add(Long.parseLong(s.substring(0, s.indexOf(' ') - 1)));
                 }
             }
-            else if (s.matches("Partitions cache sizes are inconsistent for Part (\\[0-2]): " +
+            else if (s.matches("Partitions cache sizes are inconsistent for Part 0: " +
                 "\\[dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|0) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|0}) " +
                 "dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2])=(32|0}) ]")) {
@@ -215,7 +216,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
                 }
             }
 
-            else if (s.matches("Partitions cache size and update counters are inconsistent for Part (\\[0-2]]): \\[" +
+            else if (s.matches("Partitions cache size and update counters are inconsistent for Part 0: \\[" +
                 "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(32|10500), size=(32|0)] " +
                 "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(32|10500), size=(32|0)] " +
                 "consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest(\\[0-2]) meta=\\[updCnt=(32|10500), size=(32|0)]")) {

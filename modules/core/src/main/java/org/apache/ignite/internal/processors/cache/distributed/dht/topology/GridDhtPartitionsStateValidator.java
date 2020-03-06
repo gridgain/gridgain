@@ -16,14 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
-import java.util.HashSet;
-import java.util.UUID;
-import java.util.Map;
-import java.util.Set;
-import java.util.HashMap;
-import java.util.AbstractMap;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
@@ -83,8 +76,6 @@ public class GridDhtPartitionsStateValidator {
                 ignoringNodes.add(evt.eventNode().id());
         }
 
-        Map<Integer, Map<UUID, Long>> resUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
-
         // For sizes validation ignore also nodes which are not able to send cache sizes.
         for (UUID id : messages.keySet()) {
             ClusterNode node = cctx.discovery().node(id);
@@ -94,22 +85,25 @@ public class GridDhtPartitionsStateValidator {
 
         StringBuilder error = new StringBuilder();
 
-        Map<Integer, Map<UUID, Long>> resSize = validatePartitionsSizes(top, messages, ignoringNodes);
+        Map<Integer, Map<UUID, Long>> resUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
+        Map<Integer, Map<UUID, Long>> resSize = Collections.emptyMap();
 
         AffinityTopologyVersion topVer = fut.context().events().topologyVersion();
+
+        if (!cctx.cache().cacheGroup(top.groupId()).mvccEnabled()) { // TODO: Remove "if" clause in IGNITE-9451.
+            // Validate cache sizes.
+            resSize = validatePartitionsSizes(top, messages, ignoringNodes);
+        }
 
         if (!resUpdCnt.isEmpty() && !resSize.isEmpty()) {
             error.append("Partitions cache size and update counters are inconsistent for ")
                 .append(fold(topVer, resUpdCnt, resSize));
         }
+        if (!resUpdCnt.isEmpty() && resSize.isEmpty())
+            error.append("Partitions update counters are inconsistent for ").append(fold(topVer, resUpdCnt));
+        else if (resUpdCnt.isEmpty() && !resSize.isEmpty())
+            error.append("Partitions cache sizes are inconsistent for ").append(fold(topVer, resSize));
 
-        if (!cctx.cache().cacheGroup(top.groupId()).mvccEnabled()) { // TODO: Remove "if" clause in IGNITE-9451.
-            // Validate cache sizes.
-            if (!resUpdCnt.isEmpty() && resSize.isEmpty())
-                error.append("Partitions update counters are inconsistent for ").append(fold(topVer, resUpdCnt));
-            else if (resUpdCnt.isEmpty() && !resSize.isEmpty())
-                error.append("Partitions cache sizes are inconsistent for ").append(fold(topVer, resSize));
-        }
 
         if (error.length() > 0)
             throw new IgniteCheckedException(error.toString());
