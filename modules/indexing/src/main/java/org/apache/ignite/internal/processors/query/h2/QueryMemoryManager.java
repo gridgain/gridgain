@@ -87,9 +87,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /** Global memory quota. */
     private volatile long globalQuota;
 
-    /** String representation of global quota. */
-    private String globalQuotaStr;
-
     /**
      * Default query memory limit.
      *
@@ -97,9 +94,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * treated as separate Map query.
      */
     private volatile long qryQuota;
-
-    /** String representation of query quota. */
-    private String qryQuotaStr;
 
     /** Reservation block size. */
     private final long blockSize;
@@ -246,7 +240,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     public synchronized void setGlobalQuota(String newGlobalQuota) {
         this.globalQuota = U.parseBytes(newGlobalQuota);
-        this.globalQuotaStr = newGlobalQuota;
 
         if (log.isInfoEnabled()) {
             log.info("SQL query global quota was set to " + globalQuota +  ". Current memory tracking parameters: " +
@@ -259,7 +252,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Current global query quota.
      */
     public String getGlobalQuota() {
-        return globalQuotaStr;
+        return String.valueOf(globalQuota);
     }
 
     /**
@@ -269,7 +262,6 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      */
     public synchronized void setQueryQuota(String newQryQuota) {
         this.qryQuota = U.parseBytes(newQryQuota);
-        this.qryQuotaStr = newQryQuota;
 
         if (log.isInfoEnabled()) {
             log.info("SQL query memory quota was set to " + qryQuota +  ". Current memory tracking parameters: " +
@@ -287,7 +279,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Current query quota.
      */
     public String getQueryQuotaString() {
-        return qryQuotaStr;
+        return String.valueOf(qryQuota);
     }
 
     /**
