@@ -47,11 +47,11 @@ public class QueryHistoryMetrics {
         long failures = failed ? 1 : 0;
         long duration = System.currentTimeMillis() - info.startTime();
         long reserved = info.memoryTracker().maxReserved();
-        long alloactedOnDisk = info.memoryTracker().maxWrittenOnDisk();
+        long allocatedOnDisk = info.memoryTracker().maxWrittenOnDisk();
         long totalWrittenOnDisk = info.memoryTracker().totalWrittenOnDisk();
 
         val = new QueryHistoryMetricsValue(1, failures, duration, duration, info.startTime(),
-            reserved, reserved, alloactedOnDisk, alloactedOnDisk, totalWrittenOnDisk, totalWrittenOnDisk);
+            reserved, reserved, allocatedOnDisk, allocatedOnDisk, totalWrittenOnDisk, totalWrittenOnDisk);
 
         linkRef = new AtomicReference<>();
     }

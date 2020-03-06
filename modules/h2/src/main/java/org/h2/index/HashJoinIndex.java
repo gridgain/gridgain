@@ -41,7 +41,6 @@ import org.h2.table.IndexHints;
 import org.h2.table.PlanItem;
 import org.h2.table.Table;
 import org.h2.table.TableFilter;
-import org.h2.util.IOUtils;
 import org.h2.value.Value;
 import org.h2.value.ValueArray;
 
@@ -508,7 +507,8 @@ public class HashJoinIndex extends BaseIndex {
     public void clearHashTable(Session session) {
         hashTbl = null;
 
-        IOUtils.closeSilently(tracker);
+        if (tracker != null)
+            tracker.close();
 
         tracker = null;
     }

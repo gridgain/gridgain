@@ -6,7 +6,6 @@
 package org.h2.index;
 
 import java.util.ArrayList;
-
 import org.h2.engine.Session;
 import org.h2.expression.condition.Comparison;
 import org.h2.message.DbException;
@@ -18,7 +17,6 @@ import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.Table;
 import org.h2.table.TableFilter;
-import org.h2.util.IOUtils;
 import org.h2.value.Value;
 import org.h2.value.ValueGeometry;
 import org.h2.value.ValueNull;
@@ -136,7 +134,11 @@ public class IndexCursor implements Cursor, AutoCloseable {
                 if ((isStart || isEnd) && !canUseIndexFor(inColumn)) {
                     inColumn = null;
                     inList = null;
-                    IOUtils.closeSilently(inResult);
+
+                    if (inResult != null) {
+                        inResult.close();
+                    }
+
                     inResult = null;
                 }
             }
@@ -298,7 +300,9 @@ public class IndexCursor implements Cursor, AutoCloseable {
 
     @Override
     public void close() throws Exception {
-        IOUtils.closeSilently(inResult);
+        if (inResult != null)
+            inResult.close();
+
         if (cursor instanceof AutoCloseable)
             ((AutoCloseable)cursor).close();
     }

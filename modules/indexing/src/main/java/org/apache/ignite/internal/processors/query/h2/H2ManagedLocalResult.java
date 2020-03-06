@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeMap;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.engine.Session;
 import org.h2.engine.SessionInterface;
 import org.h2.expression.Expression;
@@ -630,6 +629,7 @@ public class H2ManagedLocalResult implements LocalResult {
         distinctRows = null;
         rows = null;
 
-        U.closeQuiet(memTracker);
+        if (memTracker != null)
+            memTracker.close();
     }
 }

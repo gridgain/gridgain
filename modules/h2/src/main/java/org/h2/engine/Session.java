@@ -977,12 +977,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
 
                 H2MemoryTracker tracker = memoryTracker;
                 if (tracker != null) {
-                    try {
-                        tracker.close();
-                    }
-                    catch (Exception ignored) {
-                        // no-op
-                    }
+                    tracker.close();
                 }
 
                 // release any open table locks

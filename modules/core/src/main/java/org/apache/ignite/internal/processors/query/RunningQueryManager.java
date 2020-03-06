@@ -192,7 +192,7 @@ public class RunningQueryManager {
             return;
 
         if (qry.memoryTracker() instanceof AutoCloseable)
-            U.closeQuiet((AutoCloseable)qry.memoryTracker());
+            U.close((AutoCloseable)qry.memoryTracker(), log);
 
         if (log.isDebugEnabled()) {
             log.debug("User's query " + (failReason == null ? "completed " : "failed ") +

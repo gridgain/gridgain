@@ -139,6 +139,8 @@ public class H2ManagedGroupByData extends GroupByData {
         lastGrpKey = null;
 
         curEntry = null;
+
+        tracker.release(tracker.reserved());
     }
 
     /** {@inheritDoc} */
