@@ -115,9 +115,6 @@ public class IgniteIndexReader implements AutoCloseable {
     private static final String META_TREE_NAME = "MetaTree";
 
     /** */
-    private static final String USAGE = "Usage: cache_with_index.bin_path_IN cache_with_index.bin_path_OUT pageSize";
-
-    /** */
     private static final String FROM_ROOT_TO_LEAFS_TRAVERSE_NAME = "<FROM_ROOT> ";
 
     /** */
@@ -418,11 +415,16 @@ public class IgniteIndexReader implements AutoCloseable {
     private void compareTraversals(Map<String, TreeTraversalInfo> treeInfos, Map<String, TreeTraversalInfo> treeScans) {
         List<String> errors = new LinkedList<>();
 
+        Set<String> treeIdxNames = new HashSet<>();
+
         treeInfos.forEach((name, tree) -> {
+            treeIdxNames.add(name);
+
             TreeTraversalInfo scan = treeScans.get(name);
 
             if (scan == null) {
-                errors.add("No tree found in tree scans: " + name);
+                errors.add("Tree was detected in " + FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + " but absent in  "
+                    + HORIZONTAL_SCAN_NAME + ": " + name);
 
                 return;
             }
@@ -451,6 +453,12 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 errors.add(compareError("pages", name, 0, cnt.get(), cls));
             });
+        });
+
+        treeScans.forEach((name, tree) -> {
+            if (!treeIdxNames.contains(name))
+                errors.add("Tree was detected in " + HORIZONTAL_SCAN_NAME + " but absent in  "
+                    + FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + ": " + name);
         });
 
         print("");
