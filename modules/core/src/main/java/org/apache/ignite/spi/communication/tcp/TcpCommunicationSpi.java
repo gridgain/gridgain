@@ -23,6 +23,7 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -164,6 +165,7 @@ import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.nonNull;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
@@ -173,6 +175,7 @@ import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
+import static org.apache.ignite.internal.util.typedef.X.hasCause;
 import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture.SES_FUT_META;
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.ALREADY_CONNECTED;
@@ -2555,7 +2558,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 return srvr;
             }
             catch (IgniteCheckedException e) {
-                if (X.hasCause(e, SSLException.class))
+                if (hasCause(e, SSLException.class))
                     throw new IgniteSpiException("Failed to create SSL context. SSL factory: "
                         + ignite.configuration().getSslContextFactory() + '.', e);
 
@@ -3215,7 +3218,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     throw e;
 
                 // Reconnect for the second time, if connection is not established.
-                if (connectAttempts < 2 && X.hasCause(e, ConnectException.class)) {
+                if (connectAttempts < 2 && hasCause(e, ConnectException.class)) {
                     connectAttempts++;
 
                     continue;
@@ -3484,7 +3487,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     if (getSpiContext().node(node.id()) == null)
                         throw new ClusterTopologyCheckedException("Failed to send message (node left topology): " + node);
 
-                    SocketChannel ch = SocketChannel.open();
+                    SocketChannel ch = openSocketChannel();
 
                     ch.configureBlocking(true);
 
@@ -3664,6 +3667,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     if (log.isDebugEnabled())
                         log.debug("Client creation failed [addr=" + addr + ", err=" + e + ']');
 
+                    if (hasCause(e, "Too many open files", SocketException.class)) {
+                        if (IgniteEx.class.isInstance(ignite))
+                            ((IgniteEx)ignite).context().failure().process(new FailureContext(CRITICAL_ERROR, e));
+                    }
+
                     // check if timeout occured in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {
                         U.warn(log, "Connection timed out (will stop attempts to perform the connect) " +
@@ -3719,6 +3727,40 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             processSessionCreationError(node, addrs, errs == null ? new IgniteCheckedException("No session found") : errs);
 
         return ses;
+    }
+
+    /**
+     * Opens a socket channel.
+     *
+     * @return A new socket channel.
+     * @throws IOException If an I/O error occurs.
+     */
+    protected SocketChannel openSocketChannel() throws IOException {
+        return SocketChannel.open();
+    }
+
+    /**
+     * Closing connections to node.
+     * NOTE: It is recommended only for tests.
+     *
+     * @param nodeId Node for which to close connections.
+     * @throws IgniteCheckedException If occurs.
+     */
+    void closeConnections(UUID nodeId) throws IgniteCheckedException {
+        GridCommunicationClient[] clients = this.clients.remove(nodeId);
+        if (nonNull(clients)) {
+            for (GridCommunicationClient client : clients)
+                client.forceClose();
+        }
+
+        for (ConnectionKey connKey : clientFuts.keySet()) {
+            if (!nodeId.equals(connKey))
+                continue;
+
+            GridFutureAdapter<GridCommunicationClient> fut = clientFuts.remove(connKey);
+            if (nonNull(fut))
+                fut.get().forceClose();
+        }
     }
 
     /**
@@ -3790,7 +3832,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return {@code True} if error was caused by some connection IO error or IgniteCheckedException due to timeout.
      */
     private boolean isRecoverableException(Exception errs) {
-        return X.hasCause(
+        return hasCause(
             errs,
             IOException.class,
             HandshakeException.class,
