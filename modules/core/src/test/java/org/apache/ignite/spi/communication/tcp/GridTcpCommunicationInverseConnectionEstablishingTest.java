@@ -38,16 +38,46 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 
+/**
+ *
+ */
 public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridCommonAbstractTest {
+    /** */
     private static final IgnitePredicate<ClusterNode> CLIENT_PRED = c -> c.isClient();
 
-    private boolean client;
+    /** */
+    private static final String UNREACHABLE_IP = "172.31.30.132";
 
     /** */
-    CacheConfiguration[] ccfgs;
+    private static final String UNRESOLVED_HOST = "unresolvedHost";
+
+    /** */
+    private boolean clientMode;
+
+    /** */
+    private EnvironmentType envType = EnvironmentType.STAND_ALONE;
+
+    /** */
+    private CacheConfiguration[] ccfgs;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
+    }
 
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setFailureDetectionTimeout(8_000);
 
         cfg.setActiveOnStart(true);
 
@@ -59,8 +89,8 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             ccfgs = null;
         }
 
-        if (client) {
-            cfg.setEnvironmentType(EnvironmentType.VIRTUALIZED);
+        if (clientMode) {
+            cfg.setEnvironmentType(envType);
             cfg.setClientMode(true);
         }
 
@@ -68,26 +98,35 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
     }
 
     @Test
-    public void testUnreachableClient() throws Exception {
-        int srvs = 5;
+    public void testUnreachableClientInVirtualizedEnvironment() throws Exception {
+        executeCacheTestWithUnreachableClient(EnvironmentType.VIRTUALIZED);
+    }
+
+    @Test
+    public void testUnreachableClientInStandAloneEnvironment() throws Exception {
+        executeCacheTestWithUnreachableClient(EnvironmentType.STAND_ALONE);
+    }
+
+    /**
+     *
+     * @param envType
+     * @throws Exception
+     */
+    private void executeCacheTestWithUnreachableClient(EnvironmentType envType) throws Exception {
+        int srvs = 3;
 
         for (int i = 0; i < srvs; i++) {
-            client = i >= srvs;
-
             ccfgs = cacheConfigurations1();
 
             startGrid(i);
         }
 
-        client = false;
+        clientMode = true;
+        this.envType = envType;
 
         startGrid(srvs);
 
-        client = true;
-
-        startGrid(srvs + 1);
-
-        checkCaches(srvs + 2, 2, false);
+        checkCaches(srvs + 1, 2, false);
     }
 
     /** */
@@ -97,7 +136,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
             if (CLIENT_PRED.apply(node)) {
                 Map<String, Object> attrs = new HashMap<>(node.attributes());
 
-                attrs.put(createAttributeName(ATTR_ADDRS), Collections.singleton("172.31.30.132"));
+                attrs.put(createAttributeName(ATTR_ADDRS), Collections.singleton(UNREACHABLE_IP));
                 attrs.put(createAttributeName(ATTR_PORT), 47200);
                 attrs.put(createAttributeName(ATTR_EXT_ADDRS), Collections.emptyList());
                 attrs.put(createAttributeName(ATTR_HOST_NAMES), Collections.emptyList());

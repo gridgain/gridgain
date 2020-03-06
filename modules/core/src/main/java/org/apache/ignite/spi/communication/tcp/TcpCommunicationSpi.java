@@ -3754,9 +3754,12 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         }
 
         if (ses == null && node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
+            String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
+                "; inverse connection will be requested.";
+
             GridFutureAdapter<GridCommunicationClient> fut = clientFuts.get(new ConnectionKey(node.id(), connIdx, -1));
 
-            throw new NodeUnreachableException("", null, node.id(), connIdx, fut);
+            throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
         }
 
         if (ses == null)

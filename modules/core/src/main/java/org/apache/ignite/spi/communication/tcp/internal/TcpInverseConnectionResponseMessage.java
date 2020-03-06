@@ -23,9 +23,13 @@ import org.apache.ignite.plugin.extensions.communication.MessageReader;
 import org.apache.ignite.plugin.extensions.communication.MessageWriter;
 
 /**
- * TODO Can be replaced with any other message I think.
+ * Inverse connection response message sent by client node as a response to
+ * inverse connection request received by discovery.
+ *
+ * The main purpose of this message is to communicate back to server node connection index of a thread waiting for
+ * establishing of communication connection.
  */
-public class TcpConnectionRequestMessage implements Message {
+public class TcpInverseConnectionResponseMessage implements Message {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -33,11 +37,11 @@ public class TcpConnectionRequestMessage implements Message {
     private int connIdx;
 
     /** */
-    public TcpConnectionRequestMessage() {
+    public TcpInverseConnectionResponseMessage() {
     }
 
     /** */
-    public TcpConnectionRequestMessage(int connIdx) {
+    public TcpInverseConnectionResponseMessage(int connIdx) {
         this.connIdx = connIdx;
     }
 
@@ -92,7 +96,7 @@ public class TcpConnectionRequestMessage implements Message {
 
         }
 
-        return reader.afterMessageRead(TcpConnectionRequestMessage.class);
+        return reader.afterMessageRead(TcpInverseConnectionResponseMessage.class);
     }
 
     /** {@inheritDoc} */
@@ -107,6 +111,6 @@ public class TcpConnectionRequestMessage implements Message {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(TcpConnectionRequestMessage.class, this);
+        return S.toString(TcpInverseConnectionResponseMessage.class, this);
     }
 }

@@ -182,7 +182,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactoryProvider;
 import org.apache.ignite.spi.collision.jobstealing.JobStealingRequest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestMessage;
+import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
@@ -370,7 +370,7 @@ public class GridIoMessageFactory implements MessageFactoryProvider {
         factory.register(GridQueryKillRequest.TYPE_CODE, GridQueryKillRequest::new);
         factory.register(GridQueryKillResponse.TYPE_CODE, GridQueryKillResponse::new);
         factory.register(GridIoSecurityAwareMessage.TYPE_CODE, GridIoSecurityAwareMessage::new);
-        factory.register((short)175, TcpConnectionRequestMessage::new);
+        factory.register((short)175, TcpInverseConnectionResponseMessage::new);
 
         // [-3..119] [124..129] [-23..-28] [-36..-55] - this
         // [120..123] - DR

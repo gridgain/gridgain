@@ -112,7 +112,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException;
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
-import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestMessage;
+import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -1070,11 +1070,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 }
             }
 
-            if (msg.message() instanceof TcpConnectionRequestMessage) {
-                if (log.isInfoEnabled())
-                    log.info("Received");
+            if (msg.message() instanceof TcpInverseConnectionResponseMessage) {
+                TcpInverseConnectionResponseMessage respMsg = (TcpInverseConnectionResponseMessage)msg.message();
 
-                invConnHandler.onInverseConnectionResponse(nodeId, (TcpConnectionRequestMessage)msg.message());
+                if (log.isInfoEnabled())
+                    log.info("Received inverse connection response message: " + respMsg);
+
+                invConnHandler.onInverseConnectionResponse(nodeId, respMsg);
             }
 
             // If message is P2P, then process in P2P service.
@@ -3524,7 +3526,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                     send(snd,
                         TOPIC_COMM_SYSTEM,
                         TOPIC_COMM_SYSTEM.ordinal(),
-                        new TcpConnectionRequestMessage(connIdx),
+                        new TcpInverseConnectionResponseMessage(connIdx),
                         SYSTEM_POOL,
                         false,
                         0,
@@ -3547,7 +3549,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
          * @param nodeId ID of unreachable node that replied to inverse connection request.
          * @param msg Special communication message sent by unreachable node.
          */
-        public void onInverseConnectionResponse(UUID nodeId, TcpConnectionRequestMessage msg) {
+        public void onInverseConnectionResponse(UUID nodeId, TcpInverseConnectionResponseMessage msg) {
             if (log.isInfoEnabled())
                 log.info("Response for inverse connection received from node " + nodeId +
                     ", connection index is " + msg.connectionIndex());
