@@ -78,6 +78,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     /**
      * @param pageAddr Page address.
      * @param size Partition size.
+     *
+     * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setSize(long pageAddr, long size) {
         if (getSize(pageAddr) == size)
@@ -99,6 +101,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     /**
      * @param pageAddr Page address.
      * @param cntr Partition update counter.
+     *
+     * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setUpdateCounter(long pageAddr, long cntr) {
         if (getUpdateCounter(pageAddr) == cntr)
@@ -120,6 +124,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     /**
      * @param pageAddr Page address.
      * @param rmvId Global remove ID.
+     *
+     * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setGlobalRemoveId(long pageAddr, long rmvId) {
         if (getGlobalRemoveId(pageAddr) == rmvId)
@@ -140,6 +146,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     /**
      * @param pageAddr Partition metadata page address.
      * @param state State.
+     *
+     * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setPartitionState(long pageAddr, byte state) {
         if (getPartitionState(pageAddr) == state)
@@ -220,6 +228,8 @@ public class PagePartitionMetaIO extends PageMetaIO {
     /**
      * @param pageAddr Page address.
      * @param link Link.
+     *
+     * @return {@code true} if value has changed as a result of this method's invocation.
      */
     public boolean setGapsLink(long pageAddr, long link) {
         throw new UnsupportedOperationException("Gaps link is not supported by " +

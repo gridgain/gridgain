@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.query;
+package org.apache.ignite.internal.processors.cache.persistence.db.wal;
 
-import org.apache.ignite.internal.IgniteEx;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.processors.cache.persistence.db.SlowHistoricalRebalanceSmallHistoryTest;
 
-/**
- * Test KILL QUERY requested from client node.
- */
-@RunWith(Parameterized.class)
-public class KillQueryFromClientTest extends KillQueryTest {
+import static org.apache.ignite.configuration.DiskPageCompression.ZSTD;
+
+/** */
+public class HistoricalRebalanceWithWalPageCompressionTest extends SlowHistoricalRebalanceSmallHistoryTest {
     /** {@inheritDoc} */
-    @Override protected IgniteEx getKillRequestNode()  {
-        IgniteEx clientNode = grid(NODES_COUNT - 1);
+    @Override protected IgniteConfiguration getConfiguration(String name) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(name);
 
-        assertTrue(clientNode.context().clientNode());
+        cfg.getDataStorageConfiguration()
+            .setWalPageCompression(ZSTD);
 
-        return clientNode;
+        return cfg;
     }
 }
