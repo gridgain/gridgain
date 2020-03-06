@@ -23,7 +23,7 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 
 /**
- * Yhis exception represents a result of validation partitions for a cache group.
+ * This exception represents a result of validation partitions for a cache group.
  * See {@link GridDhtPartitionsStateValidator#validatePartitionCountersAndSizes(GridDhtPartitionsExchangeFuture, GridDhtPartitionTopology, Map)}
  */
 public class PartitionStateValidationException  extends IgniteCheckedException {

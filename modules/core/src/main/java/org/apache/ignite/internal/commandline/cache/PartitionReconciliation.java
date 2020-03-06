@@ -221,7 +221,7 @@ public class PartitionReconciliation implements Command<PartitionReconciliation.
     @Override public void parseArguments(CommandArgIterator argIter) {
         Set<String> cacheNames = null;
         boolean repair = false;
-        boolean fastCheck = false;
+        boolean fastCheck = (boolean)FAST_CHECK.defaultValue();
         boolean includeSensitive = (boolean)INCLUDE_SENSITIVE.defaultValue();
         boolean locOutput = (boolean)LOCAL_OUTPUT.defaultValue();
         int parallelism = (int)PARALLELISM.defaultValue();

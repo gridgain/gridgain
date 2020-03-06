@@ -734,7 +734,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /**
      * Returns a collection of partitions (per cache group) that did not pass validation by update counter or size.
      *
-     * Please take into account that the following cache configurations disable partitions validation:
+     * Partitions are not validated in the following cases and therefore they will not be returned by this method:
      * <ul>
      * <li> 3-rd party persistence.
      * See {@link CacheConfiguration#isReadThrough()}, {@link CacheConfiguration#isWriteThrough()}
@@ -746,7 +746,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      *
      * <li> Using expiry policies except {@link EternalExpiryPolicy}. </li>
      *
-     * <li> When partition size validation is explicitly disabled with IGNITE_SKIP_PARTITION_SIZE_VALIDATION property. </li>
+     * <li> Partition size validation is explicitly disabled with IGNITE_SKIP_PARTITION_SIZE_VALIDATION property. </li>
      * </ul>
      *
      * @return Collection of partitions that did not pass validation for all caches that were checked.

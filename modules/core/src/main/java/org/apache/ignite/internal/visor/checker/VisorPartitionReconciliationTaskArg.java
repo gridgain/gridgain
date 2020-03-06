@@ -45,7 +45,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     private boolean fastCheck;
 
     /**
-     * Collection of partitions whcih should be validated.
+     * Collection of partitions which should be validated.
      * This collection can be {@code null}, this means that all partitions should be validated/repaired.
      * Mapping: Cache group id -> collection of partitions.
      */
@@ -141,14 +141,17 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /** {@inheritDoc} */
+    @Override public byte getProtocolVersion() {
+        return V2;
+    }
+
+    /** {@inheritDoc} */
     @Override protected void writeExternalData(ObjectOutput out) throws IOException {
         U.writeCollection(out, caches);
 
         out.writeBoolean(repair);
 
         out.writeBoolean(includeSensitive);
-
-        out.writeBoolean(fastCheck);
 
         out.writeBoolean(locOutput);
 
@@ -162,6 +165,9 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         out.writeInt(recheckDelay);
 
+        // The following fields were added in V2 version.
+        out.writeBoolean(fastCheck);
+
         U.writeIntKeyMap(out, partsToRepair);
     }
 
@@ -173,8 +179,6 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         repair = in.readBoolean();
 
         includeSensitive = in.readBoolean();
-
-        fastCheck = in.readBoolean();
 
         locOutput = in.readBoolean();
 
@@ -188,18 +192,22 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
 
         recheckDelay = in.readInt();
 
-        partsToRepair = U.readIntKeyMap(in);
+        if (protoVer >= V2) {
+            fastCheck = in.readBoolean();
+
+            partsToRepair = U.readIntKeyMap(in);
+        }
     }
 
     /**
-     * @return Caches.
+     * @return Caches to be checked.
      */
     public Set<String> caches() {
         return caches;
     }
 
     /**
-     * @return If  - Partition Reconciliation&Fix: update from Primary partition.
+     * @return {@code true} if an inconsistency should be fixed in accordance with {@link #repairAlg()}.
      */
     public boolean repair() {
         return repair;
@@ -235,7 +243,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
     }
 
     /**
-     * @return If  - print data to result with sensitive information: keys and values.
+     * @return {@code true} if the result should include sensitive information such as key and value.
      */
     public boolean includeSensitive() {
         return includeSensitive;
@@ -286,7 +294,7 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
         private boolean fastCheck;
 
         /**
-         * Collection of partitions whcih should be validated.
+         * Collection of partitions which should be validated.
          * This collection can be {@code null}, this means that all partitions should be validated/repaired.
          * Mapping: Cache group id -> collection of partitions.
          */

@@ -102,7 +102,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 .equals(ignite.context().localNodeId()) :
                 "PartitionReconciliationProcessorTask must be executed on the coordinator node " +
                     "[locNodeId=" + ignite.context().localNodeId() +
-                    ", crd= " + ignite.context().discovery().discoCache().oldestAliveServerNode().id() + ']';
+                    ", crd=" + ignite.context().discovery().discoCache().oldestAliveServerNode().id() + ']';
 
             Map<Integer, Set<Integer>> invalidParts = Collections.emptyMap();
 
