@@ -21,9 +21,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.FileChannel;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -216,18 +220,30 @@ public class IgniteIndexReader implements AutoCloseable {
         if (idxFile == null)
             throw new RuntimeException("index.bin file not found");
 
-        idxStore = (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocationTracker);
+        idxStore = getIdxStore();
 
-        pagesNum = (idxFile.length() - idxStore.headerSize()) / pageSize;
+        pagesNum = idxStore == null ? 0 : (idxFile.length() - idxStore.headerSize()) / pageSize;
 
         partStores = new FilePageStore[partCnt];
 
-        for (int i = 0; i < partCnt; i++) {
-            final File file = getFile(i);
+        if (idxStore != null) {
+            for (int i = 0; i < partCnt; i++) {
+                final File file = getFile(i);
 
-            // Some of array members will be null if node doesn't have all partition files locally.
-            if (file != null)
-                partStores[i] = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, file, allocationTracker);
+                // Some of array members will be null if node doesn't have all partition files locally.
+                if (file != null)
+                    partStores[i] = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, file, allocationTracker);
+            }
+        }
+    }
+
+    /** */
+    private FilePageStore getIdxStore() throws IgniteCheckedException {
+        try {
+            return (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocationTracker);
+        }
+        catch (IllegalArgumentException e) {
+            return null;
         }
     }
 
@@ -926,7 +942,8 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** {@inheritDoc} */
     @Override public void close() throws StorageException {
-        idxStore.stop(false);
+        if (idxStore != null)
+            idxStore.stop(false);
 
         for (FilePageStore store : partStores) {
             if (store != null)
@@ -934,25 +951,24 @@ public class IgniteIndexReader implements AutoCloseable {
         }
     }
 
-    public static void mai0n(String[] args) throws Exception {
-        if (args.length != 3) {
-            System.out.println(USAGE);
+    /** */
+    public void transform(String dest, String fileMask) {
+        File destDir = new File(dest);
 
-            return;
+        if (!destDir.exists())
+            destDir.mkdirs();
+
+        try (DirectoryStream<Path> files = Files.newDirectoryStream(cacheWorkDir.toPath(), "*" + fileMask)) {
+            for (Path f : files) {
+                if (f.toString().toLowerCase().endsWith(fileMask))
+                    copyFromStreamToFile(f.toFile(), new File(destDir.getPath(), f.getFileName().toString()));
+            }
         }
-
-        try {
-            final String idxDirIn = args[0];
-            final String idxDirOut = args[1];
-
-            //copyFromStreamToFile(new File(idxDirIn + "/index.bin"), new File(idxDirOut + "/index.bin"));
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-        catch (Exception e) {
-            System.err.println(e.getMessage());
-
-            System.err.println(USAGE);
-
-            e.printStackTrace();
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
         }
     }
 
@@ -1101,6 +1117,8 @@ public class IgniteIndexReader implements AutoCloseable {
             val = (T)s;
         else if (cls.equals(Integer.class))
             val = (T)new Integer(Integer.parseInt(s));
+        else if (cls.equals(Boolean.class))
+            val = (T)Boolean.valueOf(s);
 
         return val == null ? dfltVal.get() : val;
     }
@@ -1120,6 +1138,9 @@ public class IgniteIndexReader implements AutoCloseable {
                 put("--pageSize", null);
                 put("--pageStoreVer", null);
                 put("--destFile", null);
+                put("--dest", null);
+                put("--transform", null);
+                put("--fileMask", null);
             }};
 
             for (Iterator<String> iterator = Arrays.asList(args).iterator(); iterator.hasNext();) {
@@ -1146,10 +1167,19 @@ public class IgniteIndexReader implements AutoCloseable {
 
             String destFile = getOptionFromMap(options, "--destFile", String.class, () -> null);
 
+            boolean transform = getOptionFromMap(options, "--transform", Boolean.class, () -> false);
+
+            String dest = getOptionFromMap(options, "--dest", String.class, () -> null);
+
+            String fileMask = getOptionFromMap(options, "--fileMask", String.class, () -> ".bin");
+
             OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
 
             try (IgniteIndexReader reader = new IgniteIndexReader(dir, pageSize, partCnt, pageStoreVer, destStream)) {
-                reader.readIdx();
+                if (transform)
+                    reader.transform(dest, fileMask);
+                else
+                    reader.readIdx();
             }
         }
         catch (Exception e) {
@@ -1159,6 +1189,14 @@ public class IgniteIndexReader implements AutoCloseable {
             System.err.println("--pageSize: page size (optional, default value is 4096)");
             System.err.println("--pageStoreVer: page store version (optional, default value is 2)");
             System.err.println("--destFile: file to print the report to (optional, by default report is printed to console)");
+            System.err.println("--transform: if 'true' then this utility assumes that all *.bin files "
+                + "in --dir directory are snapshot files, transforms them to normal format and puts to --dest directory."
+                + " (optional)"
+            );
+            System.err.println("--dest: directory where to put files transformed from snapshot (needed if you use "
+                + "--transform true)");
+            System.err.println("--fileMask: mask for files to transform.");
+            System.err.println();
 
             throw e;
         }
