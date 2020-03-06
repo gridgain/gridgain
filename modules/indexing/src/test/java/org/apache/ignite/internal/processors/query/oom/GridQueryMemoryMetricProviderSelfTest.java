@@ -220,4 +220,74 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
         //noinspection ThrowableNotThrown
         GridTestUtils.assertThrows(log, () -> tracker.reserve(42L), IgniteException.class, "Test exception");
     }
+
+    /** Ensure child tracker reports to parent and shares it's resources. */
+    @Test
+    public void testChildTracker() {
+        QueryMemoryTracker tracker = new QueryMemoryTracker(null, 1024, 0, false);
+
+        H2MemoryTracker child1 = tracker.createChildTracker();
+        H2MemoryTracker child2 = tracker.createChildTracker();
+
+        // reservation from child tracker should affect current child
+        // and parent only
+        assertTrue(child1.reserve(200));
+
+        assertEquals(200, child1.reserved());
+        assertEquals(0, child2.reserved());
+        assertEquals(200, tracker.reserved());
+
+        // the same
+        assertTrue(child2.reserve(800));
+
+        assertEquals(200, child1.reserved());
+        assertEquals(800, child2.reserved());
+        assertEquals(1000, tracker.reserved());
+
+        // throws error since parents quota exceeded
+        GridTestUtils.assertThrowsWithCause(() -> child1.reserve(200), IgniteException.class);
+
+        assertEquals(400, child1.reserved());
+        assertEquals(800, child2.reserved());
+        assertEquals(1200, tracker.reserved());
+
+        // the same rule as with reservation
+        child1.release(300);
+
+        assertEquals(100, child1.reserved());
+        assertEquals(800, child2.reserved());
+        assertEquals(900, tracker.reserved());
+
+        // the same rule as with reservation
+        child2.swap(200);
+
+        assertEquals(0, child1.writtenOnDisk());
+        assertEquals(200, child2.writtenOnDisk());
+        assertEquals(200, tracker.writtenOnDisk());
+
+        // closing child should not affect parent and rest of children
+        // also child should release all it's resources
+        child2.close();
+
+        assertEquals(100, child1.reserved());
+        assertEquals(0, child2.reserved());
+        assertEquals(100, tracker.reserved());
+
+        assertEquals(0, child1.writtenOnDisk());
+        assertEquals(0, child2.writtenOnDisk());
+        assertEquals(0, tracker.writtenOnDisk());
+
+        assertFalse(child1.closed());
+        assertTrue(child2.closed());
+        assertFalse(tracker.closed());
+
+        child2 = tracker.createChildTracker();
+
+        // all children should be closed with parent
+        tracker.close();
+
+        assertTrue(child1.closed());
+        assertTrue(child2.closed());
+        assertTrue(tracker.closed());
+    }
 }

@@ -450,7 +450,6 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
             reserved = 0;
             writtenOnDisk = 0;
-            totalWrittenOnDisk = 0;
 
             parent.onChildClosed(this);
         }
