@@ -26,7 +26,7 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionLSQRTrainer;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionModel;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
 
@@ -74,11 +74,9 @@ public class LinearRegressionLSQRTrainerExample {
                     .labeled(Vectorizer.LabelCoordinate.FIRST));
 
                 double rmse = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    new DummyVectorizer<Integer>()
-                        .labeled(Vectorizer.LabelCoordinate.FIRST),
-                    new RegressionMetrics()
+                    dataCache, mdl,
+                    new DummyVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST),
+                    MetricName.RMSE
                 );
 
                 System.out.println("\n>>> Rmse = " + rmse);

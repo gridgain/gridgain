@@ -24,6 +24,7 @@ import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 import org.apache.ignite.ml.svm.SVMLinearClassificationModel;
 import org.apache.ignite.ml.svm.SVMLinearClassificationTrainer;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
@@ -37,8 +38,8 @@ import org.apache.ignite.ml.util.SandboxMLCache;
  * <p>
  * After that it trains the model based on the specified data using KMeans algorithm.</p>
  * <p>
- * Finally, this example loops over the test set of data points, applies the trained model to predict what cluster
- * does this point belong to, compares prediction to expected outcome (ground truth), and builds
+ * Finally, this example loops over the test set of data points, applies the trained model to predict what cluster does
+ * this point belong to, compares prediction to expected outcome (ground truth), and builds
  * <a href="https://en.wikipedia.org/wiki/Confusion_matrix">confusion matrix</a>.</p>
  * <p>
  * You can change the test data used in this example and re-run it to explore this algorithm further.</p>
@@ -65,19 +66,19 @@ public class SVMBinaryClassificationExample {
 
                 System.out.println(">>> SVM model " + mdl);
 
-                double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    vectorizer
-                ).accuracy();
+                double accuracy = Evaluator.evaluate(dataCache,
+                    mdl, vectorizer, MetricName.ACCURACY
+                );
 
                 System.out.println("\n>>> Accuracy " + accuracy);
 
                 System.out.println(">>> SVM Binary classification model over cache based dataset usage example completed.");
-            } finally {
+            }
+            finally {
                 dataCache.destroy();
             }
-        } finally {
+        }
+        finally {
             System.out.flush();
         }
     }

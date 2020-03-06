@@ -123,14 +123,14 @@ public class Step_8_CV {
                         DecisionTreeClassificationTrainer trainer
                             = new DecisionTreeClassificationTrainer(maxDeep, 0);
 
-                        CrossValidation<DecisionTreeNode, Double, Integer, Vector> scoreCalculator
+                        CrossValidation<DecisionTreeNode, Integer, Vector> scoreCalculator
                             = new CrossValidation<>();
 
                         double[] scores = scoreCalculator
                             .withIgnite(ignite)
                             .withUpstreamCache(dataCache)
                             .withTrainer(trainer)
-                            .withMetric(new Accuracy<>())
+                            .withMetric(new Accuracy())
                             .withFilter(split.getTrainFilter())
                             .withPreprocessor(normalizationPreprocessor)
                             .withAmountOfFolds(3)
@@ -175,8 +175,7 @@ public class Step_8_CV {
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    split.getTestFilter(),
+                    dataCache, split.getTestFilter(),
                     bestMdl,
                     normalizationPreprocessor,
                     new Accuracy<>()

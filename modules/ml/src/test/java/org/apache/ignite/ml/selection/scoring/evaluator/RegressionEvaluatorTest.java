@@ -16,6 +16,8 @@
 
 package org.apache.ignite.ml.selection.scoring.evaluator;
 
+import java.util.HashMap;
+import java.util.Map;
 import org.apache.ignite.ml.common.TrainerTest;
 import org.apache.ignite.ml.dataset.feature.extractor.Vectorizer;
 import org.apache.ignite.ml.dataset.feature.extractor.impl.DummyVectorizer;
@@ -25,14 +27,11 @@ import org.apache.ignite.ml.knn.regression.KNNRegressionTrainer;
 import org.apache.ignite.ml.math.distances.EuclideanDistance;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.math.primitives.vector.VectorUtils;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetricValues;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
+import org.apache.ignite.ml.selection.scoring.metric.regression.Rss;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
@@ -67,17 +66,12 @@ public class RegressionEvaluatorTest extends TrainerTest {
         Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>()
             .labeled(Vectorizer.LabelCoordinate.FIRST);
 
-        KNNRegressionModel mdl = trainer.fit(
-            new LocalDatasetBuilder<>(data, parts),
-            vectorizer
-        );
+        LocalDatasetBuilder<Integer, Vector> datasetBuilder = new LocalDatasetBuilder<>(data, parts);
+        KNNRegressionModel mdl = trainer.fit(datasetBuilder, vectorizer);
 
-        double score = Evaluator.evaluate(data, mdl, vectorizer,
-            new RegressionMetrics()
-                .withMetric(RegressionMetricValues::rss)
-        );
+        double score = Evaluator.evaluate(data, mdl, vectorizer, MetricName.RSS);
 
-        assertEquals(1068809.6666666653, score, 1e-4);
+        assertEquals(5581012.666666679, score, 1e-4);
     }
 
     /**
@@ -116,10 +110,9 @@ public class RegressionEvaluatorTest extends TrainerTest {
             vectorizer
         );
 
-        double score = Evaluator.evaluate(data, split.getTrainFilter(), mdl, vectorizer,
-            new RegressionMetrics()
-                .withMetric(RegressionMetricValues::rss)
-        );
+        double score = Evaluator.evaluate(new LocalDatasetBuilder<>(data, split.getTrainFilter(), parts),
+            mdl, vectorizer, new Rss()
+        ).getSignle();
 
         assertEquals(4800164.444444457, score, 1e-4);
     }

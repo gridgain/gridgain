@@ -16,6 +16,6 @@
 
 /**
  * <!-- Package description. -->
- * Root package for exceptions.
+ * Package contains aggregators for metrics computation.
  */
-package org.apache.ignite.ml.selection.scoring.metric.exceptions;
+package org.apache.ignite.ml.selection.scoring.evaluator.aggregator;

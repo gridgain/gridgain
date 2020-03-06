@@ -17,7 +17,6 @@
 package org.apache.ignite.examples.ml.selection.scoring;
 
 import java.io.IOException;
-import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.Ignition;
@@ -63,15 +62,7 @@ public class MultipleMetricsExample {
 
                 SVMLinearClassificationModel mdl = trainer.fit(ignite, dataCache, vectorizer);
 
-                Map<String, Double> scores = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    vectorizer
-                ).toMap();
-
-                scores.forEach(
-                    (metricName, score) -> System.out.println("\n>>>" + metricName + ": " + score)
-                );
+                Evaluator.evaluateBinaryClassification(dataCache, mdl, vectorizer).print();
             } finally {
                 dataCache.destroy();
             }

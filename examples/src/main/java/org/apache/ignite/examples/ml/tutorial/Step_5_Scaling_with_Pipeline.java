@@ -76,10 +76,8 @@ public class Step_5_Scaling_with_Pipeline {
 
                 System.out.println("\n>>> Trained model: " + mdl);
 
-                double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    mdl.getPreprocessor(),
+                double accuracy = Evaluator.evaluate(dataCache,
+                    mdl, mdl.getPreprocessor(),
                     new Accuracy<>()
                 );
 

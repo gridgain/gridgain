@@ -40,8 +40,6 @@ import org.apache.ignite.ml.selection.paramgrid.ParamGrid;
 import org.apache.ignite.ml.selection.paramgrid.RandomStrategy;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
 import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
-import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetricValues;
-import org.apache.ignite.ml.selection.scoring.metric.classification.BinaryClassificationMetrics;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
 import org.apache.ignite.ml.tree.DecisionTreeClassificationTrainer;
@@ -122,7 +120,7 @@ public class Step_12_Parallel_Random_Search {
 
                 DecisionTreeClassificationTrainer trainerCV = new DecisionTreeClassificationTrainer();
 
-                CrossValidation<DecisionTreeNode, Double, Integer, Vector> scoreCalculator
+                CrossValidation<DecisionTreeNode, Integer, Vector> scoreCalculator
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
@@ -136,11 +134,6 @@ public class Step_12_Parallel_Random_Search {
                     .addHyperParam("minImpurityDecrease", trainerCV::withMinImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
 
 
-                BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
-                    .withNegativeClsLb(0.0)
-                    .withPositiveClsLb(1.0)
-                    .withMetric(BinaryClassificationMetricValues::accuracy);
-
                 scoreCalculator
                     .withIgnite(ignite)
                     .withUpstreamCache(dataCache)
@@ -149,7 +142,7 @@ public class Step_12_Parallel_Random_Search {
                         .withLoggingFactoryDependency(ConsoleLogger.Factory.LOW))
                     .withTrainer(trainerCV)
                     .isRunningOnPipeline(false)
-                    .withMetric(metrics)
+                    .withMetric(new Accuracy<>())
                     .withFilter(split.getTrainFilter())
                     .withPreprocessor(normalizationPreprocessor)
                     .withAmountOfFolds(3)
@@ -184,8 +177,7 @@ public class Step_12_Parallel_Random_Search {
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    split.getTestFilter(),
+                    dataCache, split.getTestFilter(),
                     bestMdl,
                     normalizationPreprocessor,
                     new Accuracy<>()

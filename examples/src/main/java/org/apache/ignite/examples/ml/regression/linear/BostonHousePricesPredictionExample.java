@@ -28,8 +28,7 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionLSQRTrainer;
 import org.apache.ignite.ml.regressions.linear.LinearRegressionModel;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetricValues;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 import org.apache.ignite.ml.selection.split.TrainTestDatasetSplitter;
 import org.apache.ignite.ml.selection.split.TrainTestSplit;
 import org.apache.ignite.ml.trainers.DatasetTrainer;
@@ -78,7 +77,7 @@ public class BostonHousePricesPredictionExample {
                     split.getTestFilter(),
                     mdl,
                     vectorizer,
-                    new RegressionMetrics().withMetric(RegressionMetricValues::r2)
+                    MetricName.R2
                 );
 
                 System.out.println(">>> Model: " + toString(mdl));

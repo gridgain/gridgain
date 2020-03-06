@@ -29,6 +29,7 @@ import org.apache.ignite.ml.optimization.updatecalculators.SimpleGDUpdateCalcula
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionModel;
 import org.apache.ignite.ml.regressions.logistic.LogisticRegressionSGDTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
 
@@ -80,11 +81,9 @@ public class LogisticRegressionSGDTrainerExample {
 
                 System.out.println(">>> Logistic regression model: " + mdl);
 
-                double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    mdl,
-                    vectorizer
-                ).accuracy();
+                double accuracy = Evaluator.evaluate(dataCache,
+                    mdl, vectorizer, MetricName.ACCURACY
+                );
 
                 System.out.println("\n>>> Accuracy " + accuracy);
 

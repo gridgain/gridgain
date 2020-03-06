@@ -28,8 +28,7 @@ import org.apache.ignite.ml.knn.utils.indices.SpatialIndexType;
 import org.apache.ignite.ml.math.distances.ManhattanDistance;
 import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetricValues;
-import org.apache.ignite.ml.selection.scoring.metric.regression.RegressionMetrics;
+import org.apache.ignite.ml.selection.scoring.metric.MetricName;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
 
@@ -69,11 +68,8 @@ public class RegressionMetricExample {
 
                 KNNRegressionModel knnMdl = (KNNRegressionModel)trainer.fit(ignite, dataCache, vectorizer);
 
-                double mae = Evaluator.evaluate(
-                    dataCache,
-                    knnMdl,
-                    vectorizer,
-                    new RegressionMetrics().withMetric(RegressionMetricValues::mae)
+                double mae = Evaluator.evaluate(dataCache,
+                    knnMdl, vectorizer, MetricName.MAE
                 );
 
                 System.out.println("\n>>> Mae " + mae);

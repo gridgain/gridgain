@@ -115,7 +115,7 @@ public class Step_8_CV_with_Param_Grid {
 
                 DecisionTreeClassificationTrainer trainerCV = new DecisionTreeClassificationTrainer();
 
-                CrossValidation<DecisionTreeNode, Double, Integer, Vector> scoreCalculator
+                CrossValidation<DecisionTreeNode, Integer, Vector> scoreCalculator
                     = new CrossValidation<>();
 
                 ParamGrid paramGrid = new ParamGrid()
@@ -126,7 +126,7 @@ public class Step_8_CV_with_Param_Grid {
                     .withIgnite(ignite)
                     .withUpstreamCache(dataCache)
                     .withTrainer(trainerCV)
-                    .withMetric(new Accuracy<>())
+                    .withMetric(new Accuracy())
                     .withFilter(split.getTrainFilter())
                     .isRunningOnPipeline(false)
                     .withPreprocessor(normalizationPreprocessor)
@@ -162,8 +162,7 @@ public class Step_8_CV_with_Param_Grid {
                 System.out.println("\n>>> Trained model: " + bestMdl);
 
                 double accuracy = Evaluator.evaluate(
-                    dataCache,
-                    split.getTestFilter(),
+                    dataCache, split.getTestFilter(),
                     bestMdl,
                     normalizationPreprocessor,
                     new Accuracy<>()

@@ -26,6 +26,7 @@ import org.apache.ignite.ml.math.primitives.vector.Vector;
 import org.apache.ignite.ml.naivebayes.gaussian.GaussianNaiveBayesModel;
 import org.apache.ignite.ml.naivebayes.gaussian.GaussianNaiveBayesTrainer;
 import org.apache.ignite.ml.selection.scoring.evaluator.Evaluator;
+import org.apache.ignite.ml.selection.scoring.metric.classification.Accuracy;
 import org.apache.ignite.ml.util.MLSandboxDatasets;
 import org.apache.ignite.ml.util.SandboxMLCache;
 
@@ -71,8 +72,9 @@ public class GaussianNaiveBayesTrainerExample {
                 double accuracy = Evaluator.evaluate(
                     dataCache,
                     mdl,
-                    vectorizer
-                ).accuracy();
+                    vectorizer,
+                    new Accuracy<>()
+                );
 
                 System.out.println("\n>>> Accuracy " + accuracy);
 
