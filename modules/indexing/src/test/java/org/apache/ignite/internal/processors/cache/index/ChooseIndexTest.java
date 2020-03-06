@@ -38,7 +38,7 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
     private static final int OBJ_CNT = 1_000;
 
     /** Test logger. */
-    private static ListeningTestLogger testLog = new ListeningTestLogger(false, log);
+    private ListeningTestLogger testLog;
 
     /** Logger listener. */
     private LogListener logLsnr;
@@ -53,7 +53,7 @@ public class ChooseIndexTest extends AbstractIndexingCommonTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        testLog.clearListeners();
+        testLog = new ListeningTestLogger(false, log);
 
         logLsnr = LogListener
             .matches("Invalid cost function: INVALID_COST_FUNC")

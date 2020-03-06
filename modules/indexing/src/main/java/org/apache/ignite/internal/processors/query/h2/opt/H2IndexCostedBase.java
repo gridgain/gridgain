@@ -17,9 +17,10 @@
 package org.apache.ignite.internal.processors.query.h2.opt;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Constants;
 import org.h2.index.BaseIndex;
@@ -61,9 +62,10 @@ public abstract class H2IndexCostedBase extends BaseIndex {
                     IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION,
                     CostFunctionType.LAST.name()));
         }
-        catch (Exception e) {
-            U.warn(log, "Invalid cost function: "
-                + IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION), e);
+        catch (IllegalArgumentException e) {
+            LT.warn(log, "Invalid cost function: "
+                + IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_INDEX_COST_FUNCTION)
+                + ", the LAST cost function is used. Available functions: " + Arrays.toString(CostFunctionType.values()));
 
             costFuncType = CostFunctionType.LAST;
         }
