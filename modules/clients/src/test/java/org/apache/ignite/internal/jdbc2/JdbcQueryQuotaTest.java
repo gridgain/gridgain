@@ -67,7 +67,7 @@ public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
      */
     @Test
     public void testClientQueryQuota() throws Exception {
-        try (Connection conn1024 = createConnection("jdbc-config-query-mem-limit-1024.xml");
+        try (Connection conn512 = createConnection("jdbc-config-query-mem-limit-512.xml");
              Connection conn4096 = createConnection("jdbc-config-query-mem-limit-4096.xml")) {
             Statement stmt0 = conn4096.createStatement();
 
@@ -81,7 +81,7 @@ public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
             }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
 
             GridTestUtils.assertThrows(log, () -> {
-                Statement stmt = conn1024.createStatement();
+                Statement stmt = conn512.createStatement();
 
                 stmt.execute(QUERY_1024_TO_2048);
             }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
