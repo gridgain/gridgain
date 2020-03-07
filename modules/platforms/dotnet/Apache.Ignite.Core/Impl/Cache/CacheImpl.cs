@@ -398,7 +398,36 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            // TODO: Near
+            if (CanUseNear)
+            {
+                var allKeysAreNear = true;
+                
+                using (var enumerator = keys.GetEnumerator())
+                {
+                    while (enumerator.MoveNext())
+                    {
+                        var key = enumerator.Current;
+
+                        TV _;
+                        if (!_nearCache.TryGetValue(key, out _))
+                        {
+                            allKeysAreNear = false;
+                            break;
+                        }
+                    }
+
+                    if (allKeysAreNear)
+                    {
+                        return true;
+                    }
+
+                    // ReSharper disable AccessToDisposedClosure (operation is synchronous, not an issue).
+                    ICollection<ICacheEntry<TK, TV>> res = null;
+                    return DoOutOp(CacheOp.ContainsKeys,
+                        writer => WriteKeysOrGetFromNear(writer, enumerator, ref res, discardResults: true));
+                }
+            }
+
             return DoOutOp(CacheOp.ContainsKeys, writer => writer.WriteEnumerable(keys));
         }
 
@@ -1917,7 +1946,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// Keys that are not in near cache are written to the writer.
         /// </summary>
         private void WriteKeysOrGetFromNear(BinaryWriter writer, IEnumerator<TK> enumerator,
-            ref ICollection<ICacheEntry<TK, TV>> res)
+            ref ICollection<ICacheEntry<TK, TV>> res, bool discardResults = false)
         {
             var count = 1;
             var pos = writer.Stream.Position;
@@ -1930,8 +1959,11 @@ namespace Apache.Ignite.Core.Impl.Cache
                 TV val;
                 if (_nearCache.TryGetValue(enumerator.Current, out val))
                 {
-                    res = res ?? new List<ICacheEntry<TK, TV>>();
-                    res.Add(new CacheEntry<TK, TV>(enumerator.Current, val));
+                    if (!discardResults)
+                    {
+                        res = res ?? new List<ICacheEntry<TK, TV>>();
+                        res.Add(new CacheEntry<TK, TV>(enumerator.Current, val));
+                    }
                 }
                 else
                 {
