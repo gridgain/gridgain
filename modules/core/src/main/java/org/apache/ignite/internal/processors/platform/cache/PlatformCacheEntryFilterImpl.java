@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.platform.cache;
 
-import org.apache.ignite.configuration.NearCacheConfiguration;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractPredicate;
@@ -108,9 +107,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
         ctx = cctx.kernalContext().platform().context();
 
-        NearCacheConfiguration nearCfg = cctx.config().getNearConfiguration();
-
-        platfromNearEnabled = nearCfg != null && nearCfg.getPlatformNearConfiguration() != null &&
+        platfromNearEnabled = cctx.config().getPlatformNearConfiguration() != null &&
                 ctx.isNativeNearCacheSupported();
 
         try (PlatformMemory mem = ctx.memory().allocate()) {

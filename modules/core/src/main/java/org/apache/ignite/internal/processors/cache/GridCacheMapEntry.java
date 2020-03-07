@@ -6998,12 +6998,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     @SuppressWarnings("rawtypes")
     private boolean hasPlatformNearCache() {
-        // Invoke platform near callback if near is enabled for this cache, even for local entries:
-        // check cacheCfg.getNearConfiguration() instead of isNear().
         GridCacheAdapter cache = cctx.cache();
 
-        return cache != null &&
-                cache.cacheCfg.getNearConfiguration() != null &&
-                cache.cacheCfg.getNearConfiguration().getPlatformNearConfiguration() != null;
+        return cache != null && cache.cacheCfg.getPlatformNearConfiguration() != null;
     }
 }

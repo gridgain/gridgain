@@ -260,6 +260,15 @@ public class PlatformConfigurationUtils {
             ccfg.setKeyConfiguration(keys);
         }
 
+        if (in.readBoolean()) {
+            PlatformNearCacheConfiguration platCfg = new PlatformNearCacheConfiguration()
+                    .setKeyTypeName(in.readString())
+                    .setValueTypeName(in.readString())
+                    .setKeepBinary(in.readBoolean());
+
+            ccfg.setPlatformNearConfiguration(platCfg);
+        }
+
         int pluginCnt = in.readInt();
 
         if (pluginCnt > 0) {
@@ -329,15 +338,6 @@ public class PlatformConfigurationUtils {
 
         cfg.setNearStartSize(in.readInt());
         cfg.setNearEvictionPolicy(readEvictionPolicy(in));
-
-        if (in.readBoolean()) {
-            PlatformNearCacheConfiguration platCfg = new PlatformNearCacheConfiguration()
-                    .setKeyTypeName(in.readString())
-                    .setValueTypeName(in.readString())
-                    .setKeepBinary(in.readBoolean());
-
-            cfg.setPlatformNearConfiguration(platCfg);
-        }
 
         return cfg;
     }
@@ -423,17 +423,6 @@ public class PlatformConfigurationUtils {
 
         out.writeInt(cfg.getNearStartSize());
         writeEvictionPolicy(out, cfg.getNearEvictionPolicy());
-
-        PlatformNearCacheConfiguration platCfg = cfg.getPlatformNearConfiguration();
-        if (platCfg != null) {
-            out.writeBoolean(true);
-            out.writeString(platCfg.getKeyTypeName());
-            out.writeString(platCfg.getValueTypeName());
-            out.writeBoolean(platCfg.isKeepBinary());
-        }
-        else {
-            out.writeBoolean(false);
-        }
     }
 
     /**
@@ -1113,6 +1102,17 @@ public class PlatformConfigurationUtils {
             }
         } else {
             writer.writeInt(0);
+        }
+
+        PlatformNearCacheConfiguration platCfg = ccfg.getPlatformNearConfiguration();
+        if (platCfg != null) {
+            writer.writeBoolean(true);
+            writer.writeString(platCfg.getKeyTypeName());
+            writer.writeString(platCfg.getValueTypeName());
+            writer.writeBoolean(platCfg.isKeepBinary());
+        }
+        else {
+            writer.writeBoolean(false);
         }
 
         CachePluginConfiguration[] plugins = ccfg.getPluginConfigurations();
