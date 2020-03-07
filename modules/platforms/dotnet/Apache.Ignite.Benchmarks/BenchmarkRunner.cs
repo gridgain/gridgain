@@ -43,7 +43,7 @@ namespace Apache.Ignite.Benchmarks
 
             args = new[] {
                 //typeof(GetAllBenchmark).FullName,
-                typeof(GetBenchmark).FullName,
+                typeof(PutNearBenchmark).FullName,
                 //typeof(ThinClientGetAllBenchmark).FullName,
                 //typeof(ThinClientGetAllBinaryBenchmark).FullName,
                 "-ConfigPath", GetConfigPath(),
