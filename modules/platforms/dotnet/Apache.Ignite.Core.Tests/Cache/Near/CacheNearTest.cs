@@ -665,9 +665,25 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
-        public void TestContainsKeys()
+        public void TestContainsKeys(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            // TODO: how can we check that result is from near?
+            var cache = GetCache<int, int>(mode);
+            var cache2 = GetCache<int, int>(CacheTestMode.ServerLocal);
+            
+            var data = Enumerable.Range(1, 100).ToDictionary(x => x, x => x);
+            cache2.PutAll(data);
+
+            foreach (var key in data.Keys)
+            {
+                Assert.IsTrue(cache.ContainsKeys(new[] {key}));
+                Assert.IsFalse(cache.ContainsKeys(new[] {-key}));
+            }
+            
+            Assert.IsTrue(cache.ContainsKeys(data.Keys));
+            Assert.IsTrue(cache.ContainsKeys(data.Keys.Take(10)));
+            Assert.IsTrue(cache.ContainsKeys(data.Keys.Skip(10)));
+            Assert.IsFalse(cache.ContainsKeys(data.Keys.Concat(new[] {-1})));
         }
         
         /// <summary>
