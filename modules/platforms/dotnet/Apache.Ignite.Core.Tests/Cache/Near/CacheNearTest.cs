@@ -740,14 +740,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Can be useful for replicated caches when everything is in memory.
         }
 
+        /// <summary>
+        /// Tests that Replicated cache puts all entries on all nodes to Platform Near.
+        /// </summary>
         [Test]
         public void TestNearCachingReplicated()
         {
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 CacheMode = CacheMode.Replicated,
-                NearConfiguration = new NearCacheConfiguration(),
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync
             };
 
             var cache1 = _grid.CreateCache<int, int>(cfg);
@@ -758,6 +761,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.AreEqual(count, cache1.GetLocalSize(CachePeekMode.NativeNear));
             Assert.AreEqual(count, cache2.GetLocalSize(CachePeekMode.NativeNear));
+            
+            Assert.AreEqual(42, cache1.LocalPeek(42, CachePeekMode.NativeNear));
+            Assert.AreEqual(42, cache2.LocalPeek(42, CachePeekMode.NativeNear));
+
+            cache1[42] = -42;
+            Assert.AreEqual(-42, cache1.LocalPeek(42, CachePeekMode.NativeNear));
+            Assert.AreEqual(-42, cache2.LocalPeek(42, CachePeekMode.NativeNear));
         }
 
         [Test]
