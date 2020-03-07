@@ -592,6 +592,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         return res;
     }
+
     /**
      * Traverse all trees in file and return their info.
      * @param metaTreeRoot Meta tree root page id.
