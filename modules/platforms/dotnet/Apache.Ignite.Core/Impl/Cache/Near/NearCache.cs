@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
@@ -125,30 +126,39 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return;
             }
 
-            var mode = _keepBinary ? BinaryMode.ForceBinary : BinaryMode.Deserialize;
-            var reader = marshaller.StartUnmarshal(stream, mode);
-
-            var key = reader.ReadObject<TK>();
-            var hasVal = reader.ReadBoolean();
-
-            var val = hasVal ? reader.ReadObject<TV>() : default(TV);
-            var part = hasVal ? reader.ReadInt() : 0;
-            var ver = hasVal
-                ? new AffinityTopologyVersion(reader.ReadLong(), reader.ReadInt())
-                : default(AffinityTopologyVersion);
-
-            if (hasVal)
+            var useThreadLocal = stream.ReadBool();
+            if (useThreadLocal)
             {
-                // Reuse existing boxed copy when possible to reduce allocations.
-                var currentVerBoxed = _affinityTopologyVersionFunc();
-                var verBoxed = (AffinityTopologyVersion) currentVerBoxed == ver ? currentVerBoxed : ver;
-
-                _map[key] = new NearCacheEntry<TV>(val, verBoxed, part);
+                var pair = (KeyValuePair<TK, TV>) NearCacheManager.ThreadLocalPair.Value;
+                var part = stream.ReadInt();
+                var ver = new AffinityTopologyVersion(stream.ReadLong(), stream.ReadInt());
+                
+                _map[pair.Key] = new NearCacheEntry<TV>(
+                    pair.Value,
+                    GetBoxedAffinityTopologyVersion(ver), 
+                    part);
             }
             else
             {
-                NearCacheEntry<TV> unused;
-                _map.TryRemove(key, out unused);
+                var mode = _keepBinary ? BinaryMode.ForceBinary : BinaryMode.Deserialize;
+                var reader = marshaller.StartUnmarshal(stream, mode);
+
+                var key = reader.ReadObject<TK>();
+                var hasVal = stream.ReadBool();
+
+                if (hasVal)
+                {
+                    var val = reader.ReadObject<TV>();
+                    var part = stream.ReadInt();
+                    var ver = new AffinityTopologyVersion(stream.ReadLong(), stream.ReadInt());
+                
+                    _map[key] = new NearCacheEntry<TV>(val, GetBoxedAffinityTopologyVersion(ver), part);
+                }
+                else
+                {
+                    NearCacheEntry<TV> unused;
+                    _map.TryRemove(key, out unused);
+                }
             }
         }
 
@@ -209,6 +219,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             entry.CompareExchangeVersion(valid ? currentVerBoxed : null, entryVerBoxed);
 
             return valid;
+        }
+        
+        /// <summary>
+        /// Gets boxed affinity version. Reuses existing boxing copy to reduce allocations.
+        /// </summary>
+        private object GetBoxedAffinityTopologyVersion(AffinityTopologyVersion ver)
+        {
+            var currentVerBoxed = _affinityTopologyVersionFunc();
+            return (AffinityTopologyVersion) currentVerBoxed == ver ? currentVerBoxed : ver;
         }
     }
 }

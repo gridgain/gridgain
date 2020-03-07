@@ -607,6 +607,7 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
             PlatformOutputStream out = mem0.output();
 
             out.writeInt(cacheId);
+            out.writeBoolean(false); // TODO: useThreadLocal
             out.writeByteArray(keyBytes);
 
             if (valBytes != null) {
@@ -618,8 +619,7 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
                 out.writeInt(part);
                 out.writeLong(ver.topologyVersion());
                 out.writeInt(ver.minorTopologyVersion());
-            } else
-            {
+            } else {
                 out.writeBoolean(false);
             }
 

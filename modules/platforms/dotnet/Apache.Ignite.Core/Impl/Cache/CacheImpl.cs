@@ -717,9 +717,27 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             StartTxIfNeeded();
 
-            // TODO: Near Cache optimization on primary nodes:
-            // Near update comes from the same thread, we can use ThreadLocal to avoid extra deserialization
-            DoOutOp(CacheOp.Put, key, val);
+            var near = CanUseNear;
+            
+            try
+            {
+                if (near)
+                {
+                    // Near Cache optimization on primary nodes:
+                    // Update from Java comes in this same thread, so we don't need to pass key/val from Java.
+                    // However, we still rely on a callback to maintain the order of updates.
+                    NearCacheManager.ThreadLocalPair.Value = new KeyValuePair<TK,TV>(key, val);
+                }
+
+                DoOutOp(CacheOp.Put, key, val);
+            }
+            finally
+            {
+                if (near)
+                {
+                    NearCacheManager.ThreadLocalPair.Value = null;
+                }
+            }
         }
 
         /** <inheritDoc /> */

@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System;
     using System.Diagnostics;
+    using System.Threading;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Impl.Binary;
@@ -32,6 +33,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     [DebuggerDisplay("NearCacheManager [IgniteInstanceName={_ignite.GetIgnite().Name}]")]
     internal class NearCacheManager
     {
+        /// <summary>
+        /// Holds thread-local key/val pair to be used for updating Near Cache .
+        /// </summary>
+        internal static readonly ThreadLocal<object> ThreadLocalPair = new ThreadLocal<object>();
+        
         /// <summary>
         /// Near caches per cache id.
         /// Multiple <see cref="CacheImpl{TK,TV}"/> instances can point to the same Ignite cache,
