@@ -458,7 +458,7 @@ public class IgniteIndexReaderTest {
 
         OutputStream destStream = new StringBuilderOutputStream();
 
-        try (IgniteIndexReader reader = new IgniteIndexReader(dir.getAbsolutePath(), PAGE_SIZE, PART_CNT, PAGE_STORE_VER, destStream)) {
+        try (IgniteIndexReader reader = new IgniteIndexReader(dir.getAbsolutePath(), PAGE_SIZE, PART_CNT, PAGE_STORE_VER, null, destStream)) {
             reader.readIdx();
         }
 

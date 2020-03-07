@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -42,6 +43,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -82,11 +84,13 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
+import org.apache.ignite.internal.util.lang.GridClosure3;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.joining;
@@ -153,6 +157,9 @@ public class IgniteIndexReader implements AutoCloseable {
     private final LongAdderMetric allocationTracker = new LongAdderMetric("n", "d");
 
     /** */
+    private final String[] indexes;
+
+    /** */
     private final PrintStream outStream;
 
     /** */
@@ -166,9 +173,6 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private final FilePageStore[] partStores;
-
-    /** */
-    private final long pagesNum;
 
     /** */
     private final Set<Integer> missingPartitions = new HashSet<>();
@@ -191,11 +195,19 @@ public class IgniteIndexReader implements AutoCloseable {
     }};
 
     /** */
-    public IgniteIndexReader(String cacheWorkDirPath, int pageSize, int partCnt, int filePageStoreVer, OutputStream outputStream) throws IgniteCheckedException {
+    public IgniteIndexReader(
+        String cacheWorkDirPath,
+        int pageSize,
+        int partCnt,
+        int filePageStoreVer,
+        String[] indexes,
+        OutputStream outputStream
+    ) throws IgniteCheckedException {
         this.pageSize = pageSize;
         this.partCnt = partCnt;
         this.dsCfg = new DataStorageConfiguration().setPageSize(pageSize);
         this.cacheWorkDir = new File(cacheWorkDirPath);
+        this.indexes = indexes;
         this.storeFactory = new FileVersionCheckingFactory(new AsyncFileIOFactory(), new AsyncFileIOFactory(), dsCfg) {
             /** {@inheritDoc} */
             @Override public int latestVersion() {
@@ -218,8 +230,6 @@ public class IgniteIndexReader implements AutoCloseable {
             throw new RuntimeException("index.bin file not found");
 
         idxStore = getIdxStore();
-
-        pagesNum = idxStore == null ? 0 : (idxFile.length() - idxStore.headerSize()) / pageSize;
 
         partStores = new FilePageStore[partCnt];
 
@@ -283,7 +293,7 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Read index file.
      */
-    public void readIdx() {
+    public void readIdx(/*boolean checkParts*/) {
         long partPageStoresNum = Arrays.stream(partStores)
             .filter(Objects::nonNull)
             .count();
@@ -291,6 +301,8 @@ public class IgniteIndexReader implements AutoCloseable {
         print("Partitions files num: " + partPageStoresNum);
 
         Map<Class<? extends PageIO>, Long> pageClasses = new HashMap<>();
+
+        long pagesNum = idxStore == null ? 0 : (idxFile.length() - idxStore.headerSize()) / pageSize;
 
         print("Going to check " + pagesNum + " pages.");
 
@@ -404,6 +416,101 @@ public class IgniteIndexReader implements AutoCloseable {
         print("Total errors occurred during sequential scan: " + errors.size());
         print("Note that some pages can be occupied by meta info, tracking info, etc., so total page count can differ " +
             "from count of pages found in index trees and page lists.");
+
+        //if (checkParts)
+        //    checkParts();
+    }
+
+    /**
+     * Allocates buffer and does some work in closure, then frees the buffer.
+     *
+     * @param c Closure.
+     * @param <T> Result type.
+     * @return Result of closure.
+     * @throws IgniteCheckedException If failed.
+     */
+    private <T> T doWithBuffer(BufferClosure<T> c) throws IgniteCheckedException {
+        ByteBuffer buf = allocateBuffer(pageSize);
+
+        try {
+            long addr = bufferAddress(buf);
+
+            return c.apply(buf, addr);
+        }
+        finally {
+            freeBuffer(buf);
+        }
+    }
+
+    /**
+     * Scans given file page store and executes closure for each page.
+     *
+     * @param partId Partition id.
+     * @param flag Flag.
+     * @param store Page store.
+     * @param c Closure that accepts page id, page address, page IO. If it returns false, scan stops.
+     * @return List of errors that occured while scanning.
+     * @throws IgniteCheckedException If failed.
+     */
+    private List<Throwable> scanFileStore(int partId, byte flag, FilePageStore store, GridClosure3<Long, Long, PageIO, Boolean> c)
+        throws IgniteCheckedException {
+        return doWithBuffer((buf, addr) -> {
+            List<Throwable> errors = new LinkedList<>();
+
+            long pagesNum = store == null ? 0 : (store.size() - store.headerSize()) / pageSize;
+
+            for (int i = 0; i < pagesNum; i++) {
+                buf.rewind();
+
+                try {
+                    long pageId = PageIdUtils.pageId(partId, flag, i);
+
+                    store.read(pageId, buf, false);
+
+                    PageIO io = PageIO.getPageIO(addr);
+
+                    if (!c.apply(pageId, addr, io))
+                        break;
+                }
+                catch (Throwable e) {
+                    String err = "Exception occurred on step " + i + ": " + e.getMessage();
+
+                    errors.add(new IgniteException(err, e));
+                }
+            }
+
+            return errors;
+        });
+    }
+
+    private void checkParts() throws IgniteCheckedException {
+        for (int i = 0; i < partCnt; i++) {
+            FilePageStore partStore = partStores[i];
+
+            if (partStore == null)
+                continue;
+
+            Map<Class, Long> metaPages = findPages(i, FLAG_DATA, partStore, singleton(PageMetaIO.class));
+
+
+        }
+    }
+
+    private Map<Class, Long> findPages(int partId, byte flag, FilePageStore store, Set<Class> pageTypes)
+        throws IgniteCheckedException {
+        Map<Class, Long> res = new HashMap<>();
+
+        scanFileStore(partId, flag, store, (pageId, addr, io) -> {
+            if (pageTypes.contains(io.getClass())) {
+                res.put(io.getClass(), pageId);
+
+                pageTypes.remove(io.getClass());
+            }
+
+            return !pageTypes.isEmpty();
+        });
+
+        return res;
     }
 
     /**
@@ -637,8 +744,6 @@ public class IgniteIndexReader implements AutoCloseable {
 
         // Map cacheId -> (map idxName -> size))
         Map<Integer, Map<String, Long>> cacheIdxSizes = new HashMap<>();
-
-        List<String> idxInconsistencyErrors = new LinkedList<>();
 
         treeInfos.forEach((idxName, validationInfo) -> {
             print(prefix + "-----");
@@ -1146,10 +1251,12 @@ public class IgniteIndexReader implements AutoCloseable {
                 put("--partCnt", null);
                 put("--pageSize", null);
                 put("--pageStoreVer", null);
+                put("--indexes", null);
                 put("--destFile", null);
                 put("--dest", null);
                 put("--transform", null);
                 put("--fileMask", null);
+                put("--checkParts", null);
             }};
 
             for (Iterator<String> iterator = Arrays.asList(args).iterator(); iterator.hasNext();) {
@@ -1166,7 +1273,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 options.put(option, val);
             }
 
-            String dir = getOptionFromMap(options, "--dir", String.class, () -> { throw new IgniteException("File path was not specified."); } );
+            String dir = getOptionFromMap(options, "--dir", String.class, () -> { throw new IgniteException("File path was not specified (use --dir)."); } );
 
             int partCnt = getOptionFromMap(options, "--partCnt", Integer.class, () -> 0);
 
@@ -1174,17 +1281,26 @@ public class IgniteIndexReader implements AutoCloseable {
 
             int pageStoreVer = getOptionFromMap(options, "--pageStoreVer", Integer.class, () -> 2);
 
+            String[] indexes = getOptionFromMap(options, "--indexes", String.class, () -> "").split(",");
+
             String destFile = getOptionFromMap(options, "--destFile", String.class, () -> null);
 
             boolean transform = getOptionFromMap(options, "--transform", Boolean.class, () -> false);
 
-            String dest = getOptionFromMap(options, "--dest", String.class, () -> null);
+            String dest = getOptionFromMap(options, "--dest", String.class, () -> {
+                if (transform)
+                    throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
+                else
+                    return null;
+            });
 
             String fileMask = getOptionFromMap(options, "--fileMask", String.class, () -> ".bin");
 
+            boolean checkParts = getOptionFromMap(options, "--checkParts", Boolean.class, () -> false);
+
             OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
 
-            try (IgniteIndexReader reader = new IgniteIndexReader(dir, pageSize, partCnt, pageStoreVer, destStream)) {
+            try (IgniteIndexReader reader = new IgniteIndexReader(dir, pageSize, partCnt, pageStoreVer, indexes, destStream)) {
                 if (transform)
                     reader.transform(dest, fileMask);
                 else
@@ -1197,14 +1313,17 @@ public class IgniteIndexReader implements AutoCloseable {
             System.err.println("--partCnt: full partitions count in cache group (optional)");
             System.err.println("--pageSize: page size (optional, default value is 4096)");
             System.err.println("--pageStoreVer: page store version (optional, default value is 2)");
+            System.err.println("--indexes: you can specify index tree names that will be processed, separated by comma " +
+                "without spaces, other index trees will be skipped (optional).");
             System.err.println("--destFile: file to print the report to (optional, by default report is printed to console)");
-            System.err.println("--transform: if 'true' then this utility assumes that all *.bin files "
-                + "in --dir directory are snapshot files, transforms them to normal format and puts to --dest directory."
-                + " (optional)"
+            System.err.println("--transform: if 'true' then this utility assumes that all *.bin files " +
+                "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest directory" +
+                " (optional)"
             );
-            System.err.println("--dest: directory where to put files transformed from snapshot (needed if you use "
-                + "--transform true)");
-            System.err.println("--fileMask: mask for files to transform.");
+            System.err.println("--dest: directory where to put files transformed from snapshot (needed if you use " +
+                "--transform true)");
+            System.err.println("--fileMask: mask for files to transform (optional if you use --transform true)");
+            System.err.println("--checkParts: check cache data tree in partition files and it's consistency with indexes (optional).");
             System.err.println();
 
             throw e;
@@ -1315,6 +1434,14 @@ public class IgniteIndexReader implements AutoCloseable {
     private interface ItemCallback {
         /** */
         void cb(long currPageId, Object item, long link);
+    }
+
+    /**
+     *
+     */
+    private interface BufferClosure<T> {
+        /** */
+        T apply(ByteBuffer buf, Long addr) throws IgniteCheckedException;
     }
 
     /**
