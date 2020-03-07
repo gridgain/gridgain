@@ -740,6 +740,28 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
+        public void TestNearCachingReplicated()
+        {
+            var cfg = new CacheConfiguration(TestUtils.TestName)
+            {
+                CacheMode = CacheMode.Replicated,
+                NearConfiguration = new NearCacheConfiguration
+                {
+                    PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                }
+            };
+
+            var cache1 = _grid.CreateCache<int, int>(cfg);
+            var cache2 = _grid2.GetCache<int, int>(cfg.Name);
+
+            const int count = 100;
+            cache1.PutAll(Enumerable.Range(1, count).ToDictionary(x => x, x => x));
+            
+            Assert.AreEqual(count, cache1.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.AreEqual(count, cache2.GetLocalSize(CachePeekMode.NativeNear));
+        }
+
+        [Test]
         public void TestNearCacheTypeMismatchLogsErrorAndUpdatesMainCache()
         {
             var cfg = new CacheConfiguration(TestUtils.TestName);
