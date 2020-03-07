@@ -148,7 +148,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestPrimaryNodeChangeClearsNearCacheDataOnClient()
         {
-            InitNodes(2, serverNear: false);
+            InitNodes(2);
             var clientCache = InitClientAndCache();
 
             _cache[0][Key3] = new Foo(-1);
@@ -374,7 +374,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 IgniteInstanceName = "srv"
             };
             var server = Ignition.Start(cfg);
-            var serverCache = server.CreateCache<int, Foo>(CacheName);
+            var serverCache = server.CreateCache<int, Foo>(new CacheConfiguration(CacheName)
+                {PlatformNearConfiguration = new PlatformNearCacheConfiguration()});
 
             var clientCfg = new IgniteConfiguration(cfg)
             {
