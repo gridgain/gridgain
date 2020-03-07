@@ -30,11 +30,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +41,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -53,6 +50,8 @@ import java.util.stream.LongStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.development.utils.arguments.CLIArgument;
+import org.apache.ignite.development.utils.arguments.CLIArgumentParser;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.persistence.IndexStorageImpl;
 import org.apache.ignite.internal.processors.cache.persistence.StorageException;
@@ -90,11 +89,24 @@ import org.apache.ignite.lang.IgniteBiTuple;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.CHECK_PARTS;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.DEST;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.DEST_FILE;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.DIR;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.FILE_MASK;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.INDEXES;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.PAGE_SIZE;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.PAGE_STORE_VER;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.PART_CNT;
+import static org.apache.ignite.development.utils.IgniteIndexReader.Args.TRANSFORM;
+import static org.apache.ignite.development.utils.arguments.CLIArgument.mandatoryArg;
+import static org.apache.ignite.development.utils.arguments.CLIArgument.optionalArg;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -1243,90 +1255,106 @@ public class IgniteIndexReader implements AutoCloseable {
      * @throws Exception If failed.
      */
     public static void main(String[] args) throws Exception {
+        System.out.println("THIS UTILITY MUST BE LAUNCHED ON PERSISTENT STORE WHICH IS NOT UNDER RUNNING GRID!");
+
         try {
-            System.out.println("THIS UTILITY MUST BE LAUNCHED ON PERSISTENT STORE WHICH IS NOT UNDER RUNNING GRID!");
+            AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
-            Map<String, String> options = new HashMap<String, String>() {{
-                put("--dir", null);
-                put("--partCnt", null);
-                put("--pageSize", null);
-                put("--pageStoreVer", null);
-                put("--indexes", null);
-                put("--destFile", null);
-                put("--dest", null);
-                put("--transform", null);
-                put("--fileMask", null);
-                put("--checkParts", null);
-            }};
+            List<CLIArgument> argsConfiguration = asList(
+                mandatoryArg(DIR.arg(), "partition directory, where index.bin and (optionally) partition files are located.", String.class),
+                optionalArg(PART_CNT.arg(), "full partitions count in cache group.", Integer.class, () -> 0),
+                optionalArg(PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
+                optionalArg(PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
+                optionalArg(INDEXES.arg(), "you can specify index tree names that will be processed, separated by comma " +
+                    "without spaces, other index trees will be skipped.", String[].class, () -> null),
+                optionalArg(DEST_FILE.arg(), "file to print the report to (by default report is printed to console).", String.class, () -> null),
+                optionalArg(TRANSFORM.arg(), "if specified, this utility assumes that all *.bin files " +
+                    "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
+                    " directory.", Boolean.class, () -> false),
+                optionalArg(DEST.arg(),
+                    "directory where to put files transformed from snapshot (needed if you use --transform).",
+                    String.class,
+                    () -> {
+                        if (parserRef.get().get(TRANSFORM.arg()))
+                            throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
+                        else
+                            return null;
+                    }
+                ),
+                optionalArg(FILE_MASK.arg(), "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
+                optionalArg(CHECK_PARTS.arg(), "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> null)
+            );
 
-            for (Iterator<String> iterator = Arrays.asList(args).iterator(); iterator.hasNext();) {
-                String option = iterator.next();
+            CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
 
-                if (!options.containsKey(option))
-                    throw new Exception("Unexpected option: " + option);
+            parserRef.set(p);
 
-                if (!iterator.hasNext())
-                    throw new Exception("Please specify a value for option: " + option);
+            if (args.length == 0) {
+                System.out.println(p.usage());
 
-                String val = iterator.next();
-
-                options.put(option, val);
+                return;
             }
 
-            String dir = getOptionFromMap(options, "--dir", String.class, () -> { throw new IgniteException("File path was not specified (use --dir)."); } );
+            p.parse(asList(args).iterator());
 
-            int partCnt = getOptionFromMap(options, "--partCnt", Integer.class, () -> 0);
-
-            int pageSize = getOptionFromMap(options, "--pageSize", Integer.class, () -> 4096);
-
-            int pageStoreVer = getOptionFromMap(options, "--pageStoreVer", Integer.class, () -> 2);
-
-            String[] indexes = getOptionFromMap(options, "--indexes", String.class, () -> "").split(",");
-
-            String destFile = getOptionFromMap(options, "--destFile", String.class, () -> null);
-
-            boolean transform = getOptionFromMap(options, "--transform", Boolean.class, () -> false);
-
-            String dest = getOptionFromMap(options, "--dest", String.class, () -> {
-                if (transform)
-                    throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
-                else
-                    return null;
-            });
-
-            String fileMask = getOptionFromMap(options, "--fileMask", String.class, () -> ".bin");
-
-            boolean checkParts = getOptionFromMap(options, "--checkParts", Boolean.class, () -> false);
+            String destFile = p.get(DEST_FILE.arg());
 
             OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
 
-            try (IgniteIndexReader reader = new IgniteIndexReader(dir, pageSize, partCnt, pageStoreVer, indexes, destStream)) {
-                if (transform)
-                    reader.transform(dest, fileMask);
+            try (IgniteIndexReader reader = new IgniteIndexReader(
+                p.get(DIR.arg()),
+                p.get(PAGE_SIZE.arg()),
+                p.get(PART_CNT.arg()),
+                p.get(PAGE_STORE_VER.arg()),
+                p.get(INDEXES.arg()),
+                destStream
+            )) {
+                if (p.get(TRANSFORM.arg()))
+                    reader.transform(p.get(DEST.arg()), p.get(FILE_MASK.arg()));
                 else
                     reader.readIdx();
             }
         }
         catch (Exception e) {
-            System.err.println("How to use: please pass option names, followed by space and option values. Options list:");
-            System.err.println("--dir: partition directory, where index.bin and (optionally) partition files are located (obligatory)");
-            System.err.println("--partCnt: full partitions count in cache group (optional)");
-            System.err.println("--pageSize: page size (optional, default value is 4096)");
-            System.err.println("--pageStoreVer: page store version (optional, default value is 2)");
-            System.err.println("--indexes: you can specify index tree names that will be processed, separated by comma " +
-                "without spaces, other index trees will be skipped (optional).");
-            System.err.println("--destFile: file to print the report to (optional, by default report is printed to console)");
-            System.err.println("--transform: if 'true' then this utility assumes that all *.bin files " +
-                "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest directory" +
-                " (optional)"
-            );
-            System.err.println("--dest: directory where to put files transformed from snapshot (needed if you use " +
-                "--transform true)");
-            System.err.println("--fileMask: mask for files to transform (optional if you use --transform true)");
-            System.err.println("--checkParts: check cache data tree in partition files and it's consistency with indexes (optional).");
-            System.err.println();
-
             throw e;
+        }
+    }
+
+    /**
+     *
+     */
+    public enum Args {
+        /** */
+        DIR("--dir"),
+        /** */
+        PART_CNT("--partCnt"),
+        /** */
+        PAGE_SIZE("--pageSize"),
+        /** */
+        PAGE_STORE_VER("--pageStoreVer"),
+        /** */
+        INDEXES("--indexes"),
+        /** */
+        DEST_FILE("--destFile"),
+        /** */
+        TRANSFORM("--transform"),
+        /** */
+        DEST("--dest"),
+        /** */
+        FILE_MASK("--fileMask"),
+        /** */
+        CHECK_PARTS("--checkParts");
+
+        /** */
+        private String arg;
+
+        /** */
+        Args(String arg) {
+            this.arg = arg;
+        }
+
+        public String arg() {
+            return arg;
         }
     }
 
