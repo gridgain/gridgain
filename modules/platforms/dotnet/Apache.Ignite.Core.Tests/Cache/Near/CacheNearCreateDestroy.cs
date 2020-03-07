@@ -100,7 +100,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cache = _grid.CreateCache<int, int>(cfg);
             cache[1] = 1;
 
-            var nearCacheConfiguration = new NearCacheConfiguration().EnablePlatformNearCache<int, int>();
+            var nearCacheConfiguration = new NearCacheConfiguration();
             var nearCache = _client.CreateNearCache<int, int>(cacheName, nearCacheConfiguration);
             Assert.AreEqual(1, nearCache[1]);
 
@@ -133,7 +133,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             // Near cache can't be started on client node
             Assert.Throws<CacheException>(
-                () => _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration(true)));
+                () => _client.CreateNearCache<int, int>(cacheName, new NearCacheConfiguration()));
         }
 
         /// <summary>
@@ -145,7 +145,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             const string cacheName = "client_with_near_cache";
 
             var cache = _client.CreateCache<int, int>(new CacheConfiguration(cacheName),
-                new NearCacheConfiguration(true));
+                new NearCacheConfiguration());
 
             AssertCacheIsNear(cache);
 
@@ -153,7 +153,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(1, cache[1]);
 
             var cache2 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cacheName), 
-                new NearCacheConfiguration(true));
+                new NearCacheConfiguration());
 
             Assert.AreEqual(1, cache2[1]);
 
@@ -171,12 +171,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestUtils.TestName + mode,
-                NearConfiguration = new NearCacheConfiguration(true)
+                NearConfiguration = new NearCacheConfiguration()
             };
 
             var ignite = GetIgnite(mode);
             
-            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration(true));
+            var cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
             
             cache[1] = 1;
             ignite.DestroyCache(cache.Name);
@@ -199,17 +199,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestUtils.TestName + mode,
-                NearConfiguration = new NearCacheConfiguration(true)
+                NearConfiguration = new NearCacheConfiguration()
             };
 
             var ignite = GetIgnite(mode);
 
-            var cache = ignite.CreateCache<int, int>(cfg,  new NearCacheConfiguration(true));
+            var cache = ignite.CreateCache<int, int>(cfg,  new NearCacheConfiguration());
             
             cache[1] = 1;
             ignite.DestroyCache(cache.Name);
             
-            cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration(true));
+            cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
             Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
         }
 

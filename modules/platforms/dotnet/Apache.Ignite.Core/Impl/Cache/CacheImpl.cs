@@ -99,10 +99,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
 
-            // On Client nodes, even if servers have NearConfiguration, clients don't have it by default.
-            // Users have to call CreateNearCache/GetOrCreateNearCache to enable near caching on Client nodes.
-            if (configuration.NearConfiguration != null && 
-                configuration.NearConfiguration.PlatformNearConfiguration != null)
+            if (configuration.PlatformNearConfiguration != null)
             {
                 _nearCache = _ignite.NearCacheManager.GetOrCreateNearCache(configuration);
             }
