@@ -649,7 +649,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         [Test]
         public void TestContainsKey(
-            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode,
+            [Values(true, false)] bool async)
         {
             var cache = GetCache<int, int>(mode);
             var cache2 = GetCache<int, int>(CacheTestMode.ServerLocal);
@@ -657,33 +658,42 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var data = Enumerable.Range(1, 100).ToDictionary(x => x, x => x);
             cache2.PutAll(data);
 
+            var act = async
+                ? (Func<int, bool>) (k => cache.ContainsKeyAsync(k).Result) 
+                : k => cache.ContainsKey(k);
+
             foreach (var key in data.Keys)
             {
-                Assert.IsTrue(cache.ContainsKey(key));
-                Assert.IsFalse(cache.ContainsKey(-key));
+                Assert.IsTrue(act(key));
+                Assert.IsFalse(act(-key));
             }
         }
 
         [Test]
         public void TestContainsKeys(
-            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode,
+            [Values(true, false)] bool async)
         {
             var cache = GetCache<int, int>(mode);
             var cache2 = GetCache<int, int>(CacheTestMode.ServerLocal);
             
             var data = Enumerable.Range(1, 100).ToDictionary(x => x, x => x);
             cache2.PutAll(data);
+            
+            var act = async
+                ? (Func<IEnumerable<int>, bool>) (k => cache.ContainsKeysAsync(k).Result) 
+                : k => cache.ContainsKeys(k);
 
             foreach (var key in data.Keys)
             {
-                Assert.IsTrue(cache.ContainsKeys(new[] {key}));
-                Assert.IsFalse(cache.ContainsKeys(new[] {-key}));
+                Assert.IsTrue(act(new[] {key}));
+                Assert.IsFalse(act(new[] {-key}));
             }
             
-            Assert.IsTrue(cache.ContainsKeys(data.Keys));
-            Assert.IsTrue(cache.ContainsKeys(data.Keys.Take(10)));
-            Assert.IsTrue(cache.ContainsKeys(data.Keys.Skip(10)));
-            Assert.IsFalse(cache.ContainsKeys(data.Keys.Concat(new[] {-1})));
+            Assert.IsTrue(act(data.Keys));
+            Assert.IsTrue(act(data.Keys.Take(10)));
+            Assert.IsTrue(act(data.Keys.Skip(10)));
+            Assert.IsFalse(act(data.Keys.Concat(new[] {-1})));
         }
         
         /// <summary>
