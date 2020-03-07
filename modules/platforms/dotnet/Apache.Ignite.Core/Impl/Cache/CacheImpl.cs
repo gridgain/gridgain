@@ -726,16 +726,16 @@ namespace Apache.Ignite.Core.Impl.Cache
                     // Near Cache optimization on primary nodes:
                     // Update from Java comes in this same thread, so we don't need to pass key/val from Java.
                     // However, we still rely on a callback to maintain the order of updates.
-                    NearCacheManager.ThreadLocalPair.Value = new KeyValuePair<TK,TV>(key, val);
+                    _nearCache.SetThreadLocalPair(key, val);
                 }
 
-                DoOutOp(CacheOp.Put, key, val);
+                DoOutOp(CacheOp.PutWithNear, key, val);
             }
             finally
             {
                 if (near)
                 {
-                    NearCacheManager.ThreadLocalPair.Value = null;
+                    _nearCache.ResetThreadLocalPair();
                 }
             }
         }

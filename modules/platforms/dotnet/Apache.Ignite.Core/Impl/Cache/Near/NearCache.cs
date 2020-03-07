@@ -175,6 +175,18 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             _map.Clear();
         }
 
+        /** <inheritdoc /> */
+        public void SetThreadLocalPair<TKey, TVal>(TKey key, TVal val)
+        {
+            NearCacheManager.ThreadLocalPair.Value = new KeyValuePair<TK, TV>((TK) (object) key, (TV) (object) val);
+        }
+
+        /** <inheritdoc /> */
+        public void ResetThreadLocalPair()
+        {
+            NearCacheManager.ThreadLocalPair.Value = null;
+        }
+
         /// <summary>
         /// Checks whether specified cache entry is still valid, based on Affinity Topology Version.
         /// When primary node changes for a key, GridNearCacheEntry stops receiving updates for that key,

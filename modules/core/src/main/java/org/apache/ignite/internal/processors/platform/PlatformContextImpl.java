@@ -87,6 +87,9 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
     /** Supported event types. */
     private static final Set<Integer> evtTyps;
 
+    /** Whether to use thread-local data to update platform near cache. */
+    private static final ThreadLocal<Boolean> nearUpdateUseThreadLocal = new ThreadLocal<>();
+
     /** Kernal context. */
     private final GridKernalContext ctx;
 
@@ -607,26 +610,45 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
             PlatformOutputStream out = mem0.output();
 
             out.writeInt(cacheId);
-            out.writeBoolean(false); // TODO: useThreadLocal
-            out.writeByteArray(keyBytes);
 
-            if (valBytes != null) {
+            Boolean useTls = nearUpdateUseThreadLocal.get();
+            if (useTls != null && useTls) {
                 out.writeBoolean(true);
-                out.writeByteArray(valBytes);
-
-                assert ver != null;
-
                 out.writeInt(part);
                 out.writeLong(ver.topologyVersion());
                 out.writeInt(ver.minorTopologyVersion());
             } else {
                 out.writeBoolean(false);
+                out.writeByteArray(keyBytes);
+
+                if (valBytes != null) {
+                    out.writeBoolean(true);
+                    out.writeByteArray(valBytes);
+
+                    assert ver != null;
+
+                    out.writeInt(part);
+                    out.writeLong(ver.topologyVersion());
+                    out.writeInt(ver.minorTopologyVersion());
+                } else {
+                    out.writeBoolean(false);
+                }
             }
 
             out.synchronize();
 
             gateway().nearCacheUpdate(mem0.pointer());
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void enableThreadLocalForNearUpdate() {
+        nearUpdateUseThreadLocal.set(true);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void disableThreadLocalForNearUpdate() {
+        nearUpdateUseThreadLocal.set(false);
     }
 
     /** {@inheritDoc} */

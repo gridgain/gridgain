@@ -52,5 +52,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Removes all mappings from the cache.
         /// </summary>
         void Clear();
+
+        /// <summary>
+        /// Sets thread-local pair to be used by <see cref="Update"/>.
+        /// </summary>
+        void SetThreadLocalPair<TK, TV>(TK key, TV val);
+        
+        /// <summary>
+        /// Resets thread-local pair set by <see cref="SetThreadLocalPair{TK,TV}"/>.
+        /// </summary>
+        void ResetThreadLocalPair();
     }
 }

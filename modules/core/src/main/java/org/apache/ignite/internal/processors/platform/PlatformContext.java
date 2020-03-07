@@ -307,4 +307,14 @@ public interface PlatformContext {
      * @param ver Key version.
      */
     public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes, int part, AffinityTopologyVersion ver);
+
+    /**
+     * Enables thread-local optimization for near cache update.
+     */
+    void enableThreadLocalForNearUpdate();
+
+    /**
+     * Disables thread-local optimization for near cache update.
+     */
+    void disableThreadLocalForNearUpdate();
 }
