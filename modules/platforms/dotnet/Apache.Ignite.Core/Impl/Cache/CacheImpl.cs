@@ -436,7 +436,36 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(keys, "keys");
 
-            // TODO: Near
+            if (CanUseNear)
+            {
+                var allKeysAreNear = true;
+                
+                using (var enumerator = keys.GetEnumerator())
+                {
+                    while (enumerator.MoveNext())
+                    {
+                        var key = enumerator.Current;
+
+                        TV _;
+                        if (!_nearCache.TryGetValue(key, out _))
+                        {
+                            allKeysAreNear = false;
+                            break;
+                        }
+                    }
+
+                    if (allKeysAreNear)
+                    {
+                        return TaskRunner.FromResult(true);
+                    }
+
+                    // ReSharper disable AccessToDisposedClosure (write is synchronous, not an issue).
+                    ICollection<ICacheEntry<TK, TV>> res = null;
+                    return DoOutOpAsync<bool>(CacheOp.ContainsKeysAsync,
+                        writer => WriteKeysOrGetFromNear(writer, enumerator, ref res, discardResults: true));
+                }
+            }
+
             return DoOutOpAsync<bool>(CacheOp.ContainsKeysAsync, writer => writer.WriteEnumerable(keys));
         }
 
