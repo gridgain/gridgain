@@ -452,43 +452,6 @@ public class FilePageStore implements PageStore {
         }
     }
 
-    public void readByOffset(long off, ByteBuffer pageBuf, boolean keepCrc) throws IgniteCheckedException {
-        init();
-
-        try {
-            assert pageBuf.capacity() == pageSize;
-            assert pageBuf.remaining() == pageSize;
-            assert pageBuf.position() == 0;
-            assert pageBuf.order() == ByteOrder.nativeOrder();
-            assert off <= allocated.get() : "calculatedOffset=" + off +
-                ", allocated=" + allocated.get() + ", headerSize=" + headerSize() + ", cfgFile=" +
-                pathProvider.apply().toAbsolutePath();
-
-            int n = readWithFailover(pageBuf, off);
-
-            // If page was not written yet, nothing to read.
-            if (n < 0) {
-                pageBuf.put(new byte[pageBuf.remaining()]);
-
-                return;
-            }
-
-            int savedCrc32 = PageIO.getCrc(pageBuf);
-
-            PageIO.setCrc(pageBuf, 0);
-
-            pageBuf.position(0);
-
-            assert PageIO.getCrc(pageBuf) == 0;
-
-            if (keepCrc)
-                PageIO.setCrc(pageBuf, savedCrc32);
-        }
-        catch (IOException e) {
-            throw new StorageException("Failed to read page [file=" + getFileAbsolutePath() + ", offset=" + off + "]", e);
-        }
-    }
-
     /** {@inheritDoc} */
     @Override public void readHeader(ByteBuffer buf) throws IgniteCheckedException {
         init();
