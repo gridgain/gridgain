@@ -1208,6 +1208,25 @@ public class PlatformCallbackGateway {
     }
 
     /**
+     * Updates near cache data.
+     *
+     * @param cacheIdAndPartition Cache id and partition.
+     * @param verMajor Affinity version.
+     * @param verMinor Affinity version minor part.
+     */
+    public void nearCacheUpdateFromThreadLocal(long cacheIdAndPartition, long verMajor, long verMinor) {
+        enter();
+
+        try {
+            PlatformCallbackUtils.inLongLongLongObjectOutLong(envPtr, PlatformCallbackOp.NearCacheUpdateFromThreadLocal,
+                    cacheIdAndPartition, verMajor, verMinor, null);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
      * Notifies about cache stop.
      *
      * @param cacheId Cache id.

@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System;
+    using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
 
@@ -35,6 +36,11 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Reads cache key and value from a stream and updates near cache.
         /// </summary>
         void Update(IBinaryStream stream, Marshaller marshaller);
+
+        /// <summary>
+        /// Updates near cache using data from <see cref="SetThreadLocalPair{TK,TV}"/>.
+        /// </summary>
+        void UpdateFromThreadLocal(int partition, AffinityTopologyVersion affinityTopologyVersion);
 
         /// <summary>
         /// Stops the cache, enters bypass mode.

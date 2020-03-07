@@ -603,6 +603,16 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
         if (!isNativeNearCacheSupported())
             return;
 
+        Boolean useTls = nearUpdateUseThreadLocal.get();
+        if (useTls != null && useTls) {
+            long cacheIdAndPartition = ((long)part << 32) + cacheId;
+
+            gateway().nearCacheUpdateFromThreadLocal(
+                    cacheIdAndPartition, ver.topologyVersion(), ver.minorTopologyVersion());
+
+            return;
+        }
+
         assert keyBytes != null;
         assert part >= 0;
 
@@ -610,29 +620,19 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
             PlatformOutputStream out = mem0.output();
 
             out.writeInt(cacheId);
+            out.writeByteArray(keyBytes);
 
-            Boolean useTls = nearUpdateUseThreadLocal.get();
-            if (useTls != null && useTls) {
+            if (valBytes != null) {
                 out.writeBoolean(true);
+                out.writeByteArray(valBytes);
+
+                assert ver != null;
+
                 out.writeInt(part);
                 out.writeLong(ver.topologyVersion());
                 out.writeInt(ver.minorTopologyVersion());
             } else {
                 out.writeBoolean(false);
-                out.writeByteArray(keyBytes);
-
-                if (valBytes != null) {
-                    out.writeBoolean(true);
-                    out.writeByteArray(valBytes);
-
-                    assert ver != null;
-
-                    out.writeInt(part);
-                    out.writeLong(ver.topologyVersion());
-                    out.writeInt(ver.minorTopologyVersion());
-                } else {
-                    out.writeBoolean(false);
-                }
             }
 
             out.synchronize();

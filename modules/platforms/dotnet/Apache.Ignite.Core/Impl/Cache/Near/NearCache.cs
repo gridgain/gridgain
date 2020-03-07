@@ -126,40 +126,41 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 return;
             }
 
-            var useThreadLocal = stream.ReadBool();
-            if (useThreadLocal)
+            var mode = _keepBinary ? BinaryMode.ForceBinary : BinaryMode.Deserialize;
+            var reader = marshaller.StartUnmarshal(stream, mode);
+
+            var key = reader.ReadObject<TK>();
+            var hasVal = stream.ReadBool();
+
+            if (hasVal)
             {
-                var pair = (KeyValuePair<TK, TV>) NearCacheManager.ThreadLocalPair.Value;
+                var val = reader.ReadObject<TV>();
                 var part = stream.ReadInt();
                 var ver = new AffinityTopologyVersion(stream.ReadLong(), stream.ReadInt());
-                
-                _map[pair.Key] = new NearCacheEntry<TV>(
-                    pair.Value,
-                    GetBoxedAffinityTopologyVersion(ver), 
-                    part);
+
+                _map[key] = new NearCacheEntry<TV>(val, GetBoxedAffinityTopologyVersion(ver), part);
             }
             else
             {
-                var mode = _keepBinary ? BinaryMode.ForceBinary : BinaryMode.Deserialize;
-                var reader = marshaller.StartUnmarshal(stream, mode);
-
-                var key = reader.ReadObject<TK>();
-                var hasVal = stream.ReadBool();
-
-                if (hasVal)
-                {
-                    var val = reader.ReadObject<TV>();
-                    var part = stream.ReadInt();
-                    var ver = new AffinityTopologyVersion(stream.ReadLong(), stream.ReadInt());
-                
-                    _map[key] = new NearCacheEntry<TV>(val, GetBoxedAffinityTopologyVersion(ver), part);
-                }
-                else
-                {
-                    NearCacheEntry<TV> unused;
-                    _map.TryRemove(key, out unused);
-                }
+                NearCacheEntry<TV> unused;
+                _map.TryRemove(key, out unused);
             }
+        }
+
+        /** <inheritdoc /> */
+        public void UpdateFromThreadLocal(int partition, AffinityTopologyVersion affinityTopologyVersion)
+        {
+            if (_stopped)
+            {
+                return;
+            }
+
+            var pair = (KeyValuePair<TK, TV>) NearCacheManager.ThreadLocalPair.Value;
+
+            _map[pair.Key] = new NearCacheEntry<TV>(
+                pair.Value,
+                GetBoxedAffinityTopologyVersion(affinityTopologyVersion),
+                partition);
         }
 
         /** <inheritdoc /> */

@@ -86,7 +86,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         PluginCallbackInLongLongOutLong = 68,
         EventLocalListenerApply = 69,
         NearCacheUpdate = 70,
-        OnCacheStopped = 71,
-        OnAffinityTopologyVersionChanged = 72
+        NearCacheUpdateFromThreadLocal = 71,
+        OnCacheStopped = 72,
+        OnAffinityTopologyVersionChanged = 73
     }
 }

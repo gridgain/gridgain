@@ -101,6 +101,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         }
 
         /// <summary>
+        /// Updates near cache from <see cref="ThreadLocalPair"/>.
+        /// </summary>
+        public void UpdateFromThreadLocal(int cacheId, int partition, AffinityTopologyVersion affinityTopologyVersion)
+        {
+            var nearCache = _nearCaches.GetOrAdd(cacheId, 
+                _ => CreateNearCache(_ignite.GetCacheConfiguration(cacheId)));
+            
+            nearCache.UpdateFromThreadLocal(partition, affinityTopologyVersion);
+        }
+
+        /// <summary>
         /// Stops near cache.
         /// </summary>
         public void Stop(int cacheId)

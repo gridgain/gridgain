@@ -231,8 +231,11 @@ class PlatformCallbackOp {
     public static final int NearCacheUpdate = 70;
 
     /** */
-    public static final int OnCacheStopped = 71;
+    public static final int NearCacheUpdateFromThreadLocal = 71;
 
     /** */
-    public static final int OnAffinityTopologyVersionChanged = 72;
+    public static final int OnCacheStopped = 72;
+
+    /** */
+    public static final int OnAffinityTopologyVersionChanged = 73;
 }

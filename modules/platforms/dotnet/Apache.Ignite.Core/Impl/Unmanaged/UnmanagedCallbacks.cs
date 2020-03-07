@@ -213,6 +213,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PluginProcessorIgniteStop, PluginProcessorIgniteStop);
             AddHandler(UnmanagedCallbackOp.PluginCallbackInLongLongOutLong, PluginCallbackInLongLongOutLong);
             AddHandler(UnmanagedCallbackOp.NearCacheUpdate, NearCacheUpdate);
+            AddHandler(UnmanagedCallbackOp.NearCacheUpdateFromThreadLocal, NearCacheUpdateFromThreadLocal);
             AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
             AddHandler(UnmanagedCallbackOp.OnAffinityTopologyVersionChanged, OnAffinityTopologyVersionChanged);
         }
@@ -436,6 +437,20 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 _ignite.NearCacheManager.Update(cacheId, stream, _ignite.Marshaller);
             }
 
+            return 0;
+        }
+        
+        /// <summary>
+        /// Updates near cache entry.
+        /// </summary>
+        private long NearCacheUpdateFromThreadLocal(long cacheIdAndPartition, long verMajor, long verMinor, void* arg)
+        {
+            int cacheId = (int)(cacheIdAndPartition & 0xFFFFFFFF);
+            int partition = (int) (cacheIdAndPartition >> 32);
+
+            _ignite.NearCacheManager.UpdateFromThreadLocal(
+                cacheId, partition, new AffinityTopologyVersion(verMajor, (int) verMinor));
+                
             return 0;
         }
         
