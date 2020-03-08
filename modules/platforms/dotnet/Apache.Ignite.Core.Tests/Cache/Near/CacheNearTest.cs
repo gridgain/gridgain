@@ -170,9 +170,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Returned object is Equal to the initial.
             Assert.AreEqual(obj, res1);
             
-            // But not the same - new instance is stored in Near Cache.
-            Assert.AreNotSame(obj, res1);
-            
+            // But not the same - new instance is stored in Near Cache,
+            // except primary on servers - thread-local optimization avoids extra deserialization there.
+            if (primaryKey && mode == CacheTestMode.ServerLocal || !primaryKey && mode == CacheTestMode.ServerRemote)
+            {
+                Assert.AreSame(obj, res1);
+            }
+            else
+            {
+                Assert.AreNotSame(obj, res1);
+            }
+
             // Repeated Get call returns same instance from Near Cache.
             Assert.AreSame(res1, res2);
         }
