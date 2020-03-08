@@ -363,7 +363,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         pageIoIds.computeIfAbsent(BPlusMetaIO.class, k -> new HashSet<>()).add(info.rootPageId);
                     });
 
-                    ItemStoreMode itemStoreMode = checkParts ? ItemStoreMode.ONLY_COUNT : ItemStoreMode.STRUCTURED;
+                    ItemStoreMode itemStoreMode = checkParts ? ItemStoreMode.STRUCTURED : ItemStoreMode.ONLY_COUNT;
 
                     horizontalScans.set(traverseAllTrees("Scan index trees horizontally", metaTreeRootId, itemStoreMode, this::horizontalTreeScan));
                 }
@@ -424,9 +424,9 @@ public class IgniteIndexReader implements AutoCloseable {
         if (checkParts) {
             List<Throwable> checkPartsErrors = checkParts(horizontalScans.get());
 
-            checkPartsErrors.forEach(e -> printErr(e.getMessage()));
+            checkPartsErrors.forEach(e -> printErr("<ERROR> " + e.getMessage()));
 
-            print("Partition check finished.");
+            print("\nPartition check finished, total errors: " + checkPartsErrors.size());
         }
     }
 
@@ -495,10 +495,14 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /** */
-    private List<Throwable> checkParts(Map<String, TreeTraversalInfo> treesInfo) {
+    private List<Throwable> checkParts(Map<String, TreeTraversalInfo> aTreesInfo) {
         System.out.println();
 
         List<Throwable> errors = new LinkedList<>();
+
+        Map<String, TreeTraversalInfo> treesInfo = new HashMap<>(aTreesInfo);
+
+        treesInfo.remove(META_TREE_NAME);
 
         ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Checking partitions", partCnt);
 
@@ -525,7 +529,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     TreeTraversalInfo cacheDataTreeInfo = horizontalTreeScan(partStore, cacheDataTreeRoot, ItemStoreMode.LIST);
 
                     for (Object dataTreeItem : cacheDataTreeInfo.idxItems)
-                        checkLinkIsPresentInIndexes(treesInfo, (Long)dataTreeItem, errors);
+                        checkLinkIsPresentInIndexes(treesInfo, (CacheAwareLink)dataTreeItem, errors);
 
                     return null;
                 });
@@ -539,14 +543,27 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /** */
-    private void checkLinkIsPresentInIndexes(Map<String, TreeTraversalInfo> treesInfo, long link, List<Throwable> errors) {
+    private void checkLinkIsPresentInIndexes(Map<String, TreeTraversalInfo> treesInfo, CacheAwareLink cacheAwareLink, List<Throwable> errors) {
         treesInfo.forEach((name, tree) -> {
-            if (!tree.itemsStore.contains(link)) {
+            int cacheId = getCacheId(name);
+
+            if (cacheId != cacheAwareLink.cacheId)
+                return;
+
+            if (!tree.itemsStore.contains(cacheAwareLink)) {
+                long link = cacheAwareLink.link;
+
                 long pageId = pageId(link);
+
+                int itemId = itemId(link);
 
                 int partId = partId(pageId);
 
-                errors.add(new IgniteException("Entry is missing in index: " + name + ", partId=" + partId + ", link = " + link));
+                int pageIdx = pageIndex(pageId);
+
+                errors.add(new IgniteException("Entry is missing in index: " + name +
+                    ", cacheId=" + cacheAwareLink.cacheId + ", partId=" + partId +
+                    ", pageIndex=" + pageIdx + ", itemId=" + itemId + ", link = " + link));
             }
         });
     }
@@ -968,7 +985,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             case STRUCTURED:
                 itemCb = (currPageId, item, link) -> {
-                    itemsStore.add(link);
+                    itemsStore.add(null);
 
                     idxItemsCnt.incrementAndGet();
                 };
@@ -1053,7 +1070,7 @@ public class IgniteIndexReader implements AutoCloseable {
                                 items.addAll(pageContent.items);
 
                             if (itemStoreMode == ItemStoreMode.STRUCTURED)
-                                pageContent.items.forEach(item -> itemsStore.add((Long)item));
+                                pageContent.items.forEach(item -> itemsStore.add((CacheAwareLink)item));
                         }
 
                         pageId = ((BPlusIO)pageIO).getForward(addr);
@@ -1450,13 +1467,15 @@ public class IgniteIndexReader implements AutoCloseable {
      */
     private class ItemsStore {
         /** */
-        private final Map<Integer, Map<Byte, IntSet>> store = new HashMap<>();
+        private final Map<Integer, Map<Integer, Map<Byte, IntSet>>> store = new HashMap<>();
 
         /** */
         private long size = 0;
 
         /** */
-        public void add(long link) {
+        public void add(CacheAwareLink cacheAwareLink) {
+            long link = cacheAwareLink.link;
+
             long pageId = pageId(link);
 
             int itemId = itemId(link);
@@ -1465,7 +1484,8 @@ public class IgniteIndexReader implements AutoCloseable {
 
             int pageIdx = pageIndex(pageId);
 
-            store.computeIfAbsent(partId, k -> new HashMap<>())
+            store.computeIfAbsent(cacheAwareLink.cacheId, k -> new HashMap<>())
+                .computeIfAbsent(partId, k -> new HashMap<>())
                 .computeIfAbsent((byte)itemId, k -> new BitSetIntSet())
                 .add(pageIdx);
 
@@ -1473,7 +1493,9 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         /** */
-        public boolean contains(long link) {
+        public boolean contains(CacheAwareLink cacheAwareLink) {
+            long link = cacheAwareLink.link;
+
             long pageId = pageId(link);
 
             int itemId = itemId(link);
@@ -1482,13 +1504,17 @@ public class IgniteIndexReader implements AutoCloseable {
 
             int pageIdx = pageIndex(pageId);
 
-            Map<Byte, IntSet> map = store.get(partId);
+            Map<Integer, Map<Byte, IntSet>> map = store.get(0);
 
             if (map != null) {
-                IntSet set = map.get(itemId);
+                Map<Byte, IntSet> innerMap = map.get(partId);
 
-                if (set != null)
-                    return set.contains(pageIdx);
+                if (innerMap != null) {
+                    IntSet set = innerMap.get((byte)itemId);
+
+                    if (set != null)
+                        return set.contains(pageIdx);
+                }
             }
 
             return false;
@@ -1497,6 +1523,23 @@ public class IgniteIndexReader implements AutoCloseable {
         /** */
         public long size() {
             return size;
+        }
+    }
+
+    /**
+     *
+     */
+    private class CacheAwareLink {
+        /** */
+        public final int cacheId;
+
+        /** */
+        public final long link;
+
+        /** */
+        public CacheAwareLink(int cacheId, long link) {
+            this.cacheId = cacheId;
+            this.link = link;
         }
     }
 
@@ -1742,13 +1785,20 @@ public class IgniteIndexReader implements AutoCloseable {
             if (isLinkIo(io)) {
                 final long link = getLink(io, addr, idx);
 
+                int cacheId = 0;
+
+                if (io instanceof RowLinkIO)
+                    cacheId = ((RowLinkIO)io).getCacheId(addr, idx);
+
+                final CacheAwareLink res = new CacheAwareLink(cacheId, link);
+
                 if (partCnt > 0) {
                     long linkedPageId = pageId(link);
 
                     int linkedPagePartId = partId(linkedPageId);
 
                     if (missingPartitions.contains(linkedPagePartId))
-                        return link; // just skip
+                        return res; // just skip
 
                     int linkedItemId = itemId(link);
 
@@ -1791,7 +1841,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     });
                 }
 
-                return link;
+                return res;
             }
             else
                 throw new IgniteException("Unexpected page io: " + io.getClass().getSimpleName());
