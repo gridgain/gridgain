@@ -849,7 +849,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var serverCache = _grid.GetCache<int, Foo>(cfg.Name);
 
             // Put Foo, but near cache expects Guid.
-            clientCache[1] = new Foo(2);
+            clientCache.GetAndPut(1, new Foo(2));
 
             // Error is logged.
             Func<ListLogger.Entry> getEntry = () =>
