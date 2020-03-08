@@ -699,6 +699,10 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().createNearCache(cacheName, cfg);
 
+                if (reader.readBoolean())
+                    cache.context().cache().configuration().setPlatformNearConfiguration(
+                            PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
+
                 return createPlatformCache(cache);
             }
 
@@ -708,6 +712,10 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
                 NearCacheConfiguration cfg = PlatformConfigurationUtils.readNearConfiguration(reader);
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().getOrCreateNearCache(cacheName, cfg);
+
+                if (reader.readBoolean())
+                    cache.context().cache().configuration().setPlatformNearConfiguration(
+                            PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
 
                 return createPlatformCache(cache);
             }

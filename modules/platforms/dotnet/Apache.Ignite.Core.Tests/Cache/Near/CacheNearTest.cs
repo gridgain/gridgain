@@ -813,13 +813,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestClientOnlyPlatformNearCache()
         {
-            // TODO: This requires some additional logic to start a platform near cache dynamically
-            // when CreateNearCache or GetOrCreateNearCache is called.
-            // 1) Bring back NearCacheConfiguration.PlatformNearCacheConfiguration, which is super confusing
-            // 2) Provide CreateNearCache<>(name, cfg, platformCfg), and propagate to Java somehow (via a callback?) -
-            //    consistent with existing APIs
+            // TODO: More tests with Create/GetOrCreate, combinations on Java and .NET configs.
             var cache = _grid.CreateCache<int, int>(TestUtils.TestName);
-            var clientCache = _client.CreateNearCache<int, int>(cache.Name, new NearCacheConfiguration());
+            var clientCache = _client.CreateNearCache<int, int>(cache.Name, new NearCacheConfiguration(), 
+                new PlatformNearCacheConfiguration());
             
             cache[1] = 2;
             Assert.AreEqual(2, clientCache[1]);

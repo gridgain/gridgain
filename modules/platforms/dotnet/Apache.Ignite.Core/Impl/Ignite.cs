@@ -714,13 +714,27 @@ namespace Apache.Ignite.Core.Impl
         /** <inheritdoc /> */
         public ICache<TK, TV> CreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
         {
-            return GetOrCreateNearCache0<TK, TV>(name, configuration, Op.CreateNearCache);
+            return GetOrCreateNearCache0<TK, TV>(name, configuration, null, Op.CreateNearCache);
+        }
+
+        /** <inheritdoc /> */
+        public ICache<TK, TV> CreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration,
+            PlatformNearCacheConfiguration platformConfiguration)
+        {
+            return GetOrCreateNearCache0<TK, TV>(name, configuration, platformConfiguration, Op.CreateNearCache);
         }
 
         /** <inheritdoc /> */
         public ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
         {
-            return GetOrCreateNearCache0<TK, TV>(name, configuration, Op.GetOrCreateNearCache);
+            return GetOrCreateNearCache0<TK, TV>(name, configuration, null, Op.GetOrCreateNearCache);
+        }
+
+        /** <inheritdoc /> */
+        public ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration,
+            PlatformNearCacheConfiguration platformConfiguration)
+        {
+            return GetOrCreateNearCache0<TK, TV>(name, configuration, platformConfiguration, Op.GetOrCreateNearCache);
         }
 
         /** <inheritdoc /> */
@@ -948,6 +962,7 @@ namespace Apache.Ignite.Core.Impl
         /// Gets or creates near cache.
         /// </summary>
         private ICache<TK, TV> GetOrCreateNearCache0<TK, TV>(string name, NearCacheConfiguration configuration,
+            PlatformNearCacheConfiguration platformConfiguration,
             Op op)
         {
             IgniteArgumentCheck.NotNull(configuration, "configuration");
@@ -956,6 +971,16 @@ namespace Apache.Ignite.Core.Impl
             {
                 w.WriteString(name);
                 configuration.Write(w);
+
+                if (platformConfiguration != null)
+                {
+                    w.WriteBoolean(true);
+                    platformConfiguration.Write(w);
+                }
+                else
+                {
+                    w.WriteBoolean(false);
+                }
             });
 
             return GetCache<TK, TV>(cacheTarget);

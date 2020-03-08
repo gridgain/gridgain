@@ -260,14 +260,8 @@ public class PlatformConfigurationUtils {
             ccfg.setKeyConfiguration(keys);
         }
 
-        if (in.readBoolean()) {
-            PlatformNearCacheConfiguration platCfg = new PlatformNearCacheConfiguration()
-                    .setKeyTypeName(in.readString())
-                    .setValueTypeName(in.readString())
-                    .setKeepBinary(in.readBoolean());
-
-            ccfg.setPlatformNearConfiguration(platCfg);
-        }
+        if (in.readBoolean())
+            ccfg.setPlatformNearConfiguration(readPlatformNearConfiguration(in));
 
         int pluginCnt = in.readInt();
 
@@ -340,6 +334,19 @@ public class PlatformConfigurationUtils {
         cfg.setNearEvictionPolicy(readEvictionPolicy(in));
 
         return cfg;
+    }
+
+    /**
+     * Reads platform near config.
+     *
+     * @param in Stream.
+     * @return PlatformNearCacheConfiguration.
+     */
+    public static PlatformNearCacheConfiguration readPlatformNearConfiguration(BinaryRawReaderEx in) {
+        return new PlatformNearCacheConfiguration()
+                .setKeyTypeName(in.readString())
+                .setValueTypeName(in.readString())
+                .setKeepBinary(in.readBoolean());
     }
 
     /**
