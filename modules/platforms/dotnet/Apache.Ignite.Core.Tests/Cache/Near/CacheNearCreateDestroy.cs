@@ -171,7 +171,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestUtils.TestName + mode,
-                NearConfiguration = new NearCacheConfiguration()
+                NearConfiguration = new NearCacheConfiguration(),
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
             };
 
             var ignite = GetIgnite(mode);
@@ -191,7 +192,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// <summary>
         /// Tests that near cache data is cleared when cache is destroyed and then created again with the same name.
         /// </summary>
-        /// <param name="mode"></param>
         [Test]
         public void TestCreateWithSameNameAfterDestroyClearsOldData(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
@@ -199,7 +199,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestUtils.TestName + mode,
-                NearConfiguration = new NearCacheConfiguration()
+                NearConfiguration = new NearCacheConfiguration(),
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
             };
 
             var ignite = GetIgnite(mode);
