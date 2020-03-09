@@ -33,7 +33,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public bool Invoke(ICacheEntry<int, Foo> entry)
         {
             var cache = Ignite.GetCache<int, Foo>(CacheName);
-            var nearVal = cache.LocalPeek(entry.Key, CachePeekMode.NativeNear);
+            var nearVal = cache.LocalPeek(entry.Key, CachePeekMode.PlatformNear);
 
             Assert.AreSame(nearVal, entry.Value);
 

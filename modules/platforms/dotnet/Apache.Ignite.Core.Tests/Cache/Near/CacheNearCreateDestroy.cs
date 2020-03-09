@@ -211,7 +211,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             ignite.DestroyCache(cache.Name);
             
             cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
-            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.NativeNear));
+            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.PlatformNear));
         }
 
         /// <summary>

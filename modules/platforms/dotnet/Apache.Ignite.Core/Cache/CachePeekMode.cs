@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Cache
 {
     using System;
     using System.Diagnostics.CodeAnalysis;
+    using Apache.Ignite.Core.Cache.Configuration;
 
     /// <summary>
     /// Enumeration of all supported cache peek modes.
@@ -60,8 +61,9 @@ namespace Apache.Ignite.Core.Cache
         Offheap = 0x20,
         
         /// <summary>
-        /// Peeks value from local native .NET near cache. 
+        /// Peeks value from local native .NET near cache
+        /// (see <see cref="CacheConfiguration.PlatformNearConfiguration"/>). 
         /// </summary>
-        NativeNear = 0x1000
+        PlatformNear = 0x1000
     }
 }

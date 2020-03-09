@@ -17,6 +17,8 @@
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System;
+    using System.Collections.Generic;
+    using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -68,5 +70,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// Resets thread-local pair set by <see cref="SetThreadLocalPair{TK,TV}"/>.
         /// </summary>
         void ResetThreadLocalPair();
+
+        /// <summary>
+        /// Gets all entries.
+        /// </summary>
+        IEnumerable<ICacheEntry<TK,TV>> GetEntries<TK, TV>();
     }
 }

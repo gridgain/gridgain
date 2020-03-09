@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -186,6 +187,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         public void ResetThreadLocalPair()
         {
             NearCacheManager.ThreadLocalPair.Value = null;
+        }
+
+        /** <inheritdoc /> */
+        public IEnumerable<ICacheEntry<TKey, TVal>> GetEntries<TKey, TVal>()
+        {
+            if (_stopped)
+            {
+                yield break;
+            }
+
+            foreach (var entry in _map)
+            {
+                yield return new CacheEntry<TKey, TVal>((TKey) (object) entry.Key, (TVal) (object) entry.Value);
+            }
         }
 
         /// <summary>

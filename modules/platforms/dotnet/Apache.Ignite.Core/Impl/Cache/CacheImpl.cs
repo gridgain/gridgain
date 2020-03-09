@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
+    using System.Linq;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
@@ -1258,13 +1259,13 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (!loc)
                 {
                     throw new InvalidOperationException(
-                        string.Format("{0} can only be used to get local size", CachePeekMode.NativeNear));
+                        string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear));
                 }
 
                 if (part != null)
                 {
                     throw new InvalidOperationException(
-                        string.Format("{0} can not be used with `partition` argument", CachePeekMode.NativeNear));
+                        string.Format("{0} can not be used with `partition` argument", CachePeekMode.PlatformNear));
                 }
 
                 if (_nearCache != null)
@@ -1685,11 +1686,18 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** <inheritdoc /> */
         public IEnumerable<ICacheEntry<TK, TV>> GetLocalEntries(CachePeekMode[] peekModes)
         {
-            // TODO: Merge with .NET Near Cache. How does it work with Java entries? Consistent with LocalSize?
             bool hasNativeNear;
             var encodedPeekModes = IgniteUtils.EncodePeekModes(peekModes, out hasNativeNear);
             
-            return new CacheEnumerable<TK, TV>(this, encodedPeekModes);
+            IEnumerable<ICacheEntry<TK,TV>> res = new CacheEnumerable<TK, TV>(this, encodedPeekModes);
+
+            if (IsNear && hasNativeNear)
+            {
+                // Will return duplicates with some combination of modes (e.g. Primary and PlatformNear).
+                res = res.Concat(_nearCache.GetEntries<TK, TV>());
+            }
+
+            return res;
         }
 
         /** <inheritdoc /> */
