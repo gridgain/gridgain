@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.util;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -24,6 +25,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.lang.annotation.Documented;
@@ -82,6 +84,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static java.util.Arrays.asList;
+import static java.util.Objects.nonNull;
+import static org.apache.ignite.testframework.GridTestUtils.readResource;
 import static org.junit.Assert.assertArrayEquals;
 
 /**
@@ -1294,6 +1298,44 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
             assertEquals(expectedException, e.getMessage());
         } finally {
             executorService.shutdownNow();
+        }
+    }
+
+    /**
+     * Testing methods {@link IgniteUtils#writeBigUTF} and
+     * {@link IgniteUtils#readBigString} using resource files, where each line is
+     * needed to test different cases.
+     *
+     * @throws IOException If failed.
+     */
+    @Test
+    public void testReadWriteBigUTF() throws IOException {
+        byte[] content = readResource(getClass().getClassLoader(), "org.apache.ignite.util/bigUtf.txt");
+
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(content)));
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        try {
+            String readLine;
+
+            while (nonNull(readLine = bufferedReader.readLine())) {
+                if ("null".equals(readLine))
+                    readLine = null;
+
+                baos.reset();
+
+                DataOutput dOut = new DataOutputStream(baos);
+                U.writeBigUTF(dOut, readLine);
+
+                DataInputStream dIn = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
+                String readBigUTF = U.readBigString(dIn);
+
+                assertEquals(readLine, readBigUTF);
+            }
+        }
+        finally {
+            U.closeQuiet(bufferedReader);
+            U.closeQuiet(baos);
         }
     }
 
