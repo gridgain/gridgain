@@ -800,6 +800,30 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             }
         }
 
+        /// <summary>
+        /// Tests <see cref="ICache{TK,TV}.GetLocalEntries"/> with various modes.
+        /// </summary>
+        [Test]
+        public void TestGetLocalEntriesCombinedModes()
+        {
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal, TestUtils.TestName);
+            var keys = Enumerable.Range(1, 100).ToArray();
+            cache.PutAll(keys.ToDictionary(x => x, x => new Foo(x)));
+
+            Func<CachePeekMode, int[]> getKeys = mode =>
+                cache.GetLocalEntries(mode).Select(e => e.Key).OrderBy(k => k).ToArray();
+
+            var primary = getKeys(CachePeekMode.Primary);
+            var near = getKeys(CachePeekMode.Near);
+            var platformNear = getKeys(CachePeekMode.PlatformNear);
+            var all = getKeys(CachePeekMode.All);
+            var all2 = getKeys(CachePeekMode.Primary | CachePeekMode.Near | CachePeekMode.PlatformNear);
+            
+            CollectionAssert.AreEqual(all, all2);
+            CollectionAssert.AreEquivalent(all, platformNear.Concat(primary).Concat(near));
+            CollectionAssert.AreEquivalent(platformNear, primary.Concat(near));
+        }
+
         [Test]
         public void TestNearCachingWithBackups()
         {
