@@ -488,10 +488,10 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            bool hasNativeNear;
-            var peekModes = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+            bool hasPlatformNear;
+            var peekModes = IgniteUtils.EncodePeekModes(modes, out hasPlatformNear);
 
-            if (hasNativeNear)
+            if (hasPlatformNear)
             {
                 if (_nearCache != null && _nearCache.TryGetValue(key, out value))
                 {
@@ -1251,10 +1251,10 @@ namespace Apache.Ignite.Core.Impl.Cache
             size = 0;
             onlyNativeNear = false;
             
-            bool hasNativeNear;
-            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
+            bool hasPlatformNear;
+            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasPlatformNear);
 
-            if (hasNativeNear)
+            if (hasPlatformNear)
             {
                 if (!loc)
                 {
@@ -1686,18 +1686,27 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** <inheritdoc /> */
         public IEnumerable<ICacheEntry<TK, TV>> GetLocalEntries(CachePeekMode[] peekModes)
         {
-            bool hasNativeNear;
-            var encodedPeekModes = IgniteUtils.EncodePeekModes(peekModes, out hasNativeNear);
-            
-            IEnumerable<ICacheEntry<TK,TV>> res = new CacheEnumerable<TK, TV>(this, encodedPeekModes);
+            bool hasPlatformNearMode;
+            var encodedPeekModes = IgniteUtils.EncodePeekModes(peekModes, out hasPlatformNearMode);
+            var onlyPlatformNearMode = hasPlatformNearMode && encodedPeekModes == 0;
 
-            if (IsNear && hasNativeNear)
+            if (IsNear && hasPlatformNearMode)
             {
-                // Will return duplicates with some combination of modes (e.g. Primary and PlatformNear).
-                res = res.Concat(_nearCache.GetEntries<TK, TV>());
+                if (onlyPlatformNearMode)
+                {
+                    // Only PlatformNear.
+                    return _nearCache.GetEntries<TK, TV>();
+                }
+
+                return _nearCache.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
             }
 
-            return res;
+            if (!IsNear && onlyPlatformNearMode)
+            {
+                return Enumerable.Empty<ICacheEntry<TK, TV>>();
+            }
+
+            return new CacheEnumerable<TK, TV>(this, encodedPeekModes);
         }
 
         /** <inheritdoc /> */
