@@ -769,7 +769,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         : () => cache.GetSize(modes); 
 
             var ex = Assert.Throws<InvalidOperationException>(() => action());
-            Assert.AreEqual("NativeNear can only be used to get local size", ex.Message);
+            
+            Assert.AreEqual(
+                string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear),
+                ex.Message);
         }
 
         [Test]
