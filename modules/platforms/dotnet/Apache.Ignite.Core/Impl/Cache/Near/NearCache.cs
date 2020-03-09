@@ -199,7 +199,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 
             foreach (var entry in _map)
             {
-                yield return new CacheEntry<TKey, TVal>((TKey) (object) entry.Key, (TVal) (object) entry.Value);
+                yield return new CacheEntry<TKey, TVal>((TKey) (object) entry.Key, (TVal) (object) entry.Value.Value);
             }
         }
 

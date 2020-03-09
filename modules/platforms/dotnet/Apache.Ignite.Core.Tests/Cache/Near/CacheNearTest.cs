@@ -770,15 +770,34 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var ex = Assert.Throws<InvalidOperationException>(() => action());
             
-            Assert.AreEqual(
-                string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear),
+            Assert.AreEqual(string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear),
                 ex.Message);
         }
 
+        /// <summary>
+        /// Tests <see cref="ICache{TK,TV}.GetLocalEntries"/> with <see cref="CachePeekMode.PlatformNear"/>.
+        /// </summary>
         [Test]
-        public void TestGetLocalEntries()
+        public void TestGetLocalEntriesNearOnly()
         {
-            // TODO
+            var cache = GetCache<int, Foo>(CacheTestMode.Client, TestUtils.TestName);
+            var keys = Enumerable.Range(1, 3).ToArray();
+            cache.PutAll(keys.ToDictionary(x => x, x => new Foo(x)));
+
+            var localEntries = cache.GetLocalEntries(CachePeekMode.PlatformNear).ToArray();
+            
+            // Same set of keys.
+            CollectionAssert.AreEquivalent(keys, localEntries.Select(e => e.Key));
+            
+            // Returns same instances every time.
+            CollectionAssert.AreEqual(localEntries.Select(e => e.Value),
+                cache.GetLocalEntries(CachePeekMode.PlatformNear).Select(e => e.Value));
+            
+            // Every instance is from near cache.
+            foreach (var entry in localEntries)
+            {
+                Assert.AreSame(entry.Value, cache[entry.Key]);
+            }
         }
 
         [Test]
