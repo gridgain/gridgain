@@ -12104,7 +12104,7 @@ public abstract class IgniteUtils {
      * Works as {@link DataOutput#writeUTF}, but has no limit of 65535 bytes,
      * can write {@code null} values, and uses string length instead of
      * total number of bytes. Must be used together with 
-     * {@link IgniteUtils#readBigString}.
+     * {@link IgniteUtils#readBigUTF}.
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
@@ -12150,7 +12150,7 @@ public abstract class IgniteUtils {
      * @return Read string, possibly {@code null}.
      * @throws IOException If read failed.
      */
-    @Nullable public static String readBigString(DataInput in) throws IOException {
+    @Nullable public static String readBigUTF(DataInput in) throws IOException {
         // Check null value.
         if (in.readBoolean())
             return null;

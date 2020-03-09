@@ -1303,7 +1303,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
     /**
      * Testing methods {@link IgniteUtils#writeBigUTF} and
-     * {@link IgniteUtils#readBigString} using resource files, where each line is
+     * {@link IgniteUtils#readBigUTF} using resource files, where each line is
      * needed to test different cases.
      *
      * @throws IOException If failed.
@@ -1328,7 +1328,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
                 U.writeBigUTF(dOut, readLine);
 
                 DataInputStream dIn = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
-                String readBigUTF = U.readBigString(dIn);
+                String readBigUTF = U.readBigUTF(dIn);
 
                 assertEquals(readLine, readBigUTF);
             }
