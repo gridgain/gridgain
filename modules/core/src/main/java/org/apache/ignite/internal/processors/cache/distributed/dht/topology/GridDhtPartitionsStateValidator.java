@@ -96,13 +96,15 @@ public class GridDhtPartitionsStateValidator {
         Map<Integer, Map<UUID, Long>> result = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
 
         if (!result.isEmpty()) {
-            invalidParts.putIfAbsent(top.groupId(), result.keySet());
+            Set<Integer> parts = new HashSet<>(result.keySet());
+
+            invalidParts.putIfAbsent(top.groupId(), parts);
 
             throw new PartitionStateValidationException(
                 "Partitions update counters are inconsistent for " + fold(topVer, result),
                 topVer,
                 top.groupId(),
-                result.keySet());
+                parts);
         }
 
         // For sizes validation ignore also nodes which are not able to send cache sizes.
@@ -117,13 +119,15 @@ public class GridDhtPartitionsStateValidator {
             result = validatePartitionsSizes(top, messages, ignoringNodes);
 
             if (!result.isEmpty()) {
-                invalidParts.putIfAbsent(top.groupId(), result.keySet());
+                Set<Integer> parts = new HashSet<>(result.keySet());
+
+                invalidParts.putIfAbsent(top.groupId(), parts);
 
                 throw new PartitionStateValidationException(
                     "Partitions cache sizes are inconsistent for " + fold(topVer, result),
                     topVer,
                     top.groupId(),
-                    result.keySet());
+                    parts);
             }
         }
     }

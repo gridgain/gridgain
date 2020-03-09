@@ -19,8 +19,10 @@ package org.apache.ignite.internal.visor.checker;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -137,7 +139,12 @@ public class VisorPartitionReconciliationTaskArg extends IgniteDataTransferObjec
              b.repairAlg,
              b.recheckDelay);
 
-        partsToRepair = b.partsToRepair;
+        if (b.partsToRepair != null) {
+            partsToRepair = b.partsToRepair
+                .entrySet()
+                .stream()
+                .collect(Collectors.toMap(e -> e.getKey(), e -> new HashSet<>(e.getValue())));
+        }
     }
 
     /** {@inheritDoc} */

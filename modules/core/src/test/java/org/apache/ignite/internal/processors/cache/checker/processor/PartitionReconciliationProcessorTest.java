@@ -309,7 +309,7 @@ public class PartitionReconciliationProcessorTest {
     }
 
     /**
-     *
+     * Mocked partition reconciliation processor for testing purposes.
      */
     private static class MockedProcessor extends PartitionReconciliationProcessor {
         /** */
