@@ -2264,7 +2264,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 // TODO do we need this ? LOST partitions are subject for eviction on afiinity change.
-                checkEvictions(updSeq, grp.affinity().readyAffinity(resTopVer));
+                // checkEvictions(updSeq, grp.affinity().readyAffinity(resTopVer));
 
                 lostParts = null;
 

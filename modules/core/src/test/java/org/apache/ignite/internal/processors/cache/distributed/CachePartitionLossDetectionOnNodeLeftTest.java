@@ -114,21 +114,21 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     }
 
     /**
-     * In this mode the assignment for volatile caches computed ignoring BLT because BLT is disabled.
+     * Baseline is OFF, expecting partition movement.
      * Partitions are expected to be LOST after migrating to remaining nodes.
      */
     @Test
     public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_NoBLT() throws Exception {
-        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, false, true);
+        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, true);
     }
 
     /**
-     * In this mode the assignment for volatile caches computed ignoring BLT because BLT is disabled.
+     * Baseline is OFF, expecting partition movement.
      * Partitions are expected to be OWNING after migrating to remaining nodes.
      */
     @Test
     public void testPartitionLossDetectionOnNodeLeft_Volatile_Unsafe_Merge_NoBLT() throws Exception {
-        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.IGNORE, true, false, true);
+        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.IGNORE, true, false);
     }
 
 //    /** */
@@ -137,9 +137,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 //    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
 //    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
 //    public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_BLT_AutoReset() throws Exception {
-//        /** In this mode the assignment for volatile caches computed ignoring BLT because BLT is disabled for volatile
-//         * caches. */
-//        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, false, true);
+//        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.IGNORE, true, true);
 //    }
 //
 //    /** */
@@ -157,16 +155,14 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      * @param merge {@code True} to enable persistence.
      * @param lossPlc Loss policy.
      * @param merge {@code True} to merge exchanges (also disables baseline for in-memory caches).
-     * @param resetBaseline {@code True} to reset baseline after nodes are left.
      */
     private void doTestPartitionLossDetectionOnNodeLeft (
         boolean persistence,
         PartitionLossPolicy lossPlc,
-        boolean merge,
-        boolean resetBaseline,
-        boolean expectPartitionsMoved
+        boolean expectPartitionsMoved,
+        boolean expectLost
     ) throws Exception {
-        enableBaseline = !merge;
+        enableBaseline = false;
         this.persistence = persistence;
         this.lossPlc = lossPlc;
 
@@ -190,8 +186,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         awaitPartitionMapExchange();
 
-        if (merge)
-            mergeExchangeWaitVersion(srv0, 8, null);
+        mergeExchangeWaitVersion(srv0, 8, null);
 
         int[] p2 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(2).localNode());
         int[] p3 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(3).localNode());
@@ -208,16 +203,35 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         Collections.sort(expLostParts);
 
-        stopGrid(getTestIgniteInstanceName(4), true, !merge);
-        stopGrid(getTestIgniteInstanceName(3), true, !merge);
-        stopGrid(getTestIgniteInstanceName(2), true, !merge);
+        stopGrid(getTestIgniteInstanceName(4), true, false);
+        stopGrid(getTestIgniteInstanceName(3), true, false);
+        stopGrid(getTestIgniteInstanceName(2), true, false);
 
-        if (resetBaseline)
-            resetBaselineTopology();
+        final AffinityTopologyVersion lastVer = new AffinityTopologyVersion(8, 0);
 
-        waitForReadyTopology(internalCache(1, DEFAULT_CACHE_NAME).context().topology(), new AffinityTopologyVersion(8, 0));
+        waitForReadyTopology(internalCache(0, DEFAULT_CACHE_NAME).context().topology(), lastVer);
+        waitForReadyTopology(internalCache(1, DEFAULT_CACHE_NAME).context().topology(), lastVer);
 
-        if (lossPlc != PartitionLossPolicy.IGNORE) {
+        final List<GridDhtPartitionTopology> tops = Arrays.asList(
+            grid(0).cachex(DEFAULT_CACHE_NAME).context().topology(),
+            grid(1).cachex(DEFAULT_CACHE_NAME).context().topology());
+
+        if (expectPartitionsMoved) {
+            for (int p = 0; p < PARTS_CNT; p++) {
+                for (GridDhtPartitionTopology top : tops) {
+                    final GridDhtLocalPartition p0 = top.localPartition(p);
+
+                    if (p0 != null && p0.state() != GridDhtPartitionState.EVICTED) {
+                        assertTrue(!expectLost ? p0.state() == GridDhtPartitionState.OWNING :
+                            !expLostParts.contains(p) || p0.state() == GridDhtPartitionState.LOST);
+                    }
+                }
+            }
+        }
+
+        printPartitionState(DEFAULT_CACHE_NAME, 0);
+
+        if (expectLost) {
             assertEquals(new HashSet<>(expLostParts), grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions());
             assertEquals(new HashSet<>(expLostParts), grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions());
 
@@ -230,23 +244,17 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
         if (expectPartitionsMoved) {
-            final List<GridDhtPartitionTopology> tops = Arrays.asList(
-                grid(0).cachex(DEFAULT_CACHE_NAME).context().topology(),
-                grid(1).cachex(DEFAULT_CACHE_NAME).context().topology());
-
             for (int p = 0; p < PARTS_CNT; p++) {
                 for (GridDhtPartitionTopology top : tops) {
                     final GridDhtLocalPartition p0 = top.localPartition(p);
 
-                    if (p0 != null && p0.state() != GridDhtPartitionState.EVICTED) {
-                        assertTrue(lossPlc == PartitionLossPolicy.IGNORE ? p0.state() == GridDhtPartitionState.OWNING :
-                            p0.state() != GridDhtPartitionState.LOST || expLostParts.contains(p));
-                    }
+                    if (p0 != null && p0.state() != GridDhtPartitionState.EVICTED)
+                        assertEquals(GridDhtPartitionState.OWNING, p0.state());
                 }
             }
         }
 
-        if (lossPlc == PartitionLossPolicy.IGNORE) {
+        if (!expectLost) {
             // Events should not be fired for IGNORE policy.
             assertTrue(lostEvt0.isEmpty());
             assertTrue(lostEvt1.isEmpty());
