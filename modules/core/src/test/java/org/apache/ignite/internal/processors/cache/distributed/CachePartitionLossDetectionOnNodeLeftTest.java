@@ -48,7 +48,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED
 import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
 
 /**
- * Tests if lost partitions are same on left nodes after other owners removal.
+ * Tests partition loss detection in various configurations.
  * TODO persistent mode shoud be moved to cache7 suite.
  */
 public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstractTest {
@@ -257,7 +257,6 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
             assertEquals("Node1", expLostParts, lostEvt1);
         }
 
-
         assertTrue(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
         assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
@@ -267,6 +266,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
                 ig.cache(DEFAULT_CACHE_NAME).put(i, i);
         }
 
+        // Graceful shutdown.
         srv0.cluster().active(false);
     }
 }

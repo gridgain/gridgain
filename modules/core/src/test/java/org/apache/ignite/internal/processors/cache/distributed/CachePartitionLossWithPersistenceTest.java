@@ -193,10 +193,40 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     }
 
     /**
+     * TODO failing.
+     */
+    @Test
+    public void testConsistencyAfterResettingLostPartitions_1() throws Exception {
+        doTestConsistencyAfterResettingLostPartitions(0, false);
+    }
+
+    /**
+     * Lagging node cannot be rebalanced from joining node.
+     */
+    @Test
+    public void testConsistencyAfterResettingLostPartitions_2() throws Exception {
+        doTestConsistencyAfterResettingLostPartitions(1, true);
+    }
+
+    /**
      *
      */
     @Test
-    public void testConsistencyAfterResettingLostPartitions() throws Exception {
+    public void testConsistencyAfterResettingLostPartitions_3() throws Exception {
+        doTestConsistencyAfterResettingLostPartitions(2, false);
+    }
+
+    /**
+     *
+     * @param partResetMode Reset mode:
+     * <ul>
+     *     <li>0 - reset then only lagging node is returned.</li>
+     *     <li>1 - reset then both nodes are returned.</li>
+     *     <li>2 - reset then both nodes are returned and new node is added to baseline causing partition movement.</li>
+     * </ul>
+     * @param resetBeforeAllJoined {@code True} to reset lost partitions after lagging node is joined.
+     */
+    private void doTestConsistencyAfterResettingLostPartitions(int partResetMode, boolean expectRebalance) throws Exception {
         lossPlc = READ_WRITE_SAFE;
 
         IgniteEx crd = startGrids(2);
@@ -221,7 +251,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         cachex.put(part, 0);
 
-        stopGrid(2);
+        stopGrid(2); // g1 now lags behind g2.
 
         final Collection<Integer> lostParts = crd.cache(DEFAULT_CACHE_NAME).lostPartitions();
 
@@ -229,45 +259,54 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         assertTrue(lostParts.contains(part));
 
+        // Start lagging node first.
         final IgniteEx g1 = startGrid(1);
 
         final Collection<Integer> g1LostParts = g1.cache(DEFAULT_CACHE_NAME).lostPartitions();
 
         assertEquals(lostParts, g1LostParts);
 
-        // Block rebalancing from g2 to g1 to ensure a primary partition is in moving state.
-        TestRecordingCommunicationSpi.spi(g1).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode node, Message msg) {
-                return msg instanceof GridDhtPartitionDemandMessage;
-            }
-        });
+        if (expectRebalance) {
+            // Block rebalancing from g2 to g1 to ensure a primary partition is in moving state.
+            TestRecordingCommunicationSpi.spi(g1).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                @Override public boolean apply(ClusterNode node, Message msg) {
+                    return msg instanceof GridDhtPartitionDemandMessage;
+                }
+            });
+        }
+
+        if (partResetMode == 0)
+            crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 
         final IgniteEx g2 = startGrid(2);
 
         final Collection<Integer> g2LostParts = g2.cache(DEFAULT_CACHE_NAME).lostPartitions();
 
-        assertEquals(lostParts, g2LostParts);
+        if (partResetMode != 0)
+            assertEquals(lostParts, g2LostParts);
 
-        crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+        if (partResetMode == 1)
+            crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 
-        TestRecordingCommunicationSpi.spi(g1).waitForBlocked();
+        if (expectRebalance) {
+            TestRecordingCommunicationSpi.spi(g1).waitForBlocked();
 
-        // Try put to moving partition. Due to forced reassignment g2 should be a primary for {@code part}.
-        cachex.put(part, 1);
+            /** Try put to moving partition. Due to forced reassignment g2 should be a primary for the partition. */
+            cachex.put(part, 1);
 
-        TestRecordingCommunicationSpi.spi(g1).stopBlock();
+            TestRecordingCommunicationSpi.spi(g1).stopBlock();
+        }
+
+        if (partResetMode == 2) {
+            final IgniteEx g3 = startGrid(3);
+
+            resetBaselineTopology();
+
+            crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+        }
 
         awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
-    }
-
-    private void logCacheSize(String prefix) {
-        final IgniteCache<Object, Object> cache = grid(0).cache(DEFAULT_CACHE_NAME);
-
-        String msg = prefix + " size=" + cache.size();
-        msg += ", partsLost=" + cache.lostPartitions();
-
-        log.info(msg);
     }
 }

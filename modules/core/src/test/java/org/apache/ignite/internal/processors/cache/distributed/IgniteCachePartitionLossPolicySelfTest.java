@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,10 +60,8 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
@@ -365,6 +364,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
     /**
      * @throws Exception if failed.
+     *
+     * TODO same test with full restart in lost state.
      */
     @Test
     public void testReadWriteSafeWithBackupsAfterKillThreeNodesWithPersistence() throws Exception {
@@ -474,10 +475,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     public void testIgnoreKillThreeNodes() throws Exception {
         partLossPlc = PartitionLossPolicy.IGNORE;
 
-        // TODO aliveNodes should include node 4, but it fails due to https://issues.apache.org/jira/browse/IGNITE-5078.
-        // TODO need to add 4 to the aliveNodes after IGNITE-5078 is fixed.
-        // TopologyChanger onlyCrdIsAlive = new TopologyChanger(false, Arrays.asList(1, 2, 3), Arrays.asList(0, 4), 0);
-        TopologyChanger onlyCrdIsAlive = new TopologyChanger(false, asList(1, 2, 3), singletonList(0), 0);
+        TopologyChanger onlyCrdIsAlive = new TopologyChanger(false, Arrays.asList(1, 2, 3), Arrays.asList(0, 4), 0);
 
         checkIgnore(onlyCrdIsAlive);
     }
@@ -515,8 +513,6 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
     /**
      * @throws Exception if failed.
-     *
-     * TODO FIXME not working.
      */
     @Test
     public void testResetBaselineWithLostPartitions() throws Exception {

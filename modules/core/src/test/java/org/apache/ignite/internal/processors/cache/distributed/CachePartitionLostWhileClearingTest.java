@@ -41,6 +41,8 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
 /**
  * Test scenario: last supplier has left while a partition on demander is cleared before sending first demand request.
+ * Baseline is enabled (persistent mode).
+ * TODO same test for in-memory with enabled baseline.
  * <p>
  * Expected result: no assertions are triggered.
  */
@@ -122,7 +124,7 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
      */
     @Test
     public void testPartitionLostWhileClearing_FailOnCrd_Unsafe() throws Exception {
-        lossPlc = PartitionLossPolicy.IGNORE; // In persistent mode READ_WRITE_SAFE is used instead of IGNORE.
+        lossPlc = PartitionLossPolicy.IGNORE; // With baseline READ_WRITE_SAFE is used instead of IGNORE.
 
         doTestPartitionLostWhileClearing(2);
     }
@@ -132,7 +134,7 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
      */
     @Test
     public void testPartitionLostWhileClearing_FailOnFullMessage_Unsafe() throws Exception {
-        lossPlc = PartitionLossPolicy.IGNORE; // In persistent mode READ_WRITE_SAFE is used instead of IGNORE.
+        lossPlc = PartitionLossPolicy.IGNORE; // With baseline READ_WRITE_SAFE is used instead of IGNORE.
 
         doTestPartitionLostWhileClearing(3);
     }
@@ -180,7 +182,7 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
 
         assertEquals(GridDhtPartitionState.LOST, part.state());
 
-        // TODO fixme own a clearing partition !!! ???
+        // Will own a clearing partition.
         g1.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
 
         awaitPartitionMapExchange();
@@ -192,7 +194,7 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
         // Counter must be reset.
         assertEquals(0, cntr.get());
 
-        // Test puts concurrently with clearing after reset are not lost.
+        // Puts done concurrently with clearing after reset should not be lost.
         g1.cache(DEFAULT_CACHE_NAME).putAll(keys.stream().collect(Collectors.toMap(k -> k, v -> -1)));
 
         g1.context().cache().context().evict().awaitFinishAll();
