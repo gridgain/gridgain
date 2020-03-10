@@ -114,7 +114,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     }
 
     /**
-     * Baseline is OFF, expecting partition movement.
+     * Baseline is OFF, expecting partition movement after removing nodes.
      * Partitions are expected to be LOST after migrating to remaining nodes.
      */
     @Test
@@ -123,7 +123,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     }
 
     /**
-     * Baseline is OFF, expecting partition movement.
+     * Baseline is OFF, expecting partition movement after removing nodes.
      * Partitions are expected to be OWNING after migrating to remaining nodes.
      */
     @Test
@@ -228,8 +228,6 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
                 }
             }
         }
-
-        printPartitionState(DEFAULT_CACHE_NAME, 0);
 
         if (expectLost) {
             assertEquals(new HashSet<>(expLostParts), grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions());

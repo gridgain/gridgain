@@ -2105,6 +2105,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 PartitionLossPolicy plc = grp.config().getPartitionLossPolicy();
 
                 // Ignore IGNORE for persistent caches.
+                // TODO check baseline settings for in-memory cache.
                 if (grp.persistenceEnabled() && plc == PartitionLossPolicy.IGNORE)
                     plc = PartitionLossPolicy.READ_WRITE_SAFE;
 
