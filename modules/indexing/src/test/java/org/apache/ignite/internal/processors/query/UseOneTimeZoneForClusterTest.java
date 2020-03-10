@@ -38,6 +38,8 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
-    public void test() {
+    public void test() throws Exception {
+        startGrid(0);
+
     }
 }

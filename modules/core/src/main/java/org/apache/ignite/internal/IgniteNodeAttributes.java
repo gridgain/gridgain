@@ -211,10 +211,6 @@ public final class IgniteNodeAttributes {
     public static final String ATTR_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED = ATTR_PREFIX +
         ".event.driven.service.processor.enabled";
 
-    /** Ignite services processor mode. */
-    public static final String ATTR_SQL_TIME_ZONE = ATTR_PREFIX +
-        ".sql.timezone";
-
     /**
      * Enforces singleton.
      */

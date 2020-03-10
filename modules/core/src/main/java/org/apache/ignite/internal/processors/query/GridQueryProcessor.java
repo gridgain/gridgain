@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -27,6 +28,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -366,6 +368,49 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 for (SchemaProposeDiscoveryMessage activeProposal : data0.values())
                     onSchemaProposeDiscovery0(activeProposal);
             }
+
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void collectJoiningNodeData(DiscoveryDataBag dataBag) {
+        // TODO:
+        synchronized (stateMux) {
+            dataBag.addGridCommonData(DiscoveryDataExchangeType.TIME_ZONE.ordinal(), null);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public @Nullable IgniteNodeValidationResult validateNode(
+        ClusterNode node,
+        DiscoveryDataBag.JoiningNodeDiscoveryData discoData) {
+        // TODO:
+        synchronized (stateMux) {
+            if (!moduleEnabled())
+                return null;
+
+            String localSqlTzId = IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_SQL_TIME_ZONE);
+
+            String clusterSqlTzId = node.attribute(IgniteSystemProperties.IGNITE_SQL_TIME_ZONE);
+
+            assert clusterSqlTzId != null;
+
+            if (localSqlTzId == null) {
+                try {
+                    idx.clusterTimezone(clusterSqlTzId);
+
+                    return null;
+                }
+                catch (IgniteCheckedException e) {
+                    return new IgniteNodeValidationResult(node.id(), "TODO");
+                }
+            }
+            else if (!clusterSqlTzId.equals(localSqlTzId)) {
+                return new IgniteNodeValidationResult(node.id(), "Cluster timezone mismatch " +
+                    "[local=" + localSqlTzId + ", remote=" + clusterSqlTzId + ']');
+            }
+
+            return null;
         }
     }
 
@@ -3213,35 +3258,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         return (key & cacheIdShifted) == cacheIdShifted;
     }
 
-    /** {@inheritDoc} */
-    @Override public @Nullable IgniteNodeValidationResult validateNode(ClusterNode node) {
-        if (!moduleEnabled())
-            return null;
-
-        String localSqlTzId = IgniteSystemProperties.getString(IgniteSystemProperties.IGNITE_SQL_TIME_ZONE);
-
-        String clusterSqlTzId = node.attribute(IgniteSystemProperties.IGNITE_SQL_TIME_ZONE);
-
-        assert clusterSqlTzId != null;
-
-        if (localSqlTzId == null) {
-            try {
-                idx.clusterTimezone(clusterSqlTzId);
-
-                return null;
-            }
-            catch (IgniteCheckedException e) {
-                return new IgniteNodeValidationResult(node.id(), "TODO");
-            }
-        }
-        else if (!clusterSqlTzId.equals(localSqlTzId)) {
-            return new IgniteNodeValidationResult(node.id(), "Cluster timezone mismatch " +
-                "[local=" + localSqlTzId + ", remote=" + clusterSqlTzId + ']');
-        }
-
-        return null;
-    }
-
     /**
      * Schema operation.
      */
@@ -3420,5 +3436,17 @@ public class GridQueryProcessor extends GridProcessorAdapter {
          * @throws IgniteCheckedException If failed.
          */
         T get() throws IgniteCheckedException;
+    }
+
+    /**
+     *
+     */
+    private static class DiscoveryDataBag implements Serializable {
+        /** */
+        private static final long serialVersionUID = 0L;
+
+        SchemaProposeDiscoveryMessage proposalMsg;
+
+        TimeZone tz;
     }
 }
