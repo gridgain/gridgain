@@ -213,7 +213,6 @@ public class IgniteProcessProxy implements IgniteEx {
      * @param log Base logger.
      * @param ctgr Category.
      * @return Initiated logger.
-     * @throws Exception In case of an error.
      */
     protected IgniteLogger logger(IgniteLogger log, Object ctgr) {
         return log.getLogger(ctgr);
@@ -223,7 +222,6 @@ public class IgniteProcessProxy implements IgniteEx {
      * Gets Ignite node runner class name.
      *
      * @return Node runner class name.
-     * @throws Exception In case of an error.
      */
     protected String igniteNodeRunnerClassName() {
         return IgniteNodeRunner.class.getCanonicalName();

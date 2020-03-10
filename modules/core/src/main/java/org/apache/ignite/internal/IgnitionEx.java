@@ -303,14 +303,15 @@ public class IgnitionEx {
      *      {@link Thread#interrupt()}, it is up to the actual job to exit from
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
-     *      jobs running on it before stopping. If {@code null} then
-     *      not-{@link IgniteConfiguration#isGracefulShutdown()} is used instead.
+     *      jobs running on it before stopping.
      * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. If {@code null} then {@link IgniteConfiguration#isWaitForBackupsOnShutdown()} is used instead.
+     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
+     *      exist that have backups configured. If {@code null} then
+     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN()} value is used instead.
      * @return {@code true} if default grid instance was indeed stopped,
      *      {@code false} otherwise (if it was not started).
      */
-    public static boolean stop(Boolean cancel, Boolean waitForBackups) {
+    public static boolean stop(boolean cancel, Boolean waitForBackups) {
         return stop(null, cancel, waitForBackups, false);
     }
 
@@ -328,16 +329,17 @@ public class IgnitionEx {
      *      {@link Thread#interrupt()}, it is up to the actual job to exit from
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
-     *      jobs running on it before stopping. If {@code null} then
-     *      not-{@link IgniteConfiguration#isGracefulShutdown()} is used instead.
+     *      jobs running on it before stopping.
      * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. If {@code null} then {@link IgniteConfiguration#isWaitForBackupsOnShutdown()} is used instead.
+     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
+     *      exist that have backups configured. If {@code null} then
+     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN()} value is used instead.
      * @param stopNotStarted If {@code true} and node start did not finish then interrupts starting thread.
      * @return {@code true} if named Ignite instance was indeed found and stopped,
      *      {@code false} otherwise (the instance with given {@code name} was
      *      not found).
      */
-    public static boolean stop(@Nullable String name, Boolean cancel, Boolean waitForBackups, boolean stopNotStarted) {
+    public static boolean stop(@Nullable String name, boolean cancel, Boolean waitForBackups, boolean stopNotStarted) {
         IgniteNamedInstance grid = name != null ? grids.get(name) : dfltGrid;
 
         if (grid != null && stopNotStarted && grid.startLatch.getCount() != 0) {
@@ -350,7 +352,7 @@ public class IgnitionEx {
             waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
 
         if (grid != null && grid.state() == STARTED) {
-            grid.stop(cancel == null || cancel, waitForBackups);
+            grid.stop(cancel, waitForBackups);
 
             boolean fireEvt;
 
@@ -425,19 +427,20 @@ public class IgnitionEx {
      *      {@link Thread#interrupt()}, it is up to the actual job to exit from
      *      execution. If {@code false}, then jobs currently running will not be
      *      canceled. In either case, grid node will wait for completion of all
-     *      jobs running on it before stopping. If {@code null} then
-     *      not-{@link IgniteConfiguration#isGracefulShutdown()} is used instead.
+     *      jobs running on it before stopping.
      * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
-     *      down. If {@code null} then {@link IgniteConfiguration#isWaitForBackupsOnShutdown()} is used instead.
+     *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
+     *      exist that have backups configured. If {@code null} then
+     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN()} value is used instead.
      */
-    public static void stopAll(Boolean cancel, Boolean waitForBackups) {
+    public static void stopAll(boolean cancel, Boolean waitForBackups) {
         IgniteNamedInstance grid0 = dfltGrid;
 
         if (waitForBackups == null)
             waitForBackups = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN);
 
         if (grid0 != null) {
-            grid0.stop(cancel == null || cancel, waitForBackups);
+            grid0.stop(cancel, waitForBackups);
 
             boolean fireEvt;
 
@@ -454,7 +457,7 @@ public class IgnitionEx {
 
         // Stop the rest and clear grids map.
         for (IgniteNamedInstance grid : grids.values()) {
-            grid.stop(cancel == null || cancel, waitForBackups);
+            grid.stop(cancel, waitForBackups);
 
             boolean fireEvt = grids.remove(grid.getName(), grid);
 
