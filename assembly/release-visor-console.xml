@@ -30,7 +30,7 @@
                 <fileSets>
                     <fileSet>
                         <directory>${basedir}</directory>
-                        <outputDirectory>bin</outputDirectory>
+                        <outputDirectory>bin/include</outputDirectory>
                         <includes>
                             <include>licenses/**</include>
                         </includes>
