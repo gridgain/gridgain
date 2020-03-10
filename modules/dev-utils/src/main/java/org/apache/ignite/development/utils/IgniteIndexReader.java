@@ -1509,6 +1509,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             long pageId = pageId(link);
 
+            // Cache id from index.bin indexes is always 0.
             Map<Integer, Map<Byte, IntSet>> map = store.get(0);
 
             if (map != null) {
