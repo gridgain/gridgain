@@ -86,11 +86,11 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
                     info.local(),
                     valueTimestampFromMillis(info.startTime()),
                     duration,
-                    info.memoryTracker().reserved(),
-                    info.memoryTracker().maxReserved(),
-                    info.memoryTracker().writtenOnDisk(),
-                    info.memoryTracker().maxWrittenOnDisk(),
-                    info.memoryTracker().totalWrittenOnDisk()
+                    info.memoryMetricProvider().reserved(),
+                    info.memoryMetricProvider().maxReserved(),
+                    info.memoryMetricProvider().writtenOnDisk(),
+                    info.memoryMetricProvider().maxWrittenOnDisk(),
+                    info.memoryMetricProvider().totalWrittenOnDisk()
                 )
             );
         }

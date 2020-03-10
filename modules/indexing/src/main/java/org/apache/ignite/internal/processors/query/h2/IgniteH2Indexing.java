@@ -931,7 +931,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2MemoryTracker tracker = null;
 
         if (runningQryInfo != null)
-            tracker = ((H2MemoryTracker)runningQryInfo.memoryTracker()).createChildTracker();
+            tracker = ((H2MemoryTracker)runningQryInfo.memoryMetricProvider()).createChildTracker();
 
         if (tracker == null)
             tracker = (H2MemoryTracker)memoryMgr.createQueryMemoryTracker(maxMem);
@@ -2643,7 +2643,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (info == null)
             return null;
 
-        final GridQueryMemoryMetricProvider memTracker = info.memoryTracker();
+        final GridQueryMemoryMetricProvider memTracker = info.memoryMetricProvider();
 
         assert memTracker == null || memTracker instanceof H2MemoryTracker : "Memory tracker either should be null" +
             " or should be instance of " + H2MemoryTracker.class.getName() + ", but it is " + memTracker.getClass().getName();

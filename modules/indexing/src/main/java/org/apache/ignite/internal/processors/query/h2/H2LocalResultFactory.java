@@ -31,7 +31,7 @@ public class H2LocalResultFactory extends LocalResultFactory {
         if (system)
             return new LocalResultImpl(ses, expressions, visibleColCnt);
 
-        return new H2ManagedLocalResult(ses, ses.memoryTracker(), expressions, visibleColCnt);
+        return new H2ManagedLocalResult(ses, expressions, visibleColCnt);
     }
 
     /** {@inheritDoc} */

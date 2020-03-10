@@ -236,7 +236,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized void swap(long size) {
+    @Override public synchronized void spill(long size) {
         assert size >= 0;
 
         if (size == 0)
@@ -245,7 +245,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         checkClosed();
 
         if (parent != null)
-            parent.swap(size);
+            parent.spill(size);
 
         writtenOnDisk += size;
         totalWrittenOnDisk += size;
@@ -253,7 +253,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized void unswap(long size) {
+    @Override public synchronized void unspill(long size) {
         assert size >= 0;
 
         if (size == 0)
@@ -262,7 +262,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         checkClosed();
 
         if (parent != null)
-            parent.unswap(size);
+            parent.unspill(size);
 
         writtenOnDisk -= size;
     }
@@ -362,13 +362,9 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
             try {
                 res = parent.reserve(size);
             }
-            catch (IgniteSQLException ex) {
+            finally {
                 reserved += size;
-
-                throw ex;
             }
-
-            reserved += size;
 
             return res;
         }
@@ -398,20 +394,20 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         }
 
         /** {@inheritDoc} */
-        @Override public void swap(long size) {
+        @Override public void spill(long size) {
             checkClosed();
 
-            parent.swap(size);
+            parent.spill(size);
 
             writtenOnDisk += size;
             totalWrittenOnDisk += size;
         }
 
         /** {@inheritDoc} */
-        @Override public void unswap(long size) {
+        @Override public void unspill(long size) {
             checkClosed();
 
-            parent.unswap(size);
+            parent.unspill(size);
 
             writtenOnDisk -= size;
         }
@@ -446,7 +442,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
                 return;
 
             parent.release(reserved);
-            parent.unswap(writtenOnDisk);
+            parent.unspill(writtenOnDisk);
 
             reserved = 0;
             writtenOnDisk = 0;

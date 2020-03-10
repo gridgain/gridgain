@@ -29,7 +29,6 @@ import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -276,10 +275,8 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
             if (system)
                 return new LocalResultImpl(ses, expressions, visibleColCnt);
 
-            H2MemoryTracker memoryTracker = ses.memoryTracker();
-
-            if (memoryTracker != null) {
-                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
+            if (ses.memoryTracker() != null) {
+                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, expressions, visibleColCnt) {
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
                     }
@@ -290,7 +287,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
                 return res;
             }
 
-            return new H2ManagedLocalResult(ses, null, expressions, visibleColCnt);
+            return new H2ManagedLocalResult(ses, expressions, visibleColCnt);
         }
 
         /** {@inheritDoc} */

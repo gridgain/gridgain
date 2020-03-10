@@ -149,21 +149,21 @@ public class TrackableFileIoFactory {
                 metrics.trackOffloadingWritten(written);
 
             if (tracker != null)
-                tracker.swap(written);
+                tracker.spill(written);
         }
 
         /** {@inheritDoc} */
         @Override public void clear() throws IOException {
             super.clear();
 
-            tracker.unswap(tracker.writtenOnDisk());
+            tracker.unspill(tracker.writtenOnDisk());
         }
 
         /** {@inheritDoc} */
         @Override public void close() throws IOException {
             super.close();
 
-            tracker.unswap(tracker.writtenOnDisk());
+            tracker.unspill(tracker.writtenOnDisk());
 
             tracker.close();
         }

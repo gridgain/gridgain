@@ -91,25 +91,25 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
     public void testDiskOffloading() {
         QueryMemoryTracker tracker = new QueryMemoryTracker(null, 128L, 256L, true);
 
-        tracker.swap(52L);
+        tracker.spill(52L);
 
         assertEquals(52L, tracker.writtenOnDisk());
         assertEquals(52L, tracker.maxWrittenOnDisk());
         assertEquals(52L, tracker.totalWrittenOnDisk());
 
-        tracker.swap(30L);
+        tracker.spill(30L);
 
         assertEquals(82L, tracker.writtenOnDisk());
         assertEquals(82L, tracker.maxWrittenOnDisk());
         assertEquals(82L, tracker.totalWrittenOnDisk());
 
-        tracker.unswap(30L);
+        tracker.unspill(30L);
 
         assertEquals(52L, tracker.writtenOnDisk());
         assertEquals(82L, tracker.maxWrittenOnDisk());
         assertEquals(82L, tracker.totalWrittenOnDisk());
 
-        tracker.swap(10L);
+        tracker.spill(10L);
 
         assertEquals(62L, tracker.writtenOnDisk());
         assertEquals(82L, tracker.maxWrittenOnDisk());
@@ -155,11 +155,11 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
                 return reserved;
             }
 
-            @Override public void swap(long size) {
+            @Override public void spill(long size) {
                 // NO-OP
             }
 
-            @Override public void unswap(long size) {
+            @Override public void unspill(long size) {
                 // NO-OP
             }
 
@@ -259,7 +259,7 @@ public class GridQueryMemoryMetricProviderSelfTest extends GridCommonAbstractTes
         assertEquals(900, tracker.reserved());
 
         // the same rule as with reservation
-        child2.swap(200);
+        child2.spill(200);
 
         assertEquals(0, child1.writtenOnDisk());
         assertEquals(200, child2.writtenOnDisk());

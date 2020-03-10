@@ -57,18 +57,18 @@ public interface H2MemoryTracker extends AutoCloseable {
     public long reserved();
 
     /**
-     * Tracks swapping on disk.
+     * Tracks spilling on disk.
      *
      * @param size Amount of bytes written on disk.
      */
-    public void swap(long size);
+    public void spill(long size);
 
     /**
-     * Tracks unswapping from disk.
+     * Tracks unspilling from disk.
      *
      * @param size Amount of bytes deleted from disk.
      */
-    public void unswap(long size);
+    public void unspill(long size);
 
     /**
      * Increments the counter of created offloading files.

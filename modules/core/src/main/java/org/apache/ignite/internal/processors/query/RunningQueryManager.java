@@ -191,12 +191,12 @@ public class RunningQueryManager {
         if (qry == null)
             return;
 
-        if (qry.memoryTracker() instanceof AutoCloseable)
-            U.close((AutoCloseable)qry.memoryTracker(), log);
+        if (qry.memoryMetricProvider() instanceof AutoCloseable)
+            U.close((AutoCloseable)qry.memoryMetricProvider(), log);
 
         if (log.isDebugEnabled()) {
             log.debug("User's query " + (failReason == null ? "completed " : "failed ") +
-                "[id=" + qryId + ", tracker=" + qry.memoryTracker() +
+                "[id=" + qryId + ", tracker=" + qry.memoryMetricProvider() +
                 ", failReason=" + (failReason != null ? failReason.getMessage() : "null") + ']');
         }
 

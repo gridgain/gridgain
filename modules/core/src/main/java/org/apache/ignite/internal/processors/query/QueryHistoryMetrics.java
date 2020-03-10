@@ -46,9 +46,9 @@ public class QueryHistoryMetrics {
 
         long failures = failed ? 1 : 0;
         long duration = System.currentTimeMillis() - info.startTime();
-        long reserved = info.memoryTracker().maxReserved();
-        long allocatedOnDisk = info.memoryTracker().maxWrittenOnDisk();
-        long totalWrittenOnDisk = info.memoryTracker().totalWrittenOnDisk();
+        long reserved = info.memoryMetricProvider().maxReserved();
+        long allocatedOnDisk = info.memoryMetricProvider().maxWrittenOnDisk();
+        long totalWrittenOnDisk = info.memoryMetricProvider().totalWrittenOnDisk();
 
         val = new QueryHistoryMetricsValue(1, failures, duration, duration, info.startTime(),
             reserved, reserved, allocatedOnDisk, allocatedOnDisk, totalWrittenOnDisk, totalWrittenOnDisk);

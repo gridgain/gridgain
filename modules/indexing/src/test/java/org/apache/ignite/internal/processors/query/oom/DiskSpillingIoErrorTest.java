@@ -183,11 +183,11 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public void swap(long size) {
+        @Override public void spill(long size) {
         }
 
         /** {@inheritDoc} */
-        @Override public void unswap(long size) {
+        @Override public void unspill(long size) {
         }
 
         /** {@inheritDoc} */

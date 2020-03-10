@@ -316,12 +316,12 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     }
 
     /** {@inheritDoc} */
-    @Override public void swap(long size) {
+    @Override public void spill(long size) {
         // NO-OP
     }
 
     /** {@inheritDoc} */
-    @Override public void unswap(long size) {
+    @Override public void unspill(long size) {
         // NO-OP
     }
 

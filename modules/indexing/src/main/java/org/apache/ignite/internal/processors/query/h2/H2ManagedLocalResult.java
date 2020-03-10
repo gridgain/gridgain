@@ -74,18 +74,21 @@ public class H2ManagedLocalResult implements LocalResult {
      * Constructor.
      *
      * @param ses the session
-     * @param memTracker Query memory tracker.
      * @param expressions the expression array
      * @param visibleColCnt the number of visible columns
      */
-    public H2ManagedLocalResult(Session ses, H2MemoryTracker memTracker, Expression[] expressions,
+    public H2ManagedLocalResult(Session ses, Expression[] expressions,
         int visibleColCnt) {
         this.session = ses;
         rows = Utils.newSmallArrayList();
         this.visibleColumnCount = visibleColCnt;
         rowId = -1;
         this.expressions = expressions;
-        this.memTracker = memTracker != null ? memTracker.createChildTracker() : null;
+    }
+
+    private void initMemTracker() {
+        if (memTracker == null)
+            memTracker = session.memoryTracker() != null ? session.memoryTracker().createChildTracker() : null;
     }
 
     /**
@@ -251,6 +254,12 @@ public class H2ManagedLocalResult implements LocalResult {
         currentRow = null;
         if (external != null) {
             external.reset();
+            external = null;
+        }
+
+        if (memTracker != null) {
+            memTracker.close();
+            memTracker = null;
         }
     }
 
@@ -334,6 +343,7 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void addRow(Value[] values) {
         cloneLobs(values);
+        initMemTracker();
         if (isAnyDistinct()) {
             if (distinctRows != null) {
                 ValueRow array = getDistinctRow(values);
@@ -393,6 +403,7 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public void done() {
+        initMemTracker();
         if (external != null) {
             addRowsToDisk(false);
         }
@@ -474,6 +485,7 @@ public class H2ManagedLocalResult implements LocalResult {
         ResultExternal temp = external;
         external = null;
         temp.reset();
+        initMemTracker();
         while (--offset >= 0) {
             temp.next();
         }
