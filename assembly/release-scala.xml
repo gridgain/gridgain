@@ -23,7 +23,7 @@
     <fileSets>
         <fileSet>
             <directory>bin</directory>
-            <outputDirectory>/</outputDirectory>
+            <outputDirectory>bin</outputDirectory>
             <includes>
                 <include>**/ignitevisorcmd.bat</include>
                 <include>**/include/visorcmd/node_startup_by_ssh.sample.ini</include>
@@ -32,7 +32,7 @@
 
         <fileSet>
             <directory>bin</directory>
-            <outputDirectory>/</outputDirectory>
+            <outputDirectory>bin</outputDirectory>
             <fileMode>0755</fileMode>
             <includes>
                 <include>**/ignitevisorcmd.sh</include>
