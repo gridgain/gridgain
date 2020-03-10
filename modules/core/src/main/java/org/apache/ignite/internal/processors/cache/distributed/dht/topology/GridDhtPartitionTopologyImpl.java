@@ -885,6 +885,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (updCntr != 0)
                 loc.updateCounter(updCntr);
 
+            // Create a partition in lost state.
+            if (lostParts != null && lostParts.contains(p))
+                loc.markLost();
+
             if (ctx.pageStore() != null) {
                 try {
                     ctx.pageStore().onPartitionCreated(grp.groupId(), p);

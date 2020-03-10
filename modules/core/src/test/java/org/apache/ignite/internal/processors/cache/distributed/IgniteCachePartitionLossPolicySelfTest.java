@@ -18,7 +18,9 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +29,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -36,6 +40,7 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -49,10 +54,15 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestDelayingCommunicationSpi;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
+import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
@@ -79,6 +89,9 @@ import static org.junit.Assume.assumeFalse;
  */
 @RunWith(Parameterized.class)
 public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTest {
+    /** */
+    private static final int PARTS_CNT = 32;
+
     /** */
     @Parameterized.Parameters(name = "{0}")
     public static List<Object[]> parameters() {
@@ -141,7 +154,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
             new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
-                        .setPersistenceEnabled(isPersistenceEnabled)
+                        .setPersistenceEnabled(isPersistenceEnabled).setMaxSize(50 * 1024 * 1024)
                 ).setWalSegmentSize(4 * 1024 * 1024).setWalMode(WALMode.LOG_ONLY));
 
         cfg.setIncludeEventTypes(EventType.EVTS_ALL);
@@ -159,7 +172,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         cacheCfg.setBackups(backups);
         cacheCfg.setWriteSynchronizationMode(FULL_SYNC);
         cacheCfg.setPartitionLossPolicy(partLossPlc);
-        cacheCfg.setAffinity(new RendezvousAffinityFunction(false, 32));
+        cacheCfg.setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
         cacheCfg.setAtomicityMode(atomicity);
 
         return cacheCfg;
@@ -486,23 +499,18 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         assertFalse(lostParts.isEmpty());
 
-        try {
-            grid(4).resetLostPartitions(singletonList(DEFAULT_CACHE_NAME));
+        Stream.of(grid(4), grid(0)).forEach(new Consumer<IgniteEx>() {
+            @Override public void accept(IgniteEx ex) {
+                try {
+                    ex.resetLostPartitions(singletonList(DEFAULT_CACHE_NAME));
 
-            fail();
-        }
-        catch (ClusterTopologyException ignored) {
-            // Expected.
-        }
-
-        try {
-            grid(0).resetLostPartitions(singletonList(DEFAULT_CACHE_NAME));
-
-            fail();
-        }
-        catch (ClusterTopologyException ignored) {
-            // Expected.
-        }
+                    fail();
+                }
+                catch (ClusterTopologyException ignored) {
+                    // Expected.
+                }
+            }
+        });
     }
 
     /**
@@ -511,7 +519,35 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
      * TODO FIXME not working.
      */
     @Test
-    public void testLostPartitionsAddDataNode() throws Exception {
+    public void testResetBaselineWithLostPartitions() throws Exception {
+        partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+
+        backups = 1;
+
+        isPersistenceEnabled = true;
+
+        final TopologyChanger changer = new TopologyChanger(false, asList(3, 2, 1), asList(0, 4), 0);
+
+        final List<Integer> lostParts = changer.changeTopology();
+
+        assertFalse(lostParts.isEmpty());
+
+        resetBaselineTopology(); // Should recreate partitions on new owners in LOST state.
+
+        printPartitionState(DEFAULT_CACHE_NAME, 0);
+
+        grid(4).resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+
+        awaitPartitionMapExchange();
+    }
+
+    /**
+     * @throws Exception if failed.
+     *
+     * TODO FIXME add test for joining node having stale data.
+     */
+    @Test
+    public void testResetBaselineLostPartitionsWithAddedDataNode() throws Exception {
         partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
 
         backups = 1;
@@ -526,9 +562,46 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         final IgniteEx g5 = startGrid(5);
 
+        assertEquals(new HashSet<>(lostParts), new HashSet<>(g5.cache(DEFAULT_CACHE_NAME).lostPartitions()));
+
         resetBaselineTopology();
 
+        // Wait for ideal switch for available partitions.
+        final GridDhtPartitionTopology top5 = g5.cachex(DEFAULT_CACHE_NAME).context().topology();
+        waitForReadyTopology(top5, new AffinityTopologyVersion(9, 2));
+
+        // Check puts to available partitions.
+        for (int p = 0; p < PARTS_CNT; p++) {
+            if (!lostParts.contains(p))
+                grid(4).cache(DEFAULT_CACHE_NAME).put(p, p);
+        }
+
+        // Check owning partitions for joined node are in LOST state.
+        final AffinityAssignment ideal =
+            grid(4).cachex(DEFAULT_CACHE_NAME).context().affinity().assignment(new AffinityTopologyVersion(9, 2));
+
+        assertTrue(ideal.partitionPrimariesDifferentToIdeal().isEmpty());
+
+        for (int p = 0; p < PARTS_CNT; p++) {
+            if (lostParts.contains(p)) {
+                final List<ClusterNode> cur = ideal.get(p);
+
+                final int idx = cur.indexOf(grid(5).localNode());
+
+                if (idx >= 0)
+                    assertEquals(GridDhtPartitionState.LOST, top5.localPartition(p).state());
+            }
+        }
+
+        g5.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+
         awaitPartitionMapExchange();
+
+        Stream.of(grid(4), grid(0), grid(5)).forEach(new Consumer<IgniteEx>() {
+            @Override public void accept(IgniteEx ex) {
+                assertTrue(ex.cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+            }
+        });
     }
 
     /**
@@ -1027,14 +1100,14 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
                     }
                 });
 
-                Thread.sleep(stopDelay);
+                doSleep(stopDelay);
             }
 
             executor.shutdown();
 
             delayPartExchange.set(false);
 
-            Thread.sleep(5_000L);
+            doSleep(5_000L);
 
             // Events are not triggered in IGNORE mode.
             if (partLossPlc != PartitionLossPolicy.IGNORE) {

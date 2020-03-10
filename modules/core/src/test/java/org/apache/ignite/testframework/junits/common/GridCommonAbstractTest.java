@@ -1011,7 +1011,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                     .append(" res=").append(f.isDone() ? f.get() : "N/A")
                     .append(" topVer=")
                     .append((U.hasField(f, "topVer") ?
-                        String.valueOf(U.<Object>field(f, "topVer")) : "[unknown] may be it is finished future"))
+                        String.valueOf(U.<Object>field(f, "topVer")) : "N/A"))
                     .append("\n");
 
                 Map<UUID, IgniteDhtDemandedPartitionsMap> remaining = U.field(f, "remaining");

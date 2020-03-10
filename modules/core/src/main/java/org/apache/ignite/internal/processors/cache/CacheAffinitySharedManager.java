@@ -2765,7 +2765,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
     /**
      * Created if cache is not started on coordinator.
      */
-    private class CacheGroupNoAffOrFiltredHolder extends CacheGroupHolder {
+    private class CacheGroupNoAffOrFilteredHolder extends CacheGroupHolder {
         /** */
         private final GridCacheSharedContext cctx;
 
@@ -2775,7 +2775,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
          * @param aff Affinity.
          * @param initAff Current affinity.
          */
-        CacheGroupNoAffOrFiltredHolder(
+        CacheGroupNoAffOrFilteredHolder(
             boolean rebalanceEnabled,
             GridCacheSharedContext cctx,
             GridAffinityAssignmentCache aff,
@@ -2793,7 +2793,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
          * @return Cache holder.
          * @throws IgniteCheckedException If failed.
          */
-        CacheGroupNoAffOrFiltredHolder create(
+        CacheGroupNoAffOrFilteredHolder create(
             GridCacheSharedContext cctx,
             CacheGroupDescriptor grpDesc,
             AffinityTopologyVersion topVer
@@ -2809,7 +2809,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
          * @return Cache holder.
          * @throws IgniteCheckedException If failed.
          */
-        CacheGroupNoAffOrFiltredHolder create(
+        CacheGroupNoAffOrFilteredHolder create(
             GridCacheSharedContext cctx,
             CacheGroupDescriptor grpDesc,
             AffinityTopologyVersion topVer,
@@ -2843,7 +2843,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 grpDesc.persistenceEnabled()
             );
 
-            return new CacheGroupNoAffOrFiltredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
+            return new CacheGroupNoAffOrFilteredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
         }
 
         /** {@inheritDoc} */
@@ -2857,7 +2857,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         }
     }
 
-    private CacheGroupNoAffOrFiltredHolder createHolder(
+    private CacheGroupNoAffOrFilteredHolder createHolder(
         GridCacheSharedContext cctx,
         CacheGroupDescriptor grpDesc,
         AffinityTopologyVersion topVer,
@@ -2891,7 +2891,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             grpDesc.persistenceEnabled()
         );
 
-        return new CacheGroupNoAffOrFiltredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
+        return new CacheGroupNoAffOrFilteredHolder(ccfg.getRebalanceMode() != NONE, cctx, aff, initAff);
     }
 
     /**
