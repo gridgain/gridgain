@@ -16,18 +16,10 @@
  limitations under the License.
 -->
 
-<assembly xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2
-          http://maven.apache.org/xsd/assembly-1.1.2.xsd">
-    <id>dependencies-visor-console</id>
-
-    <formats>
-        <format>dir</format>
-    </formats>
-
-    <includeBaseDirectory>false</includeBaseDirectory>
-
+<component xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/component/1.1.2"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/component/1.1.2
+           http://maven.apache.org/xsd/component-1.1.2.xsd">
     <moduleSets>
         <moduleSet>
             <includes>
@@ -38,7 +30,7 @@
                 <fileSets>
                     <fileSet>
                         <directory>${basedir}</directory>
-                        <outputDirectory>/</outputDirectory>
+                        <outputDirectory>bin</outputDirectory>
                         <includes>
                             <include>licenses/**</include>
                         </includes>
@@ -46,12 +38,12 @@
 
                     <fileSet>
                         <directory>${basedir}/target/licenses</directory>
-                        <outputDirectory>/licenses</outputDirectory>
+                        <outputDirectory>bin/include/licenses</outputDirectory>
                     </fileSet>
 
                     <fileSet>
                         <directory>target/libs</directory>
-                        <outputDirectory>/visorcmd</outputDirectory>
+                        <outputDirectory>bin/include/visorcmd</outputDirectory>
                         <excludes>
                             <exclude>scala-*.jar</exclude>
                             <exclude>spring-*.jar</exclude>
@@ -60,7 +52,7 @@
 
                     <fileSet>
                         <directory>target/libs</directory>
-                        <outputDirectory>/visor-common</outputDirectory>
+                        <outputDirectory>bin/include/visor-common</outputDirectory>
                         <includes>
                             <include>scala-*.jar</include>
                             <include>spring-*.jar</include>
@@ -69,7 +61,7 @@
 
                     <fileSet>
                         <directory>target</directory>
-                        <outputDirectory>/visorcmd</outputDirectory>
+                        <outputDirectory>bin/include/visorcmd</outputDirectory>
                         <includes>
                             <include>*.jar</include>
                         </includes>
@@ -93,7 +85,7 @@
                 <fileSets>
                     <fileSet>
                         <directory>${basedir}</directory>
-                        <outputDirectory>/</outputDirectory>
+                        <outputDirectory>bin/include</outputDirectory>
                         <includes>
                             <include>licenses/**</include>
                         </includes>
@@ -101,12 +93,12 @@
 
                     <fileSet>
                         <directory>${basedir}/target/licenses</directory>
-                        <outputDirectory>/licenses</outputDirectory>
+                        <outputDirectory>bin/include/licenses</outputDirectory>
                     </fileSet>
 
                     <fileSet>
                         <directory>target/libs</directory>
-                        <outputDirectory>/visor-common</outputDirectory>
+                        <outputDirectory>bin/include/visor-common</outputDirectory>
                         <excludes>
                             <exclude>spring-jdbc-*.jar</exclude>
                         </excludes>
@@ -114,7 +106,7 @@
 
                     <fileSet>
                         <directory>target</directory>
-                        <outputDirectory>/visor-common</outputDirectory>
+                        <outputDirectory>bin/include/visor-common</outputDirectory>
                         <includes>
                             <include>*.jar</include>
                         </includes>
@@ -128,4 +120,4 @@
             </sources>
         </moduleSet>
     </moduleSets>
-</assembly>
+</component>

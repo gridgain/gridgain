@@ -481,15 +481,15 @@
                                             <include name="**/*.sh" />
                                         </fixcrlf>
 
-                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}-bin.zip" encoding="UTF-8">
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin" filemode="755">
+                                        <zip destfile="${basedir}/target/bin/${ignite.edition}-${project.version}.zip" encoding="UTF-8">
+                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}" filemode="755">
                                                 <include name="**/*.sh" />
                                                 <include name="**/configure" />
                                                 <include name="**/install-sh" />
                                                 <include name="**/compile" />
                                                 <include name="**/missing" />
                                             </zipfileset>
-                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}-bin">
+                                            <zipfileset dir="${basedir}/target/release-package-${ignite.edition}" prefix="${ignite.edition}-${project.version}">
                                                 <exclude name="**/*.sh" />
                                                 <exclude name="**/configure" />
                                                 <exclude name="**/install-sh" />
@@ -536,54 +536,6 @@
                                         <descriptor>assembly/release-${ignite.edition}.xml</descriptor>
                                     </descriptors>
                                     <finalName>release-package-${ignite.edition}</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>dependencies-visor-console</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/dependencies-visor-console.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}/bin</outputDirectory>
-                                    <finalName>include</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>dependencies-sqlline</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/dependencies-sqlline.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}</outputDirectory>
-                                    <finalName>bin</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>scala-scripts</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/release-scala.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}</outputDirectory>
-                                    <finalName>bin</finalName>
                                     <appendAssemblyId>false</appendAssemblyId>
                                 </configuration>
                             </execution>
