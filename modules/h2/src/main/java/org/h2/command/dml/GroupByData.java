@@ -25,7 +25,7 @@ import org.h2.value.ValueRow;
  */
 public abstract class GroupByData {
     /** */
-    protected final H2MemoryTracker tracker;
+    public H2MemoryTracker tracker;
 
     /** */
     protected final Session ses;
@@ -36,6 +36,12 @@ public abstract class GroupByData {
     protected GroupByData(Session ses) {
         this.ses = ses;
         tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
+    }
+
+    /** */
+    protected void initTracker() {
+        if (tracker == null)
+            tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
     }
 
     /**
@@ -99,6 +105,8 @@ public abstract class GroupByData {
      * @param row New row.
      */
     protected void onGroupChanged(ValueRow groupKey, Object[] old, Object[] row) {
+        initTracker();
+
         if (tracker == null)
             return;
 
