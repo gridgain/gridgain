@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -89,6 +90,7 @@ import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.lang.GridClosure3;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.jetbrains.annotations.NotNull;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
@@ -352,7 +354,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     long metaTreeRootId = normalizePageId(pageMetaIO.getTreeRoot(addr));
 
-                    treeInfo.set(traverseAllTrees("Index trees traversal", metaTreeRootId, ItemStoreMode.ONLY_COUNT, this::traverseTree));
+                    treeInfo.set(traverseAllTrees("Index trees traversal", metaTreeRootId, CountOnlyStorage::new, this::traverseTree));
 
                     treeInfo.get().forEach((name, info) -> {
                         info.innerPageIds.forEach(id -> {
@@ -366,9 +368,9 @@ public class IgniteIndexReader implements AutoCloseable {
                         pageIoIds.computeIfAbsent(BPlusMetaIO.class, k -> new HashSet<>()).add(info.rootPageId);
                     });
 
-                    ItemStoreMode itemStoreMode = checkParts ? ItemStoreMode.STRUCTURED : ItemStoreMode.ONLY_COUNT;
+                    Supplier<ItemStorage> itemStorageFactory = checkParts ? LinkStorage::new : CountOnlyStorage::new;
 
-                    horizontalScans.set(traverseAllTrees("Scan index trees horizontally", metaTreeRootId, itemStoreMode, this::horizontalTreeScan));
+                    horizontalScans.set(traverseAllTrees("Scan index trees horizontally", metaTreeRootId, itemStorageFactory, this::horizontalTreeScan));
                 }
                 else if (io instanceof PagesListMetaIO)
                     pageListsInfo.set(getPageListsMetaInfo(pageId));
@@ -426,6 +428,8 @@ public class IgniteIndexReader implements AutoCloseable {
 
         if (checkParts) {
             List<Throwable> checkPartsErrors = checkParts(horizontalScans.get());
+
+            print("");
 
             checkPartsErrors.forEach(e -> printErr("<ERROR> " + e.getMessage()));
 
@@ -533,9 +537,9 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     long cacheDataTreeRoot = partMetaIO.getTreeRoot(addr);
 
-                    TreeTraversalInfo cacheDataTreeInfo = horizontalTreeScan(partStore, cacheDataTreeRoot, ItemStoreMode.LIST);
+                    TreeTraversalInfo cacheDataTreeInfo = horizontalTreeScan(partStore, cacheDataTreeRoot, new ItemsListStorage());
 
-                    for (Object dataTreeItem : cacheDataTreeInfo.idxItems) {
+                    for (Object dataTreeItem : cacheDataTreeInfo.itemStorage) {
                         CacheAwareLink cacheAwareLink = (CacheAwareLink)dataTreeItem;
 
                         for (Map.Entry<String, TreeTraversalInfo> e : treesInfo.entrySet()) {
@@ -548,7 +552,7 @@ public class IgniteIndexReader implements AutoCloseable {
                             if (cacheId != cacheAwareLink.cacheId)
                                 continue; // It's index for other cache, don't check.
 
-                            if (!tree.itemsStore.contains(cacheAwareLink)) {
+                            if (!tree.itemStorage.contains(cacheAwareLink)) {
                                 errors.add(new IgniteException(cacheDataTreeEntryMissingError(name, cacheAwareLink)));
 
                                 partErrCnt.incrementAndGet();
@@ -632,8 +636,8 @@ public class IgniteIndexReader implements AutoCloseable {
                 return;
             }
 
-            if (tree.itemsCnt != scan.itemsCnt)
-                errors.add(compareError("items", name, tree.itemsCnt, scan.itemsCnt, null));
+            if (tree.itemStorage.size() != scan.itemStorage.size())
+                errors.add(compareError("items", name, tree.itemStorage.size(), scan.itemStorage.size(), null));
 
             Set<Class> classesInStat = new HashSet<>();
 
@@ -804,18 +808,19 @@ public class IgniteIndexReader implements AutoCloseable {
     private Map<String, TreeTraversalInfo> traverseAllTrees(
         String traverseProcCaption,
         long metaTreeRoot,
-        ItemStoreMode itemStoreMode,
-        GridClosure3<FilePageStore, Long, ItemStoreMode, TreeTraversalInfo> traverseProc
+        Supplier<ItemStorage> itemStorageFactory,
+        GridClosure3<FilePageStore, Long, ItemStorage, TreeTraversalInfo> traverseProc
     ) {
         Map<String, TreeTraversalInfo> treeInfos = new HashMap<>();
 
-        TreeTraversalInfo metaTreeTraversalInfo = traverseProc.apply(idxStore, metaTreeRoot, ItemStoreMode.LIST);
+        TreeTraversalInfo metaTreeTraversalInfo = traverseProc.apply(idxStore, metaTreeRoot, new ItemsListStorage());
 
         treeInfos.put(META_TREE_NAME, metaTreeTraversalInfo);
 
-        ProgressPrinter progressPrinter = new ProgressPrinter(System.out, traverseProcCaption, metaTreeTraversalInfo.idxItems.size());
+        ProgressPrinter progressPrinter =
+            new ProgressPrinter(System.out, traverseProcCaption, metaTreeTraversalInfo.itemStorage.size());
 
-        metaTreeTraversalInfo.idxItems.forEach(item -> {
+        metaTreeTraversalInfo.itemStorage.forEach(item -> {
             progressPrinter.printProgress();
 
             IndexStorageImpl.IndexItem idxItem = (IndexStorageImpl.IndexItem)item;
@@ -823,7 +828,8 @@ public class IgniteIndexReader implements AutoCloseable {
             if (indexes != null && !indexes.contains(idxItem.nameString()))
                 return;
 
-            TreeTraversalInfo treeTraversalInfo = traverseProc.apply(idxStore, normalizePageId(idxItem.pageId()), itemStoreMode);
+            TreeTraversalInfo treeTraversalInfo =
+                traverseProc.apply(idxStore, normalizePageId(idxItem.pageId()), itemStorageFactory.get());
 
             treeInfos.put(idxItem.toString(), treeTraversalInfo);
         });
@@ -856,7 +862,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 totalStat.computeIfAbsent(cls, k -> new AtomicLong(0)).addAndGet(cnt.get());
             });
 
-            print(prefix + "-- Count of items found in leaf pages: " + validationInfo.itemsCnt);
+            print(prefix + "-- Count of items found in leaf pages: " + validationInfo.itemStorage.size());
 
             if (!validationInfo.errors.isEmpty()) {
                 print(prefix + "<ERROR> -- Errors:");
@@ -873,7 +879,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 print(prefix + "No errors occurred while traversing.");
 
             cacheIdxSizes.computeIfAbsent(getCacheId(idxName), k -> new HashMap<>())
-                .put(idxName, validationInfo.itemsCnt);
+                .put(idxName, validationInfo.itemStorage.size());
         });
 
         print(prefix + "---");
@@ -971,10 +977,10 @@ public class IgniteIndexReader implements AutoCloseable {
      * Traverse single index tree from root to leafs.
      *
      * @param rootPageId Root page id.
-     * @param itemStoreMode How to store items.
+     * @param itemStorage Items storage.
      * @return Tree traversal info.
      */
-    private TreeTraversalInfo traverseTree(FilePageStore store, long rootPageId, ItemStoreMode itemStoreMode) {
+    private TreeTraversalInfo traverseTree(FilePageStore store, long rootPageId, ItemStorage itemStorage) {
         Map<Class, AtomicLong> ioStat = new HashMap<>();
 
         Map<Long, Set<Throwable>> errors = new HashMap<>();
@@ -983,61 +989,24 @@ public class IgniteIndexReader implements AutoCloseable {
 
         PageCallback innerCb = (content, pageId) -> innerPageIds.add(normalizePageId(pageId));
 
-        List<Object> idxItems = new LinkedList<>();
-
-        ItemsStore itemsStore = new ItemsStore();
-
-        AtomicLong idxItemsCnt = new AtomicLong(0);
-
-        ItemCallback itemCb = null;
-
-        switch (itemStoreMode) {
-            case ONLY_COUNT:
-                itemCb = (currPageId, item, link) -> idxItemsCnt.incrementAndGet();
-
-                break;
-
-            case LIST:
-                itemCb = (currPageId, item, link) -> {
-                    idxItems.add(item);
-
-                    idxItemsCnt.incrementAndGet();
-                };
-
-                break;
-
-            case STRUCTURED:
-                itemCb = (currPageId, item, link) -> {
-                    itemsStore.add(null);
-
-                    idxItemsCnt.incrementAndGet();
-                };
-
-                break;
-        }
+        ItemCallback itemCb = (currPageId, item, link) -> itemStorage.add(item);
 
         getTreeNode(rootPageId, new TreeTraverseContext(store, ioStat, errors, innerCb, null, itemCb));
 
-        return new TreeTraversalInfo(ioStat, errors, innerPageIds, rootPageId, idxItems, itemsStore, idxItemsCnt.get());
+        return new TreeTraversalInfo(ioStat, errors, innerPageIds, rootPageId, itemStorage);
     }
 
     /**
      * Traverse single index tree by each level horizontally.
      *
      * @param rootPageId Root page id.
-     * @param itemStoreMode How to store items.
+     * @param itemStorage Items storage.
      * @return Tree traversal info.
      */
-    private TreeTraversalInfo horizontalTreeScan(FilePageStore store, long rootPageId, ItemStoreMode itemStoreMode) {
+    private TreeTraversalInfo horizontalTreeScan(FilePageStore store, long rootPageId, ItemStorage itemStorage) {
         Map<Long, Set<Throwable>> errors = new HashMap<>();
 
         Map<Class, AtomicLong> ioStat = new HashMap<>();
-
-        AtomicLong itemsCnt = new AtomicLong(0);
-
-        List<Object> items = new LinkedList<>();
-
-        ItemsStore itemsStore = new ItemsStore();
 
         TreeTraverseContext treeCtx = new TreeTraverseContext(store, ioStat, errors, null, null, null);
 
@@ -1087,13 +1056,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                             PageContent pageContent = ioProcessor.getContent(pageIO, addr, pageId, treeCtx);
 
-                            itemsCnt.addAndGet(pageContent.items.size());
-
-                            if (itemStoreMode == ItemStoreMode.LIST)
-                                items.addAll(pageContent.items);
-
-                            if (itemStoreMode == ItemStoreMode.STRUCTURED)
-                                pageContent.items.forEach(item -> itemsStore.add((CacheAwareLink)item));
+                            pageContent.items.forEach(itemStorage::add);
                         }
 
                         pageId = ((BPlusIO)pageIO).getForward(addr);
@@ -1113,7 +1076,7 @@ public class IgniteIndexReader implements AutoCloseable {
             freeBuffer(buf);
         }
 
-        return new TreeTraversalInfo(ioStat, errors, null, rootPageId, items, itemsStore, itemsCnt.get());
+        return new TreeTraversalInfo(ioStat, errors, null, rootPageId, itemStorage);
     }
 
     /**
@@ -1468,91 +1431,142 @@ public class IgniteIndexReader implements AutoCloseable {
             this.arg = arg;
         }
 
+        /** */
         public String arg() {
             return arg;
         }
     }
 
     /**
-     *
+     * Storage for items of index tree.
      */
-    private enum ItemStoreMode {
+    private interface ItemStorage<T> extends Iterable<T> {
         /** */
-        ONLY_COUNT,
+        void add(T item);
+
         /** */
-        LIST,
+        boolean contains(T item);
+
         /** */
-        STRUCTURED
+        long size();
     }
 
     /**
-     *
+     * Imitates item storage, but stores only items count.
      */
-    private class ItemsStore {
+    private static class CountOnlyStorage<T> implements ItemStorage<T> {
+        /** */
+        private long size = 0;
+
+        /** {@inheritDoc} */
+        @Override public void add(T item) {
+            size++;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean contains(T item) {
+            throw new UnsupportedOperationException("'contains' operation is not supported by SizeOnlyStorage.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public long size() {
+            return size;
+        }
+
+        /** {@inheritDoc} */
+        @NotNull @Override public Iterator<T> iterator() {
+            throw new UnsupportedOperationException("Iteration is not supported by SizeOnlyStorage.");
+        }
+    }
+
+    /**
+     * Stores link items.
+     */
+    private static class LinkStorage implements ItemStorage<CacheAwareLink> {
         /** */
         private final Map<Integer, Map<Integer, Map<Byte, IntSet>>> store = new HashMap<>();
 
         /** */
         private long size = 0;
 
-        /** */
-        public void add(CacheAwareLink cacheAwareLink) {
+        /** {@inheritDoc} */
+        @Override public void add(CacheAwareLink cacheAwareLink) {
             long link = cacheAwareLink.link;
 
             long pageId = pageId(link);
 
-            int itemId = itemId(link);
-
-            int partId = partId(pageId);
-
-            int pageIdx = pageIndex(pageId);
-
             store.computeIfAbsent(cacheAwareLink.cacheId, k -> new HashMap<>())
-                .computeIfAbsent(partId, k -> new HashMap<>())
-                .computeIfAbsent((byte)itemId, k -> new BitSetIntSet())
-                .add(pageIdx);
+                .computeIfAbsent(partId(pageId), k -> new HashMap<>())
+                .computeIfAbsent((byte)itemId(link), k -> new BitSetIntSet())
+                .add(pageIndex(pageId));
 
             size++;
         }
 
-        /** */
-        public boolean contains(CacheAwareLink cacheAwareLink) {
+        /** {@inheritDoc} */
+        @Override public boolean contains(CacheAwareLink cacheAwareLink) {
             long link = cacheAwareLink.link;
 
             long pageId = pageId(link);
 
-            int itemId = itemId(link);
-
-            int partId = partId(pageId);
-
-            int pageIdx = pageIndex(pageId);
-
             Map<Integer, Map<Byte, IntSet>> map = store.get(0);
 
             if (map != null) {
-                Map<Byte, IntSet> innerMap = map.get(partId);
+                Map<Byte, IntSet> innerMap = map.get(partId(pageId));
 
                 if (innerMap != null) {
-                    IntSet set = innerMap.get((byte)itemId);
+                    IntSet set = innerMap.get((byte)itemId(link));
 
                     if (set != null)
-                        return set.contains(pageIdx);
+                        return set.contains(pageIndex(pageId));
                 }
             }
 
             return false;
         }
 
-        /** */
-        public long size() {
+        /** {@inheritDoc} */
+        @Override public long size() {
             return size;
+        }
+
+        /** {@inheritDoc} */
+        @NotNull @Override public Iterator<CacheAwareLink> iterator() {
+            throw new UnsupportedOperationException("Item iteration is not supported by link storage.");
+        }
+    }
+
+    /**
+     * Stores index items (items of meta tree).
+     */
+    private static class ItemsListStorage<T> implements ItemStorage<T> {
+        private final List<T> store = new LinkedList<>();
+
+        /** {@inheritDoc} */
+        @Override public void add(T item) {
+            store.add(item);
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean contains(T item) {
+            throw new UnsupportedOperationException("'contains' operation is not supported by ItemsListStorage.");
+        }
+
+        /** {@inheritDoc} */
+        @Override public long size() {
+            return store.size();
+        }
+
+        /** {@inheritDoc} */
+        @NotNull @Override public Iterator<T> iterator() {
+            return store.iterator();
         }
     }
 
     /**
      *
      */
-    private class CacheAwareLink {
+    private static class CacheAwareLink {
         /** */
         public final int cacheId;
 
@@ -1918,16 +1932,9 @@ public class IgniteIndexReader implements AutoCloseable {
         final long rootPageId;
 
         /**
-         * List of index items. This list is filled only for meta tree. For other index trees only {@link #itemsCnt}
-         * is set.
+         * List of items storage.
          */
-        final List<Object> idxItems;
-
-        /** */
-        final ItemsStore itemsStore;
-
-        /** Items count. */
-        final long itemsCnt;
+        final ItemStorage itemStorage;
 
         /** */
         public TreeTraversalInfo(
@@ -1935,17 +1942,13 @@ public class IgniteIndexReader implements AutoCloseable {
             Map<Long, Set<Throwable>> errors,
             Set<Long> innerPageIds,
             long rootPageId,
-            List<Object> idxItems,
-            ItemsStore itemsStore,
-            long itemsCnt
+            ItemStorage itemStorage
         ) {
             this.ioStat = ioStat;
             this.errors = errors;
             this.innerPageIds = innerPageIds;
             this.rootPageId = rootPageId;
-            this.idxItems = idxItems;
-            this.itemsStore = itemsStore;
-            this.itemsCnt = itemsCnt;
+            this.itemStorage = itemStorage;
         }
     }
 
