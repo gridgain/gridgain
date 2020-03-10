@@ -146,6 +146,9 @@ public class IgniteIndexReader implements AutoCloseable {
     private static final Pattern CACHE_ID_SEACH_PATTERN = Pattern.compile("(?<id>[-0-9]{1,15})_[-0-9]{1,15}_.*");
 
     /** */
+    private static final int CHECK_PARTS_MAX_ERRORS_PER_PARTITION = 10;
+
+    /** */
     static {
         PageIO.registerH2(H2InnerIO.VERSIONS, H2LeafIO.VERSIONS, H2MvccInnerIO.VERSIONS, H2MvccLeafIO.VERSIONS);
 
@@ -514,6 +517,10 @@ public class IgniteIndexReader implements AutoCloseable {
             if (partStore == null)
                 continue;
 
+            AtomicInteger partErrCnt = new AtomicInteger(0);
+
+            final int partId = i;
+
             try {
                 Map<Class, Long> metaPages = findPages(i, FLAG_DATA, partStore, singleton(PagePartitionMetaIOV2.class));
 
@@ -528,8 +535,33 @@ public class IgniteIndexReader implements AutoCloseable {
 
                     TreeTraversalInfo cacheDataTreeInfo = horizontalTreeScan(partStore, cacheDataTreeRoot, ItemStoreMode.LIST);
 
-                    for (Object dataTreeItem : cacheDataTreeInfo.idxItems)
-                        checkLinkIsPresentInIndexes(treesInfo, (CacheAwareLink)dataTreeItem, errors);
+                    for (Object dataTreeItem : cacheDataTreeInfo.idxItems) {
+                        CacheAwareLink cacheAwareLink = (CacheAwareLink)dataTreeItem;
+
+                        for (Map.Entry<String, TreeTraversalInfo> e : treesInfo.entrySet()) {
+                            String name = e.getKey();
+
+                            TreeTraversalInfo tree = e.getValue();
+
+                            int cacheId = getCacheId(name);
+
+                            if (cacheId != cacheAwareLink.cacheId)
+                                continue; // It's index for other cache, don't check.
+
+                            if (!tree.itemsStore.contains(cacheAwareLink)) {
+                                errors.add(new IgniteException(cacheDataTreeEntryMissingError(name, cacheAwareLink)));
+
+                                partErrCnt.incrementAndGet();
+                            }
+                        }
+
+                        if (partErrCnt.get() >= CHECK_PARTS_MAX_ERRORS_PER_PARTITION) {
+                            errors.add(new IgniteException("Too many errors (" + CHECK_PARTS_MAX_ERRORS_PER_PARTITION +
+                                ") found for partId=" + partId + ", stopping analysis for this partition."));
+
+                            break;
+                        }
+                    }
 
                     return null;
                 });
@@ -543,29 +575,20 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /** */
-    private void checkLinkIsPresentInIndexes(Map<String, TreeTraversalInfo> treesInfo, CacheAwareLink cacheAwareLink, List<Throwable> errors) {
-        treesInfo.forEach((name, tree) -> {
-            int cacheId = getCacheId(name);
+    private String cacheDataTreeEntryMissingError(String treeName, CacheAwareLink cacheAwareLink) {
+        long link = cacheAwareLink.link;
 
-            if (cacheId != cacheAwareLink.cacheId)
-                return;
+        long pageId = pageId(link);
 
-            if (!tree.itemsStore.contains(cacheAwareLink)) {
-                long link = cacheAwareLink.link;
+        int itemId = itemId(link);
 
-                long pageId = pageId(link);
+        int partId = partId(pageId);
 
-                int itemId = itemId(link);
+        int pageIdx = pageIndex(pageId);
 
-                int partId = partId(pageId);
-
-                int pageIdx = pageIndex(pageId);
-
-                errors.add(new IgniteException("Entry is missing in index: " + name +
-                    ", cacheId=" + cacheAwareLink.cacheId + ", partId=" + partId +
-                    ", pageIndex=" + pageIdx + ", itemId=" + itemId + ", link = " + link));
-            }
-        });
+        return "Entry is missing in index: " + treeName +
+            ", cacheId=" + cacheAwareLink.cacheId + ", partId=" + partId +
+            ", pageIndex=" + pageIdx + ", itemId=" + itemId + ", link=" + link;
     }
 
     /** */
