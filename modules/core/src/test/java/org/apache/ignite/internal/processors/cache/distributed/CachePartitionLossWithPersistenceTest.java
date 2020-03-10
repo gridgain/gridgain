@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -37,6 +38,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
@@ -193,7 +195,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     }
 
     /**
-     * TODO failing.
+     * TODO failing - part desync.
      */
     @Test
     public void testConsistencyAfterResettingLostPartitions_1() throws Exception {
@@ -209,7 +211,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     }
 
     /**
-     *
+     * TODO failing - part in sync but expecting keys are missing.
      */
     @Test
     public void testConsistencyAfterResettingLostPartitions_3() throws Exception {
@@ -249,7 +251,8 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         final IgniteInternalCache<Object, Object> cachex = crd.cachex(DEFAULT_CACHE_NAME);
 
-        cachex.put(part, 0);
+        for (int p = 0; p < PARTS_CNT; p++)
+            cachex.put(p, 0);
 
         stopGrid(2); // g1 now lags behind g2.
 
@@ -292,7 +295,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
             TestRecordingCommunicationSpi.spi(g1).waitForBlocked();
 
             /** Try put to moving partition. Due to forced reassignment g2 should be a primary for the partition. */
-            cachex.put(part, 1);
+            cachex.put(part, 0);
 
             TestRecordingCommunicationSpi.spi(g1).stopBlock();
         }
@@ -308,5 +311,11 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         awaitPartitionMapExchange();
 
         assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+
+        // Read validation.
+        for (int p = 0; p < PARTS_CNT; p++) {
+            for (Ignite ignite : G.allGrids())
+                assertEquals(0, ignite.cache(DEFAULT_CACHE_NAME).get(p));
+        }
     }
 }
