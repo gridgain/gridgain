@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package org.apache.ignite;
+package org.apache.ignite.internal;
 
 import java.net.SocketException;
+import org.apache.ignite.IgniteException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -24,6 +25,9 @@ import org.jetbrains.annotations.Nullable;
  * got that exception.
  */
 public class IgniteTooManyOpenFilesException extends IgniteException {
+    /** */
+    private static final long serialVersionUID = 0L;
+
     /**
      * Create empty exception.
      */
