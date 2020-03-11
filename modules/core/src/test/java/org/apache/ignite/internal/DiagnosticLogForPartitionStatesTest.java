@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javax.cache.expiry.AccessedExpiryPolicy;
 import javax.cache.expiry.Duration;
 import javax.cache.expiry.EternalExpiryPolicy;
@@ -166,9 +167,9 @@ public class DiagnosticLogForPartitionStatesTest extends GridCommonAbstractTest 
 
         node1.cluster().active(true);
 
-        List<IgniteCache<Integer, Integer>> caches = new ArrayList<>(cfgs.size());
-        for (CacheConfiguration<Integer, Integer> cfg : cfgs)
-            caches.add(node1.getOrCreateCache(cfg));
+
+        List<IgniteCache<Integer, Integer>> caches = cfgs.stream()
+            .map(cfg -> node1.getOrCreateCache(cfg)).collect(Collectors.toList());
 
         Map<String, Set<Integer>> clearKeys = new HashMap<>();
 
