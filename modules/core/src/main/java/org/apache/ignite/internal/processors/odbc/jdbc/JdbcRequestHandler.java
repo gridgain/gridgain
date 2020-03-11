@@ -1493,7 +1493,10 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @return Node time zome identifier.
      */
     private String nodeTimeZoneId() {
-        return connCtx.kernalContext().query().getIndexing().clusterTimezone().getID();
+        if (connCtx.kernalContext().query().moduleEnabled())
+            return connCtx.kernalContext().query().getIndexing().clusterTimezone().getID();
+        else
+            return TimeZone.getDefault().getID();
     }
 
     /**
