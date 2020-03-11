@@ -18,6 +18,7 @@ package org.apache.ignite.cache;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -39,7 +40,7 @@ import org.junit.Test;
 /**
  * Test cases when rebalance processed and not cancelled during various exchange events.
  */
-@WithSystemProperty(key = "IGNITE_REBALANCE_SCHEDULING_OPTIMIZATION", value = "true")
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, value = "false")
 public class RebalanceCancellationTest extends GridCommonAbstractTest {
     /** Start cluster nodes. */
     public static final int NODES_CNT = 3;

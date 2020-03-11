@@ -101,6 +101,10 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
  * Thread pool for requesting partitions from other nodes and populating local cache.
  */
 public class GridDhtPartitionDemander {
+    /** Disable rebalancing cancellation optimization. */
+    private static final boolean DISABLE_REBALANCING_CANCELLATION_PTIMIZATION = IgniteSystemProperties.getBoolean(
+        IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
+
     /** */
     private final GridCacheSharedContext<?, ?> ctx;
 
@@ -1648,7 +1652,7 @@ public class GridDhtPartitionDemander {
          * @return {@code True} when future compared with other, {@code False} otherwise.
          */
         public boolean compatibleWith(GridDhtPreloaderAssignments otherAssignments) {
-            if (!IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_REBALANCE_SCHEDULING_OPTIMIZATION, false))
+            if (DISABLE_REBALANCING_CANCELLATION_PTIMIZATION)
                 return false;
 
             if (isInitial() || !allNodesSupports(ctx.kernalContext(), otherAssignments.keySet(), TX_TRACKING_UPDATE_COUNTER))

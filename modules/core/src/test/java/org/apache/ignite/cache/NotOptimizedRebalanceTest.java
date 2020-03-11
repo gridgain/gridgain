@@ -82,7 +82,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceWithPersistence() throws Exception {
-        testRebalance(true);
+        testRebalance(true, true);
     }
 
     /**
@@ -92,7 +92,27 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRebalanceWithoutPersistence() throws Exception {
-        testRebalance(false);
+        testRebalance(false, true);
+    }
+
+    /**
+     * Checks rebalance with persistence and client joining/lifting.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testRebalanceWithPersistenceAndClient() throws Exception {
+        testRebalance(true, false);
+    }
+
+    /**
+     * Checks rebalance without persistence and client joining/lifting..
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRebalanceWithoutPersistenceAndClient() throws Exception {
+        testRebalance(false, false);
     }
 
     /**
@@ -101,7 +121,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
      * @param persistence Persistent flag.
      * @throws Exception If failed.
      */
-    public void testRebalance(boolean persistence) throws Exception {
+    public void testRebalance(boolean persistence, boolean serverJoin) throws Exception {
         persistenceEnabled = persistence;
 
         IgniteEx ignite0 = startGrids(NODES_CNT);
@@ -110,7 +130,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(false);
 
-        IgniteEx newNode = startGrid(NODES_CNT);
+        IgniteEx newNode = serverJoin ? startGrid(NODES_CNT) : startClientGrid(NODES_CNT);
 
         grid(1).close();
 
@@ -123,37 +143,60 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
 
         commSpi1.waitForBlocked();
 
-        Map<CacheGroupContext, IgniteInternalFuture<Boolean>> futs = getAllRebalanceFuturesByGrp(grid(1));
+        Map<CacheGroupContext, IgniteInternalFuture<Boolean>> futs = getAllRebalanceFuturesByGroup(grid(1));
 
-        for (IgniteInternalFuture<Boolean> fut : futs.values())
-            assertFalse(futInfoString(fut), fut.isDone());
+        checkAllFuturesProcessing(futs);
 
         for (int i = 0; i < 3; i++) {
             newNode.close();
 
             checkTopology(NODES_CNT);
 
-            newNode = startGrid(NODES_CNT);
+            newNode = serverJoin ? startGrid(NODES_CNT) : startClientGrid(NODES_CNT);
 
             checkTopology(NODES_CNT + 1);
         }
 
-        for (IgniteInternalFuture<Boolean> fut : futs.values())
-            assertTrue(futInfoString(fut), fut.isDone() && !fut.get());
+        if (serverJoin)
+            checkAllFuturesCancelled(futs);
+        else
+            checkAllFuturesProcessing(futs);
 
         commSpi1.stopBlock();
 
         awaitPartitionMapExchange();
 
-        Map<CacheGroupContext, IgniteInternalFuture<Boolean>> newFuts = getAllRebalanceFuturesByGrp(grid(1));
+        Map<CacheGroupContext, IgniteInternalFuture<Boolean>> newFuts = getAllRebalanceFuturesByGroup(grid(1));
 
         for (Map.Entry<CacheGroupContext, IgniteInternalFuture<Boolean>> grpFut : futs.entrySet()) {
             IgniteInternalFuture<Boolean> fut = grpFut.getValue();
             IgniteInternalFuture<Boolean> newFut = newFuts.get(grpFut.getKey());
 
-            assertTrue(futInfoString(fut), fut.isDone() && !fut.get());
-            assertTrue(futInfoString(newFut), newFut.isDone() && newFut.get());
+            if (serverJoin)
+                assertTrue(futureInfoString(fut), fut.isDone() && !fut.get());
+            else
+                assertSame(fut, newFut);
+
+            assertTrue(futureInfoString(newFut), newFut.isDone() && newFut.get());
         }
+    }
+
+    /**
+     * @param futs Matching group to rebalance's future.
+     * @throws org.apache.ignite.IgniteCheckedException
+     */
+    public void checkAllFuturesCancelled(Map<CacheGroupContext, IgniteInternalFuture<Boolean>> futs)
+        throws org.apache.ignite.IgniteCheckedException {
+        for (IgniteInternalFuture<Boolean> fut : futs.values())
+            assertTrue(futureInfoString(fut), fut.isDone() && !fut.get());
+    }
+
+    /**
+     * @param futs Matching group to rebalance's future.
+     */
+    public void checkAllFuturesProcessing(Map<CacheGroupContext, IgniteInternalFuture<Boolean>> futs) {
+        for (IgniteInternalFuture<Boolean> fut : futs.values())
+            assertFalse(futureInfoString(fut), fut.isDone());
     }
 
     /**
@@ -162,7 +205,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
      * @param ignite Ignite.
      * @return Array of rebelance futures.
      */
-    private Map<CacheGroupContext, IgniteInternalFuture<Boolean>> getAllRebalanceFuturesByGrp(IgniteEx ignite) {
+    private Map<CacheGroupContext, IgniteInternalFuture<Boolean>> getAllRebalanceFuturesByGroup(IgniteEx ignite) {
         HashMap<CacheGroupContext, IgniteInternalFuture<Boolean>> futs = new HashMap<>(ignite.cacheNames().size());
 
         for (String cache : ignite.cacheNames()) {
@@ -179,7 +222,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
      * @param rebalanceFuture Rebalance future.
      * @return Information string about passed future.
      */
-    private String futInfoString(IgniteInternalFuture<Boolean> rebalanceFuture) {
+    private String futureInfoString(IgniteInternalFuture<Boolean> rebalanceFuture) {
         return "Fut: " + rebalanceFuture
             + " is done: " + rebalanceFuture.isDone()
             + " result: " + (rebalanceFuture.isDone() ? rebalanceFuture.result() : "None");
