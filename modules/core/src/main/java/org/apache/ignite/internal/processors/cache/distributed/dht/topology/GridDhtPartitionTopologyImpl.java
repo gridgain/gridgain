@@ -1571,9 +1571,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 node2part = partMap;
 
-                if (exchangeVer != null && exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT) {
-                    assert exchFut != null;
-
+                if (exchangeVer != null && exchFut != null && exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT) {
+                    // TODO debug exchFut = null, massiveClient ...
                     boolean evt = !exchFut.localJoinExchange() && !exchFut.activateCluster();
 
                     // TODO fixme this is called on joining client.

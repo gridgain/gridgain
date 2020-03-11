@@ -43,6 +43,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.util.typedef.X;
@@ -106,6 +107,9 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setFailureDetectionTimeout(10000000L);
+        cfg.setClientFailureDetectionTimeout(10000000L);
+
         if (igniteInstanceName.startsWith(CLIENT_GRID_NAME)) {
             // Intentionally skipping data storage in client configuration.
             cfg.setClientMode(true);
@@ -113,6 +117,8 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
         else {
             cfg.setDataStorageConfiguration(
                 new DataStorageConfiguration()
+                    .setWalSegmentSize(4 * 1024 * 1024)
+                    .setWalMode(WALMode.LOG_ONLY)
                     .setDefaultDataRegionConfiguration(
                         new DataRegionConfiguration()
                             .setPersistenceEnabled(true)
