@@ -33,6 +33,7 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.workload.Batch;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
+import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.visor.checker.VisorPartitionReconciliationTaskArg;
@@ -251,6 +252,8 @@ public class PartitionReconciliationFastCheckTest extends PartitionReconciliatio
         // Simulate data inconsistency.
         inconsistencySimulator.run();
 
+        ReconciliationResult res;
+
         try {
             // Block rebalancing
             for (Ignite ignite : G.allGrids()) {
@@ -263,9 +266,12 @@ public class PartitionReconciliationFastCheckTest extends PartitionReconciliatio
             // Starting this node should trigger partitions validation.
             startGrid(NODES_CNT);
 
-            return partitionReconciliation(
+            res = partitionReconciliation(
                 grid(0),
-                new VisorPartitionReconciliationTaskArg.Builder().fastCheck(true).repair(true));
+                new VisorPartitionReconciliationTaskArg.Builder()
+                    .fastCheck(true)
+                    .repair(true)
+                    .repairAlg(RepairAlgorithm.LATEST));
         }
         finally {
             ReconciliationEventListenerProvider.defaultListenerInstance((stage, workload) -> {});
@@ -274,5 +280,11 @@ public class PartitionReconciliationFastCheckTest extends PartitionReconciliatio
             for (Ignite ignite : G.allGrids())
                 TestRecordingCommunicationSpi.spi(ignite).stopBlock();
         }
+
+        awaitPartitionMapExchange(false, true, null);
+
+        assertFalse(idleVerify(grid(0), DEFAULT_CACHE_NAME).hasConflicts());
+
+        return res;
     }
 }
