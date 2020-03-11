@@ -48,6 +48,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Handler;
+import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
@@ -58,6 +59,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.Ignition;
 import org.apache.ignite.IgnitionListener;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.compute.ComputeJob;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ConnectorConfiguration;
@@ -75,10 +77,13 @@ import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.GridCacheContext;
-import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
+import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
 import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -93,7 +98,6 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.util.worker.GridWorker;
@@ -145,7 +149,6 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_SUCCESS_FILE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SYSTEM_WORKER_BLOCKED_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
-import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheMode.REPLICATED;
 import static org.apache.ignite.cache.CacheRebalanceMode.SYNC;
@@ -183,6 +186,10 @@ public class IgnitionEx {
 
     /** */
     private static final int WAIT_FOR_BACKUPS_CHECK_INTERVAL = 1000;
+
+    /** Key to store list of gracefully stopping nodes within metastore. */
+    private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
+        DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
     /** Map of named Ignite instances. */
     private static final ConcurrentMap<Object, IgniteNamedInstance> grids = new ConcurrentHashMap<>();
@@ -307,7 +314,7 @@ public class IgnitionEx {
      * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
      *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
      *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN()} value is used instead.
+     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
      * @return {@code true} if default grid instance was indeed stopped,
      *      {@code false} otherwise (if it was not started).
      */
@@ -333,7 +340,7 @@ public class IgnitionEx {
      * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
      *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
      *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN()} value is used instead.
+     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
      * @param stopNotStarted If {@code true} and node start did not finish then interrupts starting thread.
      * @return {@code true} if named Ignite instance was indeed found and stopped,
      *      {@code false} otherwise (the instance with given {@code name} was
@@ -431,7 +438,7 @@ public class IgnitionEx {
      * @param waitForBackups If {@code true} then node will wait until all of its data is backed up before shutting
      *      down. Please note that it will completely prevent last node in cluster from shutting down if any caches
      *      exist that have backups configured. If {@code null} then
-     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN()} value is used instead.
+     *      {@link IgniteSystemProperties#IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN} value is used instead.
      */
     public static void stopAll(boolean cancel, Boolean waitForBackups) {
         IgniteNamedInstance grid0 = dfltGrid;
@@ -2641,77 +2648,127 @@ public class IgnitionEx {
             if (waitForBackups) {
                 waitingForBackups = true;
 
-                long curTopVer = grid.cluster().topologyVersion();
-
-                Set<String> cacheNamesNoBackups;
-
-                if (log != null && log.isInfoEnabled())
+                if (log.isInfoEnabled())
                     log.info("Ensuring that caches have sufficient backups...");
 
-                boolean blocked;
+                boolean readyToStop = false;
 
-                do {
-                    blocked = false;
+                DistributedMetaStorage metaStorage = grid.context().distributedMetastorage();
 
-                    for (IgniteCacheProxy cache : grid().caches()) {
-                        GridCacheContext cctx = cache.context();
+                while (!readyToStop && waitingForBackups) {
+                    boolean safeToStop = true;
 
-                        AffinityTopologyVersion readyTopVer = cctx.topology().readyTopologyVersion();
+                    long topVer = grid.cluster().topologyVersion();
 
-                        if (readyTopVer.topologyVersion() < curTopVer) {
-                            if (log != null) {
-                                LT.warn(log, "Delaying node shutdown due to ongoing topology change [curTopVer=" +
-                                    curTopVer + ", readyTopVer=" + readyTopVer + "]");
+                    HashSet<UUID> originalNodesToExclude;
+
+                    HashSet<UUID> nodesToExclude;
+
+                    try {
+                        originalNodesToExclude = metaStorage.read(GRACEFUL_SHUTDOWN_METASTORE_KEY);
+
+                        nodesToExclude = originalNodesToExclude != null ? new HashSet<>(originalNodesToExclude) :
+                            new HashSet<>();
+                    }
+                    catch (IgniteCheckedException e) {
+                        U.error(log, "Unable to read " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
+                            " value from metastore.", e);
+
+                        continue;
+                    }
+
+                    for (CacheGroupContext grpCtx : grid.context().cache().cacheGroups()) {
+                        if (grpCtx.systemCache())
+                            continue;
+
+                        if (grpCtx.isLocal())
+                            continue;
+
+                        if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0) {
+                            U.warn(log, "Ignoring potential data loss on cache without backups [name="
+                                + grpCtx.cacheOrGroupName() + "]");
+
+                            continue;
+                        }
+
+                        GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
+
+                        nodesToExclude.retainAll(fullMap.keySet());
+
+                        int cacheSpecificAmountOfOwners = -1;
+
+                        if (fullMap != null) {
+                            int parts = grpCtx.topology().partitions();
+
+                            for (int part = 0; part < parts; part++) {
+                                Set<UUID> partIdealAssignment = grpCtx.affinity().idealAssignmentRaw().get(part).
+                                    stream().map(ClusterNode::id).collect(Collectors.toSet());
+
+                                int cnt = 0;
+
+                                for (Map.Entry<UUID, GridDhtPartitionMap> entry : fullMap.entrySet()) {
+                                    if (nodesToExclude.contains(entry.getKey()))
+                                        continue;
+
+                                    // Skip all non-ideal assignments.
+                                    if (!partIdealAssignment.contains(entry.getKey()))
+                                        continue;
+
+                                    if (entry.getValue().get(part) == GridDhtPartitionState.OWNING)
+                                        cnt++;
+                                }
+
+                                if (cacheSpecificAmountOfOwners == -1)
+                                    cacheSpecificAmountOfOwners = cnt;
+
+                                cacheSpecificAmountOfOwners = Math.min(cacheSpecificAmountOfOwners, cnt);
                             }
+                        }
 
-                            blocked = true;
+                        if (cacheSpecificAmountOfOwners <= 1) {
+                            safeToStop = false;
 
                             break;
                         }
 
-                        if (cctx.config().getCacheMode() == LOCAL)
-                            continue;
-
-                        int locNodeMinNumOfParts = cctx.group().metrics().getLocalNodeMinimumNumberOfPartitionCopies();
-                        if (locNodeMinNumOfParts == 1) {
-                            if (cctx.config().getCacheMode() == PARTITIONED && cctx.config().getBackups() == 0) {
-                                if (log != null) {
-                                    LT.warn(log, "Ignoring potential data loss on cache without backups [name=" +
-                                        cache.getName() + "]");
-                                }
-
-                                continue;
-                            }
-
-                            if (log != null) {
-                                LT.warn(log, "Delaying node shutdown to avoid data loss on cache [name=" +
-                                    cache.getName() + ", grp=" + cctx.group().name() + "]");
-                            }
-
-                            blocked = true;
-                        }
                     }
 
-                    if (blocked) {
+                    safeToStop = safeToStop && topVer == grid.context().discovery().topologyVersion();
+
+                    if (safeToStop) {
+                        try {
+                            HashSet<UUID> newNodesToExclude = new HashSet<>(nodesToExclude);
+                            newNodesToExclude.add(grid.getLocalNodeId());
+
+                            readyToStop = metaStorage.compareAndSet(GRACEFUL_SHUTDOWN_METASTORE_KEY,
+                                originalNodesToExclude, newNodesToExclude);
+                        }
+                        catch (IgniteCheckedException e) {
+                            U.error(log, "Unable to write " + GRACEFUL_SHUTDOWN_METASTORE_KEY +
+                                " value from metastore.", e);
+
+                            continue;
+                        }
+
+                        if (!readyToStop) {
+                            try {
+                                IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
+                            }
+                            catch (IgniteInterruptedCheckedException e) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }
+                    else {
                         try {
                             IgniteUtils.sleep(WAIT_FOR_BACKUPS_CHECK_INTERVAL);
-
-                            curTopVer = grid.cluster().topologyVersion();
                         }
                         catch (IgniteInterruptedCheckedException e) {
                             Thread.currentThread().interrupt();
                         }
                     }
                 }
-                while (blocked && waitingForBackups);
-
-                waitingForBackups = false;
-
-                if (log != null && log.isInfoEnabled())
-                    log.info("Finish caches for sufficient backup factor.");
             }
-
-            //ignite.grid().
 
             // Unregister Ignite MBean.
             unregisterFactoryMBean();

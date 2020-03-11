@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
@@ -27,6 +30,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgnitionEx;
+import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageImpl;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -40,6 +44,10 @@ import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
  */
 @WithSystemProperty(key = IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN, value = "true")
 public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTest {
+    /** Key to store list of gracefully stopping nodes within metastore. */
+    private static final String GRACEFUL_SHUTDOWN_METASTORE_KEY =
+        DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
+
     /** */
     private CacheMode cacheMode;
 
@@ -54,6 +62,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
     /** */
     private boolean clientNodes;
+
+    /** */
+    private int backups;
 
     /** */
     public GridCacheDhtPreloadWaitForBackupsTest() {
@@ -92,6 +103,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         rebalanceMode = CacheRebalanceMode.SYNC;
         clientNodes = false;
+        backups = 1;
 
         nodeLeavesRebalanceCompletes();
     }
@@ -106,6 +118,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.FULL_SYNC;
         rebalanceMode = CacheRebalanceMode.ASYNC;
         clientNodes = false;
+        backups = 1;
 
         nodeLeavesRebalanceCompletes();
     }
@@ -120,6 +133,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.FULL_ASYNC;
         rebalanceMode = CacheRebalanceMode.ASYNC;
         clientNodes = true;
+        backups = 1;
 
         nodeLeavesRebalanceCompletes();
     }
@@ -134,6 +148,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         rebalanceMode = CacheRebalanceMode.ASYNC;
         clientNodes = false;
+        backups = 1;
 
         startGrids(2);
 
@@ -171,6 +186,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         rebalanceMode = CacheRebalanceMode.ASYNC;
         clientNodes = false;
+        backups = 1;
 
         startGrids(2);
 
@@ -189,6 +205,133 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         grid(0).close();
         grid(1).close();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testThatItsNotPossibleToStopLastOwnerIfAnotherOwnerIsStopping() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.FULL_ASYNC;
+        rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = true;
+        backups = 1;
+
+        startGrids(2);
+
+        grid(0).context().distributedMetastorage().write(
+            DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown",
+            new HashSet<>(Collections.singleton(grid(0).localNode().id())));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Thread stopper = new Thread(() -> {
+            grid(1).close();
+            latch.countDown();
+        }, "Stopper");
+
+        stopper.start();
+
+        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+
+        grid(0).context().distributedMetastorage().write(
+            GRACEFUL_SHUTDOWN_METASTORE_KEY,
+            new HashSet<>());
+
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testThatItsPossibleToStopNodeIfExludedNodeListWithinMetastoreIsntEmpty() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.FULL_ASYNC;
+        rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = false;
+        backups = 2;
+
+        startGrids(3);
+
+        grid(0).context().distributedMetastorage().write(
+            DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown",
+            new HashSet<>(Collections.singleton(grid(0).localNode().id())));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        UUID node1Id = grid(1).localNode().id();
+
+        Thread stopper = new Thread(() -> {
+            grid(1).close();
+            latch.countDown();
+        }, "Stopper");
+
+        stopper.start();
+
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+
+        HashSet<UUID> expMetastoreContent = new HashSet<>();
+        expMetastoreContent.add(grid(0).localNode().id());
+        expMetastoreContent.add(node1Id);
+
+        assertEquals(
+            expMetastoreContent,
+            grid(0).context().distributedMetastorage().read(GRACEFUL_SHUTDOWN_METASTORE_KEY));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testThatExcludedNodeListWithinMetastoreCleanedUpAfterUpdatingFullMap() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.FULL_ASYNC;
+        rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = false;
+        backups = 3;
+
+        startGrids(4);
+
+        grid(0).context().distributedMetastorage().write(
+            DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown",
+            new HashSet<>(Collections.singleton(grid(0).localNode().id())));
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        UUID node1Id = grid(1).localNode().id();
+
+        Thread stopper = new Thread(() -> {
+            grid(1).close();
+            latch.countDown();
+        }, "Stopper");
+
+        stopper.start();
+
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+
+        HashSet<UUID> expMetastoreContent = new HashSet<>();
+        expMetastoreContent.add(grid(0).localNode().id());
+        expMetastoreContent.add(node1Id);
+
+        assertEquals(
+            expMetastoreContent,
+            grid(0).context().distributedMetastorage().read(GRACEFUL_SHUTDOWN_METASTORE_KEY));
+
+        UUID node2Id = grid(2).localNode().id();
+
+        grid(2).close();
+
+        expMetastoreContent.remove(node1Id);
+        expMetastoreContent.add(node2Id);
+
+        assertEquals(
+            expMetastoreContent,
+            grid(0).context().distributedMetastorage().read(GRACEFUL_SHUTDOWN_METASTORE_KEY));
     }
 
     /**
@@ -258,7 +401,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             ccfg.setAtomicityMode(atomicityMode);
             ccfg.setWriteSynchronizationMode(synchronizationMode);
             ccfg.setRebalanceMode(rebalanceMode);
-            ccfg.setBackups(1);
+            ccfg.setBackups(backups);
             ccfg.setAffinity(new RendezvousAffinityFunction().setPartitions(32));
 
             ccfgs[i - 1] = ccfg;
