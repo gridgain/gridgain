@@ -1179,9 +1179,19 @@ public class IgniteIndexReader implements AutoCloseable {
             destDir.mkdirs();
 
         try (DirectoryStream<Path> files = Files.newDirectoryStream(cacheWorkDir.toPath(), "*" + fileMask)) {
+            List<Path> filesList = new LinkedList<>();
+
             for (Path f : files) {
                 if (f.toString().toLowerCase().endsWith(fileMask))
-                    copyFromStreamToFile(f.toFile(), new File(destDir.getPath(), f.getFileName().toString()));
+                    filesList.add(f);
+            }
+
+            ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Transforming files", filesList.size());
+
+            for (Path f : filesList) {
+                progressPrinter.printProgress();
+
+                copyFromStreamToFile(f.toFile(), new File(destDir.getPath(), f.getFileName().toString()));
             }
         }
         catch (IOException e) {
