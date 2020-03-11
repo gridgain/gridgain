@@ -185,7 +185,6 @@ import org.h2.store.DataHandler;
 import org.h2.table.Column;
 import org.h2.table.IndexColumn;
 import org.h2.table.TableType;
-import org.h2.util.DateTimeUtils;
 import org.h2.util.JdbcUtils;
 import org.h2.value.DataType;
 import org.jetbrains.annotations.Nullable;
@@ -282,6 +281,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Memory manager */
     private QueryMemoryManager memoryMgr;
+
+    /** Distributed config. */
+    private DistributedSqlConfiguration distrCfg;
 
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
@@ -2135,6 +2137,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         JdbcUtils.serializer = h2Serializer;
 
         connMgr.setH2Serializer(h2Serializer);
+
+        distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), ctx, log);
     }
 
     /** {@inheritDoc} */
@@ -3123,14 +3127,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /** {@inheritDoc} */
-    @Override public void clusterTimezone(String tzId) throws IgniteCheckedException {
-
+    @Override public void clusterTimezone(TimeZone tz) throws IgniteCheckedException {
+        distrCfg.updateTimeZone(tz);
     }
 
     /** {@inheritDoc} */
-    @Override public TimeZone clusterTimezone() throws IgniteCheckedException {
-        TimeZone tz = DateTimeUtils.getTimeZone();
-
-        return DateTimeUtils.getTimeZone();
+    @Override public TimeZone clusterTimezone() {
+        return distrCfg.timeZone();
     }
 }

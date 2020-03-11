@@ -482,9 +482,9 @@ public interface GridQueryIndexing {
     /**
      * Setup cluster timezone ID used for date time conversion.
      *
-     * @param tzId Cluster timezone ID.
+     * @param tz Cluster timezone.
      */
-    default void clusterTimezone(String tzId) throws IgniteCheckedException {
+    default void clusterTimezone(TimeZone tz) throws IgniteCheckedException {
         // No-op.
     }
 
@@ -493,7 +493,7 @@ public interface GridQueryIndexing {
      *
      * @return Cluster SQL timezone.
      */
-    default TimeZone clusterTimezone() throws IgniteCheckedException {
+    default TimeZone clusterTimezone() {
         return TimeZone.getDefault();
     }
 }

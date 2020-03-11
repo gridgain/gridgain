@@ -1344,8 +1344,8 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING = "IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING";
 
     /**
-     * Choose the index cost function. May be used to compatibility with old version.
-     *
+     * Choose the index cost function. May be used to compatibility with old version
+     * .
      * The possible values:
      *         - "LAST",
      *         - "COMPATIBLE_8_7_12",
@@ -1354,13 +1354,6 @@ public final class IgniteSystemProperties {
      * The last cost function is used by default.
      */
     public static final String IGNITE_INDEX_COST_FUNCTION = "IGNITE_INDEX_COST_FUNCTION";
-
-    /**
-     * Specifies the timezone identifier that is used for SQL date/time conversion.
-     * If specified must be the same for all nodes in cluster.
-     * When not specified the
-     */
-    public static final String IGNITE_SQL_TIME_ZONE = "IGNITE_SQL_TIME_ZONE";
 
     /**
      * Enforces singleton.
