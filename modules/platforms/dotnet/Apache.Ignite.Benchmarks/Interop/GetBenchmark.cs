@@ -27,7 +27,7 @@ namespace Apache.Ignite.Benchmarks.Interop
     {
         /** Cache name. */
         private const string CacheName = "cache";
-
+        
         /** Native cache wrapper. */
         private ICache<int, Employee> _cache;
 

@@ -22,10 +22,13 @@ namespace Apache.Ignite.Core.Impl.Client
     using System.Diagnostics.CodeAnalysis;
     using System.Net;
     using Apache.Ignite.Core.Binary;
+    using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Datastream;
     using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Cache;
+    using Apache.Ignite.Core.Impl.Cache.Near;
     using Apache.Ignite.Core.Impl.Client.Cache;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
@@ -168,6 +171,23 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        public CacheAffinityImpl GetAffinity(string cacheName)
+        {
+            throw GetClientNotSupportedException();
+        }
+
+        /** <inheritDoc /> */
+        public CacheConfiguration GetCacheConfiguration(int cacheId)
+        {
+            throw GetClientNotSupportedException();
+        }
+
+        public object GetJavaThreadLocal()
+        {
+            throw GetClientNotSupportedException();
+        }
+
+        /** <inheritDoc /> */
         public IgniteClientConfiguration GetConfiguration()
         {
             // Return a copy to allow modifications by the user.
@@ -222,6 +242,12 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         [ExcludeFromCodeCoverage]
         public PluginProcessor PluginProcessor
+        {
+            get { throw GetClientNotSupportedException(); }
+        }
+
+        /** <inheritDoc /> */
+        public NearCacheManager NearCacheManager
         {
             get { throw GetClientNotSupportedException(); }
         }

@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.datastructures.GridCacheAtomicLongI
 import org.apache.ignite.internal.processors.platform.binary.PlatformBinaryProcessor;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCache;
 import org.apache.ignite.internal.processors.platform.cache.PlatformCacheExtension;
+import org.apache.ignite.internal.processors.platform.cache.PlatformCacheManager;
 import org.apache.ignite.internal.processors.platform.cache.affinity.PlatformAffinity;
 import org.apache.ignite.internal.processors.platform.cache.store.PlatformCacheStore;
 import org.apache.ignite.internal.processors.platform.cluster.PlatformClusterGroup;
@@ -76,7 +77,7 @@ import static org.apache.ignite.internal.processors.platform.client.ClientConnec
 /**
  * GridGain platform processor.
  */
-@SuppressWarnings({"unchecked"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class PlatformProcessorImpl extends GridProcessorAdapter implements PlatformProcessor, PlatformTarget {
     /** */
     private static final int OP_GET_CACHE = 1;
@@ -183,6 +184,12 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     /** */
     private static final int OP_SET_BASELINE_AUTO_ADJ_TIMEOUT = 35;
 
+    /** */
+    private static final int OP_GET_CACHE_CONFIG = 36;
+
+    /** */
+    private static final int OP_GET_THREAD_LOCAL = 37;
+
     /** Start latch. */
     private final CountDownLatch startLatch = new CountDownLatch(1);
 
@@ -217,6 +224,9 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** Cluster restart flag for the reconnect callback. */
     private volatile boolean clusterRestarted;
+
+    /** Thread local storage for platform needs. */
+    private final ThreadLocal<Object> threadLocal = new ThreadLocal<>();
 
     /**
      * Constructor.
@@ -326,6 +336,11 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     }
 
     /** {@inheritDoc} */
+    @Override public boolean hasContext() {
+        return true;
+    }
+
+    /** {@inheritDoc} */
     @Override public void registerStore(PlatformCacheStore store, boolean convertBinary)
         throws IgniteCheckedException {
         storeLock.readLock().lock();
@@ -343,6 +358,11 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
         finally {
             storeLock.readLock().unlock();
         }
+    }
+
+    /** {@inheritDoc} */
+    @Override public PlatformCacheManager cacheManager() {
+        return new PlatformCacheManager(platformCtx.gateway());
     }
 
     /** {@inheritDoc} */
@@ -547,6 +567,14 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
     /** {@inheritDoc} */
     @Override public void processInStreamOutStream(int type, BinaryRawReaderEx reader, BinaryRawWriterEx writer) throws IgniteCheckedException {
+        if (type == OP_GET_CACHE_CONFIG) {
+            int cacheId = reader.readInt();
+            CacheConfiguration cfg = ctx.cache().cacheDescriptor(cacheId).cacheConfiguration();
+            PlatformConfigurationUtils.writeCacheConfiguration(writer, cfg, DEFAULT_VER);
+
+            return;
+        }
+
         PlatformAbstractTarget.throwUnsupported(type);
     }
 
@@ -671,6 +699,10 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().createNearCache(cacheName, cfg);
 
+                if (reader.readBoolean())
+                    cache.context().cache().configuration().setPlatformNearConfiguration(
+                            PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
+
                 return createPlatformCache(cache);
             }
 
@@ -680,6 +712,10 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
                 NearCacheConfiguration cfg = PlatformConfigurationUtils.readNearConfiguration(reader);
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().getOrCreateNearCache(cacheName, cfg);
+
+                if (reader.readBoolean())
+                    cache.context().cache().configuration().setPlatformNearConfiguration(
+                            PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
 
                 return createPlatformCache(cache);
             }
@@ -740,6 +776,12 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 return;
             }
+
+            case OP_GET_THREAD_LOCAL: {
+                writer.writeObjectDetached(threadLocal.get());
+
+                return;
+            }
         }
 
         PlatformAbstractTarget.throwUnsupported(type);
@@ -770,6 +812,11 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     /** {@inheritDoc} */
     @Override public Exception convertException(Exception e) {
         return e;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setThreadLocal(Object value) {
+        threadLocal.set(value);
     }
 
     /**
