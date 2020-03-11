@@ -558,12 +558,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
                         List<Object> args = F.asList(qryParams.arguments());
 
-                        PreparedStatement stmt = preparedStatementWithParams(
-                            conn,
-                            qry,
-                            args,
-                            true
-                        );
+                        PreparedStatement stmt = conn.prepareStatement(qry, H2StatementCache.queryFlags(qryDesc));
+
+                        H2Utils.bindParameters(stmt, args);
 
                         H2QueryInfo qryInfo = new H2QueryInfo(H2QueryInfo.QueryType.LOCAL, stmt, qry);
 
@@ -571,7 +568,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                             stmt,
                             conn,
                             qry,
-                            args,
                             timeout,
                             cancel,
                             qryParams.dataPageScanEnabled(),
@@ -760,32 +756,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     }
 
     /**
-     * Prepares sql statement.
-     *
-     * @param conn Connection.
-     * @param sql Sql.
-     * @param params Params.
-     * @param useStmtCache If {@code true} use stmt cache.
-     * @return Prepared statement with set parameters.
-     * @throws IgniteCheckedException If failed.
-     */
-    public PreparedStatement preparedStatementWithParams(H2PooledConnection conn, String sql, Collection<Object> params,
-        boolean useStmtCache) throws IgniteCheckedException {
-        final PreparedStatement stmt;
-
-        try {
-            stmt = useStmtCache ? conn.prepareStatement(sql) : conn.prepareStatementNoCache(sql);
-
-            H2Utils.bindParameters(stmt, params);
-
-            return stmt;
-        }
-        catch (SQLException e) {
-            throw new IgniteCheckedException("Failed to parse SQL query: " + sql, e);
-        }
-    }
-
-    /**
      * Executes sql query statement.
      *
      * @param conn Connection,.
@@ -798,7 +768,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     private ResultSet executeSqlQuery(final H2PooledConnection conn, final PreparedStatement stmt,
         int timeoutMillis, @Nullable GridQueryCancel cancel) throws IgniteCheckedException  {
         if (cancel != null)
-            cancel.set(() -> cancelStatement(stmt));
+            cancel.add(() -> cancelStatement(stmt));
 
         Session ses = session(conn);
 
@@ -858,8 +828,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         final H2QueryInfo qryInfo,
         long maxMem
     ) throws IgniteCheckedException {
-        return executeSqlQueryWithTimer(preparedStatementWithParams(conn, sql, params, false),
-            conn, sql, params, timeoutMillis, cancel, dataPageScanEnabled, qryInfo, maxMem);
+        PreparedStatement stmt = conn.prepareStatementNoCache(sql);
+
+        H2Utils.bindParameters(stmt, params);
+
+        return executeSqlQueryWithTimer(stmt,
+            conn, sql, timeoutMillis, cancel, dataPageScanEnabled, qryInfo, maxMem);
     }
 
     /**
@@ -877,7 +851,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param stmt Prepared statement for query.
      * @param conn Connection.
      * @param sql Sql query.
-     * @param params Parameters.
      * @param timeoutMillis Query timeout.
      * @param cancel Query cancel.
      * @param dataPageScanEnabled If data page scan is enabled.
@@ -888,7 +861,6 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         PreparedStatement stmt,
         H2PooledConnection conn,
         String sql,
-        @Nullable Collection<Object> params,
         int timeoutMillis,
         @Nullable GridQueryCancel cancel,
         Boolean dataPageScanEnabled,
@@ -1311,9 +1283,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             if (select.forUpdate() && inTx)
                 iter = lockSelectedRows(iter, mvccCctx, timeout, qryParams.pageSize());
 
-            QueryCursorImpl<List<?>> cursor = qryId != null
-                ? new RegisteredQueryCursor<>(iter, cancel, runningQueryManager(), qryParams.lazy(), qryId)
-                : new QueryCursorImpl<>(iter, cancel, true, qryParams.lazy());
+            RegisteredQueryCursor<List<?>> cursor =
+                new RegisteredQueryCursor<>(iter, cancel, runningQueryManager(), qryParams.lazy(), qryId);
+
+            cancel.add(cursor::cancel);
 
             cursor.fieldsMeta(select.meta());
 

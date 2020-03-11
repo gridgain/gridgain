@@ -40,7 +40,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
 import static io.opencensus.trace.TraceOptions.DEFAULT;
-import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
