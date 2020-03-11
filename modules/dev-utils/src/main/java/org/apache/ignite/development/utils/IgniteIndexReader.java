@@ -1191,14 +1191,23 @@ public class IgniteIndexReader implements AutoCloseable {
             for (Path f : filesList) {
                 progressPrinter.printProgress();
 
-                copyFromStreamToFile(f.toFile(), new File(destDir.getPath(), f.getFileName().toString()));
+                try {
+                    copyFromStreamToFile(f.toFile(), new File(destDir.getPath(), f.getFileName().toString()));
+                }
+                catch (Exception e) {
+                    File destF = new File(destDir.getPath(), f.getFileName().toString());
+
+                    if (destF.exists())
+                        destF.delete();
+
+                    printErr("<ERROR> " + "Could not transform file: " + destF.getPath() + ", error: " + e.getMessage());
+
+                    printStackTrace(e);
+                }
             }
         }
         catch (IOException e) {
             throw new UncheckedIOException(e);
-        }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e);
         }
     }
 
