@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -57,8 +58,9 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         cfg.setLocalHost("127.0.0.1");
-        cfg.setNetworkTimeout(30_000);
+        cfg.setNetworkTimeout(60_000);
         cfg.setConnectorConfiguration(null);
+        cfg.setPeerClassLoadingEnabled(false);
 
         cfg.setDataStreamerThreadPoolSize(1);
         cfg.setManagementThreadPoolSize(2);
@@ -87,7 +89,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
             ccfg.setCacheMode(PARTITIONED);
             ccfg.setAtomicityMode(CacheAtomicityMode.values()[i % 3]);
             ccfg.setWriteSynchronizationMode(PRIMARY_SYNC);
-            ccfg.setBackups(1);
+
+            ccfg.setAffinity(new RendezvousAffinityFunction(false, 512));
 
             ccfg.setName("cache-" + i);
 
@@ -117,6 +120,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
     @Test
     public void test150Clients() throws Exception {
         Ignite srv = startGrid(0);
+
+        long startTime = System.currentTimeMillis();
 
         assertFalse(srv.configuration().isClientMode());
 
@@ -162,7 +167,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
                     }
 
                     return null;
-                } finally {
+                }
+                finally {
                     if (!cnt)
                         missed.incrementAndGet();
                 }
@@ -171,9 +177,9 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
 
         fut.get(getTestTimeout());
 
-        log.info("Started all clients.");
+        log.info("Complete starting clients: " + ((System.currentTimeMillis() - startTime) / 1000) + " sec.");
 
-        assertTrue("Clients failed to start: " + missed.get(), missed.get() == 0);
+        assertTrue("Clients failed to start: " + missed.get(), missed.get() != 0);
 
         waitForTopology(CLIENTS + 1, (int)getTestTimeout());
 
