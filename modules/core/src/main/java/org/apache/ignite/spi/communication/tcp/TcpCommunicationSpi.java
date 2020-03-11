@@ -57,6 +57,7 @@ import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.IgniteTooManyOpenFilesException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.AddressResolver;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -175,7 +176,6 @@ import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
-import static org.apache.ignite.internal.util.typedef.X.hasCause;
 import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture.SES_FUT_META;
 import static org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage.ALREADY_CONNECTED;
@@ -2558,7 +2558,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                 return srvr;
             }
             catch (IgniteCheckedException e) {
-                if (hasCause(e, SSLException.class))
+                if (X.hasCause(e, SSLException.class))
                     throw new IgniteSpiException("Failed to create SSL context. SSL factory: "
                         + ignite.configuration().getSslContextFactory() + '.', e);
 
@@ -3031,6 +3031,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     catch (Throwable e) {
                         fut.onDone(e);
 
+                        if (e instanceof IgniteTooManyOpenFilesException)
+                            throw e;
+
                         if (e instanceof Error)
                             throw (Error)e;
                     }
@@ -3218,7 +3221,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     throw e;
 
                 // Reconnect for the second time, if connection is not established.
-                if (connectAttempts < 2 && hasCause(e, ConnectException.class)) {
+                if (connectAttempts < 2 && X.hasCause(e, ConnectException.class)) {
                     connectAttempts++;
 
                     continue;
@@ -3667,8 +3670,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     if (log.isDebugEnabled())
                         log.debug("Client creation failed [addr=" + addr + ", err=" + e + ']');
 
-                    if (hasCause(e, "Too many open files", SocketException.class))
-                        throw new Error(e);
+                    if (X.hasCause(e, "Too many open files", SocketException.class))
+                        throw new IgniteTooManyOpenFilesException(e);
 
                     // check if timeout occured in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {
@@ -3830,7 +3833,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return {@code True} if error was caused by some connection IO error or IgniteCheckedException due to timeout.
      */
     private boolean isRecoverableException(Exception errs) {
-        return hasCause(
+        return X.hasCause(
             errs,
             IOException.class,
             HandshakeException.class,
@@ -4761,6 +4764,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             catch (ClusterTopologyCheckedException e) {
                 if (log.isDebugEnabled())
                     log.debug("Recovery reconnect failed, node stopping [rmtNode=" + recoveryDesc.node().id() + ']');
+            }
+            catch (IgniteTooManyOpenFilesException e) {
+                onException(e.getMessage(), e);
+
+                throw e;
             }
             catch (IgniteCheckedException | IgniteException e) {
                 try {
