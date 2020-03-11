@@ -3667,10 +3667,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
                     if (log.isDebugEnabled())
                         log.debug("Client creation failed [addr=" + addr + ", err=" + e + ']');
 
-                    if (hasCause(e, "Too many open files", SocketException.class)) {
-                        if (IgniteEx.class.isInstance(ignite))
-                            ((IgniteEx)ignite).context().failure().process(new FailureContext(CRITICAL_ERROR, e));
-                    }
+                    if (hasCause(e, "Too many open files", SocketException.class))
+                        throw new Error(e);
 
                     // check if timeout occured in case of unrecoverable exception
                     if (connTimeoutStgy.checkTimeout()) {
