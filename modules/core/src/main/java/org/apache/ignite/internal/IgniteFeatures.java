@@ -126,11 +126,11 @@ public enum IgniteFeatures {
     /** Cluster has task to get value from cache by key value. */
     WC_GET_CACHE_VALUE(31),
 
-    /** */
-    INVERSE_TCP_CONNECTION(32),
-
     /** Partition reconciliation utility. */
-    PARTITION_RECONCILIATION(34);
+    PARTITION_RECONCILIATION(34),
+
+    /** Inverse connection: sending a request over discovery to establish a communication connection. */
+    INVERSE_TCP_CONNECTION(35);
 
     /**
      * Unique feature identifier.
@@ -219,7 +219,12 @@ public enum IgniteFeatures {
     }
 
     /**
-     * TODO document and reuse
+     * Check that feature is supported by all nodes passing the provided predicate.
+     *
+     * @param ctx Kernal context.
+     * @param feature Feature to check.
+     * @param pred Predicate to filter out nodes that should not be checked for feature support.
+     * @return {@code True} if all nodes passed the predicate support the feature.
      */
     public static boolean allNodesSupport(GridKernalContext ctx, IgniteFeatures feature, IgnitePredicate<ClusterNode> pred) {
         DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();

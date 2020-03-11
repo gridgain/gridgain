@@ -3544,7 +3544,9 @@ public class IgniteConfiguration {
     }
 
     /**
-     * @return
+     * Configured environment type.
+     *
+     * @return {@link EnvironmentType environment type}.
      */
     public EnvironmentType getEnvironmentType() {
         return envType;
