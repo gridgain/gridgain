@@ -165,6 +165,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
     /** {@inheritDoc} */
     @Override public void onMarkedObsolete() {
+        super.onMarkedObsolete();
+
         assert !lockedByCurrentThread();
 
         // Remove this entry from partition mapping.
@@ -678,6 +680,8 @@ public class GridDhtCacheEntry extends GridDistributedCacheEntry {
 
             // Give to GC.
             update(null, 0L, 0L, ver, true);
+
+            updatePlatformNearCache(null, null);
 
             if (cctx.store().isLocal())
                 cctx.store().remove(null, key);
