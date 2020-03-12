@@ -682,9 +682,11 @@ public class IgniteIndexReader implements AutoCloseable {
                     + FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + ": " + name);
         });
 
-        print("");
-
         errors.forEach(e -> printErr("<ERROR>" + e));
+
+        print("Comparing traversals detected " + errors.size() + " errors.");
+        print("------------------");
+
     }
 
     /** */
