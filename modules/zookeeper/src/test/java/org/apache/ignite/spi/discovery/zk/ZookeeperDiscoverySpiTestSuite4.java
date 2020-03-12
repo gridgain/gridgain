@@ -33,15 +33,15 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-//    ZookeeperDiscoverySuitePreprocessorTest.class,
-//    IgniteCachePutRetryAtomicSelfTest.class,
-//    IgniteCachePutRetryTransactionalSelfTest.class,
-//    ClusterNodeMetricsUpdateTest.class,
-//    GridCacheAtomicMultiNodeFullApiSelfTest.class,
-//    GridCacheReplicatedAtomicMultiNodeFullApiSelfTest.class,
-//    IgniteCacheReplicatedQuerySelfTest.class,
+    ZookeeperDiscoverySuitePreprocessorTest.class,
+    IgniteCachePutRetryAtomicSelfTest.class,
+    IgniteCachePutRetryTransactionalSelfTest.class,
+    ClusterNodeMetricsUpdateTest.class,
+    GridCacheAtomicMultiNodeFullApiSelfTest.class,
+    GridCacheReplicatedAtomicMultiNodeFullApiSelfTest.class,
+    IgniteCacheReplicatedQuerySelfTest.class,
     DistributedMetaStorageTest.class,
-//    DistributedMetaStoragePersistentTest.class
+    DistributedMetaStoragePersistentTest.class
 })
 public class ZookeeperDiscoverySpiTestSuite4 {
     /** */
