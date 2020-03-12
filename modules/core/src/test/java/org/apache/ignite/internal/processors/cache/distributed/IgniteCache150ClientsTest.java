@@ -110,7 +110,9 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
     @Override protected void afterTest() throws Exception {
         super.afterTest();
 
-        stopAllGrids();
+        stopAllClients(true);
+
+        stopAllServers(true);
     }
 
     /**
