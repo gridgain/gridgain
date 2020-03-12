@@ -18,6 +18,7 @@ package org.apache.ignite.cache;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -29,17 +30,17 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
-import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 /**
  * Test cases when rebalance processed and not cancelled during various exchange events.
  */
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, value = "false")
 public class RebalanceCancellationTest extends GridCommonAbstractTest {
     /** Start cluster nodes. */
     public static final int NODES_CNT = 3;
@@ -67,22 +68,6 @@ public class RebalanceCancellationTest extends GridCommonAbstractTest {
 
     /** Filter node. */
     public boolean filterNode;
-
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        GridTestUtils.setFieldValue(null, GridDhtPartitionDemander.class,
-            "DISABLE_REBALANCING_CANCELLATION_PTIMIZATION", false);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTestsStopped() throws Exception {
-        super.afterTestsStopped();
-
-        GridTestUtils.setFieldValue(null, GridDhtPartitionDemander.class,
-            "DISABLE_REBALANCING_CANCELLATION_PTIMIZATION", true);
-    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {

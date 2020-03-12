@@ -23,6 +23,7 @@ import java.util.UUID;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
@@ -62,6 +63,10 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /** Default preload resend timeout. */
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
+
+    /** Disable rebalancing cancellation optimization. */
+    private final boolean disableRebalancingCancellationOptimization = IgniteSystemProperties.getBoolean(
+        IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -141,6 +146,16 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
      */
     private IgniteCheckedException stopError() {
         return new NodeStoppingException("Operation has been cancelled (cache or node is stopping).");
+    }
+
+    /**
+     * Returns a boolean value of flag, getting though JVM property.
+     * @see IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION
+     *
+     * @return Rebalance cancellation optimization flag.
+     */
+    public boolean isDisableRebalancingCancellationOptimization() {
+        return disableRebalancingCancellationOptimization;
     }
 
     /** {@inheritDoc} */

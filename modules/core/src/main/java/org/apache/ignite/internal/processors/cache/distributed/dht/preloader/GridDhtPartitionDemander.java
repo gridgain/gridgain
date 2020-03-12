@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheRebalanceMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -101,10 +100,6 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
  * Thread pool for requesting partitions from other nodes and populating local cache.
  */
 public class GridDhtPartitionDemander {
-    /** Disable rebalancing cancellation optimization. */
-    private static boolean DISABLE_REBALANCING_CANCELLATION_PTIMIZATION = IgniteSystemProperties.getBoolean(
-        IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
-
     /** */
     private final GridCacheSharedContext<?, ?> ctx;
 
@@ -1652,10 +1647,8 @@ public class GridDhtPartitionDemander {
          * @return {@code True} when future compared with other, {@code False} otherwise.
          */
         public boolean compatibleWith(GridDhtPreloaderAssignments otherAssignments) {
-            if (DISABLE_REBALANCING_CANCELLATION_PTIMIZATION)
-                return false;
-
-            if (isInitial() || !allNodesSupports(ctx.kernalContext(), otherAssignments.keySet(), TX_TRACKING_UPDATE_COUNTER))
+            if (isInitial() || !allNodesSupports(ctx.kernalContext(), otherAssignments.keySet(), TX_TRACKING_UPDATE_COUNTER)
+                || ((GridDhtPreloader)grp.preloader()).isDisableRebalancingCancellationOptimization())
                 return false;
 
             if (topVer.equals(otherAssignments.topologyVersion())) {

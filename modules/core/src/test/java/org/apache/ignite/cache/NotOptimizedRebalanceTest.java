@@ -54,7 +54,9 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
             .setConsistentId(igniteInstanceName)
             .setCommunicationSpi(new TestRecordingCommunicationSpi())
             .setDataStorageConfiguration(new DataStorageConfiguration()
+                .setWalSegmentSize(4 * 1024 * 1024)
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
+                    .setMaxSize(100L * 1024 * 1024)
                     .setPersistenceEnabled(persistenceEnabled)))
             .setCacheConfiguration(
                 new CacheConfiguration(DEFAULT_CACHE_NAME)
@@ -72,6 +74,7 @@ public class NotOptimizedRebalanceTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
         cleanPersistenceDir();
     }
 
