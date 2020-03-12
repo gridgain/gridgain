@@ -28,9 +28,11 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -40,6 +42,22 @@ import org.junit.Test;
 public class BreakRebalanceChainTest extends GridCommonAbstractTest {
     /** Node name suffex. Used for {@link CustomNodeFilter}. */
     public static final String FITERED_NODE_SUFFIX = "_fitered";
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        GridTestUtils.setFieldValue(null, GridDhtPartitionDemander.class,
+            "DISABLE_REBALANCING_CANCELLATION_PTIMIZATION", false);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        super.afterTestsStopped();
+
+        GridTestUtils.setFieldValue(null, GridDhtPartitionDemander.class,
+            "DISABLE_REBALANCING_CANCELLATION_PTIMIZATION", true);
+    }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
