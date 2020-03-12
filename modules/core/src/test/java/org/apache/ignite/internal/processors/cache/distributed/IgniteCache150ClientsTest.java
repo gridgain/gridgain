@@ -60,7 +60,6 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         cfg.setLocalHost("127.0.0.1");
         cfg.setNetworkTimeout(60_000);
         cfg.setConnectorConfiguration(null);
-        cfg.setPeerClassLoadingEnabled(false);
 
         cfg.setDataStreamerThreadPoolSize(1);
         cfg.setManagementThreadPoolSize(2);
@@ -179,7 +178,7 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
 
         log.info("Complete starting clients: " + ((System.currentTimeMillis() - startTime) / 1000) + " sec.");
 
-        assertTrue("Clients failed to start: " + missed.get(), missed.get() != 0);
+        assertTrue("Clients failed to start: " + missed.get(), missed.get() == 0);
 
         waitForTopology(CLIENTS + 1, (int)getTestTimeout());
 
