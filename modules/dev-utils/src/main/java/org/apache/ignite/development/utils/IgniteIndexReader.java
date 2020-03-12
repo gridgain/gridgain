@@ -1345,67 +1345,62 @@ public class IgniteIndexReader implements AutoCloseable {
     public static void main(String[] args) throws Exception {
         System.out.println("THIS UTILITY MUST BE LAUNCHED ON PERSISTENT STORE WHICH IS NOT UNDER RUNNING GRID!");
 
-        try {
-            AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
+        AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
-            List<CLIArgument> argsConfiguration = asList(
-                mandatoryArg(DIR.arg(), "partition directory, where index.bin and (optionally) partition files are located.", String.class),
-                optionalArg(PART_CNT.arg(), "full partitions count in cache group.", Integer.class, () -> 0),
-                optionalArg(PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
-                optionalArg(PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
-                optionalArg(INDEXES.arg(), "you can specify index tree names that will be processed, separated by comma " +
-                    "without spaces, other index trees will be skipped.", String[].class, () -> null),
-                optionalArg(DEST_FILE.arg(), "file to print the report to (by default report is printed to console).", String.class, () -> null),
-                optionalArg(TRANSFORM.arg(), "if specified, this utility assumes that all *.bin files " +
-                    "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
-                    " directory.", Boolean.class, () -> false),
-                optionalArg(DEST.arg(),
-                    "directory where to put files transformed from snapshot (needed if you use --transform).",
-                    String.class,
-                    () -> {
-                        if (parserRef.get().get(TRANSFORM.arg()))
-                            throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
-                        else
-                            return null;
-                    }
-                ),
-                optionalArg(FILE_MASK.arg(), "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
-                optionalArg(CHECK_PARTS.arg(), "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
-            );
+        List<CLIArgument> argsConfiguration = asList(
+            mandatoryArg(DIR.arg(), "partition directory, where index.bin and (optionally) partition files are located.", String.class),
+            optionalArg(PART_CNT.arg(), "full partitions count in cache group.", Integer.class, () -> 0),
+            optionalArg(PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
+            optionalArg(PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
+            optionalArg(INDEXES.arg(), "you can specify index tree names that will be processed, separated by comma " +
+                "without spaces, other index trees will be skipped.", String[].class, () -> null),
+            optionalArg(DEST_FILE.arg(), "file to print the report to (by default report is printed to console).", String.class, () -> null),
+            optionalArg(TRANSFORM.arg(), "if specified, this utility assumes that all *.bin files " +
+                "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
+                " directory.", Boolean.class, () -> false),
+            optionalArg(DEST.arg(),
+                "directory where to put files transformed from snapshot (needed if you use --transform).",
+                String.class,
+                () -> {
+                    if (parserRef.get().get(TRANSFORM.arg()))
+                        throw new IgniteException("Destination path for transformed files is not specified (use --dest)");
+                    else
+                        return null;
+                }
+            ),
+            optionalArg(FILE_MASK.arg(), "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
+            optionalArg(CHECK_PARTS.arg(), "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
+        );
 
-            CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
+        CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
 
-            parserRef.set(p);
+        parserRef.set(p);
 
-            if (args.length == 0) {
-                System.out.println(p.usage());
+        if (args.length == 0) {
+            System.out.println(p.usage());
 
-                return;
-            }
-
-            p.parse(asList(args).iterator());
-
-            String destFile = p.get(DEST_FILE.arg());
-
-            OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
-
-            try (IgniteIndexReader reader = new IgniteIndexReader(
-                p.get(DIR.arg()),
-                p.get(PAGE_SIZE.arg()),
-                p.get(PART_CNT.arg()),
-                p.get(PAGE_STORE_VER.arg()),
-                p.get(INDEXES.arg()),
-                p.get(CHECK_PARTS.arg()),
-                destStream
-            )) {
-                if (p.get(TRANSFORM.arg()))
-                    reader.transform(p.get(DEST.arg()), p.get(FILE_MASK.arg()));
-                else
-                    reader.readIdx();
-            }
+            return;
         }
-        catch (Exception e) {
-            throw e;
+
+        p.parse(asList(args).iterator());
+
+        String destFile = p.get(DEST_FILE.arg());
+
+        OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
+
+        try (IgniteIndexReader reader = new IgniteIndexReader(
+            p.get(DIR.arg()),
+            p.get(PAGE_SIZE.arg()),
+            p.get(PART_CNT.arg()),
+            p.get(PAGE_STORE_VER.arg()),
+            p.get(INDEXES.arg()),
+            p.get(CHECK_PARTS.arg()),
+            destStream
+        )) {
+            if (p.get(TRANSFORM.arg()))
+                reader.transform(p.get(DEST.arg()), p.get(FILE_MASK.arg()));
+            else
+                reader.readIdx();
         }
     }
 
@@ -1846,8 +1841,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         /** */
-        private Object getLeafItem(BPlusLeafIO io, long pageId, long addr, int idx, TreeTraverseContext nodeCtx)
-            throws IgniteCheckedException {
+        private Object getLeafItem(BPlusLeafIO io, long pageId, long addr, int idx, TreeTraverseContext nodeCtx) {
             if (isLinkIo(io)) {
                 final long link = getLink(io, addr, idx);
 
@@ -1861,59 +1855,58 @@ public class IgniteIndexReader implements AutoCloseable {
                 final CacheAwareLink res = new CacheAwareLink(cacheId, link);
 
                 if (partCnt > 0) {
-                    long linkedPageId = pageId(link);
+                    try {
+                        long linkedPageId = pageId(link);
 
-                    int linkedPagePartId = partId(linkedPageId);
+                        int linkedPagePartId = partId(linkedPageId);
 
-                    if (missingPartitions.contains(linkedPagePartId))
-                        return res; // just skip
+                        if (missingPartitions.contains(linkedPagePartId))
+                            return res; // just skip
 
-                    int linkedItemId = itemId(link);
+                        int linkedItemId = itemId(link);
 
-                    if (linkedPagePartId > partStores.length - 1) {
-                        missingPartitions.add(linkedPagePartId);
+                        if (linkedPagePartId > partStores.length - 1) {
+                            missingPartitions.add(linkedPagePartId);
 
-                        nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>())
-                            .add(new IgniteException("Calculated data page partition id exceeds given partitions " +
-                                "count: " + linkedPagePartId + ", partCnt=" + partCnt));
-
-                        return res;
-                    }
-
-                    final FilePageStore store = partStores[linkedPagePartId];
-
-                    if (store == null) {
-                        missingPartitions.add(linkedPagePartId);
-
-                        nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>())
-                            .add(new IgniteException("Corresponding store wasn't found for partId=" +
-                                linkedPagePartId + ". Does partition file exist?"));
-
-                        return res;
-                    }
-
-                    doWithBuffer((dataBuf, dataBufAddr) -> {
-                        store.read(linkedPageId, dataBuf, false);
-
-                        PageIO dataIo = PageIO.getPageIO(getType(dataBuf), getVersion(dataBuf));
-
-                        if (dataIo instanceof AbstractDataPageIO) {
-                            AbstractDataPageIO dataPageIO = (AbstractDataPageIO)dataIo;
-
-                            DataPagePayload payload = dataPageIO.readPayload(dataBufAddr, linkedItemId, pageSize);
-
-                            if (payload.offset() <= 0 || payload.payloadSize() <= 0) {
-                                GridStringBuilder payloadInfo = new GridStringBuilder("Invalid data page payload: ")
-                                    .a("off=").a(payload.offset())
-                                    .a(", size=").a(payload.payloadSize())
-                                    .a(", nextLink=").a(payload.nextLink());
-
-                                throw new IgniteException(payloadInfo.toString());
-                            }
+                            throw new IgniteException("Calculated data page partition id exceeds given partitions " +
+                                "count: " + linkedPagePartId + ", partCnt=" + partCnt);
                         }
 
-                        return null;
-                    });
+                        final FilePageStore store = partStores[linkedPagePartId];
+
+                        if (store == null) {
+                            missingPartitions.add(linkedPagePartId);
+
+                            throw new IgniteException("Corresponding store wasn't found for partId=" +
+                                linkedPagePartId + ". Does partition file exist?");
+                        }
+
+                        doWithBuffer((dataBuf, dataBufAddr) -> {
+                            store.read(linkedPageId, dataBuf, false);
+
+                            PageIO dataIo = PageIO.getPageIO(getType(dataBuf), getVersion(dataBuf));
+
+                            if (dataIo instanceof AbstractDataPageIO) {
+                                AbstractDataPageIO dataPageIO = (AbstractDataPageIO)dataIo;
+
+                                DataPagePayload payload = dataPageIO.readPayload(dataBufAddr, linkedItemId, pageSize);
+
+                                if (payload.offset() <= 0 || payload.payloadSize() <= 0) {
+                                    GridStringBuilder payloadInfo = new GridStringBuilder("Invalid data page payload: ")
+                                        .a("off=").a(payload.offset())
+                                        .a(", size=").a(payload.payloadSize())
+                                        .a(", nextLink=").a(payload.nextLink());
+
+                                    throw new IgniteException(payloadInfo.toString());
+                                }
+                            }
+
+                            return null;
+                        });
+                    }
+                    catch (Exception e) {
+                        nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>()).add(e);
+                    }
                 }
 
                 return res;
