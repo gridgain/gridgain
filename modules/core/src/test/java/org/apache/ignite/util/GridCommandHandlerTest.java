@@ -686,11 +686,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
-    })
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testBaselineAutoAdjustmentAutoRemoveNode() throws Exception {
         Ignite ignite = startGrids(3);
 
@@ -728,11 +726,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    })
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -772,11 +768,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
-    })
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
     public void testBaselineAutoAdjustmentAutoFeatureDisabled() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -785,16 +779,13 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
     }
 
-
     /**
      * Tests that baseline auto-adjustment enabling works from control.sh
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    })
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testBaselineAutoAdjustmentCouldBeEnabled() throws Exception {
         IgniteEx ignite = startGrids(1);
 
@@ -807,17 +798,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled());
 
         assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "disable"));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
     }
 
     /**
      * Tests that baseline auto-adjustment timeout setting works from control.sh
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    })
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testBaselineAutoAdjustmentTimeoutCouldBeChanged() throws Exception {
         IgniteEx ignite = startGrids(1);
 
@@ -833,6 +828,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
 
         assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "54321"));
 
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled());
+
         assertEquals(54321, ignite.cluster().baselineAutoAdjustTimeout());
 
     }
@@ -841,11 +838,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * Tests correct error exit code for wrong baseline auto-adjustment timeout setting in control.sh
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    })
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testBaselineAutoAdjustmentTimeoutWrongArguments() throws Exception {
         IgniteEx ignite = startGrids(1);
 
@@ -863,12 +858,9 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     /**
      * Tests correct error exit code for wrong baseline auto-adjustment enabling in control.sh
      */
-    @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    })
+    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testBaselineAutoAdjustmentWrongArguments() throws Exception {
         IgniteEx ignite = startGrids(1);
 

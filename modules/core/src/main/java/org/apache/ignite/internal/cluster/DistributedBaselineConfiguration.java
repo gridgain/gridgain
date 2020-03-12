@@ -21,7 +21,6 @@ import java.util.Objects;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedChangeableProperty;
@@ -36,6 +35,7 @@ import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
 import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
@@ -111,7 +111,7 @@ public class DistributedBaselineConfiguration {
 
                 @Override public void onReadyToWrite() {
                     if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) &&
-                        IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT) && clientMode) {
+                        allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT) && clientMode) {
                         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
                         dfltEnabled = isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && !persistenceEnabled;
                         setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
@@ -191,10 +191,13 @@ public class DistributedBaselineConfiguration {
      * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline.
      * @throws IgniteCheckedException if failed.
      */
-    public GridFutureAdapter<?> updateBaselineAutoAdjustEnabledAsync(boolean baselineAutoAdjustEnabled)
+    public GridFutureAdapter<?> updateBaselineAutoAdjustEnabledAsync(GridKernalContext ctx, boolean baselineAutoAdjustEnabled)
         throws IgniteCheckedException {
         if (!isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
             return finishFuture();
+
+        if (!allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT))
+            throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust.");
 
         return this.baselineAutoAdjustEnabled.propagateAsync(!baselineAutoAdjustEnabled, baselineAutoAdjustEnabled);
     }
@@ -212,10 +215,13 @@ public class DistributedBaselineConfiguration {
      * discovery event(node join/exit).
      * @throws IgniteCheckedException If failed.
      */
-    public GridFutureAdapter<?> updateBaselineAutoAdjustTimeoutAsync(
+    public GridFutureAdapter<?> updateBaselineAutoAdjustTimeoutAsync(GridKernalContext ctx,
         long baselineAutoAdjustTimeout) throws IgniteCheckedException {
         if (!isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
             return finishFuture();
+
+        if (!allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT))
+            throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust.");
 
         return this.baselineAutoAdjustTimeout.propagateAsync(baselineAutoAdjustTimeout);
     }

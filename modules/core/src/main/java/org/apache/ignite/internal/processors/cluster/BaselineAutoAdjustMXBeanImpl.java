@@ -19,50 +19,46 @@ package org.apache.ignite.internal.processors.cluster;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
 import org.apache.ignite.mxbean.BaselineAutoAdjustMXBean;
 
 /**
  * {@link BaselineAutoAdjustMXBean} implementation.
  */
 public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
-    /** */
-    private final DistributedBaselineConfiguration baselineConfiguration;
-
-    private final GridClusterStateProcessor state;
+    /** Context. */
+    private final GridKernalContext ctx;
 
     /**
      * @param ctx Context.
      */
     public BaselineAutoAdjustMXBeanImpl(GridKernalContext ctx) {
-        baselineConfiguration = ctx.state().baselineConfiguration();
-        state = ctx.state();
+        this.ctx = ctx;
     }
 
     /** {@inheritDoc} */
     @Override public boolean isAutoAdjustmentEnabled() {
-        return baselineConfiguration.isBaselineAutoAdjustEnabled();
+        return ctx.state().baselineConfiguration().isBaselineAutoAdjustEnabled();
     }
 
     /** {@inheritDoc} */
     @Override public long getAutoAdjustmentTimeout() {
-        return baselineConfiguration.getBaselineAutoAdjustTimeout();
+        return ctx.state().baselineConfiguration().getBaselineAutoAdjustTimeout();
     }
 
     /** {@inheritDoc} */
     @Override public long getTimeUntilAutoAdjust() {
-        return state.baselineAutoAdjustStatus().getTimeUntilAutoAdjust();
+        return ctx.state().baselineAutoAdjustStatus().getTimeUntilAutoAdjust();
     }
 
     /** {@inheritDoc} */
     @Override public String getTaskState() {
-        return state.baselineAutoAdjustStatus().getTaskState().toString();
+        return ctx.state().baselineAutoAdjustStatus().getTaskState().toString();
     }
 
     /** {@inheritDoc} */
     @Override public void setAutoAdjustmentEnabled(boolean enabled) {
         try {
-            baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(enabled).get();
+            ctx.state().baselineConfiguration().updateBaselineAutoAdjustEnabledAsync(ctx, enabled).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -72,7 +68,7 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     /** {@inheritDoc} */
     @Override public void setAutoAdjustmentTimeout(long timeout) {
         try {
-            baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(timeout).get();
+            ctx.state().baselineConfiguration().updateBaselineAutoAdjustTimeoutAsync(ctx, timeout).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

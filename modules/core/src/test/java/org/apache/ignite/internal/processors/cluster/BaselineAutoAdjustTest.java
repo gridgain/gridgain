@@ -285,11 +285,13 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().active(true);
 
-        ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustTimeout(3000L);
 
         ignite0.cluster().active(false);
 
-        doSleep(autoAdjustTimeout);
+        startGrid(1);
+
+        doSleep(3000L);
 
         assertTrue(isCurrentBaselineFromOneNode(ignite0));
     }

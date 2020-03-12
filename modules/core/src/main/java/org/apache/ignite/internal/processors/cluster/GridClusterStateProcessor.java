@@ -109,6 +109,9 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.GridComponent.DiscoveryDataExchangeType.STATE_PROC;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
+import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 
@@ -1178,6 +1181,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             return new IgniteNodeValidationResult(node.id(), msg);
         }
 
+        if(allNodesSupport(ctx, IgniteFeatures.BASELINE_AUTO_ADJUSTMENT) &&
+            !nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.BASELINE_AUTO_ADJUSTMENT)) {
+            String msg = "Node not supporting baseline auto-adjustment" +
+                " is not allowed to join the cluster with baseline auto-adjustment enabled";
+
+            return new IgniteNodeValidationResult(node.id(), msg);
+        }
+
         if (joiningNodeState == null || joiningNodeState.baselineTopology() == null)
             return null;
 
@@ -1787,7 +1798,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean baselineAutoAdjustEnabled) {
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(baselineAutoAdjustEnabled));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(ctx, baselineAutoAdjustEnabled));
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -1822,7 +1833,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(baselineAutoAdjustTimeout));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(ctx, baselineAutoAdjustTimeout));
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
