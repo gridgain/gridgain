@@ -39,6 +39,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Transactions;
+    using Apache.Ignite.Core.Log;
 
     /// <summary>
     /// Native cache wrapper.
@@ -1258,16 +1259,31 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 if (!loc)
                 {
+                    // TODO: ASH temporally replace CachePeekMode.PlatformNear exception with warning.
+                    hasPlatformNear = false;
+                    Ignite.Logger.Warn(string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear));
+                    
+                    /*
                     throw new InvalidOperationException(
                         string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear));
+                    */
                 }
 
                 if (part != null)
                 {
+                    // TODO: ASH temporally replace CachePeekMode.PlatformNear exception with warning.
+                    hasPlatformNear = false;
+                    Ignite.Logger.Warn(string.Format("{0} can not be used with `partition` argument", CachePeekMode.PlatformNear));
+
+                    /*
                     throw new InvalidOperationException(
                         string.Format("{0} can not be used with `partition` argument", CachePeekMode.PlatformNear));
+                    */
                 }
+            }
 
+            if (hasPlatformNear)
+            {
                 if (_nearCache != null)
                 {
                     size += _nearCache.GetSize();
