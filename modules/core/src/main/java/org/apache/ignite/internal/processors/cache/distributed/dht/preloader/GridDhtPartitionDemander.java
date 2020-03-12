@@ -102,7 +102,7 @@ import static org.apache.ignite.internal.processors.dr.GridDrType.DR_PRELOAD;
  */
 public class GridDhtPartitionDemander {
     /** Disable rebalancing cancellation optimization. */
-    private static final boolean DISABLE_REBALANCING_CANCELLATION_PTIMIZATION = IgniteSystemProperties.getBoolean(
+    private static boolean DISABLE_REBALANCING_CANCELLATION_PTIMIZATION = IgniteSystemProperties.getBoolean(
         IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
 
     /** */
