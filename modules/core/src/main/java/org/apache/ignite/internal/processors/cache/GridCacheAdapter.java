@@ -2585,16 +2585,25 @@ public abstract class GridCacheAdapter<K, V> implements IgniteInternalCache<K, V
         try (MTC.TraceSurroundings ignored =
                  MTC.support(ctx.kernalContext().tracing().create(CACHE_API_PUT_ALL_ASYNC, MTC.span()))) {
             MTC.span().addTagOrLog("cache", CACHE_API_PUT_ALL_ASYNC,
-                () -> Objects.toString(cacheCfg.getName()));
+                    () -> Objects.toString(cacheCfg.getName()));
             MTC.span().addTagOrLog("keys.count", CACHE_API_PUT_ALL_ASYNC,
-                () -> m == null ? "0" : String.valueOf(m.size()));
+                    () -> m == null ? "0" : String.valueOf(m.size()));
 
             if (F.isEmpty(m))
                 return new GridFinishedFuture<>();
 
+            boolean statsEnabled = ctx.statisticsEnabled();
+
+            long start = statsEnabled ? System.nanoTime() : 0L;
+
             warnIfUnordered(m, BulkOperation.PUT);
 
-            return putAllAsync0(m);
+            IgniteInternalFuture<?> fut = putAllAsync0(m);
+
+            if (statsEnabled)
+                fut.listen(new UpdatePutTimeStatClosure<Boolean>(metrics0(), start));
+
+            return fut;
         }
     }
 
