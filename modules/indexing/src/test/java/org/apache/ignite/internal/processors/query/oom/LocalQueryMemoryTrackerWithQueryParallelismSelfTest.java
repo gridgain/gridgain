@@ -65,15 +65,12 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithSort() {
-        maxMem = 3 * MB;
+        maxMem = 2 * MB;
         // Order by non-indexed field.
         checkQueryExpectOOM("select * from K ORDER BY K.grp", false);
 
-        assertEquals(5, localResults.size());
-        // Map
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
-        // Reduce
-        assertTrue(BIG_TABLE_SIZE > localResults.get(4).getRowCount());
+        assertEquals(4, localResults.size());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
@@ -192,17 +189,14 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testLazyQueryWithSort() {
-        maxMem = 3 * MB;
+        maxMem = 2 * MB;
 
         checkQueryExpectOOM("select * from K ORDER BY K.grp", true);
 
-        assertEquals(5, localResults.size());
-        assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
-        assertTrue(maxMem > localResults.get(4).memoryReserved());
+        assertEquals(4, localResults.size());
+        assertFalse(localResults.stream().anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         // Map
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(H2ManagedLocalResult::getRowCount).sum());
-        // Reduce
-        assertTrue(BIG_TABLE_SIZE > localResults.get(4).getRowCount());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().limit(4).mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
@@ -256,16 +250,14 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithSortByIndexedCol() {
-        maxMem = 3 * MB;
+        maxMem = 2 * MB;
 
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
 
-        assertEquals(5, localResults.size());
+        assertEquals(4, localResults.size());
         assertFalse(localResults.stream().limit(4).anyMatch(r -> r.memoryReserved() + 1000 > maxMem));
         // Map
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(r -> r.getRowCount()).sum());
-        // Reduce
-        assertTrue(BIG_TABLE_SIZE > localResults.get(4).getRowCount());
+        assertTrue(BIG_TABLE_SIZE > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
@@ -295,16 +287,13 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
     /** {@inheritDoc} */
     @Test
     @Override public void testQueryWithHighLimit() {
-        maxMem = 3 * MB;
+        maxMem = 2 * MB;
 
         checkQueryExpectOOM("select * from K LIMIT 8000", false);
 
-        assertEquals(5, localResults.size());
-        // Map
-        assertFalse(localResults.stream().limit(4).anyMatch(r ->  + 1000 > maxMem));
-        // Reduce
-        assertTrue(maxMem > localResults.get(4).memoryReserved());
-        assertTrue(8000 > localResults.get(4).getRowCount());
+        assertEquals(4, localResults.size());
+        assertFalse(localResults.stream().anyMatch(r ->  + 1000 > maxMem));
+        assertTrue(8000 > localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */
@@ -334,7 +323,7 @@ public class LocalQueryMemoryTrackerWithQueryParallelismSelfTest extends BasicQu
 
         assertFalse(localResults.isEmpty());
         assertTrue(localResults.size() <= 4);
-        assertEquals(BIG_TABLE_SIZE, localResults.stream().limit(4).mapToLong(H2ManagedLocalResult::getRowCount).sum());
+        assertEquals(BIG_TABLE_SIZE, localResults.stream().mapToLong(H2ManagedLocalResult::getRowCount).sum());
     }
 
     /** {@inheritDoc} */

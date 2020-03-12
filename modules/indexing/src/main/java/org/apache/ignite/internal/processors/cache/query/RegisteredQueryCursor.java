@@ -79,9 +79,9 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
 
     /** {@inheritDoc} */
     @Override public void close() {
-        unregisterQuery();
-
         super.close();
+
+        unregisterQuery();
     }
 
     /**

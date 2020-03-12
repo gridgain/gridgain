@@ -254,11 +254,6 @@ public class H2ManagedLocalResult implements LocalResult {
         currentRow = null;
         if (external != null)
             external.reset();
-
-        if (memTracker != null) {
-            memTracker.close();
-            memTracker = null;
-        }
     }
 
     /** {@inheritDoc} */
