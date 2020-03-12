@@ -13,40 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.tests.p2p;
 
-package org.apache.ignite.internal.commandline.cache.argument;
-
-import org.apache.ignite.internal.commandline.argument.CommandArg;
-import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
+import java.io.Serializable;
+import org.apache.ignite.internal.processors.cache.GridCacheDeployable;
+import org.apache.ignite.internal.processors.cache.GridCacheIdMessage;
+import org.apache.ignite.lang.IgniteBiPredicate;
 
 /**
- * {@link CacheSubcommands#VALIDATE_INDEXES} command arguments.
+ * Test predicate for scan queries in p2p deployment tests.
  */
-public enum ValidateIndexesCommandArg implements CommandArg {
-    /** Check first. */
-    CHECK_FIRST("--check-first"),
-
-    /** Check crc. */
-    CHECK_CRC("--check-crc"),
-
-    /** Check through. */
-    CHECK_THROUGH("--check-through");
-
-    /** Option name. */
-    private final String name;
-
+@SuppressWarnings("unused")
+public class P2PTestPredicate extends GridCacheIdMessage implements GridCacheDeployable, IgniteBiPredicate, Serializable {
     /** */
-    ValidateIndexesCommandArg(String name) {
-        this.name = name;
+    private static final long serialVersionUID = 0L;
+
+    /** {@inheritDoc} */
+    @Override public boolean addDeploymentInfo() {
+        return true;
     }
 
     /** {@inheritDoc} */
-    @Override public String toString() {
-        return name;
+    @Override public boolean apply(Object o, Object o2) {
+        return false;
     }
 
     /** {@inheritDoc} */
-    @Override public String argName() {
-        return name;
+    @Override public short directType() {
+        return 0;
     }
 }
