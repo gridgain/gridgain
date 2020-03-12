@@ -173,8 +173,8 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
 
         ctx.systemView().registerView(TASKS_VIEW, TASKS_VIEW_DESC,
             new ComputeTaskViewWalker(),
-            tasks.values(),
-            ComputeTaskView::new);
+            tasks.entrySet(),
+            e -> new ComputeTaskView(e.getKey(), e.getValue()));
 
         isPersistenceEnabled = !ctx.clientNode() && isPersistenceEnabled(ctx.config());
     }
