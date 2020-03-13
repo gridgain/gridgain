@@ -73,7 +73,7 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setLocalPortRange(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
 
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setJoinTimeout(100_000);
+        //((TcpDiscoverySpi)cfg.getDiscoverySpi()).setJoinTimeout(100_000);
         ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setClientReconnectDisabled(true);
 
         cfg.setClientFailureDetectionTimeout(120_000);
