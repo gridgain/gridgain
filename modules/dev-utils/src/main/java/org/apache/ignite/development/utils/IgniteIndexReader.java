@@ -287,7 +287,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private void printErr(String s) {
-        outErrStream.println(s);
+        outErrStream.println("<ERROR> " + s);
     }
 
     /** */
@@ -296,7 +296,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         e.printStackTrace(new PrintStream(os));
 
-        printErr(os.toString());
+        outErrStream.println(os.toString());
     }
 
     /** */
@@ -682,7 +682,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     + FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + ": " + name);
         });
 
-        errors.forEach(e -> printErr("<ERROR>" + e));
+        errors.forEach(e -> printErr(e));
 
         print("Comparing traversals detected " + errors.size() + " errors.");
         print("------------------");
@@ -912,8 +912,8 @@ public class IgniteIndexReader implements AutoCloseable {
 
         cacheIdxSizes.forEach((cacheId, idxSizes) -> {
             if (idxSizes.values().stream().distinct().count() > 1) {
-                print("<ERROR> Index size inconsistency: cacheId=" + cacheId);
-                idxSizes.forEach((name, size) -> print("     Index name: " + name + ", size=" + size));
+                printErr("Index size inconsistency: cacheId=" + cacheId);
+                idxSizes.forEach((name, size) -> printErr("     Index name: " + name + ", size=" + size));
             }
         });
 
@@ -1218,7 +1218,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     if (destF.exists())
                         destF.delete();
 
-                    printErr("<ERROR> " + "Could not transform file: " + destF.getPath() + ", error: " + e.getMessage());
+                    printErr("Could not transform file: " + destF.getPath() + ", error: " + e.getMessage());
 
                     printStackTrace(e);
                 }
