@@ -401,7 +401,7 @@ public class ZookeeperDiscoverySegmentationAndConnectionRestoreTest extends Zook
         if (failWhenDisconnected) {
             helper.checkEvents(ignite(1), evts, ZookeeperDiscoverySpiTestHelper.failEvent(4));
 
-            IgnitionEx.stop(getTestIgniteInstanceName(2), true, true);
+            IgnitionEx.stop(getTestIgniteInstanceName(2), true, false, true);
         }
 
         fut.get();

@@ -4037,7 +4037,7 @@ public class ZookeeperDiscoveryImpl {
         new Thread(new Runnable() {
             @Override public void run() {
                 try {
-                    IgnitionEx.stop(igniteInstanceName, true, true);
+                    IgnitionEx.stop(igniteInstanceName, true, false, true);
 
                     U.log(log, "Stopped the node successfully in response to fatal error in ZookeeperDiscoverySpi.");
                 }
