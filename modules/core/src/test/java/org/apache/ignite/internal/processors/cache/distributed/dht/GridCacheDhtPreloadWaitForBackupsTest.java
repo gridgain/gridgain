@@ -20,6 +20,10 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheRebalanceMode;
@@ -156,7 +160,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             grid(0).cluster().active(true);
 
         for (int i = 0; i < cacheSize(); i++)
-            grid(i % 2).cache("partitioned" + (1 + (i >> 3) % 3)).put(i, new byte[i]);
+            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, new byte[i]);
 
         grid(0).close();
 
@@ -180,22 +184,72 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
-    public void testShutdownWithoutBackups() throws Exception {
-        cacheMode = CacheMode.PARTITIONED;
+    public void testReplicatedNodeLeavesImmediately() throws Exception {
+        cacheMode = CacheMode.REPLICATED;
         atomicityMode = CacheAtomicityMode.ATOMIC;
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         rebalanceMode = CacheRebalanceMode.ASYNC;
         clientNodes = false;
         backups = 1;
 
+        for (int n = 1; n <= 3; n++) {
+            startGrids(1);
+
+            if (persistenceEnabled())
+                grid(0).cluster().active(true);
+
+            for (int i = 0; i < cacheSize(); i++)
+                grid(0).cache("cache" + (1 + (i >> 3) % 3)).put(i, new byte[i]);
+
+            List<Thread> threads = new ArrayList<>();
+
+            for (int i = 1; i <= n; i++) {
+                Thread thread = new Thread(new GridStarter(i));
+
+                thread.start();
+
+                threads.add(thread);
+            }
+
+            grid(0).close();
+
+            for (Thread thread : threads)
+                thread.join();
+
+            for (int i = 0; i < cacheSize(); i++) {
+                byte[] val = (byte[])grid(1).cache("cache" + (1 + (i >> 3) % 3)).get(i);
+
+                assertNotNull(Integer.toString(i), val);
+                assertEquals(i, val.length);
+            }
+
+            IgnitionEx.stopAll(false, false);
+
+            if (persistenceEnabled())
+                cleanPersistenceDir();
+        }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testShutdownWithoutBackups() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        rebalanceMode = CacheRebalanceMode.ASYNC;
+        clientNodes = false;
+        backups = 3;
+
         startGrids(2);
 
         if (persistenceEnabled())
             grid(0).cluster().active(true);
 
-        grid(1).cache("partitioned1").destroy();
-        grid(1).cache("partitioned2").destroy();
-        grid(1).cache("partitioned3").destroy();
+        grid(1).cache("cache1").destroy();
+        grid(1).cache("cache2").destroy();
+        grid(1).cache("cache3").destroy();
 
         grid(1).createCache(new CacheConfiguration<>("no-backups").setCacheMode(CacheMode.PARTITIONED)
             .setBackups(0));
@@ -344,7 +398,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             grid(0).cluster().active(true);
 
         for (int i = 0; i < cacheSize(); i++)
-            grid(i % 4).cache("partitioned" + (1 + (i >> 3) % 3)).put(i, new byte[i]);
+            grid(i % 4).cache("cache" + (1 + (i >> 3) % 3)).put(i, new byte[i]);
 
         int nextGrid = 4;
 
@@ -365,15 +419,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
             Thread.sleep(1000);
 
-            (th1 = new Thread(() ->
-            {
-                try {
-                    startGrid(stopTmp);
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }, "Start-" + stopTmp)).start();
+            (th1 = new Thread(new GridStarter(stopTmp), "Start-" + stopTmp)).start();
 
             nextGrid = stopPerm;
 
@@ -382,7 +428,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         }
 
         for (int i = 0; i < cacheSize(); i++) {
-            byte[] val = (byte[])grid((i >> 2) % 4).cache("partitioned" + (1 + (i >> 3) % 3)).get(i);
+            byte[] val = (byte[])grid((i >> 2) % 4).cache("cache" + (1 + (i >> 3) % 3)).get(i);
 
             assertNotNull(Integer.toString(i), val);
             assertEquals(i, val.length);
@@ -395,7 +441,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         CacheConfiguration[] ccfgs = new CacheConfiguration[3];
         for (int i = 1; i <= 3; i++) {
-            CacheConfiguration ccfg = new CacheConfiguration("partitioned" + i);
+            CacheConfiguration ccfg = new CacheConfiguration("cache" + i);
 
             ccfg.setCacheMode(cacheMode);
             ccfg.setAtomicityMode(atomicityMode);
@@ -418,5 +464,29 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             cfg.setClientMode(true);
 
         return cfg;
+    }
+
+    /** */
+    private class GridStarter implements Runnable {
+        /** */
+        private final int n;
+
+        /** */
+        public GridStarter(int n) {
+            this.n = n;
+        }
+
+        /** */
+        @Override public void run() {
+            try {
+                Ignite node = startGrid(n);
+
+                if (persistenceEnabled())
+                    node.cluster().setBaselineTopology(node.cluster().forServers().nodes());
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
