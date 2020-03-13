@@ -50,6 +50,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
@@ -66,7 +67,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
 
     /** Disable rebalancing cancellation optimization. */
     private final boolean disableRebalancingCancellationOptimization = IgniteSystemProperties.getBoolean(
-        IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
+        IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, true);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -149,12 +150,9 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
     }
 
     /**
-     * Returns a boolean value of flag, getting though JVM property.
-     * @see IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION
-     *
      * @return Rebalance cancellation optimization flag.
      */
-    public boolean isDisableRebalancingCancellationOptimization() {
+    public boolean disableRebalancingCancellationOptimization() {
         return disableRebalancingCancellationOptimization;
     }
 

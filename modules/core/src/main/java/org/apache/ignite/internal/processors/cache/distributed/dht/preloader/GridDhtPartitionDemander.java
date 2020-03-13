@@ -1648,7 +1648,7 @@ public class GridDhtPartitionDemander {
          */
         public boolean compatibleWith(GridDhtPreloaderAssignments otherAssignments) {
             if (isInitial() || !allNodesSupports(ctx.kernalContext(), otherAssignments.keySet(), TX_TRACKING_UPDATE_COUNTER)
-                || ((GridDhtPreloader)grp.preloader()).isDisableRebalancingCancellationOptimization())
+                || ((GridDhtPreloader)grp.preloader()).disableRebalancingCancellationOptimization())
                 return false;
 
             if (topVer.equals(otherAssignments.topologyVersion())) {

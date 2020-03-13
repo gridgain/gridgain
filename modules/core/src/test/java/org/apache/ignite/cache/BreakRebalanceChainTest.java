@@ -18,7 +18,6 @@ package org.apache.ignite.cache;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -36,13 +35,15 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
+
 /**
  * Test checks what happens when the rebalance chain is breaking of two parts.
  */
-@WithSystemProperty(key = IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, value = "false")
+@WithSystemProperty(key = IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, value = "false")
 public class BreakRebalanceChainTest extends GridCommonAbstractTest {
     /** Node name suffex. Used for {@link CustomNodeFilter}. */
-    public static final String FITERED_NODE_SUFFIX = "_fitered";
+    public static final String FILTERED_NODE_SUFFIX = "_filtered";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -74,7 +75,7 @@ public class BreakRebalanceChainTest extends GridCommonAbstractTest {
     private static class CustomNodeFilter implements IgnitePredicate<ClusterNode> {
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode node) {
-            return !node.consistentId().toString().contains(FITERED_NODE_SUFFIX);
+            return !node.consistentId().toString().contains(FILTERED_NODE_SUFFIX);
         }
     }
 
@@ -125,7 +126,7 @@ public class BreakRebalanceChainTest extends GridCommonAbstractTest {
 
         assertEquals("Several parallel rebalace detected.", blockedDemand(rebalancingCaches), 1);
 
-        IgniteEx filteredNode = startGrid(getTestIgniteInstanceName(3) + FITERED_NODE_SUFFIX);
+        IgniteEx filteredNode = startGrid(getTestIgniteInstanceName(3) + FILTERED_NODE_SUFFIX);
 
         IgniteInternalFuture<Boolean>[] futs = getAllRebalanceFutures(filteredNode);
 
