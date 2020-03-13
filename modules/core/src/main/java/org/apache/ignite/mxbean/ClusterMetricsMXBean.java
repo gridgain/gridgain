@@ -260,6 +260,10 @@ public interface ClusterMetricsMXBean extends ClusterMetrics {
     @Override @MXBeanDescription("Current PME duration in milliseconds.")
     public long getCurrentPmeDuration();
 
+    /** {@inheritDoc} */
+    @Override @MXBeanDescription("Maximum amount of nodes available for safe stop - stop without data loss.")
+    public int getMaximumNodeAmountAvailableForSafeStop();
+
     /**
      * Get count of total baseline nodes.
      *

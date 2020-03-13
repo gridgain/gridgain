@@ -26,17 +26,20 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.MAX_NODES_AVAILABLE_FOR_SAFE_STOP;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION_HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION_HISTOGRAM;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -69,6 +72,112 @@ public class ClusterMetricsSelfTest extends GridCommonAbstractTest {
     @Test
     public void testPmeMetricsWithNotBlockingEvent() throws Exception {
         checkPmeMetricsOnNodeJoin(true);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns0InCaseOf1BackupAnd1Node() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME).setBackups(1));
+
+        assertMaxNodesAvailableForSafeStopMetric(0);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns1InCaseOf1BackupAnd2Nodes() throws Exception {
+        IgniteEx ignite = startGrids(2);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME).setBackups(1));
+
+        assertMaxNodesAvailableForSafeStopMetric(1);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns1InCaseOf1BackupAnd3Nodes() throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME).setBackups(1));
+
+        assertMaxNodesAvailableForSafeStopMetric(1);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns0InCaseOf2BackupsAnd1Node() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME).setBackups(2));
+
+        assertMaxNodesAvailableForSafeStopMetric(0);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns1InCaseOf2BackupAnd2Nodes() throws Exception {
+        IgniteEx ignite = startGrids(2);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME).setBackups(2));
+
+        assertMaxNodesAvailableForSafeStopMetric(1);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns2InCaseOf2BackupAnd3Nodes() throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME).setBackups(2));
+
+        assertMaxNodesAvailableForSafeStopMetric(2);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns0AfterStoppingLastBackup() throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME).setBackups(2));
+
+        assertMaxNodesAvailableForSafeStopMetric(2);
+
+        stopGrid(2);
+
+        assertMaxNodesAvailableForSafeStopMetric(1);
+
+        stopGrid(1);
+
+        assertMaxNodesAvailableForSafeStopMetric(0);
+    }
+
+    /** @throws Exception If failed. */
+    @Test
+    public void testMaxNodesAvailableForSafeStopMetricReturns1InCaseOfTwoCachesWith2And1BackupsAnd3Nodes()
+        throws Exception {
+        IgniteEx ignite = startGrids(3);
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME + "2").setBackups(2));
+
+        ignite.createCache(new CacheConfiguration<>().setName(DEFAULT_CACHE_NAME + "1").setBackups(1));
+
+        assertMaxNodesAvailableForSafeStopMetric(1);
+    }
+
+    /**
+     * Assert that MAX_NODES_AVAILABLE_FOR_SAFE_STOP equals specified expected value.
+     *
+     * @param expectedVal Expected value.
+     * @throws InterruptedException If awaiting PME failed.
+     */
+    private void assertMaxNodesAvailableForSafeStopMetric(int expectedVal) throws InterruptedException {
+        awaitPartitionMapExchange();
+
+        assertEquals(
+            expectedVal,
+            ((IntMetric)grid(0).context().metric().registry(SYS_METRICS).
+                findMetric(MAX_NODES_AVAILABLE_FOR_SAFE_STOP)).value());
     }
 
     /**

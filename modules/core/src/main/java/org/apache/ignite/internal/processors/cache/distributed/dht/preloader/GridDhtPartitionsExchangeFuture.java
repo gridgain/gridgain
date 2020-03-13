@@ -128,6 +128,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PARTITION_RELEASE_
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_THREAD_DUMP_ON_EXCHANGE_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
+import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -137,6 +138,8 @@ import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYS
 import static org.apache.ignite.internal.processors.cache.ExchangeDiscoveryEvents.serverJoinEvent;
 import static org.apache.ignite.internal.processors.cache.ExchangeDiscoveryEvents.serverLeftEvent;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CachePartitionPartialCountersMap.PARTIAL_COUNTERS_MAP_SINCE;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.MAX_NODES_AVAILABLE_FOR_SAFE_STOP;
+import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallel;
 import static org.apache.ignite.internal.util.IgniteUtils.doInParallelUninterruptibly;
 
@@ -2349,6 +2352,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     updateDurationHistogram(System.currentTimeMillis() - initTime);
 
+                    updateMaximumAmountOfNodesAvailableForSafeStop();
+
                     // Collect all stages timings.
                     List<String> timings = timeBag.stagesTimings();
 
@@ -2400,6 +2405,61 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         return false;
+    }
+
+    /**
+     * Update maximum amount of nodes available for safe stop metric.
+     */
+    private void updateMaximumAmountOfNodesAvailableForSafeStop() {
+        int nodeSpecificAmountOfOwners = -1;
+        for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
+            if (grpCtx.systemCache())
+                continue;
+
+            if (grpCtx.isLocal())
+                continue;
+
+            if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0)
+                continue;
+
+            GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
+
+            int cacheSpecificAmountOfOwners = -1;
+
+            if (fullMap != null) {
+                int parts = grpCtx.topology().partitions();
+
+                for (int part = 0; part < parts; part++) {
+                    Set<UUID> partIdealAssignment = grpCtx.affinity().idealAssignmentRaw().get(part).
+                        stream().map(ClusterNode::id).collect(Collectors.toSet());
+
+                    int cnt = 0;
+
+                    for (Map.Entry<UUID, GridDhtPartitionMap> entry : fullMap.entrySet()) {
+                        // Skip all non-ideal assignments.
+                        if (!partIdealAssignment.contains(entry.getKey()))
+                            continue;
+
+                        if (entry.getValue().get(part) == GridDhtPartitionState.OWNING)
+                            cnt++;
+                    }
+
+                    if (cacheSpecificAmountOfOwners == -1)
+                        cacheSpecificAmountOfOwners = cnt;
+
+                    cacheSpecificAmountOfOwners = Math.min(cacheSpecificAmountOfOwners, cnt);
+                }
+            }
+
+            if (nodeSpecificAmountOfOwners == -1)
+                nodeSpecificAmountOfOwners = cacheSpecificAmountOfOwners;
+
+            nodeSpecificAmountOfOwners = Math.min(nodeSpecificAmountOfOwners, cacheSpecificAmountOfOwners);
+        }
+
+        cctx.kernalContext().metric().registry(SYS_METRICS).intMetric(
+            MAX_NODES_AVAILABLE_FOR_SAFE_STOP,
+            "Maximum amount of nodes available for safe stop - stop without data loss").value(Math.max(0, nodeSpecificAmountOfOwners - 1));
     }
 
     /**
