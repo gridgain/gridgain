@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -141,6 +142,12 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private static final String HORIZONTAL_SCAN_NAME = "<HORIZONTAL> ";
+
+    /** */
+    private static final String PAGE_LISTS_PREFIX = "<PAGE_LIST> ";
+
+    /** */
+    private static final String ERROR_PREFIX = "<ERROR> ";
 
     /** */
     private static final Pattern IDX_NAME_SEACH_PATTERN = Pattern.compile("idxName=(?<name>.*?)##");
@@ -287,7 +294,45 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private void printErr(String s) {
-        outErrStream.println("<ERROR> " + s);
+        outErrStream.println(ERROR_PREFIX + s);
+    }
+
+    /** */
+    private void printErrors(
+        String prefix,
+        String caption,
+        String alternativeCaption,
+        String elementFormatPtrn,
+        boolean printTrace,
+        Map<?, ? extends List<? extends Throwable>> errors
+    ) {
+        if (errors.isEmpty()) {
+            print(prefix + alternativeCaption);
+
+            return;
+        }
+
+        if (caption != null)
+            outErrStream.println(prefix + ERROR_PREFIX + caption);
+
+        errors.forEach((k, v) -> {
+            outErrStream.println(prefix + ERROR_PREFIX + String.format(elementFormatPtrn, k.toString()));
+
+            v.forEach(e -> {
+                if (printTrace)
+                    printStackTrace(e);
+                else
+                    printErr(e.getMessage());
+            });
+        });
+    }
+
+    /** */
+    private void printPageStat(String prefix, String caption, Map<Class, AtomicLong> stat) {
+        if (caption != null)
+            print(prefix + caption + (stat.isEmpty() ? " empty" : ""));
+
+        stat.forEach((cls, cnt) -> print(prefix + cls.getSimpleName() + ": " + cnt.get()));
     }
 
     /** */
@@ -326,7 +371,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         print("Partitions files num: " + partPageStoresNum);
 
-        Map<Class<? extends PageIO>, Long> pageClasses = new HashMap<>();
+        Map<Class, AtomicLong> pageClasses = new HashMap<>();
 
         long pagesNum = idxStore == null ? 0 : (idxFile.length() - idxStore.headerSize()) / pageSize;
 
@@ -348,7 +393,7 @@ public class IgniteIndexReader implements AutoCloseable {
             scanFileStore(INDEX_PARTITION, FLAG_IDX, idxStore, (pageId, addr, io) -> {
                 progressPrinter.printProgress();
 
-                pageClasses.merge(io.getClass(), 1L, (oldVal, newVal) -> ++oldVal);
+                pageClasses.computeIfAbsent(io.getClass(), k -> new AtomicLong(0)).incrementAndGet();
 
                 if (io instanceof PageMetaIO) {
                     PageMetaIO pageMetaIO = (PageMetaIO)io;
@@ -411,8 +456,7 @@ public class IgniteIndexReader implements AutoCloseable {
         else
             printPagesListsInfo(pageListsInfo.get());
 
-        print("\n---These pages types were encountered during sequential scan:");
-        pageClasses.forEach((key, val) -> print(key.getSimpleName() + ": " + val));
+        printPageStat("", "\n---These pages types were encountered during sequential scan:", pageClasses);
 
         if (!errors.isEmpty()) {
             printErr("---");
@@ -422,7 +466,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         print("---");
-        print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(a -> a).sum());
+        print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(AtomicLong::get).sum());
         print("Total errors occurred during sequential scan: " + errors.size());
         print("Note that some pages can be occupied by meta info, tracking info, etc., so total page count can differ " +
             "from count of pages found in index trees and page lists.");
@@ -432,20 +476,18 @@ public class IgniteIndexReader implements AutoCloseable {
 
             print("");
 
-            AtomicInteger totalErrors = new AtomicInteger(0);
+            printErrors("",
+                "Partitions check:",
+                "Partitions check detected no errors.",
+                "Errors detected in partition, partId=%s",
+                false,
+                checkPartsErrors
+            );
 
-            checkPartsErrors.forEach((partId, lst) -> {
-                printErr("Errors detected in partition, partId=" + partId);
-
-                lst.forEach(e -> {
-                    printErr(e.getMessage());
-
-                    totalErrors.incrementAndGet();
-                });
-            });
-
-            print("\nPartition check finished, total errors: " + totalErrors.get() +
-                ", total partitions: " + checkPartsErrors.size());
+            print("\nPartition check finished, total errors: " +
+                checkPartsErrors.values().stream().mapToInt(List::size).sum() + ", total broken partitions: " +
+                checkPartsErrors.size()
+            );
         }
     }
 
@@ -513,7 +555,12 @@ public class IgniteIndexReader implements AutoCloseable {
         });
     }
 
-    /** */
+    /**
+     * Checks partitions, comparing partition indexes (cache data tree) to indexes given in {@code aTreesInfo}.
+     *
+     * @param aTreesInfo Index trees info to compare cache data tree with.
+     * @return Map of errors, bound to partition id.
+     */
     private Map<Integer, List<Throwable>> checkParts(Map<String, TreeTraversalInfo> aTreesInfo) {
         System.out.println();
 
@@ -609,7 +656,17 @@ public class IgniteIndexReader implements AutoCloseable {
             ", pageIndex=" + pageIdx + ", itemId=" + itemId + ", link=" + link;
     }
 
-    /** */
+    /**
+     * Finds certain pages in file page store. When all pages corresponding given types is found, at least one page
+     * for each type, we return the result.
+     *
+     * @param partId Partition id.
+     * @param flag Page store flag.
+     * @param store File page store.
+     * @param pageTypes Page types to find.
+     * @return Map of found pages. First page of this class that was found, is put to this map.
+     * @throws IgniteCheckedException If failed.
+     */
     private Map<Class, Long> findPages(int partId, byte flag, FilePageStore store, Set<Class> pageTypes)
         throws IgniteCheckedException {
         Map<Class, Long> res = new HashMap<>();
@@ -704,6 +761,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /**
      * Gets meta info about page lists.
+     *
      * @param metaPageListId Page list meta id.
      * @return Meta info.
      */
@@ -714,7 +772,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         Map<Class, AtomicLong> pageListStat = new HashMap<>();
 
-        Map<Long, Throwable> errors = new HashMap<>();
+        Map<Long, List<Throwable>> errors = new HashMap<>();
 
         try {
             doWithBuffer((buf, addr) -> {
@@ -745,7 +803,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         nextMetaId = io.getNextMetaPageId(addr);
                     }
                     catch (Exception e) {
-                        errors.put(nextMetaId, e);
+                        errors.put(nextMetaId, singletonList(e));
 
                         nextMetaId = 0;
                     }
@@ -763,6 +821,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /**
      * Get single page list.
+     *
      * @param pageListStartId Id of the start page of the page list.
      * @param pageStat Page types statistics.
      * @return List of page ids.
@@ -818,6 +877,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /**
      * Traverse all trees in file and return their info.
+     *
      * @param metaTreeRoot Meta tree root page id.
      * @return Index trees info.
      */
@@ -856,10 +916,11 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /**
      * Prints traversal info.
+     *
      * @param treeInfos Tree traversal info.
      */
     private void printTraversalResults(String prefix, Map<String, TreeTraversalInfo> treeInfos) {
-        print("\nTree traversal results " + prefix);
+        print("\n" + prefix + "Tree traversal results");
 
         Map<Class, AtomicLong> totalStat = new HashMap<>();
 
@@ -881,41 +942,47 @@ public class IgniteIndexReader implements AutoCloseable {
 
             print(prefix + "-- Count of items found in leaf pages: " + validationInfo.itemStorage.size());
 
-            if (!validationInfo.errors.isEmpty()) {
-                print(prefix + "<ERROR> -- Errors:");
-
-                validationInfo.errors.forEach((id, errors) -> {
-                    print(prefix + "Page id=" + id + ", exceptions:");
-
-                    errors.forEach(this::printStackTrace);
-
-                    totalErr.addAndGet(errors.size());
-                });
-            }
-            else
-                print(prefix + "No errors occurred while traversing.");
+            printErrors(
+                prefix,
+                "Errors:",
+                "No errors occurred while traversing.",
+                "Page id=%s, exceptions:",
+                true,
+                validationInfo.errors
+            );
 
             cacheIdxSizes.computeIfAbsent(getCacheId(idxName), k -> new HashMap<>())
                 .put(idxName, validationInfo.itemStorage.size());
         });
 
         print(prefix + "---");
-        print(prefix + "Total page stat collected during trees traversal:");
 
-        totalStat.forEach((cls, cnt) -> print(prefix + cls.getSimpleName() + ": " + cnt.get()));
+        printPageStat(prefix, "Total page stat collected during trees traversal:", totalStat);
+
+        print("");
+
+        AtomicBoolean sizeConsistencyErrorsFound = new AtomicBoolean(false);
+
+        cacheIdxSizes.forEach((cacheId, idxSizes) -> {
+            if (idxSizes.values().stream().distinct().count() > 1) {
+                sizeConsistencyErrorsFound.set(true);
+
+                totalErr.incrementAndGet();
+
+                printErr("Index size inconsistency: cacheId=" + cacheId);
+
+                idxSizes.forEach((name, size) -> printErr("     Index name: " + name + ", size=" + size));
+            }
+        });
+
+        if (!sizeConsistencyErrorsFound.get())
+            print(prefix + "No index size consistency errors found.");
 
         print("");
         print(prefix + "Total trees: " + treeInfos.keySet().size());
         print(prefix + "Total pages found in trees: " + totalStat.values().stream().mapToLong(AtomicLong::get).sum());
         print(prefix + "Total errors during trees traversal: " + totalErr.get());
         print("");
-
-        cacheIdxSizes.forEach((cacheId, idxSizes) -> {
-            if (idxSizes.values().stream().distinct().count() > 1) {
-                printErr("Index size inconsistency: cacheId=" + cacheId);
-                idxSizes.forEach((name, size) -> printErr("     Index name: " + name + ", size=" + size));
-            }
-        });
 
         print("------------------");
     }
@@ -939,6 +1006,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /**
      * Tries to get cache id from index tree name.
+     *
      * @param name Index name.
      * @return Cache id, except of {@code 0} for cache groups with single cache.
      */
@@ -956,16 +1024,19 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /**
      * Prints page lists info.
+     *
      * @param pageListsInfo Page lists info.
      */
     private void printPagesListsInfo(PageListsInfo pageListsInfo) {
-        print("\n---Page lists info.");
+        String prefix = PAGE_LISTS_PREFIX;
+
+        print("\n" + prefix + "Page lists info.");
 
         if (!pageListsInfo.bucketsData.isEmpty())
-            print("---Printing buckets data:");
+            print(prefix + "---Printing buckets data:");
 
         pageListsInfo.bucketsData.forEach((bucket, bucketData) -> {
-            GridStringBuilder sb = new GridStringBuilder()
+            GridStringBuilder sb = new GridStringBuilder(prefix)
                 .a("List meta id=")
                 .a(bucket.get1())
                 .a(", bucket number=")
@@ -977,25 +1048,13 @@ public class IgniteIndexReader implements AutoCloseable {
             print(sb.toString());
         });
 
-        if (!pageListsInfo.allPages.isEmpty()) {
-            print("-- Page stat:");
+        printPageStat(prefix, "-- Page stat:", pageListsInfo.pageListStat);
 
-            pageListsInfo.pageListStat.forEach((cls, cnt) -> print(cls.getSimpleName() + ": " + cnt.get()));
-        }
-
-        if (!pageListsInfo.errors.isEmpty()) {
-            print("---Errors:");
-
-            pageListsInfo.errors.forEach((id, error) -> {
-                printErr("Page id: " + id + ", exception: ");
-
-                printStackTrace(error);
-            });
-        }
+        printErrors(prefix, "---Errors:", "---No errors.", "Page id: %, exception: ", true, pageListsInfo.errors);
 
         print("");
-        print("Total index pages found in lists: " + pageListsInfo.allPages.size());
-        print("Total errors during lists scan: " + pageListsInfo.errors.size());
+        print(prefix + "Total index pages found in lists: " + pageListsInfo.allPages.size());
+        print(prefix + "Total errors during lists scan: " + pageListsInfo.errors.size());
         print("------------------");
     }
 
@@ -1009,7 +1068,7 @@ public class IgniteIndexReader implements AutoCloseable {
     private TreeTraversalInfo traverseTree(FilePageStore store, long rootPageId, String treeName, ItemStorage itemStorage) {
         Map<Class, AtomicLong> ioStat = new HashMap<>();
 
-        Map<Long, Set<Throwable>> errors = new HashMap<>();
+        Map<Long, List<Throwable>> errors = new HashMap<>();
 
         Set<Long> innerPageIds = new HashSet<>();
 
@@ -1035,7 +1094,7 @@ public class IgniteIndexReader implements AutoCloseable {
         String treeName,
         ItemStorage itemStorage
     ) {
-        Map<Long, Set<Throwable>> errors = new HashMap<>();
+        Map<Long, List<Throwable>> errors = new HashMap<>();
 
         Map<Class, AtomicLong> ioStat = new HashMap<>();
 
@@ -1093,7 +1152,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         pageId = ((BPlusIO)pageIO).getForward(addr);
                     }
                     catch (Throwable e) {
-                        errors.computeIfAbsent(pageId, k -> new HashSet<>()).add(e);
+                        errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
 
                         pageId = 0;
                     }
@@ -1101,7 +1160,7 @@ public class IgniteIndexReader implements AutoCloseable {
             }
         }
         catch (Throwable e) {
-            errors.computeIfAbsent(rootPageId, k -> new HashSet<>()).add(e);
+            errors.computeIfAbsent(rootPageId, k -> new LinkedList<>()).add(e);
         }
         finally {
             freeBuffer(buf);
@@ -1145,7 +1204,7 @@ public class IgniteIndexReader implements AutoCloseable {
             return ioProcessor.getNode(pageContent, pageId, nodeCtx);
         }
         catch (Throwable e) {
-            nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>()).add(e);
+            nodeCtx.errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
 
             return new TreeNode(pageId, null, "exception: " + e.getMessage(), Collections.emptyList());
         }
@@ -1353,6 +1412,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /**
      * Entry point.
+     *
      * @param args Arguments.
      * @throws Exception If failed.
      */
@@ -1419,7 +1479,7 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     *
+     * Enum of possible utility atguments.
      */
     public enum Args {
         /** */
@@ -1642,7 +1702,7 @@ public class IgniteIndexReader implements AutoCloseable {
         final Map<Class, AtomicLong> ioStat;
 
         /** Map of errors, pageId -> set of exceptions. */
-        final Map<Long, Set<Throwable>> errors;
+        final Map<Long, List<Throwable>> errors;
 
         /** Callback that is called for each inner node page. */
         final PageCallback innerCb;
@@ -1658,7 +1718,7 @@ public class IgniteIndexReader implements AutoCloseable {
             String treeName,
             FilePageStore store,
             Map<Class, AtomicLong> ioStat,
-            Map<Long, Set<Throwable>> errors,
+            Map<Long, List<Throwable>> errors,
             PageCallback innerCb,
             PageCallback leafCb,
             ItemCallback itemCb
@@ -1844,7 +1904,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         idxItem = getLeafItem(leafIO, pageId, addr, j, nodeCtx);
                 }
                 catch (Exception e) {
-                    nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>()).add(e);
+                    nodeCtx.errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
                 }
 
                 if (idxItem != null)
@@ -1919,7 +1979,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         });
                     }
                     catch (Exception e) {
-                        nodeCtx.errors.computeIfAbsent(pageId, k -> new HashSet<>()).add(e);
+                        nodeCtx.errors.computeIfAbsent(pageId, k -> new LinkedList<>()).add(e);
                     }
                 }
 
@@ -1968,7 +2028,7 @@ public class IgniteIndexReader implements AutoCloseable {
         final Map<Class, AtomicLong> ioStat;
 
         /** Map of errors, pageId -> set of exceptions. */
-        final Map<Long, Set<Throwable>> errors;
+        final Map<Long, List<Throwable>> errors;
 
         /** Set of all inner page ids. */
         final Set<Long> innerPageIds;
@@ -1984,7 +2044,7 @@ public class IgniteIndexReader implements AutoCloseable {
         /** */
         public TreeTraversalInfo(
             Map<Class, AtomicLong> ioStat,
-            Map<Long, Set<Throwable>> errors,
+            Map<Long, List<Throwable>> errors,
             Set<Long> innerPageIds,
             long rootPageId,
             ItemStorage itemStorage
@@ -2013,15 +2073,15 @@ public class IgniteIndexReader implements AutoCloseable {
         /** Page type statistics. */
         final Map<Class, AtomicLong> pageListStat;
 
-        /** Map of errors, pageId -> exception. */
-        final Map<Long, Throwable> errors;
+        /** Map of errors, pageId -> list of exceptions. */
+        final Map<Long, List<Throwable>> errors;
 
         /** */
         public PageListsInfo(
             Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData,
             Set<Long> allPages,
             Map<Class, AtomicLong> pageListStat,
-            Map<Long, Throwable> errors
+            Map<Long, List<Throwable>> errors
         ) {
             this.bucketsData = bucketsData;
             this.allPages = allPages;
