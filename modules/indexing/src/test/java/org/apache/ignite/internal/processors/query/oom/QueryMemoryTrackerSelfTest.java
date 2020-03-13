@@ -121,12 +121,10 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
         checkQueryExpectOOM("select DISTINCT K.name from K GROUP BY K.id", true);
 
         // Local result is quite small.
-        assertEquals(2, localResults.size());
-
-        assertTrue(maxMem > localResults.get(0).memoryReserved() + localResults.get(1).memoryReserved());
-
+        // Local result is quite small.
+        assertEquals(1, localResults.size());
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
-        assertTrue(BIG_TABLE_SIZE > localResults.get(1).getRowCount());
     }
 
     /** {@inheritDoc} */
