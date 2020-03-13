@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Query descriptor.
@@ -42,12 +44,14 @@ public class GridRunningQueryInfo {
     private final long startTime;
 
     /** */
+    @GridToStringExclude
     private final GridQueryCancel cancel;
 
     /** */
     private final boolean loc;
 
     /** */
+    @GridToStringExclude
     private final QueryRunningFuture fut = new QueryRunningFuture();
 
     /**
@@ -160,5 +164,10 @@ public class GridRunningQueryInfo {
      */
     public boolean local() {
         return loc;
+    }
+
+    /**{@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRunningQueryInfo.class, this);
     }
 }

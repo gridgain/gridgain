@@ -58,7 +58,8 @@ import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCo
 import static org.apache.ignite.internal.commandline.cache.argument.IdleVerifyCommandArg.EXCLUDE_CACHES;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_FIRST;
 import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_THROUGH;
-import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.NO_CHECK_SIZES;
+import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_CRC;
+import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_SIZES;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
 
 /**
@@ -80,10 +81,18 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
         map.put(CHECK_FIRST + " N", "validate only the first N keys");
         map.put(CHECK_THROUGH + " K", "validate every Kth key");
-        map.put(NO_CHECK_SIZES.toString(), "no check that index size and cache size are same");
+        map.put(CHECK_CRC.toString(), "check the CRC-sum of pages stored on disk");
+        map.put(CHECK_SIZES.toString(), "check that index size and cache size are same");
 
-        usageCache(logger, VALIDATE_INDEXES, description, map,
-            optional(CACHES), OP_NODE_ID, optional(or(CHECK_FIRST + " N", CHECK_THROUGH + " K", NO_CHECK_SIZES)));
+        usageCache(
+            logger,
+            VALIDATE_INDEXES,
+            description,
+            map,
+            optional(CACHES),
+            OP_NODE_ID,
+            optional(or(CHECK_FIRST + " N", CHECK_THROUGH + " K", CHECK_CRC, CHECK_SIZES))
+        );
     }
 
     /**
@@ -102,6 +111,9 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         /** Number of entries to check through. */
         private final int checkThrough;
 
+        /** Check CRC. */
+        private final boolean checkCrc;
+
         /** Check that index size and cache size are same. */
         private final boolean checkSizes;
 
@@ -112,13 +124,22 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
          * @param nodeId Node id.
          * @param checkFirst Max number of entries to be checked.
          * @param checkThrough Number of entries to check through.
+         * @param checkCrc Check CRC.
          * @param checkSizes Check that index size and cache size are same.
          */
-        public Arguments(Set<String> caches, UUID nodeId, int checkFirst, int checkThrough, boolean checkSizes) {
+        public Arguments(
+            Set<String> caches,
+            UUID nodeId,
+            int checkFirst,
+            int checkThrough,
+            boolean checkCrc,
+            boolean checkSizes
+        ) {
             this.caches = caches;
             this.nodeId = nodeId;
             this.checkFirst = checkFirst;
             this.checkThrough = checkThrough;
+            this.checkCrc = checkCrc;
             this.checkSizes = checkSizes;
         }
 
@@ -148,6 +169,13 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
          */
         public UUID nodeId() {
             return nodeId;
+        }
+
+        /**
+         * @return Check CRC.
+         */
+        public boolean checkCrc() {
+            return checkCrc;
         }
 
         /**
@@ -181,6 +209,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             args.nodeId() != null ? Collections.singleton(args.nodeId()) : null,
             args.checkFirst(),
             args.checkThrough(),
+            args.checkCrc(),
             args.checkSizes()
         );
 
@@ -256,11 +285,10 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         int checkThrough = -1;
         UUID nodeId = null;
         Set<String> caches = null;
+        boolean checkCrc = false;
         boolean checkSizes = true;
 
-        int argsCnt = 0;
-
-        while (argIter.hasNextSubArg() && argsCnt++ < 4) {
+        while (argIter.hasNextSubArg()) {
             String nextArg = argIter.nextArg("");
 
             ValidateIndexesCommandArg arg = CommandArgUtils.of(nextArg, ValidateIndexesCommandArg.class);
@@ -292,7 +320,11 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
                 continue;
             }
-            else if (NO_CHECK_SIZES == arg) {
+            else if (arg == CHECK_CRC) {
+                checkCrc = true;
+                continue;
+            }
+            else if (CHECK_SIZES == arg) {
                 checkSizes = false;
 
                 continue;
@@ -316,7 +348,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
             }
         }
 
-        args = new Arguments(caches, nodeId, checkFirst, checkThrough, checkSizes);
+        args = new Arguments(caches, nodeId, checkFirst, checkThrough, checkCrc, checkSizes);
     }
 
     /** {@inheritDoc} */

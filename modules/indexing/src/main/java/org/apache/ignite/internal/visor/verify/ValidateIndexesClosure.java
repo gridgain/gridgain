@@ -119,6 +119,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     /** If provided only each Kth element will be validated. */
     private final int checkThrough;
 
+    /** Check CRC. */
+    private final boolean checkCrc;
+
     /** Check that index size and cache size are same. */
     private final boolean checkSizes;
 
@@ -156,14 +159,19 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     private final Set<Integer> failCalcCacheSizeGrpIds = newSetFromMap(new ConcurrentHashMap<>());
 
     /**
+     * Constructor.
+     *
      * @param cacheNames Cache names.
      * @param checkFirst If positive only first K elements will be validated.
      * @param checkThrough If positive only each Kth element will be validated.
+     * @param checkCrc Check CRC sum on stored pages on disk.
+     * @param checkSizes Check that index size and cache size are same.
      */
-    public ValidateIndexesClosure(Set<String> cacheNames, int checkFirst, int checkThrough, boolean checkSizes) {
+    public ValidateIndexesClosure(Set<String> cacheNames, int checkFirst, int checkThrough, boolean checkCrc, boolean checkSizes) {
         this.cacheNames = cacheNames;
         this.checkFirst = checkFirst;
         this.checkThrough = checkThrough;
+        this.checkCrc = checkCrc;
         this.checkSizes = checkSizes;
     }
 
@@ -402,16 +410,17 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                     throw new GridNotIdleException(IdleVerifyUtility.CLUSTER_NOT_IDLE_MSG);
             }
 
-            for (Integer grpId: grpIds) {
-                final CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(grpId);
+            if (checkCrc) {
+                for (Integer grpId : grpIds) {
+                    final CacheGroupContext grpCtx = ignite.context().cache().cacheGroup(grpId);
 
-                if (grpCtx == null || !grpCtx.persistenceEnabled()) {
-                    integrityCheckedIndexes.incrementAndGet();
+                    if (grpCtx == null || !grpCtx.persistenceEnabled()) {
+                        integrityCheckedIndexes.incrementAndGet();
 
-                    continue;
-                }
+                        continue;
+                    }
 
-                Future<T2<Integer, IndexIntegrityCheckIssue>> checkFut =
+                    Future<T2<Integer, IndexIntegrityCheckIssue>> checkFut =
                         calcExecutor.submit(new Callable<T2<Integer, IndexIntegrityCheckIssue>>() {
                             @Override public T2<Integer, IndexIntegrityCheckIssue> call() throws Exception {
                                 IndexIntegrityCheckIssue issue = integrityCheckIndexPartition(grpCtx, cpFlag);
@@ -420,7 +429,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                             }
                         });
 
-                integrityCheckFutures.add(checkFut);
+                    integrityCheckFutures.add(checkFut);
+                }
             }
 
             for (Future<T2<Integer, IndexIntegrityCheckIssue>> fut : integrityCheckFutures) {

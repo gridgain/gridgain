@@ -48,7 +48,7 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.VALIDATE_INDEXES;
-import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.NO_CHECK_SIZES;
+import static org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg.CHECK_SIZES;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
@@ -97,7 +97,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     /**
      * Test checks that cache size and index validation error will not be
      * displayed if cache is broken, because argument
-     * {@link ValidateIndexesCommandArg#NO_CHECK_SIZES} be used.
+     * {@link ValidateIndexesCommandArg#CHECK_SIZES} be used.
      */
     @Test
     public void testNoCheckCacheSizeWhenBrokenCache() {
@@ -132,7 +132,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     /**
      * Test checks that cache size and index validation error will not be
      * displayed if index is broken, because argument
-     * {@link ValidateIndexesCommandArg#NO_CHECK_SIZES} be used.
+     * {@link ValidateIndexesCommandArg#CHECK_SIZES} be used.
      *
      * @throws Exception If failed.
      */
@@ -254,7 +254,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
         List<String> cmdWithArgs = new ArrayList<>(asList(CACHE.text(), VALIDATE_INDEXES.text(), cacheName));
 
         if (noCheckSizes)
-            cmdWithArgs.add(NO_CHECK_SIZES.argName());
+            cmdWithArgs.add(CHECK_SIZES.argName());
 
         injectTestSystemOut();
 
@@ -267,7 +267,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
     /**
      * Check that if data is broken and option
-     * {@link ValidateIndexesCommandArg#NO_CHECK_SIZES} is enabled, size check
+     * {@link ValidateIndexesCommandArg#CHECK_SIZES} is enabled, size check
      * will not take place.
      *
      * @param cacheName Cache size.
@@ -277,7 +277,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
         assertEquals(
             EXIT_CODE_OK,
-            execute(CACHE.text(), VALIDATE_INDEXES.text(), NO_CHECK_SIZES.argName(), cacheName)
+            execute(CACHE.text(), VALIDATE_INDEXES.text(), CHECK_SIZES.argName(), cacheName)
         );
 
         String out = testOut.toString();

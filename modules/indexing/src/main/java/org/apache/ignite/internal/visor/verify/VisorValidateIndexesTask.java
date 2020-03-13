@@ -108,7 +108,8 @@ public class VisorValidateIndexesTask extends VisorMultiNodeTask<VisorValidateIn
                     arg.getCaches(),
                     arg.getCheckFirst(),
                     arg.getCheckThrough(),
-                    arg.isCheckSizes()
+                    arg.сheckCrc(),
+                    arg.checkSizes()
                 );
 
                 ignite.context().resource().injectGeneric(clo);
