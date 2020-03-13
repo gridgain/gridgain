@@ -119,7 +119,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
 
         if (!cnt && !size) {
             assertFalse("Counters and Size inconsistent message found!",
-                lsnr.check() && lsnr.checkCnt() && lsnr.checkSize());
+                lsnr.check() || lsnr.checkCnt() || lsnr.checkSize());
         }
     }
 
