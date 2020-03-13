@@ -23,9 +23,7 @@ import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
-import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.command.Prepared;
 import org.h2.engine.Session;
@@ -59,7 +57,6 @@ public class H2QueryInfo {
     private final boolean lazy;
 
     /** Prepared statement. */
-    @GridToStringExclude
     private final Prepared stmt;
 
     /**
@@ -153,9 +150,17 @@ public class H2QueryInfo {
         LT.warn(log, msgSb.toString());
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString() {
-        return S.toString(H2QueryInfo.class, this);
+    /** Returns description of this query info. */
+    public String description() {
+        return H2QueryInfo.class.getSimpleName() + " ["
+            + "type=" + type
+            + ", runningQryId=" + runningQryId
+            + ", beginTs=" + beginTs
+            + ", distributedJoin=" + distributedJoin
+            + ", enforceJoinOrder=" + enforceJoinOrder
+            + ", lazy=" + lazy
+            + ", schema=" + schema
+            + ", sql='" + sql + "']";
     }
 
     /**
