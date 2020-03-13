@@ -428,13 +428,24 @@ public class IgniteIndexReader implements AutoCloseable {
             "from count of pages found in index trees and page lists.");
 
         if (checkParts) {
-            List<Throwable> checkPartsErrors = checkParts(horizontalScans.get());
+            Map<Integer, List<Throwable>> checkPartsErrors = checkParts(horizontalScans.get());
 
             print("");
 
-            checkPartsErrors.forEach(e -> printErr("<ERROR> " + e.getMessage()));
+            AtomicInteger totalErrors = new AtomicInteger(0);
 
-            print("\nPartition check finished, total errors: " + checkPartsErrors.size());
+            checkPartsErrors.forEach((partId, lst) -> {
+                printErr("Errors detected in partition, partId=" + partId);
+
+                lst.forEach(e -> {
+                    printErr(e.getMessage());
+
+                    totalErrors.incrementAndGet();
+                });
+            });
+
+            print("\nPartition check finished, total errors: " + totalErrors.get() +
+                ", total partitions: " + checkPartsErrors.size());
         }
     }
 
@@ -503,10 +514,11 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /** */
-    private List<Throwable> checkParts(Map<String, TreeTraversalInfo> aTreesInfo) {
+    private Map<Integer, List<Throwable>> checkParts(Map<String, TreeTraversalInfo> aTreesInfo) {
         System.out.println();
 
-        List<Throwable> errors = new LinkedList<>();
+        // Map partId -> errors.
+        Map<Integer, List<Throwable>> res = new HashMap<>();
 
         Map<String, TreeTraversalInfo> treesInfo = new HashMap<>(aTreesInfo);
 
@@ -522,7 +534,7 @@ public class IgniteIndexReader implements AutoCloseable {
             if (partStore == null)
                 continue;
 
-            AtomicInteger partErrCnt = new AtomicInteger(0);
+            List<Throwable> errors = new LinkedList<>();
 
             final int partId = i;
 
@@ -554,14 +566,11 @@ public class IgniteIndexReader implements AutoCloseable {
                             if (cacheId != cacheAwareLink.cacheId)
                                 continue; // It's index for other cache, don't check.
 
-                            if (!tree.itemStorage.contains(cacheAwareLink)) {
+                            if (!tree.itemStorage.contains(cacheAwareLink))
                                 errors.add(new IgniteException(cacheDataTreeEntryMissingError(name, cacheAwareLink)));
-
-                                partErrCnt.incrementAndGet();
-                            }
                         }
 
-                        if (partErrCnt.get() >= CHECK_PARTS_MAX_ERRORS_PER_PARTITION) {
+                        if (errors.size() >= CHECK_PARTS_MAX_ERRORS_PER_PARTITION) {
                             errors.add(new IgniteException("Too many errors (" + CHECK_PARTS_MAX_ERRORS_PER_PARTITION +
                                 ") found for partId=" + partId + ", stopping analysis for this partition."));
 
@@ -575,9 +584,12 @@ public class IgniteIndexReader implements AutoCloseable {
             catch (IgniteCheckedException e) {
                 errors.add(new IgniteException("Partition check failed, partId=" + i, e));
             }
+
+            if (!errors.isEmpty())
+                res.put(partId, errors);
         }
 
-        return errors;
+        return res;
     }
 
     /** */
