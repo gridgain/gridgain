@@ -136,6 +136,8 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.H2Row;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContextRegistry;
+import org.apache.ignite.internal.processors.query.h2.sql.GridFirstValueFunction;
+import org.apache.ignite.internal.processors.query.h2.sql.GridLastValueFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlStatement;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridMapQueryExecutor;
 import org.apache.ignite.internal.processors.query.h2.twostep.GridReduceQueryExecutor;
@@ -177,6 +179,7 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.spi.indexing.IndexingQueryFilterImpl;
+import org.h2.api.AggregateFunction;
 import org.h2.api.ErrorCode;
 import org.h2.api.JavaObjectSerializer;
 import org.h2.engine.Session;
@@ -2138,6 +2141,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         connMgr.setH2Serializer(h2Serializer);
 
+        registerAggregateFunctions();
+
         distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), ctx, log);
     }
 
@@ -3124,6 +3129,37 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2TreeIndex idx = (H2TreeIndex)tbl.userIndex(idxName);
 
         return idx == null ? 0 : idx.size();
+    }
+
+    /**
+     * Register predefined custom aggregate functions.
+     *
+     * @throws IgniteCheckedException If failed.
+     */
+    private void registerAggregateFunctions() throws IgniteCheckedException {
+        registerAggregateFunction(GridFirstValueFunction.NAME, GridFirstValueFunction.class);
+        registerAggregateFunction(GridLastValueFunction.NAME, GridLastValueFunction.class);
+    }
+
+    /**
+     * Register custom aggregate function.
+     *
+     * @param fnName SQL function name.
+     * @param cls Function implementation class.
+     * @throws IgniteCheckedException If failed.
+     */
+    public void registerAggregateFunction(String fnName,
+        Class<? extends AggregateFunction> cls) throws IgniteCheckedException {
+        Objects.requireNonNull(fnName, "Function name can't be null");
+        Objects.requireNonNull(cls, "Class name can't be null");
+
+        if (!AggregateFunction.class.isAssignableFrom(cls))
+            throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" + AggregateFunction.class.getName() + "'");
+
+        connections().executeStatement(null, "CREATE AGGREGATE " + fnName + " FOR \"" + cls.getName() + "\"");
+
+        if (log.isDebugEnabled())
+            log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
     }
 
     /** {@inheritDoc} */
