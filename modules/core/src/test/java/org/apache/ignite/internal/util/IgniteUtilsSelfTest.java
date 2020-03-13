@@ -85,6 +85,7 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
+import static java.util.stream.Collectors.joining;
 import static org.apache.ignite.testframework.GridTestUtils.readResource;
 import static org.junit.Assert.assertArrayEquals;
 
@@ -1304,24 +1305,22 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     /**
      * Testing methods {@link IgniteUtils#writeBigUTF} and
      * {@link IgniteUtils#readBigUTF} using resource files, where each line is
-     * needed to test different cases.
+     * needed to test different cases:
+     * 1){@code null}. <br/>
      *
-     * @throws IOException If failed.
+     * 2)Empty line. <br/>
+     *
+     * 3)Simple strings. <br/>
+     *
+     * 4)Various combinations of strings with one, two, and three-byte
+     * characters with size greater than {@link IgniteUtils#UTF_BYTE_LIMIT}. <br/>
+     *
+     * @throws Exception If failed.
      */
     @Test
-    public void testReadWriteBigUTF() throws IOException {
-        byte[] content = readResource(getClass().getClassLoader(), "org.apache.ignite.util/bigUtf.txt");
-
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(content)));
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        try {
-            String readLine;
-
-            while (nonNull(readLine = bufferedReader.readLine())) {
-                if ("null".equals(readLine))
-                    readLine = null;
-
+    public void testReadWriteBigUTF() throws Exception {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            readLines("org.apache.ignite.util/bigUtf.txt", readLine -> {
                 baos.reset();
 
                 DataOutput dOut = new DataOutputStream(baos);
@@ -1331,11 +1330,84 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
                 String readBigUTF = U.readBigUTF(dIn);
 
                 assertEquals(readLine, readBigUTF);
-            }
+            });
         }
-        finally {
-            U.closeQuiet(bufferedReader);
-            U.closeQuiet(baos);
+    }
+
+    /**
+     * Testing method {@link IgniteUtils#writeLimitUTF} using resource files,
+     * where each line is needed to test different cases: <br/>
+     * 1){@code null}. <br/>
+     *
+     * 2)Empty line. <br/>
+     *
+     * 3)Simple strings. <br/>
+     *
+     * 4)String containing single-byte characters of size
+     * {@link IgniteUtils#UTF_BYTE_LIMIT}. <br/>
+     *
+     * 5)String containing single-byte characters of size more than
+     * {@link IgniteUtils#UTF_BYTE_LIMIT}. <br/>
+     *
+     * 6)String containing two-byte characters of size
+     * {@link IgniteUtils#UTF_BYTE_LIMIT}. <br/>
+     *
+     * 7)String containing two-byte characters of size more than
+     * {@link IgniteUtils#UTF_BYTE_LIMIT}. <br/>
+     *
+     * 8)String containing three-byte characters of size
+     * {@link IgniteUtils#UTF_BYTE_LIMIT}. <br/>
+     *
+     * 9)String containing three-byte characters of size more than
+     * {@link IgniteUtils#UTF_BYTE_LIMIT}. <br/>
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testWriteLimitUTF() throws Exception {
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+            readLines("org.apache.ignite.util/limitUtf.txt", readLine -> {
+                baos.reset();
+
+                DataOutput dOut = new DataOutputStream(baos);
+                U.writeLimitUTF(dOut, readLine);
+
+                DataInputStream dIn = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
+                String readUTF = U.readString(dIn);
+
+                if (nonNull(readLine)) {
+                    AtomicInteger utfBytes = new AtomicInteger();
+
+                    readLine = readLine.chars()
+                        .filter(c -> utfBytes.addAndGet(U.utfBytes((char)c)) <= U.UTF_BYTE_LIMIT)
+                        .mapToObj(c -> String.valueOf((char)c)).collect(joining());
+                }
+
+                assertEquals(readLine, readUTF);
+            });
+        }
+    }
+
+    /**
+     * Reading lines from a resource file and passing them to consumer.
+     * If read string is {@code "null"}, it is converted to {@code null}.
+     *
+     * @param rsrcName Resource name.
+     * @param consumer Consumer.
+     * @throws Exception If failed.
+     */
+    private void readLines(String rsrcName, ThrowableConsumer<String> consumer) throws Exception {
+        byte[] content = readResource(getClass().getClassLoader(), rsrcName);
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(content)))) {
+            String readLine;
+
+            while (nonNull(readLine = reader.readLine())) {
+                if ("null".equals(readLine))
+                    readLine = null;
+
+                consumer.accept(readLine);
+            }
         }
     }
 
@@ -1363,4 +1435,23 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     private interface I3 extends I2 {}
     @Ann2 private interface I4 {}
     private interface I5 extends I4 {}
+
+    /**
+     * Represents an operation that accepts a single input argument and returns
+     * no result. Unlike most other functional interfaces,
+     * {@code ThrowableConsumer} is expected to operate via side-effects.
+     *
+     * Also it is able to throw {@link Exception} unlike {@link Consumer}.
+     *
+     * @param <T> The type of the input to the operation.
+     */
+    @FunctionalInterface
+    private static interface ThrowableConsumer<T> {
+        /**
+         * Performs this operation on the given argument.
+         *
+         * @param t the input argument.
+         */
+        void accept(@Nullable T t) throws Exception;
+    }
 }

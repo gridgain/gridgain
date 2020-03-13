@@ -301,7 +301,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.staticFieldOffset;
 /**
  * Collection of utility methods used throughout the system.
  */
-@SuppressWarnings({"UnusedReturnValue", "RedundantStringConstructorCall"})
+@SuppressWarnings("UnusedReturnValue")
 public abstract class IgniteUtils {
     /** */
     public static final long KB = 1024L;
@@ -314,9 +314,9 @@ public abstract class IgniteUtils {
 
     /**
      * String limit in bytes for {@link DataOutput#writeUTF} and
-     * {@link DataInput#readUTF()}.
+     * {@link DataInput#readUTF()}. See "Modified UTF-8" in {@link DataInput}.
      */
-    public static final long UTF_BYTE_LIMIT = 65535;
+    public static final int UTF_BYTE_LIMIT = 65_535;
 
     /** Minimum checkpointing page buffer size (may be adjusted by Ignite). */
     public static final Long DFLT_MIN_CHECKPOINTING_PAGE_BUFFER_SIZE = GB / 4;
@@ -12212,6 +12212,35 @@ public abstract class IgniteUtils {
     }
 
     /**
+     * Writes string to output stream accounting for {@code null} values. <br/>
+     * Works as {@link DataOutput#writeUTF}, but if size of string is greater
+     * than {@link #UTF_BYTE_LIMIT} bytes, it will be truncated to a size
+     * less than or equal to {@link #UTF_BYTE_LIMIT} bytes. Must be used
+     * together with {@link IgniteUtils#readString}.
+     *
+     * @param out Output stream to write to.
+     * @param s String to write, possibly {@code null}.
+     * @throws IOException If write failed.
+     */
+    public static void writeLimitUTF(DataOutput out, @Nullable String s) throws IOException {
+        // Write null flag.
+        out.writeBoolean(isNull(s));
+
+        if (isNull(s))
+            return;
+
+        //Conversion of string to limit.
+        for (int i = 0, bs = 0; i < s.length(); i++) {
+            if ((bs += utfBytes(s.charAt(i))) > UTF_BYTE_LIMIT) {
+                s = s.substring(0, i);
+                break;
+            }
+        }
+
+        out.writeUTF(s);
+    }
+
+    /**
      * Get number of bytes for {@link DataOutput#writeUTF},
      * depending on character: <br/>
      *
@@ -12228,7 +12257,7 @@ public abstract class IgniteUtils {
      * @param c Character.
      * @return Number of bytes.
      */
-    private static int utfBytes(char c) {
+    public static int utfBytes(char c) {
         return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? 3 : 2;
     }
 }
