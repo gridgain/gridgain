@@ -312,6 +312,12 @@ public abstract class IgniteUtils {
     /** */
     public static final long GB = 1024L * 1024 * 1024;
 
+    /**
+     * String limit in bytes for {@link DataOutput#writeUTF} and
+     * {@link DataInput#readUTF()}.
+     */
+    public static final long UTF_BYTE_LIMIT = 65535;
+
     /** Minimum checkpointing page buffer size (may be adjusted by Ignite). */
     public static final Long DFLT_MIN_CHECKPOINTING_PAGE_BUFFER_SIZE = GB / 4;
 
@@ -12101,10 +12107,10 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values. <br/>
-     * Works as {@link DataOutput#writeUTF}, but has no limit of 65535 bytes,
-     * can write {@code null} values, and uses string length instead of
-     * total number of bytes. Must be used together with 
-     * {@link IgniteUtils#readBigUTF}.
+     * Works as {@link DataOutput#writeUTF}, but has no limit of
+     * {@link #UTF_BYTE_LIMIT} bytes, can write {@code null} values, and uses
+     * string length instead of total number of bytes. Must be used together
+     * with {@link IgniteUtils#readBigUTF}.
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
@@ -12125,10 +12131,11 @@ public abstract class IgniteUtils {
         // Write byte array.
         for (int i = 0; i < sLen; i++) {
             char c = s.charAt(i);
+            int utfBytes = utfBytes(c);
 
-            if (c >= 0x0001 && c <= 0x007F)
+            if (utfBytes == 1)
                 out.writeByte((byte)c);
-            else if (c > 0x07FF) {
+            else if (utfBytes == 3) {
                 out.writeByte((byte)(0xE0 | (c >> 12) & 0x0F));
                 out.writeByte((byte)(0x80 | (c >> 6) & 0x3F));
                 out.writeByte((byte)(0x80 | (c & 0x3F)));
@@ -12202,5 +12209,26 @@ public abstract class IgniteUtils {
         }
 
         return strBuilder.toString();
+    }
+
+    /**
+     * Get number of bytes for {@link DataOutput#writeUTF},
+     * depending on character: <br/>
+     *
+     * One byte - If a character <code>c</code> is in the range
+     * <code>&#92;u0001</code> through <code>&#92;u007f</code>.<br/>
+     *
+     * Two bytes - If a character <code>c</code> is <code>&#92;u0000</code> or
+     * is in the range <code>&#92;u0080</code> through <code>&#92;u07ff</code>.
+     * <br/>
+     *
+     * Three bytes - If a character <code>c</code> is in the range
+     * <code>&#92;u0800</code> through <code>uffff</code>.
+     *
+     * @param c Character.
+     * @return Number of bytes.
+     */
+    private static int utfBytes(char c) {
+        return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? 3 : 2;
     }
 }
