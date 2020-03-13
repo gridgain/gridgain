@@ -122,6 +122,10 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         startGrid(0);
 
+        // We have to start the second node and wait when it is started
+        // to be sure that all async metastorage updates of the node_0 are completed.
+        startGrid(1);
+
         initialUpdatesCount = (int)metastorage(0).getUpdatesCount();
     }
 

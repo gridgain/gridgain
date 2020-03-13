@@ -95,6 +95,8 @@ public class DistributedSqlConfiguration {
      * @return Cluster SQL time zone.
      */
     public TimeZone timeZone() {
+        assert timeZone.get() != null;
+
         return timeZone.get();
     }
 
