@@ -982,7 +982,7 @@ public final class IgniteSystemProperties {
      * If last rebalance is equivalent with new possible one, new rebalance does not trigger.
      * Set the property {@code true} and each exchange will try to trigger new rebalance.
      *
-     * Default is {@code true}.
+     * Default is {@code false}.
      */
     public static final String IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION = "IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION";
 
