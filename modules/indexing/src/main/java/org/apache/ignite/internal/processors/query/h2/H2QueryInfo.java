@@ -152,7 +152,7 @@ public class H2QueryInfo {
 
     /** Returns description of this query info. */
     public String description() {
-        return H2QueryInfo.class.getSimpleName() + " ["
+        return "H2QueryInfo ["
             + "type=" + type
             + ", runningQryId=" + runningQryId
             + ", beginTs=" + beginTs
