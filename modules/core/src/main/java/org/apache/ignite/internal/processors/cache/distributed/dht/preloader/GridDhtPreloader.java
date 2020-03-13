@@ -58,6 +58,7 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_L
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 
@@ -287,9 +288,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                         histSupplier = ctx.discovery().node(nodeId);
                 }
 
-                boolean partToBeCleared = exchFut.isClearingPartition(grp, p);
-
-                if (histSupplier != null && !partToBeCleared) {
+                if (histSupplier != null && !exchFut.isClearingPartition(grp, p)) {
                     assert grp.persistenceEnabled();
                     assert remoteOwners(p, topVer).contains(histSupplier) : remoteOwners(p, topVer);
 
@@ -304,13 +303,14 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     }
 
                     // TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11790
-                    msg.partitions().addHistorical(p, part.initialUpdateCounter(), countersMap.updateCounter(p), partitions);
+                    msg.partitions().
+                        addHistorical(p, part.initialUpdateCounter(), countersMap.updateCounter(p), partitions);
                 }
                 else {
                     if (histSupplier == null)
                         skippedPartitionsLackHistSupplier.add(p);
 
-                    if (partToBeCleared && histSupplier != null)
+                    if (histSupplier != null && exchFut.isClearingPartition(grp, p))
                         skippedPartitionsCleared.add(p);
 
                     // If for some reason (for example if supplier fails and new supplier is elected) partition is
