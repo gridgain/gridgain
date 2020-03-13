@@ -104,8 +104,8 @@ public class IgniteIndexReaderTest {
 
     /** Regexp to validate output of corrupted index. */
     private static final String CHECK_IDX_PTRN_WITH_ERRORS =
-        CHECK_IDX_PTRN_COMMON + "<FROM_ROOT> -- Errors:" +
-            LINE_DELIM + "<FROM_ROOT> Page id=[0-9]{1,30}, exceptions:" +
+        CHECK_IDX_PTRN_COMMON + "<FROM_ROOT> <ERROR> -- Errors:" +
+            LINE_DELIM + "<FROM_ROOT> <ERROR> Page id=[0-9]{1,30}, exceptions:" +
             LINE_DELIM + "class.*?Exception.*";
 
     /** Work directory, containing cache group directories. */

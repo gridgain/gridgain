@@ -73,6 +73,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageParti
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.FastCrc;
+import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
 import org.apache.ignite.internal.processors.cache.tree.AbstractDataLeafIO;
 import org.apache.ignite.internal.processors.cache.tree.PendingRowIO;
 import org.apache.ignite.internal.processors.cache.tree.RowLinkIO;
@@ -361,6 +362,17 @@ public class IgniteIndexReader implements AutoCloseable {
         return file;
     }
 
+    /** */
+    private void readPage(FilePageStore store, long pageId, ByteBuffer buf) throws IgniteCheckedException {
+        try {
+            store.read(pageId, buf, false);
+        }
+        catch (IgniteDataIntegrityViolationException e) {
+            // Replacing exception due to security reasons, as IgniteDataIntegrityViolationException prints page content.
+            throw new IgniteException("Failed to read page, id=" + pageId + ", file=" + store.getFileAbsolutePath());
+        }
+    }
+
     /**
      * Read index file.
      */
@@ -537,7 +549,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 try {
                     long pageId = PageIdUtils.pageId(partId, flag, i);
 
-                    store.read(pageId, buf, false);
+                    readPage(store, pageId, buf);
 
                     PageIO io = PageIO.getPageIO(addr);
 
@@ -591,7 +603,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 long partMetaId = metaPages.get(PagePartitionMetaIOV2.class);
 
                 doWithBuffer((buf, addr) -> {
-                    partStore.read(partMetaId, buf, false);
+                    readPage(partStore, partMetaId, buf);
 
                     PagePartitionMetaIOV2 partMetaIO = PageIO.getPageIO(addr);
 
@@ -782,7 +794,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     try {
                         buf.rewind();
 
-                        idxStore.read(nextMetaId, buf, false);
+                        readPage(idxStore, nextMetaId, buf);
 
                         PagesListMetaIO io = PageIO.getPageIO(addr);
 
@@ -842,7 +854,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 try {
                     nodeBuf.rewind();
 
-                    idxStore.read(nextNodeId, nodeBuf, false);
+                    readPage(idxStore, nextNodeId, nodeBuf);
 
                     PagesListNodeIO io = PageIO.getPageIO(nodeAddr);
 
@@ -853,7 +865,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                         res.add(pageId);
 
-                        idxStore.read(pageId, pageBuf, false);
+                        readPage(idxStore, pageId, pageBuf);
 
                         PageIO pageIO = PageIO.getPageIO(pageAddr);
 
@@ -1107,7 +1119,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             buf.rewind();
 
-            store.read(rootPageId, buf, false);
+            readPage(store, rootPageId, buf);
 
             PageIO pageIO = PageIO.getPageIO(addr);
 
@@ -1129,7 +1141,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     try {
                         buf.rewind();
 
-                        store.read(pageId, buf, false);
+                        readPage(store, pageId, buf);
 
                         pageIO = PageIO.getPageIO(addr);
 
@@ -1185,7 +1197,7 @@ public class IgniteIndexReader implements AutoCloseable {
             final ByteBuffer buf = allocateBuffer(pageSize);
 
             try {
-                nodeCtx.store.read(pageId, buf, false);
+                readPage(nodeCtx.store, pageId, buf);
 
                 final long addr = bufferAddress(buf);
 
@@ -1400,7 +1412,7 @@ public class IgniteIndexReader implements AutoCloseable {
         else
             // 1 <= readBytes < pageSize || readBytes == pagesIze && pageId != 0
             throw new IgniteException("Corrupted page in partitionId " +
-                ", readByte=" + buf.position() + ", pageSize=" + pageSize + ", content=" + U.toHexString(buf));
+                ", readByte=" + buf.position() + ", pageSize=" + pageSize);
     }
 
     /** */
@@ -1956,7 +1968,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         }
 
                         doWithBuffer((dataBuf, dataBufAddr) -> {
-                            store.read(linkedPageId, dataBuf, false);
+                            readPage(store, linkedPageId, dataBuf);
 
                             PageIO dataIo = PageIO.getPageIO(getType(dataBuf), getVersion(dataBuf));
 
