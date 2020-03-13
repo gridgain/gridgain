@@ -60,6 +60,7 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         cfg.setLocalHost("127.0.0.1");
         cfg.setNetworkTimeout(120_000);
         cfg.setConnectorConfiguration(null);
+        cfg.setPeerClassLoadingEnabled(false);
 
         cfg.setDataStreamerThreadPoolSize(1);
         cfg.setManagementThreadPoolSize(2);
@@ -72,8 +73,8 @@ public class IgniteCache150ClientsTest extends GridCommonAbstractTest {
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setLocalPortRange(200);
         ((TcpCommunicationSpi)cfg.getCommunicationSpi()).setSharedMemoryPort(-1);
 
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setJoinTimeout(60_000);
-        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setClientReconnectDisabled(false);
+        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setJoinTimeout(100_000);
+        ((TcpDiscoverySpi)cfg.getDiscoverySpi()).setClientReconnectDisabled(true);
 
         cfg.setClientFailureDetectionTimeout(120_000);
         cfg.setClientMode(!igniteInstanceName.equals(getTestIgniteInstanceName(0)));
