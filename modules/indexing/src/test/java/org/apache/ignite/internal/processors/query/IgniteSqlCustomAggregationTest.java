@@ -37,7 +37,6 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.h2.api.AggregateFunction;
 import org.h2.jdbc.JdbcSQLSyntaxErrorException;
 import org.junit.Test;
-import org.locationtech.jts.util.Assert;
 
 /**
  * Tests for registration custom aggregation functions.
