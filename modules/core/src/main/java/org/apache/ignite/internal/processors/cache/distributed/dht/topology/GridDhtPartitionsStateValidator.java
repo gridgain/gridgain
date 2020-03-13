@@ -16,7 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.topology;
 
-import java.util.*;
+import java.util.UUID;
+import java.util.Set;
+import java.util.Map;
+import java.util.HashSet;
+import java.util.HashMap;
+import java.util.AbstractMap;
+import java.util.NavigableMap;
+import java.util.TreeMap;
+import java.util.Collections;
 
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
