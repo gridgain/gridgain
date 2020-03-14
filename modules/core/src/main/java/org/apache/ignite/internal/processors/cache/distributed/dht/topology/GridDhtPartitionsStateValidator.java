@@ -25,7 +25,6 @@ import java.util.AbstractMap;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.Collections;
-
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
@@ -62,14 +61,16 @@ public class GridDhtPartitionsStateValidator {
 
     /**
      * Validates partition states - update counters and cache sizes for all nodes.
-     * If update counter value or cache size for the same partitions are different on some nodes
+     * If update counter value or cache size for the same partitions are
+     * different on some nodes
      * method throws exception with full information about inconsistent partitions.
      *
      * @param fut Current exchange future.
      * @param top Topology to validate.
      * @param messages Single messages received from all nodes.
      * @throws IgniteCheckedException If validation failed. Exception message contains
-     * full information about all partitions which update counters or cache sizes are not consistent.
+     * full information about all partitions which update counters
+     * or cache sizes are not consistent.
      */
     public void validatePartitionCountersAndSizes(
         GridDhtPartitionsExchangeFuture fut,
@@ -84,7 +85,10 @@ public class GridDhtPartitionsStateValidator {
                 ignoringNodes.add(evt.eventNode().id());
         }
 
-        // For sizes validation ignore also nodes which are not able to send cache sizes.
+        Map<Integer, Map<UUID, Long>> resSize = Collections.emptyMap();
+
+        // For sizes validation ignore also nodes which are not able
+        // to send cache sizes.
         for (UUID id : messages.keySet()) {
             ClusterNode node = cctx.discovery().node(id);
             if (node != null && node.version().compareTo(SIZES_VALIDATION_AVAILABLE_SINCE) < 0)
@@ -94,7 +98,6 @@ public class GridDhtPartitionsStateValidator {
         StringBuilder error = new StringBuilder();
 
         Map<Integer, Map<UUID, Long>> resUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
-        Map<Integer, Map<UUID, Long>> resSize = Collections.emptyMap();
 
         AffinityTopologyVersion topVer = fut.context().events().topologyVersion();
 
@@ -118,7 +121,8 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * Checks what partitions from given {@code singleMsg} message should be excluded from validation.
+     * Checks what partitions from given {@code singleMsg} message should be
+     * excluded from validation.
      *
      * @param top Topology to validate.
      * @param nodeId Node which sent single message.
@@ -167,7 +171,8 @@ public class GridDhtPartitionsStateValidator {
      * @param top Topology to validate.
      * @param messages Single messages received from all nodes.
      * @param ignoringNodes Nodes for what we ignore validation.
-     * @return Invalid partitions map with following structure: (partId, (nodeId, updateCounter)).
+     * @return Invalid partitions map with following structure:
+     * (partId, (nodeId, updateCounter)).
      * If map is empty validation is successful.
      */
     public Map<Integer, Map<UUID, Long>> validatePartitionsUpdateCounters(
@@ -227,7 +232,8 @@ public class GridDhtPartitionsStateValidator {
      * @param top Topology to validate.
      * @param messages Single messages received from all nodes.
      * @param ignoringNodes Nodes for what we ignore validation.
-     * @return Invalid partitions map with following structure: (partId, (nodeId, cacheSize)).
+     * @return Invalid partitions map with following structure:
+     * (partId, (nodeId, cacheSize)).
      * If map is empty validation is successful.
      */
     public Map<Integer, Map<UUID, Long>> validatePartitionsSizes(
@@ -282,8 +288,10 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * Processes given {@code counter} for partition {@code part} reported by {@code node}.
-     * Populates {@code invalidPartitions} map if existing counter and current {@code counter} are different.
+     * Processes given {@code counter} for partition {@code part}
+     * reported by {@code node}.
+     * Populates {@code invalidPartitions} map if existing counter
+     * and current {@code counter} are different.
      *
      * @param invalidPartitions Invalid partitions map.
      * @param countersAndNodes Current map of counters and nodes by partitions.
@@ -315,7 +323,8 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * Folds given map of invalid partition states to string representation in the following format:
+     * Folds given map of invalid partition states to string representation
+     * in the following format:
      * Part [id]: [consistentId=value*]
      *
      * Value can be both update counter or cache size.
@@ -342,10 +351,14 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
+     * Folds given map of invalid partition states to string representation
+     * in the following format:
+     * Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
      * @param topVer Topology version.
      * @param invalidPartitionsCounters Invalid partitions counters map.
      * @param invalidPartitionsSize Invalid partitions size map.
-     * @return value is String in the following format: Part [id]: [consistentId=value meta=[updCnt=value, size=value]]
+     * @return value is String in the following format: Part [id]:
+     * [consistentId=value meta=[updCnt=value, size=value]]
      */
     private String fold(AffinityTopologyVersion topVer, Map<Integer, Map<UUID, Long>> invalidPartitionsCounters,
         Map<Integer, Map<UUID, Long>> invalidPartitionsSize) {
