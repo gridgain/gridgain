@@ -286,7 +286,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
         UUID nodeId = null;
         Set<String> caches = null;
         boolean checkCrc = false;
-        boolean checkSizes = true;
+        boolean checkSizes = false;
 
         while (argIter.hasNextSubArg()) {
             String nextArg = argIter.nextArg("");
@@ -325,7 +325,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
                 continue;
             }
             else if (CHECK_SIZES == arg) {
-                checkSizes = false;
+                checkSizes = true;
 
                 continue;
             }

@@ -97,7 +97,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     /**
      * Test checks that cache size and index validation error will not be
      * displayed if cache is broken, because argument
-     * {@link ValidateIndexesCommandArg#CHECK_SIZES} be used.
+     * {@link ValidateIndexesCommandArg#CHECK_SIZES} not used.
      */
     @Test
     public void testNoCheckCacheSizeWhenBrokenCache() {
@@ -132,7 +132,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     /**
      * Test checks that cache size and index validation error will not be
      * displayed if index is broken, because argument
-     * {@link ValidateIndexesCommandArg#CHECK_SIZES} be used.
+     * {@link ValidateIndexesCommandArg#CHECK_SIZES} not used.
      *
      * @throws Exception If failed.
      */
@@ -147,7 +147,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
     /**
      * Test that checks that there will be no errors when executing command
-     * "validate_indexes" with/without "--no-check-sizes" on the cache without
+     * "validate_indexes" with/without "--check-sizes" on the cache without
      * {@link QueryEntity}.
      */
     @Test
@@ -169,7 +169,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
     /**
      * Test that checks that there will be no errors when executing command
-     * "validate_indexes" with/without "--no-check-sizes" on the empty cache
+     * "validate_indexes" with/without "--check-sizes" on the empty cache
      * with {@link QueryEntity}.
      */
     @Test
@@ -248,12 +248,12 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
      * no errors in result.
      *
      * @param cacheName Cache name.
-     * @param noCheckSizes Add argument "--no-check-sizes".
+     * @param checkSizes Add argument "--check-sizes".
      */
-    private void execVIWithNoErrCheck(String cacheName, boolean noCheckSizes) {
+    private void execVIWithNoErrCheck(String cacheName, boolean checkSizes) {
         List<String> cmdWithArgs = new ArrayList<>(asList(CACHE.text(), VALIDATE_INDEXES.text(), cacheName));
 
-        if (noCheckSizes)
+        if (checkSizes)
             cmdWithArgs.add(CHECK_SIZES.argName());
 
         injectTestSystemOut();
@@ -277,7 +277,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
         assertEquals(
             EXIT_CODE_OK,
-            execute(CACHE.text(), VALIDATE_INDEXES.text(), CHECK_SIZES.argName(), cacheName)
+            execute(CACHE.text(), VALIDATE_INDEXES.text(), cacheName)
         );
 
         String out = testOut.toString();
@@ -309,7 +309,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute(CACHE.text(), VALIDATE_INDEXES.text(), cacheName));
+        assertEquals(EXIT_CODE_OK, execute(CACHE.text(), VALIDATE_INDEXES.text(), cacheName, CHECK_SIZES.argName()));
 
         String out = testOut.toString();
         assertContains(log, out, "issues found (listed above)");
