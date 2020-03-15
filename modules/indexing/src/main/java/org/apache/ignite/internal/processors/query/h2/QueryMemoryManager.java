@@ -179,8 +179,8 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     public GridQueryMemoryMetricProvider createQueryMemoryTracker(long maxQryMemory) {
         long globalQuota0 = globalQuota;
 
-        if (maxQryMemory == 0 && globalQuota0 == 0 && qryQuota == 0)
-            return null;
+//        if (maxQryMemory == 0 && globalQuota0 == 0 && qryQuota == 0)
+//            return null;
 
         if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
             if (log.isInfoEnabled()) {
