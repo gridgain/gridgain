@@ -928,6 +928,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (qryInfo.runningQueryId() != null)
             runningQryInfo = runningQryMgr.runningQueryInfo(qryInfo.runningQueryId());
 
+        if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() != null
+            && !(runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker))
+            return;
+
         H2MemoryTracker tracker = null;
 
         if (runningQryInfo != null && runningQryInfo.memoryMetricProvider() instanceof H2MemoryTracker)
