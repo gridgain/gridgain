@@ -25,6 +25,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
@@ -42,7 +43,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.atomic.GridNe
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.processors.txdr.TransactionalDrProcessor;
 import org.apache.ignite.internal.util.GridIntList;
 import org.apache.ignite.internal.util.future.GridCompoundFuture;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
@@ -54,6 +54,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_UNLOADED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
@@ -68,6 +69,10 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 public class GridDhtPreloader extends GridCachePreloaderAdapter {
     /** Default preload resend timeout. */
     public static final long DFLT_PRELOAD_RESEND_TIMEOUT = 1500;
+
+    /** Disable rebalancing cancellation optimization. */
+    private final boolean disableRebalancingCancellationOptimization = IgniteSystemProperties.getBoolean(
+        IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION, false);
 
     /** */
     private GridDhtPartitionTopology top;
@@ -149,6 +154,13 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         return new NodeStoppingException("Operation has been cancelled (cache or node is stopping).");
     }
 
+    /**
+     * @return Rebalance cancellation optimization flag.
+     */
+    public boolean disableRebalancingCancellationOptimization() {
+        return disableRebalancingCancellationOptimization;
+    }
+
     /** {@inheritDoc} */
     @Override public void onInitialExchangeComplete(@Nullable Throwable err) {
         if (err == null)
@@ -169,35 +181,10 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         if (ctx.kernalContext().clientNode())
             return false; // No-op.
 
-        if (exchFut.resetLostPartitionFor(grp.cacheOrGroupName()))
-            return true;
-
-        if (exchFut.localJoinExchange())
-            return true; // Required, can have outdated updSeq partition counter if node reconnects.
-
-        RebalanceFuture rebalanceFuture = (RebalanceFuture)rebalanceFuture();
-
-        if (rebalanceFuture.isInitial())
-            return true;
-
-        AffinityTopologyVersion rebTopVer = rebalanceFuture.topologyVersion();
-
-        TransactionalDrProcessor txDrProc = ctx.kernalContext().txDr();
-
-        if (txDrProc != null && txDrProc.shouldScheduleRebalance(exchFut))
-            return true;
-
-        if (!grp.affinity().cachedVersions().contains(rebTopVer)) {
-            if (rebTopVer.compareTo(grp.localStartVersion()) > 0)
-                log.warning("Affinity history is exceed, rebalance should be try triggered [grp=" + grp.cacheOrGroupName() + "].");
-
-            return true; // Required, since no history info available.
-        }
-
         AffinityTopologyVersion lastAffChangeTopVer =
             ctx.exchange().lastAffinityChangedTopologyVersion(exchFut.topologyVersion());
 
-        return lastAffChangeTopVer.after(rebTopVer);
+        return lastAffChangeTopVer.equals(exchFut.topologyVersion());
     }
 
     /** {@inheritDoc} */
