@@ -39,7 +39,7 @@ import org.junit.Test;
  */
 public class BreakRebalanceChainTest extends GridCommonAbstractTest {
     /** Node name suffex. Used for {@link CustomNodeFilter}. */
-    public static final String FITERED_NODE_SUFFIX = "_fitered";
+    public static final String FILTERED_NODE_SUFFIX = "_filtered";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -71,7 +71,7 @@ public class BreakRebalanceChainTest extends GridCommonAbstractTest {
     private static class CustomNodeFilter implements IgnitePredicate<ClusterNode> {
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode node) {
-            return !node.consistentId().toString().contains(FITERED_NODE_SUFFIX);
+            return !node.consistentId().toString().contains(FILTERED_NODE_SUFFIX);
         }
     }
 
@@ -122,7 +122,7 @@ public class BreakRebalanceChainTest extends GridCommonAbstractTest {
 
         assertEquals("Several parallel rebalace detected.", blockedDemand(rebalancingCaches), 1);
 
-        IgniteEx filteredNode = startGrid(getTestIgniteInstanceName(3) + FITERED_NODE_SUFFIX);
+        IgniteEx filteredNode = startGrid(getTestIgniteInstanceName(3) + FILTERED_NODE_SUFFIX);
 
         IgniteInternalFuture<Boolean>[] futs = getAllRebalanceFutures(filteredNode);
 
