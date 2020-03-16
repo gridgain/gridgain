@@ -188,6 +188,7 @@ import org.apache.ignite.internal.processors.query.IgniteCachelessQueriesSelfTes
 import org.apache.ignite.internal.processors.query.IgniteQueryDedicatedPoolTest;
 import org.apache.ignite.internal.processors.query.IgniteQueryTableLockAndConnectionPoolLazyModeOffTest;
 import org.apache.ignite.internal.processors.query.IgniteQueryTableLockAndConnectionPoolLazyModeOnTest;
+import org.apache.ignite.internal.processors.query.IgniteSqlCustomAggregationTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaTest;
 import org.apache.ignite.internal.processors.query.IgniteSqlCustomSchemaWithPdsEnabled;
 import org.apache.ignite.internal.processors.query.IgniteSqlDefaultSchemaTest;
@@ -576,6 +577,9 @@ import org.junit.runners.Suite;
     // GROUP_CONCAT
     IgniteSqlGroupConcatCollocatedTest.class,
     IgniteSqlGroupConcatNotCollocatedTest.class,
+
+    // Custom aggregations functions
+    IgniteSqlCustomAggregationTest.class,
 
     // Binary
     BinarySerializationQuerySelfTest.class,
