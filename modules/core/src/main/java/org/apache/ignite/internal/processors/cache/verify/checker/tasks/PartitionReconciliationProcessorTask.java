@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,6 +43,7 @@ import org.apache.ignite.internal.processors.cache.checker.objects.Reconciliatio
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -94,6 +96,30 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         ignite.compute().broadcastAsync(new ReconciliationSessionId(sesId, arg.parallelism())).get();
+
+        if (arg.fastCheck()) {
+            assert ignite.context().discovery().discoCache().oldestAliveServerNode().id()
+                .equals(ignite.context().localNodeId()) :
+                "PartitionReconciliationProcessorTask must be executed on the coordinator node " +
+                    "[locNodeId=" + ignite.context().localNodeId() +
+                    ", crd=" + ignite.context().discovery().discoCache().oldestAliveServerNode().id() + ']';
+
+            Map<Integer, Set<Integer>> invalidParts = Collections.emptyMap();
+
+            GridDhtPartitionsExchangeFuture lastFut = ignite.context().cache().context().exchange().lastFinishedFuture();
+            if (lastFut == null) {
+                if (log.isInfoEnabled()) {
+                    log.info("PartitionReconciliationProcessorTask has nothing to check, " +
+                        "the initial exchnage has not completed yet.");
+                }
+            }
+            else
+                invalidParts = lastFut.invalidPartitions();
+
+            arg = new VisorPartitionReconciliationTaskArg.Builder(arg)
+                .partitionsToRepair(invalidParts)
+                .build();
+        }
 
         for (ClusterNode node : subgrid)
             jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
@@ -149,9 +175,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
      * Holder of execution {@link PartitionReconciliationProcessor}
      */
     private static class PartitionReconciliationJob extends ComputeJobAdapter {
-        /**
-         *
-         */
+        /** */
         private static final long serialVersionUID = 0L;
 
         /** Ignite instance. */
@@ -162,26 +186,27 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         @LoggerResource
         private IgniteLogger log;
 
-        /**
-         *
-         */
+        /** */
         private final VisorPartitionReconciliationTaskArg reconciliationTaskArg;
 
-        /**
-         *
-         */
+        /** */
         private final LocalDateTime startTime;
 
-        /**
-         *
-         */
+        /** */
         private long sesId;
 
         /**
+         * Create a new instance of the job.
          *
+         * @param arg Reconciliation parameters.
+         * @param startTime Start time of the whole task.
+         * @param sesId Session identifier.
          */
-        public PartitionReconciliationJob(VisorPartitionReconciliationTaskArg arg, LocalDateTime startTime,
-            long sesId) {
+        public PartitionReconciliationJob(
+            VisorPartitionReconciliationTaskArg arg,
+            LocalDateTime startTime,
+            long sesId
+        ) {
             this.reconciliationTaskArg = arg;
             this.startTime = startTime;
             this.sesId = sesId;
@@ -214,11 +239,12 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     sesId,
                     ignite,
                     caches,
+                    reconciliationTaskArg.partitionsToRepair(),
                     reconciliationTaskArg.repair(),
+                    reconciliationTaskArg.repairAlg(),
                     reconciliationTaskArg.parallelism(),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
-                    reconciliationTaskArg.repairAlg(),
                     reconciliationTaskArg.recheckDelay()
                 ).execute();
 
