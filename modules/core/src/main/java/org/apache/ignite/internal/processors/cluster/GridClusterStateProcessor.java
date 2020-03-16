@@ -1677,6 +1677,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             U.resolveClassLoader(ctx.config())
         );
 
+        baselineConfiguration().initDfltAutoAdjustVars(ctx);
+
         boolean autoAdjustBaseline = isInMemoryCluster
             && oldState.active()
             && !oldState.transition()

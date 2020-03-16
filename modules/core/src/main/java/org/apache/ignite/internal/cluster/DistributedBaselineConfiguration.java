@@ -73,6 +73,9 @@ public class DistributedBaselineConfiguration {
     private final DistributedChangeableProperty<Long> baselineAutoAdjustTimeout =
         detachedLongProperty("baselineAutoAdjustTimeout");
 
+    /** Persistence enabled flag. */
+    boolean persistenceEnabled;
+
     /**
      * @param isp Subscription processor.
      * @param ctx Kernal context.
@@ -94,7 +97,7 @@ public class DistributedBaselineConfiguration {
                     + IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE
                     + " so please keep all of them in same state");
 
-        boolean persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
+        persistenceEnabled = ctx.config() != null && CU.isPersistenceEnabled(ctx.config());
 
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
         dfltEnabled = false;
@@ -112,14 +115,21 @@ public class DistributedBaselineConfiguration {
                 @Override public void onReadyToWrite() {
                     if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) &&
                         allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT) && clientMode) {
-                        dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
-                        dfltEnabled = isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && !persistenceEnabled;
+                        initDfltAutoAdjustVars(ctx);
                         setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
                         setDefaultValue(baselineAutoAdjustTimeout, dfltTimeout, log);
                     }
                 }
             }
         );
+    }
+
+    public void initDfltAutoAdjustVars(GridKernalContext ctx) {
+        if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) &&
+            allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT)) {
+            dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
+            dfltEnabled = isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && !persistenceEnabled;
+        }
     }
 
     /** */
