@@ -2714,8 +2714,8 @@ public class IgnitionEx {
                                         continue;
 
                                     // Skip all non-ideal assignments.
-                                    if (!partIdealAssignment.contains(entry.getKey()))
-                                        continue;
+//                                    if (!partIdealAssignment.contains(entry.getKey()))
+//                                        continue;
 
                                     if (entry.getValue().get(part) == GridDhtPartitionState.OWNING)
                                         cnt++;
