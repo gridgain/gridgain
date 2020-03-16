@@ -441,6 +441,11 @@ public class IgniteIndexReaderTest {
             (travErrCnt >= 0 ? travErrCnt : ""));
         assertContains(output, "Total errors during lists scan: " + pageListsErrCnt);
 
+        if (travErrCnt == 0)
+            assertContains(output, "No index size consistency errors found.");
+        else if (travErrCnt > 0)
+            assertContains(output, "Index size inconsistency");
+
         if (seqErrCnt >= 0)
             assertContains(output, "Total errors occurred during sequential scan: " + seqErrCnt);
         else
