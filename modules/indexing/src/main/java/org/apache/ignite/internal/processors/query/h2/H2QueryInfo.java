@@ -150,7 +150,9 @@ public class H2QueryInfo {
         LT.warn(log, msgSb.toString());
     }
 
-    /** Returns description of this query info. */
+    /**
+     * Returns description of this query info.
+     */
     public String description() {
         return "H2QueryInfo ["
             + "type=" + type

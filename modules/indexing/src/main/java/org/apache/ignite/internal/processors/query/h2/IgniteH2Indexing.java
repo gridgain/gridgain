@@ -907,8 +907,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         finally {
             CacheDataTree.setDataPageScanEnabled(false);
 
-            if (qryInfo != null)
+            if (qryInfo != null) {
                 longRunningQryMgr.unregisterQuery(qryInfo);
+
+                H2Utils.session(conn).queryDescription(null);
+            }
         }
     }
 

@@ -258,7 +258,7 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
      * @return Query description.
      */
     public String queryDescription() {
-        return qryDescSupplier.get();
+        return qryDescSupplier != null ? qryDescSupplier.get() : null;
     }
 
     /**
@@ -978,9 +978,8 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
                 database.checkPowerOff();
 
                 H2MemoryTracker tracker = memoryTracker;
-                if (tracker != null) {
+                if (tracker != null)
                     tracker.close();
-                }
 
                 // release any open table locks
                 rollback();

@@ -397,21 +397,20 @@ public class H2ManagedLocalResult implements LocalResult {
     /** {@inheritDoc} */
     @Override public void done() {
         initMemTracker();
-        if (external != null) {
+        if (external != null)
             addRowsToDisk(false);
-        }
+
         else {
-            if (isAnyDistinct()) {
+            if (isAnyDistinct())
                 rows = new ArrayList<>(distinctRows.values());
-            }
+
             if (sort != null && limit != 0 && !limitsWereApplied) {
                 boolean withLimit = limit > 0 && withTiesSortOrder == null;
-                if (offset > 0 || withLimit) {
+
+                if (offset > 0 || withLimit)
                     sort.sort(rows, offset, withLimit ? limit : rows.size());
-                }
-                else {
+                else
                     sort.sort(rows);
-                }
             }
         }
 
@@ -474,33 +473,44 @@ public class H2ManagedLocalResult implements LocalResult {
         }
     }
 
+    /**
+     * @param offset Offset.
+     * @param limit Limit.
+     */
     private void trimExternal(int offset, int limit) {
         ResultExternal temp = external;
         external = null;
+
         temp.reset();
         initMemTracker();
-        while (--offset >= 0) {
+
+        while (--offset >= 0)
             temp.next();
-        }
+
         Value[] row = null;
+
         while (--limit >= 0) {
             row = temp.next();
             rows.add(row);
+
             if (!hasAvailableMemory(null,null, row))
                 addRowsToDisk(true);
         }
         if (withTiesSortOrder != null && row != null) {
             Value[] expected = row;
+
             while ((row = temp.next()) != null && withTiesSortOrder.compare(expected, row) == 0) {
                 rows.add(row);
                 rowCount++;
+
                 if (!hasAvailableMemory(null,null, row))
                     addRowsToDisk(true);
             }
         }
-        if (external != null) {
+
+        if (external != null)
             addRowsToDisk(true);
-        }
+
         temp.close();
     }
 

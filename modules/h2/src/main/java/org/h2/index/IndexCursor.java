@@ -135,9 +135,8 @@ public class IndexCursor implements Cursor, AutoCloseable {
                     inColumn = null;
                     inList = null;
 
-                    if (inResult != null) {
+                    if (inResult != null)
                         inResult.close();
-                    }
 
                     inResult = null;
                 }

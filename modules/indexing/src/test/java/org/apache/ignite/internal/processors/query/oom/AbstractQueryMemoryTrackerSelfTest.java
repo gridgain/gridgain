@@ -103,9 +103,10 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
         maxMem = MB;
         useJdbcV2GlobalQuotaCfg = false;
 
-        for (H2ManagedLocalResult res : localResults)
+        for (H2ManagedLocalResult res : localResults) {
             if (res.memoryTracker() != null)
                 res.memoryTracker().close();
+        }
 
         localResults.clear();
 
@@ -117,9 +118,10 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        for (H2ManagedLocalResult res : localResults)
+        for (H2ManagedLocalResult res : localResults) {
             if (res.memoryTracker() != null)
                 res.memoryTracker().close();
+        }
 
         checkMemoryManagerState(grid(0));
 

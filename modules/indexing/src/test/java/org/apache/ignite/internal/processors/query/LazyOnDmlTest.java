@@ -170,9 +170,10 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
             "UNION ALL " +
             "SELECT 31, 24, 'TWO-FOUR'");
 
-        for (H2ManagedLocalResult res : localResults)
+        for (H2ManagedLocalResult res : localResults) {
             if (res.memoryTracker() != null)
                 res.memoryTracker().close();
+        }
 
         localResults.clear();
     }
@@ -211,9 +212,10 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
 
         }
         finally {
-            for (H2ManagedLocalResult res : localResults)
+            for (H2ManagedLocalResult res : localResults) {
                 if (res.memoryTracker() != null)
                     res.memoryTracker().close();
+            }
 
             localResults.clear();
         }

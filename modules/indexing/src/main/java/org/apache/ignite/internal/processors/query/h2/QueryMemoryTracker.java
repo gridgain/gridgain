@@ -36,10 +36,10 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
         = AtomicIntegerFieldUpdater.newUpdater(QueryMemoryTracker.class, "state");
 
     /** Tracker is not closed and not in the middle of the closing process. */
-    private static final int NORMALLY_OPERATING_STATE = 0;
+    private static final int STATE_INITIAL = 0;
 
     /** Tracker is closed or in the middle of the closing process. */
-    private static final int CLOSING_OR_CLOSED_STATE = 1;
+    private static final int STATE_CLOSED = 1;
 
     /** Parent tracker. */
     @GridToStringExclude
@@ -81,7 +81,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     /** Close flag to prevent tracker reuse. */
     private volatile boolean closed;
 
-    /** State of the tracker. Can be equal {@link #NORMALLY_OPERATING_STATE} or {@link #CLOSING_OR_CLOSED_STATE}*/
+    /** State of the tracker. Can be equal {@link #STATE_INITIAL} or {@link #STATE_CLOSED}*/
     private volatile int state;
 
     /** Children. */
@@ -278,7 +278,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
     @Override public void close() {
         // It is not expected to be called concurrently with reserve\release.
         // But query can be cancelled concurrently on query finish.
-        if (!STATE_UPDATER.compareAndSet(this, NORMALLY_OPERATING_STATE, CLOSING_OR_CLOSED_STATE))
+        if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
             return;
 
         synchronized (this) {
@@ -317,7 +317,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
     /** {@inheritDoc} */
     @Override public synchronized void onChildClosed(H2MemoryTracker child) {
-        if (state != CLOSING_OR_CLOSED_STATE)
+        if (state != STATE_CLOSED)
             children.remove(child);
     }
 
@@ -433,12 +433,12 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         /** {@inheritDoc} */
         @Override public boolean closed() {
-            return state == CLOSING_OR_CLOSED_STATE;
+            return state == STATE_CLOSED;
         }
 
         /** {@inheritDoc} */
         @Override public void close() {
-            if (!STATE_UPDATER.compareAndSet(this, NORMALLY_OPERATING_STATE, CLOSING_OR_CLOSED_STATE))
+            if (!STATE_UPDATER.compareAndSet(this, STATE_INITIAL, STATE_CLOSED))
                 return;
 
             parent.release(reserved);
@@ -452,7 +452,7 @@ public class QueryMemoryTracker implements H2MemoryTracker, GridQueryMemoryMetri
 
         /** */
         private void checkClosed() {
-            if (state == CLOSING_OR_CLOSED_STATE)
+            if (state == STATE_CLOSED)
                 throw new TrackerWasClosedException("Memory tracker has been closed concurrently.");
         }
     }
