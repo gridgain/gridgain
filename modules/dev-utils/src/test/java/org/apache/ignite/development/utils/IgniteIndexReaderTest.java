@@ -21,8 +21,10 @@ import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,6 +32,8 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.Ignition;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -39,8 +43,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
-import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
+import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.processors.cache.persistence.file.FileVersionCheckingFactory;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -50,8 +55,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import static org.apache.ignite.development.utils.IgniteIndexReader.FROM_ROOT_TO_LEAFS_TRAVERSE_NAME;
+import static org.apache.ignite.development.utils.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
@@ -84,6 +93,12 @@ public class IgniteIndexReaderTest {
     /** Cache group without indexes. */
     private static final String EMPTY_CACHE_GROUP_NAME = "emptyGroup";
 
+    /** Cache with static query configuration. */
+    private static final String QUERY_CACHE_NAME = "query";
+
+    /** Cache group with static query configuration. */
+    private static final String QUERY_CACHE_GROUP_NAME = "queryGroup";
+
     /** Count of tables that will be created for test. */
     private static final int CREATED_TABLES_CNT = 3;
 
@@ -92,20 +107,20 @@ public class IgniteIndexReaderTest {
 
     /** Common part of regexp for single index output validation. */
     private static final String CHECK_IDX_PTRN_COMMON =
-        "<FROM_ROOT> Index tree: I \\[idxName=[\\-_0-9]{1,20}_%s##H2Tree.0, pageId=[0-9a-f]{16}\\]" +
-            LINE_DELIM + "<FROM_ROOT> -- Page stat:" +
-            LINE_DELIM + "<FROM_ROOT> ([0-9a-zA-Z]{1,50}: [0-9]{1,5}" +
-            LINE_DELIM + "<FROM_ROOT> ){%s,1000}-- Count of items found in leaf pages: %s" +
+        "<PREFIX>Index tree: I \\[idxName=[\\-_0-9]{1,20}_%s##H2Tree.0, pageId=[0-9a-f]{16}\\]" +
+            LINE_DELIM + "<PREFIX>-- Page stat:" +
+            LINE_DELIM + "<PREFIX>([0-9a-zA-Z]{1,50}: [0-9]{1,5}" +
+            LINE_DELIM + "<PREFIX>){%s,1000}-- Count of items found in leaf pages: %s" +
             LINE_DELIM;
 
     /** Regexp to validate output of correct index. */
     private static final String CHECK_IDX_PTRN_CORRECT =
-        CHECK_IDX_PTRN_COMMON + "<FROM_ROOT> No errors occurred while traversing.";
+        CHECK_IDX_PTRN_COMMON + "<PREFIX>No errors occurred while traversing.";
 
     /** Regexp to validate output of corrupted index. */
     private static final String CHECK_IDX_PTRN_WITH_ERRORS =
-        CHECK_IDX_PTRN_COMMON + "<FROM_ROOT> <ERROR> -- Errors:" +
-            LINE_DELIM + "<FROM_ROOT> <ERROR> Page id=[0-9]{1,30}, exceptions:" +
+        CHECK_IDX_PTRN_COMMON + "<PREFIX><ERROR> Errors:" +
+            LINE_DELIM + "<PREFIX><ERROR> Page id=[0-9]{1,30}, exceptions:" +
             LINE_DELIM + "class.*?Exception.*";
 
     /** Work directory, containing cache group directories. */
@@ -159,7 +174,23 @@ public class IgniteIndexReaderTest {
                     .setAffinity(new RendezvousAffinityFunction(false, PART_CNT))
                     .setSqlSchema("PUBLIC"),
                 new CacheConfiguration(EMPTY_CACHE_NAME)
-                    .setGroupName(EMPTY_CACHE_GROUP_NAME)
+                    .setGroupName(EMPTY_CACHE_GROUP_NAME),
+                new CacheConfiguration(QUERY_CACHE_NAME)
+                    .setGroupName(QUERY_CACHE_GROUP_NAME)
+                    .setQueryEntities(asList(
+                        new QueryEntity(Integer.class, TestClass1.class)
+                            .addQueryField("id", Integer.class.getName(), null)
+                            .addQueryField("f", Integer.class.getName(), null)
+                            .addQueryField("s", String.class.getName(), null)
+                            .setIndexes(singleton(new QueryIndex("f")))
+                            .setTableName("QT1"),
+                        new QueryEntity(Integer.class, TestClass2.class)
+                            .addQueryField("id", Integer.class.getName(), null)
+                            .addQueryField("f", Integer.class.getName(), null)
+                            .addQueryField("s", String.class.getName(), null)
+                            .setIndexes(singleton(new QueryIndex("s")))
+                            .setTableName("QT2")
+                    ))
             );
 
         return cfg;
@@ -175,6 +206,14 @@ public class IgniteIndexReaderTest {
         ignite.cluster().active(true);
 
         IgniteCache<Integer, Integer> cache = ignite.getOrCreateCache(CACHE_NAME);
+
+        IgniteCache<Integer, Object> qryCache = ignite.getOrCreateCache(QUERY_CACHE_NAME);
+
+        for (int i = 0; i < 100; i++)
+            qryCache.put(i, new TestClass1(i, String.valueOf(i)));
+
+        for (int i = 0; i < 70; i++)
+            qryCache.put(i, new TestClass2(i, String.valueOf(i)));
 
         for (int i = 0; i < CREATED_TABLES_CNT; i++)
             createAndFillTable(cache, TableInfo.generate(i));
@@ -204,14 +243,24 @@ public class IgniteIndexReaderTest {
 
         File file = new File(cacheWorkDir, fileName);
 
-        Files.copy(file.toPath(), new File(cacheWorkDir, fileName + ".backup").toPath());
+        File backup = new File(cacheWorkDir, fileName + ".backup");
+
+        if (!backup.exists())
+            Files.copy(file.toPath(), backup.toPath());
 
         try (RandomAccessFile f = new RandomAccessFile(file, "rw")) {
             byte[] trash = new byte[PAGE_SIZE];
 
             ThreadLocalRandom.current().nextBytes(trash);
 
-            f.seek(pageNum * PAGE_SIZE + FilePageStore.HEADER_SIZE);
+            int hdrSize = new FileVersionCheckingFactory(
+                    new AsyncFileIOFactory(),
+                    new AsyncFileIOFactory(),
+                    new DataStorageConfiguration().setPageSize(PAGE_SIZE)
+                )
+                .headerSize(PAGE_STORE_VER);
+
+            f.seek(pageNum * PAGE_SIZE + hdrSize);
 
             f.write(trash);
         }
@@ -384,10 +433,18 @@ public class IgniteIndexReaderTest {
         int pageListsErrCnt,
         int seqErrCnt
     ) {
-        assertContains(output, "Total trees: " + treesCnt);
-        assertContains(output, "Total errors during trees traversal: " + (travErrCnt >= 0 ? travErrCnt : ""));
+        assertContains(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + "Total trees: " + treesCnt);
+        assertContains(output, HORIZONTAL_SCAN_NAME + "Total trees: " + treesCnt);
+        assertContains(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + "Total errors during trees traversal: " +
+            (travErrCnt >= 0 ? travErrCnt : ""));
+        assertContains(output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " +
+            (travErrCnt >= 0 ? travErrCnt : ""));
         assertContains(output, "Total errors during lists scan: " + pageListsErrCnt);
-        assertContains(output, "Total errors occurred during sequential scan: " + seqErrCnt);
+
+        if (seqErrCnt >= 0)
+            assertContains(output, "Total errors occurred during sequential scan: " + seqErrCnt);
+        else
+            assertContains(output, "Orphan pages were not reported due to --indexes filter.");
     }
 
     /**
@@ -403,23 +460,27 @@ public class IgniteIndexReaderTest {
         int entriesCnt = info.rec - info.del;
 
         idxs.stream().map(IgniteBiTuple::get1)
-            .forEach(idx -> checkIdx(output, idx.toUpperCase(), entriesCnt, corruptedIdx));
+            .forEach(idx -> {
+                checkIdx(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME, idx.toUpperCase(), entriesCnt, corruptedIdx);
+                checkIdx(output, HORIZONTAL_SCAN_NAME, idx.toUpperCase(), entriesCnt, corruptedIdx);
+            });
     }
 
     /**
      * Checks output info for single index.
      * @param output Output string.
+     * @param traversePrefix Traverse prefix.
      * @param idx Index name.
      * @param entriesCnt Count of entries that should be present in index.
      * @param canBeCorrupted Whether index can be corrupted.
      */
-    private void checkIdx(String output, String idx, int entriesCnt, boolean canBeCorrupted) {
-        Pattern ptrnCorrect = Pattern.compile(checkIdxRegex(false, idx, 1, String.valueOf(entriesCnt)));
+    private void checkIdx(String output, String traversePrefix, String idx, int entriesCnt, boolean canBeCorrupted) {
+        Pattern ptrnCorrect = Pattern.compile(checkIdxRegex(traversePrefix, false, idx, 1, String.valueOf(entriesCnt)));
 
         Matcher mCorrect = ptrnCorrect.matcher(output);
 
         if (canBeCorrupted) {
-            Pattern ptrnCorrupted = Pattern.compile(checkIdxRegex(true, idx, 0, "[0-9]{1,4}"));
+            Pattern ptrnCorrupted = Pattern.compile(checkIdxRegex(traversePrefix, true, idx, 0, "[0-9]{1,4}"));
 
             Matcher mCorrupted = ptrnCorrupted.matcher(output);
 
@@ -431,34 +492,52 @@ public class IgniteIndexReaderTest {
 
     /**
      * Returns regexp string for index check.
+     * @param traversePrefix Traverse prefix.
      * @param withErrors Whether errors should be present.
      * @param idxName Index name.
      * @param minimumPageStatSize Minimum size of page stats for index.
      * @param itemsCnt Count of data entries.
      * @return Regexp string.
      */
-    private String checkIdxRegex(boolean withErrors, String idxName, int minimumPageStatSize, String itemsCnt) {
+    private String checkIdxRegex(
+        String traversePrefix,
+        boolean withErrors,
+        String idxName,
+        int minimumPageStatSize,
+        String itemsCnt
+    ) {
         return String.format(
-            withErrors ? CHECK_IDX_PTRN_WITH_ERRORS : CHECK_IDX_PTRN_CORRECT,
-            idxName,
-            minimumPageStatSize,
-            itemsCnt
-        );
+                withErrors ? CHECK_IDX_PTRN_WITH_ERRORS : CHECK_IDX_PTRN_CORRECT,
+                idxName,
+                minimumPageStatSize,
+                itemsCnt
+            )
+            .replace("<PREFIX>", traversePrefix);
     }
 
     /**
      * Runs index reader on given cache group.
      * @param workDir Work directory which contains cache group directories.
      * @param cacheGrp Cache group name.
+     * @param idxs Indexes to check.
+     * @param checkParts Whether to check cache data tree in partitions.
      * @return Index reader output.
      * @throws IgniteCheckedException If failed.
      */
-    private String runIndexReader(File workDir, String cacheGrp) throws IgniteCheckedException {
+    private String runIndexReader(File workDir, String cacheGrp, String[] idxs, boolean checkParts) throws IgniteCheckedException {
         File dir = new File(workDir, "cacheGroup-" + cacheGrp);
 
         OutputStream destStream = new StringBuilderOutputStream();
 
-        try (IgniteIndexReader reader = new IgniteIndexReader(dir.getAbsolutePath(), PAGE_SIZE, PART_CNT, PAGE_STORE_VER, null, false, destStream)) {
+        try (IgniteIndexReader reader = new IgniteIndexReader(
+            dir.getAbsolutePath(),
+            PAGE_SIZE,
+            PART_CNT,
+            PAGE_STORE_VER,
+            idxs,
+            checkParts,
+            destStream
+        )) {
             reader.readIdx();
         }
 
@@ -468,7 +547,7 @@ public class IgniteIndexReaderTest {
     /** */
     @Test
     public void testCorrectIdx() throws IgniteCheckedException {
-        String output = runIndexReader(workDir, CACHE_GROUP_NAME);
+        String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
 
         checkOutput(output, 19, 0, 0, 0);
 
@@ -478,9 +557,51 @@ public class IgniteIndexReaderTest {
 
     /** */
     @Test
+    public void testCorrectIdxWithCheckParts() throws IgniteCheckedException {
+        String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true);
+
+        checkOutput(output, 19, 0, 0, 0);
+
+        for (int i = 0; i < CREATED_TABLES_CNT; i++)
+            checkIdxs(output, TableInfo.generate(i), false);
+
+        assertContains(output, "Partitions check detected no errors.");
+        assertContains(output, "Partition check finished, total errors: 0, total problem partitions: 0");
+    }
+
+    /** */
+    @Test
+    public void testCorrectIdxWithFilter() throws IgniteCheckedException {
+        String[] idxsToCheck = "2654_-1177891018_T2_F1_IDX##H2Tree%0,2654_-1177891018_T2_F2_IDX##H2Tree%0".split(",");
+
+        String output = runIndexReader(workDir, CACHE_GROUP_NAME, idxsToCheck, false);
+
+        checkOutput(output, 3, 0, 0, -1);
+
+        Set<String> idxSet = new HashSet<>(asList(idxsToCheck));
+
+        for (int i = 0; i < CREATED_TABLES_CNT; i++) {
+            TableInfo info = TableInfo.generate(i);
+
+            List<IgnitePair<String>> fields = fields(info.fieldsCnt);
+            List<IgnitePair<String>> idxs = idxs(info.tblName, fields);
+
+            int entriesCnt = info.rec - info.del;
+
+            idxs.stream().map(IgniteBiTuple::get1)
+                .filter(idxSet::contains)
+                .forEach(idx -> {
+                    checkIdx(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME, idx.toUpperCase(), entriesCnt, false);
+                    checkIdx(output, HORIZONTAL_SCAN_NAME, idx.toUpperCase(), entriesCnt, false);
+                });
+        }
+    }
+
+    /** */
+    @Test
     public void testEmpty() throws IgniteCheckedException {
         // Check output for empty cache group.
-        String output = runIndexReader(workDir, EMPTY_CACHE_GROUP_NAME);
+        String output = runIndexReader(workDir, EMPTY_CACHE_GROUP_NAME, null, false);
 
         checkOutput(output, 1, 0, 0, 0);
 
@@ -492,7 +613,7 @@ public class IgniteIndexReaderTest {
         RuntimeException re = null;
 
         try {
-            runIndexReader(workDir, "noCache");
+            runIndexReader(workDir, "noCache", null, false);
         }
         catch (RuntimeException e) {
             re = e;
@@ -504,10 +625,10 @@ public class IgniteIndexReaderTest {
     /** */
     @Test
     public void testCorruptedIdx() throws IgniteCheckedException, IOException {
-        corruptFile(INDEX_PARTITION, 10);
+        corruptFile(INDEX_PARTITION, 5);
 
         try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME);
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
 
             // 1 corrupted page detected while traversing.
             int travErrCnt = 1;
@@ -527,11 +648,34 @@ public class IgniteIndexReaderTest {
 
     /** */
     @Test
-    public void testCorruptedPart() throws IgniteCheckedException, IOException {
-        corruptFile(0, 8);
+    public void testCorruptedIdxWithCheckParts() throws IgniteCheckedException, IOException {
+        int startCorrupt = 10;
+        int endCorrupt = 30;
+
+        for (int i = startCorrupt; i < endCorrupt; i++)
+            corruptFile(INDEX_PARTITION, i);
 
         try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME);
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, true);
+
+            // Pattern with errors count > 9
+            Pattern ptrn =
+                Pattern.compile("Partition check finished, total errors: [0-9]{2,5}, total problem partitions: [0-9]{2,5}");
+
+            assertTrue(output, ptrn.matcher(output).find());
+        }
+        finally {
+            restoreFile(INDEX_PARTITION);
+        }
+    }
+
+    /** */
+    @Test
+    public void testCorruptedPart() throws IgniteCheckedException, IOException {
+        corruptFile(0, 7);
+
+        try {
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
 
             checkOutput(output, 19, -1, 0, 0);
 
@@ -546,11 +690,11 @@ public class IgniteIndexReaderTest {
     /** */
     @Test
     public void testCorruptedIdxAndPart() throws IgniteCheckedException, IOException {
-        corruptFile(INDEX_PARTITION, 10);
-        corruptFile(0, 8);
+        corruptFile(INDEX_PARTITION, 7);
+        corruptFile(0, 5);
 
         try {
-            String output = runIndexReader(workDir, CACHE_GROUP_NAME);
+            String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
 
             checkOutput(output, 19, -1, 0, 2);
 
@@ -561,6 +705,14 @@ public class IgniteIndexReaderTest {
             restoreFile(INDEX_PARTITION);
             restoreFile(0);
         }
+    }
+
+    /** */
+    @Test
+    public void testQryCacheGroup() throws IgniteCheckedException {
+        String output = runIndexReader(workDir, QUERY_CACHE_GROUP_NAME, null, false);
+
+        checkOutput(output, 5, 0, 0, 0);
     }
 
     /**
@@ -594,6 +746,33 @@ public class IgniteIndexReaderTest {
          */
         public static TableInfo generate(int i) {
             return new TableInfo("T" + i, 3 + (i % 3), 1700 - (i % 3) * 500, (i % 3) * 250);
+        }
+    }
+
+    /**
+     *
+     */
+    private static class TestClass1 {
+        /** */
+        private final Integer f;
+
+        /** */
+        private final String s;
+
+        /** */
+        public TestClass1(Integer f, String s) {
+            this.f = f;
+            this.s = s;
+        }
+    }
+
+    /**
+     *
+     */
+    private static class TestClass2 extends TestClass1 {
+        /** */
+        public TestClass2(Integer f, String s) {
+            super(f, s);
         }
     }
 }

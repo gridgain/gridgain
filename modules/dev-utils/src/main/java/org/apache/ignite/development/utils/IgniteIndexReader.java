@@ -91,7 +91,7 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.collection.BitSetIntSet;
 import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.lang.GridClosure3;
-import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.NotNull;
 
@@ -139,10 +139,10 @@ public class IgniteIndexReader implements AutoCloseable {
     private static final String META_TREE_NAME = "MetaTree";
 
     /** */
-    private static final String FROM_ROOT_TO_LEAFS_TRAVERSE_NAME = "<FROM_ROOT> ";
+    public static final String FROM_ROOT_TO_LEAFS_TRAVERSE_NAME = "<FROM_ROOT> ";
 
     /** */
-    private static final String HORIZONTAL_SCAN_NAME = "<HORIZONTAL> ";
+    public static final String HORIZONTAL_SCAN_NAME = "<HORIZONTAL> ";
 
     /** */
     private static final String PAGE_LISTS_PREFIX = "<PAGE_LIST> ";
@@ -151,10 +151,12 @@ public class IgniteIndexReader implements AutoCloseable {
     private static final String ERROR_PREFIX = "<ERROR> ";
 
     /** */
-    private static final Pattern IDX_NAME_SEACH_PATTERN = Pattern.compile("idxName=(?<name>.*?)##");
+    private static final Pattern CACHE_TYPE_ID_SEACH_PATTERN =
+        Pattern.compile("(?<id>[-0-9]{1,15})_(?<typeId>[-0-9]{1,15})_.*");
 
     /** */
-    private static final Pattern CACHE_ID_SEACH_PATTERN = Pattern.compile("(?<id>[-0-9]{1,15})_[-0-9]{1,15}_.*");
+    private static final Pattern CACHE_ID_SEACH_PATTERN =
+        Pattern.compile("(?<id>[-0-9]{1,15})_.*");
 
     /** */
     private static final int CHECK_PARTS_MAX_ERRORS_PER_PARTITION = 10;
@@ -214,6 +216,9 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private PageIOProcessor leafPageIOProcessor = new LeafPageIOProcessor();
+
+    /** */
+    private Map<String, IgnitePair<Integer>> cacheTypeIds = new HashMap<>();
 
     /** Mapping IO classes to their processors. */
     private final Map<Class, PageIOProcessor> ioProcessorsMap = new HashMap<Class, PageIOProcessor>() {{
@@ -397,12 +402,12 @@ public class IgniteIndexReader implements AutoCloseable {
 
         AtomicReference<PageListsInfo> pageListsInfo = new AtomicReference<>();
 
-        List<Throwable> errors = new LinkedList<>();
+        List<Throwable> errors;
 
         ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Reading pages sequentially", pagesNum);
 
         try {
-            scanFileStore(INDEX_PARTITION, FLAG_IDX, idxStore, (pageId, addr, io) -> {
+            errors = scanFileStore(INDEX_PARTITION, FLAG_IDX, idxStore, (pageId, addr, io) -> {
                 progressPrinter.printProgress();
 
                 pageClasses.computeIfAbsent(io.getClass(), k -> new AtomicLong(0)).incrementAndGet();
@@ -433,17 +438,19 @@ public class IgniteIndexReader implements AutoCloseable {
                 else if (io instanceof PagesListMetaIO)
                     pageListsInfo.set(getPageListsMetaInfo(pageId));
                 else {
-                    ofNullable(pageIoIds.get(io.getClass())).ifPresent((pageIds) -> {
-                        if (!pageIds.contains(pageId)) {
-                            boolean foundInList =
-                                (pageListsInfo.get() != null && pageListsInfo.get().allPages.contains(pageId));
+                    if (indexes == null) {
+                        ofNullable(pageIoIds.get(io.getClass())).ifPresent((pageIds) -> {
+                            if (!pageIds.contains(pageId)) {
+                                boolean foundInList =
+                                    (pageListsInfo.get() != null && pageListsInfo.get().allPages.contains(pageId));
 
-                            throw new IgniteException(
-                                "Possibly orphan " + io.getClass().getSimpleName() + " page, pageId=" + pageId +
-                                    (foundInList ? ", it has been found in page list." : "")
-                            );
-                        }
-                    });
+                                throw new IgniteException(
+                                    "Possibly orphan " + io.getClass().getSimpleName() + " page, pageId=" + pageId +
+                                        (foundInList ? ", it has been found in page list." : "")
+                                );
+                            }
+                        });
+                    }
                 }
 
                 return true;
@@ -480,6 +487,10 @@ public class IgniteIndexReader implements AutoCloseable {
         print("---");
         print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(AtomicLong::get).sum());
         print("Total errors occurred during sequential scan: " + errors.size());
+
+        if (indexes != null)
+            print("Orphan pages were not reported due to --indexes filter.");
+
         print("Note that some pages can be occupied by meta info, tracking info, etc., so total page count can differ " +
             "from count of pages found in index trees and page lists.");
 
@@ -497,7 +508,7 @@ public class IgniteIndexReader implements AutoCloseable {
             );
 
             print("\nPartition check finished, total errors: " +
-                checkPartsErrors.values().stream().mapToInt(List::size).sum() + ", total broken partitions: " +
+                checkPartsErrors.values().stream().mapToInt(List::size).sum() + ", total problem partitions: " +
                 checkPartsErrors.size()
             );
         }
@@ -938,8 +949,8 @@ public class IgniteIndexReader implements AutoCloseable {
 
         AtomicInteger totalErr = new AtomicInteger(0);
 
-        // Map cacheId -> (map idxName -> size))
-        Map<Integer, Map<String, Long>> cacheIdxSizes = new HashMap<>();
+        // Map (cacheId, typeId) -> (map idxName -> size))
+        Map<IgnitePair<Integer>, Map<String, Long>> cacheIdxSizes = new HashMap<>();
 
         treeInfos.forEach((idxName, validationInfo) -> {
             print(prefix + "-----");
@@ -963,7 +974,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 validationInfo.errors
             );
 
-            cacheIdxSizes.computeIfAbsent(getCacheId(idxName), k -> new HashMap<>())
+            cacheIdxSizes.computeIfAbsent(getCacheAndTypeId(idxName), k -> new HashMap<>())
                 .put(idxName, validationInfo.itemStorage.size());
         });
 
@@ -975,13 +986,13 @@ public class IgniteIndexReader implements AutoCloseable {
 
         AtomicBoolean sizeConsistencyErrorsFound = new AtomicBoolean(false);
 
-        cacheIdxSizes.forEach((cacheId, idxSizes) -> {
+        cacheIdxSizes.forEach((cacheTypeId, idxSizes) -> {
             if (idxSizes.values().stream().distinct().count() > 1) {
                 sizeConsistencyErrorsFound.set(true);
 
                 totalErr.incrementAndGet();
 
-                printErr("Index size inconsistency: cacheId=" + cacheId);
+                printErr("Index size inconsistency: cacheId=" +cacheTypeId.get1() + ", typeId=" + cacheTypeId.get2());
 
                 idxSizes.forEach((name, size) -> printErr("     Index name: " + name + ", size=" + size));
             }
@@ -1000,38 +1011,44 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     * Tries to get cache id from index tree info.
-     *
-     * @param info Index info.
-     * @return Cache id, except of {@code 0} for cache groups with single cache and {@code -1} for meta tree.
-     */
-    private int getCacheId(String info) {
-        Matcher mName = IDX_NAME_SEACH_PATTERN.matcher(info);
-
-        if (!mName.find())
-            return -1;
-
-        String idxName = mName.group("name");
-
-        return getCacheIdFromTreeName(idxName);
-    }
-
-    /**
      * Tries to get cache id from index tree name.
      *
      * @param name Index name.
-     * @return Cache id, except of {@code 0} for cache groups with single cache.
+     * @return Cache id.
      */
-    private int getCacheIdFromTreeName(String name) {
-        Matcher mId = CACHE_ID_SEACH_PATTERN.matcher(name);
+    private int getCacheId(String name) {
+        return getCacheAndTypeId(name).get1();
+    }
 
-        if (mId.find()) {
-            String id = mId.group("id");
+    /**
+     * Tries to get cache id and type id from index tree name.
+     *
+     * @param name Index name.
+     * @return Cache id.
+     */
+    private IgnitePair<Integer> getCacheAndTypeId(String name) {
+        return cacheTypeIds.computeIfAbsent(name, k -> {
+            Matcher mId = CACHE_TYPE_ID_SEACH_PATTERN.matcher(k);
 
-            return Integer.parseInt(id);
-        }
+            if (mId.find()) {
+                String id = mId.group("id");
 
-        return 0;
+                String typeId = mId.group("typeId");
+
+                return new IgnitePair<>(Integer.parseInt(id), Integer.parseInt(typeId));
+            }
+            else {
+                Matcher cId = CACHE_ID_SEACH_PATTERN.matcher(k);
+
+                if (cId.find()) {
+                    String id = cId.group("id");
+
+                    return new IgnitePair<>(Integer.parseInt(id), 0);
+                }
+            }
+
+            return new IgnitePair(0, 0);
+        });
     }
 
     /**
@@ -1736,7 +1753,7 @@ public class IgniteIndexReader implements AutoCloseable {
             ItemCallback itemCb
         ) {
             this.treeName = treeName;
-            this.cacheId = getCacheIdFromTreeName(treeName);
+            this.cacheId = getCacheAndTypeId(treeName).get1();
             this.store = store;
             this.ioStat = ioStat;
             this.errors = errors;
