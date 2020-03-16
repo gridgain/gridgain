@@ -3149,7 +3149,7 @@ class ServerImpl extends TcpDiscoveryImpl {
                         new Thread(new Runnable() {
                             @Override public void run() {
                                 try {
-                                    IgnitionEx.stop(ignite.name(), true, true);
+                                    IgnitionEx.stop(ignite.name(), true, false, true);
 
                                     U.log(log, "Stopped the node successfully in response to TcpDiscoverySpi's " +
                                         "message worker thread abnormal termination.");
@@ -6870,8 +6870,7 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                 try {
                     // Set socket options.
-                    sock.setKeepAlive(true);
-                    sock.setTcpNoDelay(true);
+                    spi.configureSocketOptions(sock);
 
                     int timeout = sock.getSoTimeout();
 
