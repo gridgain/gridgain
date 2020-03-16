@@ -52,7 +52,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
     /** */
-    public static final int STOP_TIMEOUT_LIMIT = 30_000;
+    public static final int STOP_TIMEOUT_LIMIT = 3_000;
 
     /** */
     private CacheMode cacheMode;
@@ -86,7 +86,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
     /** */
     protected int cacheSize() {
-        return 10000;
+        return 1000;
     }
 
     /** */
@@ -286,6 +286,8 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         startGrids(2);
 
+        grid(0).cluster().active(true);
+
         grid(0).context().distributedMetastorage().write(
             DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown",
             new HashSet<>(Collections.singleton(grid(0).localNode().id())));
@@ -321,6 +323,8 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         backups = 2;
 
         startGrids(3);
+
+        grid(0).cluster().active(true);
 
         grid(0).context().distributedMetastorage().write(
             DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown",
@@ -361,6 +365,8 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         backups = 3;
 
         startGrids(4);
+
+        grid(0).cluster().active(true);
 
         grid(0).context().distributedMetastorage().write(
             DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown",
