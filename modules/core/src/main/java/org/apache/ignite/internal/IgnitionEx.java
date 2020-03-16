@@ -2696,11 +2696,11 @@ public class IgnitionEx {
 
                         GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
 
-                        nodesToExclude.retainAll(fullMap.keySet());
-
                         int cacheSpecificAmountOfOwners = -1;
 
                         if (fullMap != null) {
+                            nodesToExclude.retainAll(fullMap.keySet());
+
                             int parts = grpCtx.topology().partitions();
 
                             for (int part = 0; part < parts; part++) {
