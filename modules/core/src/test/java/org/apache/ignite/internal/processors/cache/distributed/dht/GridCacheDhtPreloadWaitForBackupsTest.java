@@ -259,8 +259,17 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         for (int i = 0; i < cacheSize(); i++)
             grid(i % 2).cache("no-backups").put(i, new byte[i]);
 
-        grid(0).close();
-        grid(1).close();
+        for (int i = 1; i >= 0; i--) {
+            final int n = i;
+
+            Thread th = new Thread(() -> grid(n).close());
+
+            th.start();
+
+            th.join(60_000);
+
+            assertFalse(th.isAlive());
+        }
     }
 
     /**
