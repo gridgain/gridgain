@@ -52,6 +52,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         DistributedMetaStorageImpl.IGNITE_INTERNAL_KEY_PREFIX + "graceful.shutdown";
 
     /** */
+    public static final int STOP_TIMEOUT_LIMIT = 30_000;
+
+    /** */
     private CacheMode cacheMode;
 
     /** */
@@ -172,11 +175,11 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         stopper.start();
 
-        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
 
         IgnitionEx.stop(grid(1).configuration().getIgniteInstanceName(), true, false, false);
 
-        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
     }
 
     /**
@@ -287,13 +290,13 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         stopper.start();
 
-        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
 
         grid(0).context().distributedMetastorage().write(
             GRACEFUL_SHUTDOWN_METASTORE_KEY,
             new HashSet<>());
 
-        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
     }
 
     /**
@@ -325,7 +328,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         stopper.start();
 
-        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
 
         HashSet<UUID> expMetastoreContent = new HashSet<>();
         expMetastoreContent.add(grid(0).localNode().id());
@@ -365,7 +368,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         stopper.start();
 
-        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, 3000));
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
 
         HashSet<UUID> expMetastoreContent = new HashSet<>();
         expMetastoreContent.add(grid(0).localNode().id());
