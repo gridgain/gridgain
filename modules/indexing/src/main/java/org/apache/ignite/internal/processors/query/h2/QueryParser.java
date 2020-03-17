@@ -20,8 +20,10 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -45,6 +47,8 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAlias;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAst;
+import org.apache.ignite.internal.processors.query.h2.sql.GridSqlElement;
+import org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlInsert;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQuery;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
@@ -101,6 +105,9 @@ public class QueryParser {
     /** Query parser metrics holder. */
     private final QueryParserMetricsHolder metricsHolder;
 
+    /** Query parser metrics holder. */
+    private final Set<String> disabledFuncs;
+
     /** */
     private volatile GridBoundedConcurrentLinkedHashMap<QueryDescriptor, QueryParserCacheEntry> cache =
         new GridBoundedConcurrentLinkedHashMap<>(CACHE_SIZE);
@@ -117,6 +124,9 @@ public class QueryParser {
 
         this.log = idx.kernalContext().log(QueryParser.class);
         this.metricsHolder = new QueryParserMetricsHolder(idx.kernalContext().metric());
+
+        disabledFuncs = new HashSet<>(Arrays.asList(
+            idx.kernalContext().config().getSqlInitialConfiguration().getDisabledSqlFunctions()));
     }
 
     /**

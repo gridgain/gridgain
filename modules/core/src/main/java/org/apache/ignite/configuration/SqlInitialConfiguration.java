@@ -42,7 +42,8 @@ public class SqlInitialConfiguration {
         "MEMORY_USED",
         "LOCK_MODE",
         "LINK_SCHEMA",
-        "SESSION_ID"
+        "SESSION_ID",
+        "CANCEL_SESSION"
     };
 
     /** Default value for SQL offloading flag. */
