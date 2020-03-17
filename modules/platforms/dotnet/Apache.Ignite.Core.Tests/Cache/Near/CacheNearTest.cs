@@ -871,10 +871,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             CollectionAssert.AreEquivalent(platformNear, primary.Concat(near));
         }
 
+        /// <summary>
+        /// Tests that backup entries are reflected in Platform Near Cache.
+        /// </summary>
         [Test]
         public void TestNearCachingWithBackups()
         {
-            // TODO: Backup entries end up in Near, do we want that?
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 CacheMode = CacheMode.Partitioned,
