@@ -1153,7 +1153,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             int nativeNearSize;
             bool onlyNativeNear;
-            var modes0 = EncodePeekModes(loc, null, modes, out onlyNativeNear, out nativeNearSize);
+            var modes0 = EncodePeekModes(null, modes, out onlyNativeNear, out nativeNearSize);
             
             if (onlyNativeNear)
             {
@@ -1176,7 +1176,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             int nativeNearSize;
             bool onlyNativeNear;
-            var modes0 = EncodePeekModes(loc, part, modes, out onlyNativeNear, out nativeNearSize);
+            var modes0 = EncodePeekModes(part, modes, out onlyNativeNear, out nativeNearSize);
             
             if (onlyNativeNear)
             {
@@ -1210,7 +1210,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             int nativeNearSize;
             bool onlyNativeNear;
-            var modes0 = EncodePeekModes(false, null, modes, out onlyNativeNear, out nativeNearSize);
+            var modes0 = EncodePeekModes(null, modes, out onlyNativeNear, out nativeNearSize);
             
             return DoOutOpAsync<int>(CacheOp.SizeAsync, w => w.WriteInt(modes0));
         }
@@ -1225,7 +1225,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             int nativeNearSize;
             bool onlyNativeNear;
-            var modes0 = EncodePeekModes(false, part, modes, out onlyNativeNear, out nativeNearSize);
+            var modes0 = EncodePeekModes(part, modes, out onlyNativeNear, out nativeNearSize);
 
             return DoOutOpAsync<long>(CacheOp.SizeLongAsync, writer =>
             {
@@ -1246,7 +1246,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Encodes peek modes, includes native near check.
         /// </summary>
-        private int EncodePeekModes(bool loc, int? part, CachePeekMode[] modes, out bool onlyNativeNear, out int size)
+        private int EncodePeekModes(int? part, CachePeekMode[] modes, out bool onlyNativeNear, out int size)
         {
             size = 0;
             onlyNativeNear = false;
@@ -1256,21 +1256,9 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (hasPlatformNear)
             {
-                if (!loc)
-                {
-                    throw new InvalidOperationException(
-                        string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear));
-                }
-
-                if (part != null)
-                {
-                    throw new InvalidOperationException(
-                        string.Format("{0} can not be used with `partition` argument", CachePeekMode.PlatformNear));
-                }
-
                 if (_nearCache != null)
                 {
-                    size += _nearCache.GetSize();
+                    size += _nearCache.GetSize(part);
                 }
 
                 if (modes0 == 0)

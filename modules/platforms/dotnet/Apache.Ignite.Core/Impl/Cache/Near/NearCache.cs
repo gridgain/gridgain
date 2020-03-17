@@ -96,7 +96,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         }
 
         /** <inheritdoc /> */
-        public int GetSize()
+        public int GetSize(int? partition)
         {
             if (_stopped)
             {
@@ -107,10 +107,17 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             
             foreach (var e in _map)
             {
-                if (IsValid(e.Value))
+                if (!IsValid(e.Value))
                 {
-                    count++;
+                    continue;
                 }
+
+                if (partition != null && e.Value.Partition != partition)
+                {
+                    continue;
+                }
+                
+                count++;
             }
 
             return count;

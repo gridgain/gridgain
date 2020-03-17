@@ -54,7 +54,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Gets the size.
         /// </summary>
-        int GetSize();
+        int GetSize(int? partition);
 
         /// <summary>
         /// Removes all mappings from the cache.
