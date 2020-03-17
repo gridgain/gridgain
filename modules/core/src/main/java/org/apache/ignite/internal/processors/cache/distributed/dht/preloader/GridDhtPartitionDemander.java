@@ -1645,7 +1645,7 @@ public class GridDhtPartitionDemander {
          * @return {@code True} when future compared with other, {@code False} otherwise.
          */
         public boolean compatibleWith(GridDhtPreloaderAssignments otherAssignments) {
-            if (isInitial())
+            if (isInitial() || ((GridDhtPreloader)grp.preloader()).disableRebalancingCancellationOptimization())
                 return false;
 
             if (topVer.equals(otherAssignments.topologyVersion())) {

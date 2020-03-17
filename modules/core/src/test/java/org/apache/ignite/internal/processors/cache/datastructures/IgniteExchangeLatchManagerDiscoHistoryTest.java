@@ -239,7 +239,7 @@ public class IgniteExchangeLatchManagerDiscoHistoryTest extends GridCommonAbstra
                 "Consider increasing IGNITE_DISCOVERY_HISTORY_SIZE property. Current value is " + DISCO_HISTORY_SIZE);
         }
         finally {
-            IgnitionEx.stop(getTestIgniteInstanceName(1), true, true);
+            IgnitionEx.stop(getTestIgniteInstanceName(1), true, false, true);
 
             srvFuts.forEach(f -> {
                 try {

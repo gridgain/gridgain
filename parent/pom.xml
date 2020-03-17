@@ -559,6 +559,10 @@
                                 <title>Control Center</title>
                                 <packages>org.apache.ignite.agent*</packages>
                             </group>
+                            <group>
+                                <title>System view SPI</title>
+                                <packages>org.apache.ignite.spi.systemview*</packages>
+                            </group>
                         </groups>
                         <bottom>
                             <![CDATA[
