@@ -996,6 +996,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             onDone(e);
         }
         catch (Throwable e) {
+            // TODO FH always ?
             if (reconnectOnError(e))
                 onDone(new IgniteNeedReconnectException(cctx.localNode(), e));
             else {

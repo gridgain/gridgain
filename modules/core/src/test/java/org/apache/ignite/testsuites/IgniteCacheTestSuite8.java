@@ -19,6 +19,7 @@ package org.apache.ignite.testsuites;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import org.apache.ignite.cache.ClientCreateCacheGroupOnJoinNodeMapsTest;
 import org.apache.ignite.internal.processors.cache.CacheStoreTxPutAllMultiNodeTest;
 import org.apache.ignite.internal.processors.cache.GridCacheOrderedPreloadingSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.CacheRebalanceThreadPoolTest;
@@ -76,6 +77,7 @@ public class IgniteCacheTestSuite8 {
         GridTestUtils.addTestIfNeeded(suite, CacheRebalanceThreadPoolTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, CleanupRestoredCachesSlowTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, ClientCreateCacheGroupOnJoinNodeMapsTest.class, ignoredTests);
 
         return suite;
     }

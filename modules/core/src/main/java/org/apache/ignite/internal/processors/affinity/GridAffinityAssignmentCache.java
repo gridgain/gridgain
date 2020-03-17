@@ -768,6 +768,7 @@ public class GridAffinityAssignmentCache {
 
     /**
      * Get cached affinity for specified topology version.
+     * TODO should not be public.
      *
      * @param topVer Topology version for which affinity assignment is requested.
      * @param lastAffChangeTopVer Topology version of last affinity assignment change.

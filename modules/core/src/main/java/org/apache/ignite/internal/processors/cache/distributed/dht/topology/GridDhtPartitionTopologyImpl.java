@@ -76,6 +76,7 @@ import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_L
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ExchangeType.ALL;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ExchangeType.NONE;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -571,6 +572,33 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         if (ExchangeDiscoveryEvents.serverLeftEvent(evt))
                             removeNode(evt.eventNode().id());
+                    }
+                }
+                else if (affReady && grpStarted && exchFut.exchangeType() == NONE) {
+                    assert !exchFut.context().mergeExchanges() : exchFut;
+                    assert node2part != null && node2part.valid() : exchFut;
+
+                    // Initialize node maps if group was started from joining client.
+                    final List<ClusterNode> nodes = exchFut.firstEventCache().cacheGroupAffinityNodes(grp.groupId());
+
+                    for (ClusterNode node : nodes) {
+                        if (!node2part.containsKey(node.id()) && ctx.discovery().alive(node)) {
+                            final GridDhtPartitionMap partMap = new GridDhtPartitionMap(node.id(),
+                                1L,
+                                exchFut.initialVersion(),
+                                new GridPartitionStateMap(),
+                                false);
+
+                            final AffinityAssignment aff = grp.affinity().cachedAffinity(exchFut.initialVersion());
+
+                            for (Integer p0 : aff.primaryPartitions(node.id()))
+                                partMap.put(p0, OWNING);
+
+                            for (Integer p0 : aff.backupPartitions(node.id()))
+                                partMap.put(p0, OWNING);
+
+                            node2part.put(node.id(), partMap);
+                        }
                     }
                 }
 
@@ -1475,7 +1503,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 // TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11800
                 if (exchangeVer != null) {
                     // Ignore if exchange already finished or new exchange started.
-                    if (readyTopVer.compareTo(exchangeVer) > 0 || lastTopChangeVer.compareTo(exchangeVer) > 0) {
+                    if (readyTopVer.after(exchangeVer) || lastTopChangeVer.after(exchangeVer)) {
                         U.warn(log, "Stale exchange id for full partition map update (will ignore) [" +
                             "grp=" + grp.cacheOrGroupName() +
                             ", lastTopChange=" + lastTopChangeVer +
@@ -2104,7 +2132,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 PartitionLossPolicy plc = grp.config().getPartitionLossPolicy();
 
                 // Ignore IGNORE for persistent caches.
-                // TODO check baseline settings for in-memory cache.
+                // TODO calculate lost mode based on baseline.
                 if (grp.persistenceEnabled() && plc == PartitionLossPolicy.IGNORE)
                     plc = PartitionLossPolicy.READ_WRITE_SAFE;
 
@@ -2133,6 +2161,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         // Spread existing LOST state on all data nodes.
                         if (hasOwner) {
+                            // TODO use only coordinator map for override.
                             for (GridDhtPartitionMap partMap : node2part.values()) {
                                 if (partMap.get(part) == LOST) {
                                     hasOwner = false;
@@ -2637,15 +2666,18 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             map.put(p, state);
 
             if (!grp.isReplicated() && (state == MOVING || state == OWNING || state == RENTING)) {
-                AffinityAssignment assignment = grp.affinity().cachedAffinity(diffFromAffinityVer);
+                // The conditition below can happen during partition recovery from persistent store.
+                if (diffFromAffinityVer != AffinityTopologyVersion.NONE) {
+                    AffinityAssignment assignment = grp.affinity().cachedAffinity(diffFromAffinityVer);
 
-                if (!assignment.getIds(p).contains(ctx.localNodeId())) {
-                    Set<UUID> diffIds = diffFromAffinity.get(p);
+                    if (!assignment.getIds(p).contains(ctx.localNodeId())) {
+                        Set<UUID> diffIds = diffFromAffinity.get(p);
 
-                    if (diffIds == null)
-                        diffFromAffinity.put(p, diffIds = U.newHashSet(3));
+                        if (diffIds == null)
+                            diffFromAffinity.put(p, diffIds = U.newHashSet(3));
 
-                    diffIds.add(ctx.localNodeId());
+                        diffIds.add(ctx.localNodeId());
+                    }
                 }
             }
         }

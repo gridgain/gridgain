@@ -50,6 +50,7 @@ import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVer
 /**
  * Tests partition loss detection in various configurations.
  * TODO persistent mode shoud be moved to cache7 suite.
+ *
  */
 public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstractTest {
     /** */
