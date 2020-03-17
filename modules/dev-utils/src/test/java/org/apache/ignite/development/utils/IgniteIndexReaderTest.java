@@ -59,7 +59,7 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.development.utils.IgniteIndexReader.FROM_ROOT_TO_LEAFS_TRAVERSE_NAME;
+import static org.apache.ignite.development.utils.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.development.utils.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
@@ -142,6 +142,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Cleans persistent directory.
+     *
      * @throws Exception If failed.
      */
     protected static void cleanPersistenceDir() throws Exception {
@@ -153,6 +154,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Generates a grid configuration.
+     *
      * @return Ignite configuration.
      */
     private static IgniteConfiguration getConfiguration() {
@@ -198,6 +200,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Runs a grid to prepare directory with index and data partitions.
+     *
      * @return Work directory.
      */
     private static File prepareIndex() {
@@ -232,6 +235,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Corrupts partition file.
+     *
      * @param partId Partition id.
      * @param pageNum Page to corrupt.
      * @throws IOException If failed.
@@ -268,6 +272,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Restores corrupted file from backup after corruption.
+     *
      * @param partId Partition id.
      * @throws IOException If failed.
      */
@@ -285,6 +290,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Generates fields for sql table.
+     *
      * @param cnt Count of fields.
      * @return List of pairs, first is field name, second is field type.
      */
@@ -299,6 +305,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Generates indexes for given table and fields.
+     *
      * @param tblName Table name.
      * @param fields Fields list, returned by {@link #fields}.
      * @return List of pairs, first is index name, second is list of fields, covered by index, divived by comma.
@@ -321,6 +328,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Creates an sql table, indexes and fill it with some data.
+     *
      * @param cache Ignite cache.
      * @param info Table info.
      */
@@ -348,6 +356,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Performs an insert query.
+     *
      * @param cache Ignite cache.
      * @param tblName Table name.
      * @param fields List of fields.
@@ -370,6 +379,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Performs a query.
+     *
      * @param cache Ignite cache.
      * @param qry Query string.
      * @return Result.
@@ -380,6 +390,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Performs a query.
+     *
      * @param cache Ignite cache.
      * @param qry Query string.
      * @param args Query arguments.
@@ -391,6 +402,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Makes a force checkpoint for given Ignite instance.
+     *
      * @param ignite Ignite instance.
      */
     private static void forceCheckpoint(IgniteEx ignite) {
@@ -407,6 +419,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Checks that first string contains the second.
+     *
      * @param str String.
      * @param substr String.
      */
@@ -420,6 +433,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Checks the index reader output.
+     *
      * @param output Output.
      * @param treesCnt Count of b+ trees.
      * @param travErrCnt Count of errors that can occur during traversal.
@@ -433,9 +447,9 @@ public class IgniteIndexReaderTest {
         int pageListsErrCnt,
         int seqErrCnt
     ) {
-        assertContains(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + "Total trees: " + treesCnt);
+        assertContains(output, RECURSIVE_TRAVERSE_NAME + "Total trees: " + treesCnt);
         assertContains(output, HORIZONTAL_SCAN_NAME + "Total trees: " + treesCnt);
-        assertContains(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + "Total errors during trees traversal: " +
+        assertContains(output, RECURSIVE_TRAVERSE_NAME + "Total errors during trees traversal: " +
             (travErrCnt >= 0 ? travErrCnt : ""));
         assertContains(output, HORIZONTAL_SCAN_NAME + "Total errors during trees traversal: " +
             (travErrCnt >= 0 ? travErrCnt : ""));
@@ -454,6 +468,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Checks output info for indexes.
+     *
      * @param output Output string.
      * @param info Table info, which is used to calculate index info.
      * @param corruptedIdx Whether some index is corrupted.
@@ -466,13 +481,14 @@ public class IgniteIndexReaderTest {
 
         idxs.stream().map(IgniteBiTuple::get1)
             .forEach(idx -> {
-                checkIdx(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME, idx.toUpperCase(), entriesCnt, corruptedIdx);
+                checkIdx(output, RECURSIVE_TRAVERSE_NAME, idx.toUpperCase(), entriesCnt, corruptedIdx);
                 checkIdx(output, HORIZONTAL_SCAN_NAME, idx.toUpperCase(), entriesCnt, corruptedIdx);
             });
     }
 
     /**
      * Checks output info for single index.
+     *
      * @param output Output string.
      * @param traversePrefix Traverse prefix.
      * @param idx Index name.
@@ -497,6 +513,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Returns regexp string for index check.
+     *
      * @param traversePrefix Traverse prefix.
      * @param withErrors Whether errors should be present.
      * @param idxName Index name.
@@ -522,6 +539,7 @@ public class IgniteIndexReaderTest {
 
     /**
      * Runs index reader on given cache group.
+     *
      * @param workDir Work directory which contains cache group directories.
      * @param cacheGrp Cache group name.
      * @param idxs Indexes to check.
@@ -596,7 +614,7 @@ public class IgniteIndexReaderTest {
             idxs.stream().map(IgniteBiTuple::get1)
                 .filter(idxSet::contains)
                 .forEach(idx -> {
-                    checkIdx(output, FROM_ROOT_TO_LEAFS_TRAVERSE_NAME, idx.toUpperCase(), entriesCnt, false);
+                    checkIdx(output, RECURSIVE_TRAVERSE_NAME, idx.toUpperCase(), entriesCnt, false);
                     checkIdx(output, HORIZONTAL_SCAN_NAME, idx.toUpperCase(), entriesCnt, false);
                 });
         }

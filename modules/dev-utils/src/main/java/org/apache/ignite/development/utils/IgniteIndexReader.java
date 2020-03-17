@@ -139,7 +139,7 @@ public class IgniteIndexReader implements AutoCloseable {
     private static final String META_TREE_NAME = "MetaTree";
 
     /** */
-    public static final String FROM_ROOT_TO_LEAFS_TRAVERSE_NAME = "<FROM_ROOT> ";
+    public static final String RECURSIVE_TRAVERSE_NAME = "<RECURSIVE> ";
 
     /** */
     public static final String HORIZONTAL_SCAN_NAME = "<HORIZONTAL> ";
@@ -463,7 +463,7 @@ public class IgniteIndexReader implements AutoCloseable {
         if (treeInfo == null)
             printErr("No tree meta info found.");
         else {
-            printTraversalResults(FROM_ROOT_TO_LEAFS_TRAVERSE_NAME, treeInfo.get());
+            printTraversalResults(RECURSIVE_TRAVERSE_NAME, treeInfo.get());
 
             printTraversalResults(HORIZONTAL_SCAN_NAME, horizontalScans.get());
         }
@@ -724,7 +724,7 @@ public class IgniteIndexReader implements AutoCloseable {
             TreeTraversalInfo scan = treeScans.get(name);
 
             if (scan == null) {
-                errors.add("Tree was detected in " + FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + " but absent in  "
+                errors.add("Tree was detected in " + RECURSIVE_TRAVERSE_NAME + " but absent in  "
                     + HORIZONTAL_SCAN_NAME + ": " + name);
 
                 return;
@@ -759,10 +759,10 @@ public class IgniteIndexReader implements AutoCloseable {
         treeScans.forEach((name, tree) -> {
             if (!treeIdxNames.contains(name))
                 errors.add("Tree was detected in " + HORIZONTAL_SCAN_NAME + " but absent in  "
-                    + FROM_ROOT_TO_LEAFS_TRAVERSE_NAME + ": " + name);
+                    + RECURSIVE_TRAVERSE_NAME + ": " + name);
         });
 
-        errors.forEach(e -> printErr(e));
+        errors.forEach(this::printErr);
 
         print("Comparing traversals detected " + errors.size() + " errors.");
         print("------------------");
@@ -775,7 +775,7 @@ public class IgniteIndexReader implements AutoCloseable {
             "Different count of %s; index: %s, %s:%s, %s:%s" + (pageType == null ? "" : ", pageType: " + pageType.getName()),
             itemName,
             idxName,
-            FROM_ROOT_TO_LEAFS_TRAVERSE_NAME,
+            RECURSIVE_TRAVERSE_NAME,
             fromRoot,
             HORIZONTAL_SCAN_NAME,
             scan
@@ -1024,7 +1024,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * Tries to get cache id and type id from index tree name.
      *
      * @param name Index name.
-     * @return Cache id.
+     * @return Pair of cache id and type id.
      */
     private IgnitePair<Integer> getCacheAndTypeId(String name) {
         return cacheTypeIds.computeIfAbsent(name, k -> {
@@ -1047,7 +1047,7 @@ public class IgniteIndexReader implements AutoCloseable {
                 }
             }
 
-            return new IgnitePair(0, 0);
+            return new IgnitePair<>(0, 0);
         });
     }
 
@@ -1090,7 +1090,9 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Traverse single index tree from root to leafs.
      *
+     * @param store File page store.
      * @param rootPageId Root page id.
+     * @param treeName Tree name.
      * @param itemStorage Items storage.
      * @return Tree traversal info.
      */
@@ -1113,7 +1115,9 @@ public class IgniteIndexReader implements AutoCloseable {
     /**
      * Traverse single index tree by each level horizontally.
      *
+     * @param store File page store.
      * @param rootPageId Root page id.
+     * @param treeName Tree name.
      * @param itemStorage Items storage.
      * @return Tree traversal info.
      */
@@ -1273,7 +1277,12 @@ public class IgniteIndexReader implements AutoCloseable {
         }
     }
 
-    /** */
+    /**
+     * Transforms snapshot files to regular PDS files.
+     *
+     * @param dest Destination directory.
+     * @param fileMask File mask.
+     */
     public void transform(String dest, String fileMask) {
         File destDir = new File(dest);
 
