@@ -35,6 +35,7 @@ import io.opencensus.stats.View;
 import io.opencensus.stats.View.Name;
 import io.opencensus.tags.TagContextBuilder;
 import io.opencensus.tags.TagKey;
+import io.opencensus.tags.TagMetadata;
 import io.opencensus.tags.TagValue;
 import io.opencensus.tags.Tags;
 import org.apache.ignite.internal.IgniteEx;
@@ -54,6 +55,8 @@ import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.spi.metric.ObjectMetric;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.jetbrains.annotations.Nullable;
+
+import static io.opencensus.tags.TagMetadata.TagTtl.UNLIMITED_PROPAGATION;
 
 /**
  * <a href="https://opencensus.io">OpenCensus</a> monitoring exporter. <br>
@@ -96,6 +99,9 @@ public class OpenCensusMetricExporterSpi extends PushMetricsExporterAdapter {
 
     /** Ignite node consistent id. */
     public static final TagKey CONSISTENT_ID_TAG = TagKey.create("inci");
+
+    /** Tags metadata. */
+    public static final TagMetadata METADATA = TagMetadata.create(UNLIMITED_PROPAGATION);
 
     /** Ignite instance name in the form of {@link TagValue}. */
     private TagValue instanceNameValue;
@@ -219,13 +225,13 @@ public class OpenCensusMetricExporterSpi extends PushMetricsExporterAdapter {
         TagContextBuilder builder = Tags.getTagger().currentBuilder();
 
         if (sendInstanceName)
-            builder.put(INSTANCE_NAME_TAG, instanceNameValue);
+            builder.put(INSTANCE_NAME_TAG, instanceNameValue, METADATA);
 
         if (sendNodeId)
-            builder.put(NODE_ID_TAG, nodeIdValue);
+            builder.put(NODE_ID_TAG, nodeIdValue, METADATA);
 
         if (sendConsistentId)
-            builder.put(CONSISTENT_ID_TAG, consistenIdValue);
+            builder.put(CONSISTENT_ID_TAG, consistenIdValue, METADATA);
 
         return builder.buildScoped();
     }

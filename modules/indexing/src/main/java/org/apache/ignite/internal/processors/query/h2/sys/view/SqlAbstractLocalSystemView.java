@@ -72,7 +72,7 @@ public abstract class SqlAbstractLocalSystemView extends SqlAbstractSystemView {
      * @param cols Columns.
      */
     @SuppressWarnings("ZeroLengthArrayAllocation")
-    protected SqlAbstractLocalSystemView(String tblName, String desc, GridKernalContext ctx, Column... cols) {
+    public SqlAbstractLocalSystemView(String tblName, String desc, GridKernalContext ctx, Column... cols) {
         this(tblName, desc, ctx, new String[] {}, cols);
     }
 

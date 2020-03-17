@@ -22,7 +22,6 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.SchemaManager;
 import org.apache.ignite.spi.IgniteSpiAdapter;
@@ -32,10 +31,12 @@ import org.apache.ignite.spi.metric.MetricExporterSpi;
 import org.apache.ignite.spi.metric.ReadOnlyMetricRegistry;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.query.QueryUtils.sysSchemaName;
+
 /**
  * This SPI implementation exports metrics as SQL views.
  */
-public class SqlViewExporterSpi extends IgniteSpiAdapter implements MetricExporterSpi {
+public class SqlViewMetricExporterSpi extends IgniteSpiAdapter implements MetricExporterSpi {
     /** System view name. */
     public static final String SYS_VIEW_NAME = "METRICS";
 
@@ -52,7 +53,7 @@ public class SqlViewExporterSpi extends IgniteSpiAdapter implements MetricExport
         SchemaManager mgr = ((IgniteH2Indexing)ctx.query().getIndexing()).schemaManager();
 
         try {
-            mgr.createSystemView(QueryUtils.SCHEMA_MONITORING, new MetricSetLocalSystemView(ctx, mreg, filter));
+            mgr.createSystemView(sysSchemaName(), new MetricRegistryLocalSystemView(ctx, mreg, filter));
         }
         catch (IgniteCheckedException e) {
             throw new IgniteSpiException(e);

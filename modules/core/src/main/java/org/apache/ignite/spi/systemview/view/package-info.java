@@ -14,26 +14,8 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.metric;
-
-import java.util.function.Consumer;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-
 /**
- * Read only metric registry.
+ * <!-- Package description. -->
+ * Contains {@link org.apache.ignite.spi.systemview.view.SystemView} clases that exists in Ignite.
  */
-public interface ReadOnlyMetricRegistry extends Iterable<MetricRegistry> {
-    /**
-     * Adds listener of metrics registry creation events.
-     *
-     * @param lsnr Listener.
-     */
-    public void addMetricRegistryCreationListener(Consumer<MetricRegistry> lsnr);
-
-    /**
-     * Adds listener of metrics registry remove events.
-     *
-     * @param lsnr Listener.
-     */
-    public void addMetricRegistryRemoveListener(Consumer<MetricRegistry> lsnr);
-}
+package org.apache.ignite.spi.systemview.view;
