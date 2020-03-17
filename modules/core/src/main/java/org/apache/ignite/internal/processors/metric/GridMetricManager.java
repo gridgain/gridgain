@@ -54,6 +54,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_PHY_RAM;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.internal.util.IgniteUtils.notifyListeners;
 
 /**
  * This manager should provide {@link ReadOnlyMetricRegistry} for each configured {@link MetricExporterSpi}.
@@ -271,7 +272,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         return registries.computeIfAbsent(name, n -> {
             MetricRegistry mreg = new MetricRegistry(name, name, log);
 
-            notifyListeners(mreg, metricRegCreationLsnrs);
+            notifyListeners(mreg, metricRegCreationLsnrs, log);
 
             return mreg;
         });
@@ -308,23 +309,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         MetricRegistry mreg = registries.remove(regName);
 
         if (mreg != null)
-            notifyListeners(mreg, metricRegRemoveLsnrs);
-    }
-
-    /**
-     * @param t Consumed object.
-     * @param lsnrs Listeners.
-     * @param <T> Type of consumed object.
-     */
-    private <T> void notifyListeners(T t, List<Consumer<T>> lsnrs) {
-        for (Consumer<T> lsnr : lsnrs) {
-            try {
-                lsnr.accept(t);
-            }
-            catch (Exception e) {
-                U.warn(log, "Metric listener error", e);
-            }
-        }
+            notifyListeners(mreg, metricRegRemoveLsnrs, log);
     }
 
     /**

@@ -128,6 +128,7 @@ import org.apache.ignite.spi.indexing.noop.NoopIndexingSpi;
 import org.apache.ignite.spi.loadbalancing.LoadBalancingSpi;
 import org.apache.ignite.spi.loadbalancing.roundrobin.RoundRobinLoadBalancingSpi;
 import org.apache.ignite.spi.metric.noop.NoopMetricExporterSpi;
+import org.apache.ignite.spi.systemview.jmx.JmxSystemViewExporterSpi;
 import org.apache.ignite.thread.IgniteStripedThreadPoolExecutor;
 import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.IgniteThreadPoolExecutor;
@@ -183,6 +184,9 @@ import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.RESTART_J
 public class IgnitionEx {
     /** Default configuration path relative to Ignite home. */
     public static final String DFLT_CFG = "config/default-config.xml";
+
+    /** Class name for a SQL view exporter of system views. */
+    public static final String SYSTEM_VIEW_SQL_SPI = "org.apache.ignite.spi.systemview.SqlViewExporterSpi";
 
     /** */
     private static final int WAIT_FOR_BACKUPS_CHECK_INTERVAL = 1000;
@@ -402,8 +406,7 @@ public class IgnitionEx {
 
         // Schedule delayed node killing if graceful stopping will be not finished within timeout.
         executor.schedule(new Runnable() {
-            @Override
-            public void run() {
+            @Override public void run() {
                 if (state(name) == IgniteState.STARTED) {
                     U.error(null, "Unable to gracefully stop node within timeout " + timeoutMs +
                             " milliseconds. Killing node...");
@@ -2489,6 +2492,21 @@ public class IgnitionEx {
 
             if (cfg.getTracingSpi() == null)
                 cfg.setTracingSpi(new NoopTracingSpi());
+
+            if (F.isEmpty(cfg.getSystemViewExporterSpi())) {
+                if (IgniteUtils.inClassPath(SYSTEM_VIEW_SQL_SPI)) {
+                    try {
+                        cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi(),
+                            U.newInstance(SYSTEM_VIEW_SQL_SPI));
+                    }
+                    catch (IgniteCheckedException e) {
+                        throw new IgniteException(e);
+                    }
+
+                }
+                else
+                    cfg.setSystemViewExporterSpi(new JmxSystemViewExporterSpi());
+            }
         }
 
         /**

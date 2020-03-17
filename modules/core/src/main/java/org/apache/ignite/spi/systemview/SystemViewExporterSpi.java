@@ -14,44 +14,41 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.metric;
+package org.apache.ignite.spi.systemview;
 
 import java.util.function.Predicate;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.spi.IgniteSpi;
-import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
+import org.apache.ignite.spi.systemview.jmx.JmxSystemViewExporterSpi;
+import org.apache.ignite.spi.systemview.view.SystemView;
+import org.apache.ignite.spi.systemview.view.SystemViewRowAttributeWalker;
 
 /**
- * Exporter of metric information to the external recepient.
+ * Exporter of system view to the external recepient.
  * Expected, that each implementation would support some specific protocol.
  *
  * Implementation of this Spi should work by pull paradigm.
  * So after start SPI should respond to some incoming request.
  * HTTP servlet or JMX bean are good examples of expected implementations.
  *
- * @see ReadOnlyMetricRegistry
- * @see Metric
- * @see BooleanMetric
- * @see DoubleMetric
- * @see IntMetric
- * @see LongMetric
- * @see ObjectMetric
- * @see JmxMetricExporterSpi
+ * @see ReadOnlySystemViewRegistry
+ * @see SystemView
+ * @see SystemViewRowAttributeWalker
+ * @see JmxSystemViewExporterSpi
  */
-public interface MetricExporterSpi extends IgniteSpi {
+public interface SystemViewExporterSpi extends IgniteSpi {
     /**
-     * Sets metrics registry that SPI should export.
+     * Sets system view registry that SPI should export.
      * This method called before {@link #spiStart(String)}.
      *
-     * @param registry Metric registry.
+     * @param registry System view registry.
      */
-    public void setMetricRegistry(ReadOnlyMetricRegistry registry);
+    public void setSystemViewRegistry(ReadOnlySystemViewRegistry registry);
 
     /**
      * Sets export filter.
-     * Metric registry that not satisfy {@code filter} shouldn't be exported.
+     * System view that not satisfy {@code filter} shouldn't be exported.
      *
      * @param filter Filter.
      */
-    public void setExportFilter(Predicate<MetricRegistry> filter);
+    public void setExportFilter(Predicate<SystemView<?>> filter);
 }

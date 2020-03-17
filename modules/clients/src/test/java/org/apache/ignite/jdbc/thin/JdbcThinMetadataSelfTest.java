@@ -34,10 +34,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.affinity.AffinityKey;
@@ -50,8 +50,9 @@ import org.apache.ignite.internal.jdbc2.JdbcUtils;
 import org.apache.ignite.internal.processors.query.QueryEntityEx;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.spi.metric.sql.SqlViewMetricExporterSpi;
 import org.junit.Assert;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 
 import static java.sql.Types.DATE;
@@ -59,8 +60,10 @@ import static java.sql.Types.DECIMAL;
 import static java.sql.Types.INTEGER;
 import static java.sql.Types.OTHER;
 import static java.sql.Types.VARCHAR;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.processors.query.QueryUtils.DFLT_SCHEMA;
 import static org.apache.ignite.internal.processors.query.QueryUtils.KEY_FIELD_NAME;
 import static org.apache.ignite.internal.processors.query.QueryUtils.VAL_FIELD_NAME;
 import static org.apache.ignite.internal.util.IgniteUtils.map;
@@ -78,10 +81,15 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-            .setSqlConfiguration(new SqlConfiguration()
-                .setSqlSchemas("PREDEFINED_SCHEMAS_1", "PREDEFINED_SCHEMAS_2")
-            );
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.setSqlConfiguration(
+                new SqlConfiguration().setSqlSchemas("PREDEFINED_SCHEMAS_1", "PREDEFINED_SCHEMAS_2")
+        );
+
+        cfg.setMetricExporterSpi(new SqlViewMetricExporterSpi());
+
+        return cfg;
     }
 
     /**
@@ -408,23 +416,28 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
      */
     @Test
     public void testGetAllView() throws Exception {
-        testGetTables(
-            new String[] {"VIEW"},
-            new HashSet<>(Arrays.asList(
+        HashSet<String> expViews = new HashSet<>(Arrays.asList(
+                "IGNITE.METRICS",
+                "IGNITE.CACHE_GROUPS",
+                "IGNITE.CACHES",
+                "IGNITE.TASKS",
                 "IGNITE.LOCAL_SQL_QUERY_HISTORY",
                 "IGNITE.NODES",
                 "IGNITE.SCHEMAS",
-                "IGNITE.CACHE_GROUPS",
                 "IGNITE.NODE_METRICS",
                 "IGNITE.BASELINE_NODES",
                 "IGNITE.INDEXES",
                 "IGNITE.LOCAL_CACHE_GROUPS_IO",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES",
                 "IGNITE.NODE_ATTRIBUTES",
-                "IGNITE.CACHES",
                 "IGNITE.TABLES"
-            ))
-        );
+        ));
+
+        if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
+            expViews.add("IGNITE.SERVICES");
+        }
+
+        testGetTables(new String[] {"VIEW"}, expViews);
     }
 
     /**
@@ -571,7 +584,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
             ResultSet rs = meta.getColumns(null, null, null, null);
 
-            List<String> expectedCols = Arrays.asList(
+            Set<String> expectedCols = new HashSet<>(Arrays.asList(
                 "PUBLIC.Quoted.Id.null",
                 "PUBLIC.Quoted.Name.null.50",
                 "PUBLIC.TEST.ID.null",
@@ -592,11 +605,11 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "pers.PERSON.NAME.null",
                 "pers.PERSON.AGE.null",
                 "pers.PERSON.ORGID.null"
-            );
+            ));
 
-            List<String> actualUserCols = new ArrayList<>(expectedCols.size());
+            Set<String> actualUserCols = new HashSet<>(expectedCols.size());
 
-            List<String> actualSystemCols = new ArrayList<>();
+            Set<String> actualSystemCols = new HashSet<>();
 
             while(rs.next()) {
                 int precision = rs.getInt("COLUMN_SIZE");
@@ -620,7 +633,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
 
             Assert.assertEquals(expectedCols, actualUserCols);
 
-            expectedCols = Arrays.asList(
+            expectedCols = new HashSet<>(Arrays.asList(
                 "IGNITE.BASELINE_NODES.CONSISTENT_ID.null.2147483647",
                 "IGNITE.BASELINE_NODES.ONLINE.null.1",
                 "IGNITE.CACHES.CACHE_GROUP_ID.null.10",
@@ -659,7 +672,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.CACHES.NEAR_CACHE_EVICTION_POLICY_FACTORY.null.2147483647",
                 "IGNITE.CACHES.NEAR_CACHE_START_SIZE.null.10",
                 "IGNITE.CACHES.DEFAULT_LOCK_TIMEOUT.null.19",
-                "IGNITE.CACHES.CACHE_INTERCEPTOR.null.2147483647",
+                "IGNITE.CACHES.INTERCEPTOR.null.2147483647",
                 "IGNITE.CACHES.CACHE_STORE_FACTORY.null.2147483647",
                 "IGNITE.CACHES.IS_STORE_KEEP_BINARY.null.1",
                 "IGNITE.CACHES.IS_READ_THROUGH.null.1",
@@ -669,17 +682,18 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.CACHES.WRITE_BEHIND_FLUSH_SIZE.null.10",
                 "IGNITE.CACHES.WRITE_BEHIND_FLUSH_FREQUENCY.null.19",
                 "IGNITE.CACHES.WRITE_BEHIND_FLUSH_THREAD_COUNT.null.10",
-                "IGNITE.CACHES.WRITE_BEHIND_FLUSH_BATCH_SIZE.null.10",
+                "IGNITE.CACHES.WRITE_BEHIND_BATCH_SIZE.null.10",
                 "IGNITE.CACHES.MAX_CONCURRENT_ASYNC_OPERATIONS.null.10",
                 "IGNITE.CACHES.CACHE_LOADER_FACTORY.null.2147483647",
                 "IGNITE.CACHES.CACHE_WRITER_FACTORY.null.2147483647",
                 "IGNITE.CACHES.EXPIRY_POLICY_FACTORY.null.2147483647",
                 "IGNITE.CACHES.IS_SQL_ESCAPE_ALL.null.1",
+                "IGNITE.CACHES.IS_ENCRYPTION_ENABLED.null.1",
                 "IGNITE.CACHES.SQL_SCHEMA.null.2147483647",
                 "IGNITE.CACHES.SQL_INDEX_MAX_INLINE_SIZE.null.10",
                 "IGNITE.CACHES.IS_SQL_ONHEAP_CACHE_ENABLED.null.1",
                 "IGNITE.CACHES.SQL_ONHEAP_CACHE_MAX_SIZE.null.10",
-                "IGNITE.CACHES.QUERY_DETAILS_METRICS_SIZE.null.10",
+                "IGNITE.CACHES.QUERY_DETAIL_METRICS_SIZE.null.10",
                 "IGNITE.CACHES.QUERY_PARALLELISM.null.10",
                 "IGNITE.CACHES.MAX_QUERY_ITERATORS_COUNT.null.10",
                 "IGNITE.CACHES.DATA_REGION_NAME.null.2147483647",
@@ -820,11 +834,40 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.TABLES.KEY_ALIAS.null.2147483647",
                 "IGNITE.TABLES.VALUE_ALIAS.null.2147483647",
                 "IGNITE.TABLES.KEY_TYPE_NAME.null.2147483647",
-                "IGNITE.TABLES.VALUE_TYPE_NAME.null.2147483647"
-            );
+                "IGNITE.TABLES.VALUE_TYPE_NAME.null.2147483647",
+                "IGNITE.METRICS.NAME.null.2147483647",
+                "IGNITE.METRICS.VALUE.null.2147483647",
+                "IGNITE.METRICS.DESCRIPTION.null.2147483647",
+                "IGNITE.TASKS.AFFINITY_CACHE_NAME.null.2147483647",
+                "IGNITE.TASKS.INTERNAL.null.1",
+                "IGNITE.TASKS.END_TIME.null.19",
+                "IGNITE.TASKS.START_TIME.null.19",
+                "IGNITE.TASKS.USER_VERSION.null.2147483647",
+                "IGNITE.TASKS.TASK_NAME.null.2147483647",
+                "IGNITE.TASKS.TASK_NODE_ID.null.16",
+                "IGNITE.TASKS.JOB_ID.null.2147483647",
+                "IGNITE.TASKS.AFFINITY_PARTITION_ID.null.10",
+                "IGNITE.TASKS.TASK_CLASS_NAME.null.2147483647",
+                "IGNITE.TASKS.EXEC_NAME.null.2147483647"
+            ));
+
+            if (IgniteSystemProperties.getBoolean(IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED)) {
+                expectedCols.addAll(Arrays.asList(
+                        "IGNITE.SERVICES.SERVICE_ID.null.2147483647",
+                        "IGNITE.SERVICES.NAME.null.2147483647",
+                        "IGNITE.SERVICES.SERVICE_CLASS.null.2147483647",
+                        "IGNITE.SERVICES.CACHE_NAME.null.2147483647",
+                        "IGNITE.SERVICES.ORIGIN_NODE_ID.null.2147483647",
+                        "IGNITE.SERVICES.TOTAL_COUNT.null.10",
+                        "IGNITE.SERVICES.MAX_PER_NODE_COUNT.null.10",
+                        "IGNITE.SERVICES.AFFINITY_KEY.null.2147483647",
+                        "IGNITE.SERVICES.NODE_FILTER.null.2147483647",
+                        "IGNITE.SERVICES.STATICALLY_CONFIGURED.null.1",
+                        "IGNITE.SERVICES.SERVICE_ID.null.2147483647"
+                ));
+            }
 
             Assert.assertEquals(expectedCols, actualSystemCols);
-
         }
     }
 
@@ -1089,8 +1132,8 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
         try (Connection conn = DriverManager.getConnection(URL)) {
             ResultSet rs = conn.getMetaData().getSchemas();
 
-            Set<String> expectedSchemas = new HashSet<>(Arrays.asList("IGNITE", "PUBLIC", "pers",
-                "org", "dep", "PREDEFINED_SCHEMAS_1", "PREDEFINED_SCHEMAS_2"));
+            Set<String> expectedSchemas = new HashSet<>(Arrays.asList("IGNITE", DFLT_SCHEMA,
+                "pers", "org", "dep", "PREDEFINED_SCHEMAS_1", "PREDEFINED_SCHEMAS_2"));
 
             Set<String> schemas = new HashSet<>();
 

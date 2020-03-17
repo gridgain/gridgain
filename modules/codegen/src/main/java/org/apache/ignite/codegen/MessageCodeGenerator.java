@@ -68,7 +68,7 @@ public class MessageCodeGenerator {
     };
 
     /** */
-    private static final String DFLT_SRC_DIR = U.getIgniteHome() + "/modules/core/src/main/java";
+    public static final String DFLT_SRC_DIR = U.getIgniteHome() + "/modules/core/src/main/java";
 
     /** */
     private static final String INDEXING_SRC_DIR = U.getIgniteHome() + "/modules/indexing/src/main/java";
@@ -80,7 +80,7 @@ public class MessageCodeGenerator {
     private static final String EMPTY = "";
 
     /** */
-    private static final String TAB = "    ";
+    public static final String TAB = "    ";
 
     /** */
     private static final String BUF_VAR = "buf";
