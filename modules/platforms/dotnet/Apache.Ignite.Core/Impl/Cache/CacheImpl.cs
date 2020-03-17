@@ -1212,7 +1212,13 @@ namespace Apache.Ignite.Core.Impl.Cache
             bool onlyNativeNear;
             var modes0 = EncodePeekModes(null, modes, out onlyNativeNear, out nativeNearSize);
             
-            return DoOutOpAsync<int>(CacheOp.SizeAsync, w => w.WriteInt(modes0));
+            if (onlyNativeNear)
+            {
+                return TaskRunner.FromResult(nativeNearSize);
+            }
+            
+            return DoOutOpAsync<int>(CacheOp.SizeAsync, w => w.WriteInt(modes0))
+                .ContWith(t => t.Result + nativeNearSize, TaskContinuationOptions.ExecuteSynchronously);
         }
         
         /// <summary>
@@ -1240,7 +1246,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 {
                     writer.WriteBoolean(false);   
                 }             
-            });
+            }).ContWith(t => t.Result + nativeNearSize, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         /// <summary>

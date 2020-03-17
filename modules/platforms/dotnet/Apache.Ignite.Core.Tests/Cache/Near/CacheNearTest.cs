@@ -750,28 +750,33 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Tests that <see cref="CachePeekMode.PlatformNear"/> can't be used with distributed GetSize overloads.
+        /// Tests that <see cref="CachePeekMode.PlatformNear"/> works with distributed GetSize overloads.
         /// </summary>
         [Test]
-        public void TestGetSizeWithNativeNearModeThrows([Values(true, false)] bool longMode, 
+        public void TestGetSizeWithPlatformNear([Values(true, false)] bool longMode, 
             [Values(true, false)] bool async)
         {
             var cache = GetCache<int, int>(CacheTestMode.Client, TestUtils.TestName);
-            var modes = new[] {CachePeekMode.Primary, CachePeekMode.PlatformNear};
+            var primaryAndPlatform = new[] {CachePeekMode.Primary, CachePeekMode.PlatformNear};
+            var platform = new[] {CachePeekMode.PlatformNear};
+            var all = new[] {CachePeekMode.All};
             
-            var action =
+            var func =
                 longMode
                     ? async
-                        ? (Action) (() => cache.GetSizeLongAsync(modes))
-                        : () => cache.GetSizeLong(modes)
+                        ? (Func<CachePeekMode[], long>) (m => cache.GetSizeLongAsync(m).Result)
+                        : m => cache.GetSizeLong(m)
                     : async
-                        ? (Action) (() => cache.GetSizeAsync(modes))
-                        : () => cache.GetSize(modes); 
+                        ? (Func<CachePeekMode[], long>) (m => cache.GetSizeAsync(m).Result)
+                        : m => cache.GetSize(m); 
 
-            var ex = Assert.Throws<InvalidOperationException>(() => action());
-            
-            Assert.AreEqual(string.Format("{0} can only be used to get local size", CachePeekMode.PlatformNear),
-                ex.Message);
+            Assert.AreEqual(0, func(all));
+            Assert.AreEqual(0, func(platform));
+
+            cache[1] = 2;
+            Assert.AreEqual(1, func(platform));
+            Assert.AreEqual(2, func(primaryAndPlatform));
+            Assert.AreEqual(3, func(all));
         }
 
         /// <summary>
