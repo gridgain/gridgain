@@ -777,6 +777,48 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(1, func(platform));
             Assert.AreEqual(2, func(primaryAndPlatform));
             Assert.AreEqual(3, func(all));
+
+            cache[2] = 3;
+            Assert.AreEqual(2, func(platform));
+            Assert.AreEqual(4, func(primaryAndPlatform));
+            Assert.AreEqual(6, func(all));
+        }
+
+        /// <summary>
+        /// Tests that <see cref="CachePeekMode.PlatformNear"/> works with distributed GetSize overloads
+        /// with specific partition.
+        /// </summary>
+        [Test]
+        public void TestGetSizeWithPlatformNearAndPartition([Values(true, false)] bool async)
+        {
+            var cache = GetCache<int, int>(CacheTestMode.Client, TestUtils.TestName);
+            var primaryAndPlatform = new[] {CachePeekMode.Primary, CachePeekMode.PlatformNear};
+            var platform = new[] {CachePeekMode.PlatformNear};
+            var all = new[] {CachePeekMode.All};
+
+            var func = async
+                ? (Func<int, CachePeekMode[], long>) ((p, m) => cache.GetSizeLongAsync(p, m).Result)
+                : (p, m) => cache.GetSizeLong(p, m);
+
+            const int key = 1;
+            var part = _grid.GetAffinity(cache.Name).GetPartition(key);
+
+            Assert.AreEqual(0, func(part, all));
+            Assert.AreEqual(0, func(part, platform));
+
+            cache[1] = 2;
+            Assert.AreEqual(1, func(part, platform));
+            Assert.AreEqual(2, func(part, primaryAndPlatform));
+            Assert.AreEqual(2, func(part, all));
+            
+            Assert.AreEqual(0, func(part + 1, platform));
+            Assert.AreEqual(0, func(part + 1, primaryAndPlatform));
+            Assert.AreEqual(0, func(part + 1, all));
+
+            cache[2] = 3;
+            Assert.AreEqual(1, func(part, platform));
+            Assert.AreEqual(2, func(part, primaryAndPlatform));
+            Assert.AreEqual(2, func(part, all));
         }
 
         /// <summary>
