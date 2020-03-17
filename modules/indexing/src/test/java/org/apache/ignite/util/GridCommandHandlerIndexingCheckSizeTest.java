@@ -29,6 +29,8 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.commandline.cache.argument.ValidateIndexesCommandArg;
@@ -67,11 +69,25 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     /** Entry count for entity. */
     private static final int ENTRY_CNT = 100;
 
+    /** Non persistent data region name. */
+    private static final String NON_PERSIST_REGION = "non-persist";
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        createAndFillCache(client, CACHE_NAME, GROUP_NAME, queryEntities(), ENTRY_CNT);
+        createAndFillCache(client, CACHE_NAME, GROUP_NAME, null, queryEntities(), ENTRY_CNT);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.getDataStorageConfiguration().setDataRegionConfigurations(
+            new DataRegionConfiguration().setName(NON_PERSIST_REGION)
+        );
+
+        return cfg;
     }
 
     /**
@@ -80,18 +96,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
      */
     @Test
     public void testCheckCacheSizeWhenBrokenCache() {
-        Map<String, AtomicInteger> rmvEntryByTbl = new HashMap<>();
-
-        String cacheName = CACHE_NAME;
-        IgniteEx node = crd;
-
-        breakCacheDataTree(log, node.cachex(cacheName), 1, (i, entry) -> {
-            rmvEntryByTbl.computeIfAbsent(tableName(cacheName, entry), s -> new AtomicInteger()).incrementAndGet();
-            return true;
-        });
-
-        assertEquals(rmvEntryByTbl.size(), 2);
-        validateCheckSizes(node, cacheName, rmvEntryByTbl, ai -> ENTRY_CNT - ai.get(), ai -> ENTRY_CNT);
+        validateCheckSizesAfterBreakCacheDataTree(crd, CACHE_NAME);
     }
 
     /**
@@ -116,17 +121,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
      */
     @Test
     public void testCheckCacheSizeWhenBrokenIdx() throws Exception {
-        Map<String, AtomicInteger> rmvIdxByTbl = new HashMap<>();
-
-        String cacheName = CACHE_NAME;
-
-        breakSqlIndex(crd.cachex(cacheName), 0, row -> {
-            rmvIdxByTbl.computeIfAbsent(tableName(cacheName, row), s -> new AtomicInteger()).incrementAndGet();
-            return true;
-        });
-
-        assertEquals(rmvIdxByTbl.size(), 2);
-        validateCheckSizes(crd, cacheName, rmvIdxByTbl, ai -> ENTRY_CNT, ai -> ENTRY_CNT - ai.get());
+        validateCheckSizesAfterBreakSqlIndex(crd, CACHE_NAME);
     }
 
     /**
@@ -154,7 +149,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     public void testNoErrorOnCacheWithoutQueryEntity() {
         String cacheName = DEFAULT_CACHE_NAME;
 
-        createAndFillCache(crd, cacheName, GROUP_NAME, emptyMap(), 0);
+        createAndFillCache(crd, cacheName, GROUP_NAME, null, emptyMap(), 0);
 
         try (IgniteDataStreamer<Object, Object> streamer = crd.dataStreamer(cacheName)) {
             for (int i = 0; i < ENTRY_CNT; i++)
@@ -176,7 +171,7 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     public void testNoErrorOnEmptyCacheWithQueryEntity() {
         String cacheName = DEFAULT_CACHE_NAME;
 
-        createAndFillCache(crd, cacheName, GROUP_NAME, queryEntities(), 0);
+        createAndFillCache(crd, cacheName, GROUP_NAME, null, queryEntities(), 0);
 
         execVIWithNoErrCheck(cacheName, false);
         execVIWithNoErrCheck(cacheName, true);
@@ -227,6 +222,75 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
 
         execVIWithNoErrCheck(cacheName, false);
         execVIWithNoErrCheck(cacheName, true);
+    }
+
+    /**
+     * Test checks that an error will be displayed checking cache size and
+     * index when cache is broken. In {@link #NON_PERSIST_REGION} region.
+     */
+    @Test
+    public void testCheckCacheSizeWhenBrokenCacheInNonPersistRegion() {
+        IgniteEx node = crd;
+        String cacheName = CACHE_NAME + "_new";
+
+        createAndFillCache(node, cacheName, GROUP_NAME + "_new", NON_PERSIST_REGION, queryEntities(), ENTRY_CNT);
+
+        validateCheckSizesAfterBreakCacheDataTree(node, cacheName);
+    }
+
+    /**
+     * Test checks that an error will be displayed checking cache size and
+     * index when index is broken. In {@link #NON_PERSIST_REGION} region.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testCheckCacheSizeWhenBrokenIdxInNonPersistRegion() throws Exception {
+        IgniteEx node = crd;
+        String cacheName = CACHE_NAME + "_new";
+
+        createAndFillCache(node, cacheName, GROUP_NAME + "_new", NON_PERSIST_REGION, queryEntities(), ENTRY_CNT);
+
+        validateCheckSizesAfterBreakSqlIndex(node, cacheName);
+    }
+
+    /**
+     * Validation of cache and index sizes after breaking sql index.
+     *
+     * @param node      Node.
+     * @param cacheName Cache name.
+     */
+    private void validateCheckSizesAfterBreakSqlIndex(IgniteEx node, String cacheName) throws Exception {
+        Map<String, AtomicInteger> rmvIdxByTbl = new HashMap<>();
+
+        breakSqlIndex(node.cachex(cacheName), 0, row -> {
+            rmvIdxByTbl.computeIfAbsent(tableName(cacheName, row), s -> new AtomicInteger()).incrementAndGet();
+            return true;
+        });
+
+        assertEquals(rmvIdxByTbl.size(), queryEntities().size());
+        validateCheckSizes(node, cacheName, rmvIdxByTbl, ai -> ENTRY_CNT, ai -> ENTRY_CNT - ai.get());
+    }
+
+    /**
+     * Validation of cache and index sizes after breaking CacheDataTree.
+     *
+     * @param node      Node.
+     * @param cacheName Cache name.
+     */
+    private void validateCheckSizesAfterBreakCacheDataTree(IgniteEx node, String cacheName) {
+        requireNonNull(cacheName);
+        requireNonNull(node);
+
+        Map<String, AtomicInteger> rmvEntryByTbl = new HashMap<>();
+
+        breakCacheDataTree(log, node.cachex(cacheName), 1, (i, entry) -> {
+            rmvEntryByTbl.computeIfAbsent(tableName(cacheName, entry), s -> new AtomicInteger()).incrementAndGet();
+            return true;
+        });
+
+        assertEquals(rmvEntryByTbl.size(), queryEntities().size());
+        validateCheckSizes(node, cacheName, rmvEntryByTbl, ai -> ENTRY_CNT - ai.get(), ai -> ENTRY_CNT);
     }
 
     /**

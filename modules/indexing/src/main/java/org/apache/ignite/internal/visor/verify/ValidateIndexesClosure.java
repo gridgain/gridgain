@@ -998,10 +998,18 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         return "cacheName=" + cacheCtx.name() + ", cacheId=" + cacheCtx.cacheId();
     }
 
+    /**
+     * Checking size of records in cache and indexes with a record into
+     * {@code checkSizeRes} if they are not equal.
+     *
+     * @param cacheSizesFutures Futures calculating size of records in caches.
+     * @param idxSizeFutures Futures calculating size of indexes of caches.
+     * @param checkSizeRes Result of size check.
+     */
     private void checkSizes(
         List<T3<CacheGroupContext, GridDhtLocalPartition, Future<CacheSize>>> cacheSizesFutures,
         List<T3<GridCacheContext, Index, Future<T2<Throwable, Long>>>> idxSizeFutures,
-        Map<String, ValidateIndexesCheckSizeResult> checkSizeResult
+        Map<String, ValidateIndexesCheckSizeResult> checkSizeRes
     ) throws ExecutionException, InterruptedException {
         if (!checkSizes)
             return;
@@ -1017,7 +1025,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             int grpId = cacheGrpCtx.groupId();
 
             if (failCalcCacheSizeGrpIds.contains(grpId) && nonNull(cacheSizeErr)) {
-                checkSizeResult.computeIfAbsent(
+                checkSizeRes.computeIfAbsent(
                     cacheGrpInfo(cacheGrpCtx),
                     s -> new ValidateIndexesCheckSizeResult(0, new ArrayList<>())
                 ).issues().add(new ValidateIndexesCheckSizeIssue(null, 0, cacheSizeErr));
@@ -1052,7 +1060,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 err = new IgniteException("Cache and index size not same.");
 
             if (nonNull(err)) {
-                checkSizeResult.computeIfAbsent(
+                checkSizeRes.computeIfAbsent(
                     "[" + cacheGrpInfo(cacheCtx.group()) + ", " + cacheInfo(cacheCtx) + ", tableName=" + tblName + "]",
                     s -> new ValidateIndexesCheckSizeResult(cacheSizeByTbl, new ArrayList<>()))
                     .issues().add(new ValidateIndexesCheckSizeIssue(idx.getName(), idxSize, err));

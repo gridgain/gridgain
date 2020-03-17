@@ -61,6 +61,7 @@ import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.metric.IoStatisticsHolderNoOp.INSTANCE;
 import static org.apache.ignite.internal.util.IgniteUtils.field;
+import static org.apache.ignite.internal.util.IgniteUtils.hasField;
 
 /**
  * Utility class for tests.
@@ -79,8 +80,8 @@ public class GridCommandHandlerIndexingUtils {
 
     /**
      * Create and fill cache. Key - integer, value - {@link Person}.
-     * {@link #createAndFillCache(Ignite, String, String, Map, int)} is used
-     * with {@link #personEntity()} and cnt=10_000.
+     * {@link #createAndFillCache(Ignite, String, String, String, Map, int)}
+     * is used with {@link #personEntity()}, default dataRegion and cnt=10_000.
      *
      * @param ignite Node.
      * @param cacheName Cache name.
@@ -91,6 +92,7 @@ public class GridCommandHandlerIndexingUtils {
             ignite,
             cacheName,
             grpName,
+            null,
             singletonMap(personEntity(), rand -> new Person(rand.nextInt(), valueOf(rand.nextLong()))),
             10_000
         );
@@ -123,6 +125,7 @@ public class GridCommandHandlerIndexingUtils {
      * @param ignite Node.
      * @param cacheName Cache name.
      * @param grpName Group name.
+     * @param dataRegionName DataRegionConfiguration name, null for default.
      * @param qryEntities QueryEntities and functions for creating them.
      * @param cnt How many entities create for each {@code qryEntities}.
      */
@@ -130,6 +133,7 @@ public class GridCommandHandlerIndexingUtils {
         Ignite ignite,
         String cacheName,
         String grpName,
+        @Nullable String dataRegionName,
         Map<QueryEntity, Function<Random, Object>> qryEntities,
         int cnt
     ) {
@@ -141,6 +145,7 @@ public class GridCommandHandlerIndexingUtils {
         ignite.createCache(new CacheConfiguration<>()
             .setName(cacheName)
             .setGroupName(grpName)
+            .setDataRegionName(dataRegionName)
             .setWriteSynchronizationMode(FULL_SYNC)
             .setAtomicityMode(ATOMIC)
             .setBackups(1)
@@ -183,10 +188,13 @@ public class GridCommandHandlerIndexingUtils {
         GridDhtLocalPartition dhtLocPart = cacheCtx.dht().topology().localPartition(partId);
 
         CacheDataStore cacheDataStore = cacheCtx.group().offheap().dataStore(dhtLocPart);
-        CacheDataStore innerCacheDataStore = field(cacheDataStore, "delegate");
 
-        CacheDataRowStore cacheDataRowStore = field(innerCacheDataStore, "rowStore");
-        CacheDataTree cacheDataTree = field(innerCacheDataStore, "dataTree");
+        String delegate = "delegate";
+        if (hasField(cacheDataStore, delegate))
+            cacheDataStore = field(cacheDataStore, delegate);
+
+        CacheDataRowStore cacheDataRowStore = field(cacheDataStore, "rowStore");
+        CacheDataTree cacheDataTree = field(cacheDataStore, "dataTree");
 
         String cacheName = internalCache.name();
 
