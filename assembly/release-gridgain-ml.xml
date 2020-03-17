@@ -20,7 +20,7 @@
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2
           http://maven.apache.org/xsd/assembly-1.1.2.xsd">
-    <id>apache-ignite-lgpl</id>
+    <id>gridgain-ml</id>
 
     <includeBaseDirectory>false</includeBaseDirectory>
 
@@ -28,26 +28,44 @@
         <format>dir</format>
     </formats>
 
-    <componentDescriptors>
-        <componentDescriptor>release-base.xml</componentDescriptor>
-        <componentDescriptor>release-apache-ignite-base.xml</componentDescriptor>
-        <componentDescriptor>release-yardstick.xml</componentDescriptor>
-        <componentDescriptor>release-sqlline.xml</componentDescriptor>
-        <componentDescriptor>release-visor-console.xml</componentDescriptor>
-        <componentDescriptor>release-scala.xml</componentDescriptor>
-    </componentDescriptors>
-
     <files>
         <file>
-            <source>examples/pom-standalone-lgpl.xml</source>
-            <outputDirectory>/examples</outputDirectory>
+            <source>assembly/LICENSE_IGNITE</source>
+            <destName>LICENSE</destName>
+            <outputDirectory>/</outputDirectory>
+        </file>
+
+        <file>
+            <source>assembly/NOTICE_IGNITE</source>
+            <destName>NOTICE</destName>
+            <outputDirectory>/</outputDirectory>
+        </file>
+
+        <file>
+            <source>examples-ml/pom-standalone.xml</source>
+            <outputDirectory>/examples-ml</outputDirectory>
             <destName>pom.xml</destName>
         </file>
 
         <file>
-            <source>examples/README-LGPL.txt</source>
-            <outputDirectory>/examples</outputDirectory>
+            <source>examples-ml/README.txt</source>
+            <outputDirectory>/examples-ml</outputDirectory>
             <destName>README.txt</destName>
         </file>
     </files>
+
+    <fileSets>
+        <fileSet>
+            <directory>examples-ml</directory>
+            <outputDirectory>/examples-ml</outputDirectory>
+            <includes>
+                <include>config/**</include>
+                <include>src/**</include>
+            </includes>
+            <excludes>
+                <exclude>**/package.html</exclude>
+                <exclude>src/test/**</exclude>
+            </excludes>
+        </fileSet>
+    </fileSets>
 </assembly>
