@@ -113,6 +113,8 @@ import org.apache.ignite.spi.communication.tcp.internal.NodeUnreachableException
 import org.apache.ignite.spi.communication.tcp.internal.ConnectionKey;
 import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionRequestDiscoveryMessage;
 import org.apache.ignite.spi.communication.tcp.internal.TcpInverseConnectionResponseMessage;
+import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
+import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -3575,6 +3577,10 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         public void handleInverseConnection(ClusterNode node, NodeUnreachableException e) {
             if (!inverseTcpConnectionFeatureIsSupported(node))
                 throw new IgniteSpiException(e);
+
+            if (IgniteThread.current() instanceof IgniteDiscoveryThread)
+                throw new IgniteSpiException("Inverse communication connection cannot be requested from discovery thread",
+                    e);
 
             TcpCommunicationSpi tcpCommSpi = getTcpCommunicationSpi();
 
