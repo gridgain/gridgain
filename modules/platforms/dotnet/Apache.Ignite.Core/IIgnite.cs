@@ -125,6 +125,19 @@ namespace Apache.Ignite.Core
             NearCacheConfiguration nearConfiguration);
 
         /// <summary>
+        /// Gets existing cache with the given name or creates new one using provided configuration.
+        /// </summary>
+        /// <typeparam name="TK">Cache key type.</typeparam>
+        /// <typeparam name="TV">Cache value type.</typeparam>
+        /// <param name="configuration">Cache configuration.</param>
+        /// /// <param name="nearConfiguration">Near cache configuration for client.</param>
+        /// <param name="platformNearConfiguration">Platform near configuration. Can be null.
+        /// When not null, native .NET near cache is created additionally.</param>
+        /// <returns>Existing or newly created cache.</returns>
+        ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration, 
+            NearCacheConfiguration nearConfiguration, PlatformNearCacheConfiguration platformNearConfiguration);
+
+        /// <summary>
         /// Dynamically starts new cache using template configuration.
         /// </summary>
         /// <typeparam name="TK">Cache key type.</typeparam>
@@ -152,6 +165,19 @@ namespace Apache.Ignite.Core
         /// <returns>Existing or newly created cache.</returns>
         ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration, 
             NearCacheConfiguration nearConfiguration);
+
+        /// <summary>
+        /// Dynamically starts new cache using provided configuration.
+        /// </summary>
+        /// <typeparam name="TK">Cache key type.</typeparam>
+        /// <typeparam name="TV">Cache value type.</typeparam>
+        /// <param name="configuration">Cache configuration.</param>
+        /// <param name="nearConfiguration">Near cache configuration for client.</param>
+        /// <param name="platformNearConfiguration">Platform near configuration. Can be null.
+        /// When not null, native .NET near cache is created additionally.</param>
+        /// <returns>Existing or newly created cache.</returns>
+        ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration, 
+            NearCacheConfiguration nearConfiguration, PlatformNearCacheConfiguration platformNearConfiguration);
 
         /// <summary>
         /// Destroys dynamically created (with <see cref="CreateCache{TK,TV}(string)"/> or 

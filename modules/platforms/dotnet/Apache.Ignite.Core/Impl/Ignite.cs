@@ -461,7 +461,15 @@ namespace Apache.Ignite.Core.Impl
         public ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration,
             NearCacheConfiguration nearConfiguration)
         {
-            return GetOrCreateCache<TK, TV>(configuration, nearConfiguration, Op.GetOrCreateCacheFromConfig);
+            return GetOrCreateCache<TK, TV>(configuration, nearConfiguration, null);
+        }
+
+        /** <inheritdoc /> */
+        public ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration, NearCacheConfiguration nearConfiguration,
+            PlatformNearCacheConfiguration platformNearConfiguration)
+        {
+            return GetOrCreateCache<TK, TV>(configuration, nearConfiguration, platformNearConfiguration, 
+                Op.GetOrCreateCacheFromConfig);
         }
 
         /** <inheritdoc /> */
@@ -484,14 +492,22 @@ namespace Apache.Ignite.Core.Impl
         public ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration, 
             NearCacheConfiguration nearConfiguration)
         {
-            return GetOrCreateCache<TK, TV>(configuration, nearConfiguration, Op.CreateCacheFromConfig);
+            return CreateCache<TK, TV>(configuration, nearConfiguration, null);
+        }
+
+        /** <inheritdoc /> */
+        public ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration, NearCacheConfiguration nearConfiguration,
+            PlatformNearCacheConfiguration platformNearConfiguration)
+        {
+            return GetOrCreateCache<TK, TV>(configuration, nearConfiguration, platformNearConfiguration, 
+                Op.CreateCacheFromConfig);
         }
 
         /// <summary>
         /// Gets or creates the cache.
         /// </summary>
         private ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration, 
-            NearCacheConfiguration nearConfiguration, Op op)
+            NearCacheConfiguration nearConfiguration, PlatformNearCacheConfiguration platformNearConfiguration, Op op)
         {
             IgniteArgumentCheck.NotNull(configuration, "configuration");
             IgniteArgumentCheck.NotNull(configuration.Name, "CacheConfiguration.Name");
@@ -507,6 +523,16 @@ namespace Apache.Ignite.Core.Impl
                 {
                     w.WriteBoolean(true);
                     nearConfiguration.Write(w);
+                }
+                else
+                {
+                    w.WriteBoolean(false);
+                }
+
+                if (platformNearConfiguration != null)
+                {
+                    w.WriteBoolean(true);
+                    platformNearConfiguration.Write(w);
                 }
                 else
                 {
