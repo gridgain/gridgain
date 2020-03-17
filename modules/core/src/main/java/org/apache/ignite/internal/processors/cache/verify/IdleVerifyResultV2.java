@@ -235,7 +235,12 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
             else
                 printConflicts(printer);
 
-            printSkippedPartitions(printer, movingPartitions(), "MOVING");
+            Map<PartitionKeyV2, List<PartitionHashRecordV2>> moving = movingPartitions();
+
+            if (!moving.isEmpty())
+                printer.accept("Possible results are not full due to rebalance still in progress." + U.nl());
+
+            printSkippedPartitions(printer, moving, "MOVING");
             printSkippedPartitions(printer, lostPartitions(), "LOST");
         }
         else {

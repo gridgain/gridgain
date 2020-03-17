@@ -226,9 +226,6 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Flush dirty page closure. When possible, will be called by evictPage(). */
     private final PageStoreWriter flushDirtyPage;
 
-    /** */
-    private final AtomicBoolean dirtyUserPagesPresent = new AtomicBoolean();
-
     /**
      * Delayed page replacement (rotation with disk) tracker. Because other thread may require exactly the same page to be loaded from store,
      * reads are protected by locking.
@@ -1125,15 +1122,8 @@ public class PageMemoryImpl implements PageMemoryEx {
     @Override public GridMultiCollectionWrapper<FullPageId> beginCheckpoint(
         IgniteInternalFuture allowToReplace
     ) throws IgniteException {
-        return beginCheckpointEx(allowToReplace).get1();
-    }
-
-    /** {@inheritDoc} */
-    @Override public IgniteBiTuple<GridMultiCollectionWrapper<FullPageId>, Boolean> beginCheckpointEx(
-        IgniteInternalFuture allowToReplace
-    ) throws IgniteException {
         if (segments == null)
-            return new IgniteBiTuple<>(new GridMultiCollectionWrapper<>(Collections.emptyList()), false);
+            return new GridMultiCollectionWrapper<>(Collections.emptyList());
 
         Collection[] collections = new Collection[segments.length];
 
@@ -1155,12 +1145,10 @@ public class PageMemoryImpl implements PageMemoryEx {
 
         memMetrics.resetDirtyPages();
 
-        boolean hasUserDirtyPages = dirtyUserPagesPresent.getAndSet(false);
-
         if (throttlingPlc != ThrottlingPolicy.DISABLED)
             writeThrottle.onBeginCheckpoint();
 
-        return new IgniteBiTuple<>(new GridMultiCollectionWrapper<FullPageId>(collections), hasUserDirtyPages);
+        return new GridMultiCollectionWrapper<FullPageId>(collections);
     }
 
     /**
@@ -1868,9 +1856,6 @@ public class PageMemoryImpl implements PageMemoryEx {
                     memMetrics.incrementDirtyPages();
                 }
             }
-
-            if (pageId.groupId() != CU.UTILITY_CACHE_GROUP_ID && !dirtyUserPagesPresent.get())
-                dirtyUserPagesPresent.set(true);
         }
         else {
             Segment seg = segment(pageId.groupId(), pageId.pageId());
