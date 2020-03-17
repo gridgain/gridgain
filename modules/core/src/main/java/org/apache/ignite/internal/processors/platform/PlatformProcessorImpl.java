@@ -615,6 +615,8 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
                         ? (IgniteCacheProxy)ctx.grid().createCache(cfg, PlatformConfigurationUtils.readNearConfiguration(reader))
                         : (IgniteCacheProxy)ctx.grid().createCache(cfg);
 
+                setPlatformNear(reader, cache);
+
                 return createPlatformCache(cache);
             }
 
@@ -625,6 +627,8 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
                         ? (IgniteCacheProxy)ctx.grid().getOrCreateCache(cfg,
                         PlatformConfigurationUtils.readNearConfiguration(reader))
                         : (IgniteCacheProxy)ctx.grid().getOrCreateCache(cfg);
+
+                setPlatformNear(reader, cache);
 
                 return createPlatformCache(cache);
             }
@@ -699,9 +703,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().createNearCache(cacheName, cfg);
 
-                if (reader.readBoolean())
-                    cache.context().cache().configuration().setPlatformNearConfiguration(
-                            PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
+                setPlatformNear(reader, cache);
 
                 return createPlatformCache(cache);
             }
@@ -713,9 +715,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().getOrCreateNearCache(cacheName, cfg);
 
-                if (reader.readBoolean())
-                    cache.context().cache().configuration().setPlatformNearConfiguration(
-                            PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
+                setPlatformNear(reader, cache);
 
                 return createPlatformCache(cache);
             }
@@ -834,6 +834,18 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
         }
         else
             throw new IgniteCheckedException("Unsupported interop store: " + store);
+    }
+
+    /**
+     * Sets platform near config when present in the given reader.
+     *
+     * @param reader Reader.
+     * @param cache Cache.
+     */
+    private static void setPlatformNear(BinaryRawReaderEx reader, IgniteCacheProxy cache) {
+        if (reader.readBoolean())
+            cache.context().cache().configuration().setPlatformNearConfiguration(
+                    PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
     }
 
     /**
