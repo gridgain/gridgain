@@ -874,8 +874,30 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestNearCachingWithBackups()
         {
-            // TODO: What to do with backup entries? Optionally put them to Near too?
-            // Can be useful for replicated caches when everything is in memory.
+            // TODO: Backup entries end up in Near, do we want that?
+            var cfg = new CacheConfiguration(TestUtils.TestName)
+            {
+                CacheMode = CacheMode.Partitioned,
+                Backups = 1,
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync
+            };
+
+            var cache1 = _grid.CreateCache<int, int>(cfg);
+            var cache2 = _grid2.GetCache<int, int>(cfg.Name);
+
+            const int count = 100;
+            cache1.PutAll(Enumerable.Range(1, count).ToDictionary(x => x, x => x));
+            
+            Assert.AreEqual(count, cache1.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.AreEqual(count, cache2.GetLocalSize(CachePeekMode.PlatformNear));
+            
+            Assert.AreEqual(42, cache1.LocalPeek(42, CachePeekMode.PlatformNear));
+            Assert.AreEqual(42, cache2.LocalPeek(42, CachePeekMode.PlatformNear));
+
+            cache1[42] = -42;
+            Assert.AreEqual(-42, cache1.LocalPeek(42, CachePeekMode.PlatformNear));
+            Assert.AreEqual(-42, cache2.LocalPeek(42, CachePeekMode.PlatformNear));
         }
 
         /// <summary>
