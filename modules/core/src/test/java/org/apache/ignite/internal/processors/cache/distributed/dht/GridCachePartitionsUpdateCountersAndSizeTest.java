@@ -71,8 +71,8 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
      * Four tests that partitions state validation works correctly and
      * show partition size always:
      * Start three-nodes grid,
-     * arguments: cnt - partition counters are inconsistent(boolean)
-     *           size - partition size are inconsistent(boolean)
+     * @param cnt - partition counters are inconsistent(boolean)
+     * @param size - partition size are inconsistent(boolean)
      * @throws Exception If failed.
      */
     private void startThreeNodesGrid(boolean cnt, boolean size) throws Exception {
@@ -166,18 +166,22 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
     }
 
     /**
-     *  Overraided class LogListener for find specific patterns.
-     * @throws Exception If failed.
+     * Overraided class LogListener for find specific patterns.
+     * @return cn if finded inconsistent counters in log.
+     * @return sz if finded inconsistent partition size in log.
      */
     private static class SizeCounterLogListener extends LogListener {
-
-        Pattern patCnt = Pattern.compile("(\\d)=(\\d{1,2})");
-        Pattern patSz = Pattern.compile("(\\d)=(\\d{1,2})");
-        Pattern patCntSz = Pattern.compile("consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest" +
+        /** Pattern for Counters inconsistent message.*/
+        final Pattern patCnt = Pattern.compile("(\\d)=(\\d{1,2})");
+        /** Pattern for Size inconsistent message.*/
+        final Pattern patSz = Pattern.compile("(\\d)=(\\d{1,2})");
+        /** Pattern for Both counters and sizes message*/
+        final Pattern patCntSz = Pattern.compile("consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest" +
             "\\d meta=\\[updCnt=(\\d{2}), size=(\\d{1,2})");
 
-        //if finded true substring in log.
+        /** if finded true substring in log for inconsistent counters.*/
         boolean cn;
+        /** if finded true substring in log for inconsistent partitiom size.*/
         boolean sz;
 
         public boolean checkCnt() {
@@ -198,9 +202,9 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
             //no op
         }
 
-        /** Search specific string pattern and add value of counters and sizes
-        /* to arrays
-        /* {@inheritDoc} */
+        /** Search specific pattern in log string and set cn and sz if found.
+         * @param s Log string.
+         * {@inheritDoc} */
         @Override public void accept(String s) {
             HashSet<Long> setCnt = new HashSet<>();
             HashSet<Long> setSize = new HashSet<>();

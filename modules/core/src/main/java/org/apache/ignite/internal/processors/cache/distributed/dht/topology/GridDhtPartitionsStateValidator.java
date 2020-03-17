@@ -41,7 +41,8 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 
 /**
- * Class to validate partitions update counters and cache sizes during exchange process.
+ * Class to validate partitions update counters and cache sizes during exchange
+ * process.
  */
 public class GridDhtPartitionsStateValidator {
     /** Version since node is able to send cache sizes in {@link GridDhtPartitionsSingleMessage}. */
@@ -60,15 +61,18 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
-     * Validates partition states - update counters and cache sizes for all nodes.
+     * Validates partition states - update counters and cache sizes
+     * for all nodes.
      * If update counter value or cache size for the same partitions are
      * different on some nodes
-     * method throws exception with full information about inconsistent partitions.
+     * method throws exception with full information about inconsistent
+     * partitions.
      *
      * @param fut Current exchange future.
      * @param top Topology to validate.
      * @param messages Single messages received from all nodes.
-     * @throws IgniteCheckedException If validation failed. Exception message contains
+     * @throws IgniteCheckedException If validation failed. Exception message
+     * contains
      * full information about all partitions which update counters
      * or cache sizes are not consistent.
      */
@@ -85,6 +89,9 @@ public class GridDhtPartitionsStateValidator {
                 ignoringNodes.add(evt.eventNode().id());
         }
 
+        StringBuilder error = new StringBuilder();
+
+        Map<Integer, Map<UUID, Long>> resUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
         Map<Integer, Map<UUID, Long>> resSize = Collections.emptyMap();
 
         // For sizes validation ignore also nodes which are not able
@@ -94,10 +101,6 @@ public class GridDhtPartitionsStateValidator {
             if (node != null && node.version().compareTo(SIZES_VALIDATION_AVAILABLE_SINCE) < 0)
                 ignoringNodes.add(id);
         }
-
-        StringBuilder error = new StringBuilder();
-
-        Map<Integer, Map<UUID, Long>> resUpdCnt = validatePartitionsUpdateCounters(top, messages, ignoringNodes);
 
         AffinityTopologyVersion topVer = fut.context().events().topologyVersion();
 
@@ -110,11 +113,10 @@ public class GridDhtPartitionsStateValidator {
             error.append("Partitions cache size and update counters are inconsistent for ")
                 .append(fold(topVer, resUpdCnt, resSize));
         }
-        if (!resUpdCnt.isEmpty() && resSize.isEmpty())
+        else if (!resUpdCnt.isEmpty() && resSize.isEmpty())
             error.append("Partitions update counters are inconsistent for ").append(fold(topVer, resUpdCnt));
         else if (resUpdCnt.isEmpty() && !resSize.isEmpty())
             error.append("Partitions cache sizes are inconsistent for ").append(fold(topVer, resSize));
-
 
         if (error.length() > 0)
             throw new IgniteCheckedException(error.toString());
@@ -391,6 +393,7 @@ public class GridDhtPartitionsStateValidator {
     }
 
     /**
+     * Add pair of counters and size in result map.
      * @param sourceMap PartitionCounters or PartitionSize
      * @param resultMap  result map with pair of values
      */
