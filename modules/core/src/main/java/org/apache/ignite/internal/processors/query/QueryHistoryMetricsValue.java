@@ -35,19 +35,51 @@ class QueryHistoryMetricsValue {
     /** Last start time of execution. */
     private final long lastStartTime;
 
+    /** Minimum memory required by query. */
+    private final long minMemory;
+
+    /** Maximum memory required by query. */
+    private final long maxMemory;
+
+    /** Minimum bytes on disk required by query. */
+    private final long minBytesAllocatedOnDisk;
+
+    /** Maximum bytes on disk required by query. */
+    private final long maxBytesAllocatedOnDisk;
+
+    /** Minimum bytes written on disk in total by query. */
+    private final long minTotalBytesWrittenOnDisk;
+
+    /** Maximum bytes written on disk in total by query. */
+    private final long maxTotalBytesWrittenOnDisk;
+
     /**
      * @param execs Number of executions.
      * @param failures Number of failure.
      * @param minTime Min time of execution.
      * @param maxTime Max time of execution.
      * @param lastStartTime Last start time of execution.
+     * @param minMemory Minimum memory required by query.
+     * @param maxMemory Maximum memory required by query.
+     * @param minBytesAllocatedOnDisk Minimum bytes on disk required by query.
+     * @param maxBytesAllocatedOnDisk Maximum bytes on disk required by query.
+     * @param minTotalBytesWrittenOnDisk Minimum bytes written on disk in total by query.
+     * @param maxTotalBytesWrittenOnDisk Maximum bytes written on disk in total by query.
      */
-    public QueryHistoryMetricsValue(long execs, long failures, long minTime, long maxTime, long lastStartTime) {
+    public QueryHistoryMetricsValue(long execs, long failures, long minTime, long maxTime, long lastStartTime,
+        long minMemory, long maxMemory, long minBytesAllocatedOnDisk, long maxBytesAllocatedOnDisk,
+        long minTotalBytesWrittenOnDisk, long maxTotalBytesWrittenOnDisk) {
         this.execs = execs;
         this.failures = failures;
         this.minTime = minTime;
         this.maxTime = maxTime;
         this.lastStartTime = lastStartTime;
+        this.minMemory = minMemory;
+        this.maxMemory = maxMemory;
+        this.minBytesAllocatedOnDisk = minBytesAllocatedOnDisk;
+        this.maxBytesAllocatedOnDisk = maxBytesAllocatedOnDisk;
+        this.minTotalBytesWrittenOnDisk = minTotalBytesWrittenOnDisk;
+        this.maxTotalBytesWrittenOnDisk = maxTotalBytesWrittenOnDisk;
     }
 
    /**
@@ -93,5 +125,59 @@ class QueryHistoryMetricsValue {
      */
     public long lastStartTime() {
         return lastStartTime;
+    }
+
+    /**
+     * Gets minimum memory required by query.
+     *
+     * @return Minimum memory required by query.
+     */
+    public long minMemory() {
+        return minMemory;
+    }
+
+    /**
+     * Gets maximum memory required by query.
+     *
+     * @return Maximum memory required by query.
+     */
+    public long maxMemory() {
+        return maxMemory;
+    }
+
+    /**
+     * Gets minimum bytes on disk required by query.
+     *
+     * @return Minimum bytes on disk required by query.
+     */
+    public long minBytesAllocatedOnDisk() {
+        return minBytesAllocatedOnDisk;
+    }
+
+    /**
+     * Gets maximum bytes on disk required by query.
+     *
+     * @return Maximum bytes on disk required by query.
+     */
+    public long maxBytesAllocatedOnDisk() {
+        return maxBytesAllocatedOnDisk;
+    }
+
+    /**
+     * Gets minimum bytes written on disk in total by query.
+     *
+     * @return Minimum bytes written on disk in total by query.
+     */
+    public long minTotalBytesWrittenOnDisk() {
+        return minTotalBytesWrittenOnDisk;
+    }
+
+    /**
+     * Gets maximum bytes written on disk in total by query.
+     *
+     * @return Maximum bytes written on disk in total by query.
+     */
+    public long maxTotalBytesWrittenOnDisk() {
+        return maxTotalBytesWrittenOnDisk;
     }
 }

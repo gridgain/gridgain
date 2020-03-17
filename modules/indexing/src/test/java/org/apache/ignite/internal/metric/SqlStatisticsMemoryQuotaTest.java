@@ -229,7 +229,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
         final MemValidator quotaUnlim = (free, max) -> {
             assertEquals(0, max);
-            assertEquals(max, free);
+            assertTrue(0 >= free);
         };
 
         int connNodeIdx = 1;
@@ -250,8 +250,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        assertEquals(1, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(1, longMetricValue(otherNodeIdx, "requests"));
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
@@ -260,8 +260,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        assertEquals(3, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(3, longMetricValue(otherNodeIdx, "requests"));
     }
 
     /**

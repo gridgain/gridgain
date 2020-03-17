@@ -52,8 +52,7 @@ public class SqlMemoryStatisticsHolder {
     public SqlMemoryStatisticsHolder(QueryMemoryManager memMgr, GridMetricManager metricMgr) {
         MetricRegistry quotasMetrics = metricMgr.registry(SQL_QUOTAS_REG_NAME);
         quotaRequestedCnt = quotasMetrics.longAdderMetric("requests",
-            "How many times memory quota have been requested on this node by all the queries in total. " +
-                "Always 0 if sql memory quotas are disabled.");
+            "How many times memory quota have been requested on this node by all the queries in total.");
 
         offloadingWritten = quotasMetrics.longAdderMetric("OffloadingWritten",
             "Metrics that indicates the number of bytes written to the disk during SQL query offloading.");
@@ -76,7 +75,7 @@ public class SqlMemoryStatisticsHolder {
         quotasMetrics.register("freeMem",
             new LongSupplier() {
                 @Override public long getAsLong() {
-                    return memMgr.memoryLimit() - memMgr.memoryReserved();
+                    return memMgr.memoryLimit() - memMgr.reserved();
                 }
             },
             "How much memory in bytes currently left available for the queries on this node. " +

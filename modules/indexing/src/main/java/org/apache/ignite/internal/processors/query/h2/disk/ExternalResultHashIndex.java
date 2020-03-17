@@ -128,7 +128,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(idxFile, H2MemoryTracker.NO_OP_TRACKER, READ);
+                fileIo = fileIOFactory.create(idxFile, parent.memTracker, READ);
             }
 
             rowStore = parent.rowStore;
@@ -136,7 +136,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             entriesCnt = parent.entriesCnt;
             dir = parent.dir;
             spillFileName = parent.spillFileName;
-            memTracker = H2MemoryTracker.NO_OP_TRACKER;
+            memTracker = parent.memTracker;
         }
         catch (IOException e) {
             throw new IgniteException("Failed to create new hash index.", e);
