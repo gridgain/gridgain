@@ -1232,6 +1232,11 @@ namespace Apache.Ignite.Core.Impl.Cache
             int nativeNearSize;
             bool onlyNativeNear;
             var modes0 = EncodePeekModes(part, modes, out onlyNativeNear, out nativeNearSize);
+            
+            if (onlyNativeNear)
+            {
+                return TaskRunner.FromResult((long) nativeNearSize);
+            }
 
             return DoOutOpAsync<long>(CacheOp.SizeLongAsync, writer =>
             {
