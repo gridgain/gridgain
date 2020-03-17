@@ -405,6 +405,36 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             grid(0).context().distributedMetastorage().read(GRACEFUL_SHUTDOWN_METASTORE_KEY));
     }
 
+    @Test
+    public void testClientNodeShouldStopImmediately() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backups = 1;
+
+        startGrid(0);
+
+        startClientGrid(1);
+
+        grid(0).cluster().active(true);
+
+        grid(1).close();
+    }
+
+    @Test
+    public void testNodeOnInactiveClusterShouldStopImmediately() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backups = 1;
+
+        startGrids(1);
+
+        grid(0).cluster().active(false);
+
+        grid(0).close();
+    }
+
     /**
      * @throws Exception If failed.
      */

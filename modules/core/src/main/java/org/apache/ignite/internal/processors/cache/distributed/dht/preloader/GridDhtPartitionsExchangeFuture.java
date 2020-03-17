@@ -2411,7 +2411,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Update maximum amount of nodes available for safe stop metric.
      */
     private void updateMaximumAmountOfNodesAvailableForSafeStop() {
-        int nodeSpecificAmountOfOwners = -1;
+        int minAmountOfOwners = -1;
+
         for (CacheGroupContext grpCtx : cctx.cache().cacheGroups()) {
             if (grpCtx.systemCache())
                 continue;
@@ -2423,8 +2424,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                 continue;
 
             GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
-
-            int cacheSpecificAmountOfOwners = -1;
 
             if (fullMap != null) {
                 int parts = grpCtx.topology().partitions();
@@ -2444,22 +2443,17 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             cnt++;
                     }
 
-                    if (cacheSpecificAmountOfOwners == -1)
-                        cacheSpecificAmountOfOwners = cnt;
+                    if (minAmountOfOwners == -1)
+                        minAmountOfOwners = cnt;
 
-                    cacheSpecificAmountOfOwners = Math.min(cacheSpecificAmountOfOwners, cnt);
+                    minAmountOfOwners = Math.min(minAmountOfOwners, cnt);
                 }
             }
-
-            if (nodeSpecificAmountOfOwners == -1)
-                nodeSpecificAmountOfOwners = cacheSpecificAmountOfOwners;
-
-            nodeSpecificAmountOfOwners = Math.min(nodeSpecificAmountOfOwners, cacheSpecificAmountOfOwners);
         }
 
         cctx.kernalContext().metric().registry(SYS_METRICS).intMetric(
             MAX_NODES_AVAILABLE_FOR_SAFE_STOP,
-            "Maximum amount of nodes available for safe stop - stop without data loss").value(Math.max(0, nodeSpecificAmountOfOwners - 1));
+            "Maximum amount of nodes available for safe stop - stop without data loss").value(Math.max(0, minAmountOfOwners - 1));
     }
 
     /**

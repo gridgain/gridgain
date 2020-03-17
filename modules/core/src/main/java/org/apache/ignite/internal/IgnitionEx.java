@@ -2648,7 +2648,7 @@ public class IgnitionEx {
                 }
             }
 
-            if (waitForBackups) {
+            if (waitForBackups && !grid.context().clientNode() && grid.cluster().active()) {
                 waitingForBackups = true;
 
                 if (log.isInfoEnabled())
@@ -2694,6 +2694,13 @@ public class IgnitionEx {
                             continue;
                         }
 
+                        if (topVer != grpCtx.topology().readyTopologyVersion().topologyVersion()) {
+                            // At the moment, there is an exchange.
+                            safeToStop = false;
+
+                            break;
+                        }
+
                         GridDhtPartitionFullMap fullMap = grpCtx.topology().partitionMap(false);
 
                         int cacheSpecificAmountOfOwners = -1;
@@ -2733,10 +2740,9 @@ public class IgnitionEx {
 
                             break;
                         }
-
                     }
 
-                    safeToStop = safeToStop && topVer == grid.context().discovery().topologyVersion();
+                    safeToStop = safeToStop && topVer == grid.cluster().topologyVersion();
 
                     if (safeToStop) {
                         try {
