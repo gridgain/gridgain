@@ -73,8 +73,8 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         cfg.setConsistentId(igniteInstanceName);
 
         cfg.setCacheConfiguration(new CacheConfiguration(CACHE_NAME)
-            .setBackups(1)
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
+                .setBackups(1)
+                .setAffinity(new RendezvousAffinityFunction(false, 32))
         );
 
         cfg.setCommunicationSpi(new SingleMessageInterceptorCommunicationSpi(2));
