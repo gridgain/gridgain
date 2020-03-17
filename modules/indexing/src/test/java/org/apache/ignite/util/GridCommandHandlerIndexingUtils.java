@@ -315,6 +315,9 @@ public class GridCommandHandlerIndexingUtils {
         /** Name organization. */
         String name;
 
+        /** Address of organization. */
+        String orgAddr;
+
         /**
          * Constructor.
          *
@@ -324,6 +327,18 @@ public class GridCommandHandlerIndexingUtils {
         Person(int orgId, String name) {
             this.orgId = orgId;
             this.name = name;
+        }
+
+        /**
+         * Set address of organization.
+         *
+         * @param orgAddr Address of organization.
+         * @return Current instance.
+         */
+        public Person orgAddr(String orgAddr) {
+            this.orgAddr = orgAddr;
+
+            return this;
         }
     }
 
@@ -337,6 +352,9 @@ public class GridCommandHandlerIndexingUtils {
         /** Name. */
         String name;
 
+        /** Address. */
+        String addr;
+
         /**
          * Constructor.
          *
@@ -346,6 +364,18 @@ public class GridCommandHandlerIndexingUtils {
         Organization(int id, String name) {
             this.id = id;
             this.name = name;
+        }
+
+        /**
+         * Set address.
+         *
+         * @param addr Address.
+         * @return Current instance.
+         */
+        public Organization addr(String addr) {
+            this.addr = addr;
+
+            return this;
         }
     }
 }
