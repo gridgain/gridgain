@@ -399,10 +399,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Tests that error during Put removes near cache value for that key.
+        /// Tests that error during Put does not affect correct data in near cache.
         /// </summary>
         [Test]
-        public void TestFailedPutRemovesNearCacheValue()
+        public void TestFailedPutKeepsCorrectNearCacheValue()
         {
             // TODO: use store to cause error during put
         }
@@ -513,19 +513,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var res = cache.Query(new ScanQuery<int, Foo>(filter));
             
             Assert.AreEqual(count, res.Count());
-        }
-
-        [Test]
-        public void TestScanQueryResultUsesValueFromNearCache()
-        {
-            // TODO: Looks like we can't do this, because scanned value can be different from current near cache value.
-            // We need a scan with transformer to improve this.
-        }
-
-        [Test]
-        public void TestContinuousQueryFilterUsesValueFromNearCache()
-        {
-            // TODO: Will this work? Does the value get into Near before filter call?
         }
 
         [Test]
