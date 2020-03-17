@@ -17,6 +17,7 @@ package org.apache.ignite.internal.metric;
 
 import java.util.Objects;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlInitialConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingAbstractTest;
@@ -49,8 +50,9 @@ public class SqlStatisticOffloadingTest extends DiskSpillingAbstractTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setSqlGlobalMemoryQuota("16k")
-            .setSqlOffloadingEnabled(true);
+            .setSqlInitialConfiguration(new SqlInitialConfiguration()
+                .setSqlGlobalMemoryQuota("16k")
+                .setSqlOffloadingEnabled(true));
     }
 
     /**

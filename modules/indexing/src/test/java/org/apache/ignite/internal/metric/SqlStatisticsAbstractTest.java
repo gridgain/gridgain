@@ -26,6 +26,7 @@ import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.SqlInitialConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -67,7 +68,7 @@ public class SqlStatisticsAbstractTest extends GridCommonAbstractTest {
 
         startGrid(name, getConfiguration(name)
             .setClientMode(client)
-            .setSqlGlobalMemoryQuota(Long.toString(maxMem)));
+            .setSqlInitialConfiguration(new SqlInitialConfiguration().setSqlGlobalMemoryQuota(Long.toString(maxMem))));
     }
 
     /**

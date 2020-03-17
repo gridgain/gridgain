@@ -1268,14 +1268,14 @@ public class PlatformConfigurationUtils {
             w.writeBoolean(false);
         }
         w.writeBoolean(true);
-        w.writeInt(cfg.getSqlQueryHistorySize());
+        w.writeInt(cfg.getSqlInitialConfiguration().getSqlQueryHistorySize());
 
-        if (cfg.getSqlSchemas() == null)
+        if (cfg.getSqlInitialConfiguration().getSqlSchemas() == null)
             w.writeInt(0);
         else {
-            w.writeInt(cfg.getSqlSchemas().length);
+            w.writeInt(cfg.getSqlInitialConfiguration().getSqlSchemas().length);
 
-            for (String schema : cfg.getSqlSchemas())
+            for (String schema : cfg.getSqlInitialConfiguration().getSqlSchemas())
                 w.writeString(schema);
         }
 

@@ -24,6 +24,7 @@ import java.nio.file.WatchService;
 import java.util.List;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.SqlInitialConfiguration;
 import org.junit.Test;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
@@ -36,7 +37,7 @@ public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
     /**{@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setSqlGlobalMemoryQuota("16k");
+            .setSqlInitialConfiguration(new SqlInitialConfiguration().setSqlGlobalMemoryQuota("16k"));
     }
 
     /** */
