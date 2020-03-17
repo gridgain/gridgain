@@ -105,6 +105,27 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
     /** Last operation result. */
     protected Object lastOperationResult;
 
+    /** Persistence flag. */
+    private boolean persistent = true;
+
+    /**
+     * Persistence setter.
+     *
+     * @param pr {@code True} If persistence enable.
+     **/
+    protected void persistenceEnable(boolean pr) {
+        persistent = pr;
+    }
+
+    /**
+     * Persistence getter.
+     *
+     * @return Persistence enable flag.
+     */
+    protected boolean persistenceEnable() {
+        return persistent;
+    }
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
@@ -173,7 +194,7 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
             .setWalMode(WALMode.LOG_ONLY)
             .setCheckpointFrequency(checkpointFreq)
             .setDefaultDataRegionConfiguration(
-                new DataRegionConfiguration().setMaxSize(50L * 1024 * 1024).setPersistenceEnabled(true)
+                new DataRegionConfiguration().setMaxSize(50L * 1024 * 1024).setPersistenceEnabled(persistent)
             );
 
         if (dataRegionConfiguration != null)
@@ -342,17 +363,28 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
      *
      * @param ignite Ignite.
      * @param countEntries Count of entries.
+     * @param partitions Partitions count.
      */
-    protected void createCacheAndPreload(Ignite ignite, int countEntries) {
+    protected void createCacheAndPreload(Ignite ignite, int countEntries, int partitions) {
         assert nonNull(ignite);
 
         ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-            .setAffinity(new RendezvousAffinityFunction(false, 32))
+            .setAffinity(new RendezvousAffinityFunction(false, partitions))
             .setBackups(1));
 
         try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < countEntries; i++)
                 streamer.addData(i, i);
         }
+    }
+
+    /**
+     * Creates default cache and preload some data entries.
+     *
+     * @param ignite Ignite.
+     * @param countEntries Count of entries.
+     */
+    protected void createCacheAndPreload(Ignite ignite, int countEntries) {
+        createCacheAndPreload(ignite, countEntries, 32);
     }
 }
