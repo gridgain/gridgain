@@ -644,6 +644,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         igniteForKillRequest.context().query()
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+
+        if (asyncCancel)
+            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
     }
 
     /**
@@ -660,6 +663,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         igniteForKillRequest.context().query()
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+
+        if (asyncCancel)
+            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
     }
 
     /**
@@ -678,6 +684,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         igniteForKillRequest.context().query()
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+
+        if (asyncCancel)
+            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
     }
 
     /**
@@ -692,6 +701,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         igniteForKillRequest.context().query()
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+
+        if (asyncCancel)
+            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
     }
 
     /**
@@ -708,6 +720,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         igniteForKillRequest.context().query()
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+
+        if (asyncCancel)
+            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
     }
 
     /**
@@ -726,6 +741,9 @@ public class KillQueryTest extends GridCommonAbstractTest {
 
         igniteForKillRequest.context().query()
             .querySqlFields(createKillQuery(ignite.context().localNodeId(), qryId, asyncCancel), false).getAll();
+
+        if (asyncCancel)
+            GridTestUtils.waitForCondition(() -> ignite.context().query().runningQueries(-1).isEmpty(), 1000);
     }
 
     /**
