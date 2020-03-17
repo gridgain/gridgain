@@ -38,7 +38,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
     private static final String CACHE_NAME = "cacheTest";
 
     /** Listener for parsing patterns in log. */
-    private ListeningTestLogger testLog = new ListeningTestLogger(false, log());
+    private static final ListeningTestLogger testLog = new ListeningTestLogger(false, log);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -59,12 +59,18 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         stopAllGrids();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        testLog.clearListeners();
+
+        super.afterTest();
     }
 
     /**
@@ -81,8 +87,6 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
         IgniteEx ignite = startGrids(3);
         ignite.cluster().active(true);
         awaitPartitionMapExchange();
-
-        testLog.clearListeners();
 
         testLog.registerListener(lsnr);
 
@@ -167,8 +171,6 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
 
     /**
      * Overraided class LogListener for find specific patterns.
-     * @return cn if finded inconsistent counters in log.
-     * @return sz if finded inconsistent partition size in log.
      */
     private static class SizeCounterLogListener extends LogListener {
         /** Pattern for Counters inconsistent message.*/
@@ -179,15 +181,15 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
         final Pattern patCntSz = Pattern.compile("consistentId=dht.GridCachePartitionsUpdateCountersAndSizeTest" +
             "\\d meta=\\[updCnt=(\\d{2}), size=(\\d{1,2})");
 
-        /** if finded true substring in log for inconsistent counters.*/
+        /** if finded substring in log for inconsistent counters.*/
         boolean cn;
-        /** if finded true substring in log for inconsistent partitiom size.*/
+        /** if finded substring in log for inconsistent partition size.*/
         boolean sz;
-
+        /** return true if inconsistent counters.*/
         public boolean checkCnt() {
                 return cn;
         }
-
+        /** return true if inconsistent partition size.*/
         public boolean checkSize() {
                 return sz;
         }
@@ -202,9 +204,7 @@ public class GridCachePartitionsUpdateCountersAndSizeTest extends GridCommonAbst
             //no op
         }
 
-        /** Search specific pattern in log string and set cn and sz if found.
-         * @param s Log string.
-         * {@inheritDoc} */
+        /** {@inheritDoc} */
         @Override public void accept(String s) {
             HashSet<Long> setCnt = new HashSet<>();
             HashSet<Long> setSize = new HashSet<>();

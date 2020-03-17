@@ -121,7 +121,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
     /**
      * @return Test data.
      */
-    protected TestData<T> getTestData() throws IgniteCheckedException {
+    protected TestData<T> getTestData() {
         TestData<T> data = (TestData<T>)tests.get(getClass());
 
         if (data == null)
@@ -179,7 +179,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
     }
 
     /** {@inheritDoc} */
-    @Override protected final IgniteTestResources getTestResources() throws IgniteCheckedException {
+    @Override protected final IgniteTestResources getTestResources() {
         return getTestData().getTestResources();
     }
 
@@ -613,7 +613,7 @@ public abstract class GridSpiAbstractTest<T extends IgniteSpi> extends GridAbstr
         /**
          *
          */
-        TestData() throws IgniteCheckedException {
+        TestData() {
             rsrcs = new IgniteTestResources();
         }
 

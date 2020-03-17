@@ -84,7 +84,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
         checkQueryExpectOOM("select * from K LIMIT 8000", false);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryReserved() + 1000);
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(8000 > localResults.get(0).getRowCount());
     }
 
@@ -148,7 +148,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
             "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 6", true);
 
         assertEquals(2, localResults.size());
-        assertTrue(maxMem < localResults.get(1).memoryReserved() + 500);
+        assertTrue(maxMem > localResults.get(1).memoryReserved());
         assertTrue(4000 > localResults.get(0).getRowCount());
         assertTrue(4000 > localResults.get(1).getRowCount());
     }
@@ -185,7 +185,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
         checkQueryExpectOOM("select * from T as T0, T as T1", false);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryReserved() + 500);
+        assertTrue(maxMem >= localResults.get(0).memoryReserved());
 
     }
 
@@ -196,7 +196,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
         checkQueryExpectOOM("select * from T as T0, T as T1 ORDER BY T1.id", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryReserved() + 500);
+        assertTrue(maxMem >= localResults.get(0).memoryReserved());
     }
 
     /** Check GROUP BY operation on large data set with small result set. */
@@ -276,7 +276,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
             "GROUP BY K.indexed ORDER BY a DESC", true);
 
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryReserved() + 1000);
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -287,7 +287,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
 
         // Local result is quite small.
         assertEquals(1, localResults.size());
-        assertTrue(maxMem < localResults.get(0).memoryReserved() + 500);
+        assertTrue(maxMem > localResults.get(0).memoryReserved());
         assertTrue(BIG_TABLE_SIZE > localResults.get(0).getRowCount());
     }
 
@@ -369,7 +369,7 @@ public abstract class BasicQueryMemoryTrackerSelfTest extends AbstractQueryMemor
 
             assertEquals(18, cursors.size());
 
-            long globallyReserved = h2.memoryManager().memoryReserved();
+            long globallyReserved = h2.memoryManager().reserved();
 
             assertTrue(h2.memoryManager().memoryLimit() < globallyReserved + MB);
         }

@@ -37,6 +37,7 @@ import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.embedded.LocalServerPort;
@@ -84,6 +85,16 @@ public abstract class AgentCommonAbstractTest extends GridCommonAbstractTest {
 
     /** Cluster. */
     protected IgniteCluster cluster;
+
+    /**
+     * Stop all grids and clear persistence dir.
+     */
+    @Before
+    public void cleanup() throws Exception {
+        stopAllGrids();
+
+        cleanPersistenceDir();
+    }
 
     /**
      * Stop all grids and clear persistence dir.

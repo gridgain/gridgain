@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 import org.apache.ignite.internal.processors.query.h2.opt.join.ProxyDistributedLookupBatch;
 import org.h2.command.dml.AllColumnsForPlan;
 import org.h2.engine.Session;
-import org.h2.index.BaseIndex;
 import org.h2.index.Cursor;
 import org.h2.index.Index;
 import org.h2.index.IndexLookupBatch;
@@ -38,7 +37,7 @@ import java.util.List;
  * Allows to have 'free' index for alias columns
  * Delegates the calls to underlying normal index
  */
-public class GridH2ProxyIndex extends BaseIndex {
+public class GridH2ProxyIndex extends H2IndexCostedBase {
     /** Underlying normal index */
     protected Index idx;
 
@@ -53,7 +52,7 @@ public class GridH2ProxyIndex extends BaseIndex {
                             String name,
                             List<IndexColumn> colsList,
                             Index idx) {
-        super(tbl, 0, name, GridH2IndexBase.columnsArray(tbl, colsList),
+        super(tbl, name, GridH2IndexBase.columnsArray(tbl, colsList),
             IndexType.createNonUnique(false, false, idx instanceof SpatialIndex));
 
         IndexColumn[] cols = colsList.toArray(new IndexColumn[colsList.size()]);
@@ -101,7 +100,7 @@ public class GridH2ProxyIndex extends BaseIndex {
         SortOrder sortOrder, AllColumnsForPlan allColumnsSet) {
         long rowCnt = getRowCountApproximation(ses);
 
-        double baseCost = getCostRangeIndex(masks, rowCnt, filters, filter, sortOrder, false, allColumnsSet);
+        double baseCost = costRangeIndex(masks, rowCnt, filters, filter, sortOrder, false, allColumnsSet);
 
         int mul = ((GridH2IndexBase)idx).getDistributedMultiplier(ses, filters, filter);
 

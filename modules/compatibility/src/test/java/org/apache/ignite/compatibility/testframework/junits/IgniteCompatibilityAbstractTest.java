@@ -145,11 +145,11 @@ public abstract class IgniteCompatibilityAbstractTest extends GridCommonAbstract
                 return ListenedGridTestLog4jLogger.createLogger(ctgr + "#" + ver.replaceAll("\\.", "_"));
             }
 
-            @Override protected String igniteNodeRunnerClassName() throws Exception {
+            @Override protected String igniteNodeRunnerClassName() {
                 return IgniteCompatibilityNodeRunner.class.getCanonicalName();
             }
 
-            @Override protected String params(IgniteConfiguration cfg, boolean resetDiscovery) throws Exception {
+            @Override protected String params(IgniteConfiguration cfg, boolean resetDiscovery) {
                 return cfgCloPath + " " + igniteInstanceName + " "
                     + getId() + " "
                     + (rmJvmInstance == null ? getId() : ((IgniteProcessProxy)rmJvmInstance).getId()) + " "
