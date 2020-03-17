@@ -61,9 +61,9 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        destroyGrid();
-
         super.afterTest();
+
+        destroyGrid();
     }
 
     /**
@@ -108,15 +108,14 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
 
         GridTestUtils.setFieldValue(memMgr, "fileIOFactory", ioFactory);
 
-        FieldsQueryCursor<List<?>> cur = grid(0).cache(DEFAULT_CACHE_NAME)
+        try (FieldsQueryCursor<List<?>> cur = grid(0).cache(DEFAULT_CACHE_NAME)
             .query(new SqlFieldsQueryEx(
                 "SELECT id, name, code, depId FROM person WHERE depId >= 0 " +
                     " EXCEPT " +
                     "SELECT id, name, code, depId FROM person WHERE depId > 5 ", null)
                 .setMaxMemory(SMALL_MEM_LIMIT)
-                .setLazy(true));
+                .setLazy(true))) {
 
-        try {
             cur.iterator();
 
             fail("Exception is not thrown.");
@@ -153,7 +152,64 @@ public class DiskSpillingIoErrorTest extends DiskSpillingAbstractTest {
             if (--crashOnCreateCnt == 0)
                 throw new IOException("Test crash.");
 
-            return super.create(file, H2MemoryTracker.NO_OP_TRACKER, modes);
+            return super.create(file, NO_OP_TRACKER, modes);
         }
     }
+
+    /** */
+    private static final H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
+        /** {@inheritDoc} */
+        @Override public boolean reserve(long size) {
+            return false;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void release(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public long writtenOnDisk() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long totalWrittenOnDisk() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public long reserved() {
+            return -1;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void spill(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void unspill(long size) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void close() {
+        }
+
+        /** {@inheritDoc} */
+        @Override public void incrementFilesCreated() {
+        }
+
+        /** {@inheritDoc} */
+        @Override public H2MemoryTracker createChildTracker() {
+            return NO_OP_TRACKER;
+        }
+
+        /** {@inheritDoc} */
+        @Override public void onChildClosed(H2MemoryTracker child) {
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean closed() {
+            return false;
+        }
+    };
 }
