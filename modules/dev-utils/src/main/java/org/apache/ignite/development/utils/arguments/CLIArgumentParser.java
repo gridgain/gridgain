@@ -43,7 +43,12 @@ public class CLIArgumentParser {
             this.argConfiguration.put(cliArgument.name(), cliArgument);
     }
 
-    /** */
+    /**
+     * Parses arguments using iterator. Parsed argument value are available through {@link #get(CLIArgument)}
+     * and {@link #get(String)}.
+     *
+     * @param argsIter Iterator.
+     */
     public void parse(Iterator<String> argsIter) {
         Set<String> obligatoryArgs =
             argConfiguration.values().stream().filter(a -> !a.optional()).map(CLIArgument::name).collect(toSet());
@@ -91,7 +96,13 @@ public class CLIArgumentParser {
         }
     }
 
-    /** */
+    /**
+     * Get parsed argument value.
+     *
+     * @param arg Argument configuration.
+     * @param <T> Value type.
+     * @return Value.
+     */
     public <T> T get(CLIArgument arg) {
         Object val = parsedArgs.get(arg.name());
 
@@ -101,7 +112,13 @@ public class CLIArgumentParser {
             return (T)val;
     }
 
-    /** */
+    /**
+     * Get parsed argument value.
+     *
+     * @param name Argument name.
+     * @param <T> Value type.
+     * @return Value.
+     */
     public <T> T get(String name) {
         CLIArgument arg = argConfiguration.get(name);
 
@@ -111,7 +128,11 @@ public class CLIArgumentParser {
         return get(arg);
     }
 
-    /** */
+    /**
+     * Returns usage description.
+     *
+     * @return Usage.
+     */
     public String usage() {
         GridStringBuilder sb = new GridStringBuilder("Usage: ");
 

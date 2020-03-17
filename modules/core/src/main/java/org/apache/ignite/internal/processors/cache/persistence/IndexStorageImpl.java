@@ -224,7 +224,7 @@ public class IndexStorageImpl implements IndexStorage {
     /**
      *
      */
-    public static class MetaTree extends BPlusTree<IndexItem, IndexItem> {
+    private static class MetaTree extends BPlusTree<IndexItem, IndexItem> {
         /** */
         private final int allocPartId;
 
@@ -240,7 +240,7 @@ public class IndexStorageImpl implements IndexStorage {
          * @param failureProcessor if the tree is corrupted.
          * @throws IgniteCheckedException If failed.
          */
-        public MetaTree(
+        private MetaTree(
             final int cacheId,
             final int allocPartId,
             final byte allocSpace,
