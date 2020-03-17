@@ -1677,6 +1677,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             U.resolveClassLoader(ctx.config())
         );
 
+        // We need to call this method before cluster.isBaselineAutoAdjustEnabled() because
+        // by default this param is false (see cluster.isBaselineAutoAdjustEnabled())
+        // for supporting compatibility, but the real value might be different and
+        // might not been set because of the ordering in disco
         baselineConfiguration().initDfltAutoAdjustVars(ctx);
 
         boolean autoAdjustBaseline = isInMemoryCluster

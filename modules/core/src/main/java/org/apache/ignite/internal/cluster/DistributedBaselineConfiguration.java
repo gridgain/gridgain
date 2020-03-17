@@ -101,7 +101,7 @@ public class DistributedBaselineConfiguration {
 
         dfltTimeout = persistenceEnabled ? DEFAULT_PERSISTENCE_TIMEOUT : DEFAULT_IN_MEMORY_TIMEOUT;
         dfltEnabled = false;
-        boolean clientMode = !ctx.config().isClientMode();
+        boolean serverMode = !ctx.config().isClientMode();
 
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
@@ -114,7 +114,7 @@ public class DistributedBaselineConfiguration {
 
                 @Override public void onReadyToWrite() {
                     if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) &&
-                        allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT) && clientMode) {
+                        allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT) && serverMode) {
                         initDfltAutoAdjustVars(ctx);
                         setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
                         setDefaultValue(baselineAutoAdjustTimeout, dfltTimeout, log);
@@ -124,6 +124,9 @@ public class DistributedBaselineConfiguration {
         );
     }
 
+    /**
+     * @param ctx Context.
+     */
     public void initDfltAutoAdjustVars(GridKernalContext ctx) {
         if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) &&
             allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT)) {
