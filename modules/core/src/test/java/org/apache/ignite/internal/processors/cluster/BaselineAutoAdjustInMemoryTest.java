@@ -91,7 +91,7 @@ public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
      * Tests that cluster with one server and client do not hung when activating
      */
     @Test
-    public void testActivatingWorking() throws Exception {
+    public void testActivatingIsNotHung() throws Exception {
         IgniteEx ig = startGrid(0);
 
         startClientGrid(1);

@@ -54,9 +54,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
 
 /**
@@ -161,118 +158,81 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Volatile_1() throws Exception {
-        testNodeLeftOnStableTopology(false, true, false, true);
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
-    public void testNodeLeftOnStableTopology_Volatile_2() throws Exception {
         // Baseline auto adjust for volatile caches will prevent the optimization.
-        testNodeLeftOnStableTopology(false, true, false, true);
+        testNodeLeftOnStableTopology(false, true, false, true, true);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
+    public void testNodeLeftOnStableTopology_Volatile_2() throws Exception {
+        testNodeLeftOnStableTopology(false, true, false, false, false);
+    }
+
+    /** */
+    @Test
     public void testNodeLeftOnStableTopology_Volatile_3() throws Exception {
-        testNodeLeftOnStableTopology(false, true, false, false);
+        testNodeLeftOnStableTopology(false, true, true, true, false);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
-    public void testNodeLeftOnStableTopology_Volatile_4() throws Exception {
-        testNodeLeftOnStableTopology(false, true, true, true);
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Persistent_1() throws Exception {
-        testNodeLeftOnStableTopology(true, false, false, false);
+        testNodeLeftOnStableTopology(true, false, false, false, true);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Persistent_2() throws Exception {
         // Auto adjust for volatile caches shouldn't have any effect for persistent caches.
-        testNodeLeftOnStableTopology(true, false, false, false);
+        testNodeLeftOnStableTopology(true, false, false, false, true);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Persistent_3() throws Exception {
-        testNodeLeftOnStableTopology(true, false, false, false);
+        testNodeLeftOnStableTopology(true, false, false, false, false);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Persistent_4() throws Exception {
-        testNodeLeftOnStableTopology(true, false, true, true);
+        testNodeLeftOnStableTopology(true, false, true, true, false);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
     public void testNodeLeftOnStableTopology_Persistent_5() throws Exception {
         // Explicitly disabling the optimization, PME is expected.
-        testNodeLeftOnStableTopology(true, false, false, true);
+        testNodeLeftOnStableTopology(true, false, false, true, true);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
-    @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Mixed_1() throws Exception {
         // Auto adjust for volatile caches shouldn't have any effect for mixed caches.
-        testNodeLeftOnStableTopology(true, true, false, false);
+        testNodeLeftOnStableTopology(true, true, false, false, true);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Mixed_2() throws Exception {
-        testNodeLeftOnStableTopology(true, true, false, false);
+        testNodeLeftOnStableTopology(true, true, false, false, true);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
-    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testNodeLeftOnStableTopology_Mixed_3() throws Exception {
-        testNodeLeftOnStableTopology(true, true, false, true);
+        testNodeLeftOnStableTopology(true, true, true, true, false);
     }
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
-        testNodeLeftOnStableTopology(true, true, true, true);
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
-    public void testNodeLeftOnStableTopology_Mixed_5() throws Exception {
+    public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
         // Explicitly disabling the optimization, PME is expected.
-        testNodeLeftOnStableTopology(true, true, false, true);
+        testNodeLeftOnStableTopology(true, true, false, true, true);
     }
 
     /**
@@ -287,14 +247,17 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
         boolean persistent,
         boolean inmem,
         boolean resetBlt,
-        boolean expectPME
+        boolean expectPME,
+        boolean autoAdjustEnabled
     ) throws Exception {
         startPersistentRegion = persistent;
         startVolatileRegion = inmem;
 
         int nodes = NODES_CNT;
 
-        Ignite crd = startGrids(nodes);
+        IgniteEx crd = startGrids(nodes);
+
+        crd.cluster().baselineAutoAdjustEnabled(autoAdjustEnabled);
 
         crd.cluster().active(true);
 

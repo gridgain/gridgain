@@ -602,10 +602,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
-    })
     public void testUnstableTopology() throws Exception {
         int cnt = 8;
 

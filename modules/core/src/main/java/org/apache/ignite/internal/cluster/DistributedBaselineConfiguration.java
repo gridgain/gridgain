@@ -74,7 +74,7 @@ public class DistributedBaselineConfiguration {
         detachedLongProperty("baselineAutoAdjustTimeout");
 
     /** Persistence enabled flag. */
-    boolean persistenceEnabled;
+    final boolean persistenceEnabled;
 
     /**
      * @param isp Subscription processor.
