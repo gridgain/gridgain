@@ -20,7 +20,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.SqlInitialConfiguration;
 import org.jsr166.ConcurrentLinkedDeque8;
 
