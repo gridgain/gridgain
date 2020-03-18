@@ -54,14 +54,14 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     /** */
     private static final int PARTS_CNT = 32;
 
-    /** Should be wiped out after enabling BLT for volatile caches. */
+    /** Should be wiped out after enabling BLT for volatile caches. TODO maybe remove it and use autoadjust=0. */
     private boolean enableBaseline;
 
     /** */
     private int nonAffinityIdx;
 
     /** */
-    private boolean defaultRegionPersistence;
+    private boolean dfltRegionPersistence;
 
     /** */
     private PartitionLossPolicy lossPlc;
@@ -111,7 +111,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         final int size = 50 * 1024 * 1024;
 
         DataRegionConfiguration dfltRegCfg = new DataRegionConfiguration();
-        dfltRegCfg.setName(DEFAULT_CACHE_NAME).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(defaultRegionPersistence);
+        dfltRegCfg.setName(DEFAULT_CACHE_NAME).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(dfltRegionPersistence);
 
         dsCfg.setDefaultDataRegionConfiguration(dfltRegCfg);
 
@@ -136,9 +136,10 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         enableBaseline = false;
         nonAffinityIdx = -1;
-        defaultRegionPersistence = false;
+        dfltRegionPersistence = false;
         lossPlc = PartitionLossPolicy.IGNORE;
         otherRegionPersistence = null;
+        backups = 0;
 
         cleanPersistenceDir();
     }
@@ -158,7 +159,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      */
     @Test
     public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_NoBLT() throws Exception {
-        defaultRegionPersistence = false;
+        dfltRegionPersistence = false;
 
         doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, true);
     }
@@ -169,7 +170,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      */
     @Test
     public void testPartitionLossDetectionOnNodeLeft_Volatile_Unsafe_Merge_NoBLT() throws Exception {
-        defaultRegionPersistence = false;
+        dfltRegionPersistence = false;
 
         doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.IGNORE, true, false);
     }
@@ -226,7 +227,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      */
     @Test
     public void testPartitionLossDetectionOnClientTopology_Persistent() throws Exception {
-        defaultRegionPersistence = true;
+        dfltRegionPersistence = true;
 
         final IgniteEx crd = startGrids(3);
 
@@ -254,7 +255,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      */
     @Test
     public void testPartitionLossDetectionOnClientTopology_Persistent_NonAffCrd() throws Exception {
-        defaultRegionPersistence = true;
+        dfltRegionPersistence = true;
         nonAffinityIdx = 0;
 
         final IgniteEx crd = startGrids(3);
@@ -292,7 +293,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         boolean expectLost
     ) throws Exception {
         enableBaseline = false;
-        this.defaultRegionPersistence = persistence;
+        this.dfltRegionPersistence = persistence;
         this.lossPlc = lossPlc;
 
         final int gridCnt = 5;

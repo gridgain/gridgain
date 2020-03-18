@@ -211,7 +211,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         partLossPlc = PartitionLossPolicy.READ_ONLY_SAFE;
 
-        checkLostPartition(false, true, killSingleNode);
+        checkLostPartition(false, killSingleNode);
     }
 
     /**
@@ -223,7 +223,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(false, true, killSingleNode);
+        checkLostPartition(false, killSingleNode);
     }
 
     /**
@@ -235,7 +235,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         partLossPlc = PartitionLossPolicy.READ_ONLY_ALL;
 
-        checkLostPartition(false, false, killSingleNode);
+        checkLostPartition(false, killSingleNode);
     }
 
     /**
@@ -248,7 +248,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(false, false, killSingleNode);
+        checkLostPartition(false, killSingleNode);
     }
 
     /**
@@ -260,7 +260,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
 
-        checkLostPartition(true, true, killSingleNode);
+        checkLostPartition(true, killSingleNode);
     }
 
     /**
@@ -272,7 +272,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, killSingleNode);
+        checkLostPartition(true, killSingleNode);
     }
 
     /**
@@ -284,7 +284,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         partLossPlc = PartitionLossPolicy.READ_WRITE_ALL;
 
-        checkLostPartition(true, false, killSingleNode);
+        checkLostPartition(true, killSingleNode);
     }
 
     /**
@@ -297,7 +297,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, false, killSingleNode);
+        checkLostPartition(true, killSingleNode);
     }
 
     /**
@@ -309,7 +309,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
 
-        checkLostPartition(true, true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 0));
+        checkLostPartition(true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 0));
     }
 
     /**
@@ -321,7 +321,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 0));
+        checkLostPartition(true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 0));
     }
 
     /**
@@ -333,7 +333,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
 
-        checkLostPartition(true, true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 20));
+        checkLostPartition(true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 20));
     }
 
     /**
@@ -345,7 +345,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 20));
+        checkLostPartition(true, new TopologyChanger(false, asList(3, 2), asList(0, 1, 4), 20));
     }
 
     /**
@@ -359,7 +359,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         backups = 1;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 2, 1), asList(0, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 2, 1), asList(0, 4), 0));
     }
 
     /**
@@ -375,7 +375,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 2, 1), asList(0, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 2, 1), asList(0, 4), 0));
     }
 
     /**
@@ -387,7 +387,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         partLossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
     }
 
     /**
@@ -399,7 +399,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
     }
 
     /**
@@ -413,7 +413,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         backups = 1;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 2), asList(0, 1, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 2), asList(0, 1, 4), 0));
     }
 
     /**
@@ -427,7 +427,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 2), asList(0, 1, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 2), asList(0, 1, 4), 0));
     }
 
     /**
@@ -441,7 +441,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         backups = 1;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
     }
 
     /**
@@ -455,7 +455,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         isPersistenceEnabled = true;
 
-        checkLostPartition(true, true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
+        checkLostPartition(true, new TopologyChanger(true, asList(3, 0), asList(1, 2, 4), 0));
     }
 
     /**
@@ -626,11 +626,10 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
     /**
      * @param canWrite {@code True} if writes are allowed.
-     * @param safe {@code True} if lost partition should trigger exception.
      * @param topChanger topology changer.
      * @throws Exception if failed.
      */
-    private void checkLostPartition(boolean canWrite, boolean safe, TopologyChanger topChanger) throws Exception {
+    private void checkLostPartition(boolean canWrite, TopologyChanger topChanger) throws Exception {
         assert partLossPlc != null;
 
         List<Integer> lostParts = topChanger.changeTopology();
@@ -658,33 +657,17 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
             IgniteCache<Integer, Integer> cache = ig.cache(DEFAULT_CACHE_NAME);
 
-            verifyLostPartitions(ig, lostParts);
+            verifyLostPartitions(ig, isPersistenceEnabled, lostParts);
 
-            verifyCacheOps(canWrite, safe, ig);
+            verifyCacheOps(canWrite, isPersistenceEnabled, ig);
 
-            validateQuery(safe, ig);
-
-            // TODO withPartitionRecover doesn't work with BLT - https://issues.apache.org/jira/browse/IGNITE-10041.
-            if (!isPersistenceEnabled) {
-                // Check we can read and write to lost partition in recovery mode.
-                IgniteCache<Integer, Integer> recoverCache = cache.withPartitionRecover();
-
-                for (int lostPart : recoverCache.lostPartitions()) {
-                    recoverCache.get(lostPart);
-                    recoverCache.put(lostPart, lostPart);
-                }
-
-                // Check that writing in recover mode does not clear partition state.
-                verifyLostPartitions(ig, lostParts);
-
-                verifyCacheOps(canWrite, safe, ig);
-
-                validateQuery(safe, ig);
-            }
+            // TODO queries must pass for insafe.
+            if (isPersistenceEnabled)
+                validateQuery(true, ig);
         }
 
-        checkNewNode(true, canWrite, safe);
-        checkNewNode(false, canWrite, safe);
+        checkNewNode(true, canWrite, isPersistenceEnabled);
+        checkNewNode(false, canWrite, isPersistenceEnabled);
 
         // Bring all nodes back.
         for (int i : topChanger.killNodes) {
@@ -696,7 +679,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
             // TODO With persistence enabled LOST partitions become OWNING after a node joins back - https://issues.apache.org/jira/browse/IGNITE-10044.
             if (!isPersistenceEnabled) {
                 for (Ignite ig : G.allGrids()) {
-                    verifyCacheOps(canWrite, safe, ig);
+                    verifyCacheOps(canWrite, isPersistenceEnabled, ig);
 
                     // TODO Query effectively waits for rebalance due to https://issues.apache.org/jira/browse/IGNITE-10057
                     // TODO and after resetLostPartition there is another OWNING copy in the cluster due to https://issues.apache.org/jira/browse/IGNITE-10058.
@@ -753,11 +736,12 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
             CacheGroupContext grpCtx = cl.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME));
 
-            assertTrue(grpCtx.needsRecovery());
+            assertTrue(!safe || grpCtx.needsRecovery());
 
             verifyCacheOps(canWrite, safe, cl);
 
-            validateQuery(safe, cl);
+            if (safe)
+                validateQuery(true, cl);
         }
         finally {
             stopGrid("newNode", false);
@@ -768,10 +752,17 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
     /**
      * @param node Node.
+     * @param safe Expect loss.
      * @param lostParts Lost partition IDs.
      */
-    private void verifyLostPartitions(Ignite node, List<Integer> lostParts) {
+    private void verifyLostPartitions(Ignite node, boolean safe, List<Integer> lostParts) {
         IgniteCache<Integer, Integer> cache = node.cache(DEFAULT_CACHE_NAME);
+
+        if (!safe) {
+            assertTrue(cache.lostPartitions().isEmpty());
+
+            return;
+        }
 
         Set<Integer> actualSortedLostParts = new TreeSet<>(cache.lostPartitions());
         Set<Integer> expSortedLostParts = new TreeSet<>(lostParts);
@@ -794,13 +785,17 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
             try {
                 Integer actual = cache.get(i);
 
-                if (cache.lostPartitions().contains(i)) {
-                    if (safe)
+                if (safe) {
+                    if (cache.lostPartitions().contains(i)) {
                         fail("Reading from a lost partition should have failed: " + i + " " + ig.name());
-                    // else we could have read anything.
+                        // else we could have read anything.
+                    }
+                    else
+                        assertEquals((Integer)i, actual);
                 }
-                else
-                    assertEquals((Integer)i, actual);
+                else {
+                    // TODO Validate null is returned for re-created lost partition.
+                }
             }
             catch (CacheException e) {
                 assertTrue("Read exception should only be triggered in safe mode: " + e, safe);
@@ -810,22 +805,25 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         }
 
         // Check write.
-        for (int i = 0; i < parts; i++) {
-            try {
-                cache.put(i, i);
+        // TODO remove read-only.
+        if (safe) {
+            for (int i = 0; i < parts; i++) {
+                try {
+                    cache.put(i, i);
 
-                assertTrue("Write in read-only mode should be forbidden: " + i, canWrite);
+                    assertTrue("Write in read-only mode should be forbidden: " + i, canWrite);
 
-                if (cache.lostPartitions().contains(i))
-                    assertFalse("Writing to a lost partition should have failed: " + i, safe);
-            }
-            catch (CacheException e) {
-                if (canWrite) {
-                    assertTrue("Write exception should only be triggered in safe mode: " + e, safe);
-                    assertTrue("Write exception should only be triggered for a lost partition: " + e,
-                        cache.lostPartitions().contains(i));
+                    if (cache.lostPartitions().contains(i))
+                        assertFalse("Writing to a lost partition should have failed: " + i, safe);
                 }
-                // else expected exception regardless of partition.
+                catch (CacheException e) {
+                    if (canWrite) {
+                        assertTrue("Write exception should only be triggered in safe mode: " + e, safe);
+                        assertTrue("Write exception should only be triggered for a lost partition: " + e,
+                            cache.lostPartitions().contains(i));
+                    }
+                    // else expected exception regardless of partition.
+                }
             }
         }
     }
@@ -1105,8 +1103,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
             doSleep(5_000L);
 
-            // Events are not triggered in IGNORE mode.
-            if (partLossPlc != PartitionLossPolicy.IGNORE) {
+            // Events are triggered only in persistent mode.
+            if (isPersistenceEnabled) {
                 for (Map<Integer, Semaphore> map : lostMap) {
                     for (Map.Entry<Integer, Semaphore> entry : map.entrySet())
                         assertTrue("Failed to wait for partition LOST event for partition: " + entry.getKey(), entry.getValue().tryAcquire(1));
