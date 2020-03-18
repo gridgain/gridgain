@@ -47,8 +47,6 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2Table;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAlias;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlAst;
-import org.apache.ignite.internal.processors.query.h2.sql.GridSqlElement;
-import org.apache.ignite.internal.processors.query.h2.sql.GridSqlFunction;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlInsert;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQuery;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
@@ -369,7 +367,12 @@ public class QueryParser {
 
                 // Do actual parsing.
                 if (CommandProcessor.isCommand(prepared)) {
-                    GridSqlStatement cmdH2 = new GridSqlQueryParser(false, log).parse(prepared);
+                    GridSqlStatement cmdH2 = GridSqlQueryParser.builder()
+                        .useOptimizedSubquery(false)
+                        .logger(log)
+                        .disabledFunctions(disabledFuncs)
+                        .build()
+                        .parse(prepared);
 
                     QueryParserResultCommand cmd = new QueryParserResultCommand(null, cmdH2, false);
 
@@ -415,7 +418,11 @@ public class QueryParser {
                 }
 
                 // Parse SELECT.
-                GridSqlQueryParser parser = new GridSqlQueryParser(false, log);
+                GridSqlQueryParser parser = GridSqlQueryParser.builder()
+                    .useOptimizedSubquery(false)
+                    .logger(log)
+                    .disabledFunctions(disabledFuncs)
+                    .build();
 
                 GridSqlQuery selectStmt = (GridSqlQuery)parser.parse(prepared);
 
@@ -621,7 +628,11 @@ public class QueryParser {
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
 
         // Prepare AST.
-        GridSqlQueryParser parser = new GridSqlQueryParser(false, log);
+        GridSqlQueryParser parser = GridSqlQueryParser.builder()
+            .useOptimizedSubquery(false)
+            .logger(log)
+            .disabledFunctions(disabledFuncs)
+            .build();
 
         GridSqlStatement stmt = parser.parse(prepared);
 
