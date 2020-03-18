@@ -867,6 +867,8 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
 
         saveStoreMetadata(store, null, true, false);
 
+        store.markDestroyed();
+
         ((GridCacheDatabaseSharedManager)ctx.database()).schedulePartitionDestroy(grp.groupId(), partId);
     }
 
@@ -2606,6 +2608,14 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
         /** {@inheritDoc} */
         @Override public void destroy() throws IgniteCheckedException {
             // No need to destroy delegate.
+        }
+
+        /** {@inheritDoc} */
+        @Override public void markDestroyed() throws IgniteCheckedException {
+            CacheDataStore delegate = init0(true);
+
+            if (delegate != null)
+                delegate.markDestroyed();
         }
 
         /** {@inheritDoc} */
