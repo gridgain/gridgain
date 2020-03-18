@@ -41,6 +41,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
  * Tests for "wait for backups on shutdown" flag.
@@ -405,6 +406,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             grid(0).context().distributedMetastorage().read(GRACEFUL_SHUTDOWN_METASTORE_KEY));
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testClientNodeShouldStopImmediately() throws Exception {
         cacheMode = CacheMode.PARTITIONED;
@@ -421,6 +425,9 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         grid(1).close();
     }
 
+    /**
+     * @throws Exception If failed.
+     */
     @Test
     public void testNodeOnInactiveClusterShouldStopImmediately() throws Exception {
         cacheMode = CacheMode.PARTITIONED;
@@ -433,6 +440,66 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         grid(0).cluster().active(false);
 
         grid(0).close();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingRestartEmulation() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backups = 1;
+
+        startGrids(2);
+
+        grid(0).cluster().active(true);
+
+        for (int i = 0; i < cacheSize(); i++)
+            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
+
+        for (int i = 0; i < 2; i++) {
+            grid(i).close();
+
+            startGrid(i);
+        }
+
+        // Data shouldn't be lost.
+        for (int i = 0; i < cacheSize(); i++)
+            assertEquals(i, grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSimultaneousSafeShutdown() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backups = 1;
+
+        startGrids(2);
+
+        grid(0).cluster().active(true);
+
+        for (int i = 0; i < cacheSize(); i++)
+            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
+
+        GridTestUtils.runAsync(() -> grid(0).close());
+
+        GridTestUtils.runAsync(() -> grid(1).close());
+
+        Thread.sleep(STOP_TIMEOUT_LIMIT);
+
+        startGrid(2);
+
+        assertTrue(waitForCondition(() -> grid(2).cluster().nodes().size() == 1, 10_000));
+
+        // Data shouldn't be lost.
+        for (int i = 0; i < cacheSize(); i++)
+            assertEquals(i, grid(2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
     }
 
     /**
