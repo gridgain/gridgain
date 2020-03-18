@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
 import org.apache.ignite.internal.processors.query.h2.ManagedGroupByDataFactory;
@@ -148,6 +149,8 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     private H2QueryContext qryContext;
     private H2MemoryTracker memoryTracker;
     private ManagedGroupByDataFactory groupByDataFactory;
+    private Supplier<String> qryDescSupplier;
+
     /**
      * Tables marked for ANALYZE after the current transaction is committed.
      * Prevents us calling ANALYZE repeatedly in large transactions.
@@ -249,6 +252,20 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
      */
     public void memoryTracker(H2MemoryTracker memoryTracker) {
         this.memoryTracker = memoryTracker;
+    }
+
+    /**
+     * @return Query description.
+     */
+    public String queryDescription() {
+        return qryDescSupplier != null ? qryDescSupplier.get() : null;
+    }
+
+    /**
+     * @param qryDescSupplier Supplier for query description.
+     */
+    public void queryDescription(Supplier<String> qryDescSupplier) {
+        this.qryDescSupplier = qryDescSupplier;
     }
 
     /**
@@ -959,6 +976,10 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
         if (state.getAndSet(State.CLOSED) != State.CLOSED) {
             try {
                 database.checkPowerOff();
+
+                H2MemoryTracker tracker = memoryTracker;
+                if (tracker != null)
+                    tracker.close();
 
                 // release any open table locks
                 rollback();

@@ -53,17 +53,20 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
     @Test
     public void testGlobalQuota() throws Exception {
         maxMem = 0; // Disable implicit query quota.
+
         setGlobalQuota(GLOBAL_QUOTA);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
-
         assertEquals(1, localResults.size());
         assertTrue(localResults.get(0).memoryReserved() < GLOBAL_QUOTA);
-        localResults.clear();
+
+        clearResults();
 
         setGlobalQuota(0);
         execQuery("select * from K ORDER BY K.indexed", false);
-        assertEquals(0, localResults.size());
-        localResults.clear();
+        assertEquals(2, localResults.size());
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
+
+        clearResults();
 
         setGlobalQuota(GLOBAL_QUOTA);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
@@ -79,32 +82,38 @@ public class MemoryQuotaDynamicConfigurationTest extends AbstractQueryMemoryTrac
 
         // All quotas turned off, nothing should happen.
         execQuery("select * from K ORDER BY K.indexed", false);
-        assertEquals(0, localResults.size());
-        localResults.clear();
+        assertEquals(2, localResults.size());
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
+
+        clearResults();
 
         // Default query quota is set to 100, we expect exception.
         setDefaultQueryQuota(100);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
-        localResults.clear();
+
+        clearResults();
 
         // Turn on offloading, expect no error.
         setOffloadingEnabled(true);
         execQuery("select * from K ORDER BY K.indexed", false);
         assertEquals(2, localResults.size());
         assertTrue(localResults.get(0).memoryReserved() < 100);
-        localResults.clear();
+
+        clearResults();
 
         // Turn off offloading, expect error.
         setOffloadingEnabled(false);
         checkQueryExpectOOM("select * from K ORDER BY K.indexed", false);
         assertEquals(1, localResults.size());
-        localResults.clear();
+
+        clearResults();
 
         // Turn off quota, expect no error.
         setDefaultQueryQuota(0);
         execQuery("select * from K ORDER BY K.indexed", false);
-        assertEquals(0, localResults.size());
+        assertEquals(2, localResults.size());
+        assertTrue(localResults.get(0).memoryReserved() > GLOBAL_QUOTA);
     }
 
     /** */
