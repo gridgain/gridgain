@@ -121,13 +121,19 @@ public class ProgressPrinter {
 
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
 
+        long dayMillis = 24 * 60 * 60 * 1000;
+        long daysRunning = timeRunning / dayMillis;
+        long daysEstimated = timeEstimated / dayMillis;
+
         timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         String txtProgress = String.format(
-            "%s/%s (%s / %s)",
+            "%s/%s (%s%s / %s%s)",
             curr,
             total,
+            daysRunning > 0 ? daysRunning + " days " : "",
             timeFormat.format(new Date(timeRunning)),
+            daysEstimated > 0 ? daysEstimated + " days " : "",
             timeFormat.format(new Date(timeEstimated))
         );
 
