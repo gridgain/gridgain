@@ -185,10 +185,11 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      */
     @Test
     public void testPartitionLossDetectionOnClientTopology_Volatile() throws Exception {
-        // TODO FIXME BROKEN
         persistence = false;
 
-        final IgniteEx crd = startGrids(3);
+        final IgniteEx crd = startGrid(0);
+        final IgniteEx g1 = startGrid(1);
+        final IgniteEx g2 = startGrid(2);
 
         crd.cluster().active(true);
 
@@ -203,7 +204,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         final Set<Integer> lost2 = new HashSet<>(grid(2).cache(FILTERED_CACHE_NAME).lostPartitions());
         final Set<Integer> lost3 = new HashSet<>(client.cache(FILTERED_CACHE_NAME).lostPartitions());
 
-        assertFalse(lost1.isEmpty());
+        assertTrue(lost1.isEmpty());
 
         assertEquals(lost1, lost2);
         assertEquals(lost1, lost3);

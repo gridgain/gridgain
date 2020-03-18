@@ -1000,7 +1000,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean detectLostPartitions(AffinityTopologyVersion affVer, DiscoveryEvent discoEvt) {
+    @Override public boolean detectLostPartitions(AffinityTopologyVersion affVer, @Nullable GridDhtPartitionsExchangeFuture fut) {
         assert false : "detectLostPartitions should never be called on client topology";
 
         return false;

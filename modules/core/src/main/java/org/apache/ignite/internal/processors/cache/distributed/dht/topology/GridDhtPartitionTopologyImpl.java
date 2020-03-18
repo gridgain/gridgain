@@ -57,6 +57,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cluster.BaselineTopology;
+import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.GridAtomicLong;
 import org.apache.ignite.internal.util.GridLongList;
@@ -74,6 +76,10 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
+import static org.apache.ignite.internal.IgniteFeatures.PME_FREE_SWITCH;
+import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ExchangeType.ALL;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ExchangeType.NONE;
@@ -156,6 +162,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** Factory used for re-creating partition during it's lifecycle. */
     private PartitionFactory partFactory;
+
+    /** */
+    private final boolean bltForVolatileCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /**
      * @param ctx Cache shared context.
@@ -1601,9 +1610,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 if (exchangeVer != null && (exchFut == null || exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT)) {
                     // TODO debug exchFut = null, massiveClient ...
-                    boolean evt = exchFut != null && !exchFut.localJoinExchange() && !exchFut.activateCluster();
-
-                    detectLostPartitions(exchangeVer, evt ? exchFut.events().lastEvent() : null);
+                    detectLostPartitions(exchangeVer, exchFut);
                 }
 
                 if (exchangeVer == null && !grp.isReplicated() &&
@@ -2118,7 +2125,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean detectLostPartitions(AffinityTopologyVersion resTopVer, @Nullable DiscoveryEvent discoEvt) {
+    @Override public boolean detectLostPartitions(AffinityTopologyVersion resTopVer, @Nullable GridDhtPartitionsExchangeFuture fut) {
         ctx.database().checkpointReadLock();
 
         try {
@@ -2128,14 +2135,36 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (node2part == null)
                     return false;
 
-                PartitionLossPolicy plc = grp.config().getPartitionLossPolicy();
+                // Do not trigger lost partition events on start.
+                boolean evt = fut != null && !fut.localJoinExchange() && !fut.activateCluster();
 
-                // Ignore IGNORE for persistent caches.
-                // TODO calculate lost mode based on baseline.
-                if (grp.persistenceEnabled() && plc == PartitionLossPolicy.IGNORE)
-                    plc = PartitionLossPolicy.READ_WRITE_SAFE;
+                // TODO consider merged events.
+                DiscoveryEvent discoEvt = evt ? fut.firstEvent() : null;
 
-                assert plc != null;
+                final GridClusterStateProcessor state = grp.shared().kernalContext().state();
+
+                // TODO the logic below is spread and should be refactored.
+                final BaselineTopology top = state.clusterState().baselineTopology();
+
+                boolean isInMemoryCluster = CU.isInMemoryCluster(
+                    grp.shared().kernalContext().discovery().allNodes(),
+                    grp.shared().kernalContext().marshallerContext().jdkMarshaller(),
+                    U.resolveClassLoader(grp.shared().kernalContext().config())
+                );
+
+                boolean autoAdjustBaseline = isInMemoryCluster
+                    && state.isBaselineAutoAdjustEnabled()
+                    && state.baselineAutoAdjustTimeout() == 0L;
+
+                // TODO get rid of grp.persistenceGroup
+                boolean persistence = ctx.cache().cacheGroupDescriptor(grp.groupId()).persistenceEnabled();
+
+                boolean enableBltCalculationForVolatile = top != null &&
+                    bltForVolatileCachesSup &&
+                    allNodesSupports(grp.shared().kernalContext(), discoCache.allNodes(), PME_FREE_SWITCH);
+
+                // Calculate how loss data is handled.
+                boolean safe = persistence || enableBltCalculationForVolatile && !autoAdjustBaseline;
 
                 int parts = grp.affinity().partitions();
 
@@ -2174,7 +2203,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             lost = true;
 
                             // Do not detect and record lost partition in IGNORE mode.
-                            if (plc != PartitionLossPolicy.IGNORE) {
+                            if (safe) {
                                 if (lostParts == null)
                                     lostParts = new TreeSet<>();
 
@@ -2207,7 +2236,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             final GridDhtPartitionState prevState = locPart.state();
 
-                            changed = plc == PartitionLossPolicy.IGNORE ? locPart.own() : locPart.markLost();
+                            changed = safe ? locPart.markLost() : locPart.own();
 
                             if (changed) {
                                 long updSeq = updateSeq.incrementAndGet();
@@ -2220,7 +2249,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             }
                         }
                         // Update map for remote node.
-                        else if (plc != PartitionLossPolicy.IGNORE) {
+                        else if (safe) {
                             for (Map.Entry<UUID, GridDhtPartitionMap> e : node2part.entrySet()) {
                                 if (e.getKey().equals(ctx.localNodeId()))
                                     continue;
@@ -2239,12 +2268,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 if (recentlyLost != null) {
-                    U.warn(log, "Detected lost partitions" + (plc == PartitionLossPolicy.IGNORE ? " (will ignore)" : "") + " [grp=" + grp.cacheOrGroupName()
+                    U.warn(log, "Detected lost partitions" + (!safe ? " (will ignore)" : "")
+                        + " [grp=" + grp.cacheOrGroupName()
                         + ", parts=" + S.compact(recentlyLost)
-                        + ", plc=" + plc + ", topVer=" + resTopVer + "]");
+                        + ", topVer=" + resTopVer + "]");
                 }
 
-                if (lostParts != null && plc != PartitionLossPolicy.IGNORE)
+                if (lostParts != null && safe)
                     grp.needsRecovery(true);
 
                 return changed;
