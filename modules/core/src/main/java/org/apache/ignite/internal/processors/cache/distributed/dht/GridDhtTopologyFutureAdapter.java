@@ -20,7 +20,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.TopologyValidator;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -31,9 +30,6 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
-import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
-import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.OperationType.WRITE;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
@@ -103,11 +99,6 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
                 "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
         }
 
-        if (grp.needsRecovery()) {
-            return new IgniteCheckedException(
-                "Failed to read from/write to the cache because it has lost partitions: " + cctx.name());
-        }
-
         CacheGroupValidation validation = grpValidRes.get(grp.groupId());
 
         if (validation == null)
@@ -118,15 +109,24 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
                 "(cache topology is not valid): " + cctx.name());
         }
 
-        if (recovery)
-            return null;
-
         if (validation.hasLostPartitions()) {
-            if (key != null)
-                return LostPolicyValidator.validate(cctx, key, opType, validation.lostPartitions());
+            if (key == null && keys == null)
+                return new CacheInvalidStateException("Failed to perform a cache operation " +
+                    "(the cache has lost partitions [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
 
-            if (keys != null)
-                return LostPolicyValidator.validate(cctx, keys, opType, validation.lostPartitions());
+            // TODO streamify.
+            if (key != null)
+                return validate(cctx, key, opType, validation.lostPartitions());
+
+            if (keys != null) {
+                for (Object key0 : keys) {
+                    final Throwable res =
+                        validate(cctx, key0, opType, validation.lostPartitions());
+
+                    if (res != null)
+                        return res;
+                }
+            }
         }
 
         return null;
@@ -182,7 +182,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
     }
 
     /**
-     *
+     * TODO remove bad stuff.
      */
     public enum OperationType {
         /**
@@ -195,87 +195,28 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         WRITE
     }
 
+
     /**
-     * Lost policy validator.
+     * TODO move to cache utils.
+     * @param cctx Context.
+     * @param key Key.
+     * @param opType Operation type.
+     * @param lostParts Lost partitions.
      */
-    public static class LostPolicyValidator {
-        /**
-         *
-         */
-        public static Throwable validate(
-            GridCacheContext cctx,
-            Object key,
-            OperationType opType,
-            Collection<Integer> lostParts
-        ) {
-            CacheGroupContext grp = cctx.group();
+    public static Throwable validate(
+        GridCacheContext cctx,
+        Object key,
+        OperationType opType,
+        Collection<Integer> lostParts
+    ) {
+        final int part = cctx.affinity().partition(key);
 
-            PartitionLossPolicy lostPlc = grp.config().getPartitionLossPolicy();
-
-            int partition = cctx.affinity().partition(key);
-
-            return validate(cctx, key, partition, opType, lostPlc, lostParts);
+        if (lostParts.contains(part)) {
+            return new CacheInvalidStateException("Failed to execute the cache operation " +
+                "(all partition owners have left the grid, partition data has been lost) [" +
+                "cacheName=" + cctx.name() + ", op=" + opType + ", part=" + part + ", key=" + key + ']');
         }
 
-        /**
-         *
-         */
-        public static Throwable validate(
-            GridCacheContext cctx,
-            Collection<?> keys,
-            OperationType opType,
-            Collection<Integer> lostParts
-        ) {
-            CacheGroupContext grp = cctx.group();
-
-            PartitionLossPolicy lostPlc = grp.config().getPartitionLossPolicy();
-
-            for (Object key : keys) {
-                int partition = cctx.affinity().partition(key);
-
-                Throwable res = validate(cctx, key, partition, opType, lostPlc, lostParts);
-
-                if (res != null)
-                    return res;
-            }
-
-            return null;
-        }
-
-        /**
-         *
-         */
-        private static Throwable validate(
-            GridCacheContext cctx,
-            Object key,
-            int partition,
-            OperationType opType,
-            PartitionLossPolicy lostPlc,
-            Collection<Integer> lostParts
-        ) {
-            if (opType == WRITE) {
-                if (lostPlc == READ_ONLY_SAFE || lostPlc == READ_ONLY_ALL) {
-                    return new IgniteCheckedException(
-                        "Failed to write to cache (cache is moved to a read-only state): " + cctx.name()
-                    );
-                }
-
-                if (lostParts.contains(partition) && lostPlc == READ_WRITE_SAFE) {
-                    return new CacheInvalidStateException("Failed to execute cache operation " +
-                        "(all partition owners have left the grid, partition data has been lost) [" +
-                        "cacheName=" + cctx.name() + ", part=" + partition + ", key=" + key + ']');
-                }
-            }
-
-            if (opType == OperationType.READ) {
-                if (lostParts.contains(partition) && (lostPlc == READ_ONLY_SAFE || lostPlc == READ_WRITE_SAFE))
-                    return new CacheInvalidStateException("Failed to execute cache operation " +
-                        "(all partition owners have left the grid, partition data has been lost) [" +
-                        "cacheName=" + cctx.name() + ", part=" + partition + ", key=" + key + ']'
-                    );
-            }
-
-            return null;
-        }
+        return null;
     }
 }
