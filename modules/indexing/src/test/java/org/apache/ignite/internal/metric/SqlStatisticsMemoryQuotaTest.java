@@ -22,6 +22,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.junit.After;
@@ -79,7 +80,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         assertEquals(0, longMetricValue(0, "requests"));
         assertEquals(0, longMetricValue(1, "requests"));
 
-        long dfltSqlGlobQuota = (long)(Runtime.getRuntime().maxMemory() * 0.6);
+        long dfltSqlGlobQuota = IgniteUtils.parseBytes("60%");
 
         assertEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"));
         assertEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"));
@@ -240,18 +241,19 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
 
         IgniteCache cache = createCacheFrom(grid(connNodeIdx));
 
-        final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
+        final SqlFieldsQuery scanQry = new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(5)");
 
         IgniteInternalFuture distQryIsDone =
-            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
+            runAsyncX(() -> cache.query(scanQry).getAll());
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(1, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(1, longMetricValue(otherNodeIdx, "requests"));
+        // we don't track memory for lazy queries for now
+        assertEquals(scanQry.isLazy() ? 0 : 1, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 1, longMetricValue(otherNodeIdx, "requests"));
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
@@ -260,8 +262,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(3, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(3, longMetricValue(otherNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 3, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 3, longMetricValue(otherNodeIdx, "requests"));
     }
 
     /**
