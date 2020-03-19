@@ -3726,7 +3726,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         Collection<DynamicCacheChangeRequest> reqs = new ArrayList<>(cacheNames.size());
 
         for (String cacheName : cacheNames) {
-            final IgniteInternalCache<Object, Object> cache0 = publicCache(cacheName);
+            final IgniteInternalCache<Object, Object> cache0 = internalCache(cacheName);
 
             // Check if all lost partitions has at least one affinity owner.
             final Collection<Integer> lostParts = cache0.lostPartitions();
