@@ -26,6 +26,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
@@ -147,7 +148,9 @@ public abstract class ClusterStateAbstractTest extends GridCommonAbstractTest {
         forbidden.add(GridDhtPartitionSupplyMessage.class);
         forbidden.add(GridDhtPartitionDemandMessage.class);
 
-        startGrids(GRID_CNT);
+        IgniteEx ig = startGrids(GRID_CNT);
+
+        ig.cluster().baselineAutoAdjustEnabled(false);
 
         checkInactive(GRID_CNT);
 
