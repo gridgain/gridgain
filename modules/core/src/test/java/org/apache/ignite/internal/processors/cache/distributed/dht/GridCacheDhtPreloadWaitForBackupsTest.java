@@ -87,7 +87,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
     /** */
     protected int cacheSize() {
-        return 1000;
+        return 10_000;
     }
 
     /** */
