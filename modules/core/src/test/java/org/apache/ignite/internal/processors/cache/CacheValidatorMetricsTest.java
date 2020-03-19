@@ -27,13 +27,22 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.TopologyValidator;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
  * Cache validator metrics test.
  */
+@WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
+@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
+@WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
 public class CacheValidatorMetricsTest extends GridCommonAbstractTest implements Serializable {
     /** Cache name 1. */
     private static String CACHE_NAME_1 = "cache1";
@@ -45,12 +54,13 @@ public class CacheValidatorMetricsTest extends GridCommonAbstractTest implements
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setActiveOnStart(false);
+
         CacheConfiguration cCfg1 = new CacheConfiguration()
             .setName(CACHE_NAME_1)
             .setCacheMode(CacheMode.PARTITIONED)
             .setBackups(0)
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
-            .setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_ALL);
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
 
         CacheConfiguration cCfg2 = new CacheConfiguration()
             .setName(CACHE_NAME_2)
@@ -95,12 +105,15 @@ public class CacheValidatorMetricsTest extends GridCommonAbstractTest implements
      */
     @Test
     public void testCacheValidatorMetrics() throws Exception {
-        startGrid(1);
+        final IgniteEx crd = startGrid(1);
+        crd.cluster().active(true);
+        crd.cluster().baselineAutoAdjustEnabled(false);
 
         assertCacheStatus(CACHE_NAME_1, true, true);
         assertCacheStatus(CACHE_NAME_2, true, false);
 
         startGrid(2);
+        resetBaselineTopology();
 
         awaitPartitionMapExchange();
 
@@ -111,10 +124,10 @@ public class CacheValidatorMetricsTest extends GridCommonAbstractTest implements
 
         awaitPartitionMapExchange();
 
-        // Invalid for writing due to invalid topology.
-        assertCacheStatus(CACHE_NAME_1, true, false);
-
         // Invalid for writing due to partitions loss.
+        assertCacheStatus(CACHE_NAME_1, false, false);
+
+        // Invalid for writing due to invalid topology.
         assertCacheStatus(CACHE_NAME_2, true, false);
     }
 }

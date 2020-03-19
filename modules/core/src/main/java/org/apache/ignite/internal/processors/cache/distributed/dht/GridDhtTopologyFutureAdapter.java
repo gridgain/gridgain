@@ -97,19 +97,15 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         CacheGroupContext grp = cctx.group();
 
-        PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
-
         if (cctx.shared().readOnlyMode() && opType == WRITE && !isSystemCache(cctx.name())
             && !VOLATILE_DATA_REGION_NAME.equals(cctx.group().dataRegion().config().getName())) {
             return new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in " +
                 "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
         }
 
-        if (grp.needsRecovery() && !recovery) {
-            if (opType == WRITE && (lossPlc == READ_ONLY_SAFE || lossPlc == READ_ONLY_ALL))
-                return new IgniteCheckedException(
-                    "Failed to write to the cache (the cache is moved to a read-only state according to " +
-                        "configured data loss policy): " + cctx.name());
+        if (grp.needsRecovery()) {
+            return new IgniteCheckedException(
+                "Failed to read from/write to the cache because it has lost partitions: " + cctx.name());
         }
 
         CacheGroupValidation validation = grpValidRes.get(grp.groupId());
