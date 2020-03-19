@@ -45,6 +45,7 @@ import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -188,13 +189,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    public void testNodeLeftOnStableTopology_Volatile_4() throws Exception {
-        testNodeLeftOnStableTopology(false, true, true, true);
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     public void testNodeLeftOnStableTopology_Persistent_1() throws Exception {
         testNodeLeftOnStableTopology(true, false, false, false);
     }
@@ -219,15 +213,8 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    public void testNodeLeftOnStableTopology_Persistent_4() throws Exception {
-        testNodeLeftOnStableTopology(true, false, true, true);
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
-    public void testNodeLeftOnStableTopology_Persistent_5() throws Exception {
+    public void testNodeLeftOnStableTopology_Persistent_4() throws Exception {
         // Explicitly disabling the optimization, PME is expected.
         testNodeLeftOnStableTopology(true, false, false, true);
     }
@@ -259,15 +246,8 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-    public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
-        testNodeLeftOnStableTopology(true, true, true, true);
-    }
-
-    /** */
-    @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
-    public void testNodeLeftOnStableTopology_Mixed_5() throws Exception {
+    public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
         // Explicitly disabling the optimization, PME is expected.
         testNodeLeftOnStableTopology(true, true, false, true);
     }
