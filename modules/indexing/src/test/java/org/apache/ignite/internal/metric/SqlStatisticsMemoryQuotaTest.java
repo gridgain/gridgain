@@ -82,11 +82,11 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
 
         long dfltSqlGlobQuota = IgniteUtils.parseBytes("60%");
 
-        assertEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"));
-        assertEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"));
+        assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
+        assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
 
-        assertEquals(dfltSqlGlobQuota, longMetricValue(0, "freeMem"));
-        assertEquals(dfltSqlGlobQuota, longMetricValue(1, "freeMem"));
+        assertEquals(longMetricValue(0, "maxMem"), longMetricValue(0, "freeMem"));
+        assertEquals(longMetricValue(1, "maxMem"), longMetricValue(1, "freeMem"));
     }
 
     /**
@@ -300,6 +300,17 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         Assert.assertTrue("Expected long metric, but got "+ metric.getClass(),  metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
+    }
+
+    /**
+     * @param l1 First number.
+     * @param l2 Second number.
+     * @param error Max difference between numbers.
+     *
+     * @return {@code true} if the numbers differ from each other no more than {@code error}.
+     */
+    private boolean almostEquals(long l1, long l2, long error) {
+        return Math.max(l1, l2) - Math.min(l1, l2) <= Math.abs(error);
     }
 
 
