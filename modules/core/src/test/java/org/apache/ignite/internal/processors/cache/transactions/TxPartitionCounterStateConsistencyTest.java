@@ -54,6 +54,7 @@ import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.CacheAffinityChangeMessage;
 import org.apache.ignite.internal.processors.cache.CacheEntryInfoCollection;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplyMessage;
@@ -1196,7 +1197,8 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||
                             X.hasCause(e, ClusterTopologyCheckedException.class) ||
-                            X.hasCause(e, TransactionRollbackException.class));
+                            X.hasCause(e, TransactionRollbackException.class) ||
+                            X.hasCause(e, CacheInvalidStateException.class));
                 }
             }
 

@@ -1166,6 +1166,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
         GridDhtPartitionsExchangeFuture exchFut
     ) {
         // TODO get rid of copypaste.
+        // TODO should it be called on client top ?
         Map<UUID, Set<Integer>> res = new HashMap<>();
 
         lock.writeLock().lock();

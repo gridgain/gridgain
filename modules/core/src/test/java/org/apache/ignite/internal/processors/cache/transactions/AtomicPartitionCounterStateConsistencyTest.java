@@ -22,6 +22,7 @@ import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.util.typedef.X;
 import org.junit.Ignore;
 
@@ -116,7 +117,8 @@ public class AtomicPartitionCounterStateConsistencyTest extends TxPartitionCount
                 }
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||
-                            X.hasCause(e, ClusterTopologyCheckedException.class));
+                        X.hasCause(e, ClusterTopologyCheckedException.class) ||
+                        X.hasCause(e, CacheInvalidStateException.class));
                 }
             }
 
