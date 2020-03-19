@@ -20,6 +20,7 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteCacheLockPartitionOnAffinityRunAtomicCacheOpTest;
+import org.junit.Test;
 
 /**
  *
@@ -88,5 +89,10 @@ public class IgniteBaselineLockPartitionOnAffinityRunAtomicCacheTest extends Ign
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
         cleanPersistenceDir();
+    }
+
+    @Test
+    @Override public void testReservedPartitionCacheOp() throws Exception {
+        super.testReservedPartitionCacheOp();
     }
 }
