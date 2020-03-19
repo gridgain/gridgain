@@ -33,16 +33,16 @@ import org.junit.Test;
  */
 public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
     /** */
-    public static final int CHECKPOINT_FREQUENCY = 100;
+    private static final int CHECKPOINT_FREQUENCY = 100;
 
     /** Test logger. */
     private final ListeningTestLogger srvLog = new ListeningTestLogger(false, log);
 
     /** */
-    public static final int KEYS_LOW_BORDER = 100;
+    private static final int KEYS_LOW_BORDER = 100;
 
     /** */
-    public static final int KEYS_UPPER_BORDER = 200;
+    private static final int KEYS_UPPER_BORDER = 200;
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
