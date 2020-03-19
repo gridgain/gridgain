@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.transactions;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -1077,6 +1078,10 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
 
             startGrid(2);
             startGrid(3);
+
+            assertFalse(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+
+            grid(0).resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
         }
 
         prim.context().cache().context().exchange().rebalanceDelay(500);
