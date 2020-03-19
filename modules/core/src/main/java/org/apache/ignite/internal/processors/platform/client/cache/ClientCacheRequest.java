@@ -38,7 +38,7 @@ class ClientCacheRequest extends ClientRequest {
     private static final byte TRANSACTIONAL_FLAG_MASK = 0x02;
 
     /** Flag: with expiry policy. */
-    private static final byte FLAG_WITH_EXPIRY_POLICY = 2;
+    private static final byte FLAG_WITH_EXPIRY_POLICY = 0x04;
 
     /** Cache ID. */
     private final int cacheId;

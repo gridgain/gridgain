@@ -62,9 +62,16 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             WithKeepBinary = 1 << 0,
 
             /// <summary>
+            /// With transactional binary flag.
+            /// Reserved for IEP-34 Thin client: transactions support.
+            /// </summary>
+            // ReSharper disable once UnusedMember.Local
+            WithTransactional = 1 << 1,
+
+            /// <summary>
             /// With expiration policy.
             /// </summary>
-            WithExpiryPolicy = 1 << 1
+            WithExpiryPolicy = 1 << 2
         }
 
         /** Scan query filter platform code: .NET filter. */
@@ -742,11 +749,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         {
             ctx.Stream.WriteInt(_id);
 
-            var writer = _marsh.StartMarshal(ctx.Stream);
             if (_expiryPolicy != null)
             {
                 ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.WithExpiryPolicy);
-                ExpiryPolicySerializer.WritePolicy(writer, _expiryPolicy);
+                ExpiryPolicySerializer.WritePolicy(ctx.Writer, _expiryPolicy);
             }
             else
                 ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.None); // Flags (skipStore, etc).
@@ -754,8 +760,6 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             if (writeAction != null)
             {
                 writeAction(ctx);
-
-                _marsh.FinishMarshal(writer);
             }
         }
 
