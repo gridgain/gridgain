@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -51,7 +50,6 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.commandline.CommandHandler;
 import org.apache.ignite.internal.commandline.CommandList;
-import org.apache.ignite.internal.commandline.CommonArgParser;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
@@ -88,10 +86,8 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_IL
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
-import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
 import static org.apache.ignite.internal.commandline.CommandList.MANAGEMENT;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
-import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_PRINT_ERR_STACK_TRACE;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
@@ -1571,33 +1567,6 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test print stack trace if an error occurs when option
-     * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} is enabled.
-     */
-    @Test
-    public void testPrintErrStackTraceWhenError() {
-        injectTestSystemOut();
-
-        execCmdWithError(CMD_PRINT_ERR_STACK_TRACE);
-
-        assertContains(log, testOut.toString(), "Error stack trace:");
-    }
-
-    /**
-     * The test checks that stack trace will not be displayed in case of an
-     * error without option {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE}
-     * enabled.
-     */
-    @Test
-    public void testNotPrintErrStackTraceWhenError() {
-        injectTestSystemOut();
-
-        execCmdWithError();
-
-        assertNotContains(log, testOut.toString(), "Error stack trace:");
-    }
-
-    /**
      * Checking for contains or not of experimental commands in output of the --help control.sh command.
      *
      * @param contains Check contains or not.
@@ -1637,20 +1606,5 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         execute("--help");
 
         consumer.accept(testOut.toString());
-    }
-
-    /**
-     * Executing a command with an error.
-     *
-     * @param addArgs Additional arguments for executing the command.
-     */
-    private void execCmdWithError(String... addArgs) {
-        List<String> args = new ArrayList<>();
-
-        args.add(BASELINE.text());
-        args.add(UUID.randomUUID().toString());
-        args.addAll(asList(addArgs));
-
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute(args.toArray(new String[0])));
     }
 }

@@ -56,7 +56,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.lang.System.lineSeparator;
-import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_ROLLING_UPGRADE_MODE;
 import static org.apache.ignite.internal.IgniteVersionUtils.ACK_VER_STR;
@@ -64,10 +63,8 @@ import static org.apache.ignite.internal.IgniteVersionUtils.COPYRIGHT;
 import static org.apache.ignite.internal.commandline.CommandList.ROLLING_UPGRADE;
 import static org.apache.ignite.internal.commandline.CommandLogger.DOUBLE_INDENT;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
-import static org.apache.ignite.internal.commandline.CommandLogger.errorMessage;
 import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
-import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_PRINT_ERR_STACK_TRACE;
 import static org.apache.ignite.internal.commandline.CommonArgParser.getCommonOptions;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_PORT;
@@ -228,17 +225,12 @@ public class CommandHandler {
 
         String commandName = "";
 
-        Throwable err = null;
-        boolean printErrStackTrace = false;
-
         try {
             if (F.isEmpty(rawArgs) || (rawArgs.size() == 1 && CMD_HELP.equalsIgnoreCase(rawArgs.get(0)))) {
                 printHelp();
 
                 return EXIT_CODE_OK;
             }
-
-            printErrStackTrace = F.exist(rawArgs, CMD_PRINT_ERR_STACK_TRACE::equalsIgnoreCase);
 
             ConnectionAndSslParameters args = new CommonArgParser(logger).parseAndValidate(rawArgs.iterator());
 
@@ -307,19 +299,15 @@ public class CommandHandler {
             return EXIT_CODE_OK;
         }
         catch (IllegalArgumentException e) {
-            logger.severe("Check arguments. " + errorMessage(e));
+            logger.severe("Check arguments. " + CommandLogger.errorMessage(e));
             logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_INVALID_ARGUMENTS);
-
-            err = e;
 
             return EXIT_CODE_INVALID_ARGUMENTS;
         }
         catch (Throwable e) {
             if (isAuthError(e)) {
-                logger.severe("Authentication error. " + errorMessage(e));
+                logger.severe("Authentication error. " + CommandLogger.errorMessage(e));
                 logger.info("Command [" + commandName + "] finished with code: " + ERR_AUTHENTICATION_FAILED);
-
-                err = e;
 
                 return ERR_AUTHENTICATION_FAILED;
             }
@@ -334,13 +322,11 @@ public class CommandHandler {
                     if (isSSLMisconfigurationError(cause))
                         e = cause;
 
-                    logger.severe("Connection to cluster failed. " + errorMessage(e));
+                    logger.severe("Connection to cluster failed. " + CommandLogger.errorMessage(e));
 
                 }
 
                 logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_CONNECTION_FAILED);
-
-                err = e;
 
                 return EXIT_CODE_CONNECTION_FAILED;
             }
@@ -348,18 +334,14 @@ public class CommandHandler {
             if (X.hasCause(e, VisorIllegalStateException.class)) {
                 VisorIllegalStateException vise = X.cause(e, VisorIllegalStateException.class);
 
-                logger.severe(errorMessage(vise));
+                logger.severe(CommandLogger.errorMessage(vise));
                 logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_ILLEGAL_STATE_ERROR);
-
-                err = e;
 
                 return EXIT_CODE_ILLEGAL_STATE_ERROR;
             }
 
-            logger.severe(errorMessage(e));
+            logger.severe(CommandLogger.errorMessage(e));
             logger.info("Command [" + commandName + "] finished with code: " + EXIT_CODE_UNEXPECTED_ERROR);
-
-            err = e;
 
             return EXIT_CODE_UNEXPECTED_ERROR;
         }
@@ -367,9 +349,6 @@ public class CommandHandler {
             LocalDateTime endTime = LocalDateTime.now();
 
             Duration diff = Duration.between(startTime, endTime);
-
-            if (printErrStackTrace && nonNull(err))
-                logger.info("Error stack trace:" + System.lineSeparator() + X.getFullStackTrace(err));
 
             logger.info("Control utility has completed execution at: " + endTime);
             logger.info("Execution time: " + diff.toMillis() + " ms");
