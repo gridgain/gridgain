@@ -49,6 +49,7 @@ import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVer
  * TODO persistent mode shoud be moved to cache7 suite.
  *
  * TODO do not start txlog region if no mvcc.
+ * TODO finish test!
  */
 public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstractTest {
     /** */
@@ -154,25 +155,23 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     }
 
     /**
-     * Baseline is OFF, expecting partition movement after removing nodes.
-     * Partitions are expected to be LOST after migrating to remaining nodes.
+     * TODO implement test difference with testPartitionLossDetectionOnNodeLeft_Volatile_FreeSwitch.
      */
     @Test
-    public void testPartitionLossDetectionOnNodeLeft_Volatile_Safe_Merge_NoBLT() throws Exception {
+    public void testPartitionLossDetectionOnNodeLeft_Volatile_Merge_AutoAdjust() throws Exception {
         dfltRegionPersistence = false;
 
-        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.READ_WRITE_SAFE, true, true);
+        doTestPartitionLossDetectionOnNodeLeft(false, false);
     }
 
     /**
-     * Baseline is OFF, expecting partition movement after removing nodes.
-     * Partitions are expected to be OWNING after migrating to remaining nodes.
+     *
      */
     @Test
-    public void testPartitionLossDetectionOnNodeLeft_Volatile_Unsafe_Merge_NoBLT() throws Exception {
+    public void testPartitionLossDetectionOnNodeLeft_Volatile_FreeSwitch() throws Exception {
         dfltRegionPersistence = false;
 
-        doTestPartitionLossDetectionOnNodeLeft(false, PartitionLossPolicy.IGNORE, true, false);
+        doTestPartitionLossDetectionOnNodeLeft(false, false);
     }
 
 //    /** */
@@ -281,16 +280,12 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
     /**
      * Test correct partition loss detection for merged exchanges.
-     *
-     * @param merge {@code True} to enable persistence.
-     * @param lossPlc Loss policy.
+     *  @param merge {@code True} to enable persistence.
      * @param merge {@code True} to merge exchanges (also disables baseline for in-memory caches).
      */
-    private void doTestPartitionLossDetectionOnNodeLeft (
+    private void doTestPartitionLossDetectionOnNodeLeft(
         boolean persistence,
-        PartitionLossPolicy lossPlc,
-        boolean expectPartitionsMoved,
-        boolean expectLost
+        boolean expectLostPartitions
     ) throws Exception {
         enableBaseline = false;
         this.dfltRegionPersistence = persistence;
@@ -348,20 +343,18 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
             grid(0).cachex(DEFAULT_CACHE_NAME).context().topology(),
             grid(1).cachex(DEFAULT_CACHE_NAME).context().topology());
 
-        if (expectPartitionsMoved) {
-            for (int p = 0; p < PARTS_CNT; p++) {
-                for (GridDhtPartitionTopology top : tops) {
-                    final GridDhtLocalPartition p0 = top.localPartition(p);
+        for (int p = 0; p < PARTS_CNT; p++) {
+            for (GridDhtPartitionTopology top : tops) {
+                final GridDhtLocalPartition p0 = top.localPartition(p);
 
-                    if (p0 != null && p0.state() != GridDhtPartitionState.EVICTED) {
-                        assertTrue(!expectLost ? p0.state() == GridDhtPartitionState.OWNING :
-                            !expLostParts.contains(p) || p0.state() == GridDhtPartitionState.LOST);
-                    }
+                if (p0 != null && p0.state() != GridDhtPartitionState.EVICTED) {
+                    assertTrue(p0.state().toString(), !expectLostPartitions ? p0.state() == GridDhtPartitionState.OWNING :
+                        !expLostParts.contains(p) || p0.state() == GridDhtPartitionState.LOST);
                 }
             }
         }
 
-        if (expectLost) {
+        if (expectLostPartitions) {
             assertEquals(new HashSet<>(expLostParts), grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions());
             assertEquals(new HashSet<>(expLostParts), grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions());
 
@@ -373,18 +366,16 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         assertTrue(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
         assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
-        if (expectPartitionsMoved) {
-            for (int p = 0; p < PARTS_CNT; p++) {
-                for (GridDhtPartitionTopology top : tops) {
-                    final GridDhtLocalPartition p0 = top.localPartition(p);
+        for (int p = 0; p < PARTS_CNT; p++) {
+            for (GridDhtPartitionTopology top : tops) {
+                final GridDhtLocalPartition p0 = top.localPartition(p);
 
-                    if (p0 != null && p0.state() != GridDhtPartitionState.EVICTED)
-                        assertEquals(GridDhtPartitionState.OWNING, p0.state());
-                }
+                if (p0 != null && p0.state() != GridDhtPartitionState.EVICTED)
+                    assertEquals(GridDhtPartitionState.OWNING, p0.state());
             }
         }
 
-        if (!expectLost) {
+        if (!expectLostPartitions) {
             // Events should not be fired for IGNORE policy.
             assertTrue(lostEvt0.isEmpty());
             assertTrue(lostEvt1.isEmpty());
