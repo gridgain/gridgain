@@ -29,6 +29,7 @@ import javax.cache.Cache.Entry;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -224,7 +225,7 @@ public class GridCommandHandlerIndexingUtils {
                     cacheDataRowStore.removeRow(oldRow.link(), INSTANCE);
             }
             catch (IgniteCheckedException e) {
-                log.error("Failed to remove key skipping indexes: " + entry, e);
+                throw new IgniteException("Failed to remove key skipping indexes: " + entry, e);
             }
             finally {
                 db.checkpointReadUnlock();

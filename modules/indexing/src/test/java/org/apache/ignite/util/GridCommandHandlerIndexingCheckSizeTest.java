@@ -290,6 +290,19 @@ public class GridCommandHandlerIndexingCheckSizeTest extends GridCommandHandlerC
     }
 
     /**
+     * Test that checks that there will be no errors when executing command
+     * "validate_indexes" with/without "--check-sizes" on cache with
+     * {@link QueryEntity}.
+     */
+    @Test
+    public void testNoErrorOnCacheWithQueryEntity() {
+        String cacheName = CACHE_NAME;
+
+        execVIWithNoErrCheck(cacheName, false);
+        execVIWithNoErrCheck(cacheName, true);
+    }
+
+    /**
      * Adding the "address" column and index for {@link Person} and
      * {@link Organization}, with new entries added for each of them.
      *

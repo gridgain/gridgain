@@ -137,8 +137,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     /** Counter of integrity checked indexes. */
     private final AtomicInteger integrityCheckedIndexes = new AtomicInteger(0);
 
-    /** Counter of calculated cache sizes according to tables. */
-    private final AtomicInteger processedCacheSizes = new AtomicInteger(0);
+    /** Counter of calculated sizes of caches per partitions. */
+    private final AtomicInteger processedCacheSizePartitions = new AtomicInteger(0);
 
     /** Counter of calculated index sizes. */
     private final AtomicInteger processedIdxSizes = new AtomicInteger(0);
@@ -290,10 +290,6 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             procIdxFutures.add(processIndexAsync(t2.get1(), t2.get2()));
 
         if (checkSizes) {
-            // To decrease contention on same indexes.
-            shuffle(partArgs);
-            shuffle(idxArgs);
-
             for (T2<CacheGroupContext, GridDhtLocalPartition> partArg : partArgs) {
                 CacheGroupContext cacheGrpCtx = partArg.get1();
                 GridDhtLocalPartition locPart = partArg.get2();
@@ -661,8 +657,9 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         printProgressIfNeeded(() -> "Current progress of ValidateIndexesClosure: processed " +
             processedPartitions.get() + " of " + totalPartitions + " partitions, " +
             processedIndexes.get() + " of " + totalIndexes + " SQL indexes" +
-            (checkSizes ? ", " + processedCacheSizes.get() + " of " + totalPartitions + " calculate cache size, " +
-                processedIdxSizes.get() + " of " + totalIndexes + "calculate index size" : ""));
+            (checkSizes ? ", " + processedCacheSizePartitions.get() + " of " + totalPartitions +
+                " calculate cache size per partitions, " + processedIdxSizes.get() + " of " + totalIndexes +
+                "calculate index size" : ""));
     }
 
     /**
@@ -929,7 +926,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 }
             }
             finally {
-                processedCacheSizes.incrementAndGet();
+                processedCacheSizePartitions.incrementAndGet();
 
                 printProgressOfIndexValidationIfNeeded();
             }
