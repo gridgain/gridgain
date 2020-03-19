@@ -300,6 +300,8 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
+        cfg.setConsistentId(igniteInstanceName);
+
         cfg.setClientMode(client);
 
         return cfg;
@@ -434,7 +436,7 @@ public class GridCacheContinuousQueryMultiNodesFilteringTest extends GridCommonA
 
         /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode clusterNode) {
-            return pattern.matcher(clusterNode.id().toString()).matches();
+            return pattern.matcher(clusterNode.consistentId().toString()).matches();
         }
     }
 }
