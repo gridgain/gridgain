@@ -1303,8 +1303,8 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Testing methods {@link IgniteUtils#writeBigUTF} and
-     * {@link IgniteUtils#readBigUTF} using resource files, where each line is
+     * Testing methods {@link IgniteUtils#writeLongString} and
+     * {@link IgniteUtils#readLongString} using resource files, where each line is
      * needed to test different cases:
      * 1){@code null}. <br/>
      *
@@ -1324,10 +1324,10 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
                 baos.reset();
 
                 DataOutput dOut = new DataOutputStream(baos);
-                U.writeBigUTF(dOut, readLine);
+                U.writeLongString(dOut, readLine);
 
                 DataInputStream dIn = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
-                String readBigUTF = U.readBigUTF(dIn);
+                String readBigUTF = U.readLongString(dIn);
 
                 assertEquals(readLine, readBigUTF);
             });
@@ -1335,7 +1335,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
     }
 
     /**
-     * Testing method {@link IgniteUtils#writeLimitUTF} using resource files,
+     * Testing method {@link IgniteUtils#writeCutString} using resource files,
      * where each line is needed to test different cases: <br/>
      * 1){@code null}. <br/>
      *
@@ -1370,7 +1370,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
                 baos.reset();
 
                 DataOutput dOut = new DataOutputStream(baos);
-                U.writeLimitUTF(dOut, readLine);
+                U.writeCutString(dOut, readLine);
 
                 DataInputStream dIn = new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
                 String readUTF = U.readString(dIn);

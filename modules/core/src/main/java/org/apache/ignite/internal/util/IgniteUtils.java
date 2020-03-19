@@ -314,7 +314,7 @@ public abstract class IgniteUtils {
 
     /**
      * String limit in bytes for {@link DataOutput#writeUTF} and
-     * {@link DataInput#readUTF()}. See "Modified UTF-8" in {@link DataInput}.
+     * {@link DataInput#readUTF()}, that use "Modified UTF-8".
      */
     public static final int UTF_BYTE_LIMIT = 65_535;
 
@@ -5760,6 +5760,8 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values.
+     * Under hood uses {@link DataOutput#writeUTF}, if string is greater than
+     * {@link #UTF_BYTE_LIMIT}, there will be an error.
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
@@ -5775,6 +5777,8 @@ public abstract class IgniteUtils {
 
     /**
      * Reads string from input stream accounting for {@code null} values.
+     * Under hood uses {@link DataInput#readUTF, if string is greater than
+     * {@link #UTF_BYTE_LIMIT}, there will be an error.
      *
      * @param in Stream to read from.
      * @return Read string, possibly {@code null}.
@@ -12107,16 +12111,13 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values. <br/>
-     * Works as {@link DataOutput#writeUTF}, but has no limit of
-     * {@link #UTF_BYTE_LIMIT} bytes, can write {@code null} values, and uses
-     * string length instead of total number of bytes. Must be used together
-     * with {@link IgniteUtils#readBigUTF}.
+     * There is no limit of {@link #UTF_BYTE_LIMIT} for a string.
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
      * @throws IOException If write failed.
      */
-    public static void writeBigUTF(DataOutput out, @Nullable String s) throws IOException {
+    public static void writeLongString(DataOutput out, @Nullable String s) throws IOException {
         // Write null flag.
         out.writeBoolean(isNull(s));
 
@@ -12149,15 +12150,13 @@ public abstract class IgniteUtils {
 
     /**
      * Reads string from input stream accounting for {@code null} values. <br/>
-     * Works as {@link DataInput#readUTF}, but can return a {@code null} value
-     * and uses string length instead of utf length. Must be used together with 
-     * {@link IgniteUtils#writeBigUTF}.
+     * There is no limit of {@link #UTF_BYTE_LIMIT} for a string.
      *
      * @param in Stream to read from.
      * @return Read string, possibly {@code null}.
      * @throws IOException If read failed.
      */
-    @Nullable public static String readBigUTF(DataInput in) throws IOException {
+    @Nullable public static String readLongString(DataInput in) throws IOException {
         // Check null value.
         if (in.readBoolean())
             return null;
@@ -12213,16 +12212,15 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values. <br/>
-     * Works as {@link DataOutput#writeUTF}, but if size of string is greater
-     * than {@link #UTF_BYTE_LIMIT} bytes, it will be truncated to a size
-     * less than or equal to {@link #UTF_BYTE_LIMIT} bytes. Must be used
-     * together with {@link IgniteUtils#readString}.
+     * Under hood uses {@link DataOutput#writeUTF}, if string is greater than
+     * {@link #UTF_BYTE_LIMIT}, it will be cut to it so that there are no
+     * errors. Use {@link #readString} to read string.
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
      * @throws IOException If write failed.
      */
-    public static void writeLimitUTF(DataOutput out, @Nullable String s) throws IOException {
+    public static void writeCutString(DataOutput out, @Nullable String s) throws IOException {
         // Write null flag.
         out.writeBoolean(isNull(s));
 
