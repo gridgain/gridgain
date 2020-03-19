@@ -504,7 +504,7 @@ public class GridMapQueryExecutor {
                 SQLException sqlEx = X.cause(e, SQLException.class);
 
                 if ((sqlEx != null && sqlEx.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
-                    || (qryResults.cancelled() && e instanceof QueryMemoryTracker.TrackerWasClosedException))
+                    || (qryResults != null && qryResults.cancelled() && e instanceof QueryMemoryTracker.TrackerWasClosedException))
                     sendQueryCancel(node, reqId);
                 else {
                     GridH2RetryException retryErr = X.cause(e, GridH2RetryException.class);
