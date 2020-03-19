@@ -17,6 +17,7 @@
 package org.apache.ignite.util;
 
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -81,6 +82,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTA
 import static org.apache.ignite.TestStorageUtils.corruptDataEntry;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_CONNECTION_FAILED;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
@@ -1564,11 +1566,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test print stack trace if an error occurs when option
+     * Test print stack trace if an error parsing arguments occurs when option
      * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} is enabled.
      */
     @Test
-    public void testPrintErrStackTraceWhenError() {
+    public void testPrintErrStackTraceWhenParsingArgError() {
         injectTestSystemOut();
 
         execCmdWithError(CMD_PRINT_ERR_STACK_TRACE);
@@ -1578,11 +1580,11 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
     /**
      * The test checks that stack trace will not be displayed in case of an
-     * error without option {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE}
-     * enabled.
+     * error parsing arguments without option
+     * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} enabled.
      */
     @Test
-    public void testNotPrintErrStackTraceWhenError() {
+    public void testNotPrintErrStackTraceWhenParsingArgError() {
         injectTestSystemOut();
 
         execCmdWithError();
@@ -1603,6 +1605,24 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         assertEquals(EXIT_CODE_OK, execute(CMD_PRINT_ERR_STACK_TRACE, BASELINE.text()));
         assertNotContains(log, testOut.toString(), "Error stack trace:");
+    }
+
+    /**
+     * Test print stack trace if an UnknownHostException occurs when option
+     * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} is enabled.
+     */
+    @Test
+    public void testPrintErrStackTraceWhenUnknownHostException() {
+        injectTestSystemOut();
+
+        assertEquals(
+            EXIT_CODE_CONNECTION_FAILED,
+            execute(BASELINE.text(), CMD_PRINT_ERR_STACK_TRACE, "--host", UUID.randomUUID().toString())
+        );
+
+        String testOutStr = testOut.toString();
+        assertContains(log, testOutStr, "Error stack trace:");
+        assertContains(log, testOutStr, UnknownHostException.class.getName());
     }
 
     /**
