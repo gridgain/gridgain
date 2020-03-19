@@ -366,11 +366,6 @@ public class ClusterMetricsMXBeanImpl implements ClusterMetricsMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public int getMaximumNodeAmountAvailableForSafeStop() {
-        return metrics().getMaximumNodeAmountAvailableForSafeStop();
-    }
-
-    /** {@inheritDoc} */
     @Override public int getTotalBaselineNodes() {
         Collection<BaselineNode> baselineNodes = cluster.ignite().cluster().currentBaselineTopology();
 

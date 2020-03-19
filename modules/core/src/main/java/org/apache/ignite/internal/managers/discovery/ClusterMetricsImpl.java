@@ -52,7 +52,6 @@ import static org.apache.ignite.internal.processors.metric.GridMetricManager.TOT
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.UP_TIME;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.task.GridTaskProcessor.TOTAL_EXEC_TASKS;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.MAX_NODES_AVAILABLE_FOR_SAFE_STOP;
 
 /**
  * Cluster metrics proxy.
@@ -196,9 +195,6 @@ public class ClusterMetricsImpl implements ClusterMetrics {
     /** Current PME duration in milliseconds. */
     private final LongMetric pmeDuration;
 
-    /** Maximum node amount available for safe stop - stop without data loss. */
-    private final IntMetric maxNodesAvailableForSafeStop;
-
     /**
      * @param ctx Kernel context.
      * @param nodeStartTime Node start time.
@@ -230,8 +226,6 @@ public class ClusterMetricsImpl implements ClusterMetrics {
         nonHeapUsed = mreg.findMetric(metricName("memory", "nonheap", "used"));
         nonHeapCommitted = mreg.findMetric(metricName("memory", "nonheap", "committed"));
         nonHeapMax = mreg.findMetric(metricName("memory", "nonheap", "max"));
-
-        maxNodesAvailableForSafeStop = mreg.findMetric(MAX_NODES_AVAILABLE_FOR_SAFE_STOP);
 
         MetricRegistry pmeReg = ctx.metric().registry(PME_METRICS);
 
@@ -545,11 +539,6 @@ public class ClusterMetricsImpl implements ClusterMetrics {
     /** {@inheritDoc} */
     @Override public long getCurrentPmeDuration() {
         return pmeDuration.value();
-    }
-
-    /** {@inheritDoc} */
-    @Override public int getMaximumNodeAmountAvailableForSafeStop() {
-        return maxNodesAvailableForSafeStop.value();
     }
 
     /**

@@ -159,9 +159,6 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
     /** Histogram of blocking PME durations metric name. */
     public static final String PME_OPS_BLOCKED_DURATION_HISTOGRAM = "CacheOperationsBlockedDurationHistogram";
 
-    /** Maximum amount of nodes available for safe stop - stop without data loss. */
-    public static final String MAX_NODES_AVAILABLE_FOR_SAFE_STOP = "MaxNodesAvailableForSafeStop";
-
     /** JVM interface to memory consumption info */
     private static final MemoryMXBean mem = ManagementFactory.getMemoryMXBean();
 

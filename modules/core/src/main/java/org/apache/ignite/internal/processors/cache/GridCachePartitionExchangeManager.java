@@ -168,13 +168,11 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.preloa
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture.nextDumpTimeout;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader.DFLT_PRELOAD_RESEND_TIMEOUT;
 import static org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor.CLUSTER_ACTIVATION_EVT_STRIPE_ID;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.MAX_NODES_AVAILABLE_FOR_SAFE_STOP;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_DURATION_HISTOGRAM;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_METRICS;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.PME_OPS_BLOCKED_DURATION_HISTOGRAM;
-import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 
 /**
  * Partition exchange manager.
@@ -477,10 +475,6 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
         }
 
         MetricRegistry mreg = cctx.kernalContext().metric().registry(PME_METRICS);
-
-        cctx.kernalContext().metric().registry(SYS_METRICS).intMetric(
-            MAX_NODES_AVAILABLE_FOR_SAFE_STOP,
-            "Maximum amount of nodes available for safe stop - stop without data loss");
 
         mreg.register(PME_DURATION,
             () -> currentPMEDuration(false),

@@ -92,8 +92,7 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         4/*outbound messages queue size*/ +
         4/*total nodes*/ +
         8/*total jobs execution time*/ +
-        8/*current PME time*/ +
-        4/*max nodes available for safe stop*/;
+        8/*current PME time*/;
 
     /** */
     private long lastUpdateTime = -1;
@@ -260,9 +259,6 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
     /** */
     private long currentPmeDuration = -1;
 
-    /** */
-    private int maxNodeAmountAvailableForSafeStop = -1;
-
     /**
      * Create empty snapshot.
      */
@@ -337,7 +333,6 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         heapTotal = 0;
         totalNodes = nodes.size();
         currentPmeDuration = 0;
-        maxNodeAmountAvailableForSafeStop = 0;
 
         for (ClusterNode node : nodes) {
             ClusterMetrics m = node.metrics();
@@ -416,9 +411,6 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
             avgLoad += m.getCurrentCpuLoad();
 
             currentPmeDuration = max(currentPmeDuration, m.getCurrentPmeDuration());
-
-            maxNodeAmountAvailableForSafeStop = max(maxNodeAmountAvailableForSafeStop,
-                m.getMaximumNodeAmountAvailableForSafeStop());
         }
 
         curJobExecTime /= size;
@@ -979,11 +971,6 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         return currentPmeDuration;
     }
 
-    /** {@inheritDoc} */
-    @Override public int getMaximumNodeAmountAvailableForSafeStop() {
-        return maxNodeAmountAvailableForSafeStop;
-    }
-
     /**
      * Sets available processors.
      *
@@ -1228,15 +1215,6 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
     }
 
     /**
-     * Sets maximum amount of nodes available for safe stop.
-     *
-     * @param maxNodeAmountAvailableForSafeStop Maximum amount of nodes available for safe stop.
-     */
-    public void setMaximumNodeAmountAvailableForSafeStop(int maxNodeAmountAvailableForSafeStop) {
-        this.maxNodeAmountAvailableForSafeStop = maxNodeAmountAvailableForSafeStop;
-    }
-
-    /**
      * @param neighborhood Cluster neighborhood.
      * @return CPU count.
      */
@@ -1389,7 +1367,6 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         buf.putInt(metrics.getTotalNodes());
         buf.putLong(metrics.getTotalJobsExecutionTime());
         buf.putLong(metrics.getCurrentPmeDuration());
-        buf.putInt(metrics.getMaximumNodeAmountAvailableForSafeStop());
 
         assert !buf.hasRemaining() : "Invalid metrics size [expected=" + METRICS_SIZE + ", actual="
             + (buf.position() - off) + ']';
@@ -1477,26 +1454,7 @@ public class ClusterMetricsSnapshot implements ClusterMetrics {
         else
             metrics.setCurrentPmeDuration(0);
 
-        if (buf.remaining() >= 4)
-            metrics.setMaximumNodeAmountAvailableForSafeStop(buf.getInt());
-        else
-            metrics.setMaximumNodeAmountAvailableForSafeStop(0);
-
         return metrics;
-    }
-
-    /**
-     * @return Max node amount available for safe stop.
-     */
-    public int maxNodeAmountAvailableForSafeStop() {
-        return maxNodeAmountAvailableForSafeStop;
-    }
-
-    /**
-     * @param maxNodeAmountAvailableForSafeStop New max node amount available for safe stop.
-     */
-    public void maxNodeAmountAvailableForSafeStop(int maxNodeAmountAvailableForSafeStop) {
-        this.maxNodeAmountAvailableForSafeStop = maxNodeAmountAvailableForSafeStop;
     }
 
     /** {@inheritDoc} */
