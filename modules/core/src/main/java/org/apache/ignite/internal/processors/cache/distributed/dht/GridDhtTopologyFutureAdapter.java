@@ -211,12 +211,8 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
     ) {
         final int part = cctx.affinity().partition(key);
 
-        if (lostParts.contains(part)) {
-            return new CacheInvalidStateException("Failed to execute the cache operation " +
-                "(all partition owners have left the grid, partition data has been lost) [" +
-                "cacheName=" + cctx.name() + ", op=" + opType + ", part=" + part + ", key=" + key + ']');
-        }
-
-        return null;
+        return lostParts.contains(part) ? new CacheInvalidStateException("Failed to execute the cache operation " +
+            "(all partition owners have left the grid, partition data has been lost) [" +
+            "cacheName=" + cctx.name() + ", op=" + opType + ", partition=" + part + ", key=" + key + ']') : null;
     }
 }
