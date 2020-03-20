@@ -59,7 +59,13 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
 
         cluster.active(true);
 
-        assertWithPoll(() -> interceptor.getPayload(buildClusterCachesInfoDest(cluster.id())) != null);
+        assertWithPoll(() -> {
+            List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
+
+            CacheInfo actual = F.find(cacheInfos, null, (P1<CacheInfo>)i -> CU.isSystemCache(i.getCacheName()));
+
+            return cacheInfos.size() == 1 && actual != null && actual.isSystemCache();
+        });
         assertWithPoll(() -> interceptor.getPayload(buildClusterCachesSqlMetaDest(cluster.id())) != null);
     }
 
@@ -80,10 +86,12 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
             CacheInfo actual = F.find(cacheInfos, null,
-                (P1<CacheInfo>)i -> "test-cache".equals(i.getName()));
+                (P1<CacheInfo>)i -> "test-cache".equals(i.getCacheName()));
 
             return actual != null &&
-                CU.cacheId("test-cache") == actual.getCacheId() && !actual.isCreatedBySql();
+                CU.cacheId("test-cache") == actual.getCacheId() &&
+                !actual.isSystemCache() &&
+                !actual.isCreatedBySql();
         });
 
         ignite.context().query().querySqlFields(
@@ -95,37 +103,12 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
             CacheInfo actual = F.find(cacheInfos, null,
-                (P1<CacheInfo>)i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+                (P1<CacheInfo>)i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getCacheName()));
 
             return actual != null &&
-                CU.cacheId("SQL_PUBLIC_MC_AGENT_TEST_TABLE_1") == actual.getCacheId() && actual.isCreatedBySql();
-        });
-    }
-
-    /**
-     * GG-26556 Testcase 3:
-     *
-     * 1. Start 1 ignite node.
-     * 2. Create cache with “test-cache” name.
-     * 3. Wait 1 second until message with cache info will be send to GMC.
-     * 4. Verify that cache info list does not contain cache with “ignite-sys-cache” name.
-     */
-    @Test
-    public void shouldNotSendSystemCacheInfo() throws Exception {
-        IgniteEx ignite = (IgniteEx) startGrid();
-
-        changeManagementConsoleConfig(ignite);
-
-        IgniteCluster cluster = ignite.cluster();
-
-        cluster.active(true);
-
-        ignite.getOrCreateCache("test-cache");
-
-        assertWithPoll(() -> {
-            List<CacheInfo> cachesInfo = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
-
-            return !cachesInfo.isEmpty() && cachesInfo.stream().noneMatch(i -> "ignite-sys-cache".equals(i.getName()));
+                CU.cacheId("SQL_PUBLIC_MC_AGENT_TEST_TABLE_1") == actual.getCacheId() &&
+                !actual.isSystemCache() &&
+                actual.isCreatedBySql();
         });
     }
 
@@ -157,7 +140,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache".equals(i.getCacheName()));
         });
 
         cache.destroy();
@@ -165,7 +148,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache".equals(i.getCacheName()));
         });
     }
 
@@ -199,7 +182,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getCacheName()));
         });
 
         cache.destroy();
@@ -207,7 +190,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getCacheName()));
         });
     }
 
@@ -240,7 +223,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getCacheName()));
         });
 
         ignite.context().query().querySqlFields(
@@ -251,7 +234,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getCacheName()));
         });
     }
 
@@ -442,7 +425,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "Country".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "Country".equals(i.getCacheName()));
         });
 
         assertWithPoll(() -> {
@@ -490,7 +473,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "CountryWithAnnotations".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "CountryWithAnnotations".equals(i.getCacheName()));
         });
 
         assertWithPoll(() -> {
@@ -544,7 +527,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "test-cache-1".equals(i.getCacheName()));
         });
 
         cache.destroy();
@@ -552,7 +535,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "test-cache-1".equals(i.getCacheName()));
         });
     }
 
@@ -585,7 +568,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().anyMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getCacheName()));
         });
 
         ignite.context().query().querySqlFields(
@@ -596,7 +579,7 @@ public class CacheChangesProcessorTest extends AgentCommonAbstractTest {
         assertWithPoll(() -> {
             List<CacheInfo> cacheInfos = interceptor.getListPayload(buildClusterCachesInfoDest(cluster.id()), CacheInfo.class);
 
-            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getName()));
+            return cacheInfos != null && cacheInfos.stream().noneMatch(i -> "SQL_PUBLIC_MC_AGENT_TEST_TABLE_1".equals(i.getCacheName()));
         });
     }
 

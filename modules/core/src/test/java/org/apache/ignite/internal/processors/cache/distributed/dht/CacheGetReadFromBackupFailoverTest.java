@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import javax.cache.CacheException;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -23,8 +24,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteIllegalStateException;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -185,7 +186,9 @@ public class CacheGetReadFromBackupFailoverTest extends GridCommonAbstractTest {
                     successGet.incrementAndGet();
                 }
                 catch (CacheException e) {
-                    if (!X.hasCause(e, NodeStoppingException.class))
+                    if (!X.hasCause(e, NodeStoppingException.class)
+                        && !X.hasCause(e, "Grid is in invalid state to perform this operation.",
+                        IgniteCheckedException.class))
                         throw e;
                 }
 

@@ -27,8 +27,6 @@ import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.TreeMap;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.lang.IgniteBiTuple;
@@ -41,7 +39,6 @@ import org.h2.value.ValueRow;
 /**
  * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.
  */
-@SuppressWarnings("MissortedModifiers")
 public class SortedExternalResult extends AbstractExternalResult<Value> implements ResultExternal {
     /** Distinct flag. */
     private final boolean distinct;
@@ -72,24 +69,19 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
     /**
      * @param ses Session.
-     * @param ctx Kernal context.
      * @param distinct Distinct flag.
      * @param distinctIndexes {@code DISTINCT ON(...)} expressions.
      * @param visibleColCnt Visible columns count.
      * @param sort Sort order.
-     * @param memTracker MemoryTracker.
      * @param initSize Initial size;
      */
-    public SortedExternalResult(GridKernalContext ctx,
-        Session ses,
+    public SortedExternalResult(Session ses,
         boolean distinct,
         int[] distinctIndexes,
         int visibleColCnt,
         SortOrder sort,
-        H2MemoryTracker memTracker,
         long initSize) {
-        super(ctx, memTracker, isDistinct(distinct, distinctIndexes), initSize, Value.class,
-            ses.getDatabase().getCompareMode(), ses.getDataHandler());
+        super(ses, isDistinct(distinct, distinctIndexes), initSize, Value.class);
 
         this.distinct = isDistinct(distinct, distinctIndexes);
         this.distinctIndexes = distinctIndexes;
@@ -144,7 +136,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             if (distinct && containsRowWithOrderCheck(row))
                 continue;
 
-            addRowToBuffer(row, false); // Memory is already reserved in LocalResult.
+            addRowToBuffer(row);
 
             size++;
         }
@@ -160,7 +152,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (distinct && containsRowWithOrderCheck(row))
                 return size;
 
-        addRowToBuffer(row, true);
+        addRowToBuffer(row);
 
         if (needToSpill())
             spillRowsBufferToDisk();
@@ -254,9 +246,8 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
     /**
      * Adds row to in-memory row buffer.
      * @param row Row.
-     * @param reserveMemory Flag whether to reserve memory.
      */
-    private void addRowToBuffer(Value[] row, boolean reserveMemory) {
+    private void addRowToBuffer(Value[] row) {
         if (distinct) {
             assert unsortedRowsBuf == null;
 
@@ -267,11 +258,9 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             Value[] old = sortedRowsBuf.put(key, row);
 
-            if (reserveMemory) {
-                long delta = H2Utils.calculateMemoryDelta(key, old, row);
+            long delta = H2Utils.calculateMemoryDelta(key, old, row);
 
-                memTracker.reserved(delta);
-            }
+            memTracker.reserve(delta);
         }
         else {
             assert sortedRowsBuf == null;
@@ -281,11 +270,9 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             unsortedRowsBuf.add(row);
 
-            if (reserveMemory) {
-                long delta = H2Utils.calculateMemoryDelta(null, null, row);
+            long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-                memTracker.reserved(delta);
-            }
+            memTracker.reserve(delta);
         }
     }
 
@@ -322,7 +309,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         for (Map.Entry<ValueRow, Value[]> row : rows)
             delta += H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
 
-        memTracker.released(-delta);
+        memTracker.release(-delta);
     }
 
     /** {@inheritDoc} */

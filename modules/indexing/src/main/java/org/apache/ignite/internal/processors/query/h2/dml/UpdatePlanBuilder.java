@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessor;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryDescriptor;
@@ -309,7 +310,8 @@ public final class UpdatePlanBuilder {
             rows,
             rowsNum,
             null,
-            distributed
+            distributed,
+            false
         );
     }
 
@@ -470,7 +472,8 @@ public final class UpdatePlanBuilder {
                     null,
                     0,
                     null,
-                    distributed
+                    distributed,
+                    sel.canBeLazy()
                 );
             }
             else {
@@ -588,7 +591,8 @@ public final class UpdatePlanBuilder {
             null,
             0,
             null,
-            null
+            null,
+            true
         );
     }
 
@@ -910,7 +914,7 @@ public final class UpdatePlanBuilder {
                 planKey.enforceJoinOrder());
 
             // Get a new prepared statement for derived select query.
-            try (PreparedStatement stmt = conn.prepareStatement(selectQry)) {
+            try (PreparedStatement stmt = conn.prepareStatement(selectQry, H2StatementCache.queryFlags(planKey))) {
                 Prepared prep = GridSqlQueryParser.prepared(stmt);
                 GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false, log).parse(prep);
 

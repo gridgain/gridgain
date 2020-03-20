@@ -206,7 +206,7 @@ public class IgniteCacheDistributedQueryStopOnCancelOrTimeoutSelfTest extends Gr
 
             assertEquals(0, cache.localSize());
 
-            SqlFieldsQuery qry = new SqlFieldsQueryEx(sql, true).setMaxMemory(-1);
+            SqlFieldsQuery qry = new SqlFieldsQueryEx(sql, true);
 
             final QueryCursor<List<?>> cursor;
             if (timeout) {

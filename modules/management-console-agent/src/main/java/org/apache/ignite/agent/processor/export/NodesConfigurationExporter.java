@@ -23,7 +23,7 @@ import org.apache.ignite.agent.dto.NodeConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
-import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
 
 /**

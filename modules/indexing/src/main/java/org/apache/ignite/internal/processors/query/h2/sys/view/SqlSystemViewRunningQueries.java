@@ -42,7 +42,12 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
             newColumn("SCHEMA_NAME"),
             newColumn("LOCAL", Value.BOOLEAN),
             newColumn("START_TIME", Value.TIMESTAMP),
-            newColumn("DURATION", Value.LONG)
+            newColumn("DURATION", Value.LONG),
+            newColumn("MEMORY_CURRENT", Value.LONG),
+            newColumn("MEMORY_MAX", Value.LONG),
+            newColumn("DISK_ALLOCATION_CURRENT", Value.LONG),
+            newColumn("DISK_ALLOCATION_MAX", Value.LONG),
+            newColumn("DISK_ALLOCATION_TOTAL", Value.LONG)
         );
     }
 
@@ -73,13 +78,19 @@ public class SqlSystemViewRunningQueries extends SqlAbstractLocalSystemView {
             long duration = now - info.startTime();
 
             rows.add(
-                createRow(ses,
+                createRow(
+                    ses,
                     info.globalQueryId(),
                     info.query(),
                     info.schemaName(),
                     info.local(),
                     valueTimestampFromMillis(info.startTime()),
-                    duration
+                    duration,
+                    info.memoryMetricProvider().reserved(),
+                    info.memoryMetricProvider().maxReserved(),
+                    info.memoryMetricProvider().writtenOnDisk(),
+                    info.memoryMetricProvider().maxWrittenOnDisk(),
+                    info.memoryMetricProvider().totalWrittenOnDisk()
                 )
             );
         }

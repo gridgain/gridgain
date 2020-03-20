@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Query descriptor.
@@ -42,12 +44,17 @@ public class GridRunningQueryInfo {
     private final long startTime;
 
     /** */
+    @GridToStringExclude
     private final GridQueryCancel cancel;
 
     /** */
     private final boolean loc;
 
     /** */
+    private final GridQueryMemoryMetricProvider memMetricProvider;
+
+    /** */
+    @GridToStringExclude
     private final QueryRunningFuture fut = new QueryRunningFuture();
 
     /**
@@ -70,7 +77,8 @@ public class GridRunningQueryInfo {
         String schemaName,
         long startTime,
         GridQueryCancel cancel,
-        boolean loc
+        boolean loc,
+        GridQueryMemoryMetricProvider memMetricProvider
     ) {
         this.id = id;
         this.nodeId = nodeId;
@@ -80,6 +88,7 @@ public class GridRunningQueryInfo {
         this.startTime = startTime;
         this.cancel = cancel;
         this.loc = loc;
+        this.memMetricProvider = memMetricProvider;
     }
 
     /**
@@ -124,6 +133,11 @@ public class GridRunningQueryInfo {
         return startTime;
     }
 
+    /** */
+    public GridQueryMemoryMetricProvider memoryMetricProvider() {
+        return memMetricProvider;
+    }
+
     /**
      * @param curTime Current time.
      * @param duration Duration of long query.
@@ -160,5 +174,10 @@ public class GridRunningQueryInfo {
      */
     public boolean local() {
         return loc;
+    }
+
+    /**{@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRunningQueryInfo.class, this);
     }
 }

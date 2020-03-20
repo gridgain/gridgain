@@ -37,6 +37,7 @@ import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -543,6 +544,9 @@ public final class IgniteSystemProperties {
     /** Enable backward compatible handling of UUID through DDL. */
     public static final String IGNITE_SQL_UUID_DDL_BYTE_FORMAT = "IGNITE_SQL_UUID_DDL_BYTE_FORMAT";
 
+    /** Enable memory quotas per JDBC connection. */
+    public static final String IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA = "IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA";
+
     /** Maximum size for affinity assignment history. */
     public static final String IGNITE_AFFINITY_HISTORY_SIZE = "IGNITE_AFFINITY_HISTORY_SIZE";
 
@@ -975,6 +979,15 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_DISABLE_WAL_DURING_REBALANCING = "IGNITE_DISABLE_WAL_DURING_REBALANCING";
 
     /**
+     * When property is set {@code false} each next exchange will try to compare with previous.
+     * If last rebalance is equivalent with new possible one, new rebalance does not trigger.
+     * Set the property {@code true} and each exchange will try to trigger new rebalance.
+     *
+     * Default is {@code false}.
+     */
+    public static final String IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION = "IGNITE_DISABLE_REBALANCING_CANCELLATION_OPTIMIZATION";
+
+    /**
      * Sets timeout for TCP client recovery descriptor reservation.
      */
     public static final String IGNITE_NIO_RECOVERY_DESCRIPTOR_RESERVATION_TIMEOUT =
@@ -1220,41 +1233,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_H2_LOCAL_RESULT_FACTORY = "IGNITE_H2_LOCAL_RESULT_FACTORY";
 
     /**
-     * Defines default memory limit for every single sql query (query quota).
-     * Note: Negative value disables memory tracking (for both: query and global quotas) for query by default.
-     *
-     * Default: MaxHeapSize/AvailableCPUs.
-     */
-    public static final String IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT = "IGNITE_DEFAULT_SQL_QUERY_MEMORY_LIMIT";
-
-    /**
-     * Defines memory pool size available for sql queries on node (global quota).
-     * Note: Negative value disables global memory quota for SQL, but it doesn't affects query quota.
-     *
-     * Default: 60% MaxHeapSize.
-     */
-
-    public static final String IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE = "IGNITE_DEFAULT_SQL_MEMORY_POOL_SIZE";
-
-    /**
      * Defines default memory reservation block size.
      *
      * Default: 512K.
      */
     public static final String IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE = "IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE";
-
-
-    /**
-     * Defines an action that occurs when the memory limit is exceeded. Possible variants:
-     * <ul>
-     *     <li>{@code false} - exception will be thrown.</li>
-     *     <li>{@code true} - intermediate query results will be spilled to the disk.</li>
-     * </ul>
-     *
-     * Default: false.
-     */
-    // TODO: GG-18629: Move to memory quotas configuration.
-    public static final String IGNITE_SQL_USE_DISK_OFFLOAD = "IGNITE_SQL_USE_DISK_OFFLOAD";
 
     /**
      * Page lock tracker type.
@@ -1310,14 +1293,6 @@ public final class IgniteSystemProperties {
      * Default: false.
      */
     public static final String IGNITE_ENABLE_HASH_JOIN = "IGNITE_ENABLE_HASH_JOIN";
-
-    /**
-     * Index rebuilding parallelism level. If specified, sets the count of threads that are used for index rebuilding
-     * and can only be greater than <code>0</code>, otherwise default value will be used. Maximum count of threads
-     * can't be greater than total available processors count.
-     * Default value is minimum of <code>4</code> and processors count / 4, but always greater than <code>0</code>.
-     */
-    public static final String INDEX_REBUILDING_PARALLELISM = "INDEX_REBUILDING_PARALLELISM";
 
     /** Enable write rebalnce statistics into log. Default: false */
     public static final String IGNITE_WRITE_REBALANCE_STATISTICS = "IGNITE_WRITE_REBALANCE_STATISTICS";
@@ -1377,6 +1352,26 @@ public final class IgniteSystemProperties {
      * restart.
      */
     public static final String IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING = "IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING";
+
+    /**
+     * When enabled, node will wait until all of its data is backed up before shutting down.
+     * Please note that it will completely prevent last node in cluster from shutting down if any caches exist
+     * that have backups configured.
+     */
+    @IgniteExperimental
+    public static final String IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN = "IGNITE_WAIT_FOR_BACKUPS_ON_SHUTDOWN";
+
+    /**
+     * Choose the index cost function. May be used to compatibility with old version
+     * .
+     * The possible values:
+     *         - "LAST",
+     *         - "COMPATIBLE_8_7_12",
+     *         - COMPATIBLE_8_7_6
+     *
+     * The last cost function is used by default.
+     */
+    public static final String IGNITE_INDEX_COST_FUNCTION = "IGNITE_INDEX_COST_FUNCTION";
 
     /**
      * Enforces singleton.
