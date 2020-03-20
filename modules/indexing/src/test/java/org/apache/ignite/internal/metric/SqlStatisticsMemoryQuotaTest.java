@@ -19,7 +19,6 @@ package org.apache.ignite.internal.metric;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
@@ -67,12 +66,6 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.refresh();
     }
 
-    /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-            .setSqlGlobalMemoryQuota(String.valueOf(Runtime.getRuntime().maxMemory() / 2));
-    }
-
     /**
      * Check values of all sql memory metrics right after grid starts and no queries are executed.
      *
@@ -85,7 +78,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         assertEquals(0, longMetricValue(0, "requests"));
         assertEquals(0, longMetricValue(1, "requests"));
 
-        long dfltSqlGlobQuota = Runtime.getRuntime().maxMemory() / 2;
+        long dfltSqlGlobQuota = (long)(Runtime.getRuntime().maxMemory() * 0.6);
 
         assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
         assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
