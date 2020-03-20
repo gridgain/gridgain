@@ -5760,8 +5760,29 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values.
-     * Under hood uses {@link DataOutput#writeUTF}, if string is greater than
-     * {@link #UTF_BYTE_LIMIT}, there will be an error.
+     * <p>
+     * Limitation for max string lenght of {@link #UTF_BYTE_LIMIT} bytes is caused by {@link ObjectOutputStream#writeUTF}
+     * used under the hood to perform an actual write.
+     * </p>
+     * <p>
+     * If longer string is passes a {@link UTFDataFormatException} exception will be thrown.
+     * </p>
+     * <p>
+     * To write longer strings use one of two options:
+     * <ul>
+     *     <li>
+     *         {@link #writeLongString(DataOutput, String)} writes string as is converting it into binary array of UTF-8
+     *         encoded characters.
+     *         To read the value back {@link #readLongString(DataInput)} should be used.
+     *     </li>
+     *     <li>
+     *         {@link #writeCutString(DataOutput, String)} cuts passed string to {@link #UTF_BYTE_LIMIT} bytes
+     *         and then writes them without converting to byte array.
+     *         No exceptions will be thrown for string of any length; written string can be read back with regular
+     *         {@link #readString(DataInput)} method.
+     *     </li>
+     * </ul>
+     * </p>
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
@@ -5777,8 +5798,13 @@ public abstract class IgniteUtils {
 
     /**
      * Reads string from input stream accounting for {@code null} values.
-     * Under hood uses {@link DataInput#readUTF, if string is greater than
-     * {@link #UTF_BYTE_LIMIT}, there will be an error.
+     *
+     * Method enables to read strings shorter than {@link #UTF_BYTE_LIMIT} bytes in UTF-8 otherwise an exception will be thrown.
+     *
+     * Strings written by {@link #writeString(DataOutput, String)} or {@link #writeCutString(DataOutput, String)}
+     * can be read by this method.
+     *
+     * @see #writeString(DataOutput, String) for more information about writing strings.
      *
      * @param in Stream to read from.
      * @return Read string, possibly {@code null}.
@@ -12111,7 +12137,8 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values. <br/>
-     * There is no limit of {@link #UTF_BYTE_LIMIT} for a string.
+     *
+     * This method can write string of any length, no {@link #UTF_BYTE_LIMIT} limits are applied.
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
@@ -12150,7 +12177,8 @@ public abstract class IgniteUtils {
 
     /**
      * Reads string from input stream accounting for {@code null} values. <br/>
-     * There is no limit of {@link #UTF_BYTE_LIMIT} for a string.
+     *
+     * This method can read string of any length, no {@link #UTF_BYTE_LIMIT} limits are applied.
      *
      * @param in Stream to read from.
      * @return Read string, possibly {@code null}.
@@ -12212,9 +12240,17 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values. <br/>
-     * Under hood uses {@link DataOutput#writeUTF}, if string is greater than
-     * {@link #UTF_BYTE_LIMIT}, it will be cut to it so that there are no
-     * errors. Use {@link #readString} to read string.
+     *
+     * <p>
+     *     Uses {@link ObjectOutputStream#writeUTF(String)} to write the string under the hood
+     *     but cuts strings longer than {@link #UTF_BYTE_LIMIT} to the limit to avoid {@link UTFDataFormatException}.
+     * </p>
+     *
+     * <p>
+     *     Strings written by the method can be read by {@link #readString(DataInput)}.
+     * </p>
+     *
+     * @see #writeString(DataOutput, String) for more information.
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
