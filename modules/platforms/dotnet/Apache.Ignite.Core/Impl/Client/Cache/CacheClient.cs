@@ -25,12 +25,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Cache;
+    using Apache.Ignite.Core.Impl.Cache.Expiry;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Client.Cache.Query;
     using Apache.Ignite.Core.Impl.Common;
@@ -41,6 +43,37 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
     /// </summary>
     internal sealed class CacheClient<TK, TV> : ICacheClient<TK, TV>, ICacheInternal
     {
+        /// <summary>
+        /// Additional flag values for cache operations.
+        /// </summary>
+        private enum ClientCacheRequestFlag : byte
+        {
+            /// <summary>
+            /// No flags
+            /// </summary>
+            None = 0,
+
+            /// <summary>
+            /// With keep binary flag.
+            /// Reserved for other thin clients.
+            /// </summary>
+            // ReSharper disable once ShiftExpressionRealShiftCountIsZero
+            // ReSharper disable once UnusedMember.Local
+            WithKeepBinary = 1 << 0,
+
+            /// <summary>
+            /// With transactional binary flag.
+            /// Reserved for IEP-34 Thin client: transactions support.
+            /// </summary>
+            // ReSharper disable once UnusedMember.Local
+            WithTransactional = 1 << 1,
+
+            /// <summary>
+            /// With expiration policy.
+            /// </summary>
+            WithExpiryPolicy = 1 << 2
+        }
+
         /** Scan query filter platform code: .NET filter. */
         private const byte FilterPlatformDotnet = 2;
 
@@ -59,13 +92,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /** Keep binary flag. */
         private readonly bool _keepBinary;
 
+        /** Expiry policy. */
+        private readonly IExpiryPolicy _expiryPolicy;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CacheClient{TK, TV}" /> class.
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         /// <param name="name">Cache name.</param>
         /// <param name="keepBinary">Binary mode flag.</param>
-        public CacheClient(IgniteClient ignite, string name, bool keepBinary = false)
+        /// /// <param name="expiryPolicy">Expire policy.</param>
+        public CacheClient(IgniteClient ignite, string name, bool keepBinary = false, IExpiryPolicy expiryPolicy = null)
         {
             Debug.Assert(ignite != null);
             Debug.Assert(name != null);
@@ -75,6 +112,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
             _marsh = _ignite.Marshaller;
             _id = BinaryUtils.GetCacheId(name);
             _keepBinary = keepBinary;
+            _expiryPolicy = expiryPolicy;
         }
 
         /** <inheritDoc /> */
@@ -547,7 +585,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
                 return result;
             }
 
-            return new CacheClient<TK1, TV1>(_ignite, _name, true);
+            return new CacheClient<TK1, TV1>(_ignite, _name, true, _expiryPolicy);
+        }
+
+        /** <inheritDoc /> */
+        public ICacheClient<TK, TV> WithExpiryPolicy(IExpiryPolicy plc)
+        {
+            IgniteArgumentCheck.NotNull(plc, "plc");
+
+            return new CacheClient<TK, TV>(_ignite, _name, _keepBinary, plc);
         }
 
         /** <inheritDoc /> */
@@ -702,7 +748,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         private void WriteRequest(Action<ClientRequestContext> writeAction, ClientRequestContext ctx)
         {
             ctx.Stream.WriteInt(_id);
-            ctx.Stream.WriteByte(0); // Flags (skipStore, etc).
+
+            if (_expiryPolicy != null)
+            {
+                ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.WithExpiryPolicy);
+                ExpiryPolicySerializer.WritePolicy(ctx.Writer, _expiryPolicy);
+            }
+            else
+                ctx.Stream.WriteByte((byte) ClientCacheRequestFlag.None); // Flags (skipStore, etc).
 
             if (writeAction != null)
             {
