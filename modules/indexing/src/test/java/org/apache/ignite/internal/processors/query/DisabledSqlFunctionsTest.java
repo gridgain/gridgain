@@ -77,6 +77,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         return paramsSet;
     }
 
+    /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
@@ -221,7 +222,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
      * Test local query execution.
      */
     @Test
-    public void testCustomDisabledFunctionsSet() throws Exception {
+    public void testCustomDisabledFunctionsSet_Length() throws Exception {
         disabledFuncs = new String[] {"LENGTH"};
 
         init();
@@ -238,6 +239,38 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         sql("SELECT CANCEL_SESSION(1)").getAll();
 
         checkSqlWithDisabledFunction("SELECT LENGTH(?)", "test");
+    }
+
+    /**
+     * Test local query execution.
+     */
+    @Test
+    public void testCustomDisabledFunctionsSet_FileRead() throws Exception {
+        disabledFuncs = new String[] {"FILE_READ"};
+
+        init();
+
+        sql("SELECT FILE_WRITE(0, 'test.dat')").getAll();
+        checkSqlWithDisabledFunction("SELECT FILE_READ('test.dat')");
+        sql("SELECT CSVWRITE('test.csv', 'select 1, 2')").getAll();
+        sql("SELECT * FROM CSVREAD('test.csv')").getAll();
+        sql("SELECT MEMORY_FREE()").getAll();
+        sql("SELECT MEMORY_USED()").getAll();
+        sql("SELECT LOCK_MODE()").getAll();
+        sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
+        sql("SELECT SESSION_ID()").getAll();
+        sql("SELECT CANCEL_SESSION(1)").getAll();
+    }
+
+    /**
+     * Test local query execution.
+     */
+    @Test
+    public void testNullSqlConfigurations() throws Exception {
+        IgniteConfiguration cfg = getConfiguration("test");
+
+        GridTestUtils.assertThrows(log, () -> cfg.setSqlInitialConfiguration(null),
+            IllegalArgumentException.class, "Ouch! Argument is invalid: SQL initial configuration cannot be null");
     }
 
     /**

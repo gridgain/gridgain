@@ -46,6 +46,7 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteExperimental;
@@ -1063,9 +1064,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public int getSqlQueryHistorySize() {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         return sqlInitCfg.getSqlQueryHistorySize();
     }
 
@@ -1080,9 +1078,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setSqlQueryHistorySize(int size) {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         sqlInitCfg.setSqlQueryHistorySize(size);
 
         return this;
@@ -3368,9 +3363,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public String[] getSqlSchemas() {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         return sqlInitCfg.getSqlSchemas();
     }
 
@@ -3390,9 +3382,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setSqlSchemas(String... sqlSchemas) {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         sqlInitCfg.setSqlSchemas(sqlSchemas);
 
         return this;
@@ -3409,9 +3398,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public String getSqlGlobalMemoryQuota() {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         return sqlInitCfg.getSqlGlobalMemoryQuota();
     }
 
@@ -3452,9 +3438,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setSqlGlobalMemoryQuota(String size) {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         sqlInitCfg.setSqlGlobalMemoryQuota(size);
 
         return this;
@@ -3470,9 +3453,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public String getSqlQueryMemoryQuota() {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         return sqlInitCfg.getSqlQueryMemoryQuota();
     }
 
@@ -3508,9 +3488,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setSqlQueryMemoryQuota(String size) {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         sqlInitCfg.setSqlQueryMemoryQuota(size);
 
         return this;
@@ -3526,9 +3503,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public boolean isSqlOffloadingEnabled() {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         return sqlInitCfg.isSqlOffloadingEnabled();
     }
 
@@ -3559,9 +3533,6 @@ public class IgniteConfiguration {
      */
     @Deprecated
     public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
-        if (sqlInitCfg == null)
-            sqlInitCfg = new SqlInitialConfiguration();
-
         sqlInitCfg.setSqlOffloadingEnabled(offloadingEnabled);
 
         return this;
@@ -3603,6 +3574,8 @@ public class IgniteConfiguration {
      * @return {@code this} for chaining.
      */
     public IgniteConfiguration setSqlInitialConfiguration(SqlInitialConfiguration sqlInitCfg) {
+        A.ensure(sqlInitCfg != null, "SQL initial configuration cannot be null");
+
         this.sqlInitCfg = sqlInitCfg;
 
         return this;
