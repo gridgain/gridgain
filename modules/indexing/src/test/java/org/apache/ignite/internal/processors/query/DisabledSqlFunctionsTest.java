@@ -259,6 +259,8 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         sql("SELECT CANCEL_SESSION(1)").getAll();
 
         checkSqlWithDisabledFunction("SELECT USER()");
+
+        sql("SELECT CURRENT_TIMESTAMP()").getAll();
     }
 
     /**
