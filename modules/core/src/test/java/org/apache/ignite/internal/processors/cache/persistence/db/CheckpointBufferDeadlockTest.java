@@ -57,8 +57,6 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
-import static org.apache.ignite.testframework.GridTestUtils.SF;
-
 /**
  *
  */
@@ -142,7 +140,7 @@ public class CheckpointBufferDeadlockTest extends GridCommonAbstractTest {
     public void testFourCheckpointThreads() throws Exception {
         checkpointThreads = 4;
 
-        for (int i = 0; i < SF.applyLB(20, 5); i++) {
+        for (int i = 0; i < 3; i++) {
             beforeTest();
 
             try {
