@@ -78,7 +78,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         assertEquals(0, longMetricValue(0, "requests"));
         assertEquals(0, longMetricValue(1, "requests"));
 
-        long dfltSqlGlobQuota = (long)(Runtime.getRuntime().maxMemory() * 0.6);
+        long dfltSqlGlobQuota = IgniteUtils.parseBytes("60%");
 
         assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
         assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
