@@ -720,7 +720,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
             try {
                 Integer actual = cache.get(i);
 
-                assertEquals((Integer)i, actual);
+                if (safe)
+                    assertEquals((Integer)i, actual);
             }
             catch (CacheException e) {
                 assertTrue("Read exception should only be triggered for a lost partition " +
