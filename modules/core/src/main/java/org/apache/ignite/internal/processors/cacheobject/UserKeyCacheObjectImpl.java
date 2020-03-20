@@ -65,7 +65,9 @@ public class UserKeyCacheObjectImpl extends KeyCacheObjectImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+    @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
+        assert !compress : "Keys should not be compressed!";
+
         try {
             IgniteCacheObjectProcessor proc = ctx.kernalContext().cacheObjects();
 

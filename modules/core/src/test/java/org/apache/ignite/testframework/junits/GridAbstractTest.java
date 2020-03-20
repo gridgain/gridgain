@@ -95,7 +95,6 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteClosure;
 import org.apache.ignite.lang.IgniteFuture;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.marshaller.MarshallerExclusions;
@@ -1586,7 +1585,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     protected BinaryMarshaller createStandaloneBinaryMarshaller(IgniteConfiguration cfg) throws IgniteCheckedException {
         BinaryMarshaller marsh = new BinaryMarshaller();
 
-        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), cfg, new NullLogger());
+        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), cfg);
 
         marsh.setContext(new MarshallerContextTestImpl());
 

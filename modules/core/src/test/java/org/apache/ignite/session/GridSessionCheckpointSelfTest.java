@@ -22,7 +22,6 @@ import org.apache.ignite.internal.binary.BinaryCachingMetadataHandler;
 import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.util.IgniteUtils;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.spi.checkpoint.cache.CacheCheckpointSpi;
@@ -100,7 +99,7 @@ public class GridSessionCheckpointSelfTest extends GridSessionCheckpointAbstract
         cfg.setCheckpointSpi(spi);
 
         if (cfg.getMarshaller() instanceof BinaryMarshaller) {
-            BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), cfg, new NullLogger());
+            BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), cfg);
 
             Marshaller marsh = cfg.getMarshaller();
 

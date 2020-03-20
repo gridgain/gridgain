@@ -88,6 +88,7 @@ import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectByteArra
 import org.apache.ignite.internal.processors.cacheobject.UserCacheObjectImpl;
 import org.apache.ignite.internal.processors.cacheobject.UserKeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.MutableSingletonList;
@@ -258,8 +259,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
             BinaryMarshaller bMarsh0 = (BinaryMarshaller)marsh;
 
             binaryCtx = useTestBinaryCtx ?
-                new TestBinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class)) :
-                new BinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class));
+                new TestBinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class), ctx.resource()) :
+                new BinaryContext(metaHnd, ctx.config(), ctx.log(BinaryContext.class), ctx.resource());
 
             IgniteUtils.invoke(BinaryMarshaller.class, bMarsh0, "setBinaryContext", binaryCtx, ctx.config());
 
@@ -348,14 +349,6 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
         super.onKernalStart(active);
 
         discoveryStarted = true;
-    }
-
-    /** {@inheritDoc} */
-    @Nullable @Override public CacheObject prepareForCache(@Nullable CacheObject obj, GridCacheContext cctx) {
-        if (obj == null)
-            return null;
-
-        return obj.prepareForCache(cctx.cacheObjectContext());
     }
 
     /** {@inheritDoc} */
@@ -1190,6 +1183,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_REGULAR:
                 return new CacheObjectImpl(null, bytes);
+
+            case CacheObject.TYPE_BINARY_COMPRESSED:
+                return new BinaryObjectImpl(binaryContext(), binaryContext().compressor().decompress(bytes), 0);
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);
@@ -1207,6 +1203,9 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
 
             case CacheObject.TYPE_REGULAR:
                 return new KeyCacheObjectImpl(ctx.kernalContext().cacheObjects().unmarshal(ctx, bytes, null), bytes, -1);
+
+            case CacheObject.TYPE_BINARY_COMPRESSED:
+                throw new IllegalArgumentException("Cache keys should not be compressed.");
         }
 
         throw new IllegalArgumentException("Invalid object type: " + type);
@@ -1485,8 +1484,8 @@ public class CacheObjectBinaryProcessorImpl extends GridProcessorAdapter impleme
          * @param log Logger.
          */
         public TestBinaryContext(BinaryMetadataHandler metaHnd, IgniteConfiguration igniteCfg,
-            IgniteLogger log) {
-            super(metaHnd, igniteCfg, log);
+            IgniteLogger log, GridResourceProcessor rsrcProc) {
+            super(metaHnd, igniteCfg, log, rsrcProc);
         }
 
         /** {@inheritDoc} */

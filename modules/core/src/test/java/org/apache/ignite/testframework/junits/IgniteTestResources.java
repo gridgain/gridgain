@@ -34,7 +34,6 @@ import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.resources.MetricManagerResource;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.marshaller.MarshallerContextTestImpl;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -273,7 +272,7 @@ public class IgniteTestResources {
 
         if (marsh instanceof BinaryMarshaller) {
             BinaryContext ctx =
-                new BinaryContext(BinaryCachingMetadataHandler.create(), new IgniteConfiguration(), new NullLogger());
+                new BinaryContext(BinaryCachingMetadataHandler.create(), new IgniteConfiguration());
 
             IgniteUtils.invoke(BinaryMarshaller.class, marsh, "setBinaryContext", ctx, new IgniteConfiguration());
         }

@@ -20,6 +20,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.binary.*;
+import org.apache.ignite.binary.Compressor;
 import org.apache.ignite.cache.CacheKeyConfiguration;
 import org.apache.ignite.cache.affinity.AffinityKey;
 import org.apache.ignite.cache.affinity.AffinityKeyMapped;
@@ -38,6 +39,7 @@ import org.apache.ignite.internal.processors.platform.PlatformJavaObjectFactoryP
 import org.apache.ignite.internal.processors.platform.websession.PlatformDotNetSessionData;
 import org.apache.ignite.internal.processors.platform.websession.PlatformDotNetSessionLockResult;
 import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.lang.GridMapEntry;
 import org.apache.ignite.internal.util.typedef.F;
@@ -45,8 +47,10 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteUuid;
+import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.MarshallerContext;
 import org.apache.ignite.marshaller.MarshallerUtils;
+import org.apache.ignite.resources.LoggerResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -160,12 +164,24 @@ public class BinaryContext {
     /** Object schemas. */
     private volatile Map<Integer, BinarySchemaRegistry> schemas;
 
+    /** */
+    private final Compressor compressor;
+
+    /**
+     * @param metaHnd Meta data handler.
+     * @param igniteCfg Ignite configuration.
+     */
+    public BinaryContext(BinaryMetadataHandler metaHnd, IgniteConfiguration igniteCfg) {
+        this(metaHnd, igniteCfg, new NullLogger(), null);
+    }
+
     /**
      * @param metaHnd Meta data handler.
      * @param igniteCfg Ignite configuration.
      * @param log Logger.
      */
-    public BinaryContext(BinaryMetadataHandler metaHnd, IgniteConfiguration igniteCfg, IgniteLogger log) {
+    public BinaryContext(BinaryMetadataHandler metaHnd, IgniteConfiguration igniteCfg, IgniteLogger log,
+        @Nullable GridResourceProcessor rsrcProc) {
         assert metaHnd != null;
         assert igniteCfg != null;
 
@@ -250,6 +266,27 @@ public class BinaryContext {
         registerPredefinedType(PlatformDotNetSessionLockResult.class, 0);
 
         // IDs range [200..1000] is used by Ignite internal APIs.
+
+        Compressor compressor0 = null;
+
+        try {
+            compressor0 = (Compressor)Class.forName(
+                "org.apache.ignite.internal.binary.compress.ZstdDictionaryCompressor").newInstance();
+
+            if (rsrcProc != null)
+                rsrcProc.injectBasicResource(compressor0, LoggerResource.class, log);
+
+            if (log.isInfoEnabled())
+                log.info("Configured binary data compressor: " + compressor0);
+        }
+        catch (ClassNotFoundException e) {
+            // Ignore.
+        }
+        catch (IllegalAccessException | InstantiationException | IgniteCheckedException ex) {
+            throw new IgniteException("Failed to instantiate compressor", ex);
+        }
+
+        compressor = compressor0;
     }
 
     /**
@@ -1291,6 +1328,11 @@ public class BinaryContext {
      */
     OptimizedMarshaller optimizedMarsh() {
         return optmMarsh;
+    }
+
+    /** */
+    public Compressor compressor() {
+        return compressor;
     }
 
     /**

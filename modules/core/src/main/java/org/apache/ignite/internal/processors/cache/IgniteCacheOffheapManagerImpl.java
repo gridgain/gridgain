@@ -1613,6 +1613,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldRow.expireTime() != dataRow.expireTime())
                 return false;
 
+            oldRow.key().prepareForCache(cctx.cacheObjectContext(), false);
+            oldRow.value().prepareForCache(cctx.cacheObjectContext(), true);
+
             int oldLen = oldRow.size();
 
             // Use grp.sharedGroup() flag since it is possible cacheId is not yet set here.
@@ -1700,8 +1703,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             else {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                key.valueBytes(coCtx);
-                val.valueBytes(coCtx);
+                key.prepareForCache(coCtx, false);
+                val.prepareForCache(coCtx, true);
 
                 rowStore.addRow(dataRow, grp.statisticsHolderData());
             }
@@ -2116,7 +2119,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     CacheObject val0 = cctx.toCacheObject(val);
 
-                    val0.prepareForCache(cctx.cacheObjectContext());
+                    val0.prepareForCache(cctx.cacheObjectContext(), true);
 
                     updateRow.value(val0);
                 }
@@ -2414,8 +2417,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
                 // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
-                val.valueBytes(coCtx);
+                key.prepareForCache(coCtx, false);
+                val.prepareForCache(coCtx, true);
 
                 CacheDataRow old;
 
@@ -2652,7 +2655,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
         /** {@inheritDoc} */
         @Override public CacheDataRow find(GridCacheContext cctx, KeyCacheObject key) throws IgniteCheckedException {
-            key.valueBytes(cctx.cacheObjectContext());
+            key.prepareForCache(cctx.cacheObjectContext(), false);
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 

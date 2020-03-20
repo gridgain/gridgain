@@ -50,7 +50,8 @@ public class UserCacheObjectByteArrayImpl extends CacheObjectByteArrayImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+    @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
+        // Compression not implemented.
         byte[] valCpy = Arrays.copyOf(val, val.length);
 
         return new CacheObjectByteArrayImpl(valCpy);

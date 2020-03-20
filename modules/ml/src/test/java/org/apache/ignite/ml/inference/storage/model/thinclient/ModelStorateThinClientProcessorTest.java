@@ -43,7 +43,6 @@ import org.apache.ignite.internal.processors.platform.client.ClientCustomQueryRe
 import org.apache.ignite.internal.processors.platform.client.ClientResponse;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.processors.platform.client.ThinClientCustomQueryRegistry;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.ml.inference.storage.model.DefaultModelStorage;
 import org.apache.ignite.ml.inference.storage.model.FileOrDirectory;
 import org.apache.ignite.ml.inference.storage.model.FileStat;
@@ -80,11 +79,7 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
                 .setAddresses(Collections.singletonList("127.0.0.1:47500..47509"))));
 
     /** */
-    private static final BinaryContext bctx = new BinaryContext(
-        BinaryNoopMetadataHandler.instance(),
-        conf,
-        new NullLogger()
-    );
+    private static final BinaryContext bctx = new BinaryContext(BinaryNoopMetadataHandler.instance(), conf);
 
     /** */
     private static final byte[] file1 = new byte[] {0, 1, 2, 3, 4, 5};
