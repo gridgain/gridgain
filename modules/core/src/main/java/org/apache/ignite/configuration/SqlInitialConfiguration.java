@@ -16,6 +16,8 @@
 
 package org.apache.ignite.configuration;
 
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -259,17 +261,23 @@ public class SqlInitialConfiguration {
      * @return The set of disabled SQL functions.
      */
     public String[] getDisabledSqlFunctions() {
-        return  disabledSqlFuncs;
+        return disabledSqlFuncs;
     }
 
     /**
      * Sets the set of disabled SQL functions.
+     * {@link #DFLT_DISABLED_SQL_FUNCTIONS} - the set of SQL functions that is disallowed by default.
      *
      * @param disabledSqlFuncs The set of disabled SQL functions.
+     *  <ul>
+     *      <li>If the empty is passed all SQL functions are allowed.</li>
+     *      <li>If the parameter is {@code null] the default list of function is used.</li>
+     *  </ul>
+     *
      * @return {@code this} for chaining.
      */
     public SqlInitialConfiguration setDisabledSqlFunctions(String[] disabledSqlFuncs) {
-        this.disabledSqlFuncs = disabledSqlFuncs;
+        this.disabledSqlFuncs = disabledSqlFuncs == null ? DFLT_DISABLED_SQL_FUNCTIONS : disabledSqlFuncs;
 
         return this;
     }

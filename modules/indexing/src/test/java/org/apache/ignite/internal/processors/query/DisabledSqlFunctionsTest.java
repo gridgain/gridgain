@@ -266,11 +266,23 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
-    public void testNullSqlConfigurations() throws Exception {
+    public void testNullSqlConfiguration() throws Exception {
         IgniteConfiguration cfg = getConfiguration("test");
 
         GridTestUtils.assertThrows(log, () -> cfg.setSqlInitialConfiguration(null),
             IllegalArgumentException.class, "Ouch! Argument is invalid: SQL initial configuration cannot be null");
+    }
+
+    /**
+     */
+    @Test
+    public void testNullSqlDisabledFunctions() throws Exception {
+        IgniteConfiguration cfg = getConfiguration("test");
+
+        cfg.setSqlInitialConfiguration(new SqlInitialConfiguration().setDisabledSqlFunctions(null));
+
+        assertSame(SqlInitialConfiguration.DFLT_DISABLED_SQL_FUNCTIONS,
+            cfg.getSqlInitialConfiguration().getDisabledSqlFunctions());
     }
 
     /**
