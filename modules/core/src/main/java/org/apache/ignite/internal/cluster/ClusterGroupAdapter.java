@@ -30,7 +30,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCompute;
@@ -741,16 +740,7 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
 
             Collection<ClusterNode> nodes = resolveCurrentNodes();
 
-            Set<UUID> nodeIds;
-
-            if (ids != null)
-                nodeIds = ids;
-            else if (nodes.isEmpty())
-                nodeIds = emptySet();
-            else
-                nodeIds = nodes.stream().map(ClusterNode::id).collect(Collectors.toSet());
-
-            return this.state = new ClusterGroupState(nodeIds, nodes, lastTopVer, startTime);
+            return this.state = new ClusterGroupState(nodes, lastTopVer, startTime);
         }
         finally {
             unguard();
@@ -803,8 +793,6 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
      * Container for cluster group state.
      */
     private static class ClusterGroupState {
-        /** Calculated node ids. */
-        public final Set<UUID> nodeIds;
         /** Calculated nodes. */
         public final Collection<ClusterNode> nodes;
         /** Last topology version. */
@@ -819,13 +807,11 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
         public final long startTime;
 
         /**
-         * @param nodeIds Calculated node ids.
          * @param nodes Calculated nodes.
          * @param lastTopVer Last topology version.
          * @param startTime Start time of first node in grid.
          */
-        public ClusterGroupState(Set<UUID> nodeIds, Collection<ClusterNode> nodes, long lastTopVer, long startTime) {
-            this.nodeIds = nodeIds;
+        public ClusterGroupState(Collection<ClusterNode> nodes, long lastTopVer, long startTime) {
             this.nodes = nodes;
             this.lastTopVer = lastTopVer;
             this.startTime = startTime;
@@ -1030,9 +1016,10 @@ public class ClusterGroupAdapter implements ClusterGroupEx, Externalizable {
             guard();
 
             try {
-                UUID nodeId = F.first(ensureLastTopologyState().nodeIds);
+                ClusterNode node = F.first(ensureLastTopologyState().nodes);
 
-                ClusterNode node = nodeId == null ? null : ctx.discovery().node(nodeId);
+                if (node != null)
+                    node = ctx.discovery().node(node.id());
 
                 return node == null ? emptySet() : singleton(node);
             }
