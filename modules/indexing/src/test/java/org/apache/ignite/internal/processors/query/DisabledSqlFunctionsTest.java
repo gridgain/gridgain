@@ -242,8 +242,8 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     /**
      */
     @Test
-    public void testCustomDisabledFunctionsSet_FileRead() throws Exception {
-        disabledFuncs = new String[] {"FILE_READ"};
+    public void testCustomDisabledFunctionsSet_FileRead_User() throws Exception {
+        disabledFuncs = new String[] {"FILE_READ", "USER"};
 
         init();
 
@@ -257,6 +257,8 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         sql("SELECT LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')").getAll();
         sql("SELECT SESSION_ID()").getAll();
         sql("SELECT CANCEL_SESSION(1)").getAll();
+
+        checkSqlWithDisabledFunction("SELECT USER()");
     }
 
     /**
