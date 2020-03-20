@@ -198,7 +198,6 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @Test
     public void testAllowFunctionsDisabledByDefault() throws Exception {
@@ -219,7 +218,6 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @Test
     public void testCustomDisabledFunctionsSet_Length() throws Exception {
@@ -242,7 +240,6 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @Test
     public void testCustomDisabledFunctionsSet_FileRead() throws Exception {
@@ -263,7 +260,6 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test local query execution.
      */
     @Test
     public void testNullSqlConfigurations() throws Exception {
