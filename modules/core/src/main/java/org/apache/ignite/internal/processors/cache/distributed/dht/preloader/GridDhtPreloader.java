@@ -261,7 +261,7 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
                     part.resetUpdateCounter();
                 }
 
-                if (part.state() != MOVING) {
+                if (part.state() != MOVING && part.state() != OWNING) {
                     throw new AssertionError("Partition has invalid state for rebalance "
                         + aff.topologyVersion() + " " + part);
                 }
