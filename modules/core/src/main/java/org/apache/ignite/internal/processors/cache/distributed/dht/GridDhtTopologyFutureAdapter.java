@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.TopologyValidator;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -67,7 +66,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
     }
 
     /** {@inheritDoc} */
-    @Override public final @Nullable Throwable validateCache(
+    @Override public final @Nullable CacheInvalidStateException validateCache(
         GridCacheContext cctx,
         boolean recovery,
         boolean read,
@@ -79,7 +78,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         Throwable err = error();
 
         if (err != null)
-            return err;
+            return new CacheInvalidStateException(err);
 
         if (!clusterIsActive)
             return new CacheInvalidStateException(
@@ -95,8 +94,9 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         if (cctx.shared().readOnlyMode() && opType == WRITE && !isSystemCache(cctx.name())
             && !VOLATILE_DATA_REGION_NAME.equals(cctx.group().dataRegion().config().getName())) {
-            return new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in " +
-                "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
+            return new CacheInvalidStateException(
+                    new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in " +
+                            "read-only mode) [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']'));
         }
 
         CacheGroupValidation validation = grpValidRes.get(grp.groupId());
@@ -105,7 +105,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
             return null;
 
         if (opType == WRITE && !validation.isValid()) {
-            return new IgniteCheckedException("Failed to perform cache operation " +
+            return new CacheInvalidStateException("Failed to perform cache operation " +
                 "(cache topology is not valid): " + cctx.name());
         }
 
@@ -120,7 +120,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
             if (keys != null) {
                 for (Object key0 : keys) {
-                    final Throwable res =
+                    final CacheInvalidStateException res =
                         validate(cctx, key0, opType, validation.lostPartitions());
 
                     if (res != null)
@@ -203,12 +203,13 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
      * @param opType Operation type.
      * @param lostParts Lost partitions.
      */
-    public static Throwable validate(
+    public static CacheInvalidStateException validate(
         GridCacheContext cctx,
         Object key,
         OperationType opType,
         Collection<Integer> lostParts
     ) {
+        // TODO optimize for KeyCacheObject.
         final int part = cctx.affinity().partition(key);
 
         return lostParts.contains(part) ? new CacheInvalidStateException("Failed to execute the cache operation " +

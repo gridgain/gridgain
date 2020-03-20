@@ -40,4 +40,10 @@ public class TxPartitionCounterStateConsistencyOptimisticTest extends TxPartitio
     @Override public void testPartitionConsistencyDuringRebalanceAndConcurrentUpdates_TxDuringPME() throws Exception {
         // No-op.
     }
+
+    @Override
+    @Test
+    public void testPrimaryLeftUnderLoadToSwitchingPartitions_3() throws Exception {
+        super.testPrimaryLeftUnderLoadToSwitchingPartitions_3();
+    }
 }

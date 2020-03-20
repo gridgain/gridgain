@@ -1855,7 +1855,8 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
                                     assert topFut.isDone() : topFut;
 
-                                    Throwable err = topFut.validateCache(ctx, req.recovery(), false, null, null);
+                                    Throwable err =
+                                            topFut.validateCache(ctx, req.recovery(), false, null, req.keys());
 
                                     if (err != null) {
                                         IgniteCheckedException e = new IgniteCheckedException(err);

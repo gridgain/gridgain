@@ -32,6 +32,7 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.ExchangeContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -40,12 +41,12 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.mvcc.MvccProcessor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
 
 /**
- *
+ * TODO remove loss policies from test.
  */
 public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** Nodes count. */
@@ -453,7 +454,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                     assertEquals(key1, primaryCache.get(key1));
                 }
                 catch (Exception e) {
-                    fail("Should not happen [exception=" + e + "]");
+                    assertTrue(X.hasCause(e, CacheInvalidStateException.class));
                 }
             }, multiplicator);
 
