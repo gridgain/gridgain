@@ -276,7 +276,7 @@ public class GridAffinityNoCacheSelfTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public CacheObject prepareForCache(CacheObjectContext ctx) {
+        @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
             throw new UnsupportedOperationException();
         }
 

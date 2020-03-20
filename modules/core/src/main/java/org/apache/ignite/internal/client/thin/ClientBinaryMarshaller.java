@@ -23,7 +23,6 @@ import org.apache.ignite.internal.binary.BinaryMarshaller;
 import org.apache.ignite.internal.binary.BinaryMetadataHandler;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.MarshallerContext;
 
 /**
@@ -95,7 +94,7 @@ class ClientBinaryMarshaller {
 
         igniteCfg.setBinaryConfiguration(binCfg);
 
-        BinaryContext ctx = new BinaryContext(metaHnd, igniteCfg, new NullLogger());
+        BinaryContext ctx = new BinaryContext(metaHnd, igniteCfg);
 
         BinaryMarshaller marsh = new BinaryMarshaller();
 

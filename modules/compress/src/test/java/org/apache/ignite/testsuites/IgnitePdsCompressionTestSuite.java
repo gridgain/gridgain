@@ -18,6 +18,7 @@ package org.apache.ignite.testsuites;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.apache.ignite.internal.binary.BinaryObjectCompressionPerformanceTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.HistoricalRebalanceWithWalPageCompressionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.IgnitePdsCheckpointSimulationWithRealCpDisabledAndWalCompressionTest;
 import org.apache.ignite.internal.processors.cache.persistence.db.wal.WalCompactionAndPageCompressionTest;
@@ -45,6 +46,8 @@ public class IgnitePdsCompressionTestSuite {
         suite.add(WalCompactionAndPageCompressionTest.class);
         suite.add(IgnitePdsCheckpointSimulationWithRealCpDisabledAndWalCompressionTest.class);
         suite.add(HistoricalRebalanceWithWalPageCompressionTest.class);
+
+        suite.add(BinaryObjectCompressionPerformanceTest.class);
 
         enableCompressionByDefault();
         IgnitePdsTestSuite.addRealPageStoreTests(suite, null);

@@ -65,7 +65,6 @@ import org.apache.ignite.internal.binary.builder.BinaryObjectBuilderImpl;
 import org.apache.ignite.internal.processors.cacheobject.NoOpBinary;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteProductVersion;
-import org.apache.ignite.logger.NullLogger;
 import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.plugin.IgnitePlugin;
 import org.apache.ignite.plugin.PluginNotFoundException;
@@ -319,7 +318,7 @@ public class IgniteMock implements Ignite {
 
         if (ctx == null) {
             /** {@inheritDoc} */
-            ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), configuration(), new NullLogger()) {
+            ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), configuration()) {
                 @Override public int typeId(String typeName) {
                     return typeName.hashCode();
                 }

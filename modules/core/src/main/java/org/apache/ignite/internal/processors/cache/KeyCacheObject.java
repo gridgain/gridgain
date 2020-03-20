@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import org.apache.ignite.IgniteCheckedException;
+
 /**
  *
  */
@@ -47,4 +49,8 @@ public interface KeyCacheObject extends CacheObject {
      * @return Copy of this object with given partition set.
      */
     public KeyCacheObject copy(int part);
+
+    /** {@inheritDoc} */
+    @Override public KeyCacheObject prepareForCache(CacheObjectContext ctx, boolean compress)
+        throws IgniteCheckedException;
 }
