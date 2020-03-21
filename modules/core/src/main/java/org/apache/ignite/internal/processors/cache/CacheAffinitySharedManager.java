@@ -2340,7 +2340,6 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 if (rebalanceInfo != null &&
                      top.owners(p, evts.topologyVersion()).containsAll(idealAssignment.get(p)) &&
                      top.lostPartitions().isEmpty() // TODO is this enough ?
-
                 )
                     rebalanceInfo.add(aff.groupId(), p, newNodes);
             }
