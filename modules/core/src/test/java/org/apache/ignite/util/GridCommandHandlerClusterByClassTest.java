@@ -17,7 +17,6 @@
 package org.apache.ignite.util;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +36,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.logging.Formatter;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
@@ -67,6 +70,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.tx.VisorTxTaskResult;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionRollbackException;
@@ -86,13 +90,15 @@ import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_CO
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_INVALID_ARGUMENTS;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 import static org.apache.ignite.internal.commandline.CommandHandler.UTILITY_NAME;
 import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
 import static org.apache.ignite.internal.commandline.CommandList.MANAGEMENT;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
-import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_PRINT_ERR_STACK_TRACE;
+import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.OutputFormat.MULTI_LINE;
 import static org.apache.ignite.internal.commandline.OutputFormat.SINGLE_LINE;
+import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.ADD;
 import static org.apache.ignite.internal.commandline.cache.CacheSubcommands.HELP;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.LOCAL_OUTPUT;
 import static org.apache.ignite.internal.commandline.cache.argument.PartitionReconciliationCommandArg.RECHECK_DELAY;
@@ -115,6 +121,8 @@ import static org.apache.ignite.transactions.TransactionIsolation.READ_COMMITTED
 public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClusterByClassAbstractTest {
     /** Special word for defining any char sequence from special word to the end of line in golden copy of help output */
     private static final String ANY = "<!any!>";
+    /** Error stack trace prefix. */
+    protected static final String ERROR_STACK_TRACE_PREFIX = "Error stack trace:";
 
     /**
      * Very basic tests for running the command in different enviroment which other command are running in.
@@ -1566,63 +1574,105 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
     }
 
     /**
-     * Test print stack trace if an error parsing arguments occurs when option
-     * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} is enabled.
+     * Test checks that there will be no error when executing the command with
+     * option {@link CommonArgParser#CMD_VERBOSE}.
      */
     @Test
-    public void testPrintErrStackTraceWhenParsingArgError() {
+    public void testNoErrorWithVerbose() {
         injectTestSystemOut();
 
-        execCmdWithError(CMD_PRINT_ERR_STACK_TRACE);
+        int resCode = EXIT_CODE_OK;
 
-        assertContains(log, testOut.toString(), "Error stack trace:");
+        assertEquals(resCode, execute(BASELINE.text(), CMD_VERBOSE));
+        assertNotContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
+
+        assertEquals(resCode, execute(CMD_VERBOSE, BASELINE.text()));
+        assertNotContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
     }
 
     /**
-     * The test checks that stack trace will not be displayed in case of an
-     * error parsing arguments without option
-     * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} enabled.
+     * Test checks that stack trace for incorrect arguments will be output
+     * only if {@link CommonArgParser#CMD_VERBOSE} flag is present.
      */
     @Test
-    public void testNotPrintErrStackTraceWhenParsingArgError() {
+    public void testErrInvalidArgumentsWithVerbose() {
         injectTestSystemOut();
 
-        execCmdWithError();
+        int resCode = EXIT_CODE_INVALID_ARGUMENTS;
+        String uuid = UUID.randomUUID().toString();
 
-        assertNotContains(log, testOut.toString(), "Error stack trace:");
+        assertEquals(resCode, execute(BASELINE.text(), uuid));
+        assertNotContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
+
+        assertEquals(resCode, execute(BASELINE.text(), CMD_VERBOSE, uuid));
+        assertContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
     }
 
     /**
-     * Test checks that command is executed correctly when option
-     * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} is added.
+     * Test checks that stack trace for connection error will be output only
+     * if {@link CommonArgParser#CMD_VERBOSE} flag is present.
      */
     @Test
-    public void testNoErrWithPrintErrStackTraceOption() {
+    public void testErrConnectionWithVerbose() {
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute(BASELINE.text(), CMD_PRINT_ERR_STACK_TRACE));
-        assertNotContains(log, testOut.toString(), "Error stack trace:");
+        int resCode = EXIT_CODE_CONNECTION_FAILED;
+        String uuid = UUID.randomUUID().toString();
 
-        assertEquals(EXIT_CODE_OK, execute(CMD_PRINT_ERR_STACK_TRACE, BASELINE.text()));
-        assertNotContains(log, testOut.toString(), "Error stack trace:");
+        assertEquals(resCode, execute(BASELINE.text(), "--host", uuid));
+        assertNotContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
+
+        assertEquals(resCode, execute(BASELINE.text(), CMD_VERBOSE, "--host", uuid));
+        assertContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
     }
 
     /**
-     * Test print stack trace if an UnknownHostException occurs when option
-     * {@link CommonArgParser#CMD_PRINT_ERR_STACK_TRACE} is enabled.
+     * Test checks that stack trace for illegal state will be output only
+     * if {@link CommonArgParser#CMD_VERBOSE} flag is present.
      */
     @Test
-    public void testPrintErrStackTraceWhenUnknownHostException() {
+    public void testErrIllegalStateWithVerbose() {
         injectTestSystemOut();
 
-        assertEquals(
-            EXIT_CODE_CONNECTION_FAILED,
-            execute(BASELINE.text(), CMD_PRINT_ERR_STACK_TRACE, "--host", UUID.randomUUID().toString())
-        );
+        int resCode = EXIT_CODE_ILLEGAL_STATE_ERROR;
+        String uuid = UUID.randomUUID().toString();
 
-        String testOutStr = testOut.toString();
-        assertContains(log, testOutStr, "Error stack trace:");
-        assertContains(log, testOutStr, UnknownHostException.class.getName());
+        assertEquals(resCode, execute(BASELINE.text(), ADD.text(), uuid));
+        assertNotContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
+
+        assertEquals(resCode, execute(BASELINE.text(), ADD.text(), uuid, CMD_VERBOSE));
+        assertContains(log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
+    }
+
+    /**
+     * Test checks that stack trace for unexpected error will be output with or
+     * without {@link CommonArgParser#CMD_VERBOSE} flag.
+     */
+    @Test
+    public void testErrUnexpectedWithWithoutVerbose() {
+        injectTestSystemOut();
+
+        Logger log = CommandHandler.initLogger(null);
+        log.addHandler(new StreamHandler(System.out, new Formatter() {
+            /** {@inheritDoc} */
+            @Override public String format(LogRecord record) {
+                String msg = record.getMessage();
+
+                if (msg.contains("Cluster state:"))
+                    throw new Error();
+
+                return msg + "\n";
+            }
+        }));
+
+        int resCode = EXIT_CODE_UNEXPECTED_ERROR;
+        CommandHandler cmd = new CommandHandler(log);
+
+        assertEquals(resCode, execute(cmd, BASELINE.text()));
+        assertContains(GridAbstractTest.log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
+
+        assertEquals(resCode, execute(cmd, BASELINE.text(), CMD_VERBOSE));
+        assertContains(GridAbstractTest.log, testOut.toString(), ERROR_STACK_TRACE_PREFIX);
     }
 
     /**
@@ -1668,20 +1718,5 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
         execute("--help");
 
         consumer.accept(testOut.toString());
-    }
-
-    /**
-     * Executing a command with an error.
-     *
-     * @param addArgs Additional arguments for executing the command.
-     */
-    private void execCmdWithError(String... addArgs) {
-        List<String> args = new ArrayList<>();
-
-        args.add(BASELINE.text());
-        args.add(UUID.randomUUID().toString());
-        args.addAll(asList(addArgs));
-
-        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute(args.toArray(new String[0])));
     }
 }
