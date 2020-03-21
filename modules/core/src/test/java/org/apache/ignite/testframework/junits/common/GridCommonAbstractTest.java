@@ -579,7 +579,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         boolean waitNode2PartUpdate,
         @Nullable Collection<ClusterNode> nodes
     ) throws InterruptedException {
-        awaitPartitionMapExchange(waitEvicts, waitNode2PartUpdate, nodes, false);
+        awaitPartitionMapExchange(waitEvicts, waitNode2PartUpdate, nodes, false, null);
     }
 
     /**
@@ -685,10 +685,30 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      */
     @SuppressWarnings("BusyWait")
     protected void awaitPartitionMapExchange(
+            boolean waitEvicts,
+            boolean waitNode2PartUpdate,
+            @Nullable Collection<ClusterNode> nodes,
+            boolean printPartState
+    ) throws InterruptedException {
+        awaitPartitionMapExchange(waitEvicts, waitNode2PartUpdate, nodes, printPartState, null);
+    }
+
+    /**
+     * @param waitEvicts If {@code true} will wait for evictions finished.
+     * @param waitNode2PartUpdate If {@code true} will wait for nodes node2part info update finished.
+     * @param nodes Optional nodes. If {@code null} method will wait for all nodes, for non null collection nodes will
+     *      be filtered
+     * @param printPartState If {@code true} will print partition state if evictions not happened.
+     * @param cacheNames Wait for specific caches.
+     * @throws InterruptedException If interrupted.
+     */
+    @SuppressWarnings("BusyWait")
+    protected void awaitPartitionMapExchange(
         boolean waitEvicts,
         boolean waitNode2PartUpdate,
         @Nullable Collection<ClusterNode> nodes,
-        boolean printPartState
+        boolean printPartState,
+        @Nullable Set<String> cacheNames
     ) throws InterruptedException {
         long timeout = getPartitionMapExchangeTimeout();
 
@@ -769,7 +789,7 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
             for (IgniteCacheProxy<?, ?> c : g0.context().cache().jcaches()) {
                 CacheConfiguration cfg = c.context().config();
 
-                if (cfg == null)
+                if (cfg == null || cacheNames != null && !cacheNames.contains(cfg.getName()))
                     continue;
 
                 if (cfg.getCacheMode() != LOCAL &&

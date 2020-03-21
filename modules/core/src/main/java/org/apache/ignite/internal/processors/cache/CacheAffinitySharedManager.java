@@ -2337,7 +2337,11 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 GridDhtPartitionTopology top = grpHolder.topology(evts.discoveryCache());
 
-                if (rebalanceInfo != null && !top.owners(p, evts.topologyVersion()).containsAll(idealAssignment.get(p)))
+                if (rebalanceInfo != null &&
+                     top.owners(p, evts.topologyVersion()).containsAll(idealAssignment.get(p)) &&
+                     top.lostPartitions().isEmpty() // TODO is this enough ?
+
+                )
                     rebalanceInfo.add(aff.groupId(), p, newNodes);
             }
         }
