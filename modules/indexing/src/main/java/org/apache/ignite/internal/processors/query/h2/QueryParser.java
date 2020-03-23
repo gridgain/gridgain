@@ -124,7 +124,7 @@ public class QueryParser {
         this.metricsHolder = new QueryParserMetricsHolder(idx.kernalContext().metric());
 
         disabledFuncs = new HashSet<>(Arrays.asList(
-            idx.kernalContext().config().getSqlInitialConfiguration().getDisabledSqlFunctions()));
+            idx.kernalContext().config().getSqlConfiguration().getDisabledSqlFunctions()));
     }
 
     /**

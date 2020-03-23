@@ -41,7 +41,7 @@ import org.apache.ignite.cache.query.annotations.QuerySqlField;
 import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.SqlInitialConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
@@ -1044,7 +1044,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
         return GridSqlQueryParser.builder()
             .useOptimizedSubquery(false)
             .logger(log)
-            .disabledFunctions(new HashSet<>(Arrays.asList(SqlInitialConfiguration.DFLT_DISABLED_SQL_FUNCTIONS)))
+            .disabledFunctions(new HashSet<>(Arrays.asList(SqlConfiguration.DFLT_DISABLED_SQL_FUNCTIONS)))
             .build();
     }
 

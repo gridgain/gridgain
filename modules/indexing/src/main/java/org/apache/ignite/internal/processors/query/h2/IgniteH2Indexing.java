@@ -2138,7 +2138,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         parser = new QueryParser(this, connections());
 
         schemaMgr = new SchemaManager(ctx, connections());
-        schemaMgr.start(ctx.config().getSqlInitialConfiguration().getSqlSchemas());
+        schemaMgr.start(ctx.config().getSqlConfiguration().getSqlSchemas());
 
         nodeId = ctx.localNodeId();
         marshaller = ctx.config().getMarshaller();

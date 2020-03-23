@@ -124,10 +124,10 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
 
         log = ctx.log(QueryMemoryManager.class);
 
-        setGlobalQuota(ctx.config().getSqlInitialConfiguration().getSqlGlobalMemoryQuota());
-        setQueryQuota(ctx.config().getSqlInitialConfiguration().getSqlQueryMemoryQuota());
+        setGlobalQuota(ctx.config().getSqlConfiguration().getSqlGlobalMemoryQuota());
+        setQueryQuota(ctx.config().getSqlConfiguration().getSqlQueryMemoryQuota());
 
-        offloadingEnabled = ctx.config().getSqlInitialConfiguration().isSqlOffloadingEnabled();
+        offloadingEnabled = ctx.config().getSqlConfiguration().isSqlOffloadingEnabled();
         metrics = new SqlMemoryStatisticsHolder(this, ctx.metric());
         blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
@@ -417,7 +417,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     @Override public GroupByData newManagedGroupByData(Session ses, ArrayList<Expression> expressions,
         boolean isGrpQry, int[] grpIdx) {
 
-        boolean spillingEnabled = ctx.config().getSqlInitialConfiguration().isSqlOffloadingEnabled();
+        boolean spillingEnabled = ctx.config().getSqlConfiguration().isSqlOffloadingEnabled();
 
         if (!spillingEnabled)
             return null;

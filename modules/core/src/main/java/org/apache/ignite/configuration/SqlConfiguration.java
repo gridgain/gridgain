@@ -19,10 +19,9 @@ package org.apache.ignite.configuration;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
- * Initial configuration of the SQL query subsystem.
- * 'Initial' means that the most parameters may be redefined on runtime.
+ * The configuration of the SQL query subsystem.
  */
-public class SqlInitialConfiguration {
+public class SqlConfiguration {
     /** Default SQL query history size. */
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
 
@@ -91,7 +90,7 @@ public class SqlInitialConfiguration {
      * @param size Number of SQL query history elements kept in memory.
      * @return {@code this} for chaining.
      */
-    public SqlInitialConfiguration setSqlQueryHistorySize(int size) {
+    public SqlConfiguration setSqlQueryHistorySize(int size) {
         sqlQryHistSize = size;
 
         return this;
@@ -120,7 +119,7 @@ public class SqlInitialConfiguration {
      * @param sqlSchemas SQL schemas to be created on node startup.
      * @return {@code this} for chaining.
      */
-    public SqlInitialConfiguration setSqlSchemas(String... sqlSchemas) {
+    public SqlConfiguration setSqlSchemas(String... sqlSchemas) {
         this.sqlSchemas = sqlSchemas;
 
         return this;
@@ -141,7 +140,7 @@ public class SqlInitialConfiguration {
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
      */
-    public SqlInitialConfiguration setLongQueryWarningTimeout(long longQryWarnTimeout) {
+    public SqlConfiguration setLongQueryWarningTimeout(long longQryWarnTimeout) {
         this.longQryWarnTimeout = longQryWarnTimeout;
 
         return this;
@@ -191,7 +190,7 @@ public class SqlInitialConfiguration {
      * or percentage of the max heap.
      * @return {@code this} for chaining.
      */
-    public SqlInitialConfiguration setSqlGlobalMemoryQuota(String size) {
+    public SqlConfiguration setSqlGlobalMemoryQuota(String size) {
         this.sqlGlobalMemoryQuota = size;
 
         return this;
@@ -235,7 +234,7 @@ public class SqlInitialConfiguration {
      * @param size Size of per-query memory quota in bytes, kilobytes, megabytes, or percentage of the max heap.
      * @return {@code this} for chaining.
      */
-    public SqlInitialConfiguration setSqlQueryMemoryQuota(String size) {
+    public SqlConfiguration setSqlQueryMemoryQuota(String size) {
         this.sqlQueryMemoryQuota = size;
 
         return this;
@@ -274,7 +273,7 @@ public class SqlInitialConfiguration {
      * @param offloadingEnabled Offloading enabled flag.
      * @return {@code this} for chaining.
      */
-    public SqlInitialConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
+    public SqlConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
         this.sqlOffloadingEnabled = offloadingEnabled;
 
         return this;
@@ -301,7 +300,7 @@ public class SqlInitialConfiguration {
      *
      * @return {@code this} for chaining.
      */
-    public SqlInitialConfiguration setDisabledSqlFunctions(String[] disabledSqlFuncs) {
+    public SqlConfiguration setDisabledSqlFunctions(String[] disabledSqlFuncs) {
         this.disabledSqlFuncs = disabledSqlFuncs == null ? DFLT_DISABLED_SQL_FUNCTIONS : disabledSqlFuncs;
 
         return this;
@@ -309,6 +308,6 @@ public class SqlInitialConfiguration {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(SqlInitialConfiguration.class, this);
+        return S.toString(SqlConfiguration.class, this);
     }
 }

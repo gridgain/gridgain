@@ -23,7 +23,7 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.SqlInitialConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
@@ -175,7 +175,7 @@ public abstract class AbstractQueryMemoryTrackerSelfTest extends GridCommonAbstr
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setClientMode(client)
-            .setSqlInitialConfiguration(new SqlInitialConfiguration()
+            .setSqlConfiguration(new SqlConfiguration()
                 .setSqlOffloadingEnabled(false)
                 .setSqlGlobalMemoryQuota(Long.toString(globalQuotaSize())));
     }

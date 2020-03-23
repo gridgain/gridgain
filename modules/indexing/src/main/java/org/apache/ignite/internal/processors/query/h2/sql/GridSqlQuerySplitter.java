@@ -277,7 +277,7 @@ public class GridSqlQuerySplitter {
             .useOptimizedSubquery(true)
             .logger(log)
             .disabledFunctions(new HashSet<>(Arrays.asList(
-                idx.kernalContext().config().getSqlInitialConfiguration().getDisabledSqlFunctions())))
+                idx.kernalContext().config().getSqlConfiguration().getDisabledSqlFunctions())))
             .build()
             .parse(
                 prepare(conn, H2Utils.context(conn.connection()), qry.getSQL(), false, enforceJoinOrder));
@@ -309,7 +309,7 @@ public class GridSqlQuerySplitter {
                         .useOptimizedSubquery(true)
                         .logger(log)
                         .disabledFunctions(new HashSet<>(Arrays.asList(
-                            idx.kernalContext().config().getSqlInitialConfiguration().getDisabledSqlFunctions())))
+                            idx.kernalContext().config().getSqlConfiguration().getDisabledSqlFunctions())))
                         .build()
                         .parse(prepared0).getSQL());
             }

@@ -554,7 +554,7 @@ public class IgniteConfiguration {
     private PluginProvider[] pluginProvs;
 
     /** Sql initial config. */
-    private SqlInitialConfiguration sqlInitCfg = new SqlInitialConfiguration();
+    private SqlConfiguration sqlCfg = new SqlConfiguration();
 
     /**
      * Creates valid grid configuration with all default values.
@@ -677,7 +677,7 @@ public class IgniteConfiguration {
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
-        sqlInitCfg = cfg.getSqlInitialConfiguration();
+        sqlCfg = cfg.getSqlConfiguration();
     }
 
     /**
@@ -1048,30 +1048,30 @@ public class IgniteConfiguration {
 
     /**
      * Number of SQL query history elements to keep in memory. If not provided, then default value {@link
-     * SqlInitialConfiguration#DFLT_SQL_QUERY_HISTORY_SIZE} is used. If provided value is less or equals 0, then gathering SQL query history
+     * SqlConfiguration#DFLT_SQL_QUERY_HISTORY_SIZE} is used. If provided value is less or equals 0, then gathering SQL query history
      * will be switched off.
      *
      * @return SQL query history size.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#setSqlQueryHistorySize(int)} instead.
+     * @deprecated Use {@link SqlConfiguration#setSqlQueryHistorySize(int)} instead.
      */
     @Deprecated
     public int getSqlQueryHistorySize() {
-        return sqlInitCfg.getSqlQueryHistorySize();
+        return sqlCfg.getSqlQueryHistorySize();
     }
 
     /**
      * Sets number of SQL query history elements kept in memory. If not explicitly set, then default value is {@link
-     * SqlInitialConfiguration#DFLT_SQL_QUERY_HISTORY_SIZE}.
+     * SqlConfiguration#DFLT_SQL_QUERY_HISTORY_SIZE}.
      *
      * @param size Number of SQL query history elements kept in memory.
      * @return {@code this} for chaining.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#getSqlQueryHistorySize()} instead.
+     * @deprecated Use {@link SqlConfiguration#getSqlQueryHistorySize()} instead.
      */
     @Deprecated
     public IgniteConfiguration setSqlQueryHistorySize(int size) {
-        sqlInitCfg.setSqlQueryHistorySize(size);
+        sqlCfg.setSqlQueryHistorySize(size);
 
         return this;
     }
@@ -3185,11 +3185,11 @@ public class IgniteConfiguration {
      *
      * @return Timeout in milliseconds.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#getLongQueryWarningTimeout()} instead.
+     * @deprecated Use {@link SqlConfiguration#getLongQueryWarningTimeout()} instead.
      */
     @Deprecated
     public long getLongQueryWarningTimeout() {
-        return sqlInitCfg.getLongQueryWarningTimeout();
+        return sqlCfg.getLongQueryWarningTimeout();
     }
 
     /**
@@ -3198,11 +3198,11 @@ public class IgniteConfiguration {
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#getLongQueryWarningTimeout()} instead.
+     * @deprecated Use {@link SqlConfiguration#getLongQueryWarningTimeout()} instead.
      */
     @Deprecated
     public IgniteConfiguration setLongQueryWarningTimeout(long longQryWarnTimeout) {
-        sqlInitCfg.setLongQueryWarningTimeout(longQryWarnTimeout);
+        sqlCfg.setLongQueryWarningTimeout(longQryWarnTimeout);
 
         return this;
     }
@@ -3358,11 +3358,11 @@ public class IgniteConfiguration {
      *
      * @return SQL schemas to be created on node startup.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#getSqlSchemas()} instead.
+     * @deprecated Use {@link SqlConfiguration#getSqlSchemas()} instead.
      */
     @Deprecated
     public String[] getSqlSchemas() {
-        return sqlInitCfg.getSqlSchemas();
+        return sqlCfg.getSqlSchemas();
     }
 
     /**
@@ -3377,11 +3377,11 @@ public class IgniteConfiguration {
      * @param sqlSchemas SQL schemas to be created on node startup.
      * @return {@code this} for chaining.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#setSqlSchemas(String...)} instead.
+     * @deprecated Use {@link SqlConfiguration#setSqlSchemas(String...)} instead.
      */
     @Deprecated
     public IgniteConfiguration setSqlSchemas(String... sqlSchemas) {
-        sqlInitCfg.setSqlSchemas(sqlSchemas);
+        sqlCfg.setSqlSchemas(sqlSchemas);
 
         return this;
     }
@@ -3393,11 +3393,11 @@ public class IgniteConfiguration {
      *
      * @return Global memory pool size for SQL queries.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#getSqlGlobalMemoryQuota()} instead.
+     * @deprecated Use {@link SqlConfiguration#getSqlGlobalMemoryQuota()} instead.
      */
     @Deprecated
     public String getSqlGlobalMemoryQuota() {
-        return sqlInitCfg.getSqlGlobalMemoryQuota();
+        return sqlCfg.getSqlGlobalMemoryQuota();
     }
 
     /**
@@ -3415,7 +3415,7 @@ public class IgniteConfiguration {
      * </ul>
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
      * <p>
-     * If not provided, the default value is defined by {@link SqlInitialConfiguration#DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
+     * If not provided, the default value is defined by {@link SqlConfiguration#DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
      * <p>
      * The value is specified as string value of size of in bytes.
      * <p>
@@ -3433,11 +3433,11 @@ public class IgniteConfiguration {
      * or percentage of the max heap.
      * @return {@code this} for chaining.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#setSqlGlobalMemoryQuota(String)} instead.
+     * @deprecated Use {@link SqlConfiguration#setSqlGlobalMemoryQuota(String)} instead.
      */
     @Deprecated
     public IgniteConfiguration setSqlGlobalMemoryQuota(String size) {
-        sqlInitCfg.setSqlGlobalMemoryQuota(size);
+        sqlCfg.setSqlGlobalMemoryQuota(size);
 
         return this;
     }
@@ -3448,11 +3448,11 @@ public class IgniteConfiguration {
      *
      * @return Per-query memory quota.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#getSqlQueryMemoryQuota()} instead.
+     * @deprecated Use {@link SqlConfiguration#getSqlQueryMemoryQuota()} instead.
      */
     @Deprecated
     public String getSqlQueryMemoryQuota() {
-        return sqlInitCfg.getSqlQueryMemoryQuota();
+        return sqlCfg.getSqlQueryMemoryQuota();
     }
 
     /**
@@ -3466,7 +3466,7 @@ public class IgniteConfiguration {
      * </ul>
      * See {@link #setSqlOffloadingEnabled(boolean)} for details.
      * <p>
-     * If not provided, the default value is defined by {@link SqlInitialConfiguration#DFLT_SQL_QUERY_MEMORY_QUOTA}.
+     * If not provided, the default value is defined by {@link SqlConfiguration#DFLT_SQL_QUERY_MEMORY_QUOTA}.
      * <p>
      * The value is specified as string value of size of in bytes.
      * <p>
@@ -3483,11 +3483,11 @@ public class IgniteConfiguration {
      * @param size Size of per-query memory quota in bytes, kilobytes, megabytes, or percentage of the max heap.
      * @return {@code this} for chaining.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#setSqlQueryMemoryQuota(String)} instead.
+     * @deprecated Use {@link SqlConfiguration#setSqlQueryMemoryQuota(String)} instead.
      */
     @Deprecated
     public IgniteConfiguration setSqlQueryMemoryQuota(String size) {
-        sqlInitCfg.setSqlQueryMemoryQuota(size);
+        sqlCfg.setSqlQueryMemoryQuota(size);
 
         return this;
     }
@@ -3498,11 +3498,11 @@ public class IgniteConfiguration {
      *
      * @return Flag whether disk offloading is enabled.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#isSqlOffloadingEnabled()} instead.
+     * @deprecated Use {@link SqlConfiguration#isSqlOffloadingEnabled()} instead.
      */
     @Deprecated
     public boolean isSqlOffloadingEnabled() {
-        return sqlInitCfg.isSqlOffloadingEnabled();
+        return sqlCfg.isSqlOffloadingEnabled();
     }
 
     /**
@@ -3528,11 +3528,11 @@ public class IgniteConfiguration {
      * @param offloadingEnabled Offloading enabled flag.
      * @return {@code this} for chaining.
      *
-     * @deprecated Use {@link SqlInitialConfiguration#setSqlOffloadingEnabled(boolean)} instead.
+     * @deprecated Use {@link SqlConfiguration#setSqlOffloadingEnabled(boolean)} instead.
      */
     @Deprecated
     public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
-        sqlInitCfg.setSqlOffloadingEnabled(offloadingEnabled);
+        sqlCfg.setSqlOffloadingEnabled(offloadingEnabled);
 
         return this;
     }
@@ -3563,8 +3563,8 @@ public class IgniteConfiguration {
      *
      * @return SQL initial configuration.
      */
-    public SqlInitialConfiguration getSqlInitialConfiguration() {
-        return sqlInitCfg;
+    public SqlConfiguration getSqlConfiguration() {
+        return sqlCfg;
     }
 
     /**
@@ -3572,10 +3572,10 @@ public class IgniteConfiguration {
      *
      * @return {@code this} for chaining.
      */
-    public IgniteConfiguration setSqlInitialConfiguration(SqlInitialConfiguration sqlInitCfg) {
+    public IgniteConfiguration setSqlConfiguration(SqlConfiguration sqlInitCfg) {
         A.ensure(sqlInitCfg != null, "SQL initial configuration cannot be null");
 
-        this.sqlInitCfg = sqlInitCfg;
+        this.sqlCfg = sqlInitCfg;
 
         return this;
     }

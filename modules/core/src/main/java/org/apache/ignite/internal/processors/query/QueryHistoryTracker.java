@@ -20,7 +20,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.apache.ignite.configuration.SqlInitialConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.jsr166.ConcurrentLinkedDeque8;
 
 /**
@@ -129,7 +129,7 @@ class QueryHistoryTracker {
 
     /**
      * Gets SQL query history. Size of history could be configured via {@link
-     * SqlInitialConfiguration#setSqlQueryHistorySize(int)}
+     * SqlConfiguration#setSqlQueryHistorySize(int)}
      *
      * @return SQL queries history aggregated by query text, schema and local flag.
      */

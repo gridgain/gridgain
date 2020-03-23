@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.configuration.SqlInitialConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
@@ -116,7 +116,7 @@ public class RunningQueryManager {
     public RunningQueryManager(GridKernalContext ctx) {
         log = ctx.log(RunningQueryManager.class);
         locNodeId = ctx.localNodeId();
-        histSz = ctx.config().getSqlInitialConfiguration().getSqlQueryHistorySize();
+        histSz = ctx.config().getSqlConfiguration().getSqlQueryHistorySize();
 
         qryHistTracker = new QueryHistoryTracker(histSz);
 
@@ -301,7 +301,7 @@ public class RunningQueryManager {
 
     /**
      * Gets query history statistics. Size of history could be configured via {@link
-     * SqlInitialConfiguration#setSqlQueryHistorySize(int)}
+     * SqlConfiguration#setSqlQueryHistorySize(int)}
      *
      * @return Queries history statistics aggregated by query text, schema and local flag.
      */

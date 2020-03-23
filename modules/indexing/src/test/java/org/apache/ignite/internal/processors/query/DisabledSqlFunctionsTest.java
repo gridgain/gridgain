@@ -28,7 +28,7 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.SqlInitialConfiguration;
+import org.apache.ignite.configuration.SqlConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -37,7 +37,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- * Tests for {@link SqlInitialConfiguration#setDisabledSqlFunctions(String[])}.
+ * Tests for {@link SqlConfiguration#setDisabledSqlFunctions(String[])}.
  */
 @RunWith(Parameterized.class)
 public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
@@ -82,7 +82,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         if (disabledFuncs != null)
-            cfg.setSqlInitialConfiguration(new SqlInitialConfiguration().setDisabledSqlFunctions(disabledFuncs));
+            cfg.setSqlConfiguration(new SqlConfiguration().setDisabledSqlFunctions(disabledFuncs));
 
         return cfg;
     }
@@ -269,7 +269,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     public void testNullSqlConfiguration() throws Exception {
         IgniteConfiguration cfg = getConfiguration("test");
 
-        GridTestUtils.assertThrows(log, () -> cfg.setSqlInitialConfiguration(null),
+        GridTestUtils.assertThrows(log, () -> cfg.setSqlConfiguration(null),
             IllegalArgumentException.class, "Ouch! Argument is invalid: SQL initial configuration cannot be null");
     }
 
@@ -279,10 +279,10 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     public void testNullSqlDisabledFunctions() throws Exception {
         IgniteConfiguration cfg = getConfiguration("test");
 
-        cfg.setSqlInitialConfiguration(new SqlInitialConfiguration().setDisabledSqlFunctions(null));
+        cfg.setSqlConfiguration(new SqlConfiguration().setDisabledSqlFunctions(null));
 
-        assertSame(SqlInitialConfiguration.DFLT_DISABLED_SQL_FUNCTIONS,
-            cfg.getSqlInitialConfiguration().getDisabledSqlFunctions());
+        assertSame(SqlConfiguration.DFLT_DISABLED_SQL_FUNCTIONS,
+            cfg.getSqlConfiguration().getDisabledSqlFunctions());
     }
 
     /**

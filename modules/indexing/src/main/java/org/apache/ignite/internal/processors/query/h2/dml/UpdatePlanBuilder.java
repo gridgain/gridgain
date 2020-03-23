@@ -921,7 +921,7 @@ public final class UpdatePlanBuilder {
                     .useOptimizedSubquery(false)
                     .logger(log)
                     .disabledFunctions(new HashSet<>(Arrays.asList(
-                        idx.kernalContext().config().getSqlInitialConfiguration().getDisabledSqlFunctions())))
+                        idx.kernalContext().config().getSqlConfiguration().getDisabledSqlFunctions())))
                     .build()
                     .parse(prep);
 

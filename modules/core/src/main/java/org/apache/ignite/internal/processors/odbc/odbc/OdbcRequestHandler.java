@@ -170,7 +170,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
             skipReducerOnUpdate,
             null,
             null,
-            U.parseBytes(ctx.config().getSqlInitialConfiguration().getSqlQueryMemoryQuota())
+            U.parseBytes(ctx.config().getSqlConfiguration().getSqlQueryMemoryQuota())
         );
 
         this.busyLock = busyLock;
