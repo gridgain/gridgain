@@ -456,4 +456,22 @@ BOOST_AUTO_TEST_CASE(TestDdlColumnsMetaEscaped)
     BOOST_REQUIRE_EQUAL(ret, SQL_NO_DATA);
 }
 
+BOOST_AUTO_TEST_CASE(TestSQLNumResultColsAfterSQLPrepare)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=PUBLIC");
+
+    SQLRETURN ret = ExecQuery("create table TestSqlPrepare(id int primary key, test1 varchar, test2 long, test3 varchar)");
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    ret = PrepareQuery("select * from PUBLIC.TestSqlPrepare");
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    SQLSMALLINT columnCount = 0;
+
+    ret = SQLNumResultCols(stmt, &columnCount);
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    BOOST_CHECK_EQUAL(columnCount, 4);
+}
+
 BOOST_AUTO_TEST_SUITE_END()
