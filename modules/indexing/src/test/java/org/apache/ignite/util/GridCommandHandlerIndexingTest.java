@@ -19,21 +19,32 @@ package org.apache.ignite.util;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Function;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.query.QueryCursor;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.util.GridCommandHandlerIndexingUtils.Person;
 import org.junit.Test;
 
+import static java.lang.String.valueOf;
+import static java.util.Collections.singletonMap;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
-import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.personEntity;
 
 /**
  * If you not necessary create nodes for each test you can try use
@@ -42,6 +53,28 @@ import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
 public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPerMethodAbstractTest {
     /** */
     public static final int GRID_CNT = 2;
+
+    @Test
+    public void testValidateIndexesFailedDueToDifferentInlineSize() throws Exception {
+        IgniteEx crd = startGrids(GRID_CNT);
+
+        crd.cluster().active(true);
+
+        crd.context().query().querySqlFields(new SqlFieldsQuery("CREATE TABLE TEST (ID0 INT, ID1 LONG, VAL INT, PRIMARY KEY(ID0, ID1))"), true).getAll();
+        crd.context().query().querySqlFields(new SqlFieldsQuery("INSERT INTO TEST VALUES (0, 0, 0)"), true).getAll();
+        crd.context().query().querySqlFields(new SqlFieldsQuery("INSERT INTO TEST VALUES (1, 1, 1)"), true).getAll();
+        crd.context().query().querySqlFields(new SqlFieldsQuery("INSERT INTO TEST VALUES (2, 2, 2)"), true).getAll();
+
+        stopGrid(GRID_CNT - 1);
+
+        crd.context().query().querySqlFields(new SqlFieldsQuery("CREATE INDEX IDX_VAL ON TEST (val) INLINE_SIZE 20"), true).getAll();
+
+        startGrid(GRID_CNT - 1);
+
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes"));
+
+        assertContains(log, testOut.toString(), "Index validation failed");
+    }
 
     /** */
     @Test
@@ -52,7 +85,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         AtomicBoolean stopFlag = new AtomicBoolean();
 
-        IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> cache = ignite.cache(CACHE_NAME);
+        IgniteCache<Integer, Person> cache = ignite.cache(CACHE_NAME);
 
         Thread loadThread = new Thread(() -> {
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -60,7 +93,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
             while (!stopFlag.get()) {
                 int id = rnd.nextInt();
 
-                cache.put(id, new GridCommandHandlerIndexingUtils.Person(id, "name" + id));
+                cache.put(id, new Person(id, "name" + id));
 
                 if (Thread.interrupted())
                     break;
