@@ -73,7 +73,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
             return lazy() ? new RegisteredIterator(super.iter()) : super.iter();
         }
         catch (Exception e) {
-            throw processException(e);
+            throw failReason(e);
         }
     }
 
@@ -121,7 +121,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
                 return delegateIt.hasNext();
             }
             catch (Exception e) {
-                throw processException(e);
+                throw failReason(e);
             }
         }
 
@@ -131,21 +131,22 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
                 return delegateIt.next();
             }
             catch (Exception e) {
-                throw processException(e);
+                throw failReason(e);
             }
         }
     }
 
     /**
-     * Process incoming exception. Sets fail reason if neede, unregisters query
-     * and converts original exception to {@link CacheException}
+     * Process incoming exception. Sets fail reason if needed, unregisters query
+     * and converts exception to {@link CacheException}.
      *
      * @param e Exception.
+     * @return Fail reason.
      */
-    private CacheException processException(Exception e) {
+    private CacheException failReason(Exception e) {
         if (FAIL_REASON_UPDATER.compareAndSet(this, null, e) && QueryUtils.wasCancelled(failReason))
             unregisterQuery();
 
-        throw e instanceof CacheException ? (CacheException)e : new CacheException(e);
+        return failReason instanceof CacheException ? (CacheException)failReason : new CacheException(failReason);
     }
 }
