@@ -44,7 +44,7 @@ namespace
             /** SQL data type. */
             DATA_TYPE,
 
-            /** Data source�dependent data type name. */
+            /** Data source-dependent data type name. */
             TYPE_NAME,
 
             /** Column size. */

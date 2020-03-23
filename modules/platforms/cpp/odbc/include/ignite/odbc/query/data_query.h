@@ -133,6 +133,14 @@ namespace ignite
                 bool IsClosedRemotely() const;
 
                 /**
+                 * Make query prepare request and use response to set internal
+                 * state.
+                 *
+                 * @return Result.
+                 */
+                SqlResult::Type MakeRequestPrepare();
+
+                /**
                  * Make query execute request and use response to set internal
                  * state.
                  *

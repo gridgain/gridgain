@@ -463,6 +463,9 @@ BOOST_AUTO_TEST_CASE(TestSQLNumResultColsAfterSQLPrepare)
     SQLRETURN ret = ExecQuery("create table TestSqlPrepare(id int primary key, test1 varchar, test2 long, test3 varchar)");
     ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
+    ret = SQLFreeStmt(stmt, SQL_CLOSE);
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
     ret = PrepareQuery("select * from PUBLIC.TestSqlPrepare");
     ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
