@@ -1625,6 +1625,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             if (oldLen > updateValSizeThreshold)
                 return false;
 
+            dataRow.key().prepareForCache(cctx.cacheObjectContext(), false);
+            dataRow.value().prepareForCache(cctx.cacheObjectContext(), true);
+
             int newLen = dataRow.size();
 
             return oldLen == newLen;

@@ -89,21 +89,30 @@ public class ZstdDictionaryCompressor extends CompressorAdapter {
 
         else if (iv == 0) {
             dictLock.lock();
-            int totalLen = 0;
-            for (byte[] sample : samples)
-                totalLen += sample.length;
 
-            ZstdDictTrainer trainer = new ZstdDictTrainer(totalLen, dictSize);
+            try {
+                int totalLen = 0;
+                for (byte[] sample : samples)
+                    totalLen += sample.length;
 
-            for (byte[] sample : samples)
-                trainer.addSample(sample);
+                IgniteLogger log0 = log();
+                if (log0 != null && log0.isInfoEnabled())
+                    log0.info("Training dictionary [samples=" + samples.size() + ", totalLen=" + totalLen + "]");
 
-            byte[] dictionary = trainer.trainSamples();
+                ZstdDictTrainer trainer = new ZstdDictTrainer(totalLen, dictSize);
 
-            this.decompressor = new ZstdDictDecompress(dictionary);
-            this.compressor = new ZstdDictCompress(dictionary, level);
+                for (byte[] sample : samples)
+                    trainer.addSample(sample);
 
-            dictLock.unlock();
+                byte[] dictionary = trainer.trainSamples();
+
+                this.decompressor = new ZstdDictDecompress(dictionary);
+                this.compressor = new ZstdDictCompress(dictionary, level);
+            }
+            finally {
+                // Should only throw when node is down.
+                dictLock.unlock();
+            }
         }
 
         return null;
@@ -127,13 +136,18 @@ public class ZstdDictionaryCompressor extends CompressorAdapter {
     }
 
     private void dictionarize(byte[] uncompressed) {
-        if (uncompressed.length == 0 || !dictLock.tryLock()
-            || bufToCollect.addAndGet(-uncompressed.length) <= 0 )
-            return;
+        boolean locked = false;
+        try {
+            if (uncompressed.length == 0 || !(locked = dictLock.tryLock())
+                || bufToCollect.addAndGet(-uncompressed.length) <= 0)
+                return;
 
-        samples.add(Arrays.copyOf(uncompressed, uncompressed.length));
-
-        dictLock.unlock();
+            samples.add(Arrays.copyOf(uncompressed, uncompressed.length));
+        }
+        finally {
+            if (locked)
+                dictLock.unlock();
+        }
     }
 
     /** */
