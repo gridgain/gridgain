@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
@@ -502,7 +503,8 @@ public class GridMapQueryExecutor {
             else {
                 SQLException sqlEx = X.cause(e, SQLException.class);
 
-                if (sqlEx != null && sqlEx.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                if ((sqlEx != null && sqlEx.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                    || (qryResults != null && qryResults.cancelled() && e instanceof QueryMemoryTracker.TrackerWasClosedException))
                     sendQueryCancel(node, reqId);
                 else {
                     GridH2RetryException retryErr = X.cause(e, GridH2RetryException.class);
