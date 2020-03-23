@@ -185,6 +185,8 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
             while (stopSeq.size() != NODE_CNT)
                 stopSeq.add(rnd.nextInt(0, NODE_CNT));
 
+            log.info("Stop sequence: " + stopSeq);
+
             for (Integer idx : stopSeq) {
                 log.info("Stop node: " + idx);
 
@@ -203,6 +205,47 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
         startClientCache = true;
 
         testRandom();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNodeLeft() throws Exception {
+        cache1 = false;
+        cache2 = false;
+
+        startGrid(0);
+
+        awaitPartitionMapExchange();
+
+        cache1 = true;
+        cache2 = true;
+
+        startGrid(1);
+
+        awaitPartitionMapExchange();
+
+        cache1 = true;
+        cache2 = true;
+
+        startGrid(2);
+
+        awaitPartitionMapExchange();
+
+        stopGrid(1);
+
+        awaitPartitionMapExchange();
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testNodeLeft2() throws Exception {
+        startClientCache = true;
+
+        testNodeLeft();
     }
 
     /**

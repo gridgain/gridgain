@@ -1588,6 +1588,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 if (!fullMapUpdated) {
+                    // Event if map not changed detection is required.
+                    if (exchangeVer != null && (exchFut == null || exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT))
+                        detectLostPartitions(exchangeVer, exchFut);
+
                     if (log.isTraceEnabled()) {
                         log.trace("No updates for full partition map (will ignore) [" +
                             "grp=" + grp.cacheOrGroupName() +
@@ -1608,10 +1612,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                 node2part = partMap;
 
-                if (exchangeVer != null && (exchFut == null || exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT)) {
-                    // TODO debug exchFut = null, massiveClient ...
+                if (exchangeVer != null && (exchFut == null || exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT))
                     detectLostPartitions(exchangeVer, exchFut);
-                }
 
                 if (exchangeVer == null && !grp.isReplicated() &&
                         (readyTopVer.initialized() && readyTopVer.compareTo(diffFromAffinityVer) >= 0)) {

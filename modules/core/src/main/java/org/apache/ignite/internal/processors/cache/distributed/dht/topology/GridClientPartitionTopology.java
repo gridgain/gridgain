@@ -1013,8 +1013,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public Collection<Integer> lostPartitions() {
-        assert false : "lostPartitions should never be called on client topology";
-
+        // Can be called on coordinator in auto-adjust scenarios when a node has joined.
+        // TODO add valid assertion.
         return Collections.emptyList();
     }
 
