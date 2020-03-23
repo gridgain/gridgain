@@ -16,8 +16,6 @@
 
 package org.apache.ignite.configuration;
 
-import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -27,6 +25,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 public class SqlInitialConfiguration {
     /** Default SQL query history size. */
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
+
+    /** Default timeout after which long query warning will be printed. */
+    public static final long DFLT_LONG_QRY_WARN_TIMEOUT = 3000;
 
     /** Default SQL query global memory quota. */
     public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "60%"; // 60% of heap.
@@ -50,6 +51,9 @@ public class SqlInitialConfiguration {
 
     /** Default value for SQL offloading flag. */
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
+
+    /** */
+    private long longQryWarnTimeout = DFLT_LONG_QRY_WARN_TIMEOUT;
 
     /** SQL schemas to be created on node start. */
     private String[] sqlSchemas;
@@ -118,6 +122,27 @@ public class SqlInitialConfiguration {
      */
     public SqlInitialConfiguration setSqlSchemas(String... sqlSchemas) {
         this.sqlSchemas = sqlSchemas;
+
+        return this;
+    }
+
+    /**
+     * Gets timeout in milliseconds after which long query warning will be printed.
+     *
+     * @return Timeout in milliseconds.
+     */
+    public long getLongQueryWarningTimeout() {
+        return longQryWarnTimeout;
+    }
+
+    /**
+     * Sets timeout in milliseconds after which long query warning will be printed.
+     *
+     * @param longQryWarnTimeout Timeout in milliseconds.
+     * @return {@code this} for chaining.
+     */
+    public SqlInitialConfiguration setLongQueryWarningTimeout(long longQryWarnTimeout) {
+        this.longQryWarnTimeout = longQryWarnTimeout;
 
         return this;
     }

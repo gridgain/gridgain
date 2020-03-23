@@ -238,9 +238,6 @@ public class IgniteConfiguration {
     @SuppressWarnings("UnnecessaryBoxing")
     public static final Long DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT = new Long(30_000);
 
-    /** Default timeout after which long query warning will be printed. */
-    public static final long DFLT_LONG_QRY_WARN_TIMEOUT = 3000;
-
     /** Default number of MVCC vacuum threads.. */
     public static final int DFLT_MVCC_VACUUM_THREAD_CNT = 2;
 
@@ -531,9 +528,6 @@ public class IgniteConfiguration {
     /** Auto-activation flag. */
     private boolean autoActivation = DFLT_AUTO_ACTIVATION;
 
-    /** */
-    private long longQryWarnTimeout = DFLT_LONG_QRY_WARN_TIMEOUT;
-
     /** SQL connector configuration. */
     @Deprecated
     private SqlConnectorConfiguration sqlConnCfg;
@@ -632,7 +626,6 @@ public class IgniteConfiguration {
         lifecycleBeans = cfg.getLifecycleBeans();
         locHost = cfg.getLocalHost();
         log = cfg.getGridLogger();
-        longQryWarnTimeout = cfg.getLongQueryWarningTimeout();
         lsnrs = cfg.getLocalEventListeners();
         marsh = cfg.getMarshaller();
         marshLocJobs = cfg.isMarshalLocalJobs();
@@ -3191,9 +3184,12 @@ public class IgniteConfiguration {
      * Gets timeout in milliseconds after which long query warning will be printed.
      *
      * @return Timeout in milliseconds.
+     *
+     * @deprecated Use {@link SqlInitialConfiguration#getLongQueryWarningTimeout()} instead.
      */
+    @Deprecated
     public long getLongQueryWarningTimeout() {
-        return longQryWarnTimeout;
+        return sqlInitCfg.getLongQueryWarningTimeout();
     }
 
     /**
@@ -3201,9 +3197,12 @@ public class IgniteConfiguration {
      *
      * @param longQryWarnTimeout Timeout in milliseconds.
      * @return {@code this} for chaining.
+     *
+     * @deprecated Use {@link SqlInitialConfiguration#getLongQueryWarningTimeout()} instead.
      */
+    @Deprecated
     public IgniteConfiguration setLongQueryWarningTimeout(long longQryWarnTimeout) {
-        this.longQryWarnTimeout = longQryWarnTimeout;
+        sqlInitCfg.setLongQueryWarningTimeout(longQryWarnTimeout);
 
         return this;
     }
