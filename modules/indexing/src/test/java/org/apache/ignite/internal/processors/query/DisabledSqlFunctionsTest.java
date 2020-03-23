@@ -288,7 +288,8 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     /**
      */
     private void checkSqlWithDisabledFunction(final String sql, final Object ... args) {
-        GridTestUtils.assertThrows(log, () -> sql(sql, args).getAll(), IgniteSQLException.class, "The function is disabled");
+        GridTestUtils.assertThrows(log, () ->
+            sql(sql, args).getAll(), IgniteSQLException.class, "The function is disabled");
     }
 
     /**
