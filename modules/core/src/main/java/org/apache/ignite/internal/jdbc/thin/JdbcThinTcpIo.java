@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.ipc.loopback.IpcClientTcpEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -332,13 +333,18 @@ public class JdbcThinTcpIo {
 
             String err = reader.readString();
 
+            int status = reader.readInt();
+
             ClientListenerProtocolVersion srvProtoVer0 = ClientListenerProtocolVersion.create(maj, min, maintenance);
 
-            if (srvProtoVer0.compareTo(VER_2_5_0) < 0 && !F.isEmpty(connProps.getUsername())) {
+            if (status == ClientStatus.AUTH_FAILED && srvProtoVer0.compareTo(VER_2_5_0) < 0 && !F.isEmpty(connProps.getUsername())) {
                 throw new SQLException("Authentication doesn't support by remote server[driverProtocolVer="
                     + CURRENT_VER + ", remoteNodeProtocolVer=" + srvProtoVer0 + ", err=" + err
                     + ", url=" + connProps.getUrl() + " address=" + sockAddr + ']', SqlStateCode.CONNECTION_REJECTED);
             }
+
+            if (status == ClientStatus.SECURITY_VIOLATION)
+                throw new SQLException(err);
 
             if (VER_2_1_0.equals(srvProtoVer0))
                 return handshake_2_1_0();

@@ -40,6 +40,7 @@ import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.plugin.security.SecurityException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -311,7 +312,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
             connCtx.handler().writeHandshake(writer);
         }
-        catch (IgniteAccessControlException authEx) {
+        catch (IgniteAccessControlException | SecurityException authEx) {
             writer.writeBoolean(false);
 
             writer.writeShort((short)0);
@@ -321,7 +322,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             writer.doWriteString(authEx.getMessage());
 
             if (ver.compareTo(ClientConnectionContext.VER_1_1_0) >= 0)
-                writer.writeInt(ClientStatus.AUTH_FAILED);
+                writer.writeInt(
+                    authEx instanceof IgniteAccessControlException ? ClientStatus.AUTH_FAILED : ClientStatus.SECURITY_VIOLATION
+                );
         }
         catch (IgniteCheckedException e) {
             U.warn(log, "Error during handshake [rmtAddr=" + ses.remoteAddress() + ", msg=" + e.getMessage() + ']');
