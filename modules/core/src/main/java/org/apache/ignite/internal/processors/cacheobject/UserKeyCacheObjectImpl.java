@@ -65,7 +65,7 @@ public class UserKeyCacheObjectImpl extends KeyCacheObjectImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
+    @Override public KeyCacheObject prepareForCache(CacheObjectContext ctx, boolean compress) {
         assert !compress : "Keys should not be compressed!";
 
         try {

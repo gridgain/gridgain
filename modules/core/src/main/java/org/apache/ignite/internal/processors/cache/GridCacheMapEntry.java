@@ -256,7 +256,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         assert key != null;
 
         try {
-            key = (KeyCacheObject)key.prepareForCache(cctx.cacheObjectContext(), false);
+            key = key.prepareForCache(cctx.cacheObjectContext(), false);
         }
         catch (IgniteCheckedException e) {
             e.printStackTrace();
@@ -6903,7 +6903,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         try {
             checkObsolete();
 
-            key.valueBytes(cctx.cacheObjectContext());
+            key.prepareForCache(cctx.cacheObjectContext(), false);
 
             if (cctx.offheap().mvccApplyHistoryIfAbsent(this, entryHist)) {
                 updated = true;

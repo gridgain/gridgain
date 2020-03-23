@@ -65,7 +65,7 @@ public abstract class GridCacheConcurrentMapImpl implements GridCacheConcurrentM
         KeyCacheObject key) {
         try {
             if (key != null)
-                key = (KeyCacheObject)key.prepareForCache(ctx.cacheObjectContext(), false);
+                key = key.prepareForCache(ctx.cacheObjectContext(), false);
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

@@ -1614,6 +1614,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 return false;
 
             oldRow.key().prepareForCache(cctx.cacheObjectContext(), false);
+            // Calculation is not correct, should be amended.
             oldRow.value().prepareForCache(cctx.cacheObjectContext(), true);
 
             int oldLen = oldRow.size();
@@ -1626,6 +1627,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 return false;
 
             dataRow.key().prepareForCache(cctx.cacheObjectContext(), false);
+            // Can value be null?
             dataRow.value().prepareForCache(cctx.cacheObjectContext(), true);
 
             int newLen = dataRow.size();
@@ -1707,7 +1709,9 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
                 key.prepareForCache(coCtx, false);
-                val.prepareForCache(coCtx, true);
+
+                if (val != null)
+                    val.prepareForCache(coCtx, true);
 
                 rowStore.addRow(dataRow, grp.statisticsHolderData());
             }
@@ -1755,8 +1759,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
+                key = key.prepareForCache(coCtx, false);
 
                 // null is passed for loaded from store.
                 if (mvccVer == null) {
@@ -1767,7 +1770,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 }
 
                 if (val != null) {
-                    val.valueBytes(coCtx);
+                    val = val.prepareForCache(coCtx, true);
 
                     MvccDataRow updateRow = new MvccDataRow(
                         key,
@@ -1821,8 +1824,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
+                key.prepareForCache(coCtx, false);
 
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
 
@@ -1894,11 +1896,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             try {
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
+                key.prepareForCache(coCtx, false);
 
                 if (val != null)
-                    val.valueBytes(coCtx);
+                    val.prepareForCache(coCtx, true);
 
                 assert cctx.shared().database().checkpointLockIsHeldByThread();
 
@@ -1952,11 +1953,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
+                key = key.prepareForCache(coCtx, false);
 
                 if(val != null)
-                    val.valueBytes(coCtx);
+                    val = val.prepareForCache(coCtx, true);
 
                  MvccUpdateDataRow updateRow = new MvccUpdateDataRow(
                     cctx,
@@ -2162,8 +2162,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
+                key = key.prepareForCache(coCtx, false);
 
                 MvccUpdateDataRow updateRow = new MvccUpdateDataRow(
                     cctx,
@@ -2229,8 +2228,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
+                key = key.prepareForCache(coCtx, false);
 
                 MvccUpdateDataRow updateRow = new MvccUpdateDataRow(
                     cctx,
@@ -2275,7 +2273,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 throw new NodeStoppingException("Operation has been cancelled (node is stopping).");
 
             try {
-                key.valueBytes(cctx.cacheObjectContext());
+                key = key.prepareForCache(cctx.cacheObjectContext(), false);
 
                 int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2419,9 +2417,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.prepareForCache(coCtx, false);
-                val.prepareForCache(coCtx, true);
+                key = key.prepareForCache(coCtx, false);
+
+                if (val != null)
+                    val = val.prepareForCache(coCtx, true);
 
                 CacheDataRow old;
 
@@ -2472,11 +2471,10 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 CacheObjectContext coCtx = cctx.cacheObjectContext();
 
-                // Make sure value bytes initialized.
-                key.valueBytes(coCtx);
+                key = key.prepareForCache(coCtx, false);
 
                 if (val != null)
-                    val.valueBytes(coCtx);
+                    val = val.prepareForCache(coCtx, true);
 
                 MvccSnapshotWithoutTxs mvccSnapshot = new MvccSnapshotWithoutTxs(mvccVer.coordinatorVersion(),
                     mvccVer.counter(), mvccVer.operationCounter(), MvccUtils.MVCC_COUNTER_NA);
@@ -2693,7 +2691,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
             // Note: this method is intended for testing only.
 
-            key.valueBytes(cctx.cacheObjectContext());
+            key = key.prepareForCache(cctx.cacheObjectContext(), false);
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 
@@ -2741,7 +2739,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
         @Override public CacheDataRow mvccFind(GridCacheContext cctx,
             KeyCacheObject key,
             MvccSnapshot snapshot) throws IgniteCheckedException {
-            key.valueBytes(cctx.cacheObjectContext());
+            key = key.prepareForCache(cctx.cacheObjectContext(), false);
 
             int cacheId = grp.sharedGroup() ? cctx.cacheId() : CU.UNDEFINED_CACHE_ID;
 

@@ -106,7 +106,7 @@ public class KeyCacheObjectImpl extends CacheObjectAdapter implements KeyCacheOb
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject prepareForCache(CacheObjectContext ctx, boolean compress) throws IgniteCheckedException {
+    @Override public KeyCacheObject prepareForCache(CacheObjectContext ctx, boolean compress) throws IgniteCheckedException {
         assert !compress : "Keys should not be compressed!";
 
         if (valBytes == null)
