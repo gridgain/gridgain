@@ -2281,14 +2281,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * @param evts Discovery events processed during exchange.
      * @param addedOnExchnage {@code True} if cache group was added during this exchange.
      * @param grpHolder Group holder.
-     * @param rebalanceInfo Rebalance information.
+     * @param rebalanceInfo Rebalance information on coordinator or null on other nodes.
      * @param latePrimary If {@code true} delays primary assignment if it is not owner.
      */
     private void initAffinityOnNodeJoin(
         ExchangeDiscoveryEvents evts,
         boolean addedOnExchnage,
         CacheGroupHolder grpHolder,
-        WaitRebalanceInfo rebalanceInfo,
+        @Nullable WaitRebalanceInfo rebalanceInfo,
         boolean latePrimary
     ) {
         GridAffinityAssignmentCache aff = grpHolder.affinity();
@@ -2338,8 +2338,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                 GridDhtPartitionTopology top = grpHolder.topology(evts.discoveryCache());
 
                 if (rebalanceInfo != null &&
-                     top.owners(p, evts.topologyVersion()).containsAll(idealAssignment.get(p)) &&
-                     top.lostPartitions().isEmpty() // TODO is this enough ?
+                     !top.owners(p, evts.topologyVersion()).containsAll(idealAssignment.get(p)) &&
+                     top.lostPartitions().isEmpty() // TODO is this enough. Maybe not, check owner lost during rebalancing ?
                 )
                     rebalanceInfo.add(aff.groupId(), p, newNodes);
             }
@@ -2364,7 +2364,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         int part,
         ClusterNode curPrimary,
         List<ClusterNode> newNodes,
-        WaitRebalanceInfo rebalance) {
+        @Nullable WaitRebalanceInfo rebalance) {
         assert curPrimary != null;
         assert !F.isEmpty(newNodes);
         assert !curPrimary.equals(newNodes.get(0));

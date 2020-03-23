@@ -30,6 +30,8 @@ import org.jetbrains.annotations.Nullable;
 
 /**
  * Dummy discovery message which is not really sent via ring, it is just added in local discovery worker queue.
+ *
+ * TODO todo test coordinator failed before sending lost state.
  */
 public class ClientCacheChangeDummyDiscoveryMessage implements DiscoveryCustomMessage,
     CachePartitionExchangeWorkerTask {

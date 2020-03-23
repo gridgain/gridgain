@@ -22,9 +22,14 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.IntConsumer;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -40,6 +45,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.util.AttributeNodeFilter;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.testframework.GridTestUtils.mergeExchangeWaitVersion;
@@ -62,6 +68,9 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     private int nonAffinityIdx;
 
     /** */
+    private boolean startClientCache;
+
+    /** */
     private boolean dfltRegionPersistence;
 
     /** */
@@ -79,6 +88,9 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     /** */
     private int backups;
 
+    /** */
+    private boolean client;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
@@ -92,15 +104,10 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         cfg.setConsistentId(igniteInstanceName);
 
-        cfg.setClientMode("client".equals(igniteInstanceName));
+        if (client) {
+            cfg.setClientMode(true);
 
-        if (!cfg.isClientMode()) {
-            cfg.setCacheConfiguration(
-                defaultCacheConfiguration().setNearConfiguration(null).
-                    setNodeFilter(new AttributeNodeFilter(START_CACHE_ATTR, Boolean.TRUE)).
-                    setBackups(backups).
-                    setPartitionLossPolicy(lossPlc).
-                    setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT)));
+            client = false;
         }
 
         cfg.setIncludeEventTypes(EventType.EVTS_ALL);
@@ -125,8 +132,23 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         cfg.setDataStorageConfiguration(dsCfg);
 
-        if (!cfg.isClientMode() && getTestIgniteInstanceIndex(igniteInstanceName) != nonAffinityIdx)
+
+        // Do not start cache on non-affinity node.
+        CacheConfiguration ccfg = defaultCacheConfiguration().setNearConfiguration(null).
+                setNodeFilter(new AttributeNodeFilter(START_CACHE_ATTR, Boolean.TRUE)).
+                setBackups(backups).
+                setPartitionLossPolicy(lossPlc).
+                setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
+
+        if (startClientCache)
+            cfg.setCacheConfiguration(ccfg);
+
+        if (getTestIgniteInstanceIndex(igniteInstanceName) != nonAffinityIdx) {
             cfg.setUserAttributes(F.asMap(START_CACHE_ATTR, Boolean.TRUE));
+
+            if (!startClientCache)
+                cfg.setCacheConfiguration(ccfg);
+        }
 
         return cfg;
     }
@@ -206,8 +228,10 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
         assertTrue(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
+        client = true;
+
         // TODO client topology is not removed on client after start.
-        final IgniteEx client = startGrid("client");
+        final IgniteEx client = startGrid(3);
 
         stopGrid(1);
 
@@ -235,7 +259,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
         assertTrue(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
-        final IgniteEx client = startGrid("client");
+        final IgniteEx client = startGrid(3);
 
         stopGrid(1);
 
@@ -264,7 +288,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
         assertTrue(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
-        final IgniteEx client = startGrid("client");
+        final IgniteEx client = startGrid(3);
 
         stopGrid(1);
 
@@ -276,6 +300,113 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         assertEquals(lost1, lost2);
         assertEquals(lost1, lost3);
+    }
+
+    /**
+     * Tests if lost is correctly detected if addinity is loaded on cache start.
+     */
+    @Test
+    public void testPartitionLossDetectionOnClientTopology_Persistent_NonAffCrd2() throws Exception {
+        dfltRegionPersistence = true;
+        nonAffinityIdx = 0;
+
+        final IgniteEx crd = startGrids(3);
+
+        crd.cluster().active(true);
+
+        assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+        assertTrue(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+
+        final IgniteEx g3 = startGrid(3);
+
+        awaitPartitionMapExchange();
+
+        stopGrid(1);
+
+        final Set<Integer> lost1 = new HashSet<>(crd.cache(DEFAULT_CACHE_NAME).lostPartitions());
+        final Set<Integer> lost2 = new HashSet<>(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions());
+        final Set<Integer> lost3 = new HashSet<>(g3.cache(DEFAULT_CACHE_NAME).lostPartitions());
+
+        assertFalse(lost1.isEmpty());
+
+        assertEquals(lost1, lost2);
+        assertEquals(lost1, lost3);
+
+        GridDhtPartitionTopology top = startGrid(1).cachex(DEFAULT_CACHE_NAME).context().topology();
+        assertEquals(lost1, top.lostPartitions());
+
+        crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+
+        awaitPartitionMapExchange();
+    }
+
+    /**
+     * Tests if lost is correctly detected if addinity is loaded on cache start.
+     */
+    @Test
+    public void doTestPartitionLossDetectionOnClientTopology_Persistent_NonAffCrd() throws Exception {
+        doTestPartitionLossDetectionOnClientTopology(true, 0, false, true);
+    }
+
+    /**
+     * Tests if lost is correctly detected if addinity is loaded on cache start.
+     * TODO broken
+     */
+    @Test
+    @Ignore
+    public void doTestPartitionLossDetectionOnClientTopology_Persistent_NonAffCrd2() throws Exception {
+        doTestPartitionLossDetectionOnClientTopology(true, 0, false, false);
+    }
+
+    /**
+     * Tests if lost is correctly detected if addinity is loaded on cache start.
+     */
+    private void doTestPartitionLossDetectionOnClientTopology(
+            boolean dfltRegionPersistence,
+            int nonAffinityIdx,
+            boolean joinsClientNode,
+            boolean startClientCache
+            ) throws Exception {
+        this.dfltRegionPersistence = dfltRegionPersistence;
+        this.nonAffinityIdx = nonAffinityIdx;
+        this.startClientCache = startClientCache;
+
+        final int gridCnt = 3;
+
+        final IgniteEx crd = startGrids(gridCnt);
+
+        crd.cluster().active(true);
+
+        for (int i = 0; i < gridCnt; i++) {
+            if (i == nonAffinityIdx)
+                continue;
+
+            IgniteEx grid = grid(i);
+
+            assertTrue(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+        }
+
+        client = joinsClientNode;
+
+        final IgniteEx g3 = startGrid(3);
+
+        awaitPartitionMapExchange();
+
+        boolean lossExpected = dfltRegionPersistence;
+
+        Set<Integer> lostPartsExpected = lossExpected ?
+                IntStream.of(crd.affinity(DEFAULT_CACHE_NAME).allPartitions(grid(1).localNode())).boxed().collect(Collectors.toSet()) :
+                Collections.emptySet();
+
+        stopGrid(1);
+        startGrid(1);
+
+        for (Ignite g0 : G.allGrids())
+            assertEquals(g0.toString(), lostPartsExpected, g0.cache(DEFAULT_CACHE_NAME).lostPartitions());
+
+        crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+
+        awaitPartitionMapExchange();
     }
 
     /**
@@ -315,20 +446,23 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
 
         mergeExchangeWaitVersion(srv0, 8, null);
 
-        int[] p2 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(2).localNode());
-        int[] p3 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(3).localNode());
-        int[] p4 = srv0.affinity(DEFAULT_CACHE_NAME).primaryPartitions(grid(4).localNode());
+        Set<Integer> expLostParts = new HashSet<>();
 
-        List<Integer> expLostParts = new ArrayList<>();
+        IntStream.of(2,3,4).forEach(new IntConsumer() {
+            @Override public void accept(int idx) {
+                int[] p0 = srv0.affinity(DEFAULT_CACHE_NAME).allPartitions(grid(idx).localNode());
 
-        for (int i = 0; i < p2.length; i++)
-            expLostParts.add(p2[i]);
-        for (int i = 0; i < p3.length; i++)
-            expLostParts.add(p3[i]);
-        for (int i = 0; i < p4.length; i++)
-            expLostParts.add(p4[i]);
+                for (int p : p0)
+                    expLostParts.add(p);
+            }
+        });
 
-        Collections.sort(expLostParts);
+        IntStream.of(0, 1).forEach(new IntConsumer() {
+            @Override public void accept(int idx) {
+                expLostParts.removeIf(p ->
+                        Arrays.binarySearch(srv0.affinity(DEFAULT_CACHE_NAME).allPartitions(grid(idx).localNode()), p) >= 0);
+            }
+        });
 
         stopGrid(getTestIgniteInstanceName(4), true, false);
         stopGrid(getTestIgniteInstanceName(3), true, false);
