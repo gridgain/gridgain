@@ -201,7 +201,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         Map<Integer, IndexIntegrityCheckIssue> integrityCheckResults = integrityCheckIndexesPartitions(grpIds);
 
         List<T2<CacheGroupContext, GridDhtLocalPartition>> partArgs = new ArrayList<>();
-        List<T2<GridCacheContext, Index>> idxArgs = new ArrayList<>();
+        List<T2<GridCacheContext, H2TreeIndexBase>> idxArgs = new ArrayList<>();
 
         getAndPreparePartitionsAndIndexesArguments(grpIds, integrityCheckResults, partArgs, idxArgs);
 
@@ -216,6 +216,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         processCheckSizesAsync(partArgs, idxArgs, cacheSizeFutures, idxSizeFutures);
 
         try {
+            Map<String, Integer> inlineSizes = getInlineSizes(idxArgs);
             Map<PartitionKey, ValidateIndexesPartitionResult> partResults = getResults(procPartFutures);
             Map<String, ValidateIndexesPartitionResult> idxResults = getResults(procIdxFutures);
 
@@ -231,7 +232,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 partResults,
                 idxResults,
                 integrityCheckResults.values(),
-                checkSizeResults
+                checkSizeResults,
+                inlineSizes
             );
         }
         catch (InterruptedException | ExecutionException e) {
@@ -254,7 +256,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * @throws ExecutionException If the computation threw an exception.
      * @throws InterruptedException If the current thread was interrupted while waiting.
      */
-    private <T> void waitAllFutures(
+    private static <T> void waitAllFutures(
         Collection<T> coll,
         Function<T, Future> transformer
     ) throws ExecutionException, InterruptedException {
@@ -281,7 +283,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     }
 
     /** */
-    private <T> Map<T, ValidateIndexesPartitionResult> getResults(
+    private static <T> Map<T, ValidateIndexesPartitionResult> getResults(
         Collection<Future<Map<T, ValidateIndexesPartitionResult>>> futs
     ) throws ExecutionException, InterruptedException {
         Map<T, ValidateIndexesPartitionResult> res = new HashMap<>();
@@ -297,9 +299,24 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     }
 
     /** */
+    private static Map<String, Integer> getInlineSizes(List<T2<GridCacheContext, H2TreeIndexBase>> idxArgs) {
+        Map<String, Integer> res = new HashMap<>();
+
+        for (T2<GridCacheContext, H2TreeIndexBase> t : idxArgs) {
+            H2TreeIndexBase idx = t.get2();
+
+            String tblName = idx.getTable().rowDescriptor().tableDescriptor().fullTableName();
+
+            res.put("table: " + tblName + " index: " + idx.getName(), idx.inlineSize());
+        }
+
+        return res;
+    }
+
+    /** */
     private void processCheckSizesAsync(
         List<T2<CacheGroupContext, GridDhtLocalPartition>> partArgs,
-        List<T2<GridCacheContext, Index>> idxArgs,
+        List<T2<GridCacheContext, H2TreeIndexBase>> idxArgs,
         List<T3<CacheGroupContext, GridDhtLocalPartition, Future<CacheSize>>> cacheSizeFutures,
         List<T3<GridCacheContext, Index, Future<T2<Throwable, Long>>>> idxSizeFutures
     ) {
@@ -311,7 +328,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 cacheSizeFutures.add(new T3<>(cacheGrpCtx, locPart, calcCacheSizeAsync(cacheGrpCtx, locPart)));
             }
 
-            for (T2<GridCacheContext, Index> idxArg : idxArgs) {
+            for (T2<GridCacheContext, H2TreeIndexBase> idxArg : idxArgs) {
                 GridCacheContext cacheCtx = idxArg.get1();
                 Index idx = idxArg.get2();
 
@@ -322,11 +339,11 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
     /** */
     private List<Future<Map<String, ValidateIndexesPartitionResult>>> processIndexesAsync(
-        List<T2<GridCacheContext, Index>> idxArgs
+        List<T2<GridCacheContext, H2TreeIndexBase>> idxArgs
     ) {
         List<Future<Map<String, ValidateIndexesPartitionResult>>> res = new ArrayList<>();
 
-        for (T2<GridCacheContext, Index> t2 : idxArgs) {
+        for (T2<GridCacheContext, H2TreeIndexBase> t2 : idxArgs) {
             res.add(calcExecutor.submit(() -> {
                 BPlusTree.suspendFailureDiagnostic.set(true);
 
@@ -367,7 +384,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         Set<Integer> grpIds,
         Map<Integer, IndexIntegrityCheckIssue> integrityCheckResults,
         List<T2<CacheGroupContext, GridDhtLocalPartition>> partArgs,
-        List<T2<GridCacheContext, Index>> idxArgs
+        List<T2<GridCacheContext, H2TreeIndexBase>> idxArgs
     ) {
         GridQueryProcessor qryProcessor = ignite.context().query();
         IgniteH2Indexing h2Indexing = (IgniteH2Indexing)qryProcessor.getIndexing();
@@ -398,7 +415,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
                         for (Index idx : gridH2Tbl.getIndexes()) {
                             if (idx instanceof H2TreeIndexBase)
-                                idxArgs.add(new T2<>(ctx, idx));
+                                idxArgs.add(new T2<>(ctx, (H2TreeIndexBase)idx));
                         }
                     }
                 }

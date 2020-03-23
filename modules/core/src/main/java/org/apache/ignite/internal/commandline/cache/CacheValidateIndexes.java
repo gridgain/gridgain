@@ -19,6 +19,8 @@ package org.apache.ignite.internal.commandline.cache;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -99,7 +101,7 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
      * Container for command arguments.
      */
     public class Arguments {
-         /** Caches. */
+        /** Caches. */
         private final Set<String> caches;
 
         /** Node id. */
@@ -268,6 +270,9 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
                 }
             }
 
+            if (checkInlineSizes(taskRes.results(), logger))
+                errors = true;
+
             if (!errors)
                 logger.severe("no issues found.");
             else
@@ -277,6 +282,45 @@ public class CacheValidateIndexes implements Command<CacheValidateIndexes.Argume
 
             return taskRes;
         }
+    }
+
+    /**
+     * Checks inline size of index on different nodes.
+     *
+     * @param results Indexes validation from different nodes.
+     * @param log Logger.
+     * @return TODO!
+     */
+    private boolean checkInlineSizes(Map<UUID, VisorValidateIndexesJobResult> results, Logger log) {
+        Map<String, Map<Integer, Set<UUID>>> idxNameToInlineSizes = new HashMap<>();
+
+        for (UUID nodeId : results.keySet()) {
+            Map<String, Integer> inlineSizes = results.get(nodeId).indexesInlineSize();
+
+            for (String idxName : inlineSizes.keySet()) {
+                Map<Integer, Set<UUID>> sizes = idxNameToInlineSizes.computeIfAbsent(idxName, n -> new HashMap<>());
+
+                sizes.computeIfAbsent(inlineSizes.get(idxName), i -> new HashSet<>()).add(nodeId);
+            }
+        }
+
+        boolean hasErrors = idxNameToInlineSizes.values().stream().anyMatch(m -> m.size() > 1);
+
+        if (!hasErrors)
+            return hasErrors;
+
+        log.info("Some indexes have different inline size on the nodes in the cluster.");
+
+        for (String idxName : idxNameToInlineSizes.keySet()) {
+            if (idxNameToInlineSizes.get(idxName).size() > 1) {
+                log.info(INDENT + "Index: " + idxName + " has the following inline size on nodes:");
+
+                for (Integer size : idxNameToInlineSizes.get(idxName).keySet())
+                    log.info(DOUBLE_INDENT + "Size: " + size + ". Nodes:" + idxNameToInlineSizes.get(idxName).get(size));
+            }
+        }
+
+        return hasErrors;
     }
 
     /** {@inheritDoc} */

@@ -147,7 +147,7 @@ public class H2TableDescriptor {
     /**
      * @return Database full table name.
      */
-    String fullTableName() {
+    public String fullTableName() {
         return fullTblName;
     }
 
