@@ -1578,7 +1578,7 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
      * option {@link CommonArgParser#CMD_VERBOSE}.
      */
     @Test
-    public void testNoErrorWithVerbose() {
+    public void testCorrectExecCmdWithVerboseInDiffParamsOrder() {
         injectTestSystemOut();
 
         int resCode = EXIT_CODE_OK;
