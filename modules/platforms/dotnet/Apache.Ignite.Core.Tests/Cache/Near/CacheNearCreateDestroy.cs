@@ -220,14 +220,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestClientOnlyPlatformNearCache()
         {
-            // TODO: More tests with Create/GetOrCreate, combinations on Java and .NET configs.
             var cache = _grid.CreateCache<int, int>(TestUtils.TestName);
+            cache[1] = 2;
+            
             var clientCache = _client.CreateNearCache<int, int>(cache.Name, new NearCacheConfiguration(), 
                 new PlatformNearCacheConfiguration());
             
-            cache[1] = 2;
             Assert.AreEqual(2, clientCache[1]);
             Assert.AreEqual(1, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+
+            var clientCache2 = _client.GetOrCreateNearCache<int, int>(cache.Name, new NearCacheConfiguration(),
+                new PlatformNearCacheConfiguration());
+            
+            Assert.AreEqual(2, clientCache2[1]);
+            Assert.AreEqual(1, clientCache2.GetLocalSize(CachePeekMode.PlatformNear));
         }
         
         /// <summary>
