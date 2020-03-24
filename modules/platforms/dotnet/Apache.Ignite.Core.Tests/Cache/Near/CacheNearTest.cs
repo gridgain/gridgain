@@ -25,9 +25,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
+    using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Cache.Store;
-    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Binary;
@@ -570,11 +570,25 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(count, res.Count());
         }
 
+        /// <summary>
+        /// Tests that expiry policy functionality plays well with platform near cache.
+        /// </summary>
         [Test]
-        public void TestExpiryPolicyRemovesValuesFromNearCache()
+        public void TestExpiryPolicyRemovesValuesFromNearCache(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            // TODO: WithExpiryPolicy
-            // TODO: CacheConfiguration.ExpiryPolicy
+            var cache = GetCache<int, Foo>(mode)
+                .WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(0.1), null, null));
+            
+            cache[1] = new Foo(1);
+            Assert.AreEqual(1, cache[1].Bar);
+            Assert.AreEqual(1, cache.LocalPeek(1, CachePeekMode.PlatformNear).Bar);
+            
+            Thread.Sleep(200);
+
+            Foo _;
+            Assert.IsFalse(cache.TryLocalPeek(1, out _, CachePeekMode.Primary | CachePeekMode.Near));
+            Assert.False(cache.ContainsKey(1));
         }
 
         /// <summary>
