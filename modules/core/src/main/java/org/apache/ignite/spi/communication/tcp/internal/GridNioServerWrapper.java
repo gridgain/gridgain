@@ -140,9 +140,6 @@ public class GridNioServerWrapper {
     /** Exception registry supplier. */
     private final Supplier<IgniteExceptionRegistry> eRegistrySupplier;
 
-    /** Recovery and idle clients handler. */
-    private final CommunicationWorker commWorker;
-
     /** Ignite config. */
     private final IgniteConfiguration igniteCfg;
 
@@ -166,6 +163,9 @@ public class GridNioServerWrapper {
 
     /** In rec descs. */
     private final ConcurrentMap<ConnectionKey, GridNioRecoveryDescriptor> inRecDescs = GridConcurrentFactory.newMap();
+
+    /** Recovery and idle clients handler. */
+    private volatile CommunicationWorker commWorker;
 
     /** Enable forcible node kill. */
     private boolean enableForcibleNodeKill = IgniteSystemProperties
@@ -1205,5 +1205,12 @@ public class GridNioServerWrapper {
                 }
             }
         }
+    }
+
+    /**
+     * @param commWorker New recovery and idle clients handler.
+     */
+    public void communicationWorker(CommunicationWorker commWorker) {
+        this.commWorker = commWorker;
     }
 }

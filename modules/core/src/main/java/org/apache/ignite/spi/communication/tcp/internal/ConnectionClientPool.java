@@ -589,11 +589,9 @@ public class ConnectionClientPool {
     }
 
     /**
-     * Stop this instance.
+     * Close all connections of this instance.
      */
     public void forceClose() {
-        stop();
-
         for (GridCommunicationClient[] clients0 : clients.values()) {
             for (GridCommunicationClient client : clients0) {
                 if (client != null)

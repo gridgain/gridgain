@@ -647,8 +647,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             log
         );
 
-        discoLsnr = new DiscoveryListener(clientPool, metricsLsnr);
-
         try {
             cfg.localHost(U.resolveLocalHost(cfg.localAddress()));
         }
@@ -680,7 +678,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
         TimeObjectProcessorWrapper timeObjProcessorWrapper = new TimeObjectProcessorWrapper(stateProvider);
 
-        nioSrvWrapper = new GridNioServerWrapper(
+        this.nioSrvWrapper = new GridNioServerWrapper(
             log,
             cfg,
             timeObjProcessorWrapper,
@@ -717,6 +715,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         );
 
         this.srvLsnr.setClientPool(clientPool);
+
+        discoLsnr = new DiscoveryListener(clientPool, metricsLsnr);
 
         try {
             shmemSrv = resetShmemServer();
@@ -834,12 +834,12 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
                 igniteInstanceName,
                 srvLsnr,
                 shmemSrv,
-                metricsLsnr, //TODO
+                metricsLsnr,
                 log,
                 msgFactory,
                 writerFactory,
                 readerFactory,
-                tracing //TODO
+                tracing
             );
 
             new IgniteThread(shmemAcceptWorker).start();
@@ -861,6 +861,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             getWorkersRegistry(ignite),
             getName()
         );
+
+        this.srvLsnr.communicationWorker(commWorker);
+        this.nioSrvWrapper.communicationWorker(commWorker);
 
         new IgniteSpiThread(igniteInstanceName, commWorker.name(), log) {
             @Override protected void body() {
@@ -919,16 +922,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         U.cancel(commWorker);
         U.join(commWorker, log);
 
-        shmemAcceptWorker.cancel();
         U.cancel(shmemAcceptWorker);
         U.join(shmemAcceptWorker, log);
 
         srvLsnr.stop();
 
-        shmemAcceptWorker.cancel();
-        U.cancel(shmemAcceptWorker);;
-
         // Force closing on stop (safety).
+        clientPool.stop();
         clientPool.forceClose();
 
         // Clear resources.

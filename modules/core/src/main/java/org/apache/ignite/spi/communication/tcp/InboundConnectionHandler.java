@@ -108,9 +108,6 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     /** Client pool. */
     private ConnectionClientPool clientPool;
 
-    /** Communication worker. */
-    private final CommunicationWorker commWorker;
-
     /** Connect gate. */
     private final ConnectGateway connectGate;
 
@@ -131,6 +128,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
 
     /** SPI listener. */
     private volatile CommunicationListener<Message> lsnr;
+
+    /** Communication worker. */
+    private volatile CommunicationWorker commWorker;
 
     /** Client. */
     private final boolean client;
@@ -937,5 +937,12 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
                 }
             }
         }
+    }
+
+    /**
+     * @param commWorker New communication worker.
+     */
+    public void communicationWorker(CommunicationWorker commWorker) {
+        this.commWorker = commWorker;
     }
 }
