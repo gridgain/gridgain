@@ -216,6 +216,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
         /// <summary>
         /// Tests that platform near cache can be started on a given client node only, avoiding server near cache.
+        /// Checks different overloads of CreateCache/GetOrCreateCache.
         /// </summary>
         [Test]
         public void TestClientOnlyPlatformNearCache()
@@ -234,6 +235,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.AreEqual(2, clientCache2[1]);
             Assert.AreEqual(1, clientCache2.GetLocalSize(CachePeekMode.PlatformNear));
+
+            var clientCache3 = _client.CreateCache<int, int>(new CacheConfiguration(cache.Name + "3"), 
+                new NearCacheConfiguration(), new PlatformNearCacheConfiguration());
+
+            clientCache3[1] = 2;
+            Assert.AreEqual(2, clientCache3.LocalPeek(1, CachePeekMode.PlatformNear));
+            
+            var clientCache4 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cache.Name + "4"), 
+                new NearCacheConfiguration(), new PlatformNearCacheConfiguration());
+
+            clientCache4[1] = 2;
+            Assert.AreEqual(2, clientCache4.LocalPeek(1, CachePeekMode.PlatformNear));
         }
         
         /// <summary>
