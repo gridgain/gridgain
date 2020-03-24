@@ -34,6 +34,8 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedBooleanProperty.detachedBooleanProperty;
 import static org.apache.ignite.internal.processors.configuration.distributed.DistributedLongProperty.detachedLongProperty;
 
@@ -85,8 +87,8 @@ public class DistributedBaselineConfiguration {
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
-                    baselineAutoAdjustEnabled.addListener(makeUpdateListener());
-                    baselineAutoAdjustTimeout.addListener(makeUpdateListener());
+                    baselineAutoAdjustEnabled.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
+                    baselineAutoAdjustTimeout.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
 
                     dispatcher.registerProperties(baselineAutoAdjustEnabled, baselineAutoAdjustTimeout);
                 }
@@ -107,40 +109,6 @@ public class DistributedBaselineConfiguration {
     /** */
     public void listenAutoAdjustTimeout(DistributePropertyListener<? super Long> lsnr) {
         baselineAutoAdjustTimeout.addListener(lsnr);
-    }
-
-    /**
-     * @param property Property which value should be set.
-     * @param value Default value.
-     * @param log Logger.
-     * @param <T> Property type.
-     */
-    private <T extends Serializable> void setDefaultValue(DistributedProperty<T> property, T value, IgniteLogger log) {
-        if (property.get() == null) {
-            try {
-                property.propagateAsync(null, value)
-                    .listen((IgniteInClosure<IgniteInternalFuture<?>>)future -> {
-                        if (future.error() != null)
-                            log.error("Cannot set default value of '" + property.getName() + '\'', future.error());
-                    });
-            }
-            catch (IgniteCheckedException e) {
-                log.error("Cannot initiate setting default value of '" + property.getName() + '\'', e);
-            }
-        }
-    }
-
-    /**
-     * @param <T> Type of property value.
-     * @return Update property listener.
-     */
-    @NotNull private <T> DistributePropertyListener<T> makeUpdateListener() {
-        return (name, oldVal, newVal) -> {
-            if (!Objects.equals(oldVal, newVal)) {
-                if (log.isInfoEnabled())
-                    log.info(format(PROPERTY_UPDATE_MESSAGE, name, oldVal, newVal));
-            }
-        };
     }
 
     /**

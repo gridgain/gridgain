@@ -285,6 +285,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Memory manager */
     private QueryMemoryManager memoryMgr;
 
+    /** Distributed config. */
+    private DistributedSqlConfiguration distrCfg;
+
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
         @Override public void apply(IgniteInternalFuture<?> fut) {
@@ -2178,6 +2181,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         connMgr.setH2Serializer(h2Serializer);
 
         registerAggregateFunctions();
+
+        distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), ctx, log);
     }
 
     /** {@inheritDoc} */
