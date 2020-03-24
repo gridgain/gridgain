@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
+    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
@@ -39,6 +40,8 @@ namespace Apache.Ignite.Core.Impl.Cache
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Transactions;
+    using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
+    using BinaryWriter = Apache.Ignite.Core.Impl.Binary.BinaryWriter;
 
     /// <summary>
     /// Native cache wrapper.
@@ -2036,9 +2039,9 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             var endPos = writer.Stream.Position;
-            writer.Stream.Seek(pos);
+            writer.Stream.Seek(pos, SeekOrigin.Begin);
             writer.WriteInt(count);
-            writer.Stream.Seek(endPos);
+            writer.Stream.Seek(endPos, SeekOrigin.Begin);
         }
     }
 }

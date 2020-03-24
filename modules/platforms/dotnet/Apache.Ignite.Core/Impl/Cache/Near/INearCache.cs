@@ -16,7 +16,6 @@
 
 namespace Apache.Ignite.Core.Impl.Cache.Near
 {
-    using System;
     using System.Collections.Generic;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Affinity;
