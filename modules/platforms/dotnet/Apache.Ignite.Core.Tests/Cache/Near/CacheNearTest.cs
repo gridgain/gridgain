@@ -665,16 +665,36 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(2, clientCache.LocalPeek(2, CachePeekMode.PlatformNear).Bar);
         }
 
+        /// <summary>
+        /// Tests LocalPeek / TryLocalPeek with platform near cache.
+        /// </summary>
         [Test]
-        public void TestGetAllNearOnly()
+        public void TestLocalPeek()
         {
-            // TODO: When all keys are in near, there is no Java call.
-        }
+            var clientCache = GetCache<int, Foo>(CacheTestMode.Client);
+            var serverCache = GetCache<int, Foo>(CacheTestMode.ServerRemote);
 
-        [Test]
-        public void TestLocalPeek([Values(true, false)] bool client)
-        {
-            // TODO: Test in combination with other modes.
+            // One entry is in client near cache, another is not.
+            clientCache[1] = new Foo(1);
+            serverCache[2] = new Foo(2);
+
+            Foo foo;
+            
+            Assert.IsTrue(clientCache.TryLocalPeek(1, out foo, CachePeekMode.PlatformNear));
+            Assert.AreEqual(1, foo.Bar);
+            
+            Assert.IsTrue(clientCache.TryLocalPeek(1, out foo, CachePeekMode.PlatformNear | CachePeekMode.Near));
+            Assert.AreEqual(1, foo.Bar);
+            
+            Assert.IsFalse(clientCache.TryLocalPeek(2, out foo, CachePeekMode.PlatformNear));
+            Assert.IsFalse(clientCache.TryLocalPeek(2, out foo, CachePeekMode.Near));
+            Assert.IsFalse(clientCache.TryLocalPeek(2, out foo, CachePeekMode.All));
+            
+            Assert.AreEqual(2, serverCache.LocalPeek(2, CachePeekMode.PlatformNear).Bar);
+            Assert.AreEqual(2, serverCache.LocalPeek(2, CachePeekMode.Near).Bar);
+            
+            Assert.AreSame(serverCache[2], serverCache.LocalPeek(2, CachePeekMode.PlatformNear));
+            Assert.AreNotSame(serverCache[2], serverCache.LocalPeek(2, CachePeekMode.Near));
         }
 
         [Test]

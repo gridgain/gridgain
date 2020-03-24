@@ -93,7 +93,6 @@ namespace Apache.Ignite.Core.Impl.Cache
                 {
                     // Request value from Java.
                     // This should be rare, because primary keys are always in .NET Near Cache.
-                    // TODO: Add test for this somehow.
                     val = _marsh.Ignite.GetJavaThreadLocal();
                 }
             }
