@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Cache.Near
 {
     using System;
+    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Events;
@@ -247,6 +248,32 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             clientCache4[1] = 2;
             Assert.AreEqual(2, clientCache4.LocalPeek(1, CachePeekMode.PlatformNear));
+        }
+
+        /// <summary>
+        /// Tests that Java near cache is not necessary for .NET near cache to function on server nodes.
+        /// </summary>
+        [Test]
+        public void TestPlatformNearCacheOnServerWithoutJavaNearCache()
+        {
+            var cfg = new CacheConfiguration(TestUtils.TestName)
+            {
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+            };
+
+            var cache1 = _grid.CreateCache<int, Foo>(cfg);
+            var cache2 = _grid2.GetCache<int, Foo>(cfg.Name);
+            
+            var key = TestUtils.GetPrimaryKey(_grid, cfg.Name);
+            
+            // Not in near on non-primary node.
+            cache2[key] = new Foo(key);
+            Assert.AreEqual(key, cache2[key].Bar);
+            
+            Assert.AreEqual(0, cache2.GetLocalEntries(CachePeekMode.PlatformNear).Count());
+            
+            // In near on primary node.
+            Assert.AreEqual(key, cache1.GetLocalEntries(CachePeekMode.PlatformNear).Single().Key);
         }
         
         /// <summary>
