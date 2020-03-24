@@ -26,6 +26,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Eviction;
     using Apache.Ignite.Core.Cache.Query;
+    using Apache.Ignite.Core.Cache.Store;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Binary;
@@ -404,9 +406,28 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests that error during Put does not affect correct data in near cache.
         /// </summary>
         [Test]
-        public void TestFailedPutKeepsCorrectNearCacheValue()
+        public void TestFailedPutKeepsCorrectNearCacheValue(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            // TODO: use store to cause error during put
+            var cfg = new CacheConfiguration
+            {
+                Name = TestUtils.TestName,
+                NearConfiguration = new NearCacheConfiguration(),
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                CacheStoreFactory = new FailingCacheStore(),
+                WriteThrough = true
+            };
+
+            var cache = GetIgnite(mode).CreateCache<int, Foo>(cfg, new NearCacheConfiguration(), 
+                new PlatformNearCacheConfiguration());
+            
+            // First write succeeds.
+            cache.Put(1, new Foo(1));
+            Assert.AreEqual(1, cache.LocalPeek(1, CachePeekMode.PlatformNear).Bar);
+            
+            // Special value causes write failure. Near cache value is still correct.
+            Assert.Throws<CacheStoreException>(() => cache.Put(1, new Foo(FailingCacheStore.FailingValue)));
+            Assert.AreEqual(1, cache.LocalPeek(1, CachePeekMode.PlatformNear).Bar);
         }
 
         /// <summary>
