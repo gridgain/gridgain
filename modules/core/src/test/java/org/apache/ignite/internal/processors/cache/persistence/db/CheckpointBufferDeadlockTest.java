@@ -51,10 +51,10 @@ import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStor
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.testframework.GridStringLogger;
 import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.testframework.junits.logger.GridTestLog4jLogger;
 import org.junit.Test;
 
 /**
@@ -85,8 +85,8 @@ public class CheckpointBufferDeadlockTest extends GridCommonAbstractTest {
     /** Checkpoint threads. */
     private int checkpointThreads;
 
-    /** String logger. */
-    private GridStringLogger strLog;
+    /** Test logger. */
+    private final ListeningTestLogger log = new ListeningTestLogger(false, super.log);
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -106,9 +106,7 @@ public class CheckpointBufferDeadlockTest extends GridCommonAbstractTest {
 
         cfg.setFailureHandler(new StopNodeFailureHandler());
 
-        strLog = new GridStringLogger(false, new GridTestLog4jLogger());
-
-        cfg.setGridLogger(strLog);
+        cfg.setGridLogger(log);
 
         return cfg;
     }
@@ -142,7 +140,16 @@ public class CheckpointBufferDeadlockTest extends GridCommonAbstractTest {
     public void testFourCheckpointThreads() throws Exception {
         checkpointThreads = 4;
 
-        runDeadlockScenario();
+        for (int i = 0; i < 3; i++) {
+            beforeTest();
+
+            try {
+                runDeadlockScenario();
+            }
+            finally {
+                afterTest();
+            }
+        }
     }
 
     /**
@@ -159,6 +166,10 @@ public class CheckpointBufferDeadlockTest extends GridCommonAbstractTest {
      *
      */
     private void runDeadlockScenario() throws Exception {
+        LogListener lsnr = LogListener.matches(s -> s.contains("AssertionError")).build();
+
+        log.registerListener(lsnr);
+
         IgniteEx ig = startGrid(0);
 
         ig.cluster().active(true);
@@ -312,7 +323,9 @@ public class CheckpointBufferDeadlockTest extends GridCommonAbstractTest {
         //check that there is no problem with pinned pages
         ig.destroyCache(cacheName);
 
-        assertFalse(strLog.toString().contains("AssertionError"));
+        assertFalse(lsnr.check());
+
+        log.unregisterListener(lsnr);
     }
 
     /**

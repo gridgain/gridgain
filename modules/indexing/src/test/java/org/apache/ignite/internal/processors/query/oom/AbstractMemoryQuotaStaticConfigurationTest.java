@@ -15,20 +15,7 @@
  */
 package org.apache.ignite.internal.processors.query.oom;
 
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
-import java.util.List;
-import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.internal.util.typedef.internal.U;
-
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 
 /**
  * Basic class for test cases for memory quota static configuration.
@@ -74,7 +61,7 @@ public abstract class AbstractMemoryQuotaStaticConfigurationTest extends DiskSpi
     }
 
     /** */
-    protected boolean startClient() {
+    @Override protected boolean startClient() {
         return false;
     }
 
@@ -105,84 +92,5 @@ public abstract class AbstractMemoryQuotaStaticConfigurationTest extends DiskSpi
         this.offloadingEnabled = offloadingEnabled;
 
         initGrid();
-    }
-
-    /** */
-    protected void checkQuery(Result res, String sql) {
-        checkQuery(res, sql, 1);
-    }
-
-    /** */
-    protected void checkQuery(Result res, String sql, int threadNum) {
-        WatchService watchSvc = null;
-        WatchKey watchKey = null;
-
-        try {
-            watchSvc = FileSystems.getDefault().newWatchService();
-
-            Path workDir = getWorkDir();
-
-            watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
-
-            multithreaded(() -> grid(0).cache(DEFAULT_CACHE_NAME)
-                .query(new SqlFieldsQuery(sql)
-                    .setLazy(false))
-                .getAll(), threadNum);
-        }
-        catch (Exception e) {
-            assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
-
-            IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
-
-            assertNotNull(sqlEx);
-
-            if (res == Result.ERROR_GLOBAL_QUOTA)
-                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Global quota exceeded."));
-            else
-                assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Query quota exceeded."));
-        }
-        finally {
-            try {
-                if (watchKey != null) {
-                    List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
-
-                    assertEquals("Disk spilling not happened.", res.offload, !dirEvts.isEmpty());
-                }
-
-                assertWorkDirClean();
-
-                checkMemoryManagerState();
-            }
-            finally {
-                U.closeQuiet(watchSvc);
-            }
-        }
-    }
-
-    /** */
-    enum Result {
-        /** */
-        SUCCESS_WITH_OFFLOADING(true, true),
-
-        /** */
-        SUCCESS_NO_OFFLOADING(false, true),
-
-        /** */
-        ERROR_GLOBAL_QUOTA(false, false),
-
-        /** */
-        ERROR_QUERY_QUOTA(false, false);
-
-        /** */
-        Result(boolean offload, boolean success) {
-            this.offload = offload;
-            this.success = success;
-        }
-
-        /** */
-        final boolean offload;
-
-        /** */
-        final boolean success;
     }
 }

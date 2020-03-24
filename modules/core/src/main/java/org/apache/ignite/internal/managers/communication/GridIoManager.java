@@ -95,6 +95,7 @@ import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.Marshaller;
+import org.apache.ignite.marshaller.MarshallerUtils;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.plugin.extensions.communication.MessageFactory;
 import org.apache.ignite.plugin.extensions.communication.MessageFormatter;
@@ -360,6 +361,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         List<MessageFactory> compMsgs = new ArrayList<>();
 
+        compMsgs.add(new GridIoMessageFactory());
+
         for (IgniteComponentType compType : IgniteComponentType.values()) {
             MessageFactory f = compType.messageFactory();
 
@@ -370,7 +373,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
         if (!compMsgs.isEmpty())
             msgs = F.concat(msgs, compMsgs.toArray(new MessageFactory[compMsgs.size()]));
 
-        msgFactory = new GridIoMessageFactory(msgs);
+        msgFactory = new IgniteMessageFactoryImpl(msgs);
 
         if (log.isDebugEnabled())
             log.debug(startInfo());
@@ -1141,7 +1144,23 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
                     threadProcessingMessage(true, msgC);
 
-                    processRegularMessage0(msg, nodeId);
+                    // The classes which use TransientSerializable must set a version of a node to ThreadLocal via
+                    // MarshallerUtils.jobSenderVersion(node.version()) that created a serializable object.
+                    // We forgot for communication messages.
+                    ClusterNode node = ctx.discovery().node(nodeId);
+
+                    if (node == null)
+                        node = ctx.discovery().historicalNode(nodeId);
+
+                    if (node != null)
+                        MarshallerUtils.jobSenderVersion(node.version());
+
+                    try {
+                        processRegularMessage0(msg, nodeId);
+                    }
+                    finally {
+                        MarshallerUtils.jobSenderVersion(null);
+                    }
                 }
                 catch (Throwable e) {
                     log.error("An error occurred processing the message [msg=" + msg + ", nodeId=" + nodeId + "].", e);

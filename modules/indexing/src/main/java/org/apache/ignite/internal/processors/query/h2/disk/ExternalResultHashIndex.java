@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIO;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
+import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.h2.api.ErrorCode;
@@ -53,7 +53,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private static final long REMOVED_FLAG = 1L << 63;
 
     /** */
-    private final FileIOFactory fileIOFactory;
+    private final TrackableFileIoFactory fileIOFactory;
 
     /** Index file directory. */
     private final String dir;
@@ -76,6 +76,9 @@ public class ExternalResultHashIndex implements AutoCloseable {
     /** Reusable byte buffer for reading and writing. We use this only instance just for prevention GC pressure. */
     private final ByteBuffer reusableBuff = ByteBuffer.allocate(Entry.ENTRY_BYTES);
 
+    /** */
+    private final H2MemoryTracker memTracker;
+
     /** Max HashMap size in entries - capacity. */
     private long cap;
 
@@ -86,15 +89,23 @@ public class ExternalResultHashIndex implements AutoCloseable {
     private boolean closed;
 
     /**
+     * @param fileIOFactory File
      * @param spillFile File with rows.
      * @param rowStore External result being indexed by this hash index.
      * @param initSize Init hash map size.
+     * @param tracker Memory tracker.
      */
-    ExternalResultHashIndex(FileIOFactory fileIOFactory, File spillFile, ExternalResultData rowStore, long initSize) {
+    ExternalResultHashIndex(
+        TrackableFileIoFactory fileIOFactory,
+        File spillFile,
+        ExternalResultData rowStore,
+        long initSize,
+        H2MemoryTracker tracker) {
         this.fileIOFactory = fileIOFactory;
         dir = spillFile.getParent();
         spillFileName = spillFile.getName();
         this.rowStore = rowStore;
+        this.memTracker = tracker;
 
         if (initSize <= MIN_CAPACITY)
             initSize = MIN_CAPACITY;
@@ -117,7 +128,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(idxFile, READ);
+                fileIo = fileIOFactory.create(idxFile, parent.memTracker, READ);
             }
 
             rowStore = parent.rowStore;
@@ -125,6 +136,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             entriesCnt = parent.entriesCnt;
             dir = parent.dir;
             spillFileName = parent.spillFileName;
+            memTracker = parent.memTracker;
         }
         catch (IOException e) {
             throw new IgniteException("Failed to create new hash index.", e);
@@ -446,7 +458,7 @@ public class ExternalResultHashIndex implements AutoCloseable {
             synchronized (this) {
                 checkCancelled();
 
-                fileIo = fileIOFactory.create(idxFile, CREATE_NEW, READ, WRITE);
+                fileIo = fileIOFactory.create(idxFile, memTracker, CREATE_NEW, READ, WRITE);
 
                 // Write empty data to the end of the file to extend it.
                 reusableBuff.clear();

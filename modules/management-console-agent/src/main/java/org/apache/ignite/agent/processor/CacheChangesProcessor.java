@@ -158,11 +158,11 @@ public class CacheChangesProcessor extends GridProcessorAdapter {
 
             cachesInfo.add(
                 new CacheInfo()
-                    .setName(item.getKey())
+                    .setCacheName(item.getKey())
                     .setCacheId(cd.cacheId())
                     .setCreatedBySql(item.getValue().sql())
                     .setSystemCache(isSystemCache(item.getKey()))
-                    .setGroup(cd.groupDescriptor().groupName())
+                    .setCacheGroup(cd.groupDescriptor().groupName())
             );
         }
 

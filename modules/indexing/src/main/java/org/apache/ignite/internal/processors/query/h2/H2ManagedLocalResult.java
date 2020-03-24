@@ -19,10 +19,6 @@ package org.apache.ignite.internal.processors.query.h2;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.TreeMap;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.processors.query.h2.disk.PlainExternalResult;
-import org.apache.ignite.internal.processors.query.h2.disk.SortedExternalResult;
-import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
 import org.h2.engine.Session;
 import org.h2.engine.SessionInterface;
 import org.h2.expression.Expression;
@@ -67,8 +63,6 @@ public class H2ManagedLocalResult implements LocalResult {
     /** Reserved memory. */
     private long memReserved;
 
-    private GridKernalContext ctx;
-
     /**
      * Construct a local result object.
      */
@@ -80,26 +74,21 @@ public class H2ManagedLocalResult implements LocalResult {
      * Constructor.
      *
      * @param ses the session
-     * @param memTracker Query memory tracker.
      * @param expressions the expression array
      * @param visibleColCnt the number of visible columns
      */
-    public H2ManagedLocalResult(Session ses, H2MemoryTracker memTracker, Expression[] expressions,
+    public H2ManagedLocalResult(Session ses, Expression[] expressions,
         int visibleColCnt) {
         this.session = ses;
         rows = Utils.newSmallArrayList();
         this.visibleColumnCount = visibleColCnt;
         rowId = -1;
         this.expressions = expressions;
-        this.memTracker = memTracker;
+    }
 
-        if (ses != null && ses.getQueryContext() != null) {
-            QueryContext qctx = (QueryContext)ses.getQueryContext();
-
-            ctx = qctx.context();
-
-            assert memTracker == null || ctx != null; // Context should be set when we track memory.
-        }
+    private void initMemTracker() {
+        if (memTracker == null)
+            memTracker = session.memoryTracker() != null ? session.memoryTracker().createChildTracker() : null;
     }
 
     /**
@@ -121,9 +110,9 @@ public class H2ManagedLocalResult implements LocalResult {
         boolean hasMemory = true;
 
         if (memory < 0)
-            memTracker.released(-memory);
+            memTracker.release(-memory);
         else
-            hasMemory = memTracker.reserved(memory);
+            hasMemory = memTracker.reserve(memory);
 
         memReserved += memory;
 
@@ -263,9 +252,8 @@ public class H2ManagedLocalResult implements LocalResult {
     public void reset() {
         rowId = -1;
         currentRow = null;
-        if (external != null) {
+        if (external != null)
             external.reset();
-        }
     }
 
     /** {@inheritDoc} */
@@ -335,19 +323,20 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     private void createExternalResult(boolean forcePlainResult) {
-        assert ctx != null;
-
+        QueryMemoryManager memMgr = (QueryMemoryManager)session.groupByDataFactory();
         if (forcePlainResult)
-            external = new PlainExternalResult(ctx, memTracker, session);
-        else
+            external = memMgr.createPlainExternalResult(session);
+        else {
             external = distinct || distinctIndexes != null || sort != null ?
-                new SortedExternalResult(ctx, session, distinct, distinctIndexes, visibleColumnCount, sort, memTracker,
-                    rowCount) : new PlainExternalResult(ctx, memTracker, session);
+                memMgr.createSortedExternalResult(session, distinct, distinctIndexes, visibleColumnCount, sort, rowCount)
+                : memMgr.createPlainExternalResult(session);
+        }
     }
 
     /** {@inheritDoc} */
     @Override public void addRow(Value[] values) {
         cloneLobs(values);
+        initMemTracker();
         if (isAnyDistinct()) {
             if (distinctRows != null) {
                 ValueRow array = getDistinctRow(values);
@@ -395,6 +384,8 @@ public class H2ManagedLocalResult implements LocalResult {
             distinctRows.clear();
         }
 
+        memTracker.release(memTracker.reserved());
+
         memReserved = 0;
     }
 
@@ -405,21 +396,21 @@ public class H2ManagedLocalResult implements LocalResult {
 
     /** {@inheritDoc} */
     @Override public void done() {
-        if (external != null) {
+        initMemTracker();
+        if (external != null)
             addRowsToDisk(false);
-        }
+
         else {
-            if (isAnyDistinct()) {
+            if (isAnyDistinct())
                 rows = new ArrayList<>(distinctRows.values());
-            }
+
             if (sort != null && limit != 0 && !limitsWereApplied) {
                 boolean withLimit = limit > 0 && withTiesSortOrder == null;
-                if (offset > 0 || withLimit) {
+
+                if (offset > 0 || withLimit)
                     sort.sort(rows, offset, withLimit ? limit : rows.size());
-                }
-                else {
+                else
                     sort.sort(rows);
-                }
             }
         }
 
@@ -482,32 +473,44 @@ public class H2ManagedLocalResult implements LocalResult {
         }
     }
 
+    /**
+     * @param offset Offset.
+     * @param limit Limit.
+     */
     private void trimExternal(int offset, int limit) {
         ResultExternal temp = external;
         external = null;
+
         temp.reset();
-        while (--offset >= 0) {
+        initMemTracker();
+
+        while (--offset >= 0)
             temp.next();
-        }
+
         Value[] row = null;
+
         while (--limit >= 0) {
             row = temp.next();
             rows.add(row);
+
             if (!hasAvailableMemory(null,null, row))
                 addRowsToDisk(true);
         }
         if (withTiesSortOrder != null && row != null) {
             Value[] expected = row;
+
             while ((row = temp.next()) != null && withTiesSortOrder.compare(expected, row) == 0) {
                 rows.add(row);
                 rowCount++;
+
                 if (!hasAvailableMemory(null,null, row))
                     addRowsToDisk(true);
             }
         }
-        if (external != null) {
+
+        if (external != null)
             addRowsToDisk(true);
-        }
+
         temp.close();
     }
 
@@ -551,7 +554,6 @@ public class H2ManagedLocalResult implements LocalResult {
     public long memoryReserved() {
         return memReserved;
     }
-
 
     /** {@inheritDoc} */
     @Override public void close() {
@@ -628,11 +630,6 @@ public class H2ManagedLocalResult implements LocalResult {
         // ignore
     }
 
-    /** */
-    public long memoryAllocated() {
-        return memReserved;
-    }
-
     /**
      * @return Memory tracker.
      */
@@ -648,6 +645,6 @@ public class H2ManagedLocalResult implements LocalResult {
         rows = null;
 
         if (memTracker != null)
-            memTracker.released(memReserved);
+            memTracker.close();
     }
 }

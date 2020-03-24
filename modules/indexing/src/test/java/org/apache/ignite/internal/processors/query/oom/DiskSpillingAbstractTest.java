@@ -29,16 +29,22 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.commons.io.FileUtils;
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.CacheMode;
+import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.QueryMemoryManager;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -47,7 +53,7 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE;
-import static org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing.DISK_SPILL_DIR;
+import static org.apache.ignite.internal.processors.query.h2.QueryMemoryManager.DISK_SPILL_DIR;
 
 /**
  * Base class for disk spilling tests.
@@ -192,6 +198,8 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
+        FileUtils.cleanDirectory(getWorkDir().toFile());
+
         checkSortOrder = false;
         checkGroupsSpilled = false;
         listAggs = null;
@@ -200,6 +208,8 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         super.afterTest();
+
+        checkMemoryManagerState();
 
         FileUtils.cleanDirectory(getWorkDir().toFile());
     }
@@ -431,7 +441,13 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
 
     /** */
     protected Path getWorkDir() {
-        Path workDir = Paths.get(grid(0).configuration().getWorkDirectory(), DISK_SPILL_DIR);
+        Path workDir;
+        try {
+            workDir = Paths.get(U.defaultWorkDirectory(), DISK_SPILL_DIR);
+        }
+        catch (IgniteCheckedException ex) {
+            throw new IgniteException(ex);
+        }
 
         workDir.toFile().mkdir();
         return workDir;
@@ -458,11 +474,119 @@ public abstract class DiskSpillingAbstractTest extends GridCommonAbstractTest {
      */
     protected void checkMemoryManagerState() {
         for (Ignite node : G.allGrids()) {
-            IgniteH2Indexing h2 = (IgniteH2Indexing)((IgniteEx)node).context().query().getIndexing();
+            QueryMemoryManager memoryManager = memoryManager((IgniteEx)node);
 
-            QueryMemoryManager memoryManager = h2.memoryManager();
-
-            assertEquals(memoryManager.memoryReserved(), 0);
+            assertEquals(0, memoryManager.reserved());
         }
+    }
+
+    /**
+     * @param node Node.
+     * @return Memory manager
+     */
+    protected QueryMemoryManager memoryManager(IgniteEx node) {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
+
+        return h2.memoryManager();
+    }
+
+    /**
+     * @param node Node.
+     * @return Running query manager.
+     */
+    protected RunningQueryManager runningQueryManager(IgniteEx node) {
+        IgniteH2Indexing h2 = (IgniteH2Indexing)node.context().query().getIndexing();
+
+        return h2.runningQueryManager();
+    }
+
+    /** */
+    protected void checkQuery(Result res, String sql) {
+        checkQuery(res, sql, 1, 1);
+    }
+
+    /** */
+    protected void checkQuery(Result res, String sql, int threadNum, int iterations) {
+        WatchService watchSvc = null;
+        WatchKey watchKey = null;
+
+        try {
+            watchSvc = FileSystems.getDefault().newWatchService();
+
+            Path workDir = getWorkDir();
+
+            watchKey = workDir.register(watchSvc, ENTRY_CREATE, ENTRY_DELETE);
+
+            multithreaded(() -> {
+                try {
+                    for (int i = 0; i < iterations; i++) {
+                        IgniteEx grid = fromClient() ? grid("client") : grid(0);
+                        grid.cache(DEFAULT_CACHE_NAME)
+                            .query(new SqlFieldsQuery(sql))
+                            .getAll();
+                    }
+                }
+                catch (Exception e) {
+                    assertFalse("Unexpected exception:" + X.getFullStackTrace(e) ,res.success);
+
+                    IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
+
+                    assertNotNull(sqlEx);
+
+                    if (res == Result.ERROR_GLOBAL_QUOTA)
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Global quota exceeded."));
+                    else
+                        assertTrue("Wrong message:" + X.getFullStackTrace(e), sqlEx.getMessage().contains("Query quota exceeded."));
+                }
+
+            }, threadNum);
+        }
+        catch (Exception e) {
+            fail(X.getFullStackTrace(e));
+        }
+        finally {
+            try {
+                if (watchKey != null) {
+                    List<WatchEvent<?>> dirEvts = watchKey.pollEvents();
+
+                    assertEquals("Disk spilling " +  (res.offload ? "not" : "") + " happened.",
+                        res.offload, !dirEvts.isEmpty());
+                }
+
+                assertWorkDirClean();
+
+                checkMemoryManagerState();
+            }
+            finally {
+                U.closeQuiet(watchSvc);
+            }
+        }
+    }
+
+    /** */
+    public enum Result {
+        /** */
+        SUCCESS_WITH_OFFLOADING(true, true),
+
+        /** */
+        SUCCESS_NO_OFFLOADING(false, true),
+
+        /** */
+        ERROR_GLOBAL_QUOTA(false, false),
+
+        /** */
+        ERROR_QUERY_QUOTA(false, false);
+
+        /** */
+        Result(boolean offload, boolean success) {
+            this.offload = offload;
+            this.success = success;
+        }
+
+        /** */
+        final boolean offload;
+
+        /** */
+        final boolean success;
     }
 }

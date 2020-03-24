@@ -59,7 +59,6 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 @RunWith(Parameterized.class)
 @SuppressWarnings("ZeroLengthArrayAllocation")
 public class GridCacheDataTypesCoverageTest extends AbstractDataTypesCoverageTest {
-
     /** @inheritDoc */
     @Before
     @Override public void init() throws Exception {

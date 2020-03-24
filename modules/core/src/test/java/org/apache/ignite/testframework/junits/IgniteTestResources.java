@@ -90,7 +90,7 @@ public class IgniteTestResources {
     /**
      * @throws IgniteCheckedException If failed.
      */
-    public IgniteTestResources() throws IgniteCheckedException {
+    public IgniteTestResources() {
         if (SensitiveInfoTestLoggerProxy.TEST_SENSITIVE)
             log = new SensitiveInfoTestLoggerProxy(rootLog.getLogger(getClass()), null, null, null);
         else
@@ -106,7 +106,7 @@ public class IgniteTestResources {
     /**
      * @param cfg Ignite configuration
      */
-    public IgniteTestResources(IgniteConfiguration cfg) throws IgniteCheckedException {
+    public IgniteTestResources(IgniteConfiguration cfg) {
         this.cfg = cfg;
         this.log = rootLog.getLogger(getClass());
         this.jmx = prepareMBeanServer();
@@ -117,7 +117,7 @@ public class IgniteTestResources {
     /**
      * @param jmx JMX server.
      */
-    public IgniteTestResources(MBeanServer jmx) throws IgniteCheckedException {
+    public IgniteTestResources(MBeanServer jmx) {
         assert jmx != null;
 
         this.jmx = jmx;
@@ -129,7 +129,7 @@ public class IgniteTestResources {
     /**
      * @param log Logger.
      */
-    public IgniteTestResources(IgniteLogger log) throws IgniteCheckedException {
+    public IgniteTestResources(IgniteLogger log) {
         assert log != null;
 
         this.log = log.getLogger(getClass());

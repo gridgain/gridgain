@@ -38,17 +38,31 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     private static String qry10Percent;
 
     /** {@inheritDoc} */
+    @Override protected boolean startClient() {
+        return true;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected boolean fromClient() {
+        return true;
+    }
+
+    /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         initGrid("0", "50%", false);
 
-        String qry = "SELECT * FROM person p1 JOIN person p2 WHERE p1.id < ";
+        String qry = "SELECT listagg(p1.name), listagg(p1.name), listagg(p1.name), listagg(p1.name), " +
+            "listagg(p1.name), listagg(p1.name), listagg(p1.name), listagg(p1.name), " +
+            "listagg(p1.name), listagg(p1.name), listagg(p1.name), listagg(p1.name) " +
+            "FROM person p1 JOIN person p2 WHERE p1.id < ";
         int param = 0;
 
         // Find queries which consume 10%, 25%, 50% and more than 60% of heap.
         for (int i = PERS_CNT; i >= 0; i -= 100) {
             try {
-                grid(0).cache(DEFAULT_CACHE_NAME)
-                    .query(new SqlFieldsQuery(qry + i))
+                grid("client").cache(DEFAULT_CACHE_NAME)
+                    .query(new SqlFieldsQuery(qry + i )
+                    .setLazy(true))
                     .getAll();
 
                 param = i; // We found first value with memory consumption less than 60%.
@@ -108,9 +122,9 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
         checkQuery(Result.ERROR_GLOBAL_QUOTA, qryMore60Percent);
 
-        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry10Percent, 3);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry10Percent, 3, 1);
 
-        checkQuery(Result.ERROR_GLOBAL_QUOTA, qry25Percent, 3);
+        checkQuery(Result.ERROR_GLOBAL_QUOTA, qry25Percent, 3, 1);
     }
 
     /**
@@ -137,7 +151,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
         checkQuery(Result.SUCCESS_WITH_OFFLOADING, qryMore60Percent);
 
-        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qry50Percent, 2);
+        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qry50Percent, 2, 1);
     }
 
     /**
@@ -155,9 +169,9 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     public void testQueryQuota() throws Exception {
         initGrid("0", "60%", null);
 
-        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 2);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 2, 1);
 
-        checkQuery(Result.ERROR_QUERY_QUOTA, qry50Percent, 2);
+        checkQuery(Result.ERROR_QUERY_QUOTA, qry50Percent, 2, 1);
     }
 
     /**
@@ -174,7 +188,7 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     public void testGlobalQuotaOverride() throws Exception {
         initGrid(null, "1024", null);
 
-        checkQuery(Result.ERROR_QUERY_QUOTA, qry25Percent, 2);
+        checkQuery(Result.ERROR_QUERY_QUOTA, qry25Percent, 2, 1);
     }
 
     /**
@@ -192,9 +206,9 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
     public void testOffloadingWithPerQueryQuota() throws Exception {
         initGrid("0", "60%", true);
 
-        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 1);
+        checkQuery(Result.SUCCESS_NO_OFFLOADING, qry25Percent, 1, 1);
 
-        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qryMore60Percent, 2);
+        checkQuery(Result.SUCCESS_WITH_OFFLOADING, qryMore60Percent, 2, 1);
     }
 
     /**
