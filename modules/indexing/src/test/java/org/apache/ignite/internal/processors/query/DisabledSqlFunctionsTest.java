@@ -47,7 +47,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     /** Keys count. */
     private static final int KEY_CNT = 10;
 
-    /** Local mode . */
+    /** Local mode. */
     @Parameterized.Parameter
     public boolean local;
 
