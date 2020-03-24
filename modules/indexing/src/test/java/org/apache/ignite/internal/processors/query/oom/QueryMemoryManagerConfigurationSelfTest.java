@@ -64,8 +64,11 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
 
         GridQueryMemoryMetricProvider tracker = memMgr.createQueryMemoryTracker(0);
 
-        // Assert tracking is not used by default.
-        assertNull(tracker);
+        // Check defaults for tracker
+        assertTrackerState(tracker,
+            0,
+            DFLT_SQL_QUERY_OFFLOADING_ENABLED,
+            DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
     }
 
     /**
