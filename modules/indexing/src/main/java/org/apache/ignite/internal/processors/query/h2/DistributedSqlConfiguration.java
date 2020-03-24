@@ -17,6 +17,8 @@
 package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
@@ -40,23 +42,24 @@ public class DistributedSqlConfiguration {
         "SQL parameter '%s' was changed from '%s' to '%s'";
 
     /** Default disabled SQL functions. */
-    private static final String DFLT_DISABLED_FUNCS =
-        "FILE_READ, " +
-            "FILE_WRITE, " +
-            "CSVWRITE, " +
-            "CSVREAD, " +
-            "MEMORY_FREE, " +
-            "MEMORY_USED, " +
-            "LOCK_MODE, " +
-            "LINK_SCHEMA, " +
-            "SESSION_ID, " +
-            "CANCEL_SESSION";
+    public static final HashSet<String> DFLT_DISABLED_FUNCS = (HashSet<String>)Arrays.stream(new String[] {
+        "FILE_READ",
+        "FILE_WRITE",
+        "CSVWRITE",
+        "CSVREAD",
+        "MEMORY_FREE",
+        "MEMORY_USED",
+        "LOCK_MODE",
+        "LINK_SCHEMA",
+        "SESSION_ID",
+        "CANCEL_SESSION"
+    }).collect(Collectors.toSet());
 
     /** */
     private final IgniteLogger log;
 
     /** Value of cluster time zone. */
-    private final SimpleDistributedProperty<String> disabledSqlFuncs
+    private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
         = new SimpleDistributedProperty<>("sql.disabledFunctions");
 
     /**
@@ -79,7 +82,10 @@ public class DistributedSqlConfiguration {
                 }
 
                 @Override public void onReadyToWrite() {
-                    setDefaultValue(disabledSqlFuncs, DFLT_DISABLED_FUNCS, log);
+                    setDefaultValue(
+                        disabledSqlFuncs,
+                        DFLT_DISABLED_FUNCS,
+                        log);
                 }
             }
         );
@@ -89,20 +95,17 @@ public class DistributedSqlConfiguration {
      * @return Cluster SQL time zone.
      */
     public Set<String> disabledFunctions() {
-        String str = disabledSqlFuncs.get();
+        assert Objects.nonNull(disabledSqlFuncs.get());
 
-        assert str != null;
-
-        return Arrays.stream(str.split("\\W+")).collect(Collectors.toSet());
+        return disabledSqlFuncs.get();
     }
 
     /**
      * @param disabledFuncs Set of disabled functions.
      * @throws IgniteCheckedException if failed.
      */
-    public GridFutureAdapter<?> disabledFunctions(Set<String> disabledFuncs)
+    public GridFutureAdapter<?> disabledFunctions(HashSet<String> disabledFuncs)
         throws IgniteCheckedException {
-
-        return disabledSqlFuncs.propagateAsync(disabledFuncs.stream().collect(Collectors.joining(", ")));
+        return disabledSqlFuncs.propagateAsync(disabledFuncs);
     }
 }

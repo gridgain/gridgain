@@ -28,7 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Set;
 import javax.cache.CacheException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -528,10 +528,10 @@ public class GridSqlQueryParser {
     private final IdentityHashMap<Object, Object> h2ObjToGridObj = new IdentityHashMap<>();
 
     /** */
-    private final Map<String, Integer> optimizedTableFilterOrder;
+    private Map<String, Integer> optimizedTableFilterOrder;
 
     /** */
-    private final IgniteLogger log;
+    private IgniteLogger log;
 
     /**
      * We have a counter instead of a simple flag, because
@@ -543,17 +543,13 @@ public class GridSqlQueryParser {
     /** Whether this is SELECT FOR UPDATE. */
     private boolean selectForUpdate;
 
+    /** */
+    private Set<String> disabledFuncs;
+
     /**
-     * @param useOptimizedSubqry If we have to find correct order for table filters in FROM clause.
-     *                           Relies on uniqueness of table filter aliases.
-     * @param log Logger.
      */
-    public GridSqlQueryParser(boolean useOptimizedSubqry, IgniteLogger log) {
-        assert Objects.nonNull(log);
-
-        optimizedTableFilterOrder = useOptimizedSubqry ? new HashMap<>() : null;
-
-        this.log = log;
+    private GridSqlQueryParser() {
+        // No-op.
     }
 
     /**
@@ -1923,17 +1919,6 @@ public class GridSqlQueryParser {
     }
 
     /**
-     * Parse query.
-     *
-     * @param prepared Prepared statement.
-     * @param useOptimizedSubqry Whether to user optimized subquery.
-     * @return Parsed query.
-     */
-    public static GridSqlQuery parseQuery(Prepared prepared, boolean useOptimizedSubqry, IgniteLogger log) {
-        return (GridSqlQuery)new GridSqlQueryParser(useOptimizedSubqry, log).parse(prepared);
-    }
-
-    /**
      * @param stmt Prepared statement.
      * @return Parsed AST.
      */
@@ -2268,6 +2253,8 @@ public class GridSqlQueryParser {
 
             GridSqlFunction res = new GridSqlFunction(null, f.getName());
 
+            checkDisabledFunction(res);
+
             if (f.getArgs() != null) {
                 if (f.getFunctionType() == Function.TABLE || f.getFunctionType() == Function.TABLE_DISTINCT) {
                     Column[] cols = FUNC_TBL_COLS.get((TableFunction)f);
@@ -2314,6 +2301,8 @@ public class GridSqlQueryParser {
             FunctionAlias alias = FUNC_ALIAS.get(f);
 
             GridSqlFunction res = new GridSqlFunction(alias.getSchema().getName(), f.getName());
+
+            checkDisabledFunction(res);
 
             if (f.getArgs() != null) {
                 for (Expression arg : f.getArgs())
@@ -2433,6 +2422,16 @@ public class GridSqlQueryParser {
     }
 
     /**
+     * @param f Function t check.
+     */
+    private void checkDisabledFunction(GridSqlFunction f) {
+        if (disabledFuncs.contains(f.name())) {
+            throw new IgniteSQLException("The function is disabled [func=" + f.name() + ']',
+                IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+        }
+    }
+
+    /**
      * @param cond Condition.
      * @param o Object.
      */
@@ -2467,6 +2466,13 @@ public class GridSqlQueryParser {
             throw new IgniteSQLException("ENUM type is not supported " + errMsg,
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
         }
+    }
+
+    /**
+     * @return Parser builder.
+     */
+    public static Builder builder() {
+        return new GridSqlQueryParser().new Builder();
     }
 
     /**
@@ -2551,6 +2557,48 @@ public class GridSqlQueryParser {
          */
         public String remainingSql() {
             return remainingSql;
+        }
+    }
+
+    /**
+     * Parser builder.
+     */
+    public class Builder {
+        /**
+         *
+         */
+        private Builder() {
+            // No-op.
+        }
+
+        /**
+         */
+        public Builder disabledFunctions(@NotNull Set<String> disabledFuncs) {
+            GridSqlQueryParser.this.disabledFuncs = disabledFuncs;
+
+            return this;
+        }
+
+        /**
+         */
+        public Builder logger(@NotNull IgniteLogger log) {
+            GridSqlQueryParser.this.log = log;
+
+            return this;
+        }
+
+        /**
+         */
+        public Builder useOptimizedSubquery(boolean useOptimizedSubqry) {
+            optimizedTableFilterOrder = useOptimizedSubqry ? new HashMap<>() : null;
+
+            return this;
+        }
+
+        /**
+         */
+        public GridSqlQueryParser build() {
+            return GridSqlQueryParser.this;
         }
     }
 }

@@ -3231,4 +3231,11 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (log.isDebugEnabled())
             log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
     }
+
+    /**
+     * @return Distributed configuration.
+     */
+    public DistributedSqlConfiguration distributedConfiguration() {
+        return distrCfg;
+    }
 }
