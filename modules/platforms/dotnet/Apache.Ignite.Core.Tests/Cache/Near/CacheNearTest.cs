@@ -585,11 +585,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(1, cache[1].Bar);
             Assert.AreEqual(1, cache.LocalPeek(1, CachePeekMode.PlatformNear).Bar);
             Assert.AreEqual(1, cache.Count());
-            
-            Thread.Sleep(300);
 
-            Assert.IsFalse(cache.GetAndReplace(1, new Foo(2)).Success); // Use GetAndReplace to bypass near cache.
-            Assert.IsFalse(cache.ContainsKey(1));
+            Foo _;
+            TestUtils.WaitForTrueCondition(() => !cache.TryLocalPeek(1, out _, CachePeekMode.PlatformNear), 3000);
         }
 
         /// <summary>
