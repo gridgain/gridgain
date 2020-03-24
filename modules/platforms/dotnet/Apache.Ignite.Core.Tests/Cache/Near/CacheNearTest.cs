@@ -578,17 +578,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
             var cache = GetCache<int, Foo>(mode)
-                .WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(0.1), null, null));
+                .WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(0.2), null, null));
             
             cache[1] = new Foo(1);
+            
             Assert.AreEqual(1, cache[1].Bar);
             Assert.AreEqual(1, cache.LocalPeek(1, CachePeekMode.PlatformNear).Bar);
+            Assert.AreEqual(1, cache.Count());
             
-            Thread.Sleep(200);
+            Thread.Sleep(300);
 
-            Foo _;
-            Assert.IsFalse(cache.TryLocalPeek(1, out _, CachePeekMode.Primary | CachePeekMode.Near));
-            Assert.False(cache.ContainsKey(1));
+            Assert.IsFalse(cache.GetAndReplace(1, new Foo(2)).Success); // Use GetAndReplace to bypass near cache.
+            Assert.IsFalse(cache.ContainsKey(1));
         }
 
         /// <summary>
