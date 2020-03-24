@@ -20,6 +20,8 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -28,15 +30,20 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
+import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.MvccFeatureChecker;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.util.TestTcpCommunicationSpi;
 import org.junit.Ignore;
@@ -44,10 +51,14 @@ import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
- *
+ * TODO remove IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE after pull.
  */
+@WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
 public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstractTest {
     /** */
     private int backupCnt;
@@ -60,6 +71,7 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        cfg.setActiveOnStart(false);
 
         if (igniteInstanceName.matches(".*\\d")) {
             String idStr = UUID.randomUUID().toString();
@@ -97,12 +109,13 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-5968")
     @Test
     public void testPrimaryAndBackupDead() throws Exception {
         backupCnt = 1;
 
-        startGridsMultiThreaded(4);
+        Ignite crd = startGridsMultiThreaded(4);
+
+        crd.cluster().active(true);
 
         awaitPartitionMapExchange();
 
@@ -137,7 +150,14 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
 
         awaitPartitionMapExchange();
 
-        assert !cache.containsKey(key);
+        try {
+            cache.containsKey(key);
+
+            fail("Cache ops should be forbidden");
+        }
+        catch (Exception e) {
+            assertTrue(X.hasCause(e, CacheInvalidStateException.class));
+        }
 
         final long awaitingTimeoutMs = SF.apply(5 * 60 * 1000);
 
@@ -159,10 +179,10 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
      */
     @Test
     public void testPrimaryDead() throws Exception {
-        startGrid(0);
+        IgniteEx crd = startGrid(0);
         startGrid(1);
 
-        awaitPartitionMapExchange();
+        crd.cluster().active(true);
 
         final PartitionNotFullyLoadedListener lsnr = new PartitionNotFullyLoadedListener();
 
@@ -180,8 +200,6 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
 
         awaitPartitionMapExchange();
 
-        assert !jcache(1).containsKey(key);
-
         GridTestUtils.waitForCondition(new GridAbsPredicate() {
             @Override public boolean apply() {
                 return !lsnr.lostParts.isEmpty();
@@ -196,11 +214,13 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
     public void testStableTopology() throws Exception {
         backupCnt = 1;
 
-        startGrid(1);
+        IgniteEx crd = startGrid(1);
 
-        awaitPartitionMapExchange();
+        crd.cluster().active(true);
 
         startGrid(0);
+
+        resetBaselineTopology();
 
         final PartitionNotFullyLoadedListener lsnr = new PartitionNotFullyLoadedListener();
 
@@ -220,8 +240,6 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
 
         awaitPartitionMapExchange();
 
-        assert jcache(1).containsKey(key);
-
         assert lsnr.lostParts.isEmpty();
     }
 
@@ -233,9 +251,11 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
     public void testMapPartitioned() throws Exception {
         backupCnt = 0;
 
-        startGrid(0);
+        IgniteEx crd = startGrid(0);
 
         startGrid(1);
+
+        crd.cluster().active(true);
 
         final PartitionNotFullyLoadedListener lsnr = new PartitionNotFullyLoadedListener();
 
