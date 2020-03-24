@@ -21,6 +21,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using System.Transactions;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
@@ -1008,6 +1009,43 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Tests that active transaction disables near cache.
+        /// </summary>
+        [Test]
+        public void TestNearCacheBypassedWithinTransaction()
+        {
+            var cfg = new CacheConfiguration(TestUtils.TestName)
+            {
+                AtomicityMode = CacheAtomicityMode.Transactional,
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                NearConfiguration = new NearCacheConfiguration()
+            };
+
+            var cache = _grid.CreateCache<int, Foo>(cfg);
+
+            cache[1] = new Foo(2);
+            var foo = cache[1];
+            
+            Assert.AreEqual(2, foo.Bar);
+            Assert.AreSame(foo, cache[1]);
+
+            using (_grid.GetTransactions().TxStart())
+            {
+                Assert.AreNotSame(foo, cache[1]);
+            }
+            
+            Assert.AreSame(foo, cache[1]);
+
+            using (new TransactionScope())
+            {
+                cache[2] = new Foo(3);
+                Assert.AreNotSame(foo, cache[1]);
+            }
+            
+            Assert.AreSame(foo, cache[1]);
+        } 
+
+        /// <summary>
         /// Tests near cache misconfiguration / type mismatch.
         /// </summary>
         [Test]
@@ -1034,7 +1072,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Func<ListLogger.Entry> getEntry = () =>
                 _logger.Entries.FirstOrDefault(e => e.Category != null && e.Category.Contains("processors.cache"));
 
-            TestUtils.WaitForTrueCondition(() => getEntry() != null);
+            TestUtils.WaitForTrueCondition(() => getEntry() != null, 3000);
 
 #if NETCOREAPP
             Assert.AreEqual(
