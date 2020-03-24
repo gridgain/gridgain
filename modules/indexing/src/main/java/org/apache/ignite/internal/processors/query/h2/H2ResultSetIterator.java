@@ -32,6 +32,7 @@ import org.apache.ignite.internal.processors.query.h2.opt.GridH2ValueCacheObject
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridIteratorAdapter;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.h2.api.ErrorCode;
 import org.h2.engine.Session;
@@ -165,6 +166,9 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
                 if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
                     throw new QueryCancelledException();
 
+                if (canceled && X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class))
+                    throw new QueryCancelledException();
+
                 throw new IgniteSQLException(e);
             }
 
@@ -186,6 +190,9 @@ public abstract class H2ResultSetIterator<T> extends GridIteratorAdapter<T> impl
                         throw (IgniteSQLException)e.getCause();
 
                     if (e.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                        throw new QueryCancelledException();
+
+                    if (canceled && X.hasCause(e, QueryMemoryTracker.TrackerWasClosedException.class))
                         throw new QueryCancelledException();
 
                     throw new IgniteSQLException(e);
