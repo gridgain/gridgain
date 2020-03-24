@@ -130,7 +130,8 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, MEMORY_FREE()");
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, MEMORY_USED()");
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, LOCK_MODE()");
-        checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')");
+        checkSqlWithDisabledFunction(
+            "INSERT INTO TEST (ID, VAL) SELECT 1, LINK_SCHEMA('TEST2', '', 'jdbc:h2:./test', 'sa', 'sa', 'PUBLIC')");
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, SESSION_ID()");
         checkSqlWithDisabledFunction("INSERT INTO TEST (ID, VAL) SELECT 1, CANCEL_SESSION(1)");
     }
@@ -251,7 +252,7 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
      * @param funcs Disabled SQL functions.
      * @throws IgniteCheckedException On error.
      */
-    private void setDisabledSqlFunction(String ... funcs) throws IgniteCheckedException {
+    private void setDisabledSqlFunction(String... funcs) throws IgniteCheckedException {
         HashSet<String> set = new HashSet<>(Arrays.stream(funcs).collect(Collectors.toSet()));
 
         ((IgniteH2Indexing)grid("srv").context().query().getIndexing())
