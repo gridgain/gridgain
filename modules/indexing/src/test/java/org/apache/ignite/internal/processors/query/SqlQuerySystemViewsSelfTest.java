@@ -91,13 +91,13 @@ public class SqlQuerySystemViewsSelfTest extends AbstractIndexingCommonTest {
     /** */
     private static final String SELECT_RUNNING_QUERIES = "SELECT " + Arrays.stream(RunningQueriesViewField.values())
         .map(Enum::name).collect(Collectors.joining(", ")) + " FROM " +
-        QueryUtils.SCHEMA_SYS + ".LOCAL_SQL_RUNNING_QUERIES ORDER BY START_TIME";
+        QueryUtils.sysSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES ORDER BY START_TIME";
 
     /**
      * @return System schema name.
      */
     private String systemSchemaName() {
-        return QueryUtils.SCHEMA_SYS;
+        return QueryUtils.sysSchemaName();
     }
 
     /** {@inheritDoc} */
