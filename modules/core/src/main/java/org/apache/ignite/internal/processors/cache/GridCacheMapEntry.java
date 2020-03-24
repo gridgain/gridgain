@@ -4121,6 +4121,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
 
+        updatePlatformNearCache(null, null);
+
         return rmvd;
     }
 
@@ -5873,6 +5875,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
 
+            entry.updatePlatformNearCache(null, null);
+
             return null;
         }
     }
@@ -6245,6 +6249,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
 
             cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
+
+            entry.updatePlatformNearCache(null, null);
 
             return true;
         }
