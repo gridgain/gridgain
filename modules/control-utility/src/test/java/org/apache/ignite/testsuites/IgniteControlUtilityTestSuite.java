@@ -57,6 +57,7 @@ import org.apache.ignite.util.GridCommandHandlerSslTest;
 import org.apache.ignite.util.GridCommandHandlerTest;
 import org.apache.ignite.util.GridCommandHandlerTracingConfigurationTest;
 import org.apache.ignite.util.GridCommandHandlerWithSSLTest;
+import org.apache.ignite.util.KillCommandsCommandShTest;
 import org.apache.ignite.util.MetricCommandTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -119,7 +120,9 @@ import org.junit.runners.Suite;
 
     GridCommandHandlerCheckpointingTest.class,
 
-    GridCommandHandlerResetLostPartitionTest.class
+    GridCommandHandlerResetLostPartitionTest.class,
+
+    KillCommandsCommandShTest.class,
 })
 public class IgniteControlUtilityTestSuite {
 }

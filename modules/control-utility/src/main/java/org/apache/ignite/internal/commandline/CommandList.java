@@ -23,6 +23,7 @@ import org.apache.ignite.internal.commandline.encryption.EncryptionCommands;
 import org.apache.ignite.internal.commandline.meta.MetadataCommand;
 import org.apache.ignite.internal.commandline.metric.MetricCommand;
 import org.apache.ignite.internal.commandline.property.PropertyCommand;
+import org.apache.ignite.internal.commandline.query.KillCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
 
 /**
@@ -96,7 +97,10 @@ public enum CommandList {
     DEFRAGMENTATION("--defragmentation", new DefragmentationCommand()),
 
     /** Start checkpoint on a cluster */
-    CHECKPOINT("--checkpoint", new CheckpointCommand());
+    CHECKPOINT("--checkpoint", new CheckpointCommand()),
+
+    /** Kill command. */
+    KILL("--kill", new KillCommand());
 
     /** Private values copy so there's no need in cloning it every time. */
     private static final CommandList[] VALUES = CommandList.values();
