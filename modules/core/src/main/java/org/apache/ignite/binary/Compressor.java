@@ -16,8 +16,19 @@
 
 package org.apache.ignite.binary;
 
+/**
+ * Specific compression engine implementation.
+ */
 public interface Compressor {
+    /**
+     * @param arr Array of uncompressed data.
+     * @return Array of compressed data, or {@code null}.
+     */
     byte[] tryCompress(byte[] arr);
 
+    /**
+     * @param arr Array of compressed data.
+     * @return Array of original data,.
+     */
     byte[] decompress(byte[] bytes);
 }
