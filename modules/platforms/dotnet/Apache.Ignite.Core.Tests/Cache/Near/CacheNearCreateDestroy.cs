@@ -215,6 +215,22 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Tests that platform near cache can be started on a given client node only, avoiding server near cache.
+        /// </summary>
+        [Test]
+        public void TestClientOnlyPlatformNearCache()
+        {
+            // TODO: More tests with Create/GetOrCreate, combinations on Java and .NET configs.
+            var cache = _grid.CreateCache<int, int>(TestUtils.TestName);
+            var clientCache = _client.CreateNearCache<int, int>(cache.Name, new NearCacheConfiguration(), 
+                new PlatformNearCacheConfiguration());
+            
+            cache[1] = 2;
+            Assert.AreEqual(2, clientCache[1]);
+            Assert.AreEqual(1, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+        }
+        
+        /// <summary>
         /// Asserts the cache is near.
         /// </summary>
         private void AssertCacheIsNear(ICache<int, int> cache)
