@@ -27,6 +27,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Eviction;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Events;
+    using Apache.Ignite.Core.Impl;
+    using Apache.Ignite.Core.Impl.Binary;
+    using Apache.Ignite.Core.Impl.Cache;
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
@@ -498,7 +501,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestScanQueryFilterUsesValueFromNearCache(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
-            // TODO: Check use case when filter is stored locally in handle registry.
             var cache = GetCache<int, Foo>(mode);
             
             const int count = 100;
@@ -509,6 +511,34 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 CacheName = cache.Name
             };
+            
+            var res = cache.Query(new ScanQuery<int, Foo>(filter));
+            
+            Assert.AreEqual(count, res.Count());
+        }
+
+        [Test]
+        public void TestScanQueryFilterUsesFallbackValueWhenNotInNearCache(
+            [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
+        {
+            var cache = GetCache<int, Foo>(mode);
+            
+            const int count = 100;
+            var data = Enumerable.Range(1, count).ToDictionary(x=> x, x => new Foo(x));
+            
+            cache.PutAll(data);
+
+            // Filter will check that value does not come from native near cache.
+            var filter = new ScanQueryNoNearCacheFilter
+            {
+                CacheName = cache.Name
+            };
+            
+            // Clear near cache using internal API.
+            foreach (var ignite in Ignition.GetAll())
+            {
+                ((Ignite) ignite).NearCacheManager.TryGetNearCache(BinaryUtils.GetCacheId(cache.Name)).Clear();
+            }
             
             var res = cache.Query(new ScanQuery<int, Foo>(filter));
             
