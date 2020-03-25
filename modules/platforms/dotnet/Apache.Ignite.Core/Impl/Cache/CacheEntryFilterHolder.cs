@@ -159,9 +159,12 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                 var filterHolder = grid.Marshaller.Unmarshal<CacheEntryFilterHolder>(stream);
 
-                var cacheId = stream.ReadInt();
-                filterHolder._nearCache = grid.NearCacheManager.TryGetNearCache(cacheId);
-                
+                if (stream.ReadBool())
+                {
+                    var cacheId = stream.ReadInt();
+                    filterHolder._nearCache = grid.NearCacheManager.TryGetNearCache(cacheId);
+                }
+
                 return filterHolder;
             }
         }

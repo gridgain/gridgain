@@ -16,12 +16,15 @@
 
 package org.apache.ignite.internal.processors.platform.cache;
 
+import org.apache.ignite.Ignite;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractPredicate;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
 import org.apache.ignite.internal.processors.platform.memory.PlatformMemory;
 import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStream;
+import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
+import org.apache.ignite.resources.IgniteInstanceResource;
 
 /**
  * Interop filter. Delegates apply to native platform.
@@ -102,6 +105,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
     /** {@inheritDoc} */
     @SuppressWarnings("rawtypes")
     @Override public void cacheContext(GridCacheContext cctx) {
+        // This initializer is called for Scan Query filters, which can use Platform Near cache.
         if (ptr != 0)
             return;
 
@@ -110,6 +114,29 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
         platfromNearEnabled = cctx.config().getPlatformNearConfiguration() != null &&
                 ctx.isNativeNearCacheSupported();
 
+        init(platfromNearEnabled ? cctx.cacheId() : null);
+    }
+
+    /**
+     * @param ignite Ignite instance.
+     */
+    @IgniteInstanceResource
+    public void setIgniteInstance(Ignite ignite) {
+        // This initializer is called for Cache Store filters, which can not use Platform Near Cache.
+        if (ptr != 0)
+            return;
+
+        ctx = PlatformUtils.platformContext(ignite);
+
+        init(null);
+    }
+
+    /**
+     * Initializes this instance.
+     *
+     * @param cacheId Optional cache id for Platform Near cache.
+     */
+    private void init(Integer cacheId) {
         try (PlatformMemory mem = ctx.memory().allocate()) {
             PlatformOutputStream out = mem.output();
 
@@ -117,7 +144,12 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
             writer.writeObject(pred);
 
-            writer.writeInt(cctx.cacheId());
+            if (cacheId != null) {
+                writer.writeBoolean(true);
+                writer.writeInt(cacheId);
+            } else {
+                writer.writeBoolean(false);
+            }
 
             out.synchronize();
 
