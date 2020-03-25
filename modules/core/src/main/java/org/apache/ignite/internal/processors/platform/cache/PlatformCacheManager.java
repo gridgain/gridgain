@@ -25,6 +25,7 @@ import org.apache.ignite.lang.IgniteFuture;
 /**
  * Platform cache manager - delegates functionality to native platforms (.NET, C++, ...).
  */
+@SuppressWarnings("rawtypes")
 public class PlatformCacheManager implements GridCacheManager {
     /** */
     private final PlatformCallbackGateway gate;
@@ -53,9 +54,12 @@ public class PlatformCacheManager implements GridCacheManager {
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel, boolean destroy) {
-        gate.onCacheStopped(cctx.cacheId());
+        GridCacheContext ctx = cctx;
 
-        cctx = null;
+        if (ctx != null) {
+            gate.onCacheStopped(cctx.cacheId());
+            cctx = null;
+        }
     }
 
     /** {@inheritDoc} */
