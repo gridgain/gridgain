@@ -1067,12 +1067,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             // Put Foo, but near cache expects Guid.
             clientCache.GetAndPut(1, new Foo(2));
+            
+            // Entry is not in near cache.
+            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+
+            // Ignite cache is updated.
+            Assert.AreEqual(2, serverCache[1].Bar);
+            Assert.AreEqual(2, clientCache[1].Bar);
 
             // Error is logged.
             Func<ListLogger.Entry> getEntry = () =>
                 _logger.Entries.FirstOrDefault(e => e.Category != null && e.Category.Contains("processors.cache"));
 
-            TestUtils.WaitForTrueCondition(() => getEntry() != null, 3000);
+            var message = string.Join(" | ", _logger.Entries.Select(e => e.Message));
+            TestUtils.WaitForTrueCondition(() => getEntry() != null, 3000, message);
 
 #if NETCOREAPP
             Assert.AreEqual(
@@ -1084,13 +1092,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 "Failed to update Platform Near Cache: class o.a.i.IgniteException: Specified cast is not valid.",
                 getEntry().Message);
 #endif
-
-            // Entry is not in near cache.
-            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
-
-            // Ignite cache updated.
-            Assert.AreEqual(2, serverCache[1].Bar);
-            Assert.AreEqual(2, clientCache[1].Bar);
         }
 
         /// <summary>
