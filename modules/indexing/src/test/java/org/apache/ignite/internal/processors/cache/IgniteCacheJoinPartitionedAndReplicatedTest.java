@@ -44,7 +44,6 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 /**
  *
  */
-@Ignore("https://issues.apache.org/jira/browse/IGNITE-5016")
 public class IgniteCacheJoinPartitionedAndReplicatedTest extends GridCommonAbstractTest {
     /** */
     private static final String PERSON_CACHE = "person";
@@ -163,7 +162,6 @@ public class IgniteCacheJoinPartitionedAndReplicatedTest extends GridCommonAbstr
     /**
      * @throws Exception If failed.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-5016")
     @Test
     public void testJoin() throws Exception {
         Ignite client = grid(2);
@@ -216,7 +214,6 @@ public class IgniteCacheJoinPartitionedAndReplicatedTest extends GridCommonAbstr
 
     /**
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-5016")
     @Test
     public void testReplicatedToPartitionedLeftJoin() {
         Ignite client = grid(2);

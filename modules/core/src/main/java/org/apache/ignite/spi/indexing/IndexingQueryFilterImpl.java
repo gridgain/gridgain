@@ -37,15 +37,19 @@ public class IndexingQueryFilterImpl implements IndexingQueryFilter {
     /** Partitions. */
     private final HashSet<Integer> parts;
 
+    /** Treat replicated as partitioned - only iterate over primary in replicated caches. */
+    private final boolean treatReplicatedAsPartitioned;
+
     /**
      * Constructor.
      *
      * @param ctx Kernal context.
      * @param topVer Topology version.
      * @param partsArr Partitions array.
+     * @param treatReplicatedAsPartitioned If true, only primary partitions of replicated caches will be used.
      */
     public IndexingQueryFilterImpl(GridKernalContext ctx, @Nullable AffinityTopologyVersion topVer,
-        @Nullable int[] partsArr) {
+        @Nullable int[] partsArr, boolean treatReplicatedAsPartitioned) {
         this.ctx = ctx;
 
         this.topVer = topVer != null ? topVer : AffinityTopologyVersion.NONE;
@@ -58,6 +62,20 @@ public class IndexingQueryFilterImpl implements IndexingQueryFilter {
             for (int part : partsArr)
                 parts.add(part);
         }
+
+        this.treatReplicatedAsPartitioned = treatReplicatedAsPartitioned;
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param ctx Kernal context.
+     * @param topVer Topology version.
+     * @param partsArr Partitions array.
+     */
+    public IndexingQueryFilterImpl(GridKernalContext ctx, @Nullable AffinityTopologyVersion topVer,
+            @Nullable int[] partsArr) {
+        this(ctx, topVer, partsArr, false);
     }
 
     /** {@inheritDoc} */
@@ -65,7 +83,7 @@ public class IndexingQueryFilterImpl implements IndexingQueryFilter {
         final GridCacheAdapter<Object, Object> cache = ctx.cache().internalCache(cacheName);
 
         // REPLICATED -> nothing to filter (explicit partitions are not supported).
-        if (cache.context().isReplicated())
+        if (cache.context().isReplicated() && !treatReplicatedAsPartitioned)
             return null;
 
         // No backups and explicit partitions -> nothing to filter.
