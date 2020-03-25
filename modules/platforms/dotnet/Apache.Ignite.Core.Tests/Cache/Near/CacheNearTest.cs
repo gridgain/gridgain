@@ -1094,6 +1094,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// <see cref="ICache{TK,TV}.LoadCache"/> uses same filter mechanism as <see cref="ScanQuery{TK,TV}"/>.
+        /// Near cache should never be used for cache store load filters.  
+        /// </summary>
+        [Test]
+        public void TestCacheStoreLoadFilterWithNearCache()
+        {
+            Assert.Fail("TODO");
+        }
+
+        /// <summary>
         /// Gets the cache instance.
         /// </summary>
         private ICache<TK, TV> GetCache<TK, TV>(CacheTestMode mode, string name = CacheName)
