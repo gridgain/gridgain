@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.UUID;
@@ -110,7 +111,6 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         rebalanceMode = CacheRebalanceMode.SYNC;
         clientNodes = false;
-        backups = 1;
 
         nodeLeavesRebalanceCompletes();
     }
@@ -193,7 +193,6 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         rebalanceMode = CacheRebalanceMode.ASYNC;
         clientNodes = false;
-        backups = 1;
 
         for (int n = 1; n <= 3; n++) {
             startGrids(1);
@@ -410,6 +409,51 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
+    public void testThatItsNotPossibleToStopLastNodeInBaselineIfThereAreStilNonBaselineNodesInCluster()
+        throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backups = 1;
+
+        startGrids(1);
+
+        grid(0).cluster().baselineAutoAdjustTimeout(0);
+
+        grid(0).cluster().baselineAutoAdjustEnabled(false);
+
+        grid(0).cluster().active(true);
+
+        for (int i = 0; i < cacheSize(); i++)
+            grid(0).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
+
+        startGrid(1);
+
+        final CountDownLatch latch = new CountDownLatch(1);
+
+        Thread stopper = new Thread(() -> {
+            grid(1).close();
+            latch.countDown();
+        }, "Stopper");
+
+        stopper.start();
+
+        assertFalse(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
+
+        grid(0).cluster().setBaselineTopology(Arrays.asList(grid(0).localNode(), grid(1).localNode()));
+
+        assertTrue(GridTestUtils.waitForCondition(() -> latch.getCount() == 0, STOP_TIMEOUT_LIMIT));
+
+        // Data shouldn't be lost.
+        for (int i = 0; i < cacheSize(); i++)
+            assertEquals(i, grid(0).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+    }
+
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
     public void testClientNodeShouldStopImmediately() throws Exception {
         cacheMode = CacheMode.PARTITIONED;
         atomicityMode = CacheAtomicityMode.ATOMIC;
@@ -452,17 +496,126 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         backups = 1;
 
-        startGrids(2);
+        int nodesCnt = 4;
+
+        startGrids(nodesCnt);
 
         grid(0).cluster().active(true);
 
         for (int i = 0; i < cacheSize(); i++)
             grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
 
-        for (int i = 0; i < 2; i++) {
-            grid(i).close();
+        for (int rollingRestartCycles = 0; rollingRestartCycles < 2; rollingRestartCycles++) {
+            for (int i = 0; i < nodesCnt; i++) {
+                grid(i).close();
 
+                startGrid(i);
+            }
+        }
+
+        // Data shouldn't be lost.
+        for (int i = 0; i < cacheSize(); i++)
+            assertEquals(i, grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingRestartEmulationInReadOnlyCluster() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backups = 1;
+
+        int nodesCnt = 4;
+
+        startGrids(nodesCnt);
+
+        grid(0).cluster().active(true);
+
+        for (int i = 0; i < cacheSize(); i++)
+            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
+
+        ignite(0).cluster().readOnly(true);
+
+        for (int rollingRestartCycles = 0; rollingRestartCycles < 2; rollingRestartCycles++) {
+            for (int i = 0; i < nodesCnt; i++) {
+                grid(i).close();
+
+                startGrid(i);
+            }
+        }
+
+        // Data shouldn't be lost.
+        for (int i = 0; i < cacheSize(); i++)
+            assertEquals(i, grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingRestartEmulationWithOnlyHalfNodesInBaseline() throws Exception {
+        cacheMode = CacheMode.PARTITIONED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        backups = 1;
+
+        int nodesCnt = 6;
+
+        startGrids(nodesCnt/2);
+
+        ignite(0).cluster().baselineAutoAdjustEnabled(false);
+
+        grid(0).cluster().active(true);
+
+        for (int i = nodesCnt / 2; i < nodesCnt; i++)
             startGrid(i);
+
+        for (int i = 0; i < cacheSize(); i++)
+            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
+
+        for (int rollingRestartCycles = 0; rollingRestartCycles < 2; rollingRestartCycles++) {
+            for (int i = 0; i < nodesCnt; i++) {
+                grid(i).close();
+
+                startGrid(i);
+            }
+        }
+
+        assertEquals(3, ignite(0).cluster().currentBaselineTopology().size());
+
+        // Data shouldn't be lost.
+        for (int i = 0; i < cacheSize(); i++)
+            assertEquals(i, grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testRollingRestartEmulationReplicatedCache() throws Exception {
+        cacheMode = CacheMode.REPLICATED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        rebalanceMode = CacheRebalanceMode.SYNC;
+
+        int nodesCnt = 3;
+
+        startGrids(nodesCnt);
+
+        grid(0).cluster().active(true);
+
+        for (int i = 0; i < cacheSize(); i++)
+            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
+
+        for (int rollingRestartCycles = 0; rollingRestartCycles < 2; rollingRestartCycles++) {
+            for (int i = 0; i < nodesCnt; i++) {
+                grid(i).close();
+
+                startGrid(i);
+            }
         }
 
         // Data shouldn't be lost.
@@ -495,7 +648,39 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
 
         startGrid(2);
 
-        assertTrue(waitForCondition(() -> grid(2).cluster().nodes().size() == 1, 10_000));
+        assertTrue(waitForCondition(() -> grid(2).cluster().nodes().size() == 1, STOP_TIMEOUT_LIMIT));
+
+        // Data shouldn't be lost.
+        for (int i = 0; i < cacheSize(); i++)
+            assertEquals(i, grid(2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testSimultaneousSafeShutdownWithReplicatedCache() throws Exception {
+        cacheMode = CacheMode.REPLICATED;
+        atomicityMode = CacheAtomicityMode.ATOMIC;
+        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
+        rebalanceMode = CacheRebalanceMode.SYNC;
+
+        startGrids(2);
+
+        grid(0).cluster().active(true);
+
+        for (int i = 0; i < cacheSize(); i++)
+            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
+
+        GridTestUtils.runAsync(() -> grid(0).close());
+
+        GridTestUtils.runAsync(() -> grid(1).close());
+
+        Thread.sleep(STOP_TIMEOUT_LIMIT);
+
+        startGrid(2);
+
+        assertTrue(waitForCondition(() -> grid(2).cluster().nodes().size() == 1, STOP_TIMEOUT_LIMIT));
 
         // Data shouldn't be lost.
         for (int i = 0; i < cacheSize(); i++)
