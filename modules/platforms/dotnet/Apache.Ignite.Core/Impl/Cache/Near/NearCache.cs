@@ -66,6 +66,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             get { return _stopped; }
         }
 
+        /** <inheritdoc /> */
         public bool TryGetValue<TKey, TVal>(TKey key, out TVal val)
         {
             if (_stopped)

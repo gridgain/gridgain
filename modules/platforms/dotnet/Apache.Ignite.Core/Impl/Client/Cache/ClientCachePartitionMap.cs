@@ -31,6 +31,9 @@ namespace Apache.Ignite.Core.Impl.Client.Cache
         /** Key configuration. */
         private readonly IDictionary<int, int> _keyConfiguration;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="ClientCachePartitionMap"/>.
+        /// </summary>
         public ClientCachePartitionMap(IList<Guid> partitionNodeIds,
             IDictionary<int, int> keyConfiguration)
         {

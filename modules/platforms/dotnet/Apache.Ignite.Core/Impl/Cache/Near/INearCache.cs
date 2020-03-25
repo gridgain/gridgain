@@ -48,6 +48,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         void Stop();
 
+        /// <summary>
+        /// Gets a value by key.
+        /// </summary>
         bool TryGetValue<TKey, TVal>(TKey key, out TVal val);
         
         /// <summary>

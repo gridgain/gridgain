@@ -36,6 +36,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
          * Saves memory as well, because sizeof(AffinityTopologyVersion) > sizeof(void*) */
         private object _version;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="NearCacheEntry{T}"/> class.
+        /// </summary>
         public NearCacheEntry(T value, object version, int partition)
         {
             Debug.Assert(version != null);
@@ -45,16 +48,26 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             _partition = partition;
         }
 
+        /// <summary>
+        /// Gets the value.
+        /// </summary>
         public T Value
         {
             get { return _value; }
         }
 
+        /// <summary>
+        /// Gets the version.
+        /// Returns boxed <see cref="Apache.Ignite.Core.Cache.Affinity.AffinityTopologyVersion"/>.
+        /// </summary>
         public object Version
         {
             get { return Interlocked.CompareExchange(ref _version, null, null); }
         }
 
+        /// <summary>
+        /// Gets the partition where this cache entry is assigned to.
+        /// </summary>
         public int Partition
         {
             get { return _partition; }
