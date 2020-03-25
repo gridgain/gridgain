@@ -333,7 +333,12 @@ public class JdbcThinTcpIo {
 
             String err = reader.readString();
 
-            int status = reader.readInt();
+            int status = ClientStatus.FAILED;
+            try {
+                status = reader.readInt();
+            }
+            catch (Exception ignored) {
+            }
 
             ClientListenerProtocolVersion srvProtoVer0 = ClientListenerProtocolVersion.create(maj, min, maintenance);
 
