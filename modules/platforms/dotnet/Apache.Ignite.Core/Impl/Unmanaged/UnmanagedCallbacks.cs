@@ -371,7 +371,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             using (PlatformMemoryStream stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
-                var t = _ignite.HandleRegistry.Get<CacheEntryFilterHolder>(stream.ReadLong());
+                var t = _ignite.HandleRegistry.Get<CacheEntryFilterHolder>(stream.ReadLong(), true);
 
                 return t.Invoke(stream);
             }

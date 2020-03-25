@@ -130,6 +130,15 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Query\Linq\CacheLinqTest.Strings.cs" Link="Cache\Query\Linq\CacheLinqTest.Strings.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Query\Linq\CacheLinqTestSimpleName.cs" Link="Cache\Query\Linq\CacheLinqTestSimpleName.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Query\Linq\CacheLinqTestSqlEscapeAll.cs" Link="Cache\Query\Linq\CacheLinqTestSqlEscapeAll.cs" />
+    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Store\CacheStoreTest.cs">
+      <Link>Cache\Store\CacheStoreTest.cs</Link>
+    </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Store\CacheStoreTestCodeConfig.cs">
+      <Link>Cache\Store\CacheStoreTestCodeConfig.cs</Link>
+    </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Store\CacheTestStore.cs">
+      <Link>Cache\Store\CacheTestStore.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\TestReferenceObject.cs" Link="Cache\TestReferenceObject.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Client\Cache\DynamicFieldSetTest.cs">
       <Link>ThinClient\Cache\DynamicFieldSetTest.cs</Link>
@@ -272,6 +281,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\Apache.Ignite.Core.Tests\Config\Compute\compute-grid-custom-executor.xml" Link="Config\Compute\compute-grid-custom-executor.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\Apache.Ignite.Core.Tests\Config\native-client-test-cache-store.xml">
+      <Link>Config\native-client-test-cache-store.xml</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\Apache.Ignite.Core.Tests\Config\native-client-test-cache.xml" Link="Config\native-client-test-cache.xml">
