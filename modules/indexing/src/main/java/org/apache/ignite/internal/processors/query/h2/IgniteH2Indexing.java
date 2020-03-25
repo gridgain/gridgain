@@ -315,6 +315,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Query message listener. */
     private GridMessageListener qryLsnr;
 
+    /** Functions manager. */
+    private FunctionsManager funcMgr;
+
     /**
      * @return Kernal context.
      */
@@ -2183,6 +2186,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         registerAggregateFunctions();
 
         distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), ctx, log);
+
+        funcMgr = new FunctionsManager(this, distrCfg);
     }
 
     /** {@inheritDoc} */

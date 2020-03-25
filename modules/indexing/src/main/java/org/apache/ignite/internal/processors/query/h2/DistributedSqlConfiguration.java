@@ -18,12 +18,12 @@ package org.apache.ignite.internal.processors.query.h2;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
@@ -95,9 +95,9 @@ public class DistributedSqlConfiguration {
      * @return Cluster SQL time zone.
      */
     public Set<String> disabledFunctions() {
-        assert Objects.nonNull(disabledSqlFuncs.get());
+        Set<String> ret = disabledSqlFuncs.get();
 
-        return disabledSqlFuncs.get();
+        return ret != null ? ret : DFLT_DISABLED_FUNCS;
     }
 
     /**
@@ -107,5 +107,10 @@ public class DistributedSqlConfiguration {
     public GridFutureAdapter<?> disabledFunctions(HashSet<String> disabledFuncs)
         throws IgniteCheckedException {
         return disabledSqlFuncs.propagateAsync(disabledFuncs);
+    }
+
+    /** */
+    public void listenDisabledFunctions(DistributePropertyListener<? super HashSet<String>> lsnr) {
+        disabledSqlFuncs.addListener(lsnr);
     }
 }

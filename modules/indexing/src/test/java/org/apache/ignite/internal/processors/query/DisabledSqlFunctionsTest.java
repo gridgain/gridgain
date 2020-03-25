@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -23,6 +26,8 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteCheckedException;
@@ -34,7 +39,6 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,6 +48,9 @@ import org.junit.runners.Parameterized;
  */
 @RunWith(Parameterized.class)
 public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
+    /** Pattern func not found. */
+    private static final Pattern PTRN_FUNC_NOT_FOUND = Pattern.compile("Failed to parse query. Function \"\\w+\" not found");
+
     /** Keys count. */
     private static final int KEY_CNT = 10;
 
@@ -77,6 +84,12 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
+
+        FileSystem fs = FileSystems.getDefault();
+
+        Files.deleteIfExists(fs.getPath("test.dat"));
+        Files.deleteIfExists(fs.getPath("test.csv"));
+        Files.deleteIfExists(fs.getPath("test.mv.db"));
 
         super.afterTest();
     }
@@ -231,8 +244,21 @@ public class DisabledSqlFunctionsTest extends AbstractIndexingCommonTest {
     /**
      */
     private void checkSqlWithDisabledFunction(final String sql, final Object ... args) {
-        GridTestUtils.assertThrows(log, () ->
-            sql(sql, args).getAll(), IgniteSQLException.class, "The function is disabled");
+        try {
+            sql(sql, args).getAll();
+
+            fail("Exception must be thrown");
+        }
+        catch (IgniteSQLException e) {
+            Matcher m = PTRN_FUNC_NOT_FOUND.matcher(e.getMessage());
+
+            assertTrue("Unexpected error message: " + e.getMessage(), m.find());
+        }
+        catch (Throwable e) {
+            log.error("Unexpected exception", e);
+
+            fail("Unexpected exception");
+        }
     }
 
     /**
