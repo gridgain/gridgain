@@ -106,6 +106,9 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\ScanQueryNoNearCacheFilter.cs">
       <Link>Cache\Near\ScanQueryNoNearCacheFilter.cs</Link>
     </Compile>
+    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\Near\StoreNoNearCacheFilter.cs">
+      <Link>Cache\Near\StoreNoNearCacheFilter.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\NonSerializableCacheEntryProcessor.cs" Link="Cache\NonSerializableCacheEntryProcessor.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\NonSerializableException.cs" Link="Cache\NonSerializableException.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\PersistenceTest.cs" Link="Cache\PersistenceTest.cs" />

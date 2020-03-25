@@ -25,8 +25,15 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     /// </summary>
     public class FailingCacheStore : CacheStoreAdapter<int, Foo>, IFactory<ICacheStore<int, Foo>>
     {
-        /** */
+        /// <summary>
+        /// Value that causes failure.
+        /// </summary>
         public const int FailingValue = -1;
+        
+        /// <summary>
+        /// Value to be loaded from store.
+        /// </summary>
+        public static readonly Foo Foo = new Foo(768);
 
         /** <inheritdoc /> */
         public ICacheStore<int, Foo> CreateInstance()
@@ -38,6 +45,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public override Foo Load(int key)
         {
             return null;
+        }
+
+        /** <inheritdoc /> */
+        public override void LoadCache(Action<int, Foo> act, params object[] args)
+        {
+            act(Foo.Bar, Foo);
         }
 
         /** <inheritdoc /> */

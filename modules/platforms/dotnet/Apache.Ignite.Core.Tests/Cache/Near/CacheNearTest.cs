@@ -33,6 +33,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Log;
+    using Apache.Ignite.Core.Tests.Cache.Query;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
@@ -1088,9 +1089,32 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Near cache should never be used for cache store load filters.  
         /// </summary>
         [Test]
-        public void TestCacheStoreLoadFilterWithNearCache()
+        public void TestCacheStoreLoadFilterDoesNotUseNearCache()
         {
-            Assert.Fail("TODO");
+            var cfg = new CacheConfiguration
+            {
+                Name = TestUtils.TestName,
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                CacheStoreFactory = new FailingCacheStore()
+            };
+
+            var cache = _grid.CreateCache<int, Foo>(cfg);
+
+            // Put a value to be overwritten from store.
+            var foo = FailingCacheStore.Foo;
+            var key = foo.Bar;
+            
+            cache[key] = new Foo(1);
+            
+            // Filter asserts that values do not come from near cache.
+            var filter = new StoreNoNearCacheFilter
+            {
+                CacheName = cache.Name
+            };
+
+            cache.LoadCache(filter);
+            
+            Assert.AreEqual(foo.Bar, cache[key].Bar);
         }
 
         /// <summary>
