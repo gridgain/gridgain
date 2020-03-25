@@ -164,6 +164,26 @@ public class SplitterUtils {
         return false;
     }
 
+    public static boolean hasOuterJoinReplicatedPartitioned(GridSqlAst from) {
+        boolean isRightPartitioned = false;
+        while (from instanceof GridSqlJoin) {
+            GridSqlJoin join = (GridSqlJoin)from;
+
+            assert !(join.rightTable() instanceof GridSqlJoin);
+
+            isRightPartitioned = isRightPartitioned || hasPartitionedTables(join.rightTable());
+
+            if (join.isLeftOuter()) {
+                boolean isLeftPartitioned = hasPartitionedTables(join.leftTable());
+                return !isLeftPartitioned && isRightPartitioned;
+            }
+
+            from = join.leftTable();
+        }
+
+        return false;
+    }
+
     /**
      * @param ast Reduce query AST.
      * @param rdcQry Reduce query string.

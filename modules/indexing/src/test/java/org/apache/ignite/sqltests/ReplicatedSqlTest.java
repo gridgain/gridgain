@@ -328,7 +328,6 @@ public class ReplicatedSqlTest extends BaseSqlTest {
     /**
      * Check LEFT JOIN with collocated data of replicated and partitioned tables.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-8732")
     @Test
     public void testLeftJoinReplicatedPartitioned() {
         checkLeftJoinEmployeeDepartment(DEP_PART_TAB);
@@ -353,7 +352,6 @@ public class ReplicatedSqlTest extends BaseSqlTest {
     /**
      * Check RIGHT JOIN with collocated data of partitioned and replicated tables.
      */
-    @Ignore("https://issues.apache.org/jira/browse/IGNITE-8732")
     @Test
     public void testRightJoinPartitionedReplicated() {
         checkRightJoinDepartmentEmployee(DEP_PART_TAB);

@@ -68,6 +68,8 @@ public class GridCacheTwoStepQuery {
     /** Number of positional arguments in the sql. */
     private final int paramsCnt;
 
+    private final boolean treatReplicatedAsPartitioned;
+
     /**
      *
      * @param originalSql Original SQL.
@@ -97,7 +99,8 @@ public class GridCacheTwoStepQuery {
         PartitionResult derivedPartitions,
         List<Integer> cacheIds,
         boolean mvccEnabled,
-        boolean locSplit
+        boolean locSplit,
+        boolean treatReplicatedAsPartitioned
     ) {
         assert !F.isEmpty(mapQrys);
 
@@ -114,6 +117,7 @@ public class GridCacheTwoStepQuery {
         this.locSplit = locSplit;
         this.mapQrys = mapQrys;
         this.replicatedOnly = replicatedOnly;
+        this.treatReplicatedAsPartitioned = treatReplicatedAsPartitioned;
     }
 
     /**
@@ -230,6 +234,10 @@ public class GridCacheTwoStepQuery {
      */
     public int parametersCount() {
         return paramsCnt;
+    }
+
+    public boolean treatReplicatedAsPartitioned() {
+        return treatReplicatedAsPartitioned;
     }
 
     /** {@inheritDoc} */
