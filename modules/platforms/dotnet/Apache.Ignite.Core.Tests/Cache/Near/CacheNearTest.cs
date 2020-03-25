@@ -1181,7 +1181,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     {
                         MaxSize = entryCount
                     }
-                }
+                },
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
             };
             
             var clientCfg = new NearCacheConfiguration
@@ -1200,10 +1201,31 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var data = Enumerable.Range(1, entryCount).ToDictionary(x => x, x => x);
             serverCache.PutAll(data);
 
+            // Get data on client.
             var res = clientCache.GetAll(data.Keys);
             Assert.AreEqual(entryCount, res.Count);
+            
+            // Check that all entries are in near cache on client.
             Assert.AreEqual(entryCount, clientCache.GetLocalSize(CachePeekMode.Near));
             Assert.AreEqual(entryCount, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+
+            // Update all entries with streamer.
+            using (var streamer = _grid2.GetDataStreamer<int, int>(serverCache.Name))
+            {
+                streamer.AllowOverwrite = true;
+                
+                foreach (var entry in data)
+                {
+                    streamer.AddData(entry.Key, entry.Value + 1);
+                }
+            }
+            
+            // Verify that near cache contains updated entries.
+            foreach (var entry in data)
+            {
+                Assert.AreEqual(entry.Value + 1, clientCache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
+                Assert.AreEqual(entry.Value + 1, serverCache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
+            }
         }
 
         /// <summary>
