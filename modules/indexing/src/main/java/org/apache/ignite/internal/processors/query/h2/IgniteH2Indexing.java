@@ -873,7 +873,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         if (qryInfo != null) {
             longRunningQryMgr.registerQuery(qryInfo);
 
-            setupMemoryTracking(conn, maxMem, qryInfo.buildShortQueryInfoString());
+            setupMemoryTracking(conn, maxMem, "qryInfo.buildShortQueryInfoString()");
         }
 
         enableDataPageScan(dataPageScanEnabled);
