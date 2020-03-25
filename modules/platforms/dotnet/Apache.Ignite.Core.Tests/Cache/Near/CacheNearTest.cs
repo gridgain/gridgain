@@ -33,7 +33,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Log;
-    using Apache.Ignite.Core.Tests.Cache.Query;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
 
@@ -1114,6 +1113,54 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             };
 
             cache.LoadCache(filter);
+        }
+
+        /// <summary>
+        /// Tests near cache with different eviction configuration on client and server nodes.
+        /// </summary>
+        [Test]
+        public void TestDifferentEvictionPoliciesOnClientAndServer()
+        {
+            const int serverMaxSize = 4;
+            const int clientMaxSize = serverMaxSize * 3;
+            
+            var serverCfg = new CacheConfiguration
+            {
+                Name = TestUtils.TestName,
+                NearConfiguration = new NearCacheConfiguration
+                {
+                    EvictionPolicy = new LruEvictionPolicy
+                    {
+                        MaxSize = serverMaxSize
+                    }
+                }
+            };
+            
+            var clientCfg = new NearCacheConfiguration
+            {
+                EvictionPolicy = new FifoEvictionPolicy()
+                {
+                    MaxSize = clientMaxSize
+                }
+            };
+            
+            var platformCfg = new PlatformNearCacheConfiguration();
+
+            var serverCache = _grid.CreateCache<int, int>(serverCfg);
+            var clientCache = _client.CreateNearCache<int, int>(serverCache.Name, clientCfg, platformCfg);
+
+            var keys = Enumerable.Range(1, 100).ToList();
+            
+            keys.ForEach(k => clientCache.Put(k, k));
+            
+            Assert.AreEqual(clientMaxSize, clientCache.GetLocalSize(CachePeekMode.Near));
+            Assert.AreEqual(clientMaxSize, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+
+            var expectedKeys = keys.AsEnumerable().Reverse().Take(clientMaxSize).ToArray();
+            var nearKeys = 
+                clientCache.GetLocalEntries(CachePeekMode.PlatformNear).Select(e => e.Key).ToArray();
+            
+            CollectionAssert.AreEquivalent(expectedKeys, nearKeys);
         }
 
         /// <summary>
