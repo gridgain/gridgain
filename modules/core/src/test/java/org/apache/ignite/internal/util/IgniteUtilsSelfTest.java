@@ -39,6 +39,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -766,7 +767,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
     @Test
     public void testMD5Calculation() throws Exception {
-        String md5 = U.calculateMD5(new ByteArrayInputStream("Corrupted information.".getBytes()));
+        String md5 = U.calculateMD5(new ByteArrayInputStream("Corrupted information.".getBytes(StandardCharsets.UTF_8)));
 
         assertEquals("d7dbe555be2eee7fa658299850169fa1", md5);
     }
