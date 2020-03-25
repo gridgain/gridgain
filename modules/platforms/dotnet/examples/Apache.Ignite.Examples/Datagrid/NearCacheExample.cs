@@ -51,7 +51,6 @@ namespace Apache.Ignite.Examples.Datagrid
                 Console.WriteLine(">>> Client node connected to the cluster");
 
                 // Creating a distributed and near cache.
-                // TODO: Enable platform near
                 var nearCacheCfg = new NearCacheConfiguration
                 {
                     EvictionPolicy = new LruEvictionPolicy
@@ -60,11 +59,14 @@ namespace Apache.Ignite.Examples.Datagrid
                         MaxSize = 10
                     }
                 };
+                
+                // Enable .NET near cache: keeps data in CLR heap to avoid deserialization costs.
+                var platformNearCacheCfg = new PlatformNearCacheConfiguration();
 
                 Console.WriteLine(">>> Populating the cache...");
 
                 ICache<int, int> cache = ignite.GetOrCreateCache<int, int>(
-                    new CacheConfiguration(CacheName), nearCacheCfg);
+                    new CacheConfiguration(CacheName), nearCacheCfg, platformNearCacheCfg);
 
                 // Adding data into the cache. 
                 // Latest 10 entries will be stored in the near cache on the client node side.
@@ -76,6 +78,7 @@ namespace Apache.Ignite.Examples.Datagrid
 
                 Console.WriteLine("\n>>> Reading from near cache...");
 
+                // Read data directly from .NET cache, without network or JVM calls, and without deserialization.
                 foreach (var entry in cache.GetLocalEntries(CachePeekMode.PlatformNear))
                     Console.WriteLine(entry);
 
