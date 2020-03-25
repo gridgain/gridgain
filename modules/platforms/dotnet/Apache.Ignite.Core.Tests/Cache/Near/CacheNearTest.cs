@@ -1076,22 +1076,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(2, clientCache[1].Bar);
 
             // Error is logged.
-            Func<ListLogger.Entry> getEntry = () =>
-                _logger.Entries.FirstOrDefault(e => e.Category != null && e.Category.Contains("processors.cache"));
+            Func<ListLogger.Entry> getEntry = () => 
+                _logger.Entries.FirstOrDefault(e => e.Message == "Failure in Java callback");
 
             var message = string.Join(" | ", _logger.Entries.Select(e => e.Message));
             TestUtils.WaitForTrueCondition(() => getEntry() != null, 3000, message);
-
-#if NETCOREAPP
-            Assert.AreEqual(
-                "Failed to update Platform Near Cache: class o.a.i.IgniteException: Unable to cast object " +
-                "of type 'Apache.Ignite.Core.Tests.Cache.Near.Foo' to type 'System.Guid'.",
-                getEntry().Message);
-#else
-            Assert.AreEqual(
-                "Failed to update Platform Near Cache: class o.a.i.IgniteException: Specified cast is not valid.",
-                getEntry().Message);
-#endif
         }
 
         /// <summary>
