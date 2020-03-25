@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
 {
     using System.Diagnostics;
     using System.Threading;
-    using Apache.Ignite.Core.Cache.Affinity;
 
     /// <summary>
     /// Near cache entry.
@@ -32,7 +31,8 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /** Partition. */
         private readonly int _partition;
         
-        /** Version. Boxed <see cref="AffinityTopologyVersion"/>. Stored as object for atomic updates.
+        /** Version. Boxed <see cref="Apache.Ignite.Core.Cache.Affinity.AffinityTopologyVersion"/>.
+         * Stored as object for atomic updates.
          * Saves memory as well, because sizeof(AffinityTopologyVersion) > sizeof(void*) */
         private object _version;
 
