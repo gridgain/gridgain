@@ -17,10 +17,8 @@
 package org.apache.ignite.spi.metric.jmx;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 import javax.management.Attribute;
 import javax.management.AttributeList;
@@ -30,7 +28,6 @@ import javax.management.MBeanInfo;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
 import org.apache.ignite.spi.metric.IntMetric;
@@ -49,9 +46,6 @@ import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.hist
 public class MetricRegistryMBean implements DynamicMBean {
     /** Metric registry. */
     MetricRegistry mreg;
-
-    /** Cached histogram metrics intervals names. */
-    private final Map<String, T2<long[], String[]>> histogramNames = new HashMap<>();
 
     /**
      * @param mreg Metric registry.
@@ -92,7 +86,7 @@ public class MetricRegistryMBean implements DynamicMBean {
 
         iter.forEachRemaining(metric -> {
             if (metric instanceof HistogramMetric) {
-                String[] names = histogramBucketNames((HistogramMetric)metric, histogramNames);
+                String[] names = histogramBucketNames((HistogramMetric)metric);
 
                 assert names.length == ((HistogramMetric)metric).value().length;
 
@@ -185,7 +179,7 @@ public class MetricRegistryMBean implements DynamicMBean {
      * @param name Attribute name.
      * @param mreg Metric registry to search histogram in.
      * @return Specific bucket value or {@code null} if not found.
-     * @see MetricUtils#histogramBucketNames(HistogramMetric, Map)
+     * @see MetricUtils#histogramBucketNames(HistogramMetric)
      */
     public static Long searchHistogram(String name, MetricRegistry mreg) {
         Scanner sc = new Scanner(name).useDelimiter("_");

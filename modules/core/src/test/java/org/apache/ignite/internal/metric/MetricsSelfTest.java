@@ -17,10 +17,8 @@
 package org.apache.ignite.internal.metric;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.stream.StreamSupport;
@@ -33,7 +31,6 @@ import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.metric.BooleanMetric;
 import org.apache.ignite.spi.metric.DoubleMetric;
@@ -343,9 +340,7 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
     public void testHistogramNames() throws Exception {
         HistogramMetric h = new HistogramMetric("test", null, new long[]{10, 50, 500});
 
-        Map<String, T2<long[], String[]>> cache = new HashMap<>();
-
-        String[] names = histogramBucketNames(h, cache);
+        String[] names = histogramBucketNames(h);
 
         assertArrayEquals(new String[] {
             "test_0_10",
@@ -353,8 +348,6 @@ public class MetricsSelfTest extends GridCommonAbstractTest {
             "test_50_500",
             "test_500_inf"
         }, names);
-
-        assertTrue("Computed values should be cached", names == histogramBucketNames(h, cache));
     }
 
 
