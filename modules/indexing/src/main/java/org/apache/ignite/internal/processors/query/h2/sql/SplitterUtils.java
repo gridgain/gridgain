@@ -164,6 +164,12 @@ public class SplitterUtils {
         return false;
     }
 
+    /**
+     * Checks whether the expression has an OUTER JOIN from replicated to partitioned.
+     *
+     * @param from FROM expression.
+     * @return {@code true} if the expression has an OUTER JOIN from replicated to partitioned.
+     */
     public static boolean hasOuterJoinReplicatedPartitioned(GridSqlAst from) {
         boolean isRightPartitioned = false;
         while (from instanceof GridSqlJoin) {

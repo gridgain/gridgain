@@ -68,7 +68,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     public static final int FLAG_ENFORCE_JOIN_ORDER = 1 << 1;
 
     /**
-     *
+     * Whether to treat replicated as partitioned (for outer joins).
      */
     public static final int FLAG_REPLICATED_AS_PARTITIONED = 1 << 2;
 

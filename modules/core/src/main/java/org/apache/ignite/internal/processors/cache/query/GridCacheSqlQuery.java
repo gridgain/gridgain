@@ -78,6 +78,7 @@ public class GridCacheSqlQuery implements Message {
     @GridDirectTransient
     private transient boolean hasSubQries;
 
+    /** Flag indicating that the query contains an OUTER JOIN from REPLICATED to PARTITIONED. */
     @GridToStringInclude
     @GridDirectTransient
     private transient boolean hasOuterJoinReplicatedPartitioned;

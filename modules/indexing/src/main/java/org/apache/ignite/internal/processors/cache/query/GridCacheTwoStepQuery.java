@@ -68,6 +68,7 @@ public class GridCacheTwoStepQuery {
     /** Number of positional arguments in the sql. */
     private final int paramsCnt;
 
+    /** True if need to treat replicated as partitioned (for outer joins). */
     private final boolean treatReplicatedAsPartitioned;
 
     /**
