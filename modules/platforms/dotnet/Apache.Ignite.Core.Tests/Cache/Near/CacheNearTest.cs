@@ -1094,6 +1094,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration
             {
                 Name = TestUtils.TestName,
+                NearConfiguration = new NearCacheConfiguration(),
                 PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
                 CacheStoreFactory = new FailingCacheStore()
             };
@@ -1113,8 +1114,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             };
 
             cache.LoadCache(filter);
-            
-            Assert.AreEqual(foo.Bar, cache[key].Bar);
         }
 
         /// <summary>

@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreNotSame(nearVal, entry.Value);
             Assert.AreNotEqual(nearVal.Bar, entry.Value.Bar);
 
-            return true;
+            return Ignite.GetAffinity(CacheName).IsPrimary(Ignite.GetCluster().GetLocalNode(), entry.Key);
         }
     }
 }

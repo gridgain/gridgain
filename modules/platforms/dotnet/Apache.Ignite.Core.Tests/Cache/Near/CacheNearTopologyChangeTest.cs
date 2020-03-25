@@ -98,7 +98,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             TestUtils.WaitForTrueCondition(() => _cache[0][Key3].Bar == 2, 500);
             Assert.AreEqual(2, _cache[0][Key3].Bar);
             Assert.AreEqual(2, _cache[1][Key3].Bar);
-            Assert.AreEqual(2, clientCache[Key3].Bar);
+            
+            TestUtils.WaitForTrueCondition(() => clientCache[Key3].Bar == 2);
             Assert.AreSame(_cache[0][Key3], _cache[0][Key3]);
             Assert.AreSame(_cache[1][Key3], _cache[1][Key3]);
             Assert.AreSame(clientCache[Key3], clientCache[Key3]);
