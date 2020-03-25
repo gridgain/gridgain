@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         public ListLogger(ILogger wrappedLogger = null)
         {
             _wrappedLogger = wrappedLogger;
-            EnabledLevels = new[] {LogLevel.Debug};
+            EnabledLevels = new[] {LogLevel.Debug, LogLevel.Warn, LogLevel.Error};
         }
         
         /// <summary>
