@@ -32,7 +32,7 @@ public class FunctionsManager {
     /** Fld functions. */
     private static Field fldFUNCTIONS;
 
-    /** Orig H2 functions set. */
+    /** Original H2 functions set. */
     private static HashMap<String, FunctionInfo> origFuncs;
 
     /** Current H2 functions set. */
