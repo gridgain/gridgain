@@ -28,6 +28,7 @@ import org.h2.expression.function.FunctionInfo;
 /**
  * Distributed configuration of the indexing module.
  */
+@SuppressWarnings("unchecked")
 public class FunctionsManager {
     /** Fld functions. */
     private static Field fldFUNCTIONS;
