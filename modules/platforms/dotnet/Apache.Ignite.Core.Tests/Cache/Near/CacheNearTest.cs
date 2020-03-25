@@ -29,6 +29,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Cache.Store;
+    using Apache.Ignite.Core.Datastream;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl;
     using Apache.Ignite.Core.Impl.Binary;
@@ -1138,7 +1139,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             var clientCfg = new NearCacheConfiguration
             {
-                EvictionPolicy = new FifoEvictionPolicy()
+                EvictionPolicy = new FifoEvictionPolicy
                 {
                     MaxSize = clientMaxSize
                 }
@@ -1161,6 +1162,48 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 clientCache.GetLocalEntries(CachePeekMode.PlatformNear).Select(e => e.Key).ToArray();
             
             CollectionAssert.AreEquivalent(expectedKeys, nearKeys);
+        }
+
+        /// <summary>
+        /// Tests that <see cref="IDataStreamer{TK,TV}"/> updates near cache.
+        /// </summary>
+        [Test]
+        public void TestDataStreamerUpdatesNearCache()
+        {
+            const int entryCount = 10000;
+            
+            var serverCfg = new CacheConfiguration
+            {
+                Name = TestUtils.TestName,
+                NearConfiguration = new NearCacheConfiguration
+                {
+                    EvictionPolicy = new LruEvictionPolicy
+                    {
+                        MaxSize = entryCount
+                    }
+                }
+            };
+            
+            var clientCfg = new NearCacheConfiguration
+            {
+                EvictionPolicy = new LruEvictionPolicy
+                {
+                    MaxSize = entryCount
+                }
+            };
+            
+            var platformCfg = new PlatformNearCacheConfiguration();
+            
+            var serverCache = _grid.CreateCache<int, int>(serverCfg);
+            var clientCache = _client.CreateNearCache<int, int>(serverCache.Name, clientCfg, platformCfg);
+
+            var data = Enumerable.Range(1, entryCount).ToDictionary(x => x, x => x);
+            serverCache.PutAll(data);
+
+            var res = clientCache.GetAll(data.Keys);
+            Assert.AreEqual(entryCount, res.Count);
+            Assert.AreEqual(entryCount, clientCache.GetLocalSize(CachePeekMode.Near));
+            Assert.AreEqual(entryCount, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
         }
 
         /// <summary>
