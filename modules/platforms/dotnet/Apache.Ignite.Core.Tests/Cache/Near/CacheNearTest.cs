@@ -489,6 +489,56 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
+        /// Tests that last N added entries are in near cache, where N is MaxSize.
+        /// </summary>
+        [Test]
+        public void TestEvictionPolicyKeepsLastEntriesInNearCache(
+            [Values(true, false)] bool lruOrFifo, 
+            [Values(true, false)] bool getOrCreate)
+        {
+            const int maxSize = 30;
+            
+            var serverCache = _grid.CreateCache<int, Foo>(TestUtils.TestName);
+
+            var nearCfg = new NearCacheConfiguration
+            {
+                EvictionPolicy = lruOrFifo 
+                    ? (IEvictionPolicy) new LruEvictionPolicy
+                    {
+                        MaxSize = maxSize
+                    } 
+                    : new FifoEvictionPolicy
+                    {
+                        MaxSize = maxSize
+                    }
+            };
+
+            var platformCfg = new PlatformNearCacheConfiguration();
+
+            var clientCache = getOrCreate 
+                ? _client.GetOrCreateNearCache<int, Foo>(serverCache.Name, nearCfg, platformCfg)
+                : _client.CreateNearCache<int, Foo>(serverCache.Name, nearCfg, platformCfg);
+
+            var keys = Enumerable.Range(1, maxSize * 5).ToList();
+            var nearKeys = keys.AsEnumerable().Reverse().Take(maxSize).ToArray();
+            
+            keys.ForEach(k => clientCache.Put(k, new Foo(k)));
+
+            // Check that Get returns instance from .NET near cache.
+            foreach (var key in nearKeys)
+            {
+                Assert.AreSame(clientCache.LocalPeek(key, CachePeekMode.PlatformNear), clientCache.Get(key));
+            }
+            
+            // Check that GetAll returns instances from .NET near cache.
+            var all = clientCache.GetAll(nearKeys);
+            foreach (var entry in all)
+            {
+                Assert.AreSame(clientCache.LocalPeek(entry.Key, CachePeekMode.PlatformNear), entry.Value);
+            }
+        }
+
+        /// <summary>
         /// Tests that evicted entry is reloaded from Java after update from another node.
         /// Eviction on Java side for non-local entry (not a primary key for this node) disconnects near cache notifier.
         /// This test verifies that eviction on Java side causes eviction on .NET side, and does not cause stale data.
