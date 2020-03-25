@@ -522,7 +522,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var keys = Enumerable.Range(1, maxSize * 5).ToList();
             var nearKeys = keys.AsEnumerable().Reverse().Take(maxSize).ToArray();
             
-            keys.ForEach(k => clientCache.Put(k, new Foo(k)));
+            keys.ForEach(k => serverCache.Put(k, new Foo(k)));
+
+            // Get from client to populate near cache.
+            clientCache.GetAll(nearKeys);
+            Assert.AreEqual(nearKeys.Length, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
 
             // Check that Get returns instance from .NET near cache.
             foreach (var key in nearKeys)
