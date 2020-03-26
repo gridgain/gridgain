@@ -90,7 +90,7 @@ public class CacheGroupContext {
     /** Node ID cache group was received from. */
     private volatile UUID rcvdFrom;
 
-    /** Flag indicating that this cache group is in a recovery mode due to partitions loss. */
+    /** Flag indicating that this cache group is in a recovery mode due to partitions loss. TODO wipe out */
     private boolean needsRecovery;
 
     /** */

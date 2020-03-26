@@ -670,9 +670,10 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         try {
             IgniteEx cl = (IgniteEx)startGrid("newNode");
 
-            CacheGroupContext grpCtx = cl.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME));
+            //CacheGroupContext grpCtx = cl.context().cache().cacheGroup(CU.cacheId(DEFAULT_CACHE_NAME));
 
-            assertTrue(!safe || grpCtx.needsRecovery());
+            assertTrue("client=" + client + ", safe=" + safe,
+                    !safe || !cl.cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
             verifyCacheOps(safe, cl);
 
