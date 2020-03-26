@@ -35,6 +35,9 @@ public class TcpDiscoveryMetricsWarnLogTest extends GridCommonAbstractTest {
     /** Listener log messages. */
     private static ListeningTestLogger testLog;
 
+    /** Desired message. */
+    public static final String LOG_MSG = "To prevent Discovery blocking use";
+
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
@@ -71,17 +74,17 @@ public class TcpDiscoveryMetricsWarnLogTest extends GridCommonAbstractTest {
         testLog.warning("IGNITE_DISCOVERY_METRICS_QNT_WARN = "
             + System.getProperty(IGNITE_DISCOVERY_METRICS_QNT_WARN));
 
-        LogListener logLsnr0 = LogListener.matches("To prevent Discovery blocking use")
+        LogListener logLsnr0 = LogListener.matches(LOG_MSG)
             .andMatches("TcpDiscoveryMetricsWarnLogTest0")
             .atLeast(1)
             .build();
 
-        LogListener logLsnr1 = LogListener.matches("To prevent Discovery blocking use")
+        LogListener logLsnr1 = LogListener.matches(LOG_MSG)
             .andMatches("TcpDiscoveryMetricsWarnLogTest1")
             .atLeast(1)
             .build();
 
-        LogListener logLsnr2 = LogListener.matches("To prevent Discovery blocking use")
+        LogListener logLsnr2 = LogListener.matches(LOG_MSG)
             .andMatches("TcpDiscoveryMetricsWarnLogTest2")
             .atLeast(1)
             .build();
@@ -102,9 +105,7 @@ public class TcpDiscoveryMetricsWarnLogTest extends GridCommonAbstractTest {
         awaitMetricsUpdate(3);
 
         assertTrue(logLsnr0.check());
-
         assertTrue(logLsnr1.check());
-
         assertTrue(logLsnr2.check());
     }
 
