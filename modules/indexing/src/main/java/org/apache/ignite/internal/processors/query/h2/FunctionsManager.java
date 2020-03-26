@@ -83,10 +83,9 @@ public class FunctionsManager {
     /**
      *
      */
-    private void removeFunctions(Set<String> funcNames) {
+    private static void removeFunctions(Set<String> funcNames) {
         funcs.putAll(origFuncs);
 
-        log.info("+++ REMOVE " + funcNames);
         for (String funcName : funcNames)
             funcs.remove(funcName);
     }

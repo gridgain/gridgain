@@ -16,9 +16,12 @@
 
 package org.apache.ignite.cache.store.spring;
 
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import javax.cache.Cache;
 import javax.cache.configuration.Factory;
 import javax.cache.integration.CacheLoaderException;
@@ -30,6 +33,8 @@ import org.apache.ignite.cache.store.CacheStoreSession;
 import org.apache.ignite.cache.store.CacheStoreSessionListener;
 import org.apache.ignite.cache.store.CacheStoreSessionListenerAbstractSelfTest;
 import org.apache.ignite.cache.store.jdbc.CacheJdbcStoreSessionListener;
+import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
+import org.apache.ignite.internal.processors.query.h2.FunctionsManager;
 import org.apache.ignite.lang.IgniteBiInClosure;
 import org.apache.ignite.resources.CacheStoreSessionResource;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -43,6 +48,26 @@ import org.springframework.transaction.TransactionStatus;
 public class CacheSpringStoreSessionListenerSelfTest extends CacheStoreSessionListenerAbstractSelfTest {
     /** */
     private static final DataSource DATA_SRC = new DriverManagerDataSource(URL);
+
+    private static Method removeFuncs;
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        removeFuncs = FunctionsManager.class.getDeclaredMethod("removeFunctions", Set.class);
+
+        removeFuncs.setAccessible(true);
+
+        removeFuncs.invoke(FunctionsManager.class, Collections.emptySet());
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTestsStopped() throws Exception {
+        removeFuncs.invoke(FunctionsManager.class, DistributedSqlConfiguration.DFLT_DISABLED_FUNCS);
+
+        super.afterTestsStopped();
+    }
 
     /** {@inheritDoc} */
     @Override protected Factory<? extends CacheStore<Integer, Integer>> storeFactory() {
