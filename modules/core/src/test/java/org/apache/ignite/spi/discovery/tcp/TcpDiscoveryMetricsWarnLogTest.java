@@ -71,22 +71,47 @@ public class TcpDiscoveryMetricsWarnLogTest extends GridCommonAbstractTest {
         testLog.warning("IGNITE_DISCOVERY_METRICS_QNT_WARN = "
             + System.getProperty(IGNITE_DISCOVERY_METRICS_QNT_WARN));
 
-        LogListener logLsnr = LogListener.matches("To prevent Discovery blocking use")
+        LogListener logLsnr0 = LogListener.matches("To prevent Discovery blocking use")
+            .andMatches("TcpDiscoveryMetricsWarnLogTest0")
             .atLeast(1)
             .build();
 
-        testLog.registerListener(logLsnr);
+        LogListener logLsnr1 = LogListener.matches("To prevent Discovery blocking use")
+            .andMatches("TcpDiscoveryMetricsWarnLogTest1")
+            .atLeast(1)
+            .build();
+
+        LogListener logLsnr2 = LogListener.matches("To prevent Discovery blocking use")
+            .andMatches("TcpDiscoveryMetricsWarnLogTest2")
+            .atLeast(1)
+            .build();
+
+        testLog.registerListener(logLsnr0);
+        testLog.registerListener(logLsnr1);
+        testLog.registerListener(logLsnr2);
 
         Ignite ignite0 = startGrid(0);
 
         startGrid(1);
 
+        startClientGrid(2);
+
         for (int i = 1; i <= 30; i++)
             createAndFillCache(i, ignite0);
 
-        awaitMetricsUpdate(1);
+        awaitMetricsUpdate(3);
 
-        assertTrue(logLsnr.check());
+        assertTrue(logLsnr0.check());
+
+        assertTrue(logLsnr1.check());
+
+        assertTrue(logLsnr2.check());
+    }
+
+    @Test
+    @WithSystemProperty(key = IGNITE_DISCOVERY_METRICS_QNT_WARN, value = "0")
+    public void testMetricsWarningLog0() throws Exception {
+        testMetricsWarningLog();
     }
 
     /**
