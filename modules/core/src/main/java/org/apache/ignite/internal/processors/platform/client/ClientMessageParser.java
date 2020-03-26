@@ -213,12 +213,10 @@ public class ClientMessageParser implements ClientListenerMessageParser {
     /** */
     private static final short OP_BINARY_TYPE_PUT = 3003;
 
-    /** Start new transaction. Reserved for IGNITE-9410. */
-    @SuppressWarnings("unused")
+    /** Start new transaction. */
     private static final short OP_TX_START = 4000;
 
-    /** Commit transaction. Reserved for IGNITE-9410. */
-    @SuppressWarnings("unused")
+    /** Commit transaction. */
     private static final short OP_TX_END = 4001;
 
     /* Cluster operations. */
