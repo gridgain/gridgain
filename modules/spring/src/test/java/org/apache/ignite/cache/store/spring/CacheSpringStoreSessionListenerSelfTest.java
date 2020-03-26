@@ -49,22 +49,24 @@ public class CacheSpringStoreSessionListenerSelfTest extends CacheStoreSessionLi
     /** */
     private static final DataSource DATA_SRC = new DriverManagerDataSource(URL);
 
-    private static Method removeFuncs;
+    /** */
+    private static Method FunctionManager_removeFunctions;
 
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
-        removeFuncs = FunctionsManager.class.getDeclaredMethod("removeFunctions", Set.class);
+        FunctionManager_removeFunctions = FunctionsManager.class.getDeclaredMethod("removeFunctions", Set.class);
 
-        removeFuncs.setAccessible(true);
+        FunctionManager_removeFunctions.setAccessible(true);
 
-        removeFuncs.invoke(FunctionsManager.class, Collections.emptySet());
+        // Cleanup disabled functions because transaction manager uses LOCK_MODE()
+        FunctionManager_removeFunctions.invoke(FunctionsManager.class, Collections.emptySet());
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTestsStopped() throws Exception {
-        removeFuncs.invoke(FunctionsManager.class, DistributedSqlConfiguration.DFLT_DISABLED_FUNCS);
+        FunctionManager_removeFunctions.invoke(FunctionsManager.class, DistributedSqlConfiguration.DFLT_DISABLED_FUNCS);
 
         super.afterTestsStopped();
     }
