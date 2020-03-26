@@ -548,8 +548,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                             Collections.<Integer>emptySet(),
                             null,
                             null,
-                            null
-                        );
+                            null,
+                            clientTop.lostPartitions());
                     }
 
                     assert grpHolder.affinity().lastVersion().equals(grp.affinity().lastVersion());
@@ -613,7 +613,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     -1,
                     false);
 
-                grp.topology().update(topVer, partMap, null, Collections.emptySet(), null, null, null);
+                grp.topology().update(topVer, partMap, null, Collections.emptySet(), null, null, null, null);
 
                 topFut.validate(grp, discoCache.allNodes());
             }

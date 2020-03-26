@@ -1146,7 +1146,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             Collections.emptySet(),
                             null,
                             null,
-                            null);
+                            null,
+                            clientTop.lostPartitions());
                     }
                     finally {
                         cctx.exchange().exchangerBlockingSectionEnd();
@@ -4466,7 +4467,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             msg.partsToReload(cctx.localNodeId(), grpId),
                             partsSizes.getOrDefault(grpId, Collections.emptyMap()),
                             null,
-                            this);
+                            this,
+                            msg.lostPartitions(grpId));
                     }
                     else {
                         GridDhtPartitionTopology top = cctx.exchange().clientTopology(grpId, events().discoveryCache());
@@ -4480,7 +4482,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                             Collections.emptySet(),
                             null,
                             null,
-                            this);
+                            this,
+                            msg.lostPartitions(grpId));
                     }
 
                     return null;

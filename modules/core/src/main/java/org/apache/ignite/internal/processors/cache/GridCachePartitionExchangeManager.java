@@ -1510,6 +1510,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                         m.addPartitionUpdateCounters(grp.groupId(),
                             CachePartitionFullCountersMap.toCountersMap(cntrsMap));
                     }
+
+                    m.addLostPartitions(grp.groupId(), grp.topology().lostPartitions());
                 }
             }
         }
@@ -1533,6 +1535,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                 if (!partSizesMap.isEmpty())
                     partsSizes.put(top.groupId(), partSizesMap);
+
+                m.addLostPartitions(top.groupId(), top.lostPartitions());
             }
         }
 
@@ -1907,8 +1911,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
                             msg.partsToReload(cctx.localNodeId(), grpId),
                             partsSizes.getOrDefault(grpId, Collections.emptyMap()),
                             msg.topologyVersion(),
-                            null
-                        );
+                            null,
+                            null);
                     }
                 }
 

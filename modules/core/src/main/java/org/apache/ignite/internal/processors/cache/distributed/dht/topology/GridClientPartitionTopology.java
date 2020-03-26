@@ -63,6 +63,7 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 
 /**
  * Partition topology for node which does not have any local partitions.
+ * TODO set lostParts on coordinator.
  */
 @GridToStringExclude
 public class GridClientPartitionTopology implements GridDhtPartitionTopology {
@@ -122,6 +123,9 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** */
     private volatile Map<Integer, Long> globalPartSizes;
+
+    /** */
+    private Set<Integer> lostParts;
 
     /**
      * @param cctx Context.
@@ -727,7 +731,9 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
         Set<Integer> partsToReload,
         @Nullable Map<Integer, Long> partSizes,
         @Nullable AffinityTopologyVersion msgTopVer,
-        @Nullable GridDhtPartitionsExchangeFuture exchFut) {
+        @Nullable GridDhtPartitionsExchangeFuture exchFut,
+        @Nullable Set<Integer> lostParts
+    ) {
         if (log.isDebugEnabled())
             log.debug("Updating full partition map [exchVer=" + exchangeVer + ", parts=" + fullMapString() + ']');
 
@@ -835,6 +841,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
             consistencyCheck();
 
+            this.lostParts = lostParts;
+
             if (log.isDebugEnabled())
                 log.debug("Partition map after full update: " + fullMapString());
 
@@ -855,11 +863,11 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             for (int i = 0; i < cntrMap.size(); i++) {
                 int pId = cntrMap.partitionAt(i);
 
-                long initialUpdateCntr = cntrMap.initialUpdateCounterAt(i);
+                long initUpdateCntr = cntrMap.initialUpdateCounterAt(i);
                 long updateCntr = cntrMap.updateCounterAt(i);
 
                 if (this.cntrMap.updateCounter(pId) < updateCntr) {
-                    this.cntrMap.initialUpdateCounter(pId, initialUpdateCntr);
+                    this.cntrMap.initialUpdateCounter(pId, initUpdateCntr);
                     this.cntrMap.updateCounter(pId, updateCntr);
                 }
             }
@@ -1012,10 +1020,15 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<Integer> lostPartitions() {
-        // Can be called on coordinator in auto-adjust scenarios when a node has joined.
-        // TODO add valid assertion.
-        return Collections.emptyList();
+    @Override public Set<Integer> lostPartitions() {
+        lock.readLock().lock();
+
+        try {
+            return lostParts == null ? Collections.emptySet() : lostParts;
+        }
+        finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**

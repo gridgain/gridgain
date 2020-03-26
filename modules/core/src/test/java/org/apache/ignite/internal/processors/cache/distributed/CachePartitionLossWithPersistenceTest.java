@@ -116,23 +116,12 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
      *
      */
     @Test
-    public void testPartitionConsistencyOnSupplierRestart_Unsafe() throws Exception {
-        // Should behave same as for READ_WRITE_SAFE policy.
-        doTestPartitionConsistencyOnSupplierRestart(IGNORE);
-    }
-
-    /**
-     *
-     */
-    @Test
-    public void testPartitionConsistencyOnSupplierRestart_Safe() throws Exception {
-        doTestPartitionConsistencyOnSupplierRestart(READ_WRITE_SAFE);
+    public void testPartitionConsistencyOnSupplierRestart() throws Exception {
+        doTestPartitionConsistencyOnSupplierRestart();
     }
 
     /** */
-    private void doTestPartitionConsistencyOnSupplierRestart(PartitionLossPolicy lossPlc) throws Exception {
-        this.lossPlc = lossPlc;
-
+    private void doTestPartitionConsistencyOnSupplierRestart() throws Exception {
         int entryCnt = PARTS_CNT * 200;
 
         IgniteEx crd = (IgniteEx)startGridsMultiThreaded(2);
@@ -228,9 +217,9 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
      *     <li>1 - reset then both nodes are returned.</li>
      *     <li>2 - reset then both nodes are returned and new node is added to baseline causing partition movement.</li>
      * </ul>
-     * @param resetBeforeAllJoined {@code True} to reset lost partitions after lagging node is joined.
+     * @param delayRebalance {@code True} to delay rebalancing.
      */
-    private void doTestConsistencyAfterResettingLostPartitions(int partResetMode, boolean expectRebalance) throws Exception {
+    private void doTestConsistencyAfterResettingLostPartitions(int partResetMode, boolean delayRebalance) throws Exception {
         lossPlc = READ_WRITE_SAFE;
 
         IgniteEx crd = startGrids(2);
@@ -271,7 +260,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         assertEquals(lostParts, g1LostParts);
 
-        if (expectRebalance) {
+        if (delayRebalance) {
             // Block rebalancing from g2 to g1 to ensure a primary partition is in moving state.
             TestRecordingCommunicationSpi.spi(g1).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
@@ -293,7 +282,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         if (partResetMode == 1)
             crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 
-        if (expectRebalance) {
+        if (delayRebalance) {
             TestRecordingCommunicationSpi.spi(g1).waitForBlocked();
 
             /** Try put to moving partition. Due to forced reassignment g2 should be a primary for the partition. */

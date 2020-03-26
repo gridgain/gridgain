@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
@@ -1457,7 +1456,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
         Set<Integer> partsToReload,
         @Nullable Map<Integer, Long> partSizes,
         @Nullable AffinityTopologyVersion msgTopVer,
-        @Nullable GridDhtPartitionsExchangeFuture exchFut) {
+        @Nullable GridDhtPartitionsExchangeFuture exchFut,
+        @Nullable Set<Integer> lostParts) {
         if (log.isDebugEnabled()) {
             log.debug("Updating full partition map " +
                 "[grp=" + grp.cacheOrGroupName() + ", exchVer=" + exchangeVer + ", fullMap=" + fullMapString() + ']');
@@ -1604,6 +1604,22 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     assert exchangeVer.compareTo(readyTopVer) >= 0 && exchangeVer.compareTo(lastTopChangeVer) >= 0;
 
                     lastTopChangeVer = readyTopVer = exchangeVer;
+
+                    if (lostParts != null) {
+                        this.lostParts = lostParts;
+
+                        for (Integer part : lostParts) {
+                            GridDhtLocalPartition locPart = localPartition(part);
+
+                            if (locPart != null) {
+                                locPart.markLost();
+
+                                GridDhtPartitionMap locMap = partMap.get(ctx.localNodeId());
+
+                                locMap.put(part, LOST);
+                            }
+                        }
+                    }
                 }
 
                 node2part = partMap;
@@ -1643,6 +1659,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 GridDhtPartitionMap nodeMap = partMap.get(ctx.localNodeId());
 
                 // Only in real exchange occurred.
+                // TODO persistenceEnabled is buggy.
                 if (exchangeVer != null &&
                     nodeMap != null &&
                     grp.persistenceEnabled() &&
@@ -2305,7 +2322,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<Integer> lostPartitions() {
+    @Override public Set<Integer> lostPartitions() {
         lock.readLock().lock();
 
         try {
