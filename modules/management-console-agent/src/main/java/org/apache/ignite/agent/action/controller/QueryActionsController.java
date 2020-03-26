@@ -133,15 +133,7 @@ public class QueryActionsController {
 
                 SqlFieldsQuery qry = prepareQuery(arg);
 
-                IgniteInternalCache<Object, Object> cache = F.isEmpty(arg.getDefaultSchema())
-                    ? null
-                    : ctx.cache().cache(arg.getDefaultSchema());
-
-                GridCacheContext cctx = cache == null
-                        ? null
-                        : cache.context();
-
-                for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(cctx, qry, null, true, false, qryHolder.cancelHook())) {
+                for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(null, qry, null, true, false, qryHolder.cancelHook())) {
                     CursorHolder cursorHolder = new CursorHolder(cur);
 
                     QueryResult res = fetchSqlQueryResult(cursorHolder, arg.getPageSize());

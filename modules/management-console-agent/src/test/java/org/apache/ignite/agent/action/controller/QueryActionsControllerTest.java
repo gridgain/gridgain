@@ -141,7 +141,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
         final String fullTestTable = String.format("%s.%s", testSchema, testTable);
         final String testClassName = "test.data." + testTable;
 
-        CacheConfiguration<Integer, Object> ccfg = new CacheConfiguration<>(testSchema);
+        CacheConfiguration<Integer, Object> ccfg = defaultCacheConfiguration();
         ccfg.setSqlSchema(testSchema);
 
         ArrayList<QueryEntity> qryEntities = new ArrayList<>();
