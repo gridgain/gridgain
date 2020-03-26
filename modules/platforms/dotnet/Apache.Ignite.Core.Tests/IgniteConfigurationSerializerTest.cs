@@ -932,7 +932,8 @@ namespace Apache.Ignite.Core.Tests
                     JdbcEnabled = false,
                     ThreadPoolSize = 7,
                     IdleTimeout = TimeSpan.FromMinutes(5),
-                    ThinClientConfiguration = new ThinClientConfiguration {
+                    ThinClientConfiguration = new ThinClientConfiguration 
+                    {
                         MaxActiveTxPerConnection = 8
                     }
                 },
