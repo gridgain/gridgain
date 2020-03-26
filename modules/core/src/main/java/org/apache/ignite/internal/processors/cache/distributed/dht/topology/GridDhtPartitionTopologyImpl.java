@@ -1588,10 +1588,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 if (!fullMapUpdated) {
-                    // Event if map not changed detection is required.
-                    if (exchangeVer != null && (exchFut == null || exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT))
-                        detectLostPartitions(exchangeVer, exchFut);
-
                     if (log.isTraceEnabled()) {
                         log.trace("No updates for full partition map (will ignore) [" +
                             "grp=" + grp.cacheOrGroupName() +
@@ -1611,9 +1607,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 }
 
                 node2part = partMap;
-
-                if (exchangeVer != null && (exchFut == null || exchFut.firstEvent().type() != EVT_DISCOVERY_CUSTOM_EVT))
-                    detectLostPartitions(exchangeVer, exchFut);
 
                 if (exchangeVer == null && !grp.isReplicated() &&
                         (readyTopVer.initialized() && readyTopVer.compareTo(diffFromAffinityVer) >= 0)) {
@@ -2189,18 +2182,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             }
                         }
 
-                        // Spread existing LOST state on all data nodes.
-                        if (hasOwner) {
-                            // TODO use only coordinator map for override.
-                            for (GridDhtPartitionMap partMap : node2part.values()) {
-                                if (partMap.get(part) == LOST) {
-                                    hasOwner = false;
-
-                                    break;
-                                }
-                            }
-                        }
-
                         if (!hasOwner) {
                             lost = true;
 
@@ -2248,22 +2229,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 // If a partition was lost while rebalancing reset it's counter to force demander mode.
                                 if (prevState == MOVING)
                                     locPart.resetUpdateCounter();
-                            }
-                        }
-                        // Update map for remote node.
-                        else if (safe) {
-                            for (Map.Entry<UUID, GridDhtPartitionMap> e : node2part.entrySet()) {
-                                if (e.getKey().equals(ctx.localNodeId()))
-                                    continue;
-
-                                final GridDhtPartitionState cur = e.getValue().get(part);
-
-                                // If node is owning a partition apply LOST state.
-                                if (cur != null && cur != EVICTED && cur != LOST) {
-                                    e.getValue().put(part, LOST);
-
-                                    changed = true;
-                                }
                             }
                         }
                     }

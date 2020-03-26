@@ -311,9 +311,6 @@ public class GridDhtPartitionDemander {
 
                 ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
 
-                // Partition state can be changed from moving to owning by affinity on node left, need to sync state.
-                ctx.exchange().scheduleResendPartitions();
-
                 return null;
             }
 
@@ -1573,7 +1570,7 @@ public class GridDhtPartitionDemander {
 
                 if (log.isDebugEnabled())
                     log.debug("Partitions have been scheduled to resend [reason=" +
-                        "Rebalance is done [grp=" + grp.cacheOrGroupName() + "]");
+                        "Rebalance is done, grp=" + grp.cacheOrGroupName() + "]");
 
                 ctx.exchange().scheduleResendPartitions();
 

@@ -327,10 +327,8 @@ public interface GridDhtPartitionTopology {
     public void applyUpdateCounters();
 
     /**
-     * Checks if there is at least one owner for each partition in the cache topology.
-     * If not, marks such a partition as LOST.
-     * <p>
-     * This method should be called on topology coordinator after all partition messages are received.
+     * Checks if there is at least one owner for each partition in the cache topology for local node.
+     * If not marks such a partition as LOST or OWNING depending on a policy.
      *
      * @param resTopVer Exchange result version.
      * @param fut Exchange futute for topology events to detect.

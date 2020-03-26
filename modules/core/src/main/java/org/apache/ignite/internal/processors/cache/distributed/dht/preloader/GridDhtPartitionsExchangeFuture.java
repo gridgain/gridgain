@@ -2353,8 +2353,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
                 }
 
-                // TODO Independent calc - comment.
-                if (exchCtx.exchangeFreeSwitch())
+                if (exchCtx.events().hasServerLeft() || activateCluster())
                     detectLostPartitions(res);
 
                 Map<Integer, CacheGroupValidation> m = U.newHashMap(cctx.cache().cacheGroups().size());
@@ -3692,9 +3691,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
             IgniteProductVersion minVer = exchCtx.events().discoveryCache().minimumNodeVersion();
 
-            if (firstDiscoEvt.type() != EVT_DISCOVERY_CUSTOM_EVT)
-                detectLostPartitions(resTopVer);
-
             GridDhtPartitionsFullMessage msg = createPartitionsMessage(true,
                 minVer.compareToIgnoreTimestamp(PARTIAL_COUNTERS_MAP_SINCE) >= 0);
 
@@ -4389,6 +4385,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     else
                         cctx.affinity().onServerJoinWithExchangeMergeProtocol(this, false);
 
+                    // TODO parallelize.
                     for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                         if (grp.isLocal() || cacheGroupStopping(grp.groupId()))
                             continue;
