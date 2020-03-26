@@ -21,9 +21,8 @@ import org.apache.ignite.lang.IgniteExperimental;
 
 /**
  * This class was created for the refactoring approach. It contains attribute names into a {@link ClusterNode}.
- * It should remove after global refactoring.
+ * It should be remove after global refactoring. The values of these attributes should pass via constructors of appropriate classes.
  */
-@IgniteExperimental
 public class AttributeNames {
     /** Paired connection. */
     private final String pairedConn;
