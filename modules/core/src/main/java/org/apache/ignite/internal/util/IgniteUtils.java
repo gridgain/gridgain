@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.util;
 
+import java.io.UTFDataFormatException;
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
 import javax.management.DynamicMBean;
@@ -273,6 +274,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import sun.misc.Unsafe;
 
+import static java.util.Objects.isNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISABLE_HOSTNAME_VERIFIER;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_HOME;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOCAL_HOST;
@@ -299,7 +301,7 @@ import static org.apache.ignite.internal.util.GridUnsafe.staticFieldOffset;
 /**
  * Collection of utility methods used throughout the system.
  */
-@SuppressWarnings({"UnusedReturnValue", "RedundantStringConstructorCall"})
+@SuppressWarnings("UnusedReturnValue")
 public abstract class IgniteUtils {
     /** */
     public static final long KB = 1024L;
@@ -309,6 +311,12 @@ public abstract class IgniteUtils {
 
     /** */
     public static final long GB = 1024L * 1024 * 1024;
+
+    /**
+     * String limit in bytes for {@link DataOutput#writeUTF} and
+     * {@link DataInput#readUTF()}, that use "Modified UTF-8".
+     */
+    public static final int UTF_BYTE_LIMIT = 65_535;
 
     /** Minimum checkpointing page buffer size (may be adjusted by Ignite). */
     public static final Long DFLT_MIN_CHECKPOINTING_PAGE_BUFFER_SIZE = GB / 4;
@@ -5752,6 +5760,29 @@ public abstract class IgniteUtils {
 
     /**
      * Writes string to output stream accounting for {@code null} values.
+     * <p>
+     * Limitation for max string lenght of {@link #UTF_BYTE_LIMIT} bytes is caused by {@link ObjectOutputStream#writeUTF}
+     * used under the hood to perform an actual write.
+     * </p>
+     * <p>
+     * If longer string is passes a {@link UTFDataFormatException} exception will be thrown.
+     * </p>
+     * <p>
+     * To write longer strings use one of two options:
+     * <ul>
+     *     <li>
+     *         {@link #writeLongString(DataOutput, String)} writes string as is converting it into binary array of UTF-8
+     *         encoded characters.
+     *         To read the value back {@link #readLongString(DataInput)} should be used.
+     *     </li>
+     *     <li>
+     *         {@link #writeCutString(DataOutput, String)} cuts passed string to {@link #UTF_BYTE_LIMIT} bytes
+     *         and then writes them without converting to byte array.
+     *         No exceptions will be thrown for string of any length; written string can be read back with regular
+     *         {@link #readString(DataInput)} method.
+     *     </li>
+     * </ul>
+     * </p>
      *
      * @param out Output stream to write to.
      * @param s String to write, possibly {@code null}.
@@ -5767,6 +5798,13 @@ public abstract class IgniteUtils {
 
     /**
      * Reads string from input stream accounting for {@code null} values.
+     *
+     * Method enables to read strings shorter than {@link #UTF_BYTE_LIMIT} bytes in UTF-8 otherwise an exception will be thrown.
+     *
+     * Strings written by {@link #writeString(DataOutput, String)} or {@link #writeCutString(DataOutput, String)}
+     * can be read by this method.
+     *
+     * @see #writeString(DataOutput, String) for more information about writing strings.
      *
      * @param in Stream to read from.
      * @return Read string, possibly {@code null}.
@@ -8365,6 +8403,40 @@ public abstract class IgniteUtils {
         }
 
         X.println("    Map summary [emptySegs=" + emptySegsCnt + ", collisions=" + totalCollisions + ']');
+    }
+
+    /**
+     * Compares two byte arrays by bytes.
+     * @param bytes1 Bytes 1.
+     * @param bytes2 Bytes 2.
+     */
+    public static int compareByteArrays(byte[] bytes1, byte[] bytes2) {
+        final int len = bytes1.length;
+        int lenCmp = Integer.compare(len, bytes2.length);
+
+        if (lenCmp != 0)
+            return lenCmp;
+
+        final int words = len / 8;
+        int cmp;
+
+        for (int i = 0; i < words; i++) {
+            int off = i * 8;
+            long b1 = GridUnsafe.getLong(bytes1, GridUnsafe.BYTE_ARR_OFF + off);
+            long b2 = GridUnsafe.getLong(bytes2, GridUnsafe.BYTE_ARR_OFF + off);
+            cmp = Long.compare(b1, b2);
+            if (cmp != 0)
+                return cmp;
+        }
+
+        for (int i = words * 8; i < len; i++) {
+            byte b1 = bytes1[i];
+            byte b2 = bytes2[i];
+            if (b1 != b2)
+                return b1 > b2 ? 1 : -1;
+        }
+
+        return 0;
     }
 
     /**
@@ -12026,5 +12098,200 @@ public abstract class IgniteUtils {
      */
     public static String unquote(String s) {
         return s == null ? null : s.replaceAll("^\"|\"$", "");
+    }
+
+    /**
+     * Utility method for parsing strings like '10g', '200m', '1000k' as gigabytes, megabytes and kilobytes.
+     * Plain numbers are parsed as number of bytes. Numbers followed by the '%' sign are parsed as a
+     * percent of the max heap size.
+     *
+     * @param bytesStr String to be parsed.
+     * @return Number of bytes.
+     */
+    public static long parseBytes(String bytesStr) {
+        bytesStr = bytesStr.trim();
+
+        if (bytesStr.matches("-?[0-9]+")) // Plain number.
+            return Long.parseLong(bytesStr);
+        else if (bytesStr.matches("-?[0-9]+[kK]")) // Kilobytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * KB;
+        else if (bytesStr.matches("-?[0-9]+[mM]")) // Megabytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * MB;
+        else if (bytesStr.matches("-?[0-9]+[gG]")) // Gigabytes.
+            return Long.parseLong(bytesStr.replaceAll("[^-0-9]", "")) * GB;
+        else if (bytesStr.matches("-?[0-9]+%")) { // Percent of heap.
+            long percent = Long.parseLong(bytesStr.replaceAll("[^-0-9]", ""));
+
+            if (percent < 0 || percent > 100) {
+                throw new IllegalArgumentException("The percentage should be in the range from 0 to 100, but was: " +
+                    percent);
+            }
+
+            return (long) (percent / 100.0 * Runtime.getRuntime().maxMemory());
+        }
+        else
+            throw new IllegalArgumentException("Wrong format of bytes string. It is expected to be a number or " +
+                "a number followed by one of the symbols: 'k', 'm', 'g', '%'.\n " +
+                "For example: '10000', '10k', '33m', '2G'. But was: " + bytesStr);
+    }
+
+    /**
+     * Writes string to output stream accounting for {@code null} values. <br/>
+     *
+     * This method can write string of any length, no {@link #UTF_BYTE_LIMIT} limits are applied.
+     *
+     * @param out Output stream to write to.
+     * @param s String to write, possibly {@code null}.
+     * @throws IOException If write failed.
+     */
+    public static void writeLongString(DataOutput out, @Nullable String s) throws IOException {
+        // Write null flag.
+        out.writeBoolean(isNull(s));
+
+        if (isNull(s))
+            return;
+
+        int sLen = s.length();
+
+        // Write string length.
+        out.writeInt(sLen);
+
+        // Write byte array.
+        for (int i = 0; i < sLen; i++) {
+            char c = s.charAt(i);
+            int utfBytes = utfBytes(c);
+
+            if (utfBytes == 1)
+                out.writeByte((byte)c);
+            else if (utfBytes == 3) {
+                out.writeByte((byte)(0xE0 | (c >> 12) & 0x0F));
+                out.writeByte((byte)(0x80 | (c >> 6) & 0x3F));
+                out.writeByte((byte)(0x80 | (c & 0x3F)));
+            }
+            else {
+                out.writeByte((byte)(0xC0 | ((c >> 6) & 0x1F)));
+                out.writeByte((byte)(0x80 | (c & 0x3F)));
+            }
+        }
+    }
+
+    /**
+     * Reads string from input stream accounting for {@code null} values. <br/>
+     *
+     * This method can read string of any length, no {@link #UTF_BYTE_LIMIT} limits are applied.
+     *
+     * @param in Stream to read from.
+     * @return Read string, possibly {@code null}.
+     * @throws IOException If read failed.
+     */
+    @Nullable public static String readLongString(DataInput in) throws IOException {
+        // Check null value.
+        if (in.readBoolean())
+            return null;
+
+        // Read string length.
+        int sLen = in.readInt();
+
+        StringBuilder strBuilder = new StringBuilder(sLen);
+
+        // Read byte array.
+        for (int i = 0, b0, b1, b2; i < sLen; i++) {
+            b0 = in.readByte() & 0xff;
+
+            switch (b0 >> 4) {
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:   // 1 byte format: 0xxxxxxx
+                    strBuilder.append((char)b0);
+                    break;
+
+                case 12:
+                case 13:  // 2 byte format: 110xxxxx 10xxxxxx
+                    b1 = in.readByte();
+
+                    if ((b1 & 0xC0) != 0x80)
+                        throw new UTFDataFormatException();
+
+                    strBuilder.append((char)(((b0 & 0x1F) << 6) | (b1 & 0x3F)));
+                    break;
+
+                case 14:  // 3 byte format: 1110xxxx 10xxxxxx 10xxxxxx
+                    b1 = in.readByte();
+                    b2 = in.readByte();
+
+                    if ((b1 & 0xC0) != 0x80 || (b2 & 0xC0) != 0x80)
+                        throw new UTFDataFormatException();
+
+                    strBuilder.append((char)(((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) | (b2 & 0x3F)));
+                    break;
+
+                default:  // 10xx xxxx, 1111 xxxx
+                    throw new UTFDataFormatException();
+            }
+        }
+
+        return strBuilder.toString();
+    }
+
+    /**
+     * Writes string to output stream accounting for {@code null} values. <br/>
+     *
+     * <p>
+     *     Uses {@link ObjectOutputStream#writeUTF(String)} to write the string under the hood
+     *     but cuts strings longer than {@link #UTF_BYTE_LIMIT} to the limit to avoid {@link UTFDataFormatException}.
+     * </p>
+     *
+     * <p>
+     *     Strings written by the method can be read by {@link #readString(DataInput)}.
+     * </p>
+     *
+     * @see #writeString(DataOutput, String) for more information.
+     *
+     * @param out Output stream to write to.
+     * @param s String to write, possibly {@code null}.
+     * @throws IOException If write failed.
+     */
+    public static void writeCutString(DataOutput out, @Nullable String s) throws IOException {
+        // Write null flag.
+        out.writeBoolean(isNull(s));
+
+        if (isNull(s))
+            return;
+
+        //Conversion of string to limit.
+        for (int i = 0, bs = 0; i < s.length(); i++) {
+            if ((bs += utfBytes(s.charAt(i))) > UTF_BYTE_LIMIT) {
+                s = s.substring(0, i);
+                break;
+            }
+        }
+
+        out.writeUTF(s);
+    }
+
+    /**
+     * Get number of bytes for {@link DataOutput#writeUTF},
+     * depending on character: <br/>
+     *
+     * One byte - If a character <code>c</code> is in the range
+     * <code>&#92;u0001</code> through <code>&#92;u007f</code>.<br/>
+     *
+     * Two bytes - If a character <code>c</code> is <code>&#92;u0000</code> or
+     * is in the range <code>&#92;u0080</code> through <code>&#92;u07ff</code>.
+     * <br/>
+     *
+     * Three bytes - If a character <code>c</code> is in the range
+     * <code>&#92;u0800</code> through <code>uffff</code>.
+     *
+     * @param c Character.
+     * @return Number of bytes.
+     */
+    public static int utfBytes(char c) {
+        return (c >= 0x0001 && c <= 0x007F) ? 1 : (c > 0x07FF) ? 3 : 2;
     }
 }

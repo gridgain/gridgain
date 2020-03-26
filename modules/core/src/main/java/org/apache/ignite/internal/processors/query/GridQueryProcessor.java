@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -73,15 +74,13 @@ import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.binary.CacheObjectBinaryProcessorImpl;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
-import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOFactory;
-import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
-import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.query.CacheQueryFuture;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.cacheobject.IgniteCacheObjectProcessor;
 import org.apache.ignite.internal.processors.query.property.QueryBinaryProperty;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitor;
+import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorImpl;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexOperationCancellationToken;
 import org.apache.ignite.internal.processors.query.schema.SchemaOperationClientFuture;
@@ -101,6 +100,7 @@ import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.GridBoundedConcurrentLinkedHashSet;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridCloseableIterator;
 import org.apache.ignite.internal.util.lang.GridClosureException;
 import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
@@ -120,6 +120,7 @@ import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Collections.newSetFromMap;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
@@ -186,7 +187,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     private ClusterNode crd;
 
     /** Registered cache names. */
-    private final Collection<String> cacheNames = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private final Collection<String> cacheNames = newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
     /** ID history for index create/drop discovery messages. */
     private final GridBoundedConcurrentLinkedHashSet<IgniteUuid> dscoMsgIdHist =
@@ -212,12 +213,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     private boolean skipFieldLookup;
 
     /** Cache name - value typeId pairs for which type mismatch message was logged. */
-    private final Set<Long> missedCacheTypes = Collections.newSetFromMap(new ConcurrentHashMap<>());
-
-    /** Factory to provide I/O interface for data storage files */
-    private FileIOFactory fileIOFactory =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
-            new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
+    private final Set<Long> missedCacheTypes = newSetFromMap(new ConcurrentHashMap<>());
 
     /**
      * @param ctx Kernal context.
@@ -1597,18 +1593,50 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         try {
             if (op instanceof SchemaIndexCreateOperation) {
-                final SchemaIndexCreateOperation op0 = (SchemaIndexCreateOperation)op;
+                SchemaIndexCreateOperation op0 = (SchemaIndexCreateOperation)op;
 
                 QueryIndexDescriptorImpl idxDesc = QueryUtils.createIndexDescriptor(type, op0.index());
 
                 SchemaIndexCacheVisitor visitor;
 
                 if (cacheInfo.isCacheContextInited()) {
+                    GridFutureAdapter<Void> createIdxFut = new GridFutureAdapter<>();
+
+                    int buildIdxPoolSize = ctx.config().getBuildIndexThreadPoolSize();
+                    int parallel = op0.parallel();
+
+                    if (parallel > buildIdxPoolSize) {
+                        String idxName = op0.indexName();
+
+                        log.warning("Provided parallelism " + parallel + " for creation of index " + idxName +
+                            " is greater than the number of index building threads. Will use " + buildIdxPoolSize +
+                            " threads to build index. Increase by IgniteConfiguration.setBuildIndexThreadPoolSize" +
+                            " and restart the node if you want to use more threads. [tableName=" + op0.tableName() +
+                            ", indexName=" + idxName + ", requestedParallelism=" + parallel + ", buildIndexPoolSize=" +
+                            buildIdxPoolSize + "]");
+                    }
+
                     GridCacheContext cctx = cacheInfo.cacheContext();
 
                     cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
-                    visitor = new SchemaIndexCacheVisitorImpl(cctx, cancelTok, op0.parallel());
+                    visitor = new SchemaIndexCacheVisitorImpl(
+                        cacheInfo.cacheContext(),
+                        cancelTok,
+                        createIdxFut
+                    ) {
+                        /** {@inheritDoc} */
+                        @Override public void visit(SchemaIndexCacheVisitorClosure clo) {
+                            super.visit(clo);
+
+                            try {
+                                buildIdxFut.get();
+                            }
+                            catch (Exception e) {
+                                throw new IgniteException(e);
+                            }
+                        }
+                    };
                 }
                 else
                     //For not started caches we shouldn't add any data to index.
@@ -1999,6 +2027,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @return Future that will be completed when rebuilding is finished.
      */
     public IgniteInternalFuture<?> rebuildIndexesFromHash(GridCacheContext cctx) {
+        assert nonNull(cctx);
+
         // Indexing module is disabled, nothing to rebuild.
         if (rebuildIsMeaningless(cctx))
             return null;
@@ -2017,9 +2047,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (empty)
             return null;
 
-        if (!busyLock.enterBusy())
+        if (!busyLock.enterBusy()) {
             return new GridFinishedFuture<>(new NodeStoppingException("Failed to rebuild indexes from hash " +
                 "(grid is stopping)."));
+        }
 
         try {
             return idx.rebuildIndexesFromHash(cctx);
@@ -2882,13 +2913,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @return Descriptors.
      */
     public Collection<GridQueryTypeDescriptor> types(@Nullable String cacheName) {
-        Collection<GridQueryTypeDescriptor> cacheTypes = new ArrayList<>();
+        Collection<GridQueryTypeDescriptor> cacheTypes = newSetFromMap(new IdentityHashMap<>());
 
         for (Map.Entry<QueryTypeIdKey, QueryTypeDescriptorImpl> e : types.entrySet()) {
-            QueryTypeDescriptorImpl desc = e.getValue();
-
             if (F.eq(e.getKey().cacheName(), cacheName))
-                cacheTypes.add(desc);
+                cacheTypes.add(e.getValue());
         }
 
         return cacheTypes;
@@ -3161,13 +3190,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      */
     public static AffinityTopologyVersion getRequestAffinityTopologyVersion() {
         return requestTopVer.get();
-    }
-
-    /**
-     * @return File IO Factory.
-     */
-    public FileIOFactory fileIOFactory() {
-        return fileIOFactory;
     }
 
     /**

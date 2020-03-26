@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.query.QueryTable;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
+import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.affinity.PartitionExtractor;
@@ -1860,6 +1861,9 @@ public class GridSqlQuerySplitter {
 
                 break;
 
+            case UNKNOWN_FUNCTION:
+                throw new IgniteSQLException("Custom aggregation function is not supported for not collocated data.", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+
             default:
                 throw new IgniteException("Unsupported aggregate: " + agg.type());
         }
@@ -1882,13 +1886,12 @@ public class GridSqlQuerySplitter {
      * @param qry Parsed query.
      * @param enforceJoinOrder Enforce join order.
      * @return Optimized prepared command.
-     * @throws SQLException If failed.
      */
-    public static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
-        boolean enforceJoinOrder) throws SQLException {
+    private static Prepared prepare(H2PooledConnection c, QueryContext qctx, String qry, boolean distributedJoins,
+        boolean enforceJoinOrder) throws SQLException, IgniteCheckedException {
         H2Utils.setupConnection(c, qctx, distributedJoins, enforceJoinOrder);
 
-        try (PreparedStatement s = c.prepareStatement(qry)) {
+        try (PreparedStatement s = c.prepareStatement(qry, H2StatementCache.queryFlags(distributedJoins, enforceJoinOrder))) {
             return GridSqlQueryParser.prepared(s);
         }
     }

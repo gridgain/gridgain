@@ -28,6 +28,8 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
 /**
@@ -37,7 +39,8 @@ public class PlatformCacheAffinityVersionTask extends ComputeTaskAdapter<String,
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         String arg) throws IgniteException {
-        return Collections.singletonMap(new Job(arg), subgrid.stream().filter(ClusterNode::isLocal).findFirst().get());
+        return Collections.singletonMap(new Job(arg), F.find(subgrid, null,
+            (IgnitePredicate<? super ClusterNode>)ClusterNode::isLocal));
     }
 
     /** {@inheritDoc} */

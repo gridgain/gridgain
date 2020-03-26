@@ -95,6 +95,7 @@ import org.apache.ignite.internal.processors.database.IndexStorageSelfTest;
 import org.apache.ignite.internal.processors.database.SwapPathConstructionSelfTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorLoggingTest;
 import org.apache.ignite.internal.processors.failure.FailureProcessorThreadDumpThrottlingTest;
+import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageStopTest;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorageTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DistributedMetaStorageHistoryCacheTest;
 import org.apache.ignite.internal.processors.metastorage.persistence.DmsDataWriterWorkerTest;
@@ -102,7 +103,7 @@ import org.apache.ignite.internal.processors.metastorage.persistence.InMemoryCac
 import org.apache.ignite.internal.processors.odbc.OdbcConfigurationValidationSelfTest;
 import org.apache.ignite.internal.processors.odbc.OdbcEscapeSequenceSelfTest;
 import org.apache.ignite.internal.processors.odbc.SqlListenerUtilsTest;
-import org.apache.ignite.internal.product.FeatureIsNotAvailableTest;
+import org.apache.ignite.internal.product.FeaturesIsNotAvailableTest;
 import org.apache.ignite.internal.product.GridProductVersionSelfTest;
 import org.apache.ignite.internal.util.GridCleanerTest;
 import org.apache.ignite.internal.util.collection.BitSetIntSetTest;
@@ -116,6 +117,7 @@ import org.apache.ignite.messaging.GridMessagingNoPeerClassLoadingSelfTest;
 import org.apache.ignite.messaging.GridMessagingSelfTest;
 import org.apache.ignite.messaging.IgniteMessagingSendAsyncTest;
 import org.apache.ignite.messaging.IgniteMessagingWithClientTest;
+import org.apache.ignite.plugin.PluginConfigurationTest;
 import org.apache.ignite.plugin.PluginNodeValidationTest;
 import org.apache.ignite.plugin.security.SecurityPermissionSetBuilderTest;
 import org.apache.ignite.spi.GridSpiLocalHostInjectionTest;
@@ -194,7 +196,7 @@ import org.junit.runners.Suite;
     SetTxTimeoutOnPartitionMapExchangeTest.class,
     DiscoveryDataDeserializationFailureHanderTest.class,
 
-    FeatureIsNotAvailableTest.class,
+    FeaturesIsNotAvailableTest.class,
 
     PartitionsEvictionTaskFailureHandlerTest.class,
     DropCacheContextDuringEvictionTest.class,
@@ -268,9 +270,11 @@ import org.junit.runners.Suite;
     CacheLocalGetSerializationTest.class,
 
     PluginNodeValidationTest.class,
+    PluginConfigurationTest.class,
 
     // In-memory Distributed MetaStorage.
     DistributedMetaStorageTest.class,
+    DistributedMetaStorageStopTest.class,
     DistributedMetaStorageHistoryCacheTest.class,
     DmsDataWriterWorkerTest.class,
     InMemoryCachedDistributedMetaStorageBridgeTest.class,

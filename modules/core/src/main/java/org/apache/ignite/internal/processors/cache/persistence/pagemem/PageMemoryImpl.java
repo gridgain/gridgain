@@ -1148,8 +1148,7 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             seg.checkpointPages = new CheckpointPages(dirtyPages, allowToReplace);
 
-            seg.dirtyPages = new GridConcurrentHashSet<>();
-            seg.dirtyPagesCntr.set(0);
+            seg.resetDirtyPages();
         }
 
         safeToUpdate.set(true);
@@ -1283,7 +1282,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         CheckpointMetricsTracker tracker
     ) throws IgniteCheckedException {
         assert absPtr != 0;
-        assert PageHeader.isAcquired(absPtr);
+        assert PageHeader.isAcquired(absPtr) || !isInCheckpoint(fullId);
 
         // Exception protection flag.
         // No need to write if exception occurred.
@@ -1299,16 +1298,23 @@ public class PageMemoryImpl implements PageMemoryEx {
 
             buf.clear();
 
-            pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);
+            if (isInCheckpoint(fullId))
+                pageStoreWriter.writePage(fullId, buf, TRY_AGAIN_TAG);
+
+            return;
+        }
+
+        if (!clearCheckpoint(fullId)) {
+            rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
+
+            if (!pageSingleAcquire)
+                PageHeader.releasePage(absPtr);
 
             return;
         }
 
         try {
             long tmpRelPtr = PageHeader.tempBufferPointer(absPtr);
-
-            if (!clearCheckpoint(fullId))
-                return;
 
             if (tmpRelPtr != INVALID_REL_PTR) {
                 PageHeader.tempBufferPointer(absPtr, INVALID_REL_PTR);
@@ -1346,7 +1352,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         finally {
             rwLock.writeUnlock(absPtr + PAGE_LOCK_OFFSET, OffheapReadWriteLock.TAG_LOCK_ALWAYS);
 
-            if (canWrite){
+            if (canWrite) {
                 buf.rewind();
 
                 pageStoreWriter.writePage(fullId, buf, tag);
@@ -2124,6 +2130,15 @@ public class PageMemoryImpl implements PageMemoryEx {
          */
         private long borrowOrAllocateFreePage(long pageId) {
             return pool.borrowOrAllocateFreePage(PageIdUtils.tag(pageId));
+        }
+
+        /**
+         * Clear dirty pages collection and reset counter.
+         */
+        private void resetDirtyPages() {
+            dirtyPages = new GridConcurrentHashSet<>();
+
+            dirtyPagesCntr.set(0);
         }
 
         /**

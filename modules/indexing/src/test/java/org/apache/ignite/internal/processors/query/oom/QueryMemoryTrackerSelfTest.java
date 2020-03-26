@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.query.oom;
 
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -35,8 +34,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.MB;
 /**
  * Query memory manager test for distributed queries.
  */
-@WithSystemProperty(key = "IGNITE_SQL_USE_DISK_OFFLOAD", value = "false")
-public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTest {
+public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest {
     /** {@inheritDoc} */
     @Override protected boolean isLocal() {
         return false;
@@ -45,7 +43,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
     /** {@inheritDoc} */
     @Test
     @Override public void testUnionOfSmallDataSetsWithLargeResult() {
-        maxMem = 2 * MB;
+        maxMem = 3 * MB;
 
         // OOM on reducer.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
@@ -228,7 +226,7 @@ public class QueryMemoryTrackerSelfTest extends AbstractQueryMemoryTrackerSelfTe
 
             IgniteH2Indexing h2 = (IgniteH2Indexing)grid(1).context().query().getIndexing();
 
-            long globalAllocated = h2.memoryManager().memoryReserved();
+            long globalAllocated = h2.memoryManager().reserved();
 
             assertTrue(h2.memoryManager().memoryLimit() < globalAllocated + MB);
         }

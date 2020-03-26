@@ -30,7 +30,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Tests for {@link SqlStatisticsHolderMemoryQuotas}. In this test we check that memory metrics reports plausible
+ * Tests for {@link SqlMemoryStatisticsHolder}. In this test we check that memory metrics reports plausible
  * values. Here we want to verify metrics based on the new framework work well, not {@link H2MemoryTracker}.
  */
 public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
@@ -205,7 +205,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     public void testMaxMemMetricShowCustomMaxMemoryValuesForDifferentNodes() throws Exception {
         final int oneMaxMem = 512 * 1024;
         final int otherMaxMem = 1024 * 1024;
-        final int unlimMaxMem = -1;
+        final int unlimMaxMem = 0;
 
         final int oneNodeIdx = 0;
         final int otherNodeIdx = 1;
@@ -228,15 +228,15 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     @Test
     public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
         final MemValidator quotaUnlim = (free, max) -> {
-            assertEquals(-1, max);
-            assertEquals(max, free);
+            assertEquals(0, max);
+            assertTrue(0 >= free);
         };
 
         int connNodeIdx = 1;
         int otherNodeIdx = 0;
 
-        startGridWithMaxMem(connNodeIdx, -1);
-        startGridWithMaxMem(otherNodeIdx, -1);
+        startGridWithMaxMem(connNodeIdx, 0);
+        startGridWithMaxMem(otherNodeIdx, 0);
 
         IgniteCache cache = createCacheFrom(grid(connNodeIdx));
 
@@ -250,8 +250,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        assertEquals(1, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(1, longMetricValue(otherNodeIdx, "requests"));
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
@@ -260,8 +260,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        assertEquals(3, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(3, longMetricValue(otherNodeIdx, "requests"));
     }
 
     /**
@@ -289,7 +289,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
      * @param metricName short name of the metric from the "sql memory" metric registry.
      */
     private long longMetricValue(int gridIdx, String metricName) {
-        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlStatisticsHolderMemoryQuotas.SQL_QUOTAS_REG_NAME);
+        MetricRegistry sqlMemReg = grid(gridIdx).context().metric().registry(SqlMemoryStatisticsHolder.SQL_QUOTAS_REG_NAME);
 
         Metric metric = sqlMemReg.findMetric(metricName);
 

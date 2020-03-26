@@ -19,31 +19,83 @@ package org.apache.ignite.internal.processors.query.h2;
 /**
  * Memory tracker.
  */
-public abstract class H2MemoryTracker implements AutoCloseable {
+public interface H2MemoryTracker extends AutoCloseable {
     /**
-     * Check allocated size is less than query memory pool threshold.
+     * Tracks reservation of new chunk of bytes.
      *
      * @param size Allocated size in bytes.
-     * @return {@code True} if memory limit is not exceeded. {@code False} otherwise.
+     * @return {@code true} if memory limit is not exceeded. {@code false} otherwise.
      */
-    public abstract boolean reserved(long size);
+    public boolean reserve(long size);
 
     /**
-     * Memory release callback.
+     * Tracks memory releasing.
      *
      * @param size Released memory size in bytes.
      */
-    public abstract void released(long size);
+    public void release(long size);
+
+    /**
+     * Written on disk memory.
+     *
+     * @return Amount of bytes written on disk.
+     */
+    public long writtenOnDisk();
+
+    /**
+     * Written on disk total.
+     *
+     * @return Amount of bytes written on disk in total.
+     */
+    public long totalWrittenOnDisk();
 
     /**
      * Reserved memory.
      *
-     * @return  Reserved memory in bytes.
+     * @return Reserved memory in bytes.
      */
-    public abstract long memoryReserved();
+    public long reserved();
 
     /**
-     * @return Max memory limit.
+     * Tracks spilling on disk.
+     *
+     * @param size Amount of bytes written on disk.
      */
-    public abstract long memoryLimit();
+    public void spill(long size);
+
+    /**
+     * Tracks unspilling from disk.
+     *
+     * @param size Amount of bytes deleted from disk.
+     */
+    public void unspill(long size);
+
+    /**
+     * Increments the counter of created offloading files.
+     */
+    public void incrementFilesCreated();
+
+    /**
+     * Creates child tracker that uses resources of current tracker.
+     *
+     * Note: created tracker is not thread-safe
+     */
+    public H2MemoryTracker createChildTracker();
+
+    /**
+     * Callback to release resources allocated for child tracker.
+     *
+     * @param child Child whose resources should be released.
+     */
+    public void onChildClosed(H2MemoryTracker child);
+
+    /**
+     * Whether current tracker was closed or not.
+     *
+     * @return {@code true} if current tracker was closed.
+     */
+    public boolean closed();
+
+    /** {@inheritDoc} */
+    @Override public void close();
 }

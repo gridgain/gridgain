@@ -18,7 +18,7 @@ package org.apache.ignite.agent.processor.action;
 
 import java.util.UUID;
 import org.apache.ignite.IgniteAuthenticationException;
-import org.apache.ignite.agent.ManagementConsoleProcessor;
+import org.apache.ignite.agent.ManagementConsoleAgent;
 import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.agent.action.SessionRegistry;
 import org.apache.ignite.agent.dto.action.InvalidRequest;
@@ -61,9 +61,9 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public DistributedActionProcessor(GridKernalContext ctx) {
         super(ctx);
 
-        this.mgr = ((ManagementConsoleProcessor)ctx.managementConsole()).webSocketManager();
-        this.sesRegistry = ((ManagementConsoleProcessor)ctx.managementConsole()).sessionRegistry();
-        this.locNodeConsistentId = String.valueOf(ctx.grid().localNode().consistentId());
+        mgr = ((ManagementConsoleAgent)ctx.managementConsole()).webSocketManager();
+        sesRegistry = ((ManagementConsoleAgent)ctx.managementConsole()).sessionRegistry();
+        locNodeConsistentId = String.valueOf(ctx.grid().localNode().consistentId());
     }
 
     /**
@@ -130,7 +130,7 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public void sendTaskResponse(TaskResponse res) {
         UUID clusterId = ctx.cluster().get().id();
 
-        mgr.send(buildActionTaskResponseDest(clusterId, res.getId()), res);
+        mgr.send(buildActionTaskResponseDest(clusterId), res);
     }
 
     /**
@@ -139,7 +139,7 @@ public class DistributedActionProcessor extends GridProcessorAdapter {
     public void sendJobResponse(JobResponse res) {
         UUID clusterId = ctx.cluster().get().id();
 
-        mgr.send(buildActionJobResponseDest(clusterId, res.getRequestId()), res);
+        mgr.send(buildActionJobResponseDest(clusterId), res);
     }
 
     /**
