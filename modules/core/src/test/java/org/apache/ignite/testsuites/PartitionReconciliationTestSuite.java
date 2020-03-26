@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import org.apache.ignite.internal.processors.cache.checker.ConsistencyCheckUtilsTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationBinaryObjectsTest;
+import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationCompactCollectorTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFastCheckTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFixStressTest;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationFullFixStressTest;
@@ -88,6 +89,7 @@ public class PartitionReconciliationTestSuite {
         GridTestUtils.addTestIfNeeded(suite, RepairRequestTaskTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ReconciliationResourceLimitedJobTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationFastCheckTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite, PartitionReconciliationCompactCollectorTest.class, ignoredTests);
 
         return suite;
     }
