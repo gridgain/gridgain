@@ -13,44 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
+package org.apache.ignite.development.utils.indexreader;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.RandomAccessFile;
-import java.io.UncheckedIOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.channels.FileChannel;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.IntStream;
-import java.util.stream.LongStream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.configuration.DataStorageConfiguration;
+import org.apache.ignite.development.utils.ProgressPrinter;
+import org.apache.ignite.development.utils.StringBuilderOutputStream;
 import org.apache.ignite.development.utils.arguments.CLIArgument;
 import org.apache.ignite.development.utils.arguments.CLIArgumentParser;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
@@ -88,33 +57,62 @@ import org.apache.ignite.internal.processors.query.h2.database.io.H2RowLinkIO;
 import org.apache.ignite.internal.util.GridLongList;
 import org.apache.ignite.internal.util.GridStringBuilder;
 import org.apache.ignite.internal.util.GridUnsafe;
-import org.apache.ignite.internal.util.collection.BitSetIntSet;
-import org.apache.ignite.internal.util.collection.IntSet;
 import org.apache.ignite.internal.util.lang.GridClosure3;
 import org.apache.ignite.internal.util.lang.IgnitePair;
 import org.apache.ignite.lang.IgniteBiTuple;
-import org.jetbrains.annotations.NotNull;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.io.RandomAccessFile;
+import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonList;
-import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.CHECK_PARTS;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.DEST;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.DEST_FILE;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.DIR;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.FILE_MASK;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.INDEXES;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.PAGE_SIZE;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.PAGE_STORE_VER;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.PART_CNT;
-import static org.apache.ignite.development.utils.IgniteIndexReader.Args.TRANSFORM;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.mandatoryArg;
 import static org.apache.ignite.development.utils.arguments.CLIArgument.optionalArg;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.CHECK_PARTS;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DEST_FILE;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.DIR;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.FILE_MASK;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.INDEXES;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_SIZE;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PAGE_STORE_VER;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.PART_CNT;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.Args.TRANSFORM;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -148,7 +146,7 @@ public class IgniteIndexReader implements AutoCloseable {
     private static final String PAGE_LISTS_PREFIX = "<PAGE_LIST> ";
 
     /** */
-    private static final String ERROR_PREFIX = "<ERROR> ";
+    public static final String ERROR_PREFIX = "<ERROR> ";
 
     /** */
     private static final Pattern CACHE_TYPE_ID_SEACH_PATTERN =
@@ -160,6 +158,9 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private static final int CHECK_PARTS_MAX_ERRORS_PER_PARTITION = 10;
+
+    /** */
+    private static final Map<String, IgnitePair<Integer>> CACHE_TYPE_IDS = new HashMap<>();
 
     /** */
     static {
@@ -218,18 +219,7 @@ public class IgniteIndexReader implements AutoCloseable {
     private PageIOProcessor leafPageIOProcessor = new LeafPageIOProcessor();
 
     /** */
-    private Map<String, IgnitePair<Integer>> cacheTypeIds = new HashMap<>();
-
-    /** Mapping IO classes to their processors. */
-    private final Map<Class, PageIOProcessor> ioProcessorsMap = new HashMap<Class, PageIOProcessor>() {{
-        put(BPlusMetaIO.class, new MetaPageIOProcessor());
-        put(BPlusInnerIO.class, innerPageIOProcessor);
-        put(H2ExtrasInnerIO.class, innerPageIOProcessor);
-        put(IndexStorageImpl.MetaStoreInnerIO.class, innerPageIOProcessor);
-        put(BPlusLeafIO.class, leafPageIOProcessor);
-        put(H2ExtrasLeafIO.class, leafPageIOProcessor);
-        put(IndexStorageImpl.MetaStoreLeafIO.class, leafPageIOProcessor);
-    }};
+    private PageIOProcessor metaPageIOProcessor = new MetaPageIOProcessor();
 
     /** */
     public IgniteIndexReader(
@@ -247,50 +237,42 @@ public class IgniteIndexReader implements AutoCloseable {
         this.cacheWorkDir = new File(cacheWorkDirPath);
         this.checkParts = checkParts;
         this.indexes = indexes == null ? null : new HashSet<>(asList(indexes));
-        this.storeFactory = new FileVersionCheckingFactory(new AsyncFileIOFactory(), new AsyncFileIOFactory(), dsCfg) {
-            /** {@inheritDoc} */
-            @Override public int latestVersion() {
-                return filePageStoreVer;
-            }
-        };
-
-        if (outputStream == null) {
-            outStream = System.out;
-            outErrStream = System.out;
-        }
-        else {
-            this.outStream = new PrintStream(outputStream);
-            this.outErrStream = outStream;
-        }
+        this.storeFactory = storeFactory(filePageStoreVer);
+        this.outStream = outputStream == null ? System.out : new PrintStream(outputStream);
+        this.outErrStream = outputStream == null ? System.out : outStream;
 
         idxFile = getFile(INDEX_PARTITION);
 
         if (idxFile == null)
-            throw new RuntimeException("index.bin file not found");
+            throw new IgniteException(INDEX_FILE_NAME + " file not found");
 
-        idxStore = getIdxStore();
+        idxStore = (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocationTracker);
 
         partStores = new FilePageStore[partCnt];
 
-        if (idxStore != null) {
-            for (int i = 0; i < partCnt; i++) {
-                final File file = getFile(i);
+        for (int i = 0; i < partCnt; i++) {
+            final File file = getFile(i);
 
-                // Some of array members will be null if node doesn't have all partition files locally.
-                if (file != null)
-                    partStores[i] = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, file, allocationTracker);
-            }
+            // Some of array members will be null if node doesn't have all partition files locally.
+            if (file != null)
+                partStores[i] = (FilePageStore)storeFactory.createPageStore(FLAG_DATA, file, allocationTracker);
         }
     }
 
     /** */
-    private FilePageStore getIdxStore() throws IgniteCheckedException {
-        try {
-            return (FilePageStore)storeFactory.createPageStore(FLAG_IDX, idxFile, allocationTracker);
-        }
-        catch (IllegalArgumentException e) {
-            return null;
-        }
+    public IgniteIndexReader(String cacheWorkDirPath, int pageSize, int filePageStoreVer, OutputStream outputStream) {
+        this.pageSize = pageSize;
+        this.partCnt = 0;
+        this.dsCfg = new DataStorageConfiguration().setPageSize(pageSize);
+        this.cacheWorkDir = new File(cacheWorkDirPath);
+        this.checkParts = false;
+        this.indexes = null;
+        this.storeFactory = storeFactory(filePageStoreVer);
+        this.outStream = outputStream == null ? System.out : new PrintStream(outputStream);
+        this.outErrStream = outputStream == null ? System.out : outStream;
+        this.idxFile = null;
+        this.idxStore = null;
+        this.partStores = null;
     }
 
     /** */
@@ -334,11 +316,11 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /** */
-    private void printPageStat(String prefix, String caption, Map<Class, AtomicLong> stat) {
+    private void printPageStat(String prefix, String caption, Map<Class, Long> stat) {
         if (caption != null)
             print(prefix + caption + (stat.isEmpty() ? " empty" : ""));
 
-        stat.forEach((cls, cnt) -> print(prefix + cls.getSimpleName() + ": " + cnt.get()));
+        stat.forEach((cls, cnt) -> print(prefix + cls.getSimpleName() + ": " + cnt));
     }
 
     /** */
@@ -357,14 +339,27 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private File getFile(int partId) {
-        File file =  new File(cacheWorkDir, partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId));
+        File file = new File(
+                cacheWorkDir,
+                partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId)
+        );
 
         if (!file.exists())
             return null;
-        else if (partId == -1)
+        else if (partId == INDEX_PARTITION)
             print("Analyzing file: " + file.getPath());
 
         return file;
+    }
+
+    /** */
+    private FileVersionCheckingFactory storeFactory(int filePageStoreVer) {
+        return new FileVersionCheckingFactory(new AsyncFileIOFactory(), new AsyncFileIOFactory(), dsCfg) {
+            /** {@inheritDoc} */
+            @Override public int latestVersion() {
+                return filePageStoreVer;
+            }
+        };
     }
 
     /** */
@@ -388,13 +383,13 @@ public class IgniteIndexReader implements AutoCloseable {
 
         print("Partitions files num: " + partPageStoresNum);
 
-        Map<Class, AtomicLong> pageClasses = new HashMap<>();
+        Map<Class, Long> pageClasses = new HashMap<>();
 
         long pagesNum = idxStore == null ? 0 : (idxFile.length() - idxStore.headerSize()) / pageSize;
 
         print("Going to check " + pagesNum + " pages.");
 
-        Map<Class, Set<Long>> pageIoIds = new HashMap<>();
+        Set<Long> pageIds = new HashSet<>();
 
         AtomicReference<Map<String, TreeTraversalInfo>> treeInfo = new AtomicReference<>();
 
@@ -404,52 +399,62 @@ public class IgniteIndexReader implements AutoCloseable {
 
         List<Throwable> errors;
 
-        ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Reading pages sequentially", pagesNum);
-
         try {
-            errors = scanFileStore(INDEX_PARTITION, FLAG_IDX, idxStore, (pageId, addr, io) -> {
-                progressPrinter.printProgress();
+            Set<Class> metaPageClasses = new HashSet<>(asList(PageMetaIO.class, PagesListMetaIO.class));
 
-                pageClasses.computeIfAbsent(io.getClass(), k -> new AtomicLong(0)).incrementAndGet();
+            Map<Class, Long> idxMetaPages = findPages(INDEX_PARTITION, FLAG_IDX, idxStore, metaPageClasses);
 
-                if (io instanceof PageMetaIO) {
-                    PageMetaIO pageMetaIO = (PageMetaIO)io;
+            Long pageMetaPageId = idxMetaPages.get(PageMetaIO.class);
+
+            // Traversing trees.
+            if (pageMetaPageId != null) {
+                doWithBuffer((buf, addr) -> {
+                    readPage(idxStore, pageMetaPageId, buf);
+
+                    PageMetaIO pageMetaIO = PageIO.getPageIO(addr);
 
                     long metaTreeRootId = normalizePageId(pageMetaIO.getTreeRoot(addr));
 
                     treeInfo.set(traverseAllTrees("Index trees traversal", metaTreeRootId, CountOnlyStorage::new, this::traverseTree));
 
                     treeInfo.get().forEach((name, info) -> {
-                        info.innerPageIds.forEach(id -> {
-                            Class cls = name.equals(META_TREE_NAME)
-                                ? IndexStorageImpl.MetaStoreInnerIO.class
-                                : H2ExtrasInnerIO.class;
+                        pageIds.addAll(info.innerPageIds);
 
-                            pageIoIds.computeIfAbsent(cls, k -> new HashSet<>()).add(id);
-                        });
-
-                        pageIoIds.computeIfAbsent(BPlusMetaIO.class, k -> new HashSet<>()).add(info.rootPageId);
+                        pageIds.add(info.rootPageId);
                     });
 
                     Supplier<ItemStorage> itemStorageFactory = checkParts ? LinkStorage::new : CountOnlyStorage::new;
 
                     horizontalScans.set(traverseAllTrees("Scan index trees horizontally", metaTreeRootId, itemStorageFactory, this::horizontalTreeScan));
-                }
-                else if (io instanceof PagesListMetaIO)
-                    pageListsInfo.set(getPageListsMetaInfo(pageId));
-                else {
-                    if (indexes == null) {
-                        ofNullable(pageIoIds.get(io.getClass())).ifPresent((pageIds) -> {
-                            if (!pageIds.contains(pageId)) {
-                                boolean foundInList =
-                                    (pageListsInfo.get() != null && pageListsInfo.get().allPages.contains(pageId));
 
-                                throw new IgniteException(
-                                    "Possibly orphan " + io.getClass().getSimpleName() + " page, pageId=" + pageId +
-                                        (foundInList ? ", it has been found in page list." : "")
-                                );
-                            }
-                        });
+                    return null;
+                });
+            }
+
+            Long pageListMetaPageId = idxMetaPages.get(PagesListMetaIO.class);
+
+            // Scanning page reuse lists.
+            if (pageListMetaPageId != null)
+                pageListsInfo.set(getPageListsInfo(pageListMetaPageId));
+
+            ProgressPrinter progressPrinter = new ProgressPrinter(System.out, "Reading pages sequentially", pagesNum);
+
+            // Scan all pages in file.
+            errors = scanFileStore(INDEX_PARTITION, FLAG_IDX, idxStore, (pageId, addr, io) -> {
+                progressPrinter.printProgress();
+
+                pageClasses.compute(io.getClass(), (k, v) -> v == null ? 1 : v + 1);
+
+                if (!(io instanceof PageMetaIO || io instanceof PagesListMetaIO)) {
+                    if (indexes == null) {
+                        if ((io instanceof BPlusMetaIO || io instanceof BPlusInnerIO)
+                                && !pageIds.contains(pageId)
+                                && pageListsInfo.get() != null
+                                && !pageListsInfo.get().allPages.contains(pageId)) {
+                            throw new IgniteException(
+                                    "Possibly orphan " + io.getClass().getSimpleName() + " page, pageId=" + pageId
+                            );
+                        }
                     }
                 }
 
@@ -457,10 +462,10 @@ public class IgniteIndexReader implements AutoCloseable {
             });
         }
         catch (IgniteCheckedException e) {
-            throw new IgniteException("index.bin scan problem", e);
+            throw new IgniteException(INDEX_FILE_NAME + " scan problem", e);
         }
 
-        if (treeInfo == null)
+        if (treeInfo.get() == null)
             printErr("No tree meta info found.");
         else {
             printTraversalResults(RECURSIVE_TRAVERSE_NAME, treeInfo.get());
@@ -485,7 +490,7 @@ public class IgniteIndexReader implements AutoCloseable {
         }
 
         print("---");
-        print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(AtomicLong::get).sum());
+        print("Total pages encountered during sequential scan: " + pageClasses.values().stream().mapToLong(a -> a).sum());
         print("Total errors occurred during sequential scan: " + errors.size());
 
         if (indexes != null)
@@ -738,13 +743,10 @@ public class IgniteIndexReader implements AutoCloseable {
             tree.ioStat.forEach((cls, cnt) -> {
                 classesInStat.add(cls);
 
-                AtomicLong scanCnt = scan.ioStat.get(cls);
+                long scanCnt = scan.ioStat.getOrDefault(cls, 0L);
 
-                if (scanCnt == null)
-                    scanCnt = new AtomicLong(0);
-
-                if (scanCnt.get() != cnt.get())
-                    errors.add(compareError("pages", name, cnt.get(), scanCnt.get(), cls));
+                if (scanCnt != cnt)
+                    errors.add(compareError("pages", name, cnt, scanCnt, cls));
             });
 
             scan.ioStat.forEach((cls, cnt) -> {
@@ -752,7 +754,7 @@ public class IgniteIndexReader implements AutoCloseable {
                     // Already checked.
                     return;
 
-                errors.add(compareError("pages", name, 0, cnt.get(), cls));
+                errors.add(compareError("pages", name, 0, cnt, cls));
             });
         });
 
@@ -783,17 +785,17 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     * Gets meta info about page lists.
+     * Gets info about page lists.
      *
      * @param metaPageListId Page list meta id.
-     * @return Meta info.
+     * @return Page list info.
      */
-    private PageListsInfo getPageListsMetaInfo(long metaPageListId) {
+    private PageListsInfo getPageListsInfo(long metaPageListId) {
         Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData = new HashMap<>();
 
         Set<Long> allPages = new HashSet<>();
 
-        Map<Class, AtomicLong> pageListStat = new HashMap<>();
+        Map<Class, Long> pageListStat = new HashMap<>();
 
         Map<Long, List<Throwable>> errors = new HashMap<>();
 
@@ -849,7 +851,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param pageStat Page types statistics.
      * @return List of page ids.
      */
-    private List<Long> getPageList(long pageListStartId, Map<Class, AtomicLong> pageStat) {
+    private List<Long> getPageList(long pageListStartId, Map<Class, Long> pageStat) {
         List<Long> res = new LinkedList<>();
 
         long nextNodeId = pageListStartId;
@@ -880,7 +882,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                         PageIO pageIO = PageIO.getPageIO(pageAddr);
 
-                        pageStat.computeIfAbsent(pageIO.getClass(), k -> new AtomicLong(0)).incrementAndGet();
+                        pageStat.compute(pageIO.getClass(), (k, v) -> v == null ? 1 : v + 1);
                     }
 
                     nextNodeId = io.getNextId(nodeAddr);
@@ -910,10 +912,10 @@ public class IgniteIndexReader implements AutoCloseable {
         Supplier<ItemStorage> itemStorageFactory,
         TraverseProc traverseProc
     ) {
-        Map<String, TreeTraversalInfo> treeInfos = new HashMap<>();
+        Map<String, TreeTraversalInfo> treeInfos = new LinkedHashMap<>();
 
         TreeTraversalInfo metaTreeTraversalInfo =
-            traverseProc.traverse(idxStore, metaTreeRoot, META_TREE_NAME, new ItemsListStorage());
+            traverseProc.traverse(idxStore, metaTreeRoot, META_TREE_NAME, new ItemsListStorage<IndexStorageImpl.IndexItem>());
 
         treeInfos.put(META_TREE_NAME, metaTreeTraversalInfo);
 
@@ -945,7 +947,7 @@ public class IgniteIndexReader implements AutoCloseable {
     private void printTraversalResults(String prefix, Map<String, TreeTraversalInfo> treeInfos) {
         print("\n" + prefix + "Tree traversal results");
 
-        Map<Class, AtomicLong> totalStat = new HashMap<>();
+        Map<Class, Long> totalStat = new HashMap<>();
 
         AtomicInteger totalErr = new AtomicInteger(0);
 
@@ -958,9 +960,9 @@ public class IgniteIndexReader implements AutoCloseable {
             print(prefix + "-- Page stat:");
 
             validationInfo.ioStat.forEach((cls, cnt) -> {
-                print(prefix + cls.getSimpleName() + ": " + cnt.get());
+                print(prefix + cls.getSimpleName() + ": " + cnt);
 
-                totalStat.computeIfAbsent(cls, k -> new AtomicLong(0)).addAndGet(cnt.get());
+                totalStat.compute(cls, (k, v) -> v == null ? 1 : v + 1);
             });
 
             print(prefix + "-- Count of items found in leaf pages: " + validationInfo.itemStorage.size());
@@ -1003,7 +1005,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         print("");
         print(prefix + "Total trees: " + treeInfos.keySet().size());
-        print(prefix + "Total pages found in trees: " + totalStat.values().stream().mapToLong(AtomicLong::get).sum());
+        print(prefix + "Total pages found in trees: " + totalStat.values().stream().mapToLong(a -> a).sum());
         print(prefix + "Total errors during trees traversal: " + totalErr.get());
         print("");
 
@@ -1016,7 +1018,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param name Index name.
      * @return Cache id.
      */
-    private int getCacheId(String name) {
+    public static int getCacheId(String name) {
         return getCacheAndTypeId(name).get1();
     }
 
@@ -1026,8 +1028,8 @@ public class IgniteIndexReader implements AutoCloseable {
      * @param name Index name.
      * @return Pair of cache id and type id.
      */
-    private IgnitePair<Integer> getCacheAndTypeId(String name) {
-        return cacheTypeIds.computeIfAbsent(name, k -> {
+    public static IgnitePair<Integer> getCacheAndTypeId(String name) {
+        return CACHE_TYPE_IDS.computeIfAbsent(name, k -> {
             Matcher mId = CACHE_TYPE_ID_SEACH_PATTERN.matcher(k);
 
             if (mId.find()) {
@@ -1079,7 +1081,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
         printPageStat(prefix, "-- Page stat:", pageListsInfo.pageListStat);
 
-        printErrors(prefix, "---Errors:", "---No errors.", "Page id: %, exception: ", true, pageListsInfo.errors);
+        printErrors(prefix, "---Errors:", "---No errors.", "Page id: %s, exception: ", true, pageListsInfo.errors);
 
         print("");
         print(prefix + "Total index pages found in lists: " + pageListsInfo.allPages.size());
@@ -1097,7 +1099,7 @@ public class IgniteIndexReader implements AutoCloseable {
      * @return Tree traversal info.
      */
     private TreeTraversalInfo traverseTree(FilePageStore store, long rootPageId, String treeName, ItemStorage itemStorage) {
-        Map<Class, AtomicLong> ioStat = new HashMap<>();
+        Map<Class, Long> ioStat = new HashMap<>();
 
         Map<Long, List<Throwable>> errors = new HashMap<>();
 
@@ -1129,7 +1131,7 @@ public class IgniteIndexReader implements AutoCloseable {
     ) {
         Map<Long, List<Throwable>> errors = new HashMap<>();
 
-        Map<Class, AtomicLong> ioStat = new HashMap<>();
+        Map<Class, Long> ioStat = new HashMap<>();
 
         TreeTraverseContext treeCtx = new TreeTraverseContext(treeName, store, ioStat, errors, null, null, null);
 
@@ -1137,8 +1139,6 @@ public class IgniteIndexReader implements AutoCloseable {
 
         try {
             long addr = bufferAddress(buf);
-
-            buf.rewind();
 
             readPage(store, rootPageId, buf);
 
@@ -1149,7 +1149,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
             BPlusMetaIO metaIO = (BPlusMetaIO)pageIO;
 
-            ioStat.computeIfAbsent(metaIO.getClass(), k -> new AtomicLong(0)).incrementAndGet();
+            ioStat.compute(metaIO.getClass(), (k, v) -> v == null ? 1 : v + 1);
 
             int lvlsCnt = metaIO.getLevelsCount(addr);
 
@@ -1172,7 +1172,7 @@ public class IgniteIndexReader implements AutoCloseable {
                         if (!(pageIO instanceof BPlusIO))
                             throw new IgniteException("Not-BPlus page found, pageId=" + pageId + ", level=" + i);
 
-                        ioStat.computeIfAbsent(pageIO.getClass(), k -> new AtomicLong(0)).incrementAndGet();
+                        ioStat.compute(pageIO.getClass(), (k, v) -> v == null ? 1 : v + 1);
 
                         if (pageIO instanceof BPlusLeafIO) {
                             PageIOProcessor ioProcessor = getIOProcessor(pageIO);
@@ -1224,7 +1224,7 @@ public class IgniteIndexReader implements AutoCloseable {
 
                 final PageIO io = PageIO.getPageIO(addr);
 
-                nodeCtx.ioStat.computeIfAbsent(io.getClass(), k -> new AtomicLong(0)).incrementAndGet();
+                nodeCtx.ioStat.compute(io.getClass(), (k, v) -> v == null ? 1 : v + 1);
 
                 ioProcessor = getIOProcessor(io);
 
@@ -1245,22 +1245,12 @@ public class IgniteIndexReader implements AutoCloseable {
 
     /** */
     private PageIOProcessor getIOProcessor(PageIO io) {
-        Class ioCls = io.getClass();
-
-        PageIOProcessor ioProcessor = ioProcessorsMap.getOrDefault(io.getClass(), getDefaultIoProcessor(io));
-
-        if (ioProcessor == null)
-            throw new IgniteException("Unexpected page io: " + ioCls.getSimpleName());
-
-        return ioProcessor;
-    }
-
-    /** */
-    private PageIOProcessor getDefaultIoProcessor(PageIO io) {
-        if (io instanceof BPlusInnerIO)
-            return ioProcessorsMap.get(BPlusInnerIO.class);
-        else if (io instanceof BPlusLeafIO)
-            return ioProcessorsMap.get(BPlusLeafIO.class);
+        if (io instanceof BPlusLeafIO)
+            return leafPageIOProcessor;
+        else if (io instanceof BPlusInnerIO)
+            return innerPageIOProcessor;
+        else if (io instanceof BPlusMetaIO)
+            return metaPageIOProcessor;
         else
             return null;
     }
@@ -1460,13 +1450,18 @@ public class IgniteIndexReader implements AutoCloseable {
         AtomicReference<CLIArgumentParser> parserRef = new AtomicReference<>();
 
         List<CLIArgument> argsConfiguration = asList(
-            mandatoryArg(DIR.arg(), "partition directory, where index.bin and (optionally) partition files are located.", String.class),
+            mandatoryArg(
+                    DIR.arg(),
+                    "partition directory, where " + INDEX_FILE_NAME + " and (optionally) partition files are located.",
+                    String.class
+            ),
             optionalArg(PART_CNT.arg(), "full partitions count in cache group.", Integer.class, () -> 0),
             optionalArg(PAGE_SIZE.arg(), "page size.", Integer.class, () -> 4096),
             optionalArg(PAGE_STORE_VER.arg(), "page store version.", Integer.class, () -> 2),
             optionalArg(INDEXES.arg(), "you can specify index tree names that will be processed, separated by comma " +
                 "without spaces, other index trees will be skipped.", String[].class, () -> null),
-            optionalArg(DEST_FILE.arg(), "file to print the report to (by default report is printed to console).", String.class, () -> null),
+            optionalArg(DEST_FILE.arg(),
+                    "file to print the report to (by default report is printed to console).", String.class, () -> null),
             optionalArg(TRANSFORM.arg(), "if specified, this utility assumes that all *.bin files " +
                 "in --dir directory are snapshot files, and transforms them to normal format and puts to --dest" +
                 " directory.", Boolean.class, () -> false),
@@ -1480,8 +1475,10 @@ public class IgniteIndexReader implements AutoCloseable {
                         return null;
                 }
             ),
-            optionalArg(FILE_MASK.arg(), "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
-            optionalArg(CHECK_PARTS.arg(), "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
+            optionalArg(FILE_MASK.arg(),
+                    "mask for files to transform (optional if you use --transform).", String.class, () -> ".bin"),
+            optionalArg(CHECK_PARTS.arg(),
+                    "check cache data tree in partition files and it's consistency with indexes.", Boolean.class, () -> false)
         );
 
         CLIArgumentParser p = new CLIArgumentParser(argsConfiguration);
@@ -1500,24 +1497,33 @@ public class IgniteIndexReader implements AutoCloseable {
 
         OutputStream destStream = destFile == null ? null : new FileOutputStream(destFile);
 
-        try (IgniteIndexReader reader = new IgniteIndexReader(
-            p.get(DIR.arg()),
-            p.get(PAGE_SIZE.arg()),
-            p.get(PART_CNT.arg()),
-            p.get(PAGE_STORE_VER.arg()),
-            p.get(INDEXES.arg()),
-            p.get(CHECK_PARTS.arg()),
-            destStream
-        )) {
-            if (p.get(TRANSFORM.arg()))
+        if (p.get(TRANSFORM.arg())) {
+            try (IgniteIndexReader reader = new IgniteIndexReader(
+                    p.get(DIR.arg()),
+                    p.get(PAGE_SIZE.arg()),
+                    p.get(PAGE_STORE_VER.arg()),
+                    destStream
+            )) {
                 reader.transform(p.get(DEST.arg()), p.get(FILE_MASK.arg()));
-            else
+            }
+        }
+        else {
+            try (IgniteIndexReader reader = new IgniteIndexReader(
+                    p.get(DIR.arg()),
+                    p.get(PAGE_SIZE.arg()),
+                    p.get(PART_CNT.arg()),
+                    p.get(PAGE_STORE_VER.arg()),
+                    p.get(INDEXES.arg()),
+                    p.get(CHECK_PARTS.arg()),
+                    destStream
+            )) {
                 reader.readIdx();
+            }
         }
     }
 
     /**
-     * Enum of possible utility atguments.
+     * Enum of possible utility arguments.
      */
     public enum Args {
         /** */
@@ -1556,245 +1562,11 @@ public class IgniteIndexReader implements AutoCloseable {
     }
 
     /**
-     * Storage for items of index tree.
-     */
-    private interface ItemStorage<T> extends Iterable<T> {
-        /** */
-        void add(T item);
-
-        /** */
-        boolean contains(T item);
-
-        /** */
-        long size();
-    }
-
-    /**
-     * Imitates item storage, but stores only items count.
-     */
-    private static class CountOnlyStorage<T> implements ItemStorage<T> {
-        /** */
-        private long size = 0;
-
-        /** {@inheritDoc} */
-        @Override public void add(T item) {
-            size++;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean contains(T item) {
-            throw new UnsupportedOperationException("'contains' operation is not supported by SizeOnlyStorage.");
-        }
-
-        /** {@inheritDoc} */
-        @Override public long size() {
-            return size;
-        }
-
-        /** {@inheritDoc} */
-        @NotNull @Override public Iterator<T> iterator() {
-            throw new UnsupportedOperationException("Iteration is not supported by SizeOnlyStorage.");
-        }
-    }
-
-    /**
-     * Stores link items.
-     */
-    private static class LinkStorage implements ItemStorage<CacheAwareLink> {
-        /** */
-        private final Map<Integer, Map<Integer, Map<Byte, IntSet>>> store = new HashMap<>();
-
-        /** */
-        private long size = 0;
-
-        /** {@inheritDoc} */
-        @Override public void add(CacheAwareLink cacheAwareLink) {
-            long link = cacheAwareLink.link;
-
-            long pageId = pageId(link);
-
-            store.computeIfAbsent(cacheAwareLink.cacheId, k -> new HashMap<>())
-                .computeIfAbsent(partId(pageId), k -> new HashMap<>())
-                .computeIfAbsent((byte)itemId(link), k -> new BitSetIntSet())
-                .add(pageIndex(pageId));
-
-            size++;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean contains(CacheAwareLink cacheAwareLink) {
-            long link = cacheAwareLink.link;
-
-            long pageId = pageId(link);
-
-            Map<Integer, Map<Byte, IntSet>> map = store.get(cacheAwareLink.cacheId);
-
-            if (map != null) {
-                Map<Byte, IntSet> innerMap = map.get(partId(pageId));
-
-                if (innerMap != null) {
-                    IntSet set = innerMap.get((byte)itemId(link));
-
-                    if (set != null)
-                        return set.contains(pageIndex(pageId));
-                }
-            }
-
-            return false;
-        }
-
-        /** {@inheritDoc} */
-        @Override public long size() {
-            return size;
-        }
-
-        /** {@inheritDoc} */
-        @NotNull @Override public Iterator<CacheAwareLink> iterator() {
-            throw new UnsupportedOperationException("Item iteration is not supported by link storage.");
-        }
-    }
-
-    /**
-     * Stores index items (items of meta tree).
-     */
-    private static class ItemsListStorage<T> implements ItemStorage<T> {
-        private final List<T> store = new LinkedList<>();
-
-        /** {@inheritDoc} */
-        @Override public void add(T item) {
-            store.add(item);
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean contains(T item) {
-            throw new UnsupportedOperationException("'contains' operation is not supported by ItemsListStorage.");
-        }
-
-        /** {@inheritDoc} */
-        @Override public long size() {
-            return store.size();
-        }
-
-        /** {@inheritDoc} */
-        @NotNull @Override public Iterator<T> iterator() {
-            return store.iterator();
-        }
-    }
-
-    /**
      *
      */
-    private static class CacheAwareLink {
+    private interface BufferClosure<T> {
         /** */
-        public final int cacheId;
-
-        /** */
-        public final long link;
-
-        /** */
-        public CacheAwareLink(int cacheId, long link) {
-            this.cacheId = cacheId;
-            this.link = link;
-        }
-    }
-
-    /**
-     * Tree node info.
-     */
-    private static class TreeNode {
-        /** */
-        final long pageId;
-
-        /** */
-        final PageIO io;
-
-        /** */
-        final String additionalInfo;
-
-        /** */
-        final List<TreeNode> children;
-
-        /** */
-        public TreeNode(long pageId, PageIO io, String additionalInfo, List<TreeNode> children) {
-            this.pageId = pageId;
-            this.io = io;
-            this.additionalInfo = additionalInfo;
-            this.children = children;
-        }
-    }
-
-    /**
-     * Traverse context, which is unique for traversal of one single tree.
-     */
-    private class TreeTraverseContext {
-        /** Tree name. */
-        final String treeName;
-
-        /** Cache id. */
-        final int cacheId;
-
-        /** Page store. */
-        final FilePageStore store;
-
-        /** Page type statistics. */
-        final Map<Class, AtomicLong> ioStat;
-
-        /** Map of errors, pageId -> set of exceptions. */
-        final Map<Long, List<Throwable>> errors;
-
-        /** Callback that is called for each inner node page. */
-        final PageCallback innerCb;
-
-        /** Callback that is called for each leaf node page.*/
-        final PageCallback leafCb;
-
-        /** Callback that is called for each leaf item. */
-        final ItemCallback itemCb;
-
-        /** */
-        private TreeTraverseContext(
-            String treeName,
-            FilePageStore store,
-            Map<Class, AtomicLong> ioStat,
-            Map<Long, List<Throwable>> errors,
-            PageCallback innerCb,
-            PageCallback leafCb,
-            ItemCallback itemCb
-        ) {
-            this.treeName = treeName;
-            this.cacheId = getCacheAndTypeId(treeName).get1();
-            this.store = store;
-            this.ioStat = ioStat;
-            this.errors = errors;
-            this.innerCb = innerCb;
-            this.leafCb = leafCb;
-            this.itemCb = itemCb;
-        }
-    }
-
-    /**
-     * Content of the deserialized page. When content is gained, we can free the page buffer.
-     */
-    private static class PageContent {
-        /** */
-        final PageIO io;
-
-        /** List of children page ids, or links to root pages (for meta leaf). */
-        final List<Long> linkedPageIds;
-
-        /** List of items (for leaf pages). */
-        final List<Object> items;
-
-        /** Some info. */
-        final String info;
-
-        /** */
-        public PageContent(PageIO io, List<Long> linkedPageIds, List<Object> items, String info) {
-            this.io = io;
-            this.linkedPageIds = linkedPageIds;
-            this.items = items;
-            this.info = info;
-        }
+        T apply(ByteBuffer buf, Long addr) throws IgniteCheckedException;
     }
 
     /**
@@ -1803,30 +1575,6 @@ public class IgniteIndexReader implements AutoCloseable {
     private interface TraverseProc {
         /** */
         TreeTraversalInfo traverse(FilePageStore store, long rootId, String treeName, ItemStorage itemStorage);
-    }
-
-    /**
-     *
-     */
-    private interface PageCallback {
-        /** */
-        void cb(PageContent pageContent, long pageId);
-    }
-
-    /**
-     *
-     */
-    private interface ItemCallback {
-        /** */
-        void cb(long currPageId, Object item, long link);
-    }
-
-    /**
-     *
-     */
-    private interface BufferClosure<T> {
-        /** */
-        T apply(ByteBuffer buf, Long addr) throws IgniteCheckedException;
     }
 
     /**
@@ -1932,11 +1680,10 @@ public class IgniteIndexReader implements AutoCloseable {
                 Object idxItem = null;
 
                 try {
-                    if (io.getClass().equals(IndexStorageImpl.MetaStoreLeafIO.class)) {
+                    if (io instanceof IndexStorageImpl.MetaStoreLeafIO) {
                         idxItem = ((IndexStorageImpl.MetaStoreLeafIO)io).getLookupRow(null, addr, j);
 
-                        if (idxItem != null)
-                            sb.a(idxItem.toString() + " ");
+                        sb.a(idxItem.toString() + " ");
                     }
                     else
                         idxItem = getLeafItem(leafIO, pageId, addr, j, nodeCtx);
@@ -2055,76 +1802,6 @@ public class IgniteIndexReader implements AutoCloseable {
             }
 
             return new TreeNode(pageId, content.io, content.info, Collections.emptyList());
-        }
-    }
-
-    /**
-     *
-     */
-    private static class TreeTraversalInfo {
-        /** Page type statistics. */
-        final Map<Class, AtomicLong> ioStat;
-
-        /** Map of errors, pageId -> set of exceptions. */
-        final Map<Long, List<Throwable>> errors;
-
-        /** Set of all inner page ids. */
-        final Set<Long> innerPageIds;
-
-        /** Root page id. */
-        final long rootPageId;
-
-        /**
-         * List of items storage.
-         */
-        final ItemStorage itemStorage;
-
-        /** */
-        public TreeTraversalInfo(
-            Map<Class, AtomicLong> ioStat,
-            Map<Long, List<Throwable>> errors,
-            Set<Long> innerPageIds,
-            long rootPageId,
-            ItemStorage itemStorage
-        ) {
-            this.ioStat = ioStat;
-            this.errors = errors;
-            this.innerPageIds = innerPageIds;
-            this.rootPageId = rootPageId;
-            this.itemStorage = itemStorage;
-        }
-    }
-
-    /**
-     *
-     */
-    private static class PageListsInfo {
-        /**
-         * Page list bucket data (next meta id, bucket index) -> list of page ids.
-         * See {@link PagesListMetaIO#getBucketsData }.
-         */
-        final Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData;
-
-        /** All page ids from page lists. */
-        final Set<Long> allPages;
-
-        /** Page type statistics. */
-        final Map<Class, AtomicLong> pageListStat;
-
-        /** Map of errors, pageId -> list of exceptions. */
-        final Map<Long, List<Throwable>> errors;
-
-        /** */
-        public PageListsInfo(
-            Map<IgniteBiTuple<Long, Integer>, List<Long>> bucketsData,
-            Set<Long> allPages,
-            Map<Class, AtomicLong> pageListStat,
-            Map<Long, List<Throwable>> errors
-        ) {
-            this.bucketsData = bucketsData;
-            this.allPages = allPages;
-            this.pageListStat = pageListStat;
-            this.errors = errors;
         }
     }
 }

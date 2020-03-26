@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
+package org.apache.ignite.development.utils.indexreader;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,6 +40,7 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.development.utils.StringBuilderOutputStream;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
@@ -59,12 +60,14 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singleton;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.development.utils.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
-import static org.apache.ignite.development.utils.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.ERROR_PREFIX;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
+import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -119,8 +122,8 @@ public class IgniteIndexReaderTest {
 
     /** Regexp to validate output of corrupted index. */
     private static final String CHECK_IDX_PTRN_WITH_ERRORS =
-        CHECK_IDX_PTRN_COMMON + "<PREFIX><ERROR> Errors:" +
-            LINE_DELIM + "<PREFIX><ERROR> Page id=[0-9]{1,30}, exceptions:" +
+        CHECK_IDX_PTRN_COMMON + "<PREFIX>" + ERROR_PREFIX + "Errors:" +
+            LINE_DELIM + "<PREFIX>" + ERROR_PREFIX + "Page id=[0-9]{1,30}, exceptions:" +
             LINE_DELIM + "class.*?Exception.*";
 
     /** Work directory, containing cache group directories. */
@@ -347,11 +350,17 @@ public class IgniteIndexReaderTest {
         for (IgnitePair<String> idx : idxs)
             query(cache, String.format("create index %s on %s (%s)", idx.get1(), info.tblName, idx.get2()));
 
+        String idxToDeleteName = info.tblName + "_idx_to_delete";
+
+        query(cache, String.format("create index %s on %s (%s)", idxToDeleteName, info.tblName, fields.get(0).get1()));
+
         for (int i = 0; i < info.rec; i++)
             insertQuery(cache, info.tblName, fields, i);
 
         for (int i = info.rec - info.del; i < info.rec; i++)
             query(cache, "delete from " + info.tblName + " where id = " + i);
+
+        query(cache, "drop index " + idxToDeleteName);
     }
 
     /**
@@ -464,6 +473,9 @@ public class IgniteIndexReaderTest {
             assertContains(output, "Total errors occurred during sequential scan: " + seqErrCnt);
         else
             assertContains(output, "Orphan pages were not reported due to --indexes filter.");
+
+        if (travErrCnt == 0 && pageListsErrCnt == 0 && seqErrCnt == 0)
+            assertFalse(output.contains(ERROR_PREFIX));
     }
 
     /**
@@ -672,8 +684,8 @@ public class IgniteIndexReaderTest {
     /** */
     @Test
     public void testCorruptedIdxWithCheckParts() throws IgniteCheckedException, IOException {
-        int startCorrupt = 10;
-        int endCorrupt = 30;
+        int startCorrupt = 30;
+        int endCorrupt = 50;
 
         for (int i = startCorrupt; i < endCorrupt; i++)
             corruptFile(INDEX_PARTITION, i);
@@ -686,6 +698,8 @@ public class IgniteIndexReaderTest {
                 Pattern.compile("Partition check finished, total errors: [0-9]{2,5}, total problem partitions: [0-9]{2,5}");
 
             assertTrue(output, ptrn.matcher(output).find());
+
+            assertContains(output, "Total errors during lists scan: 0");
         }
         finally {
             restoreFile(INDEX_PARTITION);

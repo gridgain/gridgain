@@ -13,18 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
+package org.apache.ignite.development.utils.indexreader;
 
-import org.apache.ignite.development.utils.indexreader.IgniteIndexReaderTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
+
+import java.util.List;
 
 /**
- * Test suite for dev utils.
+ * Tree node info.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    IgniteIndexReaderTest.class
-})
-public class DevUtilsTestSuite {
+class TreeNode {
+    /** */
+    final long pageId;
+
+    /** */
+    final PageIO io;
+
+    /** */
+    final String additionalInfo;
+
+    /** */
+    final List<TreeNode> children;
+
+    /** */
+    public TreeNode(long pageId, PageIO io, String additionalInfo, List<TreeNode> children) {
+        this.pageId = pageId;
+        this.io = io;
+        this.additionalInfo = additionalInfo;
+        this.children = children;
+    }
 }

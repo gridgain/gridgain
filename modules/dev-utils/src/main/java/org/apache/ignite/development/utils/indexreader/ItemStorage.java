@@ -13,18 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
-
-import org.apache.ignite.development.utils.indexreader.IgniteIndexReaderTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.development.utils.indexreader;
 
 /**
- * Test suite for dev utils.
+ * Storage for items of index tree.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    IgniteIndexReaderTest.class
-})
-public class DevUtilsTestSuite {
+interface ItemStorage<T> extends Iterable<T> {
+    /** */
+    void add(T item);
+
+    /** */
+    boolean contains(T item);
+
+    /** */
+    long size();
 }

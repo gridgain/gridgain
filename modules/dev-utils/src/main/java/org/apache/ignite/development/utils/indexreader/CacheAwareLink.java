@@ -13,18 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.ignite.development.utils;
-
-import org.apache.ignite.development.utils.indexreader.IgniteIndexReaderTest;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+package org.apache.ignite.development.utils.indexreader;
 
 /**
- * Test suite for dev utils.
+ *
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    IgniteIndexReaderTest.class
-})
-public class DevUtilsTestSuite {
+class CacheAwareLink {
+    /** */
+    public final int cacheId;
+
+    /** */
+    public final long link;
+
+    /** */
+    public CacheAwareLink(int cacheId, long link) {
+        this.cacheId = cacheId;
+        this.link = link;
+    }
 }
