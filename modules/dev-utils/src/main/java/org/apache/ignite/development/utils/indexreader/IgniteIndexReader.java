@@ -1261,9 +1261,11 @@ public class IgniteIndexReader implements AutoCloseable {
         if (idxStore != null)
             idxStore.stop(false);
 
-        for (FilePageStore store : partStores) {
-            if (store != null)
-                store.stop(false);
+        if (partStores != null) {
+            for (FilePageStore store : partStores) {
+                if (store != null)
+                    store.stop(false);
+            }
         }
     }
 
