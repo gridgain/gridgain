@@ -186,9 +186,7 @@ public class CacheGroupMetricsImpl {
         this.idxBuildCntPartitionsLeft.value(idxBuildCntPartitionsLeft);
     }
 
-    /**
-     * Decrement number of partitions need processed for finished indexes create or rebuilding.
-     */
+    /** Decrement number of partitions need processed for finished indexes create or rebuilding. */
     public void decrementIndexBuildCountPartitionsLeft() {
         idxBuildCntPartitionsLeft.decrement();
     }
@@ -200,16 +198,12 @@ public class CacheGroupMetricsImpl {
         idxBuildCntPartitionsLeft.add(partitions);
     }
 
-    /**
-     * Increments number of local partitions initialized on current node.
-     */
+    /** Increments number of local partitions initialized on current node. */
     public void incrementInitializedLocalPartitions() {
         initLocalPartitionsNumber.increment();
     }
 
-    /**
-     * Decrements number of local partitions initialized on current node.
-     */
+    /** Decrements number of local partitions initialized on current node. */
     public void decrementInitializedLocalPartitions() {
         initLocalPartitionsNumber.decrement();
     }

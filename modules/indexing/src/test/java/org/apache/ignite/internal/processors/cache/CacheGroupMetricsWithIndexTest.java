@@ -109,7 +109,8 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
                 qryEntity.setIndexes(indexes);
 
                 cacheCfg.setQueryEntities(Collections.singletonList(qryEntity));
-            }else if (GROUP_NAME.equals(cacheCfg.getGroupName()) && CACHE_NAME3.equals(cacheCfg.getName())) {
+            }
+            else if (GROUP_NAME.equals(cacheCfg.getGroupName()) && CACHE_NAME3.equals(cacheCfg.getName())) {
                 QueryEntity qryEntity = new QueryEntity(Long.class.getCanonicalName(), OBJECT_NAME3);
 
                 qryEntity.setKeyFieldName(KEY_NAME);
