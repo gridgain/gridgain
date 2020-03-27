@@ -99,12 +99,12 @@ namespace Apache.Ignite.Core.Impl.Common
         {
             lock (this)
             {
-                var dict0 = new Dictionary<TKey, TValue>(_dict);
-
-                if (!dict0.TryGetValue(key, out val))
+                if (!_dict.TryGetValue(key, out val))
                 {
                     return false;
                 }
+
+                var dict0 = new Dictionary<TKey, TValue>(_dict);
 
                 dict0.Remove(key);
 
