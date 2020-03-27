@@ -51,6 +51,21 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
+        /// Tests that cluster operations throw proper exception on older server versions.
+        /// </summary>
+        [Test]
+        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
+            [Values(0, 1, 2, 3, 4)] short minor)
+        {
+            var version = new ClientProtocolVersion(1, minor, 0);
+            
+            using (var client = GetClient(version))
+            {
+                TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(client, version.ToString());
+            }
+        }
+
+        /// <summary>
         /// Tests that partition awareness disables automatically on older server versions.
         /// </summary>
         [Test]
@@ -78,10 +93,36 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
+        /// Tests that client can connect to old server nodes and negotiate common protocol version. 
+        /// </summary>
+        [Test]
+        public void TestClientNewerThanServerReconnectsOnServerVersion()
+        {
+            // Use a non-existent version that is not supported by the server
+            var version = new ClientProtocolVersion(short.MaxValue, short.MaxValue, short.MaxValue);
+            
+            using (var client = GetClient(version))
+            {
+                Assert.AreEqual(ClientSocket.CurrentProtocolVersion, client.Socket.CurrentProtocolVersion);
+
+                var logs = GetLogs(client);
+                
+                var expectedMessage = "Handshake failed on 127.0.0.1:10800, " +
+                                      "requested protocol version = 32767.32767.32767, server protocol version = , " +
+                                      "status = Fail, message = Unsupported version.";
+
+                var message = Regex.Replace(
+                    logs[2].Message, @"server protocol version = \d\.\d\.\d", "server protocol version = ");
+                
+                Assert.AreEqual(expectedMessage, message);
+            }
+        }
+
+        /// <summary>
         /// Tests that old client with new server can negotiate a protocol version.
         /// </summary>
         [Test]
-        public void TestClientOlderThanServerConnectsOnClientVersion([Values(0, 1, 2, 3, 4)] short minor)
+        public void TestClientOlderThanServerConnectsOnClientVersion([Values(0, 1, 2, 3, 4, 5)] short minor)
         {
             var version = new ClientProtocolVersion(1, minor, 0);
 
@@ -98,7 +139,38 @@ namespace Apache.Ignite.Core.Tests.Client
                 Assert.AreEqual(typeof(ClientSocket).Name, lastLog.Category);
             }
         }
+
+        /// <summary>
+        /// Asserts correct exception for cluster operations.
+        /// </summary>
+        public static void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(IIgniteClient client,
+            string version)
+        {
+            var cluster = client.GetCluster();
+
+            AssertNotSupportedOperation(() => cluster.IsActive(), version, "ClusterIsActive");
+            AssertNotSupportedOperation(() => cluster.SetActive(true), version, "ClusterChangeState");
+            AssertNotSupportedOperation(() => cluster.IsWalEnabled("c"), version, "ClusterGetWalState");
+            AssertNotSupportedOperation(() => cluster.EnableWal("c"), version, "ClusterChangeWalState");
+            AssertNotSupportedOperation(() => cluster.DisableWal("c"), version, "ClusterChangeWalState");
+        }
         
+        /// <summary>
+        /// Asserts proper exception for non-supported operation.
+        /// </summary>
+        public static void AssertNotSupportedOperation(Action action, string version,
+            string expectedOperationName)
+        {
+            var ex = Assert.Throws<IgniteClientException>(() => action());
+            
+            var expectedMessage = string.Format(
+                "Operation {0} is not supported by protocol version {1}. " +
+                "Minimum protocol version required is 1.5.0.",
+                expectedOperationName, version);
+
+            Assert.AreEqual(expectedMessage, ex.Message);
+        }
+
         /// <summary>
         /// Gets the client with specified protocol version.
         /// </summary>
