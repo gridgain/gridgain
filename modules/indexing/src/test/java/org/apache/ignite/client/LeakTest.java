@@ -22,7 +22,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.Ignition;
-import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -40,7 +39,7 @@ public class LeakTest {
     int KEYS = 10000;
 
     /** Iterations. */
-    int ITERS = 10_000;
+    int ITERS = 5_000;
 
     /** Per test timeout */
     @Rule
@@ -62,14 +61,17 @@ public class LeakTest {
             int iter = 0;
 
             while (true) {
-                for (int i = 0; i < ITERS; ++i) {
-                    int k = ThreadLocalRandom.current().nextInt(KEYS);
-                    String val = "val_" + ThreadLocalRandom.current().nextInt(KEYS);
+                GridTestUtils.runMultiThreaded(() -> {
+                        for (int i = 0; i < ITERS; ++i) {
+                            int k = ThreadLocalRandom.current().nextInt(KEYS);
+                            String val = "val_" + ThreadLocalRandom.current().nextInt(KEYS);
 
-                    List<List<?>> res = sqlTest(cli,"UPDATE TEST SET val = ? WHERE ID = ?", val, k);
+                            List<List<?>> res = sqlTest(cli, "UPDATE TEST SET val = ? WHERE ID = ?", val, k);
 
-                    Assert.assertEquals(1L, res.get(0).get(0));
-                }
+                            Assert.assertEquals(1L, res.get(0).get(0));
+                        }
+                    },
+                    10, "upd-pressure-thread");
 
                 GridDebug.dumpHeap(String.format("mem%03d.hprof", iter++), true);
 
