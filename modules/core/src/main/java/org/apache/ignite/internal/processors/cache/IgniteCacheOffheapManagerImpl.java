@@ -2925,9 +2925,11 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
                 throw new IgniteCheckedException("Fail destroy store", ex);
 
             // Allow checkpointer to progress if a partition contains less than BATCH_SIZE keys.
-            ctx.database().checkpointReadUnlock();
+            if (rmv > 0) {
+                ctx.database().checkpointReadUnlock();
 
-            ctx.database().checkpointReadLock();
+                ctx.database().checkpointReadLock();
+            }
         }
 
         /** {@inheritDoc} */

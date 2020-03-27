@@ -170,7 +170,9 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
 
     /** */
     public void doTestDestroyCacheNotThrowsOOM(boolean loc) throws Exception {
-        int batchSize = 1000;
+        Field batchField = U.findField(IgniteCacheOffheapManagerImpl.class, "BATCH_SIZE");
+
+        int batchSize = batchField.getInt(null);
 
         int pageSize = 1024;
 
@@ -186,7 +188,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
 
         IgniteConfiguration cfg = getConfiguration().setDataStorageConfiguration(ds);
 
-        final IgniteEx ignite = startGrid(cfg);
+        final IgniteEx ignite = startGrid(optimize(cfg));
 
         ignite.cluster().active(true);
 
@@ -194,14 +196,6 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
 
         GridCacheDatabaseSharedManager db =
             (GridCacheDatabaseSharedManager)ignite.context().cache().context().database();
-
-        final CacheGroupContext grp = ignite.cachex(cacheName(0)).context().group();
-
-        final IgniteCacheOffheapManager offheap = grp.offheap();
-
-        Field batchField = U.findField(IgniteCacheOffheapManagerImpl.class, "BATCH_SIZE");
-
-        assertEquals(batchField.getInt(offheap), batchSize);
 
         final AtomicLong progress = new AtomicLong();
 
