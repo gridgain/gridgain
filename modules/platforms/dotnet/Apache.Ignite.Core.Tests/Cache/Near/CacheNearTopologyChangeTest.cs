@@ -147,7 +147,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests that near cache works correctly on client node after primary node changes for a given key.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeChangeClearsNearCacheDataOnClient()
+        public void TestPrimaryNodeChangeClearsNearCacheDataOnClient(
+            [Values(NearCheckMode.Entries, NearCheckMode.Peek, NearCheckMode.Size, NearCheckMode.TryPeek)] 
+            NearCheckMode checkMode)
         {
             InitNodes(2);
             var clientCache = InitClientAndCache();
@@ -161,13 +163,37 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             InitNode(2);
             
             // Client node cache is cleared.
-            Foo foo;
-            Assert.IsFalse(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.PlatformNear));
+            // Check with different methods: important because every method calls entry validation separately
+            // (covers all NearCache.IsValid calls).
+            switch (checkMode)
+            {
+                case NearCheckMode.Peek:
+                    Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(Key3, CachePeekMode.PlatformNear));
+                    break;
+                
+                case NearCheckMode.TryPeek:
+                    Foo _;
+                    Assert.IsFalse(clientCache.TryLocalPeek(Key3, out _, CachePeekMode.PlatformNear));
+                    break;
+                
+                case NearCheckMode.Size:
+                    Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+                    break;
+                
+                case NearCheckMode.Entries:
+                    Assert.AreEqual(0, clientCache.GetLocalEntries(CachePeekMode.PlatformNear).Count());
+                    break;
+                
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
             
             // Updates are propagated to client near cache.
             _cache[2][Key3] = new Foo(3);
             
             TestUtils.WaitForTrueCondition(() => clientCache[Key3].Bar == 3);
+
+            Foo foo;
             Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.PlatformNear));
             Assert.AreNotSame(clientInstance, foo);
             Assert.AreEqual(3, foo.Bar);
@@ -569,6 +595,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     env.CallStaticVoidMethod(cls, methodId, args);
                 }
             }
+        }
+
+        /// <summary>
+        /// Near cache check modes: how we can verify near cache contents in a test.
+        /// </summary>
+        public enum NearCheckMode
+        {
+            Peek,
+            TryPeek,
+            Size,
+            Entries
         }
     }
 }
