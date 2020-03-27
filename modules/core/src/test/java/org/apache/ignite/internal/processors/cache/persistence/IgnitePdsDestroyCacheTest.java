@@ -209,7 +209,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
 
         db.enableCheckpoints(false).get();
 
-        runAsync(() -> {
+        IgniteInternalFuture<?> loaderFut = runAsync(() -> {
             IgniteCache<Object, byte[]> c1 = ignite.cache(cacheName(0));
 
             long totalPages = pageMemory.totalPages();
@@ -253,6 +253,8 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
             else
                 ignite.destroyCache(cacheName(0));
         });
+
+        loaderFut.cancel();
 
         delFut.get(20_000);
     }
