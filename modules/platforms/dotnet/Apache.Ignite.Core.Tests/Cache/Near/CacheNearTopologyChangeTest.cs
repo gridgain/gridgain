@@ -366,6 +366,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // Near cache is empty.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.IsEmpty(clientCache.GetLocalEntries(CachePeekMode.PlatformNear));
+            Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(1, CachePeekMode.PlatformNear));
             
             // Cache still works for new entries, near cache is being bypassed.
             var serverCache = _cache[0];
