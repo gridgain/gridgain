@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -544,7 +545,13 @@ public final class IgniteSystemProperties {
     /** Enable backward compatible handling of UUID through DDL. */
     public static final String IGNITE_SQL_UUID_DDL_BYTE_FORMAT = "IGNITE_SQL_UUID_DDL_BYTE_FORMAT";
 
-    /** Enable memory quotas per JDBC connection. */
+    /**
+     * Enable memory quotas per JDBC connection.
+     *
+     * @deprecated Possibility to modify query qouta is now managed
+     * by security permission {@link SecurityPermission#SET_QUERY_MEMORY_QUOTA}.
+     */
+    @Deprecated
     public static final String IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA = "IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA";
 
     /** Maximum size for affinity assignment history. */

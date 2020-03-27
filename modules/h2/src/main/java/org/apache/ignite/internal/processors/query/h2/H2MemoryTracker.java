@@ -21,31 +21,54 @@ package org.apache.ignite.internal.processors.query.h2;
  */
 public interface H2MemoryTracker extends AutoCloseable {
     /**
-     * Check allocated size is less than query memory pool threshold.
+     * Tracks reservation of new chunk of bytes.
      *
      * @param size Allocated size in bytes.
-     * @return {@code True} if memory limit is not exceeded. {@code False} otherwise.
+     * @return {@code true} if memory limit is not exceeded. {@code false} otherwise.
      */
-    public boolean reserved(long size);
+    public boolean reserve(long size);
 
     /**
-     * Memory release callback.
+     * Tracks memory releasing.
      *
      * @param size Released memory size in bytes.
      */
-    public void released(long size);
+    public void release(long size);
+
+    /**
+     * Written on disk memory.
+     *
+     * @return Amount of bytes written on disk.
+     */
+    public long writtenOnDisk();
+
+    /**
+     * Written on disk total.
+     *
+     * @return Amount of bytes written on disk in total.
+     */
+    public long totalWrittenOnDisk();
 
     /**
      * Reserved memory.
      *
-     * @return  Reserved memory in bytes.
+     * @return Reserved memory in bytes.
      */
-    public long memoryReserved();
+    public long reserved();
 
     /**
-     * @return Max memory limit.
+     * Tracks spilling on disk.
+     *
+     * @param size Amount of bytes written on disk.
      */
-    public long memoryLimit();
+    public void spill(long size);
+
+    /**
+     * Tracks unspilling from disk.
+     *
+     * @param size Amount of bytes deleted from disk.
+     */
+    public void unspill(long size);
 
     /**
      * Increments the counter of created offloading files.
@@ -53,45 +76,26 @@ public interface H2MemoryTracker extends AutoCloseable {
     public void incrementFilesCreated();
 
     /**
-     * Updates the counter of bytes written to disk.
+     * Creates child tracker that uses resources of current tracker.
      *
-     * @param written Number of bytes.
+     * Note: created tracker is not thread-safe
      */
-    public void addTotalWrittenOnDisk(long written);
+    public H2MemoryTracker createChildTracker();
+
+    /**
+     * Callback to release resources allocated for child tracker.
+     *
+     * @param child Child whose resources should be released.
+     */
+    public void onChildClosed(H2MemoryTracker child);
+
+    /**
+     * Whether current tracker was closed or not.
+     *
+     * @return {@code true} if current tracker was closed.
+     */
+    public boolean closed();
 
     /** {@inheritDoc} */
     @Override public void close();
-
-    H2MemoryTracker NO_OP_TRACKER = new H2MemoryTracker() {
-        /** {@inheritDoc} */
-        @Override public boolean reserved(long size) {
-            return false; 
-        }
-
-        /** {@inheritDoc} */
-        @Override public void released(long size) {
-        }
-
-        /** {@inheritDoc} */
-        @Override public long memoryReserved() {
-            return -1;
-        }
-
-        /** {@inheritDoc} */
-        @Override public long memoryLimit() {
-            return -1;
-        }
-
-        /** {@inheritDoc} */
-        @Override public void close() {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void incrementFilesCreated() {
-        }
-
-        /** {@inheritDoc} */
-        @Override public void addTotalWrittenOnDisk(long written) {
-        }
-    };
 }

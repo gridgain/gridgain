@@ -359,6 +359,12 @@ namespace Apache.Ignite.Core.Tests
             
             Assert.IsTrue(failureHandler.TryStop);  
             Assert.AreEqual(TimeSpan.Parse("0:1:0"), failureHandler.Timeout);
+
+            var ec = cfg.ExecutorConfiguration;
+            Assert.NotNull(ec);
+            Assert.AreEqual(2, ec.Count);
+            Assert.AreEqual(new[] {"exec1", "exec2"}, ec.Select(e => e.Name));
+            Assert.AreEqual(new[] {1, 2}, ec.Select(e => e.Size));
         }
 
         /// <summary>
@@ -926,7 +932,8 @@ namespace Apache.Ignite.Core.Tests
                     JdbcEnabled = false,
                     ThreadPoolSize = 7,
                     IdleTimeout = TimeSpan.FromMinutes(5),
-                    ThinClientConfiguration = new ThinClientConfiguration {
+                    ThinClientConfiguration = new ThinClientConfiguration 
+                    {
                         MaxActiveTxPerConnection = 8
                     }
                 },
@@ -1032,7 +1039,15 @@ namespace Apache.Ignite.Core.Tests
                     TryStop = false,
                     Timeout = TimeSpan.FromSeconds(10)
                 },
-                SqlQueryHistorySize = 345
+                SqlQueryHistorySize = 345,
+                ExecutorConfiguration = new[]
+                {
+                    new ExecutorConfiguration
+                    {
+                        Name = "exec-1",
+                        Size = 11
+                    }
+                }
             };
         }
 

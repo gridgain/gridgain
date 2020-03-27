@@ -459,7 +459,7 @@ public class CommandProcessor {
                     null,
                     locNodeMsgHnd,
                     GridIoPolicy.MANAGEMENT_POOL,
-                    false
+                    cmd.async()
                 );
 
                 if (!snd) {

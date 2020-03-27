@@ -34,10 +34,10 @@ import org.junit.Test;
 @SuppressWarnings("ThrowableNotThrown")
 public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
     /** */
-    private static final String QUERY_512_TO_1024 = "SELECT DISTINCT id FROM person WHERE id < 8";
+    private static final String QUERY_1024_TO_2048 = "SELECT DISTINCT id FROM person WHERE id < 8";
 
     /** */
-    private static final String QUERY_1024_TO_2048 = "SELECT DISTINCT id FROM person WHERE id < 16";
+    private static final String QUERY_2048_TO_4096 = "SELECT DISTINCT id FROM person WHERE id < 16";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -68,22 +68,22 @@ public class JdbcQueryQuotaTest extends DiskSpillingAbstractTest {
     @Test
     public void testClientQueryQuota() throws Exception {
         try (Connection conn512 = createConnection("jdbc-config-query-mem-limit-512.xml");
-             Connection conn2048 = createConnection("jdbc-config-query-mem-limit-2048.xml")) {
-            Statement stmt0 = conn2048.createStatement();
+             Connection conn4096 = createConnection("jdbc-config-query-mem-limit-4096.xml")) {
+            Statement stmt0 = conn4096.createStatement();
 
             // Expect no exception here.
-            stmt0.execute(QUERY_512_TO_1024);
+            stmt0.execute(QUERY_1024_TO_2048);
 
             GridTestUtils.assertThrows(log, () -> {
-                Statement stmt = conn2048.createStatement();
+                Statement stmt = conn4096.createStatement();
 
-                stmt.execute(QUERY_1024_TO_2048);
+                stmt.execute(QUERY_2048_TO_4096);
             }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
 
             GridTestUtils.assertThrows(log, () -> {
                 Statement stmt = conn512.createStatement();
 
-                stmt.execute(QUERY_512_TO_1024);
+                stmt.execute(QUERY_1024_TO_2048);
             }, IgniteException.class, "SQL query run out of memory: Query quota exceeded.");
         }
     }

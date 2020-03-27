@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.query;
 import com.google.common.collect.Sets;
 import java.lang.reflect.Field;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +31,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import javax.cache.Cache;
-import javax.cache.CacheException;
 import javax.cache.configuration.Factory;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -44,10 +42,7 @@ import org.apache.ignite.cache.affinity.AffinityKeyMapper;
 import org.apache.ignite.cache.eviction.EvictableEntry;
 import org.apache.ignite.cache.eviction.EvictionFilter;
 import org.apache.ignite.cache.eviction.EvictionPolicy;
-import org.apache.ignite.cache.query.FieldsQueryCursor;
-import org.apache.ignite.cache.query.QueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.cache.query.SqlQuery;
 import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -77,7 +72,6 @@ import org.junit.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toSet;
-import static org.junit.Assert.assertNotEquals;
 
 /**
  * Tests for ignite SQL system views.
@@ -210,7 +204,6 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         Assert.assertEquals(expSchemasCli, schemasCli);
     }
 
-
     /**
      * Test indexes system view.
      *
@@ -291,7 +284,6 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         }
     }
 
-
     /**
      * @return Default cache configuration.
      */
@@ -347,192 +339,6 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         qry = new SqlFieldsQuery(sql).setLocal(true);
 
         assertEquals(nodeId, ((List<?>)cache.query(qry).getAll().get(0)).get(0));
-    }
-
-    /**
-     * Test Query history system view.
-     */
-    @Test
-    @SuppressWarnings("unchecked")
-    public void testQueryHistoryMetricsModes() throws Exception {
-        IgniteEx ignite = startGrid(0);
-
-        final String SCHEMA_NAME = "TEST_SCHEMA";
-        final long MAX_SLEEP = 500;
-        final long MIN_SLEEP = 50;
-
-        long tsBeforeRun = System.currentTimeMillis();
-
-        IgniteCache cache = ignite.createCache(
-            new CacheConfiguration<>(DEFAULT_CACHE_NAME)
-                .setIndexedTypes(Integer.class, String.class)
-                .setSqlSchema(SCHEMA_NAME)
-                .setSqlFunctionClasses(GridTestUtils.SqlTestFunctions.class)
-        );
-
-        cache.put(100, "200");
-
-        String sql = "SELECT \"STRING\"._KEY, \"STRING\"._VAL FROM \"STRING\" WHERE _key=100 AND sleep_and_can_fail()>0";
-
-        GridTestUtils.SqlTestFunctions.sleepMs = MIN_SLEEP;
-        GridTestUtils.SqlTestFunctions.fail = false;
-
-        cache.query(new SqlFieldsQuery(sql).setSchema(SCHEMA_NAME)).getAll();
-
-        GridTestUtils.SqlTestFunctions.sleepMs = MAX_SLEEP;
-        GridTestUtils.SqlTestFunctions.fail = false;
-
-        cache.query(new SqlFieldsQuery(sql).setSchema(SCHEMA_NAME)).getAll();
-
-        GridTestUtils.SqlTestFunctions.sleepMs = MIN_SLEEP;
-        GridTestUtils.SqlTestFunctions.fail = true;
-
-        GridTestUtils.assertThrows(log,
-            () ->
-                cache.query(new SqlFieldsQuery(sql).setSchema(SCHEMA_NAME)).getAll()
-            , CacheException.class,
-            "Exception calling user-defined function");
-
-        String sqlHist = "SELECT SCHEMA_NAME, SQL, LOCAL, EXECUTIONS, FAILURES, DURATION_MIN, DURATION_MAX, LAST_START_TIME " +
-            "FROM " + systemSchemaName() + ".LOCAL_SQL_QUERY_HISTORY ORDER BY LAST_START_TIME";
-
-        cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
-        cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
-
-        List<List<?>> res = cache.query(new SqlFieldsQuery(sqlHist).setLocal(true)).getAll();
-
-        assertEquals(2, res.size());
-
-        long tsAfterRun = System.currentTimeMillis();
-
-        List<?> firstRow = res.get(0);
-        List<?> secondRow = res.get(1);
-
-        //SCHEMA_NAME
-        assertEquals(SCHEMA_NAME, firstRow.get(0));
-        assertEquals(SCHEMA_NAME, secondRow.get(0));
-
-        //SQL
-        assertEquals(sql, firstRow.get(1));
-        assertEquals(sqlHist, secondRow.get(1));
-
-        // LOCAL flag
-        assertEquals(false, firstRow.get(2));
-        assertEquals(true, secondRow.get(2));
-
-        // EXECUTIONS
-        assertEquals(3L, firstRow.get(3));
-        assertEquals(2L, secondRow.get(3));
-
-        //FAILURES
-        assertEquals(1L, firstRow.get(4));
-        assertEquals(0L, secondRow.get(4));
-
-        //DURATION_MIN
-        assertTrue((Long)firstRow.get(5) >= MIN_SLEEP);
-        assertTrue((Long)firstRow.get(5) < (Long)firstRow.get(6));
-
-        //DURATION_MAX
-        assertTrue((Long)firstRow.get(6) >= MAX_SLEEP);
-
-        //LAST_START_TIME
-        assertFalse(((Timestamp)firstRow.get(7)).before(new Timestamp(tsBeforeRun)));
-        assertFalse(((Timestamp)firstRow.get(7)).after(new Timestamp(tsAfterRun)));
-    }
-
-    /**
-     * Test running queries system view.
-     */
-    @Test
-    public void testRunningQueriesView() throws Exception {
-        IgniteEx ignite = startGrid(0);
-
-        IgniteCache cache = ignite.createCache(
-            new CacheConfiguration<>(DEFAULT_CACHE_NAME).setIndexedTypes(Integer.class, String.class)
-        );
-
-        cache.put(100,"200");
-
-        String sql = "SELECT SQL, QUERY_ID, SCHEMA_NAME, LOCAL, START_TIME, DURATION FROM " +
-            systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES";
-
-        FieldsQueryCursor notClosedFieldQryCursor = cache.query(new SqlFieldsQuery(sql).setLocal(true));
-
-        List<?> cur = cache.query(new SqlFieldsQuery(sql).setLocal(true)).getAll();
-
-        assertEquals(2, cur.size());
-
-        List<?> res0 = (List<?>)cur.get(0);
-        List<?> res1 = (List<?>)cur.get(1);
-
-        Timestamp ts = (Timestamp)res0.get(4);
-
-        Instant now = Instant.now();
-
-        long diffInMillis = now.minusMillis(ts.getTime()).toEpochMilli();
-
-        assertTrue(diffInMillis < 3000);
-
-        assertEquals(sql, res0.get(0));
-
-        assertEquals(sql, res1.get(0));
-
-        assertTrue((Boolean)res0.get(3));
-
-        String id0 = (String)res0.get(1);
-        String id1 = (String)res1.get(1);
-
-        assertNotEquals(id0, id1);
-
-
-        String qryPrefix = ignite.localNode().id() + "_";
-
-        String qryId1 = qryPrefix + "1";
-        String qryId2 = qryPrefix + "2";
-
-        assertTrue(id0.equals(qryId1) || id1.equals(qryId1));
-
-        assertTrue(id0.equals(qryId2) || id1.equals(qryId2));
-
-        assertEquals(2, cache.query(new SqlFieldsQuery(sql)).getAll().size());
-
-        notClosedFieldQryCursor.close();
-
-        assertEquals(1, cache.query(new SqlFieldsQuery(sql)).getAll().size());
-
-        cache.put(100,"200");
-
-        QueryCursor notClosedQryCursor = cache.query(new SqlQuery<>(String.class, "_key=100"));
-
-        String expSqlQry = "SELECT \"default\".\"STRING\"._KEY, \"default\".\"STRING\"._VAL FROM " +
-            "\"default\".\"STRING\" WHERE _key=100";
-
-        cur = cache.query(new SqlFieldsQuery(sql)).getAll();
-
-        assertEquals(2, cur.size());
-
-        res0 = (List<?>)cur.get(0);
-        res1 = (List<?>)cur.get(1);
-
-        assertTrue(expSqlQry, res0.get(0).equals(expSqlQry) || res1.get(0).equals(expSqlQry));
-
-        assertFalse((Boolean)res0.get(3));
-
-        assertFalse((Boolean)res1.get(3));
-
-        notClosedQryCursor.close();
-
-        sql = "SELECT SQL, QUERY_ID FROM " + systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES WHERE QUERY_ID='" + qryPrefix + "7'";
-
-        assertEquals(qryPrefix + "7", ((List<?>)cache.query(new SqlFieldsQuery(sql)).getAll().get(0)).get(1));
-
-        sql = "SELECT SQL FROM " + systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES WHERE DURATION > 100000";
-
-        assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
-
-        sql = "SELECT SQL FROM " + systemSchemaName() + ".LOCAL_SQL_RUNNING_QUERIES WHERE QUERY_ID='UNKNOWN'";
-
-        assertTrue(cache.query(new SqlFieldsQuery(sql)).getAll().isEmpty());
     }
 
     /**
@@ -1051,8 +857,6 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
 
         assertTrue("All tables should be dropped", execSql(selectTabNameCacheName).isEmpty());
     }
-
-
 
     /**
      * Dummy implementation of the mapper. Required to test "AFFINITY_KEY_COLUMN".
@@ -1650,21 +1454,30 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
         }
     }
 
+    /** */
     private static class CustomNodeFilter implements IgnitePredicate<ClusterNode> {
-        private final int attemptsBeforeException;
+        /** */
+        private final int attemptsBeforeE;
 
+        /** */
         private volatile int attempts;
 
-        public CustomNodeFilter(int attemptsBeforeException) {
-            this.attemptsBeforeException = attemptsBeforeException;
+        /**
+         * @param attemptsBeforeE Attempts before exception.
+         */
+        public CustomNodeFilter(int attemptsBeforeE) {
+            this.attemptsBeforeE = attemptsBeforeE;
         }
 
+        /** {@inheritDoc} */
         @Override public boolean apply(ClusterNode node) {
             return true;
         }
 
+        /** {@inheritDoc} */
+        @SuppressWarnings("NonAtomicOperationOnVolatileField")
         @Override public String toString() {
-            if(attempts++ > attemptsBeforeException)
+            if(attempts++ > attemptsBeforeE)
                 throw new NullPointerException("Oops... incorrect customer realization.");
 
             return "CUSTOM_NODE_FILTER";

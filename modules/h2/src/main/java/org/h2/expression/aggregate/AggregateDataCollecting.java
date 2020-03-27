@@ -38,7 +38,8 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
 
     private Value shared;
 
-    private long memReserved;
+    private H2MemoryTracker tracker;
+
 
     /**
      * Creates new instance of data for collecting aggregates.
@@ -69,15 +70,16 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
         if (c == null) {
             values = c = distinct ? new TreeSet<>(ses.getDatabase().getCompareMode()) : new ArrayList<Value>();
         }
-        H2MemoryTracker memTracker;
-        if (c.add(v) && (memTracker = ses.memoryTracker()) != null) {
+
+        if (tracker == null && ses.memoryTracker() != null)
+            tracker = ses.memoryTracker().createChildTracker();
+
+        if (c.add(v) && tracker != null) {
             long size = distinct ? 40 /* TreeMap.Entry */ : Constants.MEMORY_POINTER;
 
             size += v.getMemory();
 
-            memTracker.reserved(size);
-
-            memReserved += size;
+            tracker.reserve(size);
         }
     }
 
@@ -153,17 +155,16 @@ public class AggregateDataCollecting extends AggregateData implements Iterable<V
 
     /** {@inheritDoc} */
     @Override public void cleanup(Session ses) {
-        H2MemoryTracker memTracker;
-        if (values != null && (memTracker = ses.memoryTracker()) != null) {
+        if (values != null)
             values = null;
 
-            memTracker.released(memReserved);
-        }
+        if (tracker != null)
+            tracker.release(tracker.reserved());
     }
 
     /** */
     @Override public long getMemory() {
-        return memReserved;
+        return tracker.reserved();
     }
 
     /** */

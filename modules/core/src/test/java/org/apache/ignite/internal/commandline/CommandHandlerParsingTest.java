@@ -18,7 +18,6 @@ package org.apache.ignite.internal.commandline;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
@@ -47,10 +46,12 @@ import org.junit.Test;
 import org.junit.rules.TestRule;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.internal.commandline.CommandList.CACHE;
 import static org.apache.ignite.internal.commandline.CommandList.CLUSTER_CHANGE_TAG;
 import static org.apache.ignite.internal.commandline.CommandList.WAL;
+import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_VERBOSE;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_HOST;
 import static org.apache.ignite.internal.commandline.TaskExecutor.DFLT_PORT;
 import static org.apache.ignite.internal.commandline.WalCommands.WAL_DELETE;
@@ -63,6 +64,7 @@ import static org.apache.ignite.internal.commandline.cache.argument.ValidateInde
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -215,7 +217,7 @@ public class CommandHandlerParsingTest {
 
             T removed = sourceCopy.remove(i);
 
-            generateAllCombinations(Collections.singletonList(removed), sourceCopy, stopFunc, res);
+            generateAllCombinations(singletonList(removed), sourceCopy, stopFunc, res);
         }
 
         return res;
@@ -257,8 +259,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testParseAndValidateSSLArguments() {
         for (CommandList cmd : CommandList.values()) {
-            if (skipCommand(cmd))
-                continue; // --cache, --wal, --rolling-upgrade, --dr and --change-tag commands require its own specific arguments.
+            if (requireArgs(cmd))
+                continue;
 
             assertParseArgsThrows("Expected SSL trust store path", "--truststore");
 
@@ -279,25 +281,14 @@ public class CommandHandlerParsingTest {
         }
     }
 
-    /** */
-    private boolean skipCommand(CommandList cmd) {
-        return cmd == CommandList.CACHE ||
-            cmd == CommandList.WAL ||
-            cmd == CommandList.ROLLING_UPGRADE ||
-            cmd == CommandList.CLUSTER_CHANGE_TAG ||
-            cmd == CommandList.DATA_CENTER_REPLICATION ||
-            cmd == CommandList.MANAGEMENT;
-    }
-
-
     /**
      * Tests parsing and validation for user and password arguments.
      */
     @Test
     public void testParseAndValidateUserAndPassword() {
         for (CommandList cmd : CommandList.values()) {
-            if (skipCommand(cmd))
-                continue; // --cache, --wal, --rolling-upgrade and --change-tag commands requires its own specific arguments.
+            if (requireArgs(cmd))
+                continue;
 
             assertParseArgsThrows("Expected user name", "--user");
             assertParseArgsThrows("Expected password", "--password");
@@ -430,8 +421,8 @@ public class CommandHandlerParsingTest {
     @Test
     public void testConnectionSettings() {
         for (CommandList cmd : CommandList.values()) {
-            if (skipCommand(cmd))
-                continue; // --cache, --wal, --rolling-upgrade, --change-tag commands require its own specific arguments.
+            if (requireArgs(cmd))
+                continue;
 
             ConnectionAndSslParameters args = parseArgs(asList(cmd.text()));
 
@@ -574,7 +565,7 @@ public class CommandHandlerParsingTest {
             + Arrays.toString(RepairAlgorithm.values()) + '.', "--cache", "partition-reconciliation", "--repair",
             "invalid-repair-alg");
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--fix-alg", "PRIMARY"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--fix-alg", "PRIMARY"));
 
         // --load-factor
         assertParseArgsThrows("The parallelism level should be specified.",
@@ -589,11 +580,11 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows(String.format(PARALLELISM_FORMAT_MESSAGE, "-1"),
             "--cache", "partition-reconciliation", "--parallelism", "-1");
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "8"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--parallelism", "8"));
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "1"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--parallelism", "1"));
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--parallelism", "0"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--parallelism", "0"));
 
         // --batch-size
         assertParseArgsThrows("The batch size should be specified.",
@@ -605,7 +596,7 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("Invalid batch size: 0. Integer value greater than zero should be used.",
             "--cache", "partition-reconciliation", "--batch-size", "0");
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--batch-size", "10"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--batch-size", "10"));
 
         // --recheck-attempts
         assertParseArgsThrows("The recheck attempts should be specified.",
@@ -617,9 +608,9 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("Invalid recheck attempts: 6. Integer value between 1 (inclusive) and 5 (exclusive) should be used.",
             "--cache", "partition-reconciliation", "--recheck-attempts", "6");
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--recheck-attempts", "1"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--recheck-attempts", "1"));
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--recheck-attempts", "5"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--recheck-attempts", "5"));
 
         // --recheck-delay
         assertParseArgsThrows("The recheck delay should be specified.",
@@ -631,9 +622,25 @@ public class CommandHandlerParsingTest {
         assertParseArgsThrows("Invalid recheck delay: 101. Integer value between 0 (inclusive) and 100 (exclusive) should be used.",
             "--cache", "partition-reconciliation", "--recheck-delay", "101");
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--recheck-delay", "0"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--recheck-delay", "0"));
 
-        parseArgs(Arrays.asList("--cache", "partition-reconciliation", "--recheck-delay", "50"));
+        parseArgs(asList("--cache", "partition-reconciliation", "--recheck-delay", "50"));
+    }
+
+    /**
+     * Test checks that option {@link CommonArgParser#CMD_VERBOSE} is parsed
+     * correctly and if it is not present, it takes the default value
+     * {@code false}.
+     */
+    @Test
+    public void testParseVerboseOption() {
+        for (CommandList cmd : CommandList.values()) {
+            if (requireArgs(cmd))
+                continue;
+
+            assertFalse(cmd.toString(), parseArgs(singletonList(cmd.text())).verbose());
+            assertTrue(cmd.toString(), parseArgs(asList(cmd.text(), CMD_VERBOSE)).verbose());
+        }
     }
 
     /**
@@ -668,5 +675,19 @@ public class CommandHandlerParsingTest {
      */
     private void assertParseArgsThrows(@Nullable String failMsg, String... args) {
         assertThrows(null, () -> parseArgs(asList(args)), IllegalArgumentException.class, failMsg);
+    }
+
+    /**
+     * Return {@code True} if cmd there are required arguments.
+     *
+     * @return {@code True} if cmd there are required arguments.
+     */
+    private boolean requireArgs(@Nullable CommandList cmd) {
+        return cmd == CommandList.CACHE ||
+            cmd == CommandList.WAL ||
+            cmd == CommandList.ROLLING_UPGRADE ||
+            cmd == CommandList.CLUSTER_CHANGE_TAG ||
+            cmd == CommandList.DATA_CENTER_REPLICATION ||
+            cmd == CommandList.MANAGEMENT;
     }
 }
