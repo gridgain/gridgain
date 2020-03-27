@@ -57,10 +57,6 @@ public class VisorValidateIndexesJobResult extends VisorDataTransferObject {
     @GridToStringInclude
     private Map<String, ValidateIndexesCheckSizeResult> checkSizeRes;
 
-    @GridToStringInclude
-    /** Indexes inline size. */
-    private Map<String, Integer> indexesInlineSize;
-
     /**
      * Constructor.
      *
@@ -73,14 +69,12 @@ public class VisorValidateIndexesJobResult extends VisorDataTransferObject {
         Map<PartitionKey, ValidateIndexesPartitionResult> partRes,
         @Nullable Map<String, ValidateIndexesPartitionResult> idxRes,
         @Nullable Collection<IndexIntegrityCheckIssue> integrityCheckFailures,
-        @Nullable Map<String, ValidateIndexesCheckSizeResult> checkSizeRes,
-        @Nullable Map<String, Integer> indexesInlineSize
+        @Nullable Map<String, ValidateIndexesCheckSizeResult> checkSizeRes
     ) {
         this.partRes = partRes;
         this.idxRes = idxRes;
         this.integrityCheckFailures = integrityCheckFailures;
         this.checkSizeRes = checkSizeRes;
-        this.indexesInlineSize = indexesInlineSize;
     }
 
     /**
@@ -91,7 +85,7 @@ public class VisorValidateIndexesJobResult extends VisorDataTransferObject {
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V5;
+        return V4;
     }
 
     /**
@@ -125,15 +119,6 @@ public class VisorValidateIndexesJobResult extends VisorDataTransferObject {
     }
 
     /**
-     * Return inline size of indexes.
-     *
-     * @return Return inline size of indexes.
-     */
-    public Map<String, Integer> indexesInlineSize() {
-        return indexesInlineSize == null ? emptyMap() : indexesInlineSize;
-    }
-
-    /**
      * @return {@code true} If any indexes issues found on node, otherwise returns {@code false}.
      */
     public boolean hasIssues() {
@@ -149,7 +134,6 @@ public class VisorValidateIndexesJobResult extends VisorDataTransferObject {
         writeMap(out, idxRes);
         writeCollection(out, integrityCheckFailures);
         writeMap(out, checkSizeRes);
-        writeMap(out, indexesInlineSize);
     }
 
     /** {@inheritDoc} */
@@ -167,9 +151,6 @@ public class VisorValidateIndexesJobResult extends VisorDataTransferObject {
 
         if (protoVer >= V4)
             checkSizeRes = readMap(in);
-
-        if (protoVer >= V5)
-            indexesInlineSize = readMap(in);
     }
 
     /** {@inheritDoc} */
