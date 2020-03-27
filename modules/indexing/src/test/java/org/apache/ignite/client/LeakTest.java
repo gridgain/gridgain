@@ -39,7 +39,7 @@ public class LeakTest {
     int KEYS = 10000;
 
     /** Iterations. */
-    int ITERS = 5_000;
+    int ITERS = 1_000;
 
     /** Per test timeout */
     @Rule
@@ -58,7 +58,9 @@ public class LeakTest {
             for (int i = 0; i < KEYS; ++i)
                 sql(cli,"INSERT INTO TEST VALUES (?, ?)", i, "val_" + i);
 
-            int iter = 0;
+            GridDebug.dumpHeap(String.format("mem%03d.hprof", 0), true);
+
+            int iter = 1;
 
             while (true) {
                 GridTestUtils.runMultiThreaded(() -> {
@@ -69,6 +71,8 @@ public class LeakTest {
                             List<List<?>> res = sqlTest(cli, "UPDATE TEST SET val = ? WHERE ID = ?", val, k);
 
                             Assert.assertEquals(1L, res.get(0).get(0));
+
+                            sqlTest(cli, "SELECT * FROM TEST WHERE ID < 2000");
                         }
                     },
                     10, "upd-pressure-thread");
@@ -88,7 +92,7 @@ public class LeakTest {
         cur.iterator().hasNext();
 
         // Don't close cursor
-        // cur.close();
+         cur.close();
 
         // Returns fake update count
         return Collections.singletonList(Collections.singletonList(1L));
