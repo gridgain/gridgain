@@ -201,8 +201,6 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
 
         PageMemoryEx pageMemory = (PageMemoryEx) ignite.cachex(cacheName(0)).context().dataRegion().pageMemory();
 
-        db.enableCheckpoints(false).get();
-
         IgniteInternalFuture<?> loaderFut = runAsync(() -> {
             IgniteCache<Object, byte[]> c1 = ignite.cache(cacheName(0));
 
@@ -215,31 +213,32 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
             }
         });
 
-        IgniteInternalFuture<?> f = runAsync(() -> {
-            long processed = progress.get();
+        CountDownLatch cpStart = new CountDownLatch(1);
 
-            while (true) {
-                try {
-                    U.sleep(500);
+        GridCacheDatabaseSharedManager dbMgr = ((GridCacheDatabaseSharedManager)ignite.context()
+            .cache().context().database());
 
-                    if (progress.get() != processed)
-                        processed = progress.get();
-                    else {
-                        db.enableCheckpoints(true).get();
-
-                        forceCheckpoint();
-
-                        return;
-                    }
-
-                }
-                catch (IgniteCheckedException e) {
-                    e.printStackTrace();
-                }
+        DbCheckpointListener lsnr = new DbCheckpointListener() {
+            @Override public void onMarkCheckpointBegin(Context ctx) {
+                /* No-op. */
             }
-        });
 
-        f.get();
+            @Override public void onCheckpointBegin(Context ctx) {
+                cpStart.countDown();
+            }
+
+            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+                /* No-op. */
+            }
+        };
+
+        dbMgr.addCheckpointListener(lsnr);
+
+        loaderFut.get();
+
+        cpStart.await();
+
+        dbMgr.removeCheckpointListener(lsnr);
 
         IgniteInternalFuture<?> delFut = runAsync(() -> {
             if (loc)
