@@ -247,8 +247,6 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
                 ignite.destroyCache(cacheName(0));
         });
 
-        loaderFut.cancel();
-
         delFut.get(20_000);
     }
 
