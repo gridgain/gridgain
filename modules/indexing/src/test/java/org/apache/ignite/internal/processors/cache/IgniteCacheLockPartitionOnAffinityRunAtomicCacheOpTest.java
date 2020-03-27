@@ -84,14 +84,6 @@ public class IgniteCacheLockPartitionOnAffinityRunAtomicCacheOpTest extends Igni
         }, "restart-node");
     }
 
-    /** {@inheritDoc} */
-    @Override protected CacheConfiguration cacheConfiguration(String igniteInstanceName) throws Exception {
-        CacheConfiguration ccfg = super.cacheConfiguration(igniteInstanceName);
-        ccfg.setBackups(0);
-
-        return  ccfg;
-    }
-
     /**
      * @param cacheName Cache name.
      * @param mode Atomicity mode.
