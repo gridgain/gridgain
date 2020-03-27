@@ -64,6 +64,7 @@ import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.RECURSIVE_TRAVERSE_NAME;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.HORIZONTAL_SCAN_NAME;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
+import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CACHE_GRP_DIR_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.PART_FILE_TEMPLATE;
@@ -246,7 +247,7 @@ public class IgniteIndexReaderTest {
     private void corruptFile(int partId, int pageNum) throws IOException {
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId);
 
-        File cacheWorkDir = new File(workDir, "cacheGroup-" + CACHE_GROUP_NAME);
+        File cacheWorkDir = new File(workDir, CACHE_GRP_DIR_PREFIX + CACHE_GROUP_NAME);
 
         File file = new File(cacheWorkDir, fileName);
 
@@ -282,7 +283,7 @@ public class IgniteIndexReaderTest {
     private void restoreFile(int partId) throws IOException {
         String fileName = partId == INDEX_PARTITION ? INDEX_FILE_NAME : String.format(PART_FILE_TEMPLATE, partId);
 
-        File cacheWorkDir = new File(workDir, "cacheGroup-" + CACHE_GROUP_NAME);
+        File cacheWorkDir = new File(workDir, CACHE_GRP_DIR_PREFIX + CACHE_GROUP_NAME);
 
         Path backupFilesPath = new File(cacheWorkDir, fileName + ".backup").toPath();
 
