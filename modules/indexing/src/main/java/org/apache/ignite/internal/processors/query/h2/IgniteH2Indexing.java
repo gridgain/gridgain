@@ -2185,7 +2185,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         registerAggregateFunctions();
 
-        distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), ctx);
+        distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), log);
 
         funcMgr = new FunctionsManager(this, distrCfg);
     }

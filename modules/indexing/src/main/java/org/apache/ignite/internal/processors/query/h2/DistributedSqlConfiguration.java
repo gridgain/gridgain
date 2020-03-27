@@ -55,23 +55,18 @@ public class DistributedSqlConfiguration {
         "CANCEL_SESSION"
     }).collect(Collectors.toSet());
 
-    /** */
-    private final IgniteLogger log;
-
     /** Value of cluster time zone. */
     private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
         = new SimpleDistributedProperty<>("sql.disabledFunctions");
 
     /**
      * @param isp Subscription processor.
-     * @param ctx Kernal context.
+     * @param log Logger.
      */
     public DistributedSqlConfiguration(
         GridInternalSubscriptionProcessor isp,
-        GridKernalContext ctx
+        IgniteLogger log
     ) {
-        this.log = ctx.log(DistributedSqlConfiguration.class);
-
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
