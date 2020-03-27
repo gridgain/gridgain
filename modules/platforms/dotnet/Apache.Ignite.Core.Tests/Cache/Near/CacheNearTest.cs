@@ -1277,8 +1277,14 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Verify that near cache contains updated entries.
             foreach (var entry in data)
             {
-                Assert.AreEqual(entry.Value + 1, clientCache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
-                Assert.AreEqual(entry.Value + 1, serverCache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
+                var key = entry.Key;
+                var val = entry.Value + 1;
+
+                TestUtils.WaitForTrueCondition(() => val == clientCache.LocalPeek(key, CachePeekMode.PlatformNear), 
+                    message: string.Format("{0} = {1}", key, val));
+                
+                TestUtils.WaitForTrueCondition(() => val == serverCache.LocalPeek(key, CachePeekMode.PlatformNear), 
+                    message: string.Format("{0} = {1}", key, val));
             }
         }
 
