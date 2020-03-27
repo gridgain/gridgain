@@ -184,7 +184,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
                 .setPersistenceEnabled(true))
             .setPageSize(pageSize);
 
-        int payLoadSize = pageSize / 2;
+        int payLoadSize = pageSize * 3 / 4;
 
         IgniteConfiguration cfg = getConfiguration().setDataStorageConfiguration(ds);
 
@@ -194,11 +194,6 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
 
         startGroupCachesDynamically(ignite, loc);
 
-        GridCacheDatabaseSharedManager db =
-            (GridCacheDatabaseSharedManager)ignite.context().cache().context().database();
-
-        final AtomicLong progress = new AtomicLong();
-
         PageMemoryEx pageMemory = (PageMemoryEx) ignite.cachex(cacheName(0)).context().dataRegion().pageMemory();
 
         IgniteInternalFuture<?> loaderFut = runAsync(() -> {
@@ -206,11 +201,8 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
 
             long totalPages = pageMemory.totalPages();
 
-            for (int i = 0; i <= totalPages; i++) {
+            for (int i = 0; i <= totalPages; i++)
                 c1.put(i, new byte[payLoadSize]);
-
-                progress.incrementAndGet();
-            }
         });
 
         CountDownLatch cpStart = new CountDownLatch(1);
@@ -227,7 +219,7 @@ public class IgnitePdsDestroyCacheTest extends IgnitePdsDestroyCacheAbstractTest
                 cpStart.countDown();
             }
 
-            @Override public void beforeCheckpointBegin(Context ctx) throws IgniteCheckedException {
+            @Override public void beforeCheckpointBegin(Context ctx) {
                 /* No-op. */
             }
         };
