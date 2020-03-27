@@ -68,10 +68,9 @@ public class DistributedSqlConfiguration {
      */
     public DistributedSqlConfiguration(
         GridInternalSubscriptionProcessor isp,
-        GridKernalContext ctx,
-        IgniteLogger log
+        GridKernalContext ctx
     ) {
-        this.log = log;
+        this.log = ctx.log(DistributedSqlConfiguration.class);
 
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
