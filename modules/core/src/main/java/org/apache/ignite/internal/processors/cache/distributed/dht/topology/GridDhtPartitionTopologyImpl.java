@@ -2248,6 +2248,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                     locPart.resetUpdateCounter();
                             }
                         }
+
+                        // Update remote maps according to policy.
+                        for (Map.Entry<UUID, GridDhtPartitionMap> entry : node2part.entrySet()) {
+                            if (entry.getKey().equals(ctx.localNodeId()))
+                                continue;
+
+                            if (entry.getValue().get(part) != null)
+                                entry.getValue().put(part, safe ? LOST : OWNING);
+                        }
                     }
                 }
 

@@ -2354,7 +2354,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     }
                 }
 
-                if (exchCtx.events().hasServerLeft() || activateCluster())
+                // Detection for joining node is done to avoid a case when joining node is first data node
+                // according to node filter and has no available supplier.
+                if (serverNodeDiscoveryEvent() || activateCluster())
                     detectLostPartitions(res);
 
                 Map<Integer, CacheGroupValidation> m = U.newHashMap(cctx.cache().cacheGroups().size());
