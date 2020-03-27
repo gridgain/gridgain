@@ -105,10 +105,12 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         public void UpdateFromThreadLocal(int cacheId, int partition, AffinityTopologyVersion affinityTopologyVersion)
         {
-            var nearCache = _nearCaches.GetOrAdd(cacheId, 
-                _ => CreateNearCache(_ignite.GetCacheConfiguration(cacheId)));
-            
-            nearCache.UpdateFromThreadLocal(partition, affinityTopologyVersion);
+            var nearCache = TryGetNearCache(cacheId);
+
+            if (nearCache != null)
+            {
+                nearCache.UpdateFromThreadLocal(partition, affinityTopologyVersion);
+            }
         }
 
         /// <summary>
@@ -144,9 +146,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             var keepBinary = nearCfg.KeepBinary;
 
             TypeResolver resolver = null;
-            Func<string, Type> resolve = n =>
+            Func<string, string, Type> resolve = (typeName, fieldName) =>
             {
-                if (n == null)
+                if (typeName == null)
                 {
                     return typeof(object);
                 }
@@ -156,18 +158,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                     resolver = new TypeResolver();
                 }
 
-                var resolved = resolver.ResolveType(n);
+                var resolved = resolver.ResolveType(typeName);
 
                 if (resolved == null)
                 {
-                    throw new InvalidOperationException(string.Format("Failed to resolve type: '{0}'", n));
+                    throw new InvalidOperationException(string.Format(
+                        "Can not create .NET Near Cache: {0}.{1} is invalid. Failed to resolve type: '{2}'", 
+                        typeof(PlatformNearCacheConfiguration).Name, fieldName, typeName));
                 }
 
                 return resolved;
             };
 
-            var keyType = resolve(nearCfg.KeyTypeName);
-            var valType = resolve(nearCfg.ValueTypeName);
+            var keyType = resolve(nearCfg.KeyTypeName, "KeyTypeName");
+            var valType = resolve(nearCfg.ValueTypeName, "ValueTypeName");
 
             var cacheType = typeof(NearCache<,>).MakeGenericType(keyType, valType);
             var nearCache = Activator.CreateInstance(

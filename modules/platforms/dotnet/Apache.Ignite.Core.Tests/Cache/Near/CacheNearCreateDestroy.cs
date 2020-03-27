@@ -275,6 +275,33 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // In near on primary node.
             Assert.AreEqual(key, cache1.GetLocalEntries(CachePeekMode.PlatformNear).Single().Key);
         }
+
+        /// <summary>
+        /// Tests that invalid config is handled properly.
+        /// </summary>
+        [Test]
+        public void TestCreateNearCacheWithInvalidKeyValueTypeNames([Values(true, false)] bool client, 
+            [Values(true, false)] bool keyOrValue)
+        {
+            var cfg = new CacheConfiguration(TestUtils.TestName)
+            {
+                PlatformNearConfiguration = new PlatformNearCacheConfiguration
+                {
+                    KeyTypeName = keyOrValue ? "invalid" : null,
+                    ValueTypeName = keyOrValue ? null : "invalid"
+                }
+            };
+
+            var ignite = client ? _client : _grid;
+
+            var err = Assert.Throws<InvalidOperationException>(() => ignite.CreateCache<int, int>(cfg));
+
+            var expectedMessage = string.Format(
+                "Can not create .NET Near Cache: PlatformNearCacheConfiguration.{0} is invalid. " +
+                "Failed to resolve type: 'invalid'", keyOrValue ? "KeyTypeName" : "ValueTypeName");
+            
+            Assert.AreEqual(expectedMessage, err.Message);
+        }
         
         /// <summary>
         /// Asserts the cache is near.
