@@ -138,7 +138,10 @@ public enum IgniteFeatures {
     VOLATILE_DATA_STRUCTURES_REGION(33),
 
     /** Partition reconciliation utility. */
-    PARTITION_RECONCILIATION(34);
+    PARTITION_RECONCILIATION(34),
+
+    /** */
+    CHECK_INDEX_INLINE_SIZES_ON_JOIN(36);
 
     /**
      * Unique feature identifier.

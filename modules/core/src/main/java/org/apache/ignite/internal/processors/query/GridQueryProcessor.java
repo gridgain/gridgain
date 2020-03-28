@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.io.Serializable;
 import javax.cache.Cache;
 import javax.cache.CacheException;
 import java.util.ArrayList;
@@ -55,9 +56,11 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.events.CacheQueryExecutedEvent;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.managers.communication.GridMessageListener;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheObject;
@@ -102,15 +105,18 @@ import org.apache.ignite.internal.util.lang.IgniteOutClosureX;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T3;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgniteInClosure;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.marshaller.jdk.JdkMarshaller;
 import org.apache.ignite.spi.discovery.DiscoveryDataBag;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.indexing.IndexingQueryFilter;
 import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
@@ -121,6 +127,8 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_SCHEMA;
 import static org.apache.ignite.internal.IgniteComponentType.INDEXING;
+import static org.apache.ignite.internal.IgniteFeatures.CHECK_INDEX_INLINE_SIZES_ON_JOIN;
+import static org.apache.ignite.internal.IgniteFeatures.DISTRIBUTED_METASTORAGE;
 import static org.apache.ignite.internal.binary.BinaryUtils.fieldTypeName;
 import static org.apache.ignite.internal.binary.BinaryUtils.typeByClass;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
@@ -130,6 +138,12 @@ import static org.apache.ignite.internal.processors.query.schema.SchemaOperation
  * Indexing processor.
  */
 public class GridQueryProcessor extends GridProcessorAdapter {
+    /** Key for information about index inline sizes in discovery databag. */
+    private static final String INLINE_SIZE_KEY = "inline_sizes";
+
+    /** Key for information about active proposals in discovery databag. */
+    private static final String ACTIVE_PROPOSALS_KEY = "proposals";
+
     /** Queries detail metrics eviction frequency. */
     private static final int QRY_DETAIL_METRICS_EVICTION_FREQ = 3_000;
 
@@ -340,27 +354,90 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
     /** {@inheritDoc} */
     @Override public void collectGridNodeData(DiscoveryDataBag dataBag) {
+        LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> proposals;
+
         // Collect active proposals.
         synchronized (stateMux) {
-            LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> data = new LinkedHashMap<>(activeProposals);
+            proposals = new LinkedHashMap<>(activeProposals);
+        }
 
-            dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), data);
+        if (joiningNodeSupportedCheckIndexInlineSize(dataBag.joiningNodeId()))
+            dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectIndexesInfo(proposals));
+        else {
+            // Support backward compatibility.
+            dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), proposals);
         }
     }
 
     /** {@inheritDoc} */
-    @Override public void onGridDataReceived(DiscoveryDataBag.GridDiscoveryData data) {
-        synchronized (stateMux) {
-            // Preserve proposals.
-            LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> data0 =
-                (LinkedHashMap<UUID, SchemaProposeDiscoveryMessage>)data.commonData();
+    @Override public void collectJoiningNodeData(DiscoveryDataBag dataBag) {
+        dataBag.addJoiningNodeData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectIndexesInfo(null));
+    }
 
-            // Process proposals as if they were received as regular discovery messages.
-            if (data0 != null) {
-                for (SchemaProposeDiscoveryMessage activeProposal : data0.values())
+    /** {@inheritDoc} */
+    @Override public void onGridDataReceived(DiscoveryDataBag.GridDiscoveryData data) {
+        // Preserve proposals.
+        LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> activeProposals;
+
+        HashMap<String, Serializable> indexesInfo = null;
+
+        if (data.commonData() instanceof HashMap) {
+            indexesInfo = (HashMap<String, Serializable>)data.commonData();
+
+            activeProposals = (LinkedHashMap<UUID, SchemaProposeDiscoveryMessage>)indexesInfo.get(ACTIVE_PROPOSALS_KEY);
+        }
+        else {
+            // Backward compatibility.
+            activeProposals = (LinkedHashMap<UUID, SchemaProposeDiscoveryMessage>)data.commonData();
+        }
+
+        // Process proposals as if they were received as regular discovery messages.
+        if (!F.isEmpty(activeProposals)) {
+            synchronized (stateMux) {
+                for (SchemaProposeDiscoveryMessage activeProposal : activeProposals.values())
                     onSchemaProposeDiscovery0(activeProposal);
             }
         }
+
+        if (!F.isEmpty(indexesInfo) && !F.isEmpty((Map<String, Integer>)indexesInfo.get(INLINE_SIZE_KEY)))
+            checkInlineSizes(collectIndexInlineSizes(), (Map<String, Integer>)indexesInfo.get(INLINE_SIZE_KEY));
+    }
+
+    private boolean joiningNodeSupportedCheckIndexInlineSize(UUID joiningNodeId) {
+        IgnitePredicate<ClusterNode> joiningNode = n -> !n.isClient() && !n.isDaemon() && joiningNodeId.equals(n.id());
+
+        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
+
+        if (discoSpi instanceof IgniteDiscoverySpi)
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(CHECK_INDEX_INLINE_SIZES_ON_JOIN, joiningNode);
+        else {
+            ClusterNode node = discoSpi.getNode(joiningNodeId);
+
+            A.notNull(node, "joiningNodeId: " + joiningNodeId);
+
+            return IgniteFeatures.nodeSupports(ctx, node, CHECK_INDEX_INLINE_SIZES_ON_JOIN);
+        }
+    }
+
+    private HashMap<String, Serializable> collectIndexesInfo(@Nullable LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> proposals) {
+        HashMap<String, Serializable> data = new HashMap<>();
+
+        data.put(INLINE_SIZE_KEY, collectIndexInlineSizes());
+
+        if (proposals != null)
+            data.put(ACTIVE_PROPOSALS_KEY, proposals);
+
+        return data;
+    }
+
+    private void checkInlineSizes(Map<String, Integer> local, Map<String, Integer> remote) {
+        for (String name : local.keySet()) {
+
+        }
+    }
+
+    private HashMap<String, Integer> collectIndexInlineSizes() {
+        return new HashMap<>();
     }
 
     /**
