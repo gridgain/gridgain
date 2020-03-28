@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.EventType;
@@ -499,12 +500,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /**
      * Creates non-existing partitions belong to given affinity {@code aff}.
-     *
-     * @param affVer Affinity version.
+     *  @param affVer Affinity version.
      * @param aff Affinity assignments.
      * @param updateSeq Update sequence.
+     * @param exchFut
      */
-    private void createPartitions(AffinityTopologyVersion affVer, List<List<ClusterNode>> aff, long updateSeq) {
+    private void createPartitions(AffinityTopologyVersion affVer,
+                                  List<List<ClusterNode>> aff,
+                                  long updateSeq
+    ) {
         if (!grp.affinityNode())
             return;
 
@@ -2046,9 +2050,40 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
             if (updateRebalanceVer)
                 updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
+
+            // Check if joining node has any supplier.
+            if (fut != null && fut.context().events().hasServerJoin())
+                ownLost();
         }
         finally {
             lock.writeLock().unlock();
+        }
+    }
+
+    /** */
+    private void ownLost() {
+        for (int p = 0; p < grp.affinity().partitions(); p++) {
+            boolean hasOwner = false;
+
+            for (GridDhtPartitionMap map : node2part.values()) {
+                if (map.get(p) == OWNING) {
+                    hasOwner = true;
+
+                    break;
+                }
+            }
+
+            if (!hasOwner) {
+                GridDhtLocalPartition locPart = localPartition(p);
+
+                if (locPart != null && locPart.state() != EVICTED)
+                    locPart.own();
+
+                for (GridDhtPartitionMap map : node2part.values()) {
+                    if (map.get(p) != null)
+                        map.put(p, OWNING);
+                }
+            }
         }
     }
 
@@ -2148,35 +2183,25 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     return false;
 
                 // Do not trigger lost partition events on start.
-                boolean evt = fut != null && !fut.localJoinExchange() && !fut.activateCluster();
+                boolean evt = fut != null && !fut.activateCluster();
 
                 // TODO consider merged events.
                 DiscoveryEvent discoEvt = evt ? fut.firstEvent() : null;
 
                 final GridClusterStateProcessor state = grp.shared().kernalContext().state();
 
-                // TODO the logic below is spread and should be refactored.
-                final BaselineTopology top = state.clusterState().baselineTopology();
-
                 boolean isInMemoryCluster = CU.isInMemoryCluster(
-                    grp.shared().kernalContext().discovery().allNodes(),
-                    grp.shared().kernalContext().marshallerContext().jdkMarshaller(),
-                    U.resolveClassLoader(grp.shared().kernalContext().config())
+                        grp.shared().kernalContext().discovery().allNodes(),
+                        grp.shared().kernalContext().marshallerContext().jdkMarshaller(),
+                        U.resolveClassLoader(grp.shared().kernalContext().config())
                 );
 
-                boolean autoAdjustBaseline = isInMemoryCluster
-                    && state.isBaselineAutoAdjustEnabled()
-                    && state.baselineAutoAdjustTimeout() == 0L;
-
-                // TODO get rid of grp.persistenceGroup
-                boolean persistence = ctx.cache().cacheGroupDescriptor(grp.groupId()).persistenceEnabled();
-
-                boolean enableBltCalculationForVolatile = top != null &&
-                    bltForVolatileCachesSup &&
-                    allNodesSupports(grp.shared().kernalContext(), discoCache.allNodes(), PME_FREE_SWITCH);
+                boolean ignoreCompatible = isInMemoryCluster
+                        && state.isBaselineAutoAdjustEnabled()
+                        && state.baselineAutoAdjustTimeout() == 0L;
 
                 // Calculate how loss data is handled.
-                boolean safe = persistence || enableBltCalculationForVolatile && !autoAdjustBaseline;
+                boolean safe = !(grp.config().getPartitionLossPolicy() == PartitionLossPolicy.IGNORE && ignoreCompatible);
 
                 int parts = grp.affinity().partitions();
 

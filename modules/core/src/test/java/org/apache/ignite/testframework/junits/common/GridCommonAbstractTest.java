@@ -1003,7 +1003,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         for (Ignite ig : nodes) {
             IgniteKernal k = ((IgniteKernal)ig);
 
-            IgniteInternalFuture<?> syncFut = k.internalCache(cacheName)
+            GridCacheAdapter<Object, Object> adapter = k.internalCache(cacheName);
+
+            if (adapter == null)
+                continue;
+
+            IgniteInternalFuture<?> syncFut = adapter
                 .preloader()
                 .syncFuture();
 
@@ -1021,7 +1026,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
         for (Ignite ig : nodes) {
             IgniteKernal k = ((IgniteKernal)ig);
 
-            IgniteInternalFuture<?> f = k.internalCache(cacheName)
+            GridCacheAdapter<Object, Object> adapter = k.internalCache(cacheName);
+
+            if (adapter == null)
+                continue;
+
+            IgniteInternalFuture<?> f = adapter
                 .preloader()
                 .rebalanceFuture();
 
@@ -1054,7 +1064,12 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
                 .append(" grid=").append(g0.name())
                 .append("\n");
 
-            IgniteCacheProxy<?, ?> cache = g0.context().cache().jcache(cacheName);
+            IgniteCacheProxy<?, ?> cache = null;
+            try {
+                cache = g0.context().cache().jcache(cacheName);
+            } catch (IllegalArgumentException e) {
+                continue; // Client topology.
+            }
 
             GridDhtCacheAdapter<?, ?> dht = dht(cache);
 

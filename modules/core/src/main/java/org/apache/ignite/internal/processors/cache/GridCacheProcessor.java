@@ -3734,6 +3734,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             // Check if all lost partitions has at least one affinity owner.
             final Collection<Integer> lostParts = cache0.lostPartitions();
 
+            if (lostParts.isEmpty())
+                continue;
+
             for (Integer part : lostParts) {
                 final Collection<ClusterNode> owners = cache0.affinity().mapPartitionToPrimaryAndBackups(part);
 

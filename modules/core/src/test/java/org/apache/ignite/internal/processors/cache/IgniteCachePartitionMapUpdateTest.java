@@ -22,6 +22,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import org.apache.ignite.cache.PartitionLossPolicy;
+import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -44,10 +46,10 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
     private static final String CACHE2_ATTR = "cache2";
 
     /** */
-    private static final String CACHE1 = "cache1";
+    protected static final String CACHE1 = "cache1";
 
     /** */
-    private static final String CACHE2 = "cache2";
+    protected static final String CACHE2 = "cache2";
 
     /** */
     private boolean startClientCache;
@@ -246,6 +248,13 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
         startClientCache = true;
 
         testNodeLeft();
+    }
+
+    /**
+     * @return Policy.
+     */
+    protected PartitionLossPolicy policy() {
+        return PartitionLossPolicy.IGNORE;
     }
 
     /**

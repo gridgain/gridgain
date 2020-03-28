@@ -2356,7 +2356,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 // Detection for joining node is done to avoid a case when joining node is first data node
                 // according to node filter and has no available supplier.
-                if (serverNodeDiscoveryEvent() || activateCluster())
+                if (exchCtx.events().hasServerLeft() || activateCluster())
                     detectLostPartitions(res);
 
                 Map<Integer, CacheGroupValidation> m = U.newHashMap(cctx.cache().cacheGroups().size());
@@ -2400,6 +2400,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (err == null) {
                 cctx.database().rebuildIndexesIfNeeded(this);
 
+                // TODO parallelize.
                 for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                     if (!grp.isLocal())
                         grp.topology().onExchangeDone(this, grp.affinity().readyAffinity(res), false);
@@ -3375,21 +3376,29 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             // Reserve at least 2 threads for system operations.
             doInParallelUninterruptibly(
-                U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                cctx.kernalContext().getSystemExecutorService(),
-                cctx.cache().cacheGroups(),
-                grp -> {
-                    if (!grp.isLocal()) {
-                        if (grp.topology().detectLostPartitions(resTopVer, this))
-                            detected.incrementAndGet();
-                    }
+                    U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
+                    cctx.kernalContext().getSystemExecutorService(),
+                    cctx.affinity().cacheGroups().values(),
+                    desc -> {
+                        if (desc.config().getCacheMode() == CacheMode.LOCAL)
+                            return null;
 
-                    return null;
-                });
+                        CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
+
+                        GridDhtPartitionTopology top = grp != null ? grp.topology() :
+                                cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
+
+                        if (top.detectLostPartitions(resTopVer, this))
+                            detected.incrementAndGet();
+
+                        return null;
+                    });
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         }
+
+
 
 //        if (detected.get() > 0) {
 //            if (log.isDebugEnabled())
