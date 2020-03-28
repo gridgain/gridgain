@@ -2337,13 +2337,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                 GridDhtPartitionTopology top = grpHolder.topology(evts.discoveryCache());
 
-                List<ClusterNode> owners = top.owners(p, evts.topologyVersion());
+                if (rebalanceInfo != null) {
+                    List<ClusterNode> owners = top.owners(p, evts.topologyVersion());
 
-                if (rebalanceInfo != null &&
-                     !owners.isEmpty() && // If current owners are empty no supplier exists
-                     !owners.containsAll(idealAssignment.get(p)) &&
-                     top.lostPartitions().isEmpty()) // A group with lost partitions never rebalanced.
-                    rebalanceInfo.add(aff.groupId(), p, newNodes); // TODO is this enough? Maybe not, check owner lost during rebalancing ?
+                    // If current owners are empty no supplier can exist.
+                    // A group with lost partitions never rebalanced.
+                    if (!owners.isEmpty() && !owners.containsAll(idealAssignment.get(p)) && top.lostPartitions().isEmpty())
+                        rebalanceInfo.add(aff.groupId(), p, newNodes); // TODO is this enough? Maybe not, check owner lost during rebalancing ?
+                }
             }
         }
 
