@@ -57,7 +57,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
-import org.apache.ignite.internal.processors.cluster.BaselineTopology;
 import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.internal.util.F0;
 import org.apache.ignite.internal.util.GridAtomicLong;
@@ -76,8 +75,6 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
-import static org.apache.ignite.internal.IgniteFeatures.PME_FREE_SWITCH;
-import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
@@ -2196,12 +2193,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         U.resolveClassLoader(grp.shared().kernalContext().config())
                 );
 
-                boolean ignoreCompatible = isInMemoryCluster
-                        && state.isBaselineAutoAdjustEnabled()
-                        && state.baselineAutoAdjustTimeout() == 0L;
+                boolean compatibleWithIgnorePlc = isInMemoryCluster
+                        && (!state.isBaselineAutoAdjustEnabled() || state.baselineAutoAdjustTimeout() == 0L);
 
                 // Calculate how loss data is handled.
-                boolean safe = !(grp.config().getPartitionLossPolicy() == PartitionLossPolicy.IGNORE && ignoreCompatible);
+                boolean safe = !(grp.config().getPartitionLossPolicy() == PartitionLossPolicy.IGNORE && compatibleWithIgnorePlc);
 
                 int parts = grp.affinity().partitions();
 

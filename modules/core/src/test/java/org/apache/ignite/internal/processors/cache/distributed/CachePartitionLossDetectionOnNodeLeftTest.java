@@ -239,7 +239,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         final Set<Integer> lost2 = new HashSet<>(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions());
         final Set<Integer> lost3 = new HashSet<>(client.cache(DEFAULT_CACHE_NAME).lostPartitions());
 
-        assertTrue(lost1.isEmpty());
+        assertFalse(lost1.isEmpty());
 
         assertEquals(lost1, lost2);
         assertEquals(lost1, lost3);
