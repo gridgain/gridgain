@@ -2195,7 +2195,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 );
 
                 boolean compatibleWithIgnorePlc = isInMemoryCluster
-                        && state.isBaselineAutoAdjustEnabled() && state.baselineAutoAdjustTimeout() == 0L;
+                        && (!state.isBaselineAutoAdjustEnabled() || state.baselineAutoAdjustTimeout() == 0L);
 
                 // Calculate how loss data is handled.
                 boolean safe = grp.config().getPartitionLossPolicy() != PartitionLossPolicy.IGNORE || !compatibleWithIgnorePlc;
