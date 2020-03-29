@@ -239,16 +239,9 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
-    public void testNodeLeftOnStableTopology_Mixed_3() throws Exception {
-        testNodeLeftOnStableTopology(true, true, false, true);
-    }
-
-    /** */
-    @Test
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
     @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
-    public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
+    public void testNodeLeftOnStableTopology_Mixed_3() throws Exception {
         // Explicitly disabling the optimization, PME is expected.
         testNodeLeftOnStableTopology(true, true, false, true);
     }

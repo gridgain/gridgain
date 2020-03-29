@@ -46,7 +46,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 
 /**

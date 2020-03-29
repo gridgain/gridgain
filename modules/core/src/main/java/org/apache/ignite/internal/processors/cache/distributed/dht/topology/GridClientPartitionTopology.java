@@ -1034,12 +1034,11 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
                     U.resolveClassLoader(cctx.kernalContext().config())
             );
 
-            boolean ignoreCompatible = isInMemoryCluster
-                    && state.isBaselineAutoAdjustEnabled()
-                    && state.baselineAutoAdjustTimeout() == 0L;
+            boolean compatibleWithIgnorePlc = isInMemoryCluster
+                    && (!state.isBaselineAutoAdjustEnabled() || state.baselineAutoAdjustTimeout() == 0L);
 
             // Calculate how loss data is handled.
-            boolean safe = !(partLossPlc == PartitionLossPolicy.IGNORE && ignoreCompatible);
+            boolean safe = !(partLossPlc == PartitionLossPolicy.IGNORE && compatibleWithIgnorePlc);
 
             boolean changed = false;
 

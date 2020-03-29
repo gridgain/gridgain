@@ -239,7 +239,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
         final Set<Integer> lost2 = new HashSet<>(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions());
         final Set<Integer> lost3 = new HashSet<>(client.cache(DEFAULT_CACHE_NAME).lostPartitions());
 
-        assertFalse(lost1.isEmpty());
+        assertTrue(lost1.isEmpty());
 
         assertEquals(lost1, lost2);
         assertEquals(lost1, lost3);
@@ -303,7 +303,7 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     }
 
     /**
-     * Tests if lost is correctly detected if addinity is loaded on cache start.
+     * Tests if lost is correctly detected if affinity is loaded on cache start.
      */
     @Test
     public void testPartitionLossDetectionOnClientTopology_Persistent_NonAffCrd2() throws Exception {
@@ -353,7 +353,6 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
      * TODO broken
      */
     @Test
-    @Ignore
     public void doTestPartitionLossDetectionOnClientTopology_Persistent_NonAffCrd2() throws Exception {
         doTestPartitionLossDetectionOnClientTopology(true, 0, false, false);
     }

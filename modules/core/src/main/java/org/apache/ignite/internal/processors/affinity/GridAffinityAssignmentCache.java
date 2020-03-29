@@ -357,9 +357,8 @@ public class GridAffinityAssignmentCache {
 
             hasBaseline = blt != null;
 
-            // Use PME_FREE_SWITCH feature to avoid compatibility issues when BLT is enabled for volatile caches.
             if (!persistentCache && hasBaseline)
-                hasBaseline = bltForInMemoryCachesSup && allNodesSupports(ctx, discoCache.allNodes(), PME_FREE_SWITCH);
+                hasBaseline = bltForInMemoryCachesSup;
 
             changedBaseline = !hasBaseline ? baselineTopology != null : !blt.equals(baselineTopology);
         }

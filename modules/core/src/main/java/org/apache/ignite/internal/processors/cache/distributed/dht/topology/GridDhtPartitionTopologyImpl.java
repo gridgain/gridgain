@@ -2073,12 +2073,13 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (!hasOwner) {
                 GridDhtLocalPartition locPart = localPartition(p);
 
-                if (locPart != null && locPart.state() != EVICTED)
+                if (locPart != null && locPart.state() != EVICTED && locPart.state() != LOST) {
                     locPart.own();
 
-                for (GridDhtPartitionMap map : node2part.values()) {
-                    if (map.get(p) != null)
-                        map.put(p, OWNING);
+                    for (GridDhtPartitionMap map : node2part.values()) {
+                        if (map.get(p) != null)
+                            map.put(p, OWNING);
+                    }
                 }
             }
         }
@@ -2275,7 +2276,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                             if (entry.getKey().equals(ctx.localNodeId()))
                                 continue;
 
-                            if (entry.getValue().get(part) != null)
+                            GridDhtPartitionState p0 = entry.getValue().get(part);
+
+                            if (p0 != null && p0 != EVICTED)
                                 entry.getValue().put(part, safe ? LOST : OWNING);
                         }
                     }

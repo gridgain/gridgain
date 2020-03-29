@@ -2031,11 +2031,7 @@ public class CacheConfiguration<K, V> extends MutableConfiguration<K, V> {
      * @param partLossPlc Partition loss policy.
      * @return {@code this} for chaining.
      * @see PartitionLossPolicy
-     *
-     * @deprecated This setting is ignored. Cache baseline configuration is used to determing how lost partitions are
-     * handled.
      */
-    @Deprecated
     public CacheConfiguration<K, V> setPartitionLossPolicy(PartitionLossPolicy partLossPlc) {
         this.partLossPlc = partLossPlc;
 

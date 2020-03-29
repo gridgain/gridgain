@@ -1614,7 +1614,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         }
 
         // Pre-create missing partitions using current affinity.
-        if (!exchCtx.mergeExchanges()) {
+        if (!exchCtx.mergeExchanges() && !exchCtx.exchangeFreeSwitch()) {
             for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                 if (grp.isLocal() || cacheGroupStopping(grp.groupId()))
                     continue;
@@ -1655,8 +1655,28 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         cctx.exchange().exchangerBlockingSectionBegin();
 
         try {
-            if (context().exchangeFreeSwitch())
+            if (context().exchangeFreeSwitch()) {
+                // Independently called on all nodes.
+                doInParallel(
+                        U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
+                        cctx.kernalContext().getSystemExecutorService(),
+                        cctx.affinity().cacheGroups().values(),
+                        desc -> {
+                            if (desc.config().getCacheMode() == CacheMode.LOCAL)
+                                return null;
+
+                            CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
+
+                            GridDhtPartitionTopology top = grp != null ? grp.topology() :
+                                    cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
+
+                            top.beforeExchange(this, true, true);
+
+                            return null;
+                        });
+
                 onDone(initialVersion());
+            }
             else {
                 if (crd.isLocal()) {
                     if (remaining.isEmpty()) {
