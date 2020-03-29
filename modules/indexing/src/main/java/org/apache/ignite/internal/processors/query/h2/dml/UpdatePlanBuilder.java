@@ -916,13 +916,7 @@ public final class UpdatePlanBuilder {
             // Get a new prepared statement for derived select query.
             try (PreparedStatement stmt = conn.prepareStatement(selectQry, H2StatementCache.queryFlags(planKey))) {
                 Prepared prep = GridSqlQueryParser.prepared(stmt);
-
-                GridSqlQuery selectStmt = (GridSqlQuery)GridSqlQueryParser.builder()
-                    .useOptimizedSubquery(false)
-                    .logger(log)
-                    .disabledFunctions(idx.distributedConfiguration().disabledFunctions())
-                    .build()
-                    .parse(prep);
+                GridSqlQuery selectStmt = (GridSqlQuery)new GridSqlQueryParser(false, log).parse(prep);
 
                 GridCacheTwoStepQuery qry = GridSqlQuerySplitter.split(
                     conn,

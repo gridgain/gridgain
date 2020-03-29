@@ -272,13 +272,9 @@ public class GridSqlQuerySplitter {
         // Here we will have correct normalized AST with optimized join order.
         // The distributedJoins parameter is ignored because it is not relevant for
         // the REDUCE query optimization.
-        qry = (GridSqlQuery)GridSqlQueryParser.builder()
-            .useOptimizedSubquery(true)
-            .logger(log)
-            .disabledFunctions(idx.distributedConfiguration().disabledFunctions())
-            .build()
-            .parse(
-                prepare(conn, H2Utils.context(conn.connection()), qry.getSQL(), false, enforceJoinOrder));
+        qry = GridSqlQueryParser.parseQuery(
+            prepare(conn, H2Utils.context(conn.connection()), qry.getSQL(), false, enforceJoinOrder),
+            true, log);
 
         // Do the actual query split. We will update the original query AST, need to be careful.
         splitter.splitQuery(qry);
@@ -302,13 +298,7 @@ public class GridSqlQuerySplitter {
 
                 allCollocated &= isCollocated((Query)prepared0);
 
-                mapSqlQry.query(
-                    GridSqlQueryParser.builder()
-                        .useOptimizedSubquery(true)
-                        .logger(log)
-                        .disabledFunctions(idx.distributedConfiguration().disabledFunctions())
-                        .build()
-                        .parse(prepared0).getSQL());
+                mapSqlQry.query(GridSqlQueryParser.parseQuery(prepared0, true, log).getSQL());
             }
 
             // We do not need distributed joins if all MAP queries are collocated.

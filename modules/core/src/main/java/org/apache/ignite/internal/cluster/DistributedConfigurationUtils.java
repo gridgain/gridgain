@@ -29,9 +29,9 @@ import org.jetbrains.annotations.NotNull;
 import static java.lang.String.format;
 
 /**
- * Distributed baseline configuration.
+ * Distributed configuration utilities methods.
  */
-public class DistributedConfigurationUtils {
+public final class DistributedConfigurationUtils {
     /**
      */
     private DistributedConfigurationUtils() {

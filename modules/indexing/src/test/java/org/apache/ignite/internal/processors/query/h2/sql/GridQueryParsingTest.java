@@ -23,7 +23,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -340,7 +339,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
         Prepared prepared = parse("select Person.old, p1.old, p1.addrId from Person, Person p1 " +
             "where exists(select 1 from sch2.Address a where a.id = p1.addrId)");
 
-        GridSqlSelect select = (GridSqlSelect)parser().parse(prepared);
+        GridSqlSelect select = (GridSqlSelect)new GridSqlQueryParser(false, log).parse(prepared);
 
         GridSqlJoin join = (GridSqlJoin)select.from();
 
@@ -677,7 +676,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
             @Override public Object call() throws Exception {
                 Prepared p = parse(sql);
 
-                return parser().parse(p);
+                return new GridSqlQueryParser(false, log).parse(p);
             }
         }, exCls, msg);
     }
@@ -688,7 +687,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private void assertCreateIndexEquals(GridSqlCreateIndex exp, String sql) throws Exception {
         Prepared prepared = parse(sql);
 
-        GridSqlStatement stmt = parser().parse(prepared);
+        GridSqlStatement stmt = new GridSqlQueryParser(false, log).parse(prepared);
 
         assertTrue(stmt instanceof GridSqlCreateIndex);
 
@@ -701,7 +700,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private void assertDropIndexEquals(GridSqlDropIndex exp, String sql) throws Exception {
         Prepared prepared = parse(sql);
 
-        GridSqlStatement stmt = parser().parse(prepared);
+        GridSqlStatement stmt = new GridSqlQueryParser(false, log).parse(prepared);
 
         assertTrue(stmt instanceof GridSqlDropIndex);
 
@@ -736,7 +735,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private void assertCreateTableEquals(GridSqlCreateTable exp, String sql) throws Exception {
         Prepared prepared = parse(sql);
 
-        GridSqlStatement stmt = parser().parse(prepared);
+        GridSqlStatement stmt = new GridSqlQueryParser(false, log).parse(prepared);
 
         assertTrue(stmt instanceof GridSqlCreateTable);
 
@@ -798,7 +797,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private void assertAlterTableAddColumnEquals(GridSqlAlterTableAddColumn exp, String sql) throws Exception {
         Prepared prepared = parse(sql);
 
-        GridSqlStatement stmt = parser().parse(prepared);
+        GridSqlStatement stmt = new GridSqlQueryParser(false, log).parse(prepared);
 
         assertTrue(stmt instanceof GridSqlAlterTableAddColumn);
 
@@ -874,7 +873,7 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private void assertDropTableEquals(GridSqlDropTable exp, String sql) throws Exception {
         Prepared prepared = parse(sql);
 
-        GridSqlStatement stmt = parser().parse(prepared);
+        GridSqlStatement stmt = new GridSqlQueryParser(false, log).parse(prepared);
 
         assertTrue(stmt instanceof GridSqlDropTable);
 
@@ -1028,22 +1027,12 @@ public class GridQueryParsingTest extends AbstractIndexingCommonTest {
     private void checkQuery(String qry) throws Exception {
         Prepared prepared = parse(qry);
 
-        GridSqlStatement gQry = parser().parse(prepared);
+        GridSqlStatement gQry = new GridSqlQueryParser(false, log).parse(prepared);
 
         Prepared preparedTwice = parse(gQry.getSQL());
 
         assertSqlEquals(U.firstNotNull(prepared.getPlanSQL(true), prepared.getSQL()),
             U.firstNotNull(preparedTwice.getPlanSQL(true), preparedTwice.getSQL()));
-    }
-
-    /**
-     */
-    private GridSqlQueryParser parser() {
-        return GridSqlQueryParser.builder()
-            .useOptimizedSubquery(false)
-            .logger(log)
-            .disabledFunctions(Collections.emptySet())
-            .build();
     }
 
     @QuerySqlFunction

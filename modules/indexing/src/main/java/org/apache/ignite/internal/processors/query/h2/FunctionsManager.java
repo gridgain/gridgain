@@ -26,13 +26,10 @@ import org.h2.expression.function.Function;
 import org.h2.expression.function.FunctionInfo;
 
 /**
- * Distributed configuration of the indexing module.
+ * SQL function manager.
  */
 @SuppressWarnings("unchecked")
 public class FunctionsManager {
-    /** Fld functions. */
-    private static Field fldFUNCTIONS;
-
     /** Original H2 functions set. */
     private static HashMap<String, FunctionInfo> origFuncs;
 
@@ -41,7 +38,7 @@ public class FunctionsManager {
 
     static {
         try {
-            fldFUNCTIONS = Function.class.getDeclaredField("FUNCTIONS");
+            Field fldFUNCTIONS = Function.class.getDeclaredField("FUNCTIONS");
 
             fldFUNCTIONS.setAccessible(true);
 
@@ -86,7 +83,6 @@ public class FunctionsManager {
     private static void removeFunctions(Set<String> funcNames) {
         funcs.putAll(origFuncs);
 
-        for (String funcName : funcNames)
-            funcs.remove(funcName);
+        funcs.keySet().removeAll(funcNames);
     }
 }

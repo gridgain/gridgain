@@ -22,7 +22,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
@@ -55,7 +54,7 @@ public class DistributedSqlConfiguration {
         "CANCEL_SESSION"
     }).collect(Collectors.toSet());
 
-    /** Value of cluster time zone. */
+    /** Disabled SQL functions. */
     private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
         = new SimpleDistributedProperty<>("sql.disabledFunctions");
 
@@ -86,7 +85,7 @@ public class DistributedSqlConfiguration {
     }
 
     /**
-     * @return Cluster SQL time zone.
+     * @return Disabled SQL functions.
      */
     public Set<String> disabledFunctions() {
         Set<String> ret = disabledSqlFuncs.get();

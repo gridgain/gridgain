@@ -359,12 +359,7 @@ public class QueryParser {
 
                 // Do actual parsing.
                 if (CommandProcessor.isCommand(prepared)) {
-                    GridSqlStatement cmdH2 = GridSqlQueryParser.builder()
-                        .useOptimizedSubquery(false)
-                        .logger(log)
-                        .disabledFunctions(idx.distributedConfiguration().disabledFunctions())
-                        .build()
-                        .parse(prepared);
+                    GridSqlStatement cmdH2 = new GridSqlQueryParser(false, log).parse(prepared);
 
                     QueryParserResultCommand cmd = new QueryParserResultCommand(null, cmdH2, false);
 
@@ -410,11 +405,7 @@ public class QueryParser {
                 }
 
                 // Parse SELECT.
-                GridSqlQueryParser parser = GridSqlQueryParser.builder()
-                    .useOptimizedSubquery(false)
-                    .logger(log)
-                    .disabledFunctions(idx.distributedConfiguration().disabledFunctions())
-                    .build();
+                GridSqlQueryParser parser = new GridSqlQueryParser(false, log);
 
                 GridSqlQuery selectStmt = (GridSqlQuery)parser.parse(prepared);
 
@@ -620,11 +611,7 @@ public class QueryParser {
                 IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
 
         // Prepare AST.
-        GridSqlQueryParser parser = GridSqlQueryParser.builder()
-            .useOptimizedSubquery(false)
-            .logger(log)
-            .disabledFunctions(idx.distributedConfiguration().disabledFunctions())
-            .build();
+        GridSqlQueryParser parser = new GridSqlQueryParser(false, log);
 
         GridSqlStatement stmt = parser.parse(prepared);
 
