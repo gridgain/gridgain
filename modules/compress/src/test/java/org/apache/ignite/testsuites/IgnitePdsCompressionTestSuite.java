@@ -40,6 +40,7 @@ public class IgnitePdsCompressionTestSuite {
         List<Class<?>> suite = new ArrayList<>();
         // WAL page records compression.
         suite.add(WalPageCompressionIntegrationTest.class);
+        suite.add(HistoricalRebalanceWithWalPageCompressionTest.class);
         suite.add(WalRecoveryWithPageCompressionTest.class);
         suite.add(WalCompactionAndPageCompressionTest.class);
         suite.add(IgnitePdsCheckpointSimulationWithRealCpDisabledAndWalCompressionTest.class);

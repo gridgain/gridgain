@@ -19,7 +19,6 @@ package org.apache.ignite.jdbc.suite;
 import java.security.Security;
 import org.apache.ignite.internal.jdbc2.JdbcBlobTest;
 import org.apache.ignite.internal.jdbc2.JdbcBulkLoadSelfTest;
-import org.apache.ignite.internal.jdbc2.JdbcConnMemQuotasDisabledByDefaultTest;
 import org.apache.ignite.internal.jdbc2.JdbcConnectionReopenTest;
 import org.apache.ignite.internal.jdbc2.JdbcDiskSpillingClientsTest;
 import org.apache.ignite.internal.jdbc2.JdbcDistributedJoinsQueryTest;
@@ -53,7 +52,6 @@ import org.apache.ignite.jdbc.thin.JdbcThinComplexDmlDdlCustomSchemaSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinComplexDmlDdlSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinComplexDmlDdlSkipReducerOnUpdateSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinComplexQuerySelfTest;
-import org.apache.ignite.jdbc.thin.JdbcThinConnMemQuotasDisabledByDefaultTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionMultipleAddressesTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionMvccEnabledSelfTest;
 import org.apache.ignite.jdbc.thin.JdbcThinConnectionSSLTest;
@@ -159,7 +157,6 @@ import org.junit.runners.Suite;
     org.apache.ignite.internal.jdbc2.JdbcNoCacheStreamingSelfTest.class,
     JdbcBulkLoadSelfTest.class,
     JdbcSchemaCaseSelfTest.class,
-    JdbcConnMemQuotasDisabledByDefaultTest.class,
 
     JdbcBlobTest.class,
     org.apache.ignite.internal.jdbc2.JdbcStreamingSelfTest.class,
@@ -262,7 +259,6 @@ import org.junit.runners.Suite;
     JdbcThinQueryMemoryTrackerSelfTest.class,
     JdbcThinDiskSpillingClientsTest.class,
     JdbcDiskSpillingClientsTest.class,
-    JdbcThinConnMemQuotasDisabledByDefaultTest.class,
 
     // Data types coverage.
     JdbcThinCacheToJdbcDataTypesCoverageTest.class,

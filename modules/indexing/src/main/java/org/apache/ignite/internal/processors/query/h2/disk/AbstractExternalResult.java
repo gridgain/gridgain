@@ -25,9 +25,8 @@ import org.h2.result.ResultInterface;
 /**
  * Basic class for external result.
  */
-@SuppressWarnings({"MissortedModifiers", "WeakerAccess", "ForLoopReplaceableByForEach"})
+@SuppressWarnings({"WeakerAccess", "ForLoopReplaceableByForEach"})
 public abstract class AbstractExternalResult<T> implements AutoCloseable {
-
     /** Logger. */
     protected final IgniteLogger log;
 
@@ -68,7 +67,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
         this.log = memMgr.log();
         this.data = memMgr.createExternalData(ses, useHashIdx, initSize, cls);
         this.parent = null;
-        this.memTracker = ses.memoryTracker();
+        this.memTracker = ses.memoryTracker().createChildTracker();
     }
 
     /**
@@ -86,7 +85,7 @@ public abstract class AbstractExternalResult<T> implements AutoCloseable {
 
     /** */
     protected boolean needToSpill() {
-        return !memTracker.reserved(0);
+        return !memTracker.reserve(0);
     }
 
     /** */

@@ -38,6 +38,7 @@ import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -544,7 +545,13 @@ public final class IgniteSystemProperties {
     /** Enable backward compatible handling of UUID through DDL. */
     public static final String IGNITE_SQL_UUID_DDL_BYTE_FORMAT = "IGNITE_SQL_UUID_DDL_BYTE_FORMAT";
 
-    /** Enable memory quotas per JDBC connection. */
+    /**
+     * Enable memory quotas per JDBC connection.
+     *
+     * @deprecated Possibility to modify query qouta is now managed
+     * by security permission {@link SecurityPermission#SET_QUERY_MEMORY_QUOTA}.
+     */
+    @Deprecated
     public static final String IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA = "IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA";
 
     /** Maximum size for affinity assignment history. */
@@ -556,6 +563,10 @@ public final class IgniteSystemProperties {
     /** Maximum number of discovery message history used to support client reconnect. */
     public static final String IGNITE_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE =
         "IGNITE_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE";
+
+    /** Logging a warning message when metrics quantity exceeded a specified number. */
+    public static final String IGNITE_DISCOVERY_METRICS_QNT_WARN =
+        "IGNITE_DISCOVERY_METRICS_QNT_WARN";
 
     /** Time interval that indicates that client reconnect throttle must be reset to zero. 2 minutes by default. */
     public static final String CLIENT_THROTTLE_RECONNECT_RESET_TIMEOUT_INTERVAL =

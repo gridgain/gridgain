@@ -52,13 +52,7 @@ class QueryHistoryTracker {
         if (histSz <= 0)
             return;
 
-        String qry = runningQryInfo.query();
-        String schema = runningQryInfo.schemaName();
-        boolean loc = runningQryInfo.local();
-        long startTime = runningQryInfo.startTime();
-        long duration = System.currentTimeMillis() - startTime;
-
-        QueryHistoryMetrics m = new QueryHistoryMetrics(qry, schema, loc, startTime, duration, failed);
+        QueryHistoryMetrics m = new QueryHistoryMetrics(runningQryInfo, failed);
 
         QueryHistoryMetrics mergedMetrics = qryMetrics.merge(m.key(), m, QueryHistoryMetrics::aggregateWithNew);
 

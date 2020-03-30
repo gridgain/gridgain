@@ -25,27 +25,23 @@ import org.h2.value.ValueRow;
  */
 public abstract class GroupByData {
     /** */
-    protected final H2MemoryTracker tracker;
+    public H2MemoryTracker tracker;
 
     /** */
     protected final Session ses;
-
-    /**
-     * Memory reserved in bytes.
-     *
-     * Note: Poison value '-1' means memory tracking is disabled.
-     */
-    protected long memReserved;
 
     /**
      * @param ses Session.
      */
     protected GroupByData(Session ses) {
         this.ses = ses;
-        this.tracker = ses.memoryTracker();
+        tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
+    }
 
+    /** */
+    protected void initTracker() {
         if (tracker == null)
-            memReserved = -1;
+            tracker = ses.memoryTracker() != null ? ses.memoryTracker().createChildTracker() : null;
     }
 
     /**
@@ -109,7 +105,9 @@ public abstract class GroupByData {
      * @param row New row.
      */
     protected void onGroupChanged(ValueRow groupKey, Object[] old, Object[] row) {
-        if (!trackable())
+        initTracker();
+
+        if (tracker == null)
             return;
 
         assert old != null || row != null;
@@ -131,19 +129,8 @@ public abstract class GroupByData {
         }
 
         if (size > 0)
-            tracker.reserved(size);
-        else
-            tracker.released(-size);
-
-        memReserved += size;
-    }
-
-    /**
-     * @return {@code True} if memory tracker available, {@code False} otherwise.
-     */
-    boolean trackable() {
-        assert memReserved == -1 || tracker != null;
-
-        return memReserved != -1;
+            tracker.reserve(size);
+        else if (size < 0)
+            tracker.release(-size);
     }
 }

@@ -21,6 +21,7 @@ import java.sql.SQLException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.processors.query.h2.sql.GridSqlQueryParser;
 import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -31,6 +32,9 @@ import org.h2.engine.Session;
  * Base H2 query info with commons for MAP, LOCAL, REDUCE queries.
  */
 public class H2QueryInfo {
+    /** Query id assigned by {@link RunningQueryManager}. */
+    private final Long runningQryId;
+
     /** Type. */
     private final QueryType type;
 
@@ -59,13 +63,15 @@ public class H2QueryInfo {
      * @param type Query type.
      * @param stmt Query statement.
      * @param sql Query statement.
+     * @param runningQryId Query id assigned by {@link RunningQueryManager}.
      */
-    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql) {
+    public H2QueryInfo(QueryType type, PreparedStatement stmt, String sql, Long runningQryId) {
         try {
             assert stmt != null;
 
             this.type = type;
             this.sql = sql;
+            this.runningQryId = runningQryId;
 
             beginTs = U.currentTimeMillis();
 
@@ -108,6 +114,11 @@ public class H2QueryInfo {
         printLogMessage(log, null, msg, additionalInfo);
     }
 
+    /** @return Query id assigned by {@link RunningQueryManager}. */
+    public Long runningQueryId() {
+        return runningQryId;
+    }
+
     /**
      * @param log Logger.
      * @param msg Log message
@@ -140,16 +151,18 @@ public class H2QueryInfo {
     }
 
     /**
-     * @return Query description.
+     * Returns description of this query info.
      */
-    public String buildShortQueryInfoString() {
-        return "[type=" + type +
-            ", distributedJoin=" + distributedJoin +
-            ", enforceJoinOrder=" + enforceJoinOrder +
-            ", lazy=" + lazy +
-            ", schema=" + schema +
-            ", sql='" + sql +
-            ']';
+    public String description() {
+        return "H2QueryInfo ["
+            + "type=" + type
+            + ", runningQryId=" + runningQryId
+            + ", beginTs=" + beginTs
+            + ", distributedJoin=" + distributedJoin
+            + ", enforceJoinOrder=" + enforceJoinOrder
+            + ", lazy=" + lazy
+            + ", schema=" + schema
+            + ", sql='" + sql + "']";
     }
 
     /**
