@@ -51,7 +51,7 @@ public class ServiceDeploymentProcessIdSelfTest {
     /**
      * @param data Tests data.
      */
-    public ServiceDeploymentProcessIdSelfTest(IgniteBiTuple<DiscoveryEvent, AffinityTopologyVersion> data) {
+    public ServiceDeploymentProcessIdSelfTest(String testLabel, IgniteBiTuple<DiscoveryEvent, AffinityTopologyVersion> data) {
         this.evt = data.get1();
         this.topVer = data.get2();
 
@@ -64,7 +64,7 @@ public class ServiceDeploymentProcessIdSelfTest {
     /**
      * @return Tests data.
      */
-    @Parameterized.Parameters(name = "Test event={0}")
+    @Parameterized.Parameters(name = "Test event class={0}")
     public static Collection<Object[]> instancesToTest() {
         DiscoveryEvent evt = new DiscoveryEvent(
             new GridTestNode(UUID.randomUUID()), "", 10, new GridTestNode(UUID.randomUUID()));
@@ -82,13 +82,16 @@ public class ServiceDeploymentProcessIdSelfTest {
         customEvt.eventNode(node);
 
         return Arrays.asList(new Object[][] {
-            {new IgniteBiTuple<>(customEvt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))},
-            {new IgniteBiTuple<>(evt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))}});
+            {customEvt.getClass().getSimpleName(), new IgniteBiTuple<>(customEvt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))},
+            {evt.getClass().getSimpleName(), new IgniteBiTuple<>(evt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))}});
     }
 
     /** */
     @Test
     public void topologyVersion() {
+        System.out.println("event = " + evt);
+        System.out.println("topology version = " + topVer);
+
         AffinityTopologyVersion topVer = evt instanceof DiscoveryCustomEvent ? null : this.topVer;
 
         assertEquals(topVer, sut.topologyVersion());
@@ -97,6 +100,9 @@ public class ServiceDeploymentProcessIdSelfTest {
     /** */
     @Test
     public void requestId() {
+        System.out.println("event = " + evt);
+        System.out.println("topology version = " + topVer);
+
         IgniteUuid reqId = evt instanceof DiscoveryCustomEvent ? ((DiscoveryCustomEvent)evt).customMessage().id() : null;
 
         assertEquals(reqId, sut.requestId());
