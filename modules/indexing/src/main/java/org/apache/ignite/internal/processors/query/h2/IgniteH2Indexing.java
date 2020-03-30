@@ -2996,7 +2996,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         int pageSize = qryParams.updateBatchSize();
 
         //TODO: IGNITE-11176 - Need to support cancellation
-        return DmlUtils.processSelectResult(plan, cur, pageSize);
+        try {
+            return DmlUtils.processSelectResult(plan, cur, pageSize);
+        }
+        finally {
+            if (cur instanceof QueryCursorImpl)
+                ((QueryCursorImpl)cur).close();
+        }
     }
 
     /**

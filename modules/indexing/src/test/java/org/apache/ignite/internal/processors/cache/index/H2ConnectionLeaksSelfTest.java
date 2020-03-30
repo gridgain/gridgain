@@ -175,12 +175,13 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
      * @throws Exception On failed.
      */
     @Test
-    public void testCuttentTimestampFunc() throws Exception {
+    public void testCurrentTimestampFunc() throws Exception {
         startGridAndPopulateCache(1);
 
-        sql(grid(0), "CREATE TABLE TEST_F(ID INT PRIMARY KEY, TS TIMESTAMP) WITH \"TEMPLATE=REPLICATED\"");
+        sql(grid(0), "CREATE TABLE TEST_F(ID INT PRIMARY KEY, TS TIMESTAMP)");
 
-        sql(grid(0),"INSERT INTO TEST_F VALUES (?, CURRENT_TIMESTAMP())", 0);
+        sql(grid(0),"INSERT INTO TEST_F VALUES (?, NULL)", 0);
+//        sql(grid(0),"INSERT INTO TEST_F VALUES (?, CURRENT_TIMESTAMP())", 0);
 
         checkConnectionLeaks();
     }
