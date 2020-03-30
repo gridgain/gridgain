@@ -543,7 +543,7 @@ public class GridDhtPartitionSupplier {
      * @param row Cache data row.
      * @return Entry info.
      */
-    private GridCacheEntryInfo extractEntryInfo(CacheDataRow row) {
+    public GridCacheEntryInfo extractEntryInfo(CacheDataRow row) {
         GridCacheEntryInfo info = grp.mvccEnabled() ?
             new GridCacheMvccEntryInfo() : new GridCacheEntryInfo();
 

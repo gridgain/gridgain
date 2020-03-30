@@ -36,6 +36,9 @@ public class CacheEntryInfoCollection implements Message {
     @GridDirectCollection(GridCacheEntryInfo.class)
     private List<GridCacheEntryInfo> infos;
 
+    /** {@code True} if partition rebalancing using WAL history. */
+    private boolean historical;
+
     /** */
     public CacheEntryInfoCollection() {
         // No-op
@@ -46,6 +49,15 @@ public class CacheEntryInfoCollection implements Message {
      */
     public CacheEntryInfoCollection(List<GridCacheEntryInfo> infos) {
         this.infos = infos;
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param {@code True} if partition rebalancing using WAL history.
+     */
+    public CacheEntryInfoCollection(boolean historical) {
+        this.historical = historical;
     }
 
     /**
@@ -67,6 +79,15 @@ public class CacheEntryInfoCollection implements Message {
      */
     public void add(GridCacheEntryInfo info) {
         infos.add(info);
+    }
+
+    /**
+     * Return {@code true} if partition rebalancing using WAL history.
+     *
+     * @return {@code True} if partition rebalancing using WAL history.
+     */
+    public boolean historical() {
+        return historical;
     }
 
     /** {@inheritDoc} */
@@ -92,6 +113,11 @@ public class CacheEntryInfoCollection implements Message {
 
                 writer.incrementState();
 
+            case 1:
+                if (!writer.writeBoolean("historical", historical))
+                    return false;
+
+                writer.incrementState();
         }
 
         return true;
@@ -113,6 +139,13 @@ public class CacheEntryInfoCollection implements Message {
 
                 reader.incrementState();
 
+            case 1:
+                historical = reader.readBoolean("historical");
+
+                if (!reader.isLastRead())
+                    return false;
+
+                reader.incrementState();
         }
 
         return reader.afterMessageRead(CacheEntryInfoCollection.class);
@@ -125,7 +158,7 @@ public class CacheEntryInfoCollection implements Message {
 
     /** {@inheritDoc} */
     @Override public byte fieldsCount() {
-        return 1;
+        return 2;
     }
 
     /** {@inheritDoc} */

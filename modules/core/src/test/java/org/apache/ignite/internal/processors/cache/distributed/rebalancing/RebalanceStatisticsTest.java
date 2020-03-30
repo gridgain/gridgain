@@ -16,439 +16,748 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupRebalanceStatistics;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupSupplierRebalanceStatistics;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupTotalRebalanceStatistics;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupTotalSupplierRebalanceStatistics;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionExchangeId;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionSupplier;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloaderAssignments;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
+import org.apache.ignite.internal.util.lang.GridTuple4;
+import org.apache.ignite.internal.util.typedef.T2;
+import org.apache.ignite.internal.util.typedef.T4;
+import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
+import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.apache.ignite.thread.IgniteThread;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
-import static java.lang.Integer.parseInt;
-import static java.util.Collections.newSetFromMap;
+import static java.lang.Boolean.FALSE;
+import static java.lang.Boolean.TRUE;
+import static java.lang.System.setProperty;
 import static java.util.Objects.nonNull;
+import static java.util.Objects.requireNonNull;
 import static java.util.regex.Pattern.compile;
-import static java.util.stream.Collectors.toMap;
-import static java.util.stream.IntStream.range;
-import static java.util.stream.IntStream.rangeClosed;
-import static java.util.stream.Stream.of;
+import static java.util.stream.Collectors.toSet;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
-import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.availablePrintPartitionsDistribution;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.availablePrintRebalanceStatistics;
+import static org.apache.ignite.internal.util.IgniteUtils.currentTimeMillis;
+import static org.apache.ignite.testframework.LogListener.matches;
 
 /**
  * For testing of rebalance statistics.
  */
-@WithSystemProperty(key = IGNITE_QUIET, value = "false")
-@WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true")
-@WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
+@SystemPropertiesList(value = {
+    @WithSystemProperty(key = IGNITE_QUIET, value = "false"),
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true"),
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
+})
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
-    /** Cache names. */
-    private static final String[] DEFAULT_CACHE_NAMES = {"ch0", "ch1", "ch2", "ch3"};
-
-    /** Total information text. */
-    private static final String TOTAL_INFORMATION_TEXT = "Total information";
-
-    /** Partitions distribution text. */
-    private static final String PARTITIONS_DISTRIBUTION_TEXT = "Partitions distribution per cache group";
-
-    /** Topic statistics text. */
-    public static final String TOPIC_STATISTICS_TEXT = "Topic statistics:";
-
-    /** Supplier statistics text. */
-    public static final String SUPPLIER_STATISTICS_TEXT = "Supplier statistics:";
-
-    /** Information per cache group text. */
-    public static final String INFORMATION_PER_CACHE_GROUP_TEXT = "Information per cache group";
-
-    /** Name attribute. */
-    public static final String NAME_ATTRIBUTE = "name";
-
-    /** Multi jvm. */
-    private boolean multiJvm;
-
-    /** Node count. */
-    private static final int DEFAULT_NODE_CNT = 3;
-
     /** Logger for listen messages. */
-    private final ListeningTestLogger log = new ListeningTestLogger(false, super.log);
-
-    /** For remember messages from standard output. */
-    private final ByteArrayOutputStream baos = new ByteArrayOutputStream(32 * 1024);
-
-    /** For write messages from standard output. */
-    private final PrintWriter pw = new PrintWriter(baos);
+    private final ListeningTestLogger listenLog = new ListeningTestLogger(false, log);
 
     /** Caches configurations. */
     private CacheConfiguration[] cacheCfgs;
 
-    /** Coordinator. */
-    private IgniteEx crd;
-
-    /** Cache group name. */
-    private String grpName;
+    /** Data storage configuration. */
+    private DataStorageConfiguration dsCfg;
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        listenLog.clearListeners();
+
         stopAllGrids();
+
+        if (nonNull(dsCfg))
+            cleanPersistenceDir();
 
         super.afterTest();
     }
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
-        cfg.setCacheConfiguration(cacheCfgs);
-        cfg.setRebalanceThreadPoolSize(5);
-        cfg.setGridLogger(log);
-        return cfg;
+        return super.getConfiguration(igniteInstanceName)
+            .setConsistentId(igniteInstanceName)
+            .setCacheConfiguration(cacheCfgs)
+            .setRebalanceThreadPoolSize(5)
+            .setGridLogger(listenLog)
+            .setDataStorageConfiguration(dsCfg);
     }
 
-    /** {@inheritDoc} */
-    @Override protected boolean isMultiJvm() {
-        return multiJvm;
+    /**
+     * Test checks that rebalance statistics are output into log only if
+     * {@link IgniteSystemProperties#IGNITE_QUIET} == {@code false} and
+     * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS} ==
+     * {@code true}, also partition distribution is present in statistics only
+     * if {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}
+     * == {@code true}.
+     *
+     * @throws Exception if any error occurs.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_QUIET, value = "true")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "false")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "false")
+    public void testPrintIntoLogRebStatDependSysProps() throws Exception {
+        LogListener[] logListeners = {
+            matches(new GrpStatPred()).build(),
+            matches(new TotalStatPred()).build(),
+            matches(compile("Partitions distribution per cache group \\(.* rebalance\\):.*")).build()
+        };
+
+        listenLog.registerAllListeners(logListeners);
+
+        int nodeId = 0;
+        startGrid(nodeId++);
+
+        assertFalse(availablePrintRebalanceStatistics());
+        assertFalse(availablePrintPartitionsDistribution());
+        restartNode(nodeId, null, null, l -> assertFalse(l.check()), logListeners);
+
+        setProperty(IGNITE_QUIET, FALSE.toString());
+        assertFalse(availablePrintRebalanceStatistics());
+        assertFalse(availablePrintPartitionsDistribution());
+        restartNode(nodeId, null, null, l -> assertFalse(l.check()), logListeners);
+
+        setProperty(IGNITE_WRITE_REBALANCE_STATISTICS, TRUE.toString());
+        assertTrue(availablePrintRebalanceStatistics());
+        assertFalse(availablePrintPartitionsDistribution());
+        restartNode(nodeId, null, null, l -> assertEquals(l != logListeners[2], l.check()), logListeners);
+
+        setProperty(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, TRUE.toString());
+        assertTrue(availablePrintRebalanceStatistics());
+        assertTrue(availablePrintPartitionsDistribution());
+        restartNode(nodeId, null, null, l -> assertTrue(l.check()), logListeners);
+    }
+
+    /**
+     * Test statistics of a full rebalance.
+     *
+     * @throws Exception if any error occurs.
+     */
+    @Test
+    public void testFullRebalanceStatistics() throws Exception {
+        createCluster(3);
+
+        int restartNodeId = 2;
+        Map<String, CacheGroupRebalanceStatistics> expGrpStats = calcGrpStat(restartNodeId);
+
+        Map<String, CacheGroupTotalRebalanceStatistics> expTotalStats = new HashMap<>();
+        updateTotalStat(expTotalStats, expGrpStats);
+
+        GrpStatPred grpStatPred = new GrpStatPred();
+        TotalStatPred totalStatPred = new TotalStatPred();
+
+        LogListener[] logListeners = {
+            matches(grpStatPred).build(),
+            matches(totalStatPred).build()
+        };
+
+        long beforeRestartNode = currentTimeMillis();
+
+        listenLog.registerAllListeners(logListeners);
+        restartNode(restartNodeId, null, null, l -> assertTrue(l.check()), logListeners);
+
+        long afterRestartNode = currentTimeMillis();
+
+        checkStat(
+            restartNodeId,
+            expGrpStats,
+            expTotalStats,
+            grpStatPred,
+            totalStatPred,
+            null,
+            beforeRestartNode,
+            afterRestartNode,
+            false
+        );
+    }
+
+    /**
+     * Test statistics of a historical rebalance.
+     *
+     * @throws Exception if any error occurs.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_PDS_WAL_REBALANCE_THRESHOLD, value = "0")
+    public void testHistRebalanceStatistics() throws Exception {
+        dsCfg = new DataStorageConfiguration()
+            .setDefaultDataRegionConfiguration(
+                new DataRegionConfiguration()
+                    .setMaxSize(200 * 1024 * 1024)
+                    .setPersistenceEnabled(true)
+            ).setWalMode(WALMode.LOG_ONLY);
+
+        IgniteEx crd = createCluster(3);
+
+        GrpStatPred grpStatPred = new GrpStatPred();
+        TotalStatPred totalStatPred = new TotalStatPred();
+
+        LogListener[] logListeners = {
+            matches(grpStatPred).build(),
+            matches(totalStatPred).build()
+        };
+
+        listenLog.registerAllListeners(logListeners);
+
+        int restartNodeId = 2;
+        AtomicReference<Map<String, CacheGroupRebalanceStatistics>> calcGrpStatRef = new AtomicReference<>();
+
+        long beforeRestartNode = currentTimeMillis();
+
+        restartNode(
+            restartNodeId,
+            () -> populateCluster(crd, 10, "_"),
+            node -> {
+                AffinityTopologyVersion waitTopVer = crd.context().discovery().topologyVersionEx();
+                node.context().cache().context().exchange().affinityReadyFuture(waitTopVer).listen(f -> {
+                    try {
+                        calcGrpStatRef.set(calcGrpStat(restartNodeId));
+                    }
+                    catch (Exception e) {
+                        throw new IgniteException(e);
+                    }
+                });
+            },
+            l -> assertTrue(l.check()),
+            logListeners
+        );
+
+        long afterRestartNode = currentTimeMillis();
+
+        Map<String, CacheGroupRebalanceStatistics> expGrpStats = calcGrpStatRef.get();
+        assertNotNull(expGrpStats);
+
+        Map<String, CacheGroupTotalRebalanceStatistics> expTotalStats = new HashMap<>();
+        updateTotalStat(expTotalStats, expGrpStats);
+
+        expGrpStats.remove(UTILITY_CACHE_NAME);
+        expTotalStats.remove(UTILITY_CACHE_NAME);
+
+        checkStat(
+            restartNodeId,
+            expGrpStats,
+            expTotalStats,
+            grpStatPred,
+            totalStatPred,
+            grpCtx -> !UTILITY_CACHE_NAME.equals(grpCtx.cacheOrGroupName()),
+            beforeRestartNode,
+            afterRestartNode,
+            true
+        );
+    }
+
+    /**
+     * Create and populate cluster.
+     *
+     * @param nodeCnt Node count.
+     * @return Coordinator.
+     * @throws Exception if any error occurs.
+     */
+    private IgniteEx createCluster(int nodeCnt) throws Exception {
+        String grpName0 = "grp0";
+        String grpName1 = "grp1";
+
+        cacheCfgs = new CacheConfiguration[] {
+            cacheConfiguration("ch_0_0", grpName0, 10, 2),
+            cacheConfiguration("ch_0_1", grpName0, 10, 2),
+            cacheConfiguration("ch_0_2", grpName0, 10, 2),
+            cacheConfiguration("ch_1_0", grpName1, 10, 2),
+            cacheConfiguration("ch_1_1", grpName1, 10, 2),
+        };
+
+        IgniteEx crd = startGrids(nodeCnt);
+        crd.cluster().active(true);
+
+        populateCluster(crd, 10, "");
+        return crd;
+    }
+
+    /**
+     * Сontent of node data on all partitions for all caches.
+     *
+     * @param node Node.
+     * @param cnt  Count values.
+     * @param add  Additional value postfix.
+     */
+    private void populateCluster(IgniteEx node, int cnt, String add) {
+        requireNonNull(node);
+        requireNonNull(add);
+
+        for (CacheConfiguration cacheCfg : cacheCfgs) {
+            String cacheName = cacheCfg.getName();
+            IgniteCache<Object, Object> cache = node.cache(cacheName);
+
+            for (int i = 0; i < cacheCfg.getAffinity().partitions(); i++)
+                partitionKeys(cache, i, cnt, i * cnt).forEach(k -> cache.put(k, cacheName + "_val_" + k + add));
+        }
     }
 
     /**
      * Create cache configuration.
      *
      * @param cacheName Cache name.
+     * @param grpName Cache group name.
      * @param parts Count of partitions.
      * @param backups Count backup.
      * @return Cache configuration.
      */
-    private CacheConfiguration cacheConfiguration(final String cacheName, final int parts, final int backups) {
-        CacheConfiguration<Object, Object> ccfg = new CacheConfiguration<>(cacheName);
-        ccfg.setCacheMode(CacheMode.PARTITIONED);
-        ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-        ccfg.setAffinity(new RendezvousAffinityFunction(false, parts));
-        ccfg.setBackups(backups);
-        ccfg.setGroupName(grpName);
-        return ccfg;
+    private CacheConfiguration cacheConfiguration(String cacheName, String grpName, int parts, int backups) {
+        requireNonNull(cacheName);
+        requireNonNull(grpName);
+
+        return new CacheConfiguration<>(cacheName)
+            .setCacheMode(CacheMode.PARTITIONED)
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setAffinity(new RendezvousAffinityFunction(false, parts))
+            .setBackups(backups)
+            .setGroupName(grpName);
     }
 
     /**
-     * Test check that not present statistics in log output, if we not set system properties {@code IGNITE_QUIET},
-     * {@code IGNITE_WRITE_REBALANCE_STATISTICS}.
+     * Restarting a node with log listeners.
      *
-     * @throws Exception if any error occurs.
-     * @see IgniteSystemProperties#IGNITE_QUIET
-     * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_QUIET, value = "true")
-    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "false")
-    public void testNotPrintStat() throws Exception {
-        createCluster();
-
-        log.registerListener(pw::write);
-
-        int nodeCnt = DEFAULT_NODE_CNT;
-
-        assertNotContainsAfterCreateNewNode(nodeCnt++, TOTAL_INFORMATION_TEXT);
-
-        System.setProperty(IGNITE_QUIET, Boolean.FALSE.toString());
-
-        assertNotContainsAfterCreateNewNode(nodeCnt++, TOTAL_INFORMATION_TEXT);
-    }
-
-    /**
-     * Test check that not present partition distribution in log output, if we not set system properties {@code
-     * IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
-     *
-     * @throws Exception if any error occurs.
-     * @see IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS
-     */
-    @Test
-    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "false")
-    public void testNotPrintPartitionDistribution() throws Exception {
-        createCluster();
-
-        log.registerListener(pw::write);
-
-        assertNotContainsAfterCreateNewNode(DEFAULT_NODE_CNT, PARTITIONS_DISTRIBUTION_TEXT);
-    }
-
-    /**
-     * The test checks the correctness of the output rebalance statistics.
-     *
+     * @param nodeId        Node id.
+     * @param afterStop Function after stop node.
+     * @param afterStart Function after start node.
+     * @param checkConsumer Checking listeners.
+     * @param logListeners  Log listeners.
      * @throws Exception if any error occurs.
      */
-    @Test
-    public void testPrintCorrectStatistic() throws Exception {
-        createCluster();
+    private void restartNode(
+        int nodeId,
+        @Nullable Runnable afterStop,
+        @Nullable Consumer<IgniteEx> afterStart,
+        Consumer<LogListener> checkConsumer,
+        LogListener... logListeners
+    ) throws Exception {
+        requireNonNull(checkConsumer);
+        requireNonNull(logListeners);
 
-        checkOutputRebalanceStatistics(DEFAULT_NODE_CNT);
-    }
+        A.ensure(logListeners.length > 0, "Empty logListeners");
 
-    /**
-     * The test checks the correctness of the statistics output for two cache groups.
-     *
-     * @throws Exception if any error occurs.
-     */
-    @Test
-    public void testPrintCorrectStatisticTwoCacheGroups() throws Exception {
-        grpName = "Test";
+        for (LogListener rebLogListener : logListeners)
+            rebLogListener.reset();
 
-        createCluster();
+        stopGrid(nodeId);
+        awaitPartitionMapExchange();
 
-        checkOutputRebalanceStatistics(DEFAULT_NODE_CNT);
-    }
+        if (nonNull(afterStop))
+            afterStop.run();
 
-    /**
-     * The test checks the correctness of the output rebalance statistics in multi jvm mode.
-     *
-     * @throws Exception if any error occurs.
-     */
-    @Test
-    public void testPrintCorrectStatisticInMultiJvm() throws Exception {
-        multiJvm = true;
-
-        createCluster();
-
-        stopGrid(0);
+        IgniteEx node = startGrid(nodeId);
+        if(nonNull(afterStart))
+            afterStart.accept(node);
 
         awaitPartitionMapExchange();
 
-        checkOutputRebalanceStatistics(0);
+        for (LogListener rebLogListener : logListeners)
+            checkConsumer.accept(rebLogListener);
     }
 
     /**
-     * Creating a cluster and populating caches.
+     * Сalculation of expected statistics of rebalance for cache groups.
      *
-     * @throws Exception if any error occurs.
-     * */
-    private void createCluster() throws Exception{
-        cacheCfgs = defaultCacheConfigurations(10, 2);
-
-        crd = startGrids(DEFAULT_NODE_CNT);
-
-        fillCaches(100);
-    }
-
-    /**
-     * Starting a node with checking rebalance statistics.
-     *
-     * @param nodeId ID of the new node.
+     * @param nodeId Node id.
+     * @return Rebalance statistics for cache groups.
      * @throws Exception if any error occurs.
      */
-    private void checkOutputRebalanceStatistics(int nodeId) throws Exception {
-        LogListener logLsnr = new LogListener();
+    private Map<String, CacheGroupRebalanceStatistics> calcGrpStat(int nodeId) throws Exception {
+        Map<String, CacheGroupRebalanceStatistics> grpStats = new HashMap<>();
 
-        log.registerListener(logLsnr);
+        for (CacheGroupContext grpCtx : grid(nodeId).context().cache().cacheGroups()) {
+            CacheGroupRebalanceStatistics grpStat = new CacheGroupRebalanceStatistics();
+            grpStats.put(grpCtx.cacheOrGroupName(), grpStat);
 
-        IgniteEx newNode = startGrid(nodeId);
+            Map<GridDhtLocalPartition, GridDhtPartitionState> locPartState = new HashMap<>();
 
-        awaitPartitionMapExchange();
+            for (GridDhtLocalPartition locPart : grpCtx.topology().localPartitions()) {
+                locPartState.put(locPart, locPart.state());
+                locPart.setState(GridDhtPartitionState.MOVING);
+            }
 
-        assertEquals(newNode.context().cache().cacheGroups().size(), logLsnr.statPerCacheGrps.size());
-        assertEquals(1, logLsnr.totalStats.size());
+            GridDhtPartitionsExchangeFuture exchFut = grpCtx.shared().exchange().lastTopologyFuture();
+            GridDhtPartitionExchangeId exchId = exchFut.exchangeId();
 
-        Map<String, Integer> topicStats = perCacheGroupTopicStatistics(logLsnr.totalStats.iterator().next()).entrySet()
-            .stream().collect(toMap(Map.Entry::getKey, entry -> sumNum(entry.getValue(), "p=([0-9]+)")));
+            GridDhtPreloaderAssignments assigns = grpCtx.preloader().generateAssignments(exchId, exchFut);
+            for (Entry<ClusterNode, GridDhtPartitionDemandMessage> assignEntry : assigns.entrySet()) {
+                IgniteEx supplierNode = (IgniteEx)grid(assignEntry.getKey());
+                CacheGroupContext supGrpCtx = supplierNode.context().cache().cacheGroup(grpCtx.groupId());
+                GridDhtPartitionSupplier supplier = ((GridDhtPreloader)supGrpCtx.preloader()).supplier();
 
-        logLsnr.cacheGrpRebParts
-            .forEach((cacheGrpName, parts) -> assertEquals(parts.size(), topicStats.get(cacheGrpName).intValue()));
-    }
+                GridDhtPartitionDemandMessage demandMsg = assignEntry.getValue();
 
-    /**
-     * Parsing and extract topic statistics string for each caches.
-     *
-     * @param s String with statisctics for parsing, require not null.
-     * @return key - Name cache, string topic statistics.
-     */
-    private Map<String, String> perCacheGroupTopicStatistics(final String s) {
-        assert nonNull(s);
+                Set<Integer> remainingParts = new HashSet<>(demandMsg.partitions().fullSet());
+                remainingParts.addAll(demandMsg.partitions().historicalSet());
 
-        Map<String, String> perCacheGroupTopicStatistics = new HashMap<>();
+                IgniteRebalanceIterator rebIter = supGrpCtx.offheap().rebalanceIterator(
+                    demandMsg.partitions(),
+                    demandMsg.topologyVersion()
+                );
 
-        int startI = s.indexOf(INFORMATION_PER_CACHE_GROUP_TEXT);
+                while (rebIter.hasNext()) {
+                    CacheDataRow row = rebIter.next();
 
-        for (; ; ) {
-            int tsti = s.indexOf(TOPIC_STATISTICS_TEXT, startI);
-            if (tsti == -1)
-                break;
+                    int partId = row.partition();
+                    int bytes = supplier.extractEntryInfo(row).marshalledSize(supGrpCtx.cacheObjectContext());
 
-            int ssti = s.indexOf(SUPPLIER_STATISTICS_TEXT, tsti);
-            if (ssti == -1)
-                break;
+                    grpStat.update(supplierNode.localNode(), partId, rebIter.historical(partId), 1, bytes);
+                    remainingParts.remove(partId);
+                }
 
-            int nai = s.indexOf(NAME_ATTRIBUTE, startI);
-            if (nai == -1)
-                break;
+                for (Integer remPartId : remainingParts)
+                    grpStat.update(supplierNode.localNode(), remPartId, rebIter.historical(remPartId), 0, 0);
+            }
 
-            int ci = s.indexOf(",", nai);
-            if (ci == -1)
-                break;
-
-            String cacheName = s.substring(nai + NAME_ATTRIBUTE.length() + 1, ci);
-            String topicStat = s.substring(tsti + TOPIC_STATISTICS_TEXT.length(), ssti);
-
-            perCacheGroupTopicStatistics.put(cacheName, topicStat);
-            startI = ssti;
+            locPartState.forEach(GridDhtLocalPartition::setState);
         }
-
-        return perCacheGroupTopicStatistics;
+        return grpStats;
     }
 
     /**
-     * Create {@link #DEFAULT_CACHE_NAMES} cache configurations.
+     * Update total rebalance statistics.
      *
-     * @param parts Count of partitions.
-     * @param backups Count backup.
-     * @return Cache group configurations.
+     * @param totalStats Total rebalance statistics.
+     * @param grpStats   Cache group rebalance statistics.
      */
-    private CacheConfiguration[] defaultCacheConfigurations(final int parts, final int backups) {
-        return of(DEFAULT_CACHE_NAMES)
-            .map(cacheName -> cacheConfiguration(cacheName, parts, backups))
-            .toArray(CacheConfiguration[]::new);
-    }
+    private void updateTotalStat(
+        Map<String, CacheGroupTotalRebalanceStatistics> totalStats,
+        Map<String, CacheGroupRebalanceStatistics> grpStats
+    ) {
+        requireNonNull(totalStats);
+        requireNonNull(grpStats);
 
-    /**
-     * Add values to all {@link #DEFAULT_CACHE_NAMES}.
-     *
-     * @param cnt - Count of values.
-     */
-    private void fillCaches(final int cnt) {
-        for (CacheConfiguration cacheCfg : cacheCfgs) {
-            String name = cacheCfg.getName();
-
-            IgniteCache<Object, Object> cache = crd.cache(name);
-
-            range(0, cnt).forEach(value -> cache.put(value, name + value));
+        for (Entry<String, CacheGroupRebalanceStatistics> grpStatE : grpStats.entrySet()) {
+            totalStats.computeIfAbsent(
+                grpStatE.getKey(),
+                s -> new CacheGroupTotalRebalanceStatistics()
+            ).update(grpStatE.getValue());
         }
     }
 
     /**
-     * Create new node and check that {@code notContainsStr} not present in log output.
+     * Checking statistic rebalance.
      *
-     * @param idx New node index.
-     * @param notContainsStr String for assertNotContains in log output.
-     * @throws Exception if any error occurs.
+     * @param nodeId Node id.
+     * @param expGrpStats Expected group statistics.
+     * @param expTotalStats Expected total statistics.
+     * @param grpStatPred Actual group statistics.
+     * @param totalStatPred Actual total statistics.
+     * @param grpFilter Cache group filter.
+     * @param expStart Expected start time.
+     * @param expEnd Expected end time.
+     * @param hist Historical rebalance.
      */
-    private void assertNotContainsAfterCreateNewNode(final int idx, final String notContainsStr) throws Exception {
-        baos.reset();
+    private void checkStat(
+        int nodeId,
+        Map<String, CacheGroupRebalanceStatistics> expGrpStats,
+        Map<String, CacheGroupTotalRebalanceStatistics> expTotalStats,
+        GrpStatPred grpStatPred,
+        TotalStatPred totalStatPred,
+        @Nullable Predicate<CacheGroupContext> grpFilter,
+        long expStart,
+        long expEnd,
+        boolean hist
+    ) {
+        requireNonNull(expGrpStats);
+        requireNonNull(expTotalStats);
+        requireNonNull(grpStatPred);
+        requireNonNull(totalStatPred);
 
-        startGrid(idx);
+        //checking that only for nodeId=2 had statistics into log
+        Set<String> nodes = grpStatPred.values.stream().map(GridTuple4::get1).map(Ignite::name).collect(toSet());
+        totalStatPred.values.stream().map(IgniteBiTuple::get1).map(Ignite::name).forEach(nodes::add);
 
-        awaitPartitionMapExchange();
+        assertEquals(1, nodes.size());
+        assertTrue(nodes.contains(grid(nodeId).name()));
 
-        assertNotContains(super.log, baos.toString(), notContainsStr);
+        int actGrpStatSize = nonNull(grpFilter) ?
+            (int)grpStatPred.values.stream().map(GridTuple4::get2).filter(grpFilter).count() :
+            grpStatPred.values.size();
+
+        assertEquals(expGrpStats.size(), actGrpStatSize);
+        assertTrue(actGrpStatSize > 0);
+
+        for (T4<IgniteEx, CacheGroupContext, Boolean, CacheGroupRebalanceStatistics> t4 : grpStatPred.values) {
+            if (nonNull(grpFilter) && !grpFilter.test(t4.get2()))
+                continue;
+
+            //check that result was successful
+            assertTrue(t4.get3());
+
+            CacheGroupRebalanceStatistics actGrpStat = t4.get4();
+            assertEquals(1, actGrpStat.attempt());
+
+            CacheGroupRebalanceStatistics expGrpStat = expGrpStats.get(t4.get2().cacheOrGroupName());
+            checkGrpStat(expGrpStat, actGrpStat, expStart, expEnd, hist);
+        }
+
+        for (T2<IgniteEx, Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics>> t2 : totalStatPred.values) {
+            Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics> actTotalStats = t2.get2();
+
+            int actTotalStatSize = nonNull(grpFilter) ?
+                (int)actTotalStats.keySet().stream().filter(grpFilter).count() : actTotalStats.size();
+
+            assertEquals(expTotalStats.size(), actTotalStatSize);
+            assertTrue(actTotalStatSize > 0);
+
+            for (Entry<CacheGroupContext, CacheGroupTotalRebalanceStatistics> actTotalStatE : actTotalStats.entrySet()) {
+                if (nonNull(grpFilter) && !grpFilter.test(actTotalStatE.getKey()))
+                    continue;
+
+                checkTotalStat(
+                    expTotalStats.get(actTotalStatE.getKey().cacheOrGroupName()),
+                    actTotalStatE.getValue(),
+                    expStart,
+                    expEnd
+                );
+            }
+        }
     }
 
     /**
-     * Extract numbers and sum its.
+     * Checking equality of {@code exp} and {@code act}.
      *
-     * @param s String of numbers, require not null.
-     * @param pattern Number extractor, require not null.
-     * @return Sum extracted numbers.
+     * @param exp Expected rebalance statistics.
+     * @param act Actual rebalance statistics.
+     * @param expStart Expected start time.
+     * @param expEnd Expected end time.
+     * @param hist Historical rebalance.
      */
-    private int sumNum(final String s, final String pattern) {
-        assert nonNull(s);
-        assert nonNull(pattern);
+    private void checkGrpStat(
+        CacheGroupRebalanceStatistics exp,
+        CacheGroupRebalanceStatistics act,
+        long expStart,
+        long expEnd,
+        boolean hist
+    ) {
+        assertNotNull(exp);
+        assertNotNull(act);
 
-        Matcher matcher = compile(pattern).matcher(s);
+        checkTime(expStart, expEnd, act.start(), act.end());
 
-        int num = 0;
-        while (matcher.find())
-            num += parseInt(matcher.group(1));
+        Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> expSupStats = exp.supplierStatistics();
+        Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
 
-        return num;
+        assertEquals(expSupStats.size(), actSupStats.size());
+        assertTrue(actSupStats.size() > 0);
+
+        for (Entry<ClusterNode, CacheGroupSupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
+            CacheGroupSupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
+            CacheGroupSupplierRebalanceStatistics actSupStat = actSupStats.get(expSupStatE.getKey());
+
+            assertNotNull(actSupStat);
+
+            checkTime(expStart, expEnd, actSupStat.start(), actSupStat.end());
+
+            assertEquals(expSupStat.partitions(), actSupStat.partitions());
+            actSupStat.partitions().values().forEach(p -> assertEquals(!hist, (boolean) p));
+
+            assertEquals(expSupStat.fullEntries(), actSupStat.fullEntries());
+            assertEquals(expSupStat.histEntries(), actSupStat.histEntries());
+
+            assertEquals(expSupStat.fullBytes(), actSupStat.fullBytes());
+            assertEquals(expSupStat.histBytes(), actSupStat.histBytes());
+        }
     }
 
     /**
-     * Log listener for testing rebalance statistics.
+     * Checking equality of {@code exp} and {@code act}.
+     *
+     * @param exp Expected total rebalance statistics.
+     * @param act Actual total rebalance statistics.
+     * @param expStart Expected start time.
+     * @param expEnd Expected end time.
      */
-    private class LogListener implements Consumer<String> {
-        /** Started rebalance routine text. */
-        static final String STARTED_REBALANCE_ROUTINE_TEXT = "Started rebalance routine";
+    private void checkTotalStat(
+        CacheGroupTotalRebalanceStatistics exp,
+        CacheGroupTotalRebalanceStatistics act,
+        long expStart,
+        long expEnd
+    ) {
+        assertNotNull(exp);
+        assertNotNull(act);
 
-        /** Output statistics per cache group. */
-        Collection<String> statPerCacheGrps = new ConcurrentLinkedQueue<>();
+        checkTime(expStart, expEnd, act.start(), act.end());
 
-        /** Output total statistics. */
-        Collection<String> totalStats = new ConcurrentLinkedQueue<>();
+        Map<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> expSupStats = exp.supplierStatistics();
+        Map<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
 
-        /** Rebalanced partitions by cache groups. */
-        Map<String, Set<Integer>> cacheGrpRebParts = new ConcurrentHashMap<>();
+        assertEquals(expSupStats.size(), actSupStats.size());
+        assertTrue(actSupStats.size() > 0);
 
-        /** Pattern for extracting the name of a cache group. */
-        Pattern cacheGrpExtractor = compile(STARTED_REBALANCE_ROUTINE_TEXT + " \\[(.+?),");
+        for (Entry<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
+            CacheGroupTotalSupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
+            CacheGroupTotalSupplierRebalanceStatistics actSupStat = actSupStats.get(expSupStatE.getKey());
 
-        /** Pattern for extracting fullPartitions for a cache group. */
-        Pattern fullPartsExtractor = compile("fullPartitions=\\[(.+?)]");
+            assertNotNull(actSupStat);
+
+            checkTime(expStart, expEnd, actSupStat.start(), actSupStat.end());
+
+            assertEquals(expSupStat.fullParts(), actSupStat.fullParts());
+            assertEquals(expSupStat.histParts(), actSupStat.histParts());
+
+            assertEquals(expSupStat.fullEntries(), actSupStat.fullEntries());
+            assertEquals(expSupStat.histEntries(), actSupStat.histEntries());
+
+            assertEquals(expSupStat.fullBytes(), actSupStat.fullBytes());
+            assertEquals(expSupStat.histBytes(), actSupStat.histBytes());
+        }
+    }
+
+    /**
+     * Time check that {@code actStart} and {@code actEnd} are in between
+     * {@code expStart} and {@code expEnd}, and the duration is positive.
+     *
+     * @param expStart Expected start time.
+     * @param expEnd Expected end time.
+     * @param actStart Actual start time.
+     * @param actEnd Actual end time.
+     */
+    private void checkTime(long expStart, long expEnd, long actStart, long actEnd) {
+        assertTrue(actStart >= expStart && actStart <= expEnd);
+        assertTrue(actEnd >= expStart && actEnd <= expEnd);
+        assertTrue((actEnd - actStart) >= 0);
+    }
+
+    /**
+     * Predicate for getting rebalance statistics for cache group when listening log.
+     */
+    class GrpStatPred extends StatPred<T4<IgniteEx, CacheGroupContext, Boolean, CacheGroupRebalanceStatistics>> {
+        /**
+         * Default constructor.
+         */
+        public GrpStatPred() {
+            super(compile("Information per cache group \\(.* rebalance\\): \\[id=.*, name=(.*?), startTime=.*"));
+        }
 
         /** {@inheritDoc} */
-        @Override public void accept(String logStr) {
-            if (logStr.contains(INFORMATION_PER_CACHE_GROUP_TEXT))
-                (logStr.contains(TOTAL_INFORMATION_TEXT) ? totalStats : statPerCacheGrps).add(logStr);
+        @Override public T4<IgniteEx, CacheGroupContext, Boolean, CacheGroupRebalanceStatistics> value(
+            Matcher m,
+            IgniteThread t
+        ) {
+            IgniteEx node = grid(t.getIgniteInstanceName());
+            CacheGroupContext grpCtx = node.context().cache().cacheGroup(CU.cacheId(m.group(1)));
+            RebalanceFuture rebFut = (RebalanceFuture)grpCtx.preloader().rebalanceFuture();
 
-            if (logStr.contains(STARTED_REBALANCE_ROUTINE_TEXT)) {
-                cacheGrpRebParts.computeIfAbsent(
-                    extractValue(cacheGrpExtractor, logStr),
-                    s -> newSetFromMap(new ConcurrentHashMap<>())
-                ).addAll(parseParts(extractValue(fullPartsExtractor, logStr)));
+            return new T4<>(node, grpCtx, rebFut.result(), new CacheGroupRebalanceStatistics(rebFut.statistics()));
+        }
+    }
+
+    /**
+     * Predicate for getting total rebalance statistics for all cache group when listening log.
+     */
+    class TotalStatPred extends StatPred<T2<IgniteEx, Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics>>> {
+        /**
+         * Default constructor.
+         */
+        public TotalStatPred() {
+            super(compile("Total information \\(including successful and not rebalances\\):.*"));
+        }
+
+        /** {@inheritDoc} */
+        @Override public T2<IgniteEx, Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics>> value(
+            Matcher m,
+            IgniteThread t
+        ) {
+            IgniteEx node = grid(t.getIgniteInstanceName());
+
+            Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics> stat = new HashMap<>();
+            for (CacheGroupContext grpCtx : node.context().cache().cacheGroups()) {
+                GridDhtPartitionDemander demander = ((GridDhtPreloader)grpCtx.preloader()).demander();
+                stat.put(grpCtx, new CacheGroupTotalRebalanceStatistics(demander.totalStatistics()));
             }
+            return new T2<>(node, stat);
+        }
+    }
+
+    /**
+     * Base predicate for getting rebalance statistics when listening log.
+     */
+    private abstract class StatPred<T> implements Predicate<String> {
+        /** Pattern for finding statistics of rebalance. */
+        final Pattern ptrn;
+
+        /** Obtained values. */
+        final Collection<T> values = new ConcurrentLinkedQueue<>();
+
+        /**
+         * Constructor.
+         *
+         * @param ptrn Pattern for finding statistics of rebalance.
+         */
+        public StatPred(Pattern ptrn) {
+            requireNonNull(ptrn);
+
+            this.ptrn = ptrn;
         }
 
         /**
-         * Parsing partition.
+         * Creating a special value for found statistics.
          *
-         * @param s Partition string.
-         * @return Parsed partition.
+         * @param m Statistics matcher.
+         * @param t Thread of found statistics.
+         * @return Special value for found statistics.
          */
-        private Set<Integer> parseParts(String s) {
-            assert nonNull(s);
+        public abstract T value(Matcher m, IgniteThread t);
 
-            Set<Integer> parts = new HashSet<>();
+        /** {@inheritDoc} */
+        @Override public boolean test(String logStr) {
+            Matcher matcher = ptrn.matcher(logStr);
+            if (matcher.matches()) {
+                values.add(value(matcher, (IgniteThread)Thread.currentThread()));
 
-            for (String num : s.split(", ")) {
-                if (num.contains("-")) {
-                    String[] range = num.split("-");
-
-                    rangeClosed(parseInt(range[0]), parseInt(range[1])).forEach(parts::add);
-                }
-                else
-                    parts.add(parseInt(num));
+                return true;
             }
-
-            return parts;
-        }
-
-        /**
-         * Extracting a value from a string by pattern.
-         *
-         * @param extractor Pattern for extracting value.
-         * @param s String to extract the value.
-         * @return Extracted value.
-         */
-        private String extractValue(Pattern extractor, String s) {
-            assert nonNull(extractor);
-            assert nonNull(s);
-
-            Matcher matcher = extractor.matcher(s);
-
-            assert matcher.find();
-
-            return matcher.group(1);
+            return false;
         }
     }
 }
