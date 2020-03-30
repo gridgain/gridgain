@@ -16,7 +16,6 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
-import javax.cache.expiry.EternalExpiryPolicy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +40,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.cache.expiry.EternalExpiryPolicy;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
@@ -95,6 +95,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionsStateValidator;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.PartitionStateValidationException;
 import org.apache.ignite.internal.processors.cache.persistence.DatabaseLifecycleListener;
 import org.apache.ignite.internal.processors.cache.persistence.snapshot.SnapshotDiscoveryMessage;
 import org.apache.ignite.internal.processors.cache.transactions.IgniteTxKey;
@@ -152,6 +153,7 @@ import static org.apache.ignite.internal.util.IgniteUtils.doInParallelUninterrup
 @SuppressWarnings({"TypeMayBeWeakened", "unchecked"})
 public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapter
     implements Comparable<GridDhtPartitionsExchangeFuture>, CachePartitionExchangeWorkerTask, IgniteDiagnosticAware {
+
     /** */
     public static final String EXCHANGE_LOG = "org.apache.ignite.internal.exchange.time";
 
@@ -730,6 +732,33 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     }
 
     /**
+     * Returns a collection of partitions (per cache group) that did not pass validation by update counter or size.
+     *
+     * Partitions are not validated in the following cases and therefore they will not be returned by this method:
+     * <ul>
+     * <li> 3-rd party persistence.
+     * See {@link CacheConfiguration#isReadThrough()}, {@link CacheConfiguration#isWriteThrough()}
+     * and {@link CacheConfiguration#getCacheStoreFactory()}. </li>
+     *
+     * <li> Manual rebalancing. See {@link CacheConfiguration#getRebalanceDelay()}. </li>
+     *
+     * <li> Disabled rebalancing. See {@link CacheRebalanceMode#NONE}. </li>
+     *
+     * <li> Using expiry policies except {@link EternalExpiryPolicy}. </li>
+     *
+     * <li> Partition size validation is explicitly disabled with IGNITE_SKIP_PARTITION_SIZE_VALIDATION property. </li>
+     * </ul>
+     *
+     * @return Collection of partitions that did not pass validation for all caches that were checked.
+     */
+    public Map<Integer, Set<Integer>> invalidPartitions() {
+        assert isDone() :
+            "GridDhtPartitionsExchangeFuture must be done before calling ivalidPartitions method [fut=" + this + ']';
+
+        return validator.invalidPartitions();
+    }
+
+    /**
      * @return {@code true} if entered to busy state. {@code false} for stop node.
      */
     private boolean enterBusy() {
@@ -783,6 +812,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @throws IgniteInterruptedCheckedException If interrupted.
      */
     public void init(boolean newCrd) throws IgniteInterruptedCheckedException {
+
         if (isDone())
             return;
 
@@ -2675,6 +2705,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         newCrdFut = null;
         exchangeLocE = null;
         exchangeGlobalExceptions.clear();
+        validator.cleanUp();
         if (finishState != null)
             finishState.cleanUp();
     }
@@ -3337,24 +3368,44 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (localReserved != null) {
                 Long localHistCntr = localReserved.get(p);
 
-                if (localHistCntr != null && localHistCntr <= minCntr && maxCntrObj.nodes.contains(cctx.localNodeId())) {
-                    partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, localHistCntr);
+                if (localHistCntr != null && localHistCntr <= minCntr) {
+                    if (maxCntrObj.nodes.contains(cctx.localNodeId())) {
+                        partHistSuppliers.put(cctx.localNodeId(), top.groupId(), p, localHistCntr);
 
-                    haveHistory.add(p);
+                        haveHistory.add(p);
 
-                    continue;
+                        continue;
+                    }
+                    else {
+                        if (log.isInfoEnabled()) {
+                            log.info("Historical rebalance is not possible because no suitable supplier exists " +
+                                "[nodeId=" + cctx.localNodeId() + ", grpId=" + top.groupId() +
+                                ", grpName=" + cctx.cache().cacheGroupDescriptor(top.groupId()).groupName() +
+                                ", part=" + p + ", localHistCntr=" + localHistCntr + ", minCntr=" + minCntr);
+                        }
+                    }
                 }
             }
 
             for (Map.Entry<UUID, GridDhtPartitionsSingleMessage> e0 : msgs.entrySet()) {
                 Long histCntr = e0.getValue().partitionHistoryCounters(top.groupId()).get(p);
 
-                if (histCntr != null && histCntr <= minCntr && maxCntrObj.nodes.contains(e0.getKey())) {
-                    partHistSuppliers.put(e0.getKey(), top.groupId(), p, histCntr);
+                if (histCntr != null && histCntr <= minCntr) {
+                    if (maxCntrObj.nodes.contains(e0.getKey())) {
+                        partHistSuppliers.put(e0.getKey(), top.groupId(), p, histCntr);
 
-                    haveHistory.add(p);
+                        haveHistory.add(p);
 
-                    break;
+                        break;
+                    }
+                    else {
+                        if (log.isInfoEnabled()) {
+                            log.info("Historical rebalance is not possible because no suitable supplier exists " +
+                                "[nodeId=" + e0.getKey() + ", grpId=" + top.groupId() +
+                                ", grpName=" + cctx.cache().cacheGroupDescriptor(top.groupId()).groupName() +
+                                ", part=" + p + ", histCntr=" + histCntr + ", minCntr=" + minCntr);
+                        }
+                    }
                 }
             }
         }
@@ -3955,8 +4006,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     // Do not validate read or write through caches or caches with disabled rebalance
                     // or ExpiryPolicy is set or validation is disabled.
-                    boolean eternalExpiryPolicy = grpCtx != null && (grpCtx.config().getExpiryPolicyFactory() == null
-                        || grpCtx.config().getExpiryPolicyFactory().create() instanceof EternalExpiryPolicy);
+                    boolean customExpiryPlc = Optional.ofNullable(grpCtx)
+                        .map(CacheGroupContext::caches)
+                        .orElseGet(Collections::emptyList)
+                        .stream()
+                        .anyMatch(ctx -> ctx.expiry() != null && !(ctx.expiry() instanceof EternalExpiryPolicy));
 
                     if (grpCtx == null
                         || grpCtx.config().isReadThrough()
@@ -3964,14 +4018,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         || grpCtx.config().getCacheStoreFactory() != null
                         || grpCtx.config().getRebalanceDelay() == -1
                         || grpCtx.config().getRebalanceMode() == CacheRebalanceMode.NONE
-                        || !eternalExpiryPolicy
+                        || customExpiryPlc
                         || SKIP_PARTITION_SIZE_VALIDATION)
                         return null;
 
                     try {
                         validator.validatePartitionCountersAndSizes(GridDhtPartitionsExchangeFuture.this, top, msgs);
                     }
-                    catch (IgniteCheckedException ex) {
+                    catch (PartitionStateValidationException ex) {
                         log.warning(String.format(PARTITION_STATE_FAILED_MSG, grpCtx.cacheOrGroupName(), ex.getMessage()));
                         // TODO: Handle such errors https://issues.apache.org/jira/browse/IGNITE-7833
                     }

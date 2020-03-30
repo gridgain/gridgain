@@ -34,7 +34,7 @@ import org.apache.ignite.testframework.ThrowUp;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.TOPOLOGY_CHANGE_MSG;
-import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHING;
+import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHED;
 
 /**
  * Tests different scenario of interruption of recheck stage.
@@ -171,7 +171,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
         CountDownLatch waitInTask = new CountDownLatch(1);
         CountDownLatch waitOnProcessingBeforeAction = new CountDownLatch(1);
 
-        ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
+        ReconciliationEventListenerProvider.defaultListenerInstance((stage, workload) -> {
             if (firstRecheckFinished.getCount() == 0) {
                 try {
                     waitInTask.await();
@@ -185,7 +185,7 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
                 }
             }
 
-            if (stage.equals(FINISHING) && workload instanceof RecheckRequest)
+            if (stage.equals(FINISHED) && workload instanceof RecheckRequest)
                 firstRecheckFinished.countDown();
         });
 
@@ -201,11 +201,11 @@ public class PartitionReconciliationInterruptionRecheckTest extends PartitionRec
         }
 
         VisorPartitionReconciliationTaskArg.Builder builder = new VisorPartitionReconciliationTaskArg.Builder();
-        builder.fixMode(false);
+        builder.repair(false);
         builder.batchSize(batchSize);
         builder.parallelism(1);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
-        builder.console(true);
+        builder.locOutput(true);
         builder.recheckAttempts(0);
 
         final AtomicReference<ReconciliationResult> res = new AtomicReference<>();

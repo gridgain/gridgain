@@ -21,13 +21,14 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.ignite.cache.PartitionLossPolicy;
-import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -64,17 +65,20 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        CacheConfiguration ccfg1 = new CacheConfiguration(DEFAULT_CACHE_NAME);
+        cfg.setFailureDetectionTimeout(100000000L);
+        cfg.setClientFailureDetectionTimeout(100000000L);
 
-        ccfg1.setName(CACHE1);
+        CacheConfiguration ccfg1 = new CacheConfiguration(CACHE1);
+
         ccfg1.setCacheMode(PARTITIONED);
         ccfg1.setBackups(1);
+        ccfg1.setPartitionLossPolicy(policy());
         ccfg1.setNodeFilter(new AttributeFilter(CACHE1_ATTR));
 
-        CacheConfiguration ccfg2 = new CacheConfiguration(DEFAULT_CACHE_NAME);
+        CacheConfiguration ccfg2 = new CacheConfiguration(CACHE2);
 
-        ccfg2.setName(CACHE2);
         ccfg2.setCacheMode(PARTITIONED);
+        ccfg2.setPartitionLossPolicy(policy());
         ccfg2.setNodeFilter(new AttributeFilter(CACHE2_ATTR));
 
         List<CacheConfiguration> ccfgs = new ArrayList<>();
@@ -164,16 +168,29 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRandom() throws Exception {
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        Random rnd = new Random();
 
         final int NODE_CNT = GridTestUtils.SF.applyLB(10, 5);
 
         for (int iter = 0; iter < 1; iter++) {
             log.info("Iteration: " + iter);
 
+            boolean[][] vars = new boolean[][]{
+                    {true, false}, // 0
+                    {true, false}, // 1
+                    {false, false}, // 2
+                    {true, false}, // 3
+                    {true, false}, // 4
+                    {false, true}, // 5
+                    {false, false}, // 6
+                    {true, false}, // 7
+                    {false, true}, // 8
+                    {true, false} // 9
+            };
+
             for (int i = 0; i < NODE_CNT; i++) {
-                cache1 = rnd.nextBoolean();
-                cache2 = rnd.nextBoolean();
+                cache1 = vars[i][0];
+                cache2 = vars[i][1];
 
                 log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
 
@@ -184,10 +201,17 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
 
             LinkedHashSet<Integer> stopSeq = new LinkedHashSet<>();
 
-            while (stopSeq.size() != NODE_CNT)
-                stopSeq.add(rnd.nextInt(0, NODE_CNT));
+            //while (stopSeq.size() != NODE_CNT)
+                stopSeq.add(rnd.nextInt(NODE_CNT));
 
-            log.info("Stop sequence: " + stopSeq);
+            stopSeq.add(0);
+            stopSeq.add(6);
+            stopSeq.add(7);
+            stopSeq.add(1);
+            stopSeq.add(8);
+
+            // 0, 6, 7, 1, 8, 9, 2, 3, 5, 4
+            log.info("Stop sequence: " + stopSeq + ", seed=" + U.field(rnd, "seed"));
 
             for (Integer idx : stopSeq) {
                 log.info("Stop node: " + idx);

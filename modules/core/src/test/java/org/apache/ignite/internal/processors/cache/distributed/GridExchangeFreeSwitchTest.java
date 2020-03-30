@@ -27,12 +27,10 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.ExchangeContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
@@ -41,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.mvcc.MvccProcessor;
 import org.apache.ignite.internal.util.future.GridFinishedFuture;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
@@ -57,17 +54,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
 
 /**
- * TODO add loss policies to test.
+ *
  */
-@WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
-@WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
 public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
     /** Nodes count. */
     private static final int NODES_CNT = 6;
@@ -104,7 +95,6 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
         DataStorageConfiguration dsCfg = new DataStorageConfiguration();
         dsCfg.setWalSegmentSize(4 * 1024 * 1024);
-        dsCfg.setWalMode(WALMode.LOG_ONLY);
 
         final int size = 50 * 1024 * 1024;
 
@@ -168,50 +158,81 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    public void testNodeLeftOnStableTopology_Volatile_2() throws Exception {
+    public void testNodeLeftOnStableTopology_Volatile_1() throws Exception {
         // Baseline auto adjust for volatile caches will prevent the optimization.
-        testNodeLeftOnStableTopology(false, true, false, true);
+        testNodeLeftOnStableTopology(false, true, false, true, true);
+    }
+
+    /** */
+    @Test
+    public void testNodeLeftOnStableTopology_Volatile_2() throws Exception {
+        testNodeLeftOnStableTopology(false, true, false, false, false);
+    }
+
+    /** */
+    @Test
+    public void testNodeLeftOnStableTopology_Volatile_3() throws Exception {
+        testNodeLeftOnStableTopology(false, true, true, true, false);
     }
 
     /** */
     @Test
     public void testNodeLeftOnStableTopology_Persistent_1() throws Exception {
-        testNodeLeftOnStableTopology(true, false, false, false);
+        testNodeLeftOnStableTopology(true, false, false, false, true);
     }
 
     /** */
     @Test
     public void testNodeLeftOnStableTopology_Persistent_2() throws Exception {
-        testNodeLeftOnStableTopology(true, false, false, false);
+        // Auto adjust for volatile caches shouldn't have any effect for persistent caches.
+        testNodeLeftOnStableTopology(true, false, false, false, true);
+    }
+
+    /** */
+    @Test
+    public void testNodeLeftOnStableTopology_Persistent_3() throws Exception {
+        testNodeLeftOnStableTopology(true, false, false, false, false);
+    }
+
+    /** */
+    @Test
+    public void testNodeLeftOnStableTopology_Persistent_4() throws Exception {
+        testNodeLeftOnStableTopology(true, false, true, true, false);
     }
 
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
-    public void testNodeLeftOnStableTopology_Persistent_3() throws Exception {
+    public void testNodeLeftOnStableTopology_Persistent_5() throws Exception {
         // Explicitly disabling the optimization, PME is expected.
-        testNodeLeftOnStableTopology(true, false, false, true);
+        testNodeLeftOnStableTopology(true, false, false, true, true);
     }
 
     /** */
     @Test
     public void testNodeLeftOnStableTopology_Mixed_1() throws Exception {
         // Auto adjust for volatile caches shouldn't have any effect for mixed caches.
-        testNodeLeftOnStableTopology(true, true, false, false);
+        testNodeLeftOnStableTopology(true, true, false, false, true);
     }
 
     /** */
     @Test
     public void testNodeLeftOnStableTopology_Mixed_2() throws Exception {
-        testNodeLeftOnStableTopology(true, true, false, false);
+        testNodeLeftOnStableTopology(true, true, false, false, true);
+    }
+
+    /** */
+    @Test
+    public void testNodeLeftOnStableTopology_Mixed_3() throws Exception {
+        testNodeLeftOnStableTopology(true, true, true, true, false);
     }
 
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_PME_FREE_SWITCH_DISABLED, value = "true")
-    public void testNodeLeftOnStableTopology_Mixed_3() throws Exception {
+    public void testNodeLeftOnStableTopology_Mixed_4() throws Exception {
         // Explicitly disabling the optimization, PME is expected.
-        testNodeLeftOnStableTopology(true, true, false, true);
+        testNodeLeftOnStableTopology(true, true, false, true, true);
     }
 
     /**
@@ -226,14 +247,17 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
         boolean persistent,
         boolean inmem,
         boolean resetBlt,
-        boolean expectPME
+        boolean expectPME,
+        boolean autoAdjustEnabled
     ) throws Exception {
         startPersistentRegion = persistent;
         startVolatileRegion = inmem;
 
         int nodes = NODES_CNT;
 
-        Ignite crd = startGrids(nodes);
+        IgniteEx crd = startGrids(nodes);
+
+        crd.cluster().baselineAutoAdjustEnabled(autoAdjustEnabled);
 
         crd.cluster().active(true);
 
@@ -415,7 +439,7 @@ public class GridExchangeFreeSwitchTest extends GridCommonAbstractTest {
                     assertEquals(key1, primaryCache.get(key1));
                 }
                 catch (Exception e) {
-                    assertTrue(X.hasCause(e, CacheInvalidStateException.class));
+                    fail("Should not happen [exception=" + e + "]");
                 }
             }, multiplicator);
 

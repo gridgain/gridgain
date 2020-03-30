@@ -35,12 +35,13 @@ import org.apache.ignite.agent.dto.tracing.Span;
 import org.apache.ignite.agent.dto.tracing.SpanBatch;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.processors.tracing.NoopTracingSpi;
 import org.apache.ignite.spi.IgniteSpiException;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.ignite.agent.ManagementConsoleProcessor.TOPIC_MANAGEMENT_CONSOLE;
+import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 
 /**
  * Span exporter which send spans to coordinator.
@@ -61,7 +62,7 @@ public class SpanExporter extends GridProcessorAdapter {
     public SpanExporter(GridKernalContext ctx) {
         super(ctx);
 
-        if (ctx.config().getTracingSpi() != null) {
+        if (!(ctx.config().getTracingSpi() instanceof NoopTracingSpi)) {
             try {
                 exporter = new OpenCensusTraceExporter(getTraceHandler());
 

@@ -35,7 +35,7 @@ import org.apache.ignite.testframework.ThrowUp;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.TOPOLOGY_CHANGE_MSG;
-import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHING;
+import static org.apache.ignite.internal.processors.cache.checker.processor.ReconciliationEventListener.WorkLoadStage.FINISHED;
 
 /**
  * Tests different scenario of interruption of repair stage.
@@ -179,7 +179,7 @@ public class PartitionReconciliationInterruptionRepairTest extends PartitionReco
         CountDownLatch waitInTask = new CountDownLatch(1);
         CountDownLatch waitOnProcessingBeforeAction = new CountDownLatch(1);
 
-        ReconciliationEventListenerFactory.defaultListenerInstance((stage, workload) -> {
+        ReconciliationEventListenerProvider.defaultListenerInstance((stage, workload) -> {
             if (firstRecheckFinished.getCount() == 0) {
                 try {
                     waitInTask.await();
@@ -193,7 +193,7 @@ public class PartitionReconciliationInterruptionRepairTest extends PartitionReco
                 }
             }
 
-            if (stage.equals(FINISHING) && workload instanceof RepairRequest)
+            if (stage.equals(FINISHED) && workload instanceof RepairRequest)
                 firstRecheckFinished.countDown();
         });
 
@@ -212,10 +212,10 @@ public class PartitionReconciliationInterruptionRepairTest extends PartitionReco
         ;
         builder.batchSize(batchSize);
         builder.parallelism(1);
-        builder.fixMode(true);
+        builder.repair(true);
         builder.repairAlg(RepairAlgorithm.PRIMARY);
         builder.caches(Collections.singleton(DEFAULT_CACHE_NAME));
-        builder.console(true);
+        builder.locOutput(true);
         builder.recheckAttempts(0);
         if (zeroDelay)
             builder.recheckDelay(0);

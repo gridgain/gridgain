@@ -60,6 +60,8 @@ public class RebalanceCompleteDuringExchangeTest extends GridCommonAbstractTest 
     public void testRebalance() throws Exception {
         IgniteEx ignite0 = startGrid(0);
 
+        ignite0.cluster().baselineAutoAdjustEnabled(false);
+
         ignite0.cluster().active(true);
 
         IgniteCache cache = ignite0.cache(DEFAULT_CACHE_NAME);

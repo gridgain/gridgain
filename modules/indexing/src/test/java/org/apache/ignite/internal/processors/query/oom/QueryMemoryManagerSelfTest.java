@@ -24,14 +24,10 @@ import org.apache.ignite.cache.query.FieldsQueryCursor;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
-import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.h2.engine.Session;
-import org.h2.expression.Expression;
-import org.h2.result.LocalResult;
 import org.junit.Test;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     /** Node client mode flag. */
@@ -40,7 +36,6 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
         System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
 
         super.beforeTest();
     }
@@ -50,7 +45,6 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
         super.afterTest();
 
         System.clearProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE);
-        System.clearProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY);
 
         stopAllGrids();
     }
@@ -62,7 +56,6 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
     public void testDefaults() throws Exception {
         final long maxMem = Runtime.getRuntime().maxMemory();
 
-        System.setProperty(IgniteSystemProperties.IGNITE_H2_LOCAL_RESULT_FACTORY, TestH2LocalResultFactory.class.getName());
         System.setProperty(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE, String.valueOf(maxMem));
 
         startGrid(0);
@@ -78,7 +71,10 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
             "select * from T as T2, T as T3 where T2.id >= 2 AND T2.id < 3";
 
         try (FieldsQueryCursor<List<?>> cursor = query(sql, false)) {
-            cursor.getAll();
+            Throwable t = GridTestUtils.assertThrowsWithCause(cursor::getAll, IgniteSQLException.class);
+
+            assertNotNull(t);
+            assertTrue(t.getMessage().contains("SQL query run out of memory: Global quota exceeded"));
         }
     }
 
@@ -95,7 +91,7 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
             cfg.setSqlGlobalMemoryQuota(String.valueOf(maxMem + 1));
 
             startGrid(cfg);
-        }, IgniteException.class, "Sql memory pool size can't be more than heap memory max size");
+        }, IgniteException.class, "Ouch! Argument is invalid: Sql global memory quota can't be more than heap size");
     }
 
     /**
@@ -138,22 +134,5 @@ public class QueryMemoryManagerSelfTest extends GridCommonAbstractTest {
                 .setLazy(lazy)
                 .setEnforceJoinOrder(true)
                 .setPageSize(100), false);
-    }
-
-    /**
-     * Local result factory for test.
-     */
-    public static class TestH2LocalResultFactory extends H2LocalResultFactory {
-        /** {@inheritDoc} */
-        @Override public LocalResult create(Session ses, Expression[] expressions, int visibleColCnt, boolean system) {
-            assertNull(ses.queryMemoryTracker());
-
-            return super.create(ses, expressions, visibleColCnt, system);
-        }
-
-        /** {@inheritDoc} */
-        @Override public LocalResult create() {
-            throw new NotImplementedException();
-        }
     }
 }

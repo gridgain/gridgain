@@ -723,7 +723,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                     try {
                         if (obsoleteVer == null)
-                            obsoleteVer = ctx.versions().next();
+                            obsoleteVer = cctx.cache().nextVersion();
 
                         GridCacheEntryEx entry = cctx.cache().entryEx(key);
 
@@ -1364,7 +1364,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
 
                 if (pendingEntries.removex(row)) {
                     if (obsoleteVer == null)
-                        obsoleteVer = ctx.versions().next();
+                        obsoleteVer = cctx.cache().nextVersion();
 
                     GridCacheEntryEx entry = cctx.cache().entryEx(row.key);
 
@@ -1434,8 +1434,8 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             this.dataTree = dataTree;
 
             PartitionUpdateCounter delegate = grp.mvccEnabled() ? new PartitionUpdateCounterMvccImpl(grp) :
-                grp.persistenceEnabled() ? new PartitionUpdateCounterTrackingImpl(grp) :
-                    new PartitionUpdateCounterVolatileImpl(grp);
+                !grp.persistenceEnabled() || grp.hasAtomicCaches() ? new PartitionUpdateCounterVolatileImpl(grp) :
+                            new PartitionUpdateCounterTrackingImpl(grp);
 
             pCntr = ctx.logger(PartitionUpdateCounterDebugWrapper.class).isDebugEnabled() ?
                 new PartitionUpdateCounterDebugWrapper(partId, delegate) : delegate;

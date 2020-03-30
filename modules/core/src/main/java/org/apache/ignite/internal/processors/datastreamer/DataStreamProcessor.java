@@ -16,6 +16,9 @@
 
 package org.apache.ignite.internal.processors.datastreamer;
 
+import java.util.Collection;
+import java.util.UUID;
+import java.util.concurrent.DelayQueue;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
@@ -47,10 +50,6 @@ import org.apache.ignite.thread.IgniteThread;
 import org.apache.ignite.thread.OomExceptionHandler;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.UUID;
-import java.util.concurrent.DelayQueue;
-
 import static org.apache.ignite.internal.GridTopic.TOPIC_DATASTREAM;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.DATA_STREAMER_POOL;
 
@@ -64,8 +63,8 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
     /** Busy lock. */
     private final GridSpinBusyLock busyLock = new GridSpinBusyLock();
 
-    /** Flushing thread. */
-    private Thread flusher;
+    /** Flushing worker. */
+    private GridWorker flusher;
 
     /** */
     private final DelayQueue<DataStreamerImpl<K, V>> flushQ = new DelayQueue<>();
@@ -103,7 +102,7 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
         marshErrBytes = U.marshal(marsh, new IgniteCheckedException("Failed to marshal response error, " +
             "see node log for details."));
 
-        flusher = new IgniteThread(new GridWorker(ctx.igniteInstanceName(), "grid-data-loader-flusher", log) {
+        flusher = new GridWorker(ctx.igniteInstanceName(), "grid-data-loader-flusher", log) {
             @Override protected void body() throws InterruptedException {
                 while (!isCancelled()) {
                     DataStreamerImpl<K, V> ldr = flushQ.take();
@@ -124,11 +123,13 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
                     }
                 }
             }
-        });
+        };
 
-        flusher.setUncaughtExceptionHandler(new OomExceptionHandler(ctx));
+        final IgniteThread flushThread = new IgniteThread(flusher);
 
-        flusher.start();
+        flushThread.setUncaughtExceptionHandler(new OomExceptionHandler(ctx));
+
+        flushThread.start();
 
         if (log.isDebugEnabled())
             log.debug("Started data streamer processor.");
@@ -144,7 +145,7 @@ public class DataStreamProcessor<K, V> extends GridProcessorAdapter {
 
         busyLock.block();
 
-        U.interrupt(flusher);
+        U.cancel(flusher);
         U.join(flusher, log);
 
         for (DataStreamerImpl<?, ?> ldr : ldrs) {

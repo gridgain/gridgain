@@ -103,6 +103,19 @@ namespace Apache.Ignite.Core.Tests.Client
         }
 
         /// <summary>
+        /// Tests that cluster operations throw proper exception on older server versions.
+        /// </summary>
+        [Test]
+        public void TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150()
+        {
+            using (var client = StartClient())
+            {
+                ClientProtocolCompatibilityTest.TestClusterOperationsThrowCorrectExceptionOnVersionsOlderThan150(
+                    client, _clientProtocolVersion.ToString());
+            }
+        }
+        
+        /// <summary>
         /// Tests that partition awareness disables automatically on older server versions.
         /// </summary>
         [Test]
@@ -119,6 +132,27 @@ namespace Apache.Ignite.Core.Tests.Client
             }
         }
         
+        /// <summary>
+        /// Tests that WithExpiryPolicy throws proper exception on older server versions.
+        /// </summary>
+        [Test]
+        public void TestWithExpiryPolicyThrowCorrectExceptionOnVersionsOlderThan150()
+        {
+            if (_clientProtocolVersion >= ClientSocket.Ver150)
+            {
+                return;
+            }
+            
+            using (var client = StartClient())
+            {
+                var cache = client.GetOrCreateCache<int, int>(TestContext.CurrentContext.Test.Name);
+                var cacheWithExpiry = cache.WithExpiryPolicy(new ExpiryPolicy(TimeSpan.FromSeconds(1), null, null));
+
+                ClientProtocolCompatibilityTest.AssertNotSupportedOperation(
+                    () => cacheWithExpiry.Put(1, 2), _clientProtocolVersion.ToString(), "WithExpiryPolicy");
+            }
+        }
+
         /// <summary>
         /// Tests that server-side configured expiry policy works on all client versions.
         /// </summary>
@@ -210,6 +244,7 @@ namespace Apache.Ignite.Core.Tests.Client
                 SqlSchema = Guid.NewGuid().ToString(),
                 CopyOnRead = false,
                 DataRegionName = DataStorageConfiguration.DefaultDataRegionName,
+                ExpiryPolicyFactory = new TestExpiryPolicyFactory(),
                 OnheapCacheEnabled = true,
                 PartitionLossPolicy = PartitionLossPolicy.ReadWriteAll,
                 ReadFromBackup = false,

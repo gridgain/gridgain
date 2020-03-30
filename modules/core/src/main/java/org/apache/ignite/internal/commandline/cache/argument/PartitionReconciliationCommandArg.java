@@ -17,10 +17,11 @@
 package org.apache.ignite.internal.commandline.cache.argument;
 
 import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.ignite.internal.commandline.argument.CommandArg;
 import org.apache.ignite.internal.commandline.cache.CacheSubcommands;
+import org.apache.ignite.internal.processors.cache.verify.PartitionReconciliationRepairMeta;
 import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 
 /**
@@ -29,9 +30,17 @@ import org.apache.ignite.internal.processors.cache.verify.RepairAlgorithm;
 public enum PartitionReconciliationCommandArg implements CommandArg {
     /**
      * If present - Partition Reconciliation&Fix: update from Primary partition. Specifies which fix algorithm to use
-     * while repairing doubtful keys: options {@code PartitionReconciliationRepairMeta.RepairAlg}.
+     * while repairing doubtful keys: options {@link PartitionReconciliationRepairMeta#repairAlg()}.
      */
     REPAIR("--repair", RepairAlgorithm.defaultValue()),
+
+    /**
+     * This mode allows checking and repairing only partitions that did not pass the validation,
+     * which includes validation of update counters and partition sizes, during the last partitions map exchange.
+     *
+     * See also GridDhtPartitionsStateValidator#validatePartitionCountersAndSizes
+     */
+    FAST_CHECK("--fast-check", Boolean.FALSE),
 
     /** If {@code true} - print data to result with sensitive information: keys and values. */
     INCLUDE_SENSITIVE("--include-sensitive", Boolean.FALSE),
@@ -55,10 +64,14 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     private final String name;
 
     /** Default value. */
-    private Object dfltVal;
+    private final Object dfltVal;
+
 
     /**
+     * Creates a new instance of partition reconciliation argument.
      *
+     * @param name command name.
+     * @param dfltVal Default value of command.
      */
     PartitionReconciliationCommandArg(String name, Object dfltVal) {
         this.name = name;
@@ -66,12 +79,12 @@ public enum PartitionReconciliationCommandArg implements CommandArg {
     }
 
     /**
-     * @return List of args.
+     * @return List of arguments.
      */
-    public static List<String> commands() {
+    public static Set<String> args() {
         return Arrays.stream(PartitionReconciliationCommandArg.values())
             .map(PartitionReconciliationCommandArg::argName)
-            .collect(Collectors.toList());
+            .collect(Collectors.toSet());
     }
 
     /** {@inheritDoc} */

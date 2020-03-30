@@ -16,9 +16,10 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.ignite.internal.processors.query.h2.ManagedGroupByDataFactory;
+import java.util.function.Supplier;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.H2QueryContext;
+import org.apache.ignite.internal.processors.query.h2.ManagedGroupByDataFactory;
 import org.h2.api.ErrorCode;
 import org.h2.command.Command;
 import org.h2.command.CommandInterface;
@@ -146,7 +147,10 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     private boolean lazyQueryExecution;
     private ColumnNamerConfiguration columnNamerConfiguration;
     private H2QueryContext qryContext;
-    private boolean offloadedToDisk;
+    private H2MemoryTracker memoryTracker;
+    private ManagedGroupByDataFactory groupByDataFactory;
+    private Supplier<String> qryDescSupplier;
+
     /**
      * Tables marked for ANALYZE after the current transaction is committed.
      * Prevents us calling ANALYZE repeatedly in large transactions.
@@ -239,24 +243,51 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     /**
      * @return Query memory tracker if it is available or 'null' otherwise.
      */
-    public H2MemoryTracker queryMemoryTracker() {
-        return qryContext != null ? qryContext.queryMemoryTracker() : null;
+    public H2MemoryTracker memoryTracker() {
+        return memoryTracker;
+    }
+
+    /**
+     * @param memoryTracker Memory tracker.
+     */
+    public void memoryTracker(H2MemoryTracker memoryTracker) {
+        this.memoryTracker = memoryTracker;
+    }
+
+    /**
+     * @return Query description.
+     */
+    public String queryDescription() {
+        return qryDescSupplier != null ? qryDescSupplier.get() : null;
+    }
+
+    /**
+     * @param qryDescSupplier Supplier for query description.
+     */
+    public void queryDescription(Supplier<String> qryDescSupplier) {
+        this.qryDescSupplier = qryDescSupplier;
     }
 
     /**
      * @return Group by data factory.
      */
     public ManagedGroupByDataFactory groupByDataFactory() {
-        return qryContext != null ? qryContext.groupByDataFactory() : null;
+        return groupByDataFactory;
+    }
+
+    /**
+     * @param groupByDataFactory Memory manager/factory.
+     */
+    public void groupByDataFactory(ManagedGroupByDataFactory groupByDataFactory) {
+        this.groupByDataFactory = groupByDataFactory;
     }
 
     /**
      * @return Creates new data holder for GROUP BY data.
      */
     public GroupByData newGroupByDataInstance(ArrayList<Expression> expressions, boolean isGrpQry, int[] grpIdx) {
-        if (qryContext != null && qryContext.queryMemoryTracker() != null) {
-            GroupByData grpByData = qryContext.groupByDataFactory()
-                .newManagedGroupByData(this, expressions, isGrpQry, grpIdx);
+        if (memoryTracker != null) {
+            GroupByData grpByData = groupByDataFactory.newManagedGroupByData(this, expressions, isGrpQry, grpIdx);
 
             if (grpByData != null)
                 return grpByData;
@@ -945,6 +976,10 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
         if (state.getAndSet(State.CLOSED) != State.CLOSED) {
             try {
                 database.checkPowerOff();
+
+                H2MemoryTracker tracker = memoryTracker;
+                if (tracker != null)
+                    tracker.close();
 
                 // release any open table locks
                 rollback();
@@ -1976,13 +2011,5 @@ public class Session extends SessionWithState implements TransactionStore.Rollba
     @Override
     public boolean isSupportsGeneratedKeys() {
         return true;
-    }
-
-    public boolean isOffloadedToDisk() {
-        return offloadedToDisk;
-    }
-
-    public void setOffloadedToDisk(boolean offloadedToDisk) {
-        this.offloadedToDisk = offloadedToDisk;
     }
 }

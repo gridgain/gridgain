@@ -24,11 +24,14 @@ import java.net.Socket;
 import java.sql.SQLException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.QueryCancelledException;
+import org.apache.ignite.internal.ThinProtocolFeature;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
 import org.apache.ignite.internal.binary.streams.BinaryHeapInputStream;
@@ -51,6 +54,7 @@ import org.apache.ignite.internal.processors.odbc.jdbc.JdbcRequest;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcResponse;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcThinFeature;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
+import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.ipc.loopback.IpcClientTcpEndpoint;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -222,7 +226,7 @@ public class JdbcThinTcpIo {
 
         srvProtoVer = handshakeRes.serverProtocolVersion();
 
-        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features());
+        protoCtx = new JdbcProtocolContext(srvProtoVer, handshakeRes.features(), handshakeRes.serverTimezone(), true);
     }
 
     /**
@@ -265,7 +269,7 @@ public class JdbcThinTcpIo {
             JdbcUtils.writeNullableLong(writer, connProps.getQueryMaxMemory());
 
         if (ver.compareTo(VER_2_8_2) >= 0)
-            writer.writeByteArray(JdbcThinFeature.allFeaturesAsBytes());
+            writer.writeByteArray(ThinProtocolFeature.featuresAsBytes(enabledFeatures()));
 
         if (!F.isEmpty(connProps.getUsername())) {
             assert ver.compareTo(VER_2_5_0) >= 0 : "Authentication is supported since 2.5";
@@ -314,6 +318,12 @@ public class JdbcThinTcpIo {
 
             handshakeRes.serverProtocolVersion(ver);
 
+            if (handshakeRes.features().contains(JdbcThinFeature.TIME_ZONE)) {
+                String srvTzId = reader.readString();
+
+                handshakeRes.serverTimezone(TimeZone.getTimeZone(srvTzId));
+            }
+
             return handshakeRes;
         }
         else {
@@ -323,13 +333,23 @@ public class JdbcThinTcpIo {
 
             String err = reader.readString();
 
+            int status = ClientStatus.FAILED;
+            try {
+                status = reader.readInt();
+            }
+            catch (Exception ignored) {
+            }
+
             ClientListenerProtocolVersion srvProtoVer0 = ClientListenerProtocolVersion.create(maj, min, maintenance);
 
-            if (srvProtoVer0.compareTo(VER_2_5_0) < 0 && !F.isEmpty(connProps.getUsername())) {
+            if (status == ClientStatus.AUTH_FAILED && srvProtoVer0.compareTo(VER_2_5_0) < 0 && !F.isEmpty(connProps.getUsername())) {
                 throw new SQLException("Authentication doesn't support by remote server[driverProtocolVer="
                     + CURRENT_VER + ", remoteNodeProtocolVer=" + srvProtoVer0 + ", err=" + err
                     + ", url=" + connProps.getUrl() + " address=" + sockAddr + ']', SqlStateCode.CONNECTION_REJECTED);
             }
+
+            if (status == ClientStatus.SECURITY_VIOLATION)
+                throw new SQLException(err);
 
             if (VER_2_1_0.equals(srvProtoVer0))
                 return handshake_2_1_0();
@@ -682,5 +702,20 @@ public class JdbcThinTcpIo {
      */
     public boolean connected() {
         return connected;
+    }
+
+    /** */
+    private EnumSet<JdbcThinFeature> enabledFeatures() {
+        EnumSet<JdbcThinFeature> features = JdbcThinFeature.allFeaturesAsEnumSet();
+
+        String disabledFeaturesStr = connProps.disabledFeatures();
+
+        if (Objects.isNull(disabledFeaturesStr))
+            return features;
+
+        for (String f : disabledFeaturesStr.split("\\W+"))
+            features.remove(JdbcThinFeature.valueOf(f.toUpperCase()));
+
+        return features;
     }
 }

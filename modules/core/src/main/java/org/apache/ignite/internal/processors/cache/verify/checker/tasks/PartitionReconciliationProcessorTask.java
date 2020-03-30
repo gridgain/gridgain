@@ -17,18 +17,15 @@
 package org.apache.ignite.internal.processors.cache.verify.checker.tasks;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -39,10 +36,11 @@ import org.apache.ignite.compute.ComputeJobResultPolicy;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.checker.objects.ExecutionResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResult;
-import org.apache.ignite.internal.processors.cache.checker.objects.PartitionReconciliationResultMeta;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntries;
+import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationAffectedEntriesExtended;
 import org.apache.ignite.internal.processors.cache.checker.objects.ReconciliationResult;
 import org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -52,7 +50,6 @@ import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.resources.LoggerResource;
 
 import static org.apache.ignite.internal.processors.cache.checker.processor.PartitionReconciliationProcessor.ERROR_REASON;
-import static org.apache.ignite.internal.processors.cache.checker.util.ConsistencyCheckUtils.createLocalResultFile;
 
 /**
  * The main task which services {@link PartitionReconciliationProcessor} per nodes.
@@ -71,23 +68,23 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     private IgniteLogger log;
 
     /** Flag indicates that the result of the utility should be logged to the console. */
-    private boolean consoleMode;
+    private boolean localOutoutMode;
 
     /** {@inheritDoc} */
     @Override public Map<? extends ComputeJob, ClusterNode> map(
         List<ClusterNode> subgrid,
         VisorPartitionReconciliationTaskArg arg
     ) throws IgniteException {
-        consoleMode = arg.console();
+        localOutoutMode = arg.locOutput();
 
         Map<ComputeJob, ClusterNode> jobs = new HashMap<>();
 
         LocalDateTime startTime = LocalDateTime.now();
-        long sesId = startTime.toEpochSecond(ZoneOffset.UTC);
+        long sesId = System.currentTimeMillis() / 1000;
 
-        if (arg.parallelism() == 0) {
-            int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
 
+        if (arg.parallelism() == 0 || arg.parallelism() > availableProcessors) {
             U.warn(log, "Partition reconciliation [session=" + sesId + "] will be executed with " +
                 "[parallelism=" + availableProcessors + "] according to number of CPU cores of the local node" );
 
@@ -95,6 +92,30 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         }
 
         ignite.compute().broadcastAsync(new ReconciliationSessionId(sesId, arg.parallelism())).get();
+
+        if (arg.fastCheck()) {
+            assert ignite.context().discovery().discoCache().oldestAliveServerNode().id()
+                .equals(ignite.context().localNodeId()) :
+                "PartitionReconciliationProcessorTask must be executed on the coordinator node " +
+                    "[locNodeId=" + ignite.context().localNodeId() +
+                    ", crd=" + ignite.context().discovery().discoCache().oldestAliveServerNode().id() + ']';
+
+            Map<Integer, Set<Integer>> invalidParts = Collections.emptyMap();
+
+            GridDhtPartitionsExchangeFuture lastFut = ignite.context().cache().context().exchange().lastFinishedFuture();
+            if (lastFut == null) {
+                if (log.isInfoEnabled()) {
+                    log.info("PartitionReconciliationProcessorTask has nothing to check, " +
+                        "the initial exchnage has not completed yet.");
+                }
+            }
+            else
+                invalidParts = lastFut.invalidPartitions();
+
+            arg = new VisorPartitionReconciliationTaskArg.Builder(arg)
+                .partitionsToRepair(invalidParts)
+                .build();
+        }
 
         for (ClusterNode node : subgrid)
             jobs.put(new PartitionReconciliationJob(arg, startTime, sesId), node);
@@ -105,9 +126,10 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
     /** {@inheritDoc} */
     @Override public ReconciliationResult reduce(List<ComputeJobResult> results) throws IgniteException {
         Map<UUID, String> nodeIdToFolder = new HashMap<>();
-        PartitionReconciliationResult res = consoleMode ?
-            new PartitionReconciliationResult() :
-            new PartitionReconciliationResultMeta();
+
+        ReconciliationAffectedEntries res = localOutoutMode ?
+            new ReconciliationAffectedEntries() :
+            new ReconciliationAffectedEntriesExtended();
 
         List<String> errors = new ArrayList<>();
 
@@ -121,13 +143,13 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                 continue;
             }
 
-            T2<String, ExecutionResult<PartitionReconciliationResult>> data = result.getData();
+            T2<String, ExecutionResult<ReconciliationAffectedEntries>> data = result.getData();
 
             nodeIdToFolder.put(nodeId, data.get1());
-            res.merge(data.get2().getResult());
+            res.merge(data.get2().result());
 
-            if (data.get2().getErrorMessage() != null)
-                errors.add(nodeId + " - " + data.get2().getErrorMessage());
+            if (data.get2().errorMessage() != null)
+                errors.add(nodeId + " - " + data.get2().errorMessage());
         }
 
         return new ReconciliationResult(res, nodeIdToFolder, errors);
@@ -149,9 +171,7 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
      * Holder of execution {@link PartitionReconciliationProcessor}
      */
     private static class PartitionReconciliationJob extends ComputeJobAdapter {
-        /**
-         *
-         */
+        /** */
         private static final long serialVersionUID = 0L;
 
         /** Ignite instance. */
@@ -162,33 +182,34 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
         @LoggerResource
         private IgniteLogger log;
 
-        /**
-         *
-         */
+        /** */
         private final VisorPartitionReconciliationTaskArg reconciliationTaskArg;
 
-        /**
-         *
-         */
+        /** */
         private final LocalDateTime startTime;
 
-        /**
-         *
-         */
+        /** */
         private long sesId;
 
         /**
+         * Create a new instance of the job.
          *
+         * @param arg Reconciliation parameters.
+         * @param startTime Start time of the whole task.
+         * @param sesId Session identifier.
          */
-        public PartitionReconciliationJob(VisorPartitionReconciliationTaskArg arg, LocalDateTime startTime,
-            long sesId) {
+        public PartitionReconciliationJob(
+            VisorPartitionReconciliationTaskArg arg,
+            LocalDateTime startTime,
+            long sesId
+        ) {
             this.reconciliationTaskArg = arg;
             this.startTime = startTime;
             this.sesId = sesId;
         }
 
         /** {@inheritDoc} */
-        @Override public T2<String, ExecutionResult<PartitionReconciliationResult>> execute() throws IgniteException {
+        @Override public T2<String, ExecutionResult<ReconciliationAffectedEntries>> execute() throws IgniteException {
             Set<String> caches = new HashSet<>();
 
             if (reconciliationTaskArg.caches() == null || reconciliationTaskArg.caches().isEmpty())
@@ -203,34 +224,32 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new T2<>(null, new ExecutionResult<>(new PartitionReconciliationResultMeta(), "The cache '" + cacheRegexp + "' doesn't exist."));
+                        return new T2<>(null, new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
 
                     caches.addAll(acceptedCaches);
                 }
             }
 
             try {
-                ExecutionResult<PartitionReconciliationResult> reconciliationRes = new PartitionReconciliationProcessor(
+                PartitionReconciliationProcessor proc = new PartitionReconciliationProcessor(
                     sesId,
                     ignite,
                     caches,
-                    reconciliationTaskArg.fixMode(),
+                    reconciliationTaskArg.partitionsToRepair(),
+                    reconciliationTaskArg.repair(),
+                    reconciliationTaskArg.repairAlg(),
                     reconciliationTaskArg.parallelism(),
                     reconciliationTaskArg.batchSize(),
                     reconciliationTaskArg.recheckAttempts(),
-                    reconciliationTaskArg.repairAlg(),
-                    reconciliationTaskArg.recheckDelay()
-                ).execute();
+                    reconciliationTaskArg.recheckDelay(),
+                    !reconciliationTaskArg.locOutput(),
+                    reconciliationTaskArg.includeSensitive());
 
-                String path = localPrint(reconciliationRes.getResult());
+                ExecutionResult<ReconciliationAffectedEntries> reconciliationRes = proc.execute();
 
-                return new T2<>(
-                    path,
-                    reconciliationTaskArg.console() ? reconciliationRes : new ExecutionResult<>(new PartitionReconciliationResultMeta(
-                        reconciliationRes.getResult().inconsistentKeysCount(),
-                        reconciliationRes.getResult().skippedEntriesCount(),
-                        reconciliationRes.getResult().skippedEntriesCount()), reconciliationRes.getErrorMessage())
-                );
+                File path = proc.collector().flushResultsToFile(startTime);
+
+                return new T2<>((path != null)? path.getAbsolutePath() : null, reconciliationRes);
             }
             catch (Exception e) {
                 String msg = "Reconciliation job failed on node [id=" + ignite.localNode().id() + "]. ";
@@ -238,37 +257,6 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
 
                 throw new IgniteException(msg + String.format(ERROR_REASON, e.getMessage(), e.getClass()), e);
             }
-        }
-
-        /**
-         * Does print local result.
-         *
-         * @return link to file with result.
-         */
-        private String localPrint(PartitionReconciliationResult reconciliationRes) {
-            if (reconciliationRes != null && !reconciliationRes.isEmpty()) {
-                try {
-                    File file = createLocalResultFile(ignite.context().discovery().localNode(), startTime);
-
-                    try (PrintWriter pw = new PrintWriter(file)) {
-                        reconciliationRes.print(pw::write, reconciliationTaskArg.verbose());
-
-                        pw.flush();
-
-                        return file.getAbsolutePath();
-                    }
-                    catch (IOException e) {
-                        log.error("Unable to write report to file " + e.getMessage());
-                    }
-                }
-                catch (IgniteCheckedException | IOException e) {
-                    log.error("Unable to create file " + e.getMessage());
-                }
-
-                reconciliationRes.print(log::info, reconciliationTaskArg.verbose());
-            }
-
-            return null;
         }
     }
 

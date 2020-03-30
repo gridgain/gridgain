@@ -223,4 +223,7 @@ public class JavaAggregate extends AbstractAggregate {
         return distinct ? new AggregateDataCollecting(true) : getInstance();
     }
 
+    public UserAggregate getUserAggregate() {
+        return userAggregate;
+    }
 }

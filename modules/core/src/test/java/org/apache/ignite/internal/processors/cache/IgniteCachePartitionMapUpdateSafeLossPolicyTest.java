@@ -16,16 +16,16 @@
 
 package org.apache.ignite.internal.processors.cache;
 
-import org.apache.ignite.Ignite;
-import org.apache.ignite.cache.PartitionLossPolicy;
-import org.apache.ignite.cluster.ClusterTopologyException;
-import org.apache.ignite.internal.util.typedef.G;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.cache.PartitionLossPolicy;
+import org.apache.ignite.cluster.ClusterTopologyException;
+import org.apache.ignite.internal.util.typedef.G;
+import org.junit.Test;
 
 /**
  *
@@ -55,6 +55,9 @@ public class IgniteCachePartitionMapUpdateSafeLossPolicyTest extends IgniteCache
 
     /** {@inheritDoc} */
     @Override protected void stopGrid(int idx) {
+        if (idx == 8)
+            System.out.println();
+
         super.stopGrid(idx);
 
         List<Ignite> grids = G.allGrids();
@@ -73,5 +76,11 @@ public class IgniteCachePartitionMapUpdateSafeLossPolicyTest extends IgniteCache
                 }
             }
         });
+    }
+
+    @Test
+    @Override
+    public void testRandom() throws Exception {
+        super.testRandom();
     }
 }

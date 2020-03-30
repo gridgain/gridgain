@@ -651,7 +651,8 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * If partition has reservations, eviction will be delayed and continued after all reservations will be released.
      *
      * @param updateSeq If {@code true} topology update sequence will be updated after eviction is finished.
-     * @return Future to signal that this node is no longer an owner or backup.
+     * @return Future to signal that this node is no longer an owner or backup or null if corresponding partition
+     * state is {@code RENTING} or {@code EVICTED}.
      */
     public IgniteInternalFuture<?> rent(boolean updateSeq) {
         long state0 = this.state.get();
@@ -659,7 +660,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
         GridDhtPartitionState partState = getPartState(state0);
 
         if (partState == RENTING || partState == EVICTED)
-            return rent;
+            return null;
 
         delayedRentingTopVer = ctx.exchange().readyAffinityVersion().topologyVersion();
 
@@ -1111,7 +1112,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
      * @throws NodeStoppingException If node stopping.
      */
     private long clearAll(EvictionContext evictionCtx) throws NodeStoppingException {
-        GridCacheVersion clearVer = ctx.versions().next();
+        GridCacheVersion clearVer = group().caches().get(0).cache().nextVersion();
 
         GridCacheObsoleteEntryExtras extras = new GridCacheObsoleteEntryExtras(clearVer);
 
