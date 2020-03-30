@@ -327,16 +327,16 @@ public class GridDhtPreloader extends GridCachePreloaderAdapter {
         }
 
         if (log.isInfoEnabled()) {
-            if (!skippedPartitionsLackHistSupplier.isEmpty()) {
-                log.info("Unable to perform historical rebalance cause " +
-                    "history supplier is not available [grpId=" + grp.groupId() + ", grpName=" + grp.name() +
+            if (!skippedPartitionsLackHistSupplier.isEmpty() && grp.persistenceEnabled()) {
+                log.info("Unable to perform historical rebalancing because " +
+                    "a history supplier is not available [grpId=" + grp.groupId() + ", grpName=" + grp.name() +
                     ", parts=" + S.compact(
                         Arrays.stream(skippedPartitionsLackHistSupplier.array()).boxed().collect(Collectors.toList())) +
                     ", topVer=" + topVer + ']');
             }
 
-            if (!skippedPartitionsCleared.isEmpty()) {
-                log.info("Unable to perform historical rebalance because clearing is required for partitions" +
+            if (!skippedPartitionsCleared.isEmpty() && grp.persistenceEnabled()) {
+                log.info("Unable to perform historical rebalancing because a clearing is required for partitions " +
                     "[grpId=" + grp.groupId() + ", grpName=" + grp.name() +
                     ", parts=" + S.compact(
                         Arrays.stream(skippedPartitionsCleared.array()).boxed().collect(Collectors.toList())) +

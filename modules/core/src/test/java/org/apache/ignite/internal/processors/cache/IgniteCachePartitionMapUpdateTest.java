@@ -65,9 +65,6 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(100000000L);
-        cfg.setClientFailureDetectionTimeout(100000000L);
-
         CacheConfiguration ccfg1 = new CacheConfiguration(CACHE1);
 
         ccfg1.setCacheMode(PARTITIONED);
@@ -168,29 +165,16 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRandom() throws Exception {
-        Random rnd = new Random();
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
         final int NODE_CNT = GridTestUtils.SF.applyLB(10, 5);
 
         for (int iter = 0; iter < 1; iter++) {
             log.info("Iteration: " + iter);
 
-            boolean[][] vars = new boolean[][]{
-                    {true, false}, // 0
-                    {true, false}, // 1
-                    {false, false}, // 2
-                    {true, false}, // 3
-                    {true, false}, // 4
-                    {false, true}, // 5
-                    {false, false}, // 6
-                    {true, false}, // 7
-                    {false, true}, // 8
-                    {true, false} // 9
-            };
-
             for (int i = 0; i < NODE_CNT; i++) {
-                cache1 = vars[i][0];
-                cache2 = vars[i][1];
+                cache1 = rnd.nextBoolean();
+                cache2 = rnd.nextBoolean();
 
                 log.info("Start node [idx=" + i + ", cache1=" + cache1 + ", cache2=" + cache2 + ']');
 
@@ -201,17 +185,8 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
 
             LinkedHashSet<Integer> stopSeq = new LinkedHashSet<>();
 
-            //while (stopSeq.size() != NODE_CNT)
-                stopSeq.add(rnd.nextInt(NODE_CNT));
-
-            stopSeq.add(0);
-            stopSeq.add(6);
-            stopSeq.add(7);
-            stopSeq.add(1);
-            stopSeq.add(8);
-
-            // 0, 6, 7, 1, 8, 9, 2, 3, 5, 4
-            log.info("Stop sequence: " + stopSeq + ", seed=" + U.field(rnd, "seed"));
+            while (stopSeq.size() != NODE_CNT)
+                stopSeq.add(rnd.nextInt(0, NODE_CNT));
 
             for (Integer idx : stopSeq) {
                 log.info("Stop node: " + idx);

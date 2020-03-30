@@ -3469,8 +3469,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException(e);
         }
 
-
-
 //        if (detected.get() > 0) {
 //            if (log.isDebugEnabled())
 //                log.debug("Partitions have been scheduled to resend [reason=" +
@@ -3489,25 +3487,25 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         assert !exchCtx.mergeExchanges();
 
         try {
-            // Reserve at least 2 threads for system operations.
-            U.doInParallel(
-                U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                cctx.kernalContext().getSystemExecutorService(),
-                cctx.cache().cacheGroups(),
-                grp -> {
-                    if (grp.isLocal())
-                        return null;
+            doInParallelUninterruptibly(
+                    U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
+                    cctx.kernalContext().getSystemExecutorService(),
+                    cctx.affinity().caches().values(),
+                    desc -> {
+                        if (desc.cacheConfiguration().getCacheMode() == CacheMode.LOCAL)
+                            return null;
 
-                    for (String cacheName : cacheNames) {
-                        if (grp.hasCache(cacheName)) {
-                            grp.topology().resetLostPartitions(initialVersion());
+                        if (cacheNames.contains(desc.cacheName())) {
+                            CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
 
-                            break;
+                            GridDhtPartitionTopology top = grp != null ? grp.topology() :
+                                    cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
+
+                            top.resetLostPartitions(initialVersion());
                         }
-                    }
 
-                    return null;
-                });
+                        return null;
+                    });
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

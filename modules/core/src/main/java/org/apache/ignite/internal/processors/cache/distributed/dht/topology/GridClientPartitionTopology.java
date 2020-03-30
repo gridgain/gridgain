@@ -1087,7 +1087,22 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public void resetLostPartitions(AffinityTopologyVersion affVer) {
-        assert false : "resetLostPartitions should never be called on client topology";
+        lock.writeLock().lock();
+
+        try {
+            for (Map.Entry<UUID, GridDhtPartitionMap> e : node2part.entrySet()) {
+                for (Map.Entry<Integer, GridDhtPartitionState> e0 : e.getValue().entrySet()) {
+                    if (e0.getValue() != LOST)
+                        continue;
+
+                    e0.setValue(OWNING);
+                }
+            }
+
+            lostParts = null;
+        } finally {
+            lock.writeLock().unlock();
+        }
     }
 
     /** {@inheritDoc} */

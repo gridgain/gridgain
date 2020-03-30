@@ -3728,6 +3728,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         for (String cacheName : cacheNames) {
             final IgniteInternalCache<Object, Object> cache0 = internalCache(cacheName);
 
+            // TODO force start cache.
             if (cache0 == null)
                 continue;
 
