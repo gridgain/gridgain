@@ -49,6 +49,9 @@ public class H2Connection implements AutoCloseable {
     /** Logger. */
     private IgniteLogger log;
 
+    private final Exception create;
+
+
     /**
      * @param conn Connection to use.
      * @param log Logger.
@@ -58,6 +61,8 @@ public class H2Connection implements AutoCloseable {
         this.log = log;
 
         initStatementCache();
+
+        create = new Exception();
     }
 
     /**

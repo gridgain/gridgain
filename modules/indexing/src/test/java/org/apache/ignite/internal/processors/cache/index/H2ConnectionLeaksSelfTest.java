@@ -16,12 +16,15 @@
 
 package org.apache.ignite.internal.processors.cache.index;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
+import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.h2.ConnectionManager;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -169,6 +172,21 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     * @throws Exception On failed.
+     */
+    @Test
+    public void testCuttentTimestampFunc() throws Exception {
+        startGridAndPopulateCache(1);
+
+        sql(grid(0), "CREATE TABLE TEST_F(ID INT PRIMARY KEY, TS TIMESTAMP) WITH \"TEMPLATE=REPLICATED\"");
+
+        sql(grid(0),"INSERT INTO TEST_F VALUES (?, CURRENT_TIMESTAMP())", 0);
+
+        checkConnectionLeaks();
+    }
+
+
+    /**
      * @throws Exception On error.
      */
     private void checkConnectionLeaks() throws Exception {
@@ -218,4 +236,11 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
             cache.put((long)i, String.valueOf(i));
 
     }
+
+    /**
+     */
+    private List<List<?>> sql(IgniteEx ign, String sql, Object... params) {
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql).setArgs(params), false).getAll();
+    }
+
 }

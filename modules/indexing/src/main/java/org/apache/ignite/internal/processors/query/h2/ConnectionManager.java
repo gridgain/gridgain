@@ -84,7 +84,7 @@ public class ConnectionManager {
     private final IgniteLogger log;
 
     /** Used connections set. */
-    private final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    public final Set<H2Connection> usedConns = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     /** Connection pool. */
     private final ConcurrentStripedPool<H2Connection> connPool;
