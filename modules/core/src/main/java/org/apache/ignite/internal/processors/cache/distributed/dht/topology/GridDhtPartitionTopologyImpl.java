@@ -1602,13 +1602,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     return false;
                 }
 
+                // Apply lost partitions from full message.
                 if (exchangeVer != null) {
                     assert exchangeVer.compareTo(readyTopVer) >= 0 && exchangeVer.compareTo(lastTopChangeVer) >= 0;
 
                     lastTopChangeVer = readyTopVer = exchangeVer;
 
                     if (lostParts != null) {
-                        this.lostParts = lostParts;
+                        this.lostParts = new HashSet<>(lostParts);
 
                         for (Integer part : lostParts) {
                             GridDhtLocalPartition locPart = localPartition(part);

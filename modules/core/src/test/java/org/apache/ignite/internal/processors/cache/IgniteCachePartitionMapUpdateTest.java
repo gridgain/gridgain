@@ -165,7 +165,7 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
      */
     @Test
     public void testRandom() throws Exception {
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        Random rnd = new Random();
 
         final int NODE_CNT = GridTestUtils.SF.applyLB(10, 5);
 
@@ -186,7 +186,9 @@ public class IgniteCachePartitionMapUpdateTest extends GridCommonAbstractTest {
             LinkedHashSet<Integer> stopSeq = new LinkedHashSet<>();
 
             while (stopSeq.size() != NODE_CNT)
-                stopSeq.add(rnd.nextInt(0, NODE_CNT));
+                stopSeq.add(rnd.nextInt(NODE_CNT));
+
+            log.info("Stop sequence: " + stopSeq + ", seed=" + U.field(rnd, "seed"));
 
             for (Integer idx : stopSeq) {
                 log.info("Stop node: " + idx);
