@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.file.OpenOption;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
@@ -579,13 +580,20 @@ public class LocalWalModeChangeDuringRebalancingSelfTest extends GridCommonAbstr
 
         cache = newIgnite.cache(DEFAULT_CACHE_NAME);
 
-        for (int k = 0; k < keysCnt; k++)
-            assertFalse("k=" + k +", v="  + cache.get(k), cache.containsKey(k));
+        Collection<Integer> lostParts = cache.lostPartitions();
 
         Set<Integer> keys = new TreeSet<>();
 
-        for (int k = 0; k < keysCnt; k++)
+        for (int k = 0; k < keysCnt; k++) {
+            // Skip lost partitions.
+            if (lostParts.contains(newIgnite.affinity(DEFAULT_CACHE_NAME).partition(k)))
+                continue;
+
             keys.add(k);
+        }
+
+        for (Integer k : keys)
+            assertFalse("k=" + k + ", v=" + cache.get(k), cache.containsKey(k));
 
         assertFalse(cache.containsKeys(keys));
     }
