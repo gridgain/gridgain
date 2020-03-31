@@ -248,6 +248,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();
@@ -255,6 +257,8 @@ public class IgniteWalRecoveryTest extends GridCommonAbstractTest {
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
 
         cleanPersistenceDir();

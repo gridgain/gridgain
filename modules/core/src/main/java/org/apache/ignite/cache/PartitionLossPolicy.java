@@ -42,6 +42,7 @@ public enum PartitionLossPolicy {
     /**
      * All writes to the cache will be failed with an exception, reads will only be allowed for keys in
      * non-lost partitions. Reads from lost partitions will be failed with an exception.
+     * TODO always forced for mvcc
      */
     READ_ONLY_SAFE,
 
