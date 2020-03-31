@@ -547,7 +547,7 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
                         + " [forced local query=" + this + "]");
                 }
 
-                if (isSafeLossPolicy()) {
+                if (cctx.topology().lostPartitions().contains(part)) {
                     throw new IgniteCheckedException("Failed to execute scan query because cache partition has been " +
                         "lost [cacheName=" + cctx.name() + ", part=" + part + "]");
                 }
@@ -597,16 +597,6 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
             it = qryMgr.scanQueryDistributed(this, nodes);
 
         return mvccTracker != null ? new MvccTrackingIterator(it, mvccTracker) : it;
-    }
-
-    /**
-     * @return true if current PartitionLossPolicy corresponds to *_SAFE values.
-     */
-    private boolean isSafeLossPolicy() {
-        PartitionLossPolicy lossPlc = cctx.cache().configuration().getPartitionLossPolicy();
-
-        return lossPlc == PartitionLossPolicy.READ_ONLY_SAFE ||
-            lossPlc == PartitionLossPolicy.READ_WRITE_SAFE;
     }
 
     /**

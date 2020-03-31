@@ -85,17 +85,14 @@ public class ReducePartitionMapper {
         for (int cacheId : cacheIds) {
             GridCacheContext<?, ?> cctx = cacheContext(cacheId);
 
-            PartitionLossPolicy plc = cctx.config().getPartitionLossPolicy();
-
-            if (plc != READ_ONLY_SAFE && plc != READ_WRITE_SAFE)
-                continue;
-
             Collection<Integer> lostParts = cctx.topology().lostPartitions();
 
-            for (int part : lostParts) {
-                if (parts == null || Arrays.binarySearch(parts, part) >= 0) {
-                    throw new CacheException("Failed to execute query because cache partition has been " +
-                        "lost [cacheName=" + cctx.name() + ", part=" + part + ']');
+            if (!lostParts.isEmpty()) {
+                for (int part : lostParts) {
+                    if (parts == null || Arrays.binarySearch(parts, part) >= 0) {
+                        throw new CacheException("Failed to execute query because cache partition has been " +
+                                "lost [cacheName=" + cctx.name() + ", part=" + part + ']');
+                    }
                 }
             }
         }
