@@ -307,6 +307,10 @@ public class GridDhtPartitionDemander {
 
                 ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
 
+                // Required to trigger late affinity switch (see testCommitReorderWithRollbackNoRebalanceAfterRestart).
+                if (grp.persistenceEnabled())
+                    ctx.exchange().scheduleResendPartitions();
+
                 return null;
             }
 

@@ -1085,11 +1085,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
             startGrid(2);
             startGrid(3);
 
-            if (persistenceEnabled()) {
-                assertFalse(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+            assertFalse(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
-                grid(0).resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
-            }
+            grid(0).resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
         }
 
         prim.context().cache().context().exchange().rebalanceDelay(500);
