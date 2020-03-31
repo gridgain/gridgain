@@ -291,7 +291,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             grpCtx -> !UTILITY_CACHE_NAME.equals(grpCtx.cacheOrGroupName()),
             beforeRestartNode,
             afterRestartNode,
-            true
+            grpStatPred.values.stream().map(GridTuple4::get2).noneMatch(CacheGroupContext::mvccEnabled)
         );
     }
 
@@ -588,7 +588,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
 
         assertEquals(expSupStats.size(), actSupStats.size());
-        assertTrue(actSupStats.size() > 0);
+        assertFalse(actSupStats.isEmpty());
 
         for (Entry<ClusterNode, CacheGroupSupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
             CacheGroupSupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
@@ -632,7 +632,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         Map<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
 
         assertEquals(expSupStats.size(), actSupStats.size());
-        assertTrue(actSupStats.size() > 0);
+        assertFalse(actSupStats.isEmpty());
 
         for (Entry<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
             CacheGroupTotalSupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
