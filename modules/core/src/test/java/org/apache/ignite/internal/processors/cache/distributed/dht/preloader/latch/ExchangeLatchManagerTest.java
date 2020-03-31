@@ -15,11 +15,24 @@
  */
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch;
 
+import com.sun.source.tree.AssertTree;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.GridTestUtils;
+import org.apache.ignite.testframework.ListeningTestLogger;
+import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -29,6 +42,85 @@ import org.junit.Test;
 public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
     /** */
     private static final String LATCH_NAME = "test";
+
+    /** Message are meaning that node getting a stale acknowledge message. */
+    private static final String STALE_ACK_LOG_MSG = "Ignoring stale latch's acknowledge";
+
+    /** Message happens when assertion was broken. */
+    public static final String ERROR_MSG = "An error occurred processing the message.*LatchAckMessage";
+
+    /** Grid logger. */
+    public ListeningTestLogger gridLogger;
+
+    /** {@inheritDoc} */
+    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
+        return super.getConfiguration(igniteInstanceName)
+            .setGridLogger(gridLogger)
+            .setCommunicationSpi(new TestRecordingCommunicationSpi());
+    }
+
+    /**
+     * Checks reaction of latch on stale acknowledge from new coordinator.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testExcessAcknowledgeForNewCoordinator() throws Exception {
+        gridLogger = new ListeningTestLogger(false, log);
+
+        LogListener staleMessageLsnr = LogListener.matches(STALE_ACK_LOG_MSG).build();
+        LogListener errorLsnr = LogListener.matches(ERROR_MSG).build();
+
+        IgniteEx ignite0 = startGrids(3);
+
+        TestRecordingCommunicationSpi spi0 = TestRecordingCommunicationSpi.spi(ignite0);
+
+        spi0.blockMessages((node, msg) ->
+            msg instanceof LatchAckMessage && node.order() == 2);
+
+        spi0.record((node, msg) ->
+            msg instanceof LatchAckMessage && node.order() == 3);
+
+        Ignite ignite1 = G.allGrids().stream().filter(node -> node.cluster().localNode().order() == 2).findAny().get();
+
+        assertNotNull("Could not find node with second order.", ignite1);
+
+        TestRecordingCommunicationSpi spi1 = TestRecordingCommunicationSpi.spi(ignite1);
+
+        spi1.blockMessages((node, msg) -> {
+            if (msg instanceof LatchAckMessage && node.order() == 3) {
+                LatchAckMessage ack = (LatchAckMessage)msg;
+
+                return ack.topVer().topologyVersion() == 3;
+            }
+
+            return false;
+        });
+
+        IgniteInternalFuture exchangeDoingFut = GridTestUtils.runAsync(() ->
+            ignite0.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME))
+        );
+
+        spi0.waitForBlocked();
+        spi0.waitForRecorded();
+
+        ignite0.close();
+
+        spi1.waitForBlocked();
+
+        awaitPartitionMapExchange();
+
+        assertTrue(exchangeDoingFut.isDone());
+
+        gridLogger.registerAllListeners(errorLsnr, staleMessageLsnr);
+
+        spi1.stopBlock();
+
+        assertTrue(GridTestUtils.waitForCondition(() ->
+            staleMessageLsnr.check(), 10_000));
+
+        assertFalse(errorLsnr.check());
+    }
 
     /**
      * @throws Exception If failed.
