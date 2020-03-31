@@ -17,22 +17,24 @@
 package org.apache.ignite.internal;
 
 import java.util.BitSet;
-import java.util.Collection;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
@@ -213,7 +215,7 @@ public enum IgniteFeatures {
      * @param nodes cluster nodes to check their feature support.
      * @return if feature is declared to be supported by all nodes
      */
-    public static boolean allNodesSupports(GridKernalContext ctx, Iterable<ClusterNode> nodes, IgniteFeatures feature) {
+    public static boolean allNodesSupports(@Nullable GridKernalContext ctx, Iterable<ClusterNode> nodes, IgniteFeatures feature) {
         if (ctx != null && nodes.iterator().hasNext()) {
             RollingUpgradeStatus status = ctx.rollingUpgrade().getStatus();
 
@@ -236,15 +238,54 @@ public enum IgniteFeatures {
      * @return {@code True} if all nodes in the cluster support given feature.
      */
     public static boolean allNodesSupport(GridKernalContext ctx, IgniteFeatures feature) {
-        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
+        return allNodesSupport(ctx, ctx.config().getDiscoverySpi(), feature);
+    }
 
+    /**
+     * @param ctx Kernal context (can be {@code null}).
+     * @param discoSpi Instance of {@link DiscoverySpi}.
+     * @param feature Feature to check.
+     * @return {@code True} if all nodes in the cluster support given feature.
+     */
+    public static boolean allNodesSupport(@Nullable GridKernalContext ctx, DiscoverySpi discoSpi, IgniteFeatures feature) {
+        return selectedNodesSupport(ctx, discoSpi, feature, F.alwaysTrue());
+    }
+
+    /**
+     * Checks that feature supported by all passed throw {@code filter} nodes.
+     *
+     * @param ctx Kernal context.
+     * @param feature Feature to check.
+     * @param filter Filter for selecting checked nodes.
+     * @return if feature is declared to be supported by all selected nodes.
+     */
+    public static boolean selectedNodesSupport(
+        GridKernalContext ctx,
+        IgniteFeatures feature,
+        IgnitePredicate<ClusterNode> filter
+    ) {
+        return selectedNodesSupport(ctx, ctx.config().getDiscoverySpi(), feature, filter);
+    }
+
+    /**
+     * Checks that feature supported by all passed throw {@code filter} nodes.
+     *
+     * @param ctx Kernal context (can be null).
+     * @param discoSpi Instance of {@link DiscoverySpi}.
+     * @param feature Feature to check.
+     * @param filter Filter for selecting checked nodes.
+     * @return if feature is declared to be supported by all selected nodes.
+     */
+    public static boolean selectedNodesSupport(
+        @Nullable GridKernalContext ctx,
+        DiscoverySpi discoSpi,
+        IgniteFeatures feature,
+        IgnitePredicate<ClusterNode> filter
+    ) {
         if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature);
-        else {
-            Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
-
-            return allNodesSupports(ctx, nodes, feature);
-        }
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature, filter);
+        else
+            return allNodesSupports(ctx, F.view(discoSpi.getRemoteNodes(), filter), feature);
     }
 
     /**
