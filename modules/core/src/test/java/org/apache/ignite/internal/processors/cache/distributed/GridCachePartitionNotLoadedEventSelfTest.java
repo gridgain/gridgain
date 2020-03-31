@@ -20,8 +20,6 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
-import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -37,28 +35,21 @@ import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsFullMessage;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.GridTestUtils.SF;
 import org.apache.ignite.testframework.MvccFeatureChecker;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.util.TestTcpCommunicationSpi;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 
 /**
- * TODO remove IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE after pull.
+ *
  */
-@WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
 public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstractTest {
     /** */
     private int backupCnt;
@@ -113,8 +104,9 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
     public void testPrimaryAndBackupDead() throws Exception {
         backupCnt = 1;
 
-        Ignite crd = startGridsMultiThreaded(4);
+        IgniteEx crd = (IgniteEx) startGridsMultiThreaded(4);
 
+        crd.cluster().baselineAutoAdjustEnabled(false);
         crd.cluster().active(true);
 
         awaitPartitionMapExchange();
@@ -182,6 +174,7 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
         IgniteEx crd = startGrid(0);
         startGrid(1);
 
+        crd.cluster().baselineAutoAdjustEnabled(false);
         crd.cluster().active(true);
 
         final PartitionNotFullyLoadedListener lsnr = new PartitionNotFullyLoadedListener();
@@ -216,6 +209,7 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
 
         IgniteEx crd = startGrid(1);
 
+        crd.cluster().baselineAutoAdjustEnabled(false);
         crd.cluster().active(true);
 
         startGrid(0);
@@ -255,6 +249,7 @@ public class GridCachePartitionNotLoadedEventSelfTest extends GridCommonAbstract
 
         startGrid(1);
 
+        crd.cluster().baselineAutoAdjustEnabled(false);
         crd.cluster().active(true);
 
         final PartitionNotFullyLoadedListener lsnr = new PartitionNotFullyLoadedListener();
