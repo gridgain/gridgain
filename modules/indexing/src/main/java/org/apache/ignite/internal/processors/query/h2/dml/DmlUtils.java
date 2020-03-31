@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.query.h2.dml;
 
+import java.io.Closeable;
 import java.lang.reflect.Array;
 import java.sql.BatchUpdateException;
 import java.sql.SQLException;
@@ -191,8 +192,12 @@ public class DmlUtils {
         if (plan.rowCount() == 1) {
             IgniteBiTuple t = plan.processRow(cursor.iterator().next());
 
-            if (cctx.cache().putIfAbsent(t.getKey(), t.getValue()))
+            if (cctx.cache().putIfAbsent(t.getKey(), t.getValue())) {
+                if (cursor instanceof AutoCloseable)
+                    U.closeQuiet((AutoCloseable)cursor);
+
                 return 1;
+            }
             else
                 throw new TransactionDuplicateKeyException("Duplicate key during INSERT [key=" + t.getKey() + ']');
         }
