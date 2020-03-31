@@ -155,10 +155,10 @@ public class IgniteWalRebalanceLoggingTest extends GridCommonAbstractTest {
         System.setProperty(IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD, "500000");
         LogListener expMsgsLsnr = LogListener.
             matches("Following partitions were reserved for potential history rebalance []").times(4).
-            andMatches("Unable to perform historical rebalance cause history supplier is not available [" +
+            andMatches("Unable to perform historical rebalancing because a history supplier is not available [" +
                 "grpId=1813188848, grpName=cache_group2, parts=[0-7]," +
                 " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").
-            andMatches("Unable to perform historical rebalance cause history supplier is not available [" +
+            andMatches("Unable to perform historical rebalancing because a history supplier is not available [" +
                 "grpId=1813188847, grpName=cache_group1, parts=[0-7]," +
                 " topVer=AffinityTopologyVersion [topVer=4, minorTopVer=0]]").
             andMatches("fullPartitions=[0-7], histPartitions=[]").times(2).build();
