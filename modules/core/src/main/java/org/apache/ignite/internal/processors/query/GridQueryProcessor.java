@@ -458,6 +458,9 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         for (Map.Entry<QueryIndexKey, QueryIndexDescriptorImpl> e : idxs.entrySet())
             sizes.put(e.getKey(), e.getValue().inlineSize());
 
+        // TODO remove me!
+        log.error("GG-23133 " + ctx.igniteInstanceName() + " " + sizes);
+
         return sizes;
     }
 
