@@ -92,7 +92,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
      * Failed to reserve partitions for query (cache is not found on local node)
      */
     @Test
-    public void testSynthCacheWasNotFoundMessage() {
+    public void testSynthCacheWasNotFoundMessage() throws IgniteCheckedException {
         GridMapQueryExecutor mapQryExec = GridTestUtils.getFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec");
 
         GridTestUtils.setFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec",
@@ -105,7 +105,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
                     qryReq.caches().remove(qryReq.caches().size() - 1);
                 }
-            }.insertRealExecutor(mapQryExec));
+            }.insertRealExecutor(mapQryExec, h2Idx));
 
         SqlQuery<String, Person> qry = new SqlQuery<String, Person>(Person.class, JOIN_SQL).setArgs("Organization #0");
 
@@ -129,7 +129,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
      * Failed to reserve partitions for query (group reservation failed)
      */
     @Test
-    public void testGrpReservationFailureMessage() {
+    public void testGrpReservationFailureMessage() throws IgniteCheckedException {
         final GridMapQueryExecutor mapQryExec = GridTestUtils.getFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec");
 
         final ConcurrentMap<PartitionReservationKey, GridReservable> reservations = reservations(h2Idx);
@@ -150,7 +150,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
                     });
                     startedExecutor.onQueryRequest(node, qryReq);
                 }
-            }.insertRealExecutor(mapQryExec));
+            }.insertRealExecutor(mapQryExec, h2Idx));
 
         SqlQuery<String, Person> qry = new SqlQuery<String, Person>(Person.class, JOIN_SQL).setArgs("Organization #0");
 
@@ -175,7 +175,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
      */
     @Ignore("https://issues.apache.org/jira/browse/IGNITE-7039")
     @Test
-    public void testReplicatedCacheReserveFailureMessage() {
+    public void testReplicatedCacheReserveFailureMessage() throws IgniteCheckedException {
         GridMapQueryExecutor mapQryExec = GridTestUtils.getFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec");
 
         final GridKernalContext ctx = GridTestUtils.getFieldValue(mapQryExec, GridMapQueryExecutor.class, "ctx");
@@ -195,7 +195,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
                     aState.getAndSet(stateVal);
                 }
-            }.insertRealExecutor(mapQryExec));
+            }.insertRealExecutor(mapQryExec, h2Idx));
 
         SqlQuery<String, Organization> qry = new SqlQuery<>(Organization.class, ORG_SQL);
 
@@ -219,7 +219,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
      * Failed to reserve partitions for query (partition of PARTITIONED cache cannot be reserved)
      */
     @Test
-    public void testPartitionedCacheReserveFailureMessage() {
+    public void testPartitionedCacheReserveFailureMessage() throws IgniteCheckedException {
         GridMapQueryExecutor mapQryExec = GridTestUtils.getFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec");
 
         final GridKernalContext ctx = GridTestUtils.getFieldValue(mapQryExec, GridMapQueryExecutor.class, "ctx");
@@ -240,7 +240,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
                     aState.getAndSet(stateVal);
                 }
-            }.insertRealExecutor(mapQryExec));
+            }.insertRealExecutor(mapQryExec, h2Idx));
 
         SqlQuery<String, Person> qry = new SqlQuery<String, Person>(Person.class, JOIN_SQL).setArgs("Organization #0");
 
@@ -264,7 +264,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
      * Failed to execute non-collocated query (will retry)
      */
     @Test
-    public void testNonCollocatedFailureMessage() {
+    public void testNonCollocatedFailureMessage() throws IgniteCheckedException {
         final GridMapQueryExecutor mapQryExec = GridTestUtils.getFieldValue(h2Idx, IgniteH2Indexing.class, "mapQryExec");
 
         final ConcurrentMap<PartitionReservationKey, GridReservable> reservations = reservations(h2Idx);
@@ -285,7 +285,7 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
 
                     startedExecutor.onQueryRequest(node, qryReq);
                 }
-            }.insertRealExecutor(mapQryExec));
+            }.insertRealExecutor(mapQryExec, h2Idx));
 
         SqlQuery<String, Person> qry = new SqlQuery<String, Person>(Person.class, JOIN_SQL).setArgs("Organization #0");
 
@@ -446,8 +446,10 @@ public class RetryCauseMessageSelfTest extends AbstractIndexingCommonTest {
          * @param startedExecutor Started executor.
          * @return Mocked map query executor.
          */
-        MockGridMapQueryExecutor insertRealExecutor(GridMapQueryExecutor startedExecutor) {
+        MockGridMapQueryExecutor insertRealExecutor(GridMapQueryExecutor startedExecutor, IgniteH2Indexing h2Idx) throws IgniteCheckedException {
             this.startedExecutor = startedExecutor;
+
+            start(h2Idx.kernalContext(), h2Idx);
 
             return this;
         }

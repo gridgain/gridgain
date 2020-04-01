@@ -33,7 +33,6 @@ import org.h2.value.Value;
  * View that contains query history statistics on local node.
  */
 public class SqlSystemViewQueryHistoryMetrics extends SqlAbstractLocalSystemView {
-
    /**
      * Creates view with columns.
      *
@@ -48,7 +47,13 @@ public class SqlSystemViewQueryHistoryMetrics extends SqlAbstractLocalSystemView
             newColumn("FAILURES", Value.LONG),
             newColumn("DURATION_MIN", Value.LONG),
             newColumn("DURATION_MAX", Value.LONG),
-            newColumn("LAST_START_TIME", Value.TIMESTAMP)
+            newColumn("LAST_START_TIME", Value.TIMESTAMP),
+            newColumn("MEMORY_MIN", Value.LONG),
+            newColumn("MEMORY_MAX", Value.LONG),
+            newColumn("DISK_ALLOCATION_MIN", Value.LONG),
+            newColumn("DISK_ALLOCATION_MAX", Value.LONG),
+            newColumn("DISK_ALLOCATION_TOTAL_MIN", Value.LONG),
+            newColumn("DISK_ALLOCATION_TOTAL_MAX", Value.LONG)
         );
 
     }
@@ -70,6 +75,12 @@ public class SqlSystemViewQueryHistoryMetrics extends SqlAbstractLocalSystemView
                 m.minimumTime(),
                 m.maximumTime(),
                 valueTimestampFromMillis(m.lastStartTime()),
+                m.minMemory(),
+                m.maxMemory(),
+                m.minBytesAllocatedOnDisk(),
+                m.maxBytesAllocatedOnDisk(),
+                m.minTotalBytesWrittenOnDisk(),
+                m.maxTotalBytesWrittenOnDisk()
             };
 
             rows.add(createRow(ses, data));

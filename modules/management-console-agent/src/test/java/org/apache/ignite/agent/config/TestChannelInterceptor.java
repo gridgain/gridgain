@@ -56,10 +56,9 @@ public class TestChannelInterceptor extends ChannelInterceptorAdapter {
         if (accessor.getCommand() == StompCommand.SEND) {
             String dest = getDestination(msg.getHeaders());
 
-            messages.compute(dest, (k, v) -> {
-                if (v == null)
-                    return Lists.newArrayList(msg.getPayload());
+            messages.computeIfAbsent(dest, k -> Lists.newCopyOnWriteArrayList());
 
+            messages.computeIfPresent(dest, (k, v) -> {
                 v.add(msg.getPayload());
 
                 return v;

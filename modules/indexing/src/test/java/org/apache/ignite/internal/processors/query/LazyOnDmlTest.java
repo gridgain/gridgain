@@ -40,7 +40,6 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.internal.processors.query.h2.H2LocalResultFactory;
 import org.apache.ignite.internal.processors.query.h2.H2ManagedLocalResult;
-import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
 import org.h2.engine.Session;
 import org.h2.expression.Expression;
 import org.h2.result.LocalResult;
@@ -171,6 +170,11 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
             "UNION ALL " +
             "SELECT 31, 24, 'TWO-FOUR'");
 
+        for (H2ManagedLocalResult res : localResults) {
+            if (res.memoryTracker() != null)
+                res.memoryTracker().close();
+        }
+
         localResults.clear();
     }
 
@@ -208,6 +212,11 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
 
         }
         finally {
+            for (H2ManagedLocalResult res : localResults) {
+                if (res.memoryTracker() != null)
+                    res.memoryTracker().close();
+            }
+
             localResults.clear();
         }
     }
@@ -330,14 +339,10 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
             if (system)
                 return new LocalResultImpl(ses, expressions, visibleColCnt);
 
-            H2MemoryTracker memoryTracker = ses.memoryTracker();
-
-            if (memoryTracker != null) {
-                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, memoryTracker, expressions, visibleColCnt) {
+            if (ses.memoryTracker() != null) {
+                H2ManagedLocalResult res = new H2ManagedLocalResult(ses, expressions, visibleColCnt) {
                     @Override public void onClose() {
                         // Just prevent 'rows' from being nullified for test purposes.
-
-                        memoryTracker().released(memoryReserved());
                     }
                 };
 
@@ -346,7 +351,7 @@ public class LazyOnDmlTest extends AbstractIndexingCommonTest {
                 return res;
             }
 
-            return new H2ManagedLocalResult(ses, null, expressions, visibleColCnt);
+            return new H2ManagedLocalResult(ses, expressions, visibleColCnt);
         }
 
         /** {@inheritDoc} */

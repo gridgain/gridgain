@@ -22,6 +22,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.h2.H2MemoryTracker;
+import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.spi.metric.LongMetric;
 import org.apache.ignite.spi.metric.Metric;
 import org.junit.After;
@@ -79,13 +80,13 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         assertEquals(0, longMetricValue(0, "requests"));
         assertEquals(0, longMetricValue(1, "requests"));
 
-        long dfltSqlGlobQuota = (long)(Runtime.getRuntime().maxMemory() * 0.6);
+        long dfltSqlGlobQuota = IgniteUtils.parseBytes("60%");
 
-        assertEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"));
-        assertEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"));
+        assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(0, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
+        assertTrue(almostEquals(dfltSqlGlobQuota, longMetricValue(1, "maxMem"), (long)(dfltSqlGlobQuota * 0.05)));
 
-        assertEquals(dfltSqlGlobQuota, longMetricValue(0, "freeMem"));
-        assertEquals(dfltSqlGlobQuota, longMetricValue(1, "freeMem"));
+        assertEquals(longMetricValue(0, "maxMem"), longMetricValue(0, "freeMem"));
+        assertEquals(longMetricValue(1, "maxMem"), longMetricValue(1, "freeMem"));
     }
 
     /**
@@ -229,7 +230,7 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
     public void testAllMetricsIfMemoryQuotaIsUnlimited() throws Exception {
         final MemValidator quotaUnlim = (free, max) -> {
             assertEquals(0, max);
-            assertEquals(max, free);
+            assertTrue(0 >= free);
         };
 
         int connNodeIdx = 1;
@@ -240,18 +241,19 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
 
         IgniteCache cache = createCacheFrom(grid(connNodeIdx));
 
-        final String scanQry = "SELECT * FROM TAB WHERE ID <> suspendHook(5)";
+        final SqlFieldsQuery scanQry = new SqlFieldsQuery("SELECT * FROM TAB WHERE ID <> suspendHook(5)");
 
         IgniteInternalFuture distQryIsDone =
-            runAsyncX(() -> cache.query(new SqlFieldsQuery(scanQry)).getAll());
+            runAsyncX(() -> cache.query(scanQry).getAll());
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.awaitQueryStopsInTheMiddle();
 
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        // we don't track memory for lazy queries for now
+        assertEquals(scanQry.isLazy() ? 0 : 1, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 1, longMetricValue(otherNodeIdx, "requests"));
 
         SqlStatisticsAbstractTest.SuspendQuerySqlFunctions.resumeQueryExecution();
 
@@ -260,8 +262,8 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         validateMemoryUsageOn(connNodeIdx, quotaUnlim);
         validateMemoryUsageOn(otherNodeIdx, quotaUnlim);
 
-        assertEquals(0, longMetricValue(connNodeIdx, "requests"));
-        assertEquals(0, longMetricValue(otherNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 3, longMetricValue(connNodeIdx, "requests"));
+        assertEquals(scanQry.isLazy() ? 0 : 3, longMetricValue(otherNodeIdx, "requests"));
     }
 
     /**
@@ -298,6 +300,17 @@ public class SqlStatisticsMemoryQuotaTest extends SqlStatisticsAbstractTest {
         Assert.assertTrue("Expected long metric, but got "+ metric.getClass(),  metric instanceof LongMetric);
 
         return ((LongMetric)metric).value();
+    }
+
+    /**
+     * @param l1 First number.
+     * @param l2 Second number.
+     * @param error Max difference between numbers.
+     *
+     * @return {@code true} if the numbers differ from each other no more than {@code error}.
+     */
+    private boolean almostEquals(long l1, long l2, long error) {
+        return Math.max(l1, l2) - Math.min(l1, l2) <= Math.abs(error);
     }
 
 
