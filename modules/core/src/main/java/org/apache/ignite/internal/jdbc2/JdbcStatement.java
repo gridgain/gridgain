@@ -111,7 +111,13 @@ public class JdbcStatement implements Statement {
         boolean loc = nodeId == null;
         JdbcQueryMultipleStatementsTask qryTask;
 
-        if (!conn.isMultipleStatementsAllowed() && conn.isMultipleStatementsTaskV2Supported()) {
+        if (conn.isMultipleStatementsTaskV3Supported()) {
+            qryTask = new JdbcQueryMultipleStatementsTaskV3(loc ? ignite : null, conn.schemaName(),
+                sql, isQuery, loc, getArgs(), fetchSize, conn.getQueryMaxMemory(), conn.isLocalQuery(),
+                conn.isCollocatedQuery(), conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy(),
+                conn.isMultipleStatementsAllowed(), conn.queryInitiatorId());
+        }
+        else if (!conn.isMultipleStatementsAllowed() && conn.isMultipleStatementsTaskV2Supported()) {
             qryTask = new JdbcQueryMultipleStatementsNotAllowTask(loc ? ignite : null, conn.schemaName(),
                 sql, isQuery, loc, getArgs(), fetchSize, conn.getQueryMaxMemory(), conn.isLocalQuery(),
                 conn.isCollocatedQuery(), conn.isDistributedJoins(), conn.isEnforceJoinOrder(), conn.isLazy());
@@ -233,6 +239,8 @@ public class JdbcStatement implements Statement {
      * @throws SQLException On error.
      */
     void closeInternal() throws SQLException {
+        closeResults();
+
         closeResults();
 
         closed = true;

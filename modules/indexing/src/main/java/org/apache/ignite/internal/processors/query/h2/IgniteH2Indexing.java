@@ -489,7 +489,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2TableDescriptor tbl = schemaMgr.tableForType(schemaName, cacheName, typeName);
 
         if (tbl != null && tbl.luceneIndex() != null) {
-            Long qryId = runningQueryManager().register(qry, TEXT, schemaName, true, null, null);
+            Long qryId = runningQueryManager().register(
+                qry,
+                TEXT,
+                schemaName,
+                true,
+                null,
+                null,
+                SqlFieldsQuery.threadedQueryInitiatorId());
 
             Throwable failReason = null;
             try {
@@ -691,7 +698,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     @SuppressWarnings({"unchecked"})
     private long streamQuery0(String qry, String schemaName, IgniteDataStreamer streamer, QueryParserResultDml dml,
         final Object[] args) throws IgniteCheckedException {
-        Long qryId = runningQryMgr.register(qry, GridCacheQueryType.SQL_FIELDS, schemaName, true, null, null);
+        Long qryId = runningQryMgr.register(
+            qry,
+            GridCacheQueryType.SQL_FIELDS,
+            schemaName,
+            true,
+            null,
+            null,
+            SqlFieldsQuery.threadedQueryInitiatorId());
 
         Exception failReason = null;
 
@@ -1552,7 +1566,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.schemaName(),
             qryDesc.local(),
             memoryMgr.createQueryMemoryTracker(qryParams.maxMemory()),
-            cancel
+            cancel,
+            qryDesc.queryInitiatorId()
         );
     }
 

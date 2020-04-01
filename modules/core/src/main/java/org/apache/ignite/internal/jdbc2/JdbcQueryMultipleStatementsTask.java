@@ -30,6 +30,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.cache.query.SqlFieldsQueryEx;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
@@ -128,6 +129,9 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
             .setLazy(lazy)
             .setSchema(schemaName);
 
+        if (!F.isEmpty(queryInitiatorId()))
+            qry.setQueryInitiatorId(queryInitiatorId());
+
         GridKernalContext ctx = ((IgniteKernal)ignite).context();
 
         List<FieldsQueryCursor<List<?>>> curs = ctx.query().querySqlFields(
@@ -184,5 +188,12 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
      */
     protected boolean allowMultipleStatements() {
         return true;
+    }
+
+    /**
+     * @return {@code true} if query with multiple statements is allowed.
+     */
+    protected String queryInitiatorId() {
+        return null;
     }
 }
