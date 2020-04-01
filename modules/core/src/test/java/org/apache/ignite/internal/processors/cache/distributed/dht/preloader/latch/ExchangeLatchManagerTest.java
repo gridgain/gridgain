@@ -15,21 +15,17 @@
  */
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch;
 
-import com.sun.source.tree.AssertTree;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridTopic;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
-import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.managers.communication.GridIoPolicy;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -40,7 +36,9 @@ import org.junit.Test;
  * Tests for {@link ExchangeLatchManager} functionality when latch coordinator is failed.
  */
 public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
-    /** */
+    /**
+     *
+     */
     private static final String LATCH_NAME = "test";
 
     /** Message are meaning that node getting a stale acknowledge message. */
@@ -57,6 +55,20 @@ public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
         return super.getConfiguration(igniteInstanceName)
             .setGridLogger(gridLogger)
             .setCommunicationSpi(new TestRecordingCommunicationSpi());
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        stopAllGrids();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
+        stopAllGrids();
     }
 
     /**
