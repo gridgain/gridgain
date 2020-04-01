@@ -24,6 +24,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.ConnectionManager;
 import org.apache.ignite.internal.processors.query.h2.H2PooledConnection;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
@@ -174,17 +175,34 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
      * @throws Exception On failed.
      */
     @Test
-    public void testCurrentTimestampFunc() throws Exception {
+    public void testSingleRowInsertWithNotConstantValues() throws Exception {
         startGridAndPopulateCache(1);
 
         sql(grid(0), "CREATE TABLE TEST_F(ID INT PRIMARY KEY, TS TIMESTAMP)");
 
-        sql(grid(0),"INSERT INTO TEST_F VALUES (?, NULL)", 0);
-//        sql(grid(0),"INSERT INTO TEST_F VALUES (?, CURRENT_TIMESTAMP())", 0);
+        sql(grid(0),"INSERT INTO TEST_F VALUES (?, CURRENT_TIMESTAMP())", 0);
 
         checkConnectionLeaks();
     }
 
+    /**
+     * @throws Exception On failed.
+     */
+    @Test
+    public void testMultipleRowsInsertWithNotConstantValuesAndError() throws Exception {
+        startGridAndPopulateCache(1);
+
+        sql(grid(0), "CREATE TABLE TEST_F(ID INT PRIMARY KEY, TS TIMESTAMP)");
+
+        GridTestUtils.assertThrows(log, () -> sql(grid(0), "INSERT INTO TEST_F VALUES " +
+                    "(?, CURRENT_TIMESTAMP()), " +
+                    "(?, CURRENT_TIMESTAMP()), " +
+                    "(?, CURRENT_TIMESTAMP())",
+                0, "FAIL", 1),
+            IgniteSQLException.class, "Data conversion error converting");
+
+        checkConnectionLeaks();
+    }
 
     /**
      * @throws Exception On error.
@@ -240,7 +258,7 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
     /**
      */
     private List<List<?>> sql(IgniteEx ign, String sql, Object... params) {
-        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql).setArgs(params), false).getAll();
+        return ign.context().query().querySqlFields(new SqlFieldsQuery(sql).setLazy(true).setArgs(params), false).getAll();
     }
 
 }
