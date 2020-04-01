@@ -25,8 +25,8 @@ public class QueryArgument {
     /** Query ID. */
     private String qryId;
 
-    /** Cache name for query. */
-    private String cacheName;
+    /** Schema for the query. */
+    private String defaultSchema;
 
     /** Query text. */
     private String qryTxt;
@@ -70,18 +70,18 @@ public class QueryArgument {
     }
 
     /**
-     * @return Cache name.
+     * @return Schema for the query.
      */
-    public String getCacheName() {
-        return cacheName;
+    public String getDefaultSchema() {
+        return defaultSchema;
     }
 
     /**
-     * @param cacheName Cache name.
+     * @param defaultSchema Schema for the query.
      * @return {@code This} for chaining method calls.
      */
-    public QueryArgument setCacheName(String cacheName) {
-        this.cacheName = cacheName;
+    public QueryArgument setDefaultSchema(String defaultSchema) {
+        this.defaultSchema = defaultSchema;
 
         return this;
     }

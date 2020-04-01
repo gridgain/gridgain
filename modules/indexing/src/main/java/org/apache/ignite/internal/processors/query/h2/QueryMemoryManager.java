@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.persistence.file.AsyncFileIOF
 import org.apache.ignite.internal.processors.cache.persistence.file.FileIOFactory;
 import org.apache.ignite.internal.processors.cache.persistence.file.RandomAccessFileIOFactory;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
+import org.apache.ignite.internal.processors.query.GridQueryMemoryMetricProvider;
 import org.apache.ignite.internal.processors.query.IgniteSQLException;
 import org.apache.ignite.internal.processors.query.h2.disk.ExternalResultData;
 import org.apache.ignite.internal.processors.query.h2.disk.GroupedExternalResult;
@@ -119,39 +120,35 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @param ctx Kernal context.
      */
     public QueryMemoryManager(GridKernalContext ctx) {
-        this.log = ctx.log(QueryMemoryManager.class);
         this.ctx = ctx;
 
+        log = ctx.log(QueryMemoryManager.class);
+
         setGlobalQuota(ctx.config().getSqlGlobalMemoryQuota());
-
-        if (Runtime.getRuntime().maxMemory() <= globalQuota)
-            throw new IllegalStateException("Sql memory pool size can't be more than heap memory max size.");
-
         setQueryQuota(ctx.config().getSqlQueryMemoryQuota());
-        this.offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
-        this.metrics = new SqlMemoryStatisticsHolder(this, ctx.metric());
-        this.blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
+
+        offloadingEnabled = ctx.config().isSqlOffloadingEnabled();
+        metrics = new SqlMemoryStatisticsHolder(this, ctx.metric());
+        blockSize = Long.getLong(IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE,
             DFLT_MEMORY_RESERVATION_BLOCK_SIZE);
 
         final FileIOFactory delegateFactory =
-        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
+            IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_USE_ASYNC_FILE_IO_FACTORY, true) ?
             new AsyncFileIOFactory() : new RandomAccessFileIOFactory();
 
         fileIOFactory = new TrackableFileIoFactory(delegateFactory, metrics);
 
-        A.ensure(globalQuota >= 0, "Sql global memory quota must be >= 0. But was " + globalQuota);
-        A.ensure(qryQuota >= 0, "Sql query memory quota must be >= 0. But was " + qryQuota);
-        A.ensure(blockSize > 0, "Block size must be > 0. But was " + blockSize);
+        A.ensure(blockSize > 0, "Block size must be > 0: blockSize=" + blockSize);
     }
 
     /** {@inheritDoc} */
-    @Override public boolean reserved(long size) {
+    @Override public boolean reserve(long size) {
         if (size == 0)
             return true; // Nothing to do.
 
         long reserved0 = reserved.addAndGet(size);
 
-        if (reserved0 >= globalQuota)
+        if (globalQuota > 0 && reserved0 >= globalQuota)
             return onQuotaExceeded(size);
 
         metrics.trackReserve();
@@ -160,7 +157,7 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     }
 
     /** {@inheritDoc} */
-    @Override public void released(long size) {
+    @Override public void release(long size) {
         assert size >= 0;
 
         if (size == 0)
@@ -174,48 +171,35 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
     /**
      * Query memory tracker factory method.
      *
-     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#qryQuota}  will be used.
-     * Note: Negative values are reserved for disable memory tracking.
+     * Note: If 'maxQueryMemory' is zero, then {@link QueryMemoryManager#qryQuota} will be used.
      *
      * @param maxQryMemory Query memory limit in bytes.
-     * @param qryDesc Query descriptor.
      * @return Query memory tracker.
      */
-    public QueryMemoryTracker createQueryMemoryTracker(long maxQryMemory, String qryDesc) {
-        assert maxQryMemory >= 0;
-
-        if (maxQryMemory == 0)
-            maxQryMemory = qryQuota;
-
+    public GridQueryMemoryMetricProvider createQueryMemoryTracker(long maxQryMemory) {
         long globalQuota0 = globalQuota;
-
-        if (maxQryMemory == 0 && globalQuota0 == 0) {
-            if (log.isDebugEnabled()) {
-                log.debug("No memory quota configured for the query. " +
-                    "It will be executed without memory tracking: "  + qryDesc);
-            }
-
-            return null;
-        }
 
         if (globalQuota0 > 0 && globalQuota0 < maxQryMemory) {
             if (log.isInfoEnabled()) {
-                LT.info(log, "Max query memory can't exceed SQL memory pool size. Will be reduced down to: " +
-                    globalQuota);
+                LT.info(log, "Query memory quota cannot exceed global memory quota." +
+                    " It will be reduced to the size of global quota: " + globalQuota0);
             }
 
             maxQryMemory = globalQuota0;
         }
 
-        H2MemoryTracker parent = globalQuota0 == 0 ? null : this;
+        if (maxQryMemory == 0)
+            maxQryMemory = globalQuota0 > 0 ? Math.min(qryQuota, globalQuota0) : qryQuota;
 
-        if (log.isDebugEnabled()) {
-            log.debug("Started query with memory tracking parameters [queryQuota=" + maxQryMemory +
-                ", globalQuota=" + globalQuota0 + ", offloadingEnabled=" + offloadingEnabled +
-                ", query=" + qryDesc + ']');
-        }
+        if (maxQryMemory < 0)
+            maxQryMemory = 0;
 
-        return new QueryMemoryTracker(log, parent, maxQryMemory, blockSize, offloadingEnabled, qryDesc);
+        QueryMemoryTracker tracker = new QueryMemoryTracker(this, maxQryMemory, blockSize, offloadingEnabled);
+
+        if (log.isDebugEnabled())
+            log.debug("Memory tracker created: " + tracker);
+
+        return tracker;
     }
 
     /**
@@ -239,7 +223,18 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @param newGlobalQuota New global query quota.
      */
     public synchronized void setGlobalQuota(String newGlobalQuota) {
-        this.globalQuota = U.parseBytes(newGlobalQuota);
+        long globalQuota0 = U.parseBytes(newGlobalQuota);
+        long heapSize = Runtime.getRuntime().maxMemory();
+
+        A.ensure(
+            heapSize > globalQuota0,
+            "Sql global memory quota can't be more than heap size: heapSize="
+                + heapSize + ", quotaSize=" + globalQuota0
+        );
+
+        A.ensure(globalQuota0 >= 0, "Sql global memory quota must be >= 0: quotaSize=" + globalQuota0);
+
+        globalQuota = globalQuota0;
 
         if (log.isInfoEnabled()) {
             log.info("SQL query global quota was set to " + globalQuota +  ". Current memory tracking parameters: " +
@@ -261,7 +256,11 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @param newQryQuota New per-query quota.
      */
     public synchronized void setQueryQuota(String newQryQuota) {
-        this.qryQuota = U.parseBytes(newQryQuota);
+        long qryQuota0 = U.parseBytes(newQryQuota);
+
+        A.ensure(qryQuota0 >= 0, "Sql query memory quota must be >= 0: quotaSize=" + qryQuota0);
+
+        qryQuota = U.parseBytes(newQryQuota);
 
         if (log.isInfoEnabled()) {
             log.info("SQL query memory quota was set to " + qryQuota +  ". Current memory tracking parameters: " +
@@ -304,14 +303,26 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
         return offloadingEnabled;
     }
 
-    /** {@inheritDoc} */
-    @Override public long memoryReserved() {
+    /**
+     * @return Bytes reserved by all queries.
+     */
+    @Override public long reserved() {
         return reserved.get();
     }
 
-    /** {@inheritDoc} */
-    @Override public long memoryLimit() {
+    /** */
+    public long memoryLimit() {
         return globalQuota;
+    }
+
+    /** {@inheritDoc} */
+    @Override public void spill(long size) {
+        // NO-OP
+    }
+
+    /** {@inheritDoc} */
+    @Override public void unspill(long size) {
+        // NO-OP
     }
 
     /** {@inheritDoc} */
@@ -324,12 +335,39 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
 
     /** {@inheritDoc} */
     @Override public void incrementFilesCreated() {
-        throw new AssertionError("Should not be called.");
+        // NO-OP
     }
 
     /** {@inheritDoc} */
-    @Override public void addTotalWrittenOnDisk(long written) {
-        throw new AssertionError("Should not be called.");
+    @Override public H2MemoryTracker createChildTracker() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long writtenOnDisk() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long totalWrittenOnDisk() {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onChildClosed(H2MemoryTracker child) {
+        throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public boolean closed() {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * @return Global quota.
+     */
+    public long globalQuota() {
+        return globalQuota;
     }
 
     /** */
@@ -430,13 +468,13 @@ public class QueryMemoryManager implements H2MemoryTracker, ManagedGroupByDataFa
      * @return Created external data (offload file wrapper).
      */
     public <T> ExternalResultData<T> createExternalData(Session ses, boolean useHashIdx, long initSize, Class<T> cls) {
-        QueryMemoryTracker tracker = (QueryMemoryTracker)ses.memoryTracker();
+        H2MemoryTracker tracker = ses.memoryTracker();
 
         if (tracker.totalWrittenOnDisk() == 0) {
             metrics.trackQueryOffloaded();
 
             if (log.isInfoEnabled())
-                LT.info(log, "Started offloading for query: " + tracker.queryDescriptor());
+                LT.info(log, "Offloading started for query: " + ses.queryDescription());
         }
 
         return new ExternalResultData<T>(log,

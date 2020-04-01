@@ -16,62 +16,87 @@
 
 package org.apache.ignite.internal.processors.query.h2;
 
-import java.util.Objects;
-import java.util.TimeZone;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.GridKernalContext;
-import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationLifecycleListener;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.subscription.GridInternalSubscriptionProcessor;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
-import org.apache.ignite.lang.IgniteInClosure;
-import org.h2.util.DateTimeUtils;
+
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.makeUpdateListener;
+import static org.apache.ignite.internal.cluster.DistributedConfigurationUtils.setDefaultValue;
 
 /**
  * Distributed configuration of the indexing module.
  */
 public class DistributedSqlConfiguration {
-    /** */
-    private final IgniteLogger log;
+    /** Property update message. */
+    private static final String PROPERTY_UPDATE_MESSAGE =
+        "SQL parameter '%s' was changed from '%s' to '%s'";
+
+    /** Default disabled SQL functions. */
+    public static final HashSet<String> DFLT_DISABLED_FUNCS = (HashSet<String>)Arrays.stream(new String[] {
+        "FILE_READ",
+        "FILE_WRITE",
+        "CSVWRITE",
+        "CSVREAD",
+        "MEMORY_FREE",
+        "MEMORY_USED",
+        "LOCK_MODE",
+        "LINK_SCHEMA",
+        "SESSION_ID",
+        "CANCEL_SESSION"
+    }).collect(Collectors.toSet());
+
+    /** Disabled SQL functions. */
+    private final SimpleDistributedProperty<HashSet<String>> disabledSqlFuncs
+        = new SimpleDistributedProperty<>("sql.disabledFunctions");
 
     /** Value of cluster time zone. */
     private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sqlTimeZone");
 
     /**
      * @param isp Subscription processor.
-     * @param ctx Kernal context.
+     * @param log Logger.
      */
     public DistributedSqlConfiguration(
         GridInternalSubscriptionProcessor isp,
-        GridKernalContext ctx,
         IgniteLogger log
     ) {
-        this.log = log;
-
         isp.registerDistributedConfigurationListener(
             new DistributedConfigurationLifecycleListener() {
                 @Override public void onReadyToRegister(DistributedPropertyDispatcher dispatcher) {
+                    disabledSqlFuncs.addListener(makeUpdateListener(PROPERTY_UPDATE_MESSAGE, log));
+
                     timeZone.addListener((name, oldTz, newTz) -> {
                         if (!Objects.equals(oldTz, newTz))
                             DateTimeUtils.setTimeZone(newTz);
                     });
 
-                    dispatcher.registerProperties(timeZone);
+                    dispatcher.registerProperties(disabledSqlFuncs, timeZone);
                 }
 
                 @Override public void onReadyToWrite() {
+                    setDefaultValue(
+                        disabledSqlFuncs,
+                        DFLT_DISABLED_FUNCS,
+                        log);
+
                     TimeZone tz = timeZone.get();
 
                     if (tz == null) {
                         try {
                             timeZone.propagateAsync(null, TimeZone.getDefault())
                                 .listen((IgniteInClosure<IgniteInternalFuture<?>>)future -> {
-                                if (future.error() != null)
-                                    log.error("Cannot set default value of '" + timeZone.getName() + '\'', future.error());
-                            });
+                                    if (future.error() != null)
+                                        log.error("Cannot set default value of '" + timeZone.getName() + '\'', future.error());
+                                });
                         }
                         catch (IgniteCheckedException e) {
                             log.error("Cannot initiate setting default value of '" + timeZone.getName() + '\'', e);
@@ -89,6 +114,29 @@ public class DistributedSqlConfiguration {
                 }
             }
         );
+    }
+
+    /**
+     * @return Disabled SQL functions.
+     */
+    public Set<String> disabledFunctions() {
+        Set<String> ret = disabledSqlFuncs.get();
+
+        return ret != null ? ret : DFLT_DISABLED_FUNCS;
+    }
+
+    /**
+     * @param disabledFuncs Set of disabled functions.
+     * @throws IgniteCheckedException if failed.
+     */
+    public GridFutureAdapter<?> disabledFunctions(HashSet<String> disabledFuncs)
+        throws IgniteCheckedException {
+        return disabledSqlFuncs.propagateAsync(disabledFuncs);
+    }
+
+    /** */
+    public void listenDisabledFunctions(DistributePropertyListener<? super HashSet<String>> lsnr) {
+        disabledSqlFuncs.addListener(lsnr);
     }
 
     /**

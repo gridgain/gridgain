@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.query.h2.H2StatementCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
 import org.apache.ignite.internal.processors.query.h2.MapH2QueryInfo;
+import org.apache.ignite.internal.processors.query.h2.QueryMemoryTracker;
 import org.apache.ignite.internal.processors.query.h2.UpdateResult;
 import org.apache.ignite.internal.processors.query.h2.opt.GridH2RetryException;
 import org.apache.ignite.internal.processors.query.h2.opt.QueryContext;
@@ -214,7 +215,8 @@ public class GridMapQueryExecutor {
             ctx.closure().callLocal(
                 new GridPlainCallable<Void>() {
                     @Override public Void call() {
-                        onQueryRequest0(node,
+                        onQueryRequest0(
+                            node,
                             req.requestId(),
                             segment,
                             req.schemaName(),
@@ -232,7 +234,9 @@ public class GridMapQueryExecutor {
                             lazy,
                             req.mvccSnapshot(),
                             dataPageScanEnabled,
-                            req.maxMemory());
+                            req.maxMemory(),
+                            req.runningQryId()
+                        );
 
                         return null;
                     }
@@ -240,7 +244,8 @@ public class GridMapQueryExecutor {
                 QUERY_POOL);
         }
 
-        onQueryRequest0(node,
+        onQueryRequest0(
+            node,
             req.requestId(),
             0,
             req.schemaName(),
@@ -258,7 +263,9 @@ public class GridMapQueryExecutor {
             lazy,
             req.mvccSnapshot(),
             dataPageScanEnabled,
-            req.maxMemory());
+            req.maxMemory(),
+            req.runningQryId()
+        );
     }
 
     /**
@@ -281,6 +288,7 @@ public class GridMapQueryExecutor {
      * @param mvccSnapshot MVCC snapshot.
      * @param dataPageScanEnabled If data page scan is enabled.
      * @param maxMem Query memory limit.
+     * @param runningQryId Running query id.
      */
     private void onQueryRequest0(
         final ClusterNode node,
@@ -301,7 +309,9 @@ public class GridMapQueryExecutor {
         boolean lazy,
         @Nullable final MvccSnapshot mvccSnapshot,
         Boolean dataPageScanEnabled,
-        long maxMem) {
+        long maxMem,
+        @Nullable Long runningQryId
+    ) {
         // Prepare to run queries.
         GridCacheContext<?, ?> mainCctx = mainCacheContext(cacheIds);
 
@@ -406,7 +416,7 @@ public class GridMapQueryExecutor {
 
                         H2Utils.bindParameters(stmt, params0);
 
-                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId);
+                        MapH2QueryInfo qryInfo = new MapH2QueryInfo(stmt, qry.query(), node, reqId, segmentId, runningQryId);
 
                         ResultSet rs = h2.executeSqlQueryWithTimer(
                             stmt,
@@ -416,7 +426,8 @@ public class GridMapQueryExecutor {
                             qryResults.queryCancel(qryIdx),
                             dataPageScanEnabled,
                             qryInfo,
-                            maxMem);
+                            maxMem
+                        );
 
                         if (evt) {
                             ctx.event().record(new CacheQueryExecutedEvent<>(
@@ -492,7 +503,8 @@ public class GridMapQueryExecutor {
             else {
                 SQLException sqlEx = X.cause(e, SQLException.class);
 
-                if (sqlEx != null && sqlEx.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                if ((sqlEx != null && sqlEx.getErrorCode() == ErrorCode.STATEMENT_WAS_CANCELED)
+                    || (qryResults != null && qryResults.cancelled() && e instanceof QueryMemoryTracker.TrackerWasClosedException))
                     sendQueryCancel(node, reqId);
                 else {
                     GridH2RetryException retryErr = X.cause(e, GridH2RetryException.class);

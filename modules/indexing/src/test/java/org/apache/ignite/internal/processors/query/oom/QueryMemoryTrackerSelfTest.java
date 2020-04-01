@@ -43,7 +43,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
     /** {@inheritDoc} */
     @Test
     @Override public void testUnionOfSmallDataSetsWithLargeResult() {
-        maxMem = 2 * MB;
+        maxMem = 3 * MB;
 
         // OOM on reducer.
         checkQueryExpectOOM("select * from T as T0, T as T1 where T0.id < 1 " +
@@ -226,7 +226,7 @@ public class QueryMemoryTrackerSelfTest extends BasicQueryMemoryTrackerSelfTest 
 
             IgniteH2Indexing h2 = (IgniteH2Indexing)grid(1).context().query().getIndexing();
 
-            long globalAllocated = h2.memoryManager().memoryReserved();
+            long globalAllocated = h2.memoryManager().reserved();
 
             assertTrue(h2.memoryManager().memoryLimit() < globalAllocated + MB);
         }

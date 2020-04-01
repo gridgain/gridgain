@@ -52,6 +52,7 @@ import org.apache.ignite.internal.processors.cache.index.DynamicIndexReplicatedT
 import org.apache.ignite.internal.processors.cache.query.ScanQueryOffheapExpiryPolicySelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteChangingBaselineCacheQueryNodeRestartSelfTest;
 import org.apache.ignite.internal.processors.database.baseline.IgniteStableBaselineCacheQueryNodeRestartsSelfTest;
+import org.apache.ignite.internal.processors.query.DisabledSqlFunctionsTest;
 import org.apache.ignite.internal.processors.query.DmlBatchSizeDeadlockTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsCompareQueryTest;
 import org.apache.ignite.internal.processors.query.IgniteCacheGroupsSqlDistributedJoinSelfTest;
@@ -87,6 +88,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingBasicTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingDmlTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingGlobalQuotaTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingIoErrorTest;
+import org.apache.ignite.internal.processors.query.oom.DiskSpillingMemoryTrackerTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingLoggingTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingMultipleIndexesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingMultipleNodesTest;
@@ -94,6 +96,7 @@ import org.apache.ignite.internal.processors.query.oom.DiskSpillingPersistenceTe
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueriesTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingQueryParallelismTest;
 import org.apache.ignite.internal.processors.query.oom.DiskSpillingWithBaselineTest;
+import org.apache.ignite.internal.processors.query.oom.GridQueryMemoryMetricProviderSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerSelfTest;
 import org.apache.ignite.internal.processors.query.oom.LocalQueryMemoryTrackerWithQueryParallelismSelfTest;
 import org.apache.ignite.internal.processors.query.oom.MemoryQuotaDynamicConfigurationTest;
@@ -111,6 +114,8 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     UseOneTimeZoneForClusterTest.class,
+    DisabledSqlFunctionsTest.class,
+
     StatementCacheTest.class,
     ChooseIndexTest.class,
     LazyOnDmlTest.class,
@@ -221,9 +226,12 @@ import org.junit.runners.Suite;
     DiskSpillingDmlTest.class,
     SqlStatisticOffloadingTest.class,
     DiskSpillingLoggingTest.class,
+    DiskSpillingMemoryTrackerTest.class,
 
     GridCachePartitionedTxMultiNodeSelfTest.class,
     GridCacheReplicatedTxMultiNodeBasicTest.class,
+
+    GridQueryMemoryMetricProviderSelfTest.class,
 
     SqlPartOfComplexPkLookupTest.class,
 
