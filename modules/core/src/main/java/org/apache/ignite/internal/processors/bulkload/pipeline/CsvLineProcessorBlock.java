@@ -37,11 +37,11 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
      */
     private final char quoteChars;
 
-    private static final int READER_MODE_UNDEF = 0;
-    private static final int READER_MODE_QUOTED = 1;
-    private static final int READER_MODE_UNQUOTED = 2;
-    private static final int READER_MODE_QUOTED_STARTED = 4;
-    private static final int READER_MODE_QUOTED_EMPTY = 8;
+    private static final int READER_STATE_UNDEF = 0;
+    private static final int READER_STATE_QUOTED = 1;
+    private static final int READER_STATE_UNQUOTED = 2;
+    private static final int READER_STATE_QUOTED_STARTED = 4;
+    private static final int READER_STATE_QUOTED_EMPTY = 8;
 
     /**
      * Creates a CSV line parser.
@@ -63,7 +63,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
         StringBuilder currentField = new StringBuilder(256);
         final int length = input.length();
         int copy = 0;
-        int readerMode = READER_MODE_UNDEF;
+        int readerState = READER_STATE_UNDEF;
 
         int current = 0;
         int prev = -1;
@@ -80,14 +80,14 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
 
             final char c = input.charAt(current++);
 
-            if ((readerMode & READER_MODE_QUOTED_STARTED) != 0) {
+            if ((readerState & READER_STATE_QUOTED_STARTED) != 0) {
                 if (c == quoteChars) {
-                    readerMode &= ~READER_MODE_QUOTED_STARTED;
+                    readerState &= ~READER_STATE_QUOTED_STARTED;
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
                         copy = 0;
                     } else {
-                        readerMode |= READER_MODE_QUOTED_EMPTY;
+                        readerState |= READER_STATE_QUOTED_EMPTY;
                     }
                     copyStart = current;
                 } else {
@@ -102,9 +102,9 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                     fields.add(currentField.toString().trim());
                     currentField = new StringBuilder();
                     copyStart = current;
-                    readerMode = READER_MODE_UNDEF;
-                } else if (c == quoteChars && (readerMode & READER_MODE_UNQUOTED) == 0) {
-                    readerMode = READER_MODE_QUOTED | READER_MODE_QUOTED_STARTED;
+                    readerState = READER_STATE_UNDEF;
+                } else if (c == quoteChars && (readerState & READER_STATE_UNQUOTED) == 0) {
+                    readerState = READER_STATE_QUOTED | READER_STATE_QUOTED_STARTED;
                     if (prev == quoteChars) {
                         copy++;
                     } else {
@@ -112,8 +112,8 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                     }
                 } else {
                     copy++;
-                    if (readerMode == READER_MODE_UNDEF) {
-                        readerMode = READER_MODE_UNQUOTED;
+                    if (readerState == READER_STATE_UNDEF) {
+                        readerState = READER_STATE_UNQUOTED;
                     }
                 }
             }

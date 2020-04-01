@@ -317,7 +317,8 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports four-entry CSV file with default delimiter into a table and checks that
+     * the entry is created using SELECT statement.
      *
      * @throws SQLException If failed.
      */
@@ -334,7 +335,8 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports four-entry CSV file with comma delimiter into a table and checks that
+     * the entry is created using SELECT statement.
      *
      * @throws SQLException If failed.
      */
@@ -351,7 +353,8 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Imports four-entry CSV file with pipe delimiter into a table and checks that
+     * the entry is created using SELECT statement.
      *
      * @throws SQLException If failed.
      */
