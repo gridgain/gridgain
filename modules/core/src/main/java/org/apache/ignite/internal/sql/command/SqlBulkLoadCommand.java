@@ -26,6 +26,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.apache.ignite.internal.sql.SqlParserUtils.error;
 import static org.apache.ignite.internal.sql.SqlParserUtils.errorUnexpectedToken;
@@ -177,6 +178,16 @@ public class SqlBulkLoadCommand implements SqlCommand {
                     String charsetName = parseString(lex);
 
                     format.inputCharsetName(charsetName);
+
+                    break;
+                }
+
+                case SqlKeyword.DELIMITER: {
+                    lex.shift();
+
+                    String delimiter = parseString(lex);
+
+                    format.fieldSeparator(Pattern.compile(delimiter));
 
                     break;
                 }

@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.bulkload.pipeline;
 
 import org.apache.ignite.IgniteCheckedException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -25,47 +27,100 @@ import java.util.regex.Pattern;
  * The next block {@link PipelineBlock#accept(Object, boolean)} is called per-line.
  */
 public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
-    /** Field delimiter pattern. */
-    private final Pattern fldDelim;
+    /**
+     * Field delimiter pattern.
+     */
+    private final char fldDelim;
 
-    /** Quote character. */
-    private final String quoteChars;
+    /**
+     * Quote character.
+     */
+    private final char quoteChars;
+
+    private static final int READER_MODE_UNDEF = 0;
+    private static final int READER_MODE_QUOTED = 1;
+    private static final int READER_MODE_UNQUOTED = 2;
+    private static final int READER_MODE_QUOTED_STARTED = 4;
+    private static final int READER_MODE_QUOTED_EMPTY = 8;
 
     /**
      * Creates a CSV line parser.
      *
-     * @param fldDelim The pattern for the field delimiter.
+     * @param fldDelim   The pattern for the field delimiter.
      * @param quoteChars Quoting character.
      */
     public CsvLineProcessorBlock(Pattern fldDelim, String quoteChars) {
-        this.fldDelim = fldDelim;
-        this.quoteChars = quoteChars;
-    }
-
-    /** {@inheritDoc} */
-    @Override public void accept(String input, boolean isLastPortion) throws IgniteCheckedException {
-        // Currently we don't process quoted field delimiter properly, will be fixed in IGNITE-7537.
-        String[] fields = fldDelim.split(input);
-
-        for (int i = 0; i < fields.length; i++)
-            fields[i] = trim(fields[i]);
-
-        nextBlock.accept(fields, isLastPortion);
+        this.fldDelim = fldDelim.toString().charAt(0);
+        this.quoteChars = quoteChars.charAt(0);
     }
 
     /**
-     * Trims quote characters from beginning and end of the line.
-     *
-     * @param str String to trim.
-     * @return The trimmed string.
+     * {@inheritDoc}
      */
-    private String trim(String str) {
-        if (str.isEmpty())
-            return null;
+    @Override
+    public void accept(String input, boolean isLastPortion) throws IgniteCheckedException {
+        List<String> fields = new ArrayList<>();
+        StringBuilder currentField = new StringBuilder(256);
+        final int length = input.length();
+        int copy = 0;
+        int readerMode = READER_MODE_UNDEF;
 
-        int startPos = quoteChars.indexOf(str.charAt(0)) != -1 ? 1 : 0;
-        int endPos = quoteChars.indexOf(str.charAt(str.length() - 1)) != -1 ? str.length() - 1 : str.length();
+        int current = 0;
+        int prev = -1;
+        int copyStart = 0;
+        while (true) {
+            if (current == length) {
+                if ( copy > 0) {
+                    currentField.append(input, copyStart, copyStart + copy);
+                }
 
-        return str.substring(startPos, endPos);
+                fields.add(currentField.toString().trim());
+                break;
+            }
+
+            final char c = input.charAt(current++);
+
+            if ((readerMode & READER_MODE_QUOTED_STARTED) != 0) {
+                if (c == quoteChars) {
+                    readerMode &= ~READER_MODE_QUOTED_STARTED;
+                    if (copy > 0) {
+                        currentField.append(input, copyStart, copyStart + copy);
+                        copy = 0;
+                    } else {
+                        readerMode |= READER_MODE_QUOTED_EMPTY;
+                    }
+                    copyStart = current;
+                } else {
+                    copy++;
+                }
+            } else {
+                if (c == fldDelim) {
+                    if (copy > 0) {
+                        currentField.append(input, copyStart, copyStart + copy);
+                        copy = 0;
+                    }
+                    fields.add(currentField.toString().trim());
+                    currentField = new StringBuilder();
+                    copyStart = current;
+                    readerMode = READER_MODE_UNDEF;
+                } else if (c == quoteChars && (readerMode & READER_MODE_UNQUOTED) == 0) {
+                    readerMode = READER_MODE_QUOTED | READER_MODE_QUOTED_STARTED;
+                    if (prev == quoteChars) {
+                        copy++;
+                    } else {
+                        copyStart = current;
+                    }
+                } else {
+                    copy++;
+                    if (readerMode == READER_MODE_UNDEF) {
+                        readerMode = READER_MODE_UNQUOTED;
+                    }
+                }
+            }
+
+            prev = c;
+        }
+
+        nextBlock.accept(fields.toArray(new String[0]), isLastPortion);
     }
 }

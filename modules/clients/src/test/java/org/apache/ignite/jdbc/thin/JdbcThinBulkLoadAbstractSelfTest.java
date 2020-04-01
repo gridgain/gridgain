@@ -78,6 +78,14 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     private static final String BULKLOAD_CP1251_CSV_FILE =
         Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload2_windows1251.csv")).getAbsolutePath();
 
+    /** A CSV file in windows-1251. */
+    private static final String BULKLOAD_RFC4180_COMMA_CSV_FILE =
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_comma.csv")).getAbsolutePath();
+
+    /** A CSV file in windows-1251. */
+    private static final String BULKLOAD_RFC4180_PIPE_CSV_FILE_ =
+            Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_pipe.csv")).getAbsolutePath();
+
     /** Basic COPY statement used in majority of the tests. */
     public static final String BASIC_SQL_COPY_STMT =
         "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
@@ -306,6 +314,57 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
         assertEquals(2, updatesCnt);
 
         checkCacheContents(TBL_NAME, true, 2);
+    }
+
+    /**
+     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testCsvLoadWithDefaultDelimiter() throws SQLException {
+        int updatesCnt = stmt.executeUpdate(
+                "copy from '" + BULKLOAD_RFC4180_COMMA_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
+
+        assertEquals(4, updatesCnt);
+
+        checkCacheContents(TBL_NAME, true, 4);
+    }
+
+    /**
+     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testCsvLoadWithCommaDelimiter() throws SQLException {
+        int updatesCnt = stmt.executeUpdate(
+                "copy from '" + BULKLOAD_RFC4180_COMMA_CSV_FILE + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv delimiter ','");
+
+        assertEquals(4, updatesCnt);
+
+        checkCacheContents(TBL_NAME, true, 4, ',');
+    }
+
+    /**
+     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testCsvLoadWithPipeDelimiter() throws SQLException {
+        int updatesCnt = stmt.executeUpdate(
+                "copy from '" + BULKLOAD_RFC4180_PIPE_CSV_FILE_ + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv delimiter '|'");
+
+        assertEquals(4, updatesCnt);
+
+        checkCacheContents(TBL_NAME, true, 4, '|');
     }
 
     /**
@@ -740,6 +799,20 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
      * @throws SQLException When one of checks has failed.
      */
     private void checkCacheContents(String tblName, boolean checkLastName, int recCnt) throws SQLException {
+        checkCacheContents(tblName, checkLastName, recCnt, ',');
+    }
+
+    /**
+     * Checks cache contents after bulk loading data in the above tests: ASCII version.
+     * <p>
+     * Uses SQL SELECT command for querying entries.
+     *
+     * @param tblName Table name to query.
+     * @param checkLastName Check 'lastName' column (not imported in some tests).
+     * @param recCnt Number of records to expect.
+     * @throws SQLException When one of checks has failed.
+     */
+    private void checkCacheContents(String tblName, boolean checkLastName, int recCnt, char delimiter) throws SQLException {
         ResultSet rs = stmt.executeQuery("select _key, age, firstName, lastName from " + tblName);
 
         assert rs != null;
@@ -760,6 +833,18 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                 assertEquals("FirstName456", rs.getString("firstName"));
                 if (checkLastName)
                     assertEquals("LastName456", rs.getString("lastName"));
+            }
+            else if (id == 789) {
+                assertEquals(78, rs.getInt("age"));
+                assertEquals("FirstName789 plus \"quoted\"", rs.getString("firstName"));
+                if (checkLastName)
+                    assertEquals("LastName 789", rs.getString("lastName"));
+            }
+            else if (id == 101112) {
+                assertEquals(1011, rs.getInt("age"));
+                assertEquals("FirstName 101112", rs.getString("firstName"));
+                if (checkLastName)
+                    assertEquals("LastName"+delimiter + " 1011" + delimiter + " 12", rs.getString("lastName"));
             }
             else
                 fail("Wrong ID: " + id);
