@@ -25,16 +25,15 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
-import org.apache.ignite.util.GridCommandHandlerIndexingUtils.Person;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.CACHE_NAME;
 import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.GROUP_NAME;
-import static org.apache.ignite.util.GridCommandHandlerIndexingUtils.createAndFillCache;
 
 /**
  * If you not necessary create nodes for each test you can try use
@@ -53,7 +52,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         AtomicBoolean stopFlag = new AtomicBoolean();
 
-        IgniteCache<Integer, Person> cache = ignite.cache(CACHE_NAME);
+        IgniteCache<Integer, GridCommandHandlerIndexingUtils.Person> cache = ignite.cache(CACHE_NAME);
 
         Thread loadThread = new Thread(() -> {
             ThreadLocalRandom rnd = ThreadLocalRandom.current();
@@ -61,7 +60,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
             while (!stopFlag.get()) {
                 int id = rnd.nextInt();
 
-                cache.put(id, new Person(id, "name" + id));
+                cache.put(id, new GridCommandHandlerIndexingUtils.Person(id, "name" + id));
 
                 if (Thread.interrupted())
                     break;

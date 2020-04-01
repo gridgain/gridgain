@@ -436,6 +436,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     private void checkInlineSizes(Map<QueryIndexKey, Integer> remote) {
         boolean hasDiff = false;
 
+        log.error("GG-23133 loc: " + collectIndexInlineSizes() + ", remote: " + remote);
+
         SB sb = new SB();
 
         for (QueryIndexKey key : idxs.keySet()) {
