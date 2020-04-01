@@ -135,10 +135,9 @@ public class CacheWithDifferentDataRegionConfigurationTest extends GridCommonAbs
     }
 
     /**
-     * TODO broken
+     *
      */
     @Test
-    @Ignore
     public void firstNodeHasDefaultAndSecondDefaultWithCustomNameAcceptable() throws Exception {
         IgniteEx node1 = node(NODE_1)
             .andCache(CACHE_1)
@@ -159,9 +158,10 @@ public class CacheWithDifferentDataRegionConfigurationTest extends GridCommonAbs
     }
 
     /**
-     *
+     * TODO broken
      */
     @Test
+    @Ignore
     public void firstNodeHasDefaultAndSecondWithTwoRegionsDefaultAndPersistenceAcceptable() throws Exception {
         IgniteEx node1 = node(NODE_1)
             .andCache(CACHE_1)
