@@ -145,6 +145,23 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(3, res.Nested.Baz);
             Assert.AreEqual(5, res.Nested.Qux);
         }
+
+        /// <summary>
+        /// Runs write/read test in multiple threads, using random field order to create lots of schemas.
+        /// </summary>
+        [Test]
+        public void TestRandomOrderFields()
+        {
+            var marsh = new Marshaller(new BinaryConfiguration(typeof(RandomFieldOrder)));
+            var obj = new RandomFieldOrder();
+
+            for (var i = 0; i < 100; i++)
+            {
+                var bytes = marsh.Marshal(obj);
+
+                marsh.Unmarshal<RandomFieldOrder>(bytes);
+            }
+        }
     }
 
     [SuppressMessage("ReSharper", "InconsistentNaming")]
@@ -382,6 +399,38 @@ namespace Apache.Ignite.Core.Tests.Binary
             // Read in reverse order to defeat structure optimization.
             Qux = reader.ReadInt("qux");
             Baz = reader.ReadInt("baz");
+        }
+    }
+
+    public class RandomFieldOrder : IBinarizable
+    {
+        public const int FieldCount = 50;
+
+        public void WriteBinary(IBinaryWriter writer)
+        {
+            foreach (var fieldName in GetRandomOrderFieldNames())
+            {
+                writer.WriteString(fieldName, fieldName);
+            }
+        }
+
+        public void ReadBinary(IBinaryReader reader)
+        {
+            foreach (var fieldName in GetRandomOrderFieldNames())
+            {
+                var fieldValue = reader.ReadString(fieldName);
+
+                if (fieldValue != null)
+                {
+                    Assert.AreEqual(fieldName, fieldValue);
+                }
+            }
+        }
+
+        private static IEnumerable<string> GetRandomOrderFieldNames()
+        {
+            return Enumerable.Range(0, FieldCount).Select(x => "Field_" + x).OrderBy(_ => Guid.NewGuid())
+                .Skip(IgniteUtils.ThreadLocalRandom.Next(FieldCount));
         }
     }
 }

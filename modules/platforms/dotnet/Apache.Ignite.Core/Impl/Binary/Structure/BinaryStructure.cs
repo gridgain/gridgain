@@ -93,6 +93,9 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
 
                     BinaryStructureJumpTable jmpTbl = _jumps[entry.Id];
 
+                    if (jmpTbl == null)
+                        return 0;
+
                     int pathIdx0 = jmpTbl.GetPathIndex(fieldName);
 
                     if (pathIdx0 < 0)
