@@ -79,7 +79,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.lang.Boolean.FALSE;
-import static java.lang.Boolean.TRUE;
+import static java.lang.String.valueOf;
 import static java.lang.System.setProperty;
 import static java.util.Objects.nonNull;
 import static java.util.Objects.requireNonNull;
@@ -87,10 +87,8 @@ import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.availablePrintPartitionsDistribution;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.availablePrintRebalanceStatistics;
 import static org.apache.ignite.internal.util.IgniteUtils.currentTimeMillis;
 import static org.apache.ignite.testframework.LogListener.matches;
@@ -100,8 +98,7 @@ import static org.apache.ignite.testframework.LogListener.matches;
  */
 @SystemPropertiesList(value = {
     @WithSystemProperty(key = IGNITE_QUIET, value = "false"),
-    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "true"),
-    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "true")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD, value = "0")
 })
 public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /** Logger for listen messages. */
@@ -137,18 +134,16 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
     /**
      * Test checks that rebalance statistics are output into log only if
-     * {@link IgniteSystemProperties#IGNITE_QUIET} == {@code false} and
-     * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS} ==
-     * {@code true}, also partition distribution is present in statistics only
-     * if {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}
-     * == {@code true}.
+     * {@link IgniteSystemProperties#IGNITE_QUIET} == {@code false}, also
+     * partition distribution is present in statistics only if rebalance is
+     * less than or equal to {@link
+     * IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD}.
      *
      * @throws Exception if any error occurs.
      */
     @Test
     @WithSystemProperty(key = IGNITE_QUIET, value = "true")
-    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_STATISTICS, value = "false")
-    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, value = "false")
+    @WithSystemProperty(key = IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD, value = "1000000000")
     public void testPrintIntoLogRebStatDependSysProps() throws Exception {
         LogListener[] logListeners = {
             matches(new GrpStatPred()).build(),
@@ -162,22 +157,14 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         startGrid(nodeId++);
 
         assertFalse(availablePrintRebalanceStatistics());
-        assertFalse(availablePrintPartitionsDistribution());
         restartNode(nodeId, null, null, l -> assertFalse(l.check()), logListeners);
 
         setProperty(IGNITE_QUIET, FALSE.toString());
-        assertFalse(availablePrintRebalanceStatistics());
-        assertFalse(availablePrintPartitionsDistribution());
-        restartNode(nodeId, null, null, l -> assertFalse(l.check()), logListeners);
-
-        setProperty(IGNITE_WRITE_REBALANCE_STATISTICS, TRUE.toString());
         assertTrue(availablePrintRebalanceStatistics());
-        assertFalse(availablePrintPartitionsDistribution());
         restartNode(nodeId, null, null, l -> assertEquals(l != logListeners[2], l.check()), logListeners);
 
-        setProperty(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, TRUE.toString());
+        setProperty(IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD, valueOf(0));
         assertTrue(availablePrintRebalanceStatistics());
-        assertTrue(availablePrintPartitionsDistribution());
         restartNode(nodeId, null, null, l -> assertTrue(l.check()), logListeners);
     }
 

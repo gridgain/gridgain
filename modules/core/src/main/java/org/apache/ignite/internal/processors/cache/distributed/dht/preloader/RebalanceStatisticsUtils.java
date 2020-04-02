@@ -40,10 +40,11 @@ import static java.lang.Math.min;
 import static java.time.ZoneId.systemDefault;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Comparator.comparing;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_STATISTICS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getLong;
 
 /**
  * Utility class for rebalance statistics.
@@ -67,33 +68,24 @@ public class RebalanceStatisticsUtils {
     }
 
     /**
-     * Returns ability to print statistics for rebalance depending on
-     * {@link IgniteSystemProperties#IGNITE_QUIET IGNITE_QUIET} and
-     * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_STATISTICS
-     * IGNITE_WRITE_REBALANCE_STATISTICS}.
-     * <br/>
-     * {@code True} returns only if {@code IGNITE_QUIET = false} and
-     * {@code IGNITE_WRITE_REBALANCE_STATISTICS = true}, otherwise
-     * {@code false}.
+     * Returns ability to print statistics for rebalance. {@code True} if
+     * {@link IgniteSystemProperties#IGNITE_QUIET IGNITE_QUIET} == {@code false}.
      *
      * @return {@code True} if printing statistics for rebalance is available.
      */
     public static boolean availablePrintRebalanceStatistics() {
-        return !getBoolean(IGNITE_QUIET, true) && getBoolean(IGNITE_WRITE_REBALANCE_STATISTICS, false);
+        return !getBoolean(IGNITE_QUIET, true);
     }
 
     /**
-     * Returns ability to print partitions distribution depending on
-     * {@link IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS}.
-     * <br/>
-     * {@code True} returns only if
-     * {@code IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS = true}, otherwise
-     * {@code false}.
+     * Returns ability to print partitions distribution depending on {@link
+     * IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD}.
      *
+     * @param d Duration of rebalance, in milliseconds.
      * @return {@code True} if printing partitions distribution is available.
      */
-    public static boolean availablePrintPartitionsDistribution() {
-        return getBoolean(IGNITE_WRITE_REBALANCE_PARTITION_STATISTICS, false);
+    public static boolean availablePrintPartitionsDistribution(long d) {
+        return d >= getLong(IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD, MINUTES.toMillis(10));
     }
 
     /**
@@ -147,7 +139,7 @@ public class RebalanceStatisticsUtils {
         for (ClusterNode supNode : supStats.keySet())
             sb.a(supInfo(nodeId++, supNode));
 
-        if (!availablePrintPartitionsDistribution())
+        if (!availablePrintPartitionsDistribution(stat.end() - stat.start()))
             return sb.toString();
 
         sb.a("Partitions distribution per cache group (").a(suc ? "successful" : "interrupted").a(" rebalance): [")
