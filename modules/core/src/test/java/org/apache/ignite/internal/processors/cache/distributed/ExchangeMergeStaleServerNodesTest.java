@@ -101,7 +101,7 @@ public class ExchangeMergeStaleServerNodesTest extends GridCommonAbstractTest {
 
             IgniteInternalFuture<IgniteEx> futFail = GridTestUtils.runAsync(() -> startGrid(2), "starter2");
 
-            GridTestUtils.waitForCondition(exchMgr::hasPendingExchange, getTestTimeout());
+            GridTestUtils.waitForCondition(exchMgr::hasPendingServerExchange, getTestTimeout());
 
             // Unblock message to proceed merging.
             delaySpi1.replay(crd.cluster().localNode().id());
@@ -161,7 +161,7 @@ public class ExchangeMergeStaleServerNodesTest extends GridCommonAbstractTest {
             // This exchange will be merged as well, but the node will be failed.
             IgniteInternalFuture<IgniteEx> futFail = GridTestUtils.runAsync(() -> startGrid(3), "starter3");
 
-            GridTestUtils.waitForCondition(exchMgr::hasPendingExchange, getTestTimeout());
+            GridTestUtils.waitForCondition(exchMgr::hasPendingServerExchange, getTestTimeout());
 
             // Wait for merged exchange.
             GridTestUtils.waitForCondition(

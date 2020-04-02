@@ -308,6 +308,9 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     @GridToStringExclude
     private volatile IgniteDhtPartitionHistorySuppliersMap partHistSuppliers = new IgniteDhtPartitionHistorySuppliersMap();
 
+    /** Set of nodes that cannot be used for wal rebalancing due to some reason. */
+    private Set<UUID> exclusionsFromWalRebalance = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
     /** Reserved max available history for calculation of history supplier on coordinator. */
     private volatile Map<Integer /** Group. */, Map<Integer /** Partition */, Long /** Counter. */ >> partHistReserved;
 
@@ -557,7 +560,28 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @return ID of history supplier node or null if it doesn't exist.
      */
     @Nullable public UUID partitionHistorySupplier(int grpId, int partId, long cntrSince) {
-        return partHistSuppliers.getSupplier(grpId, partId, cntrSince);
+        UUID histSupplier = partHistSuppliers.getSupplier(grpId, partId, cntrSince);
+
+        if (histSupplier != null && exclusionsFromWalRebalance.contains(histSupplier))
+            return null;
+
+        return histSupplier;
+    }
+
+    /**
+     * Excludes the given node from the collection of historical suppliers.
+     *
+     * @param nodeId Node id that should not be used for wal rebalance (aka historical supplier).
+     */
+    public void excludeNodeFromWalRebalance(UUID nodeId) {
+        exclusionsFromWalRebalance.add(nodeId);
+    }
+
+    /**
+     * @return {@code true} if there are nodes that are excluded from wal rebalance.
+     */
+    public boolean hasExclusionsFromWalRebalance() {
+        return !exclusionsFromWalRebalance.isEmpty();
     }
 
     /**
