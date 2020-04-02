@@ -163,8 +163,6 @@ namespace Apache.Ignite.Core.Tests.Binary
                 marsh.Unmarshal<CustomFieldOrder>(bytes);
             };
 
-            test(new[] {0}, new[] {1, 0});
-            test(new[] {0, 1}, new[] {1, 0});
             test(new[] {1, 0}, new[] {1, 0});
             test(new[] {0}, new[] {0});
             test(new[] {1}, new[] {0, 1});
