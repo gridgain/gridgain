@@ -100,10 +100,10 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
                     BinaryStructureJumpTable jmpTbl = _jumps[entry.Id];
 
                     // TODO: Not sure this is a correct fix, find the root cause.
-                    // if (jmpTbl == null)
-                    // {
-                    //     return 0;
-                    // }
+                    if (jmpTbl == null)
+                    {
+                        return 0;
+                    }
 
                     int pathIdx0 = jmpTbl.GetPathIndex(fieldName);
 
@@ -151,7 +151,8 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
             if (firstUpdate.Index == 0)
             {
                 // TODO: Suspect in GG-28406 - not covered with tests.
-                // This never happens because of BinaryStructureTracker.GetFieldId - it always starts with 1. 
+                // This never happens because of BinaryStructureTracker.GetFieldId - it always starts with 1.
+                // And this does not work if we fix the above. Looks like broken code - REMOVE
                 
                 // Special case: the very first structure update. Simply attach all updates.
                 Debug.Assert(_paths.Length == 1);
@@ -207,7 +208,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
                 {
                     // We are on existing entry. Need to create a new jump table here and two new paths.
 
-                    // 1. Prepaare new structures.
+                    // 1. Prepare new structures.
                     var newPaths = CopyPaths(firstUpdate.Index + updates.Count, 2);
                     var newJumps = CopyJumps(1);
 
