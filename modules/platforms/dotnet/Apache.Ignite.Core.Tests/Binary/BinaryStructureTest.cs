@@ -154,7 +154,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             var marsh = new Marshaller(new BinaryConfiguration(typeof(CustomFieldOrder)));
 
-            Action<int[], int[]> test = (r, w) =>
+            Action<int[], int[]> test = (w, r) =>
             {
                 CustomFieldOrder.Fields = w;
                 var bytes = marsh.Marshal(new CustomFieldOrder());
@@ -165,7 +165,7 @@ namespace Apache.Ignite.Core.Tests.Binary
 
             test(new[] {1, 0}, new[] {1, 0});
             test(new[] {0}, new[] {0});
-            test(new[] {1}, new[] {0, 1});
+            test(new[] {0, 1}, new[] {1});
         }
 
         /// <summary>
