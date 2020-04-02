@@ -78,7 +78,10 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
             for (var i = 0; i < _names.Length; i++)
             {
                 if (fieldName.Equals(_names[i]))
+                {
+                    // TODO: Not covered with tests.
                     return _pathIdxs[i];
+                }
             }
 
             // No path found for the field.

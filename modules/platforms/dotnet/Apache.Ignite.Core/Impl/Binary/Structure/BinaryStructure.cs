@@ -144,6 +144,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
 
             if (firstUpdate.Index == 0)
             {
+                // TODO: Suspect in GG-28406 - not covered with tests.
                 // Special case: the very first structure update. Simply attach all updates.
                 Debug.Assert(_paths.Length == 1);
                 Debug.Assert(_paths[0].Length == 0);
