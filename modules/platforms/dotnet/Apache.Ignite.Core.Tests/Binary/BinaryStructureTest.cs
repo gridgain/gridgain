@@ -162,9 +162,6 @@ namespace Apache.Ignite.Core.Tests.Binary
                 marsh.Unmarshal<RandomFieldOrder>(bytes);
 
             }, Environment.ProcessorCount * 2, 100);
-
-            var desc = (BinaryFullTypeDescriptor) marsh.GetDescriptor(typeof(RandomFieldOrder));
-            Console.WriteLine(desc.WriterTypeStructure); 
         }
     }
 

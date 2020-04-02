@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
-    using System.Linq;
     using Apache.Ignite.Core.Binary;
 
     /// <summary>
@@ -331,12 +330,5 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
         {
             get { return _fieldTypes; }
         } 
-        
-        /** <inheritdoc /> */
-        public override string ToString()
-        {
-            return string.Format("{0} [Paths={1}, Jumps={2}]", typeof(BinaryStructure).Name,
-                _paths.Sum(p => p.Length), _jumps.Length);
-        }
     }
 }
