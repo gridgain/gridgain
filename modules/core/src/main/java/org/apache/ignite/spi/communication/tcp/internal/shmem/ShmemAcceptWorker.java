@@ -37,7 +37,7 @@ import org.apache.ignite.thread.IgniteThread;
  */
 public class ShmemAcceptWorker extends GridWorker {
     /** Worker name. */
-    private final static String WORKER_NAME = "shmem-communication-acceptor";
+    private static final String WORKER_NAME = "shmem-communication-acceptor";
 
     /** Shared memory workers. */
     private final Collection<ShmemWorker> shmemWorkers = new ConcurrentLinkedDeque<>();

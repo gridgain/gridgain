@@ -17,7 +17,6 @@
 package org.apache.ignite.spi.communication.tcp;
 
 import org.apache.ignite.cluster.ClusterNode;
-import org.apache.ignite.lang.IgniteExperimental;
 
 /**
  * This class was created for the refactoring approach. It contains attribute names into a {@link ClusterNode}.

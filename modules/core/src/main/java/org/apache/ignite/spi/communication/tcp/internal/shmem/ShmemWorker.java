@@ -40,7 +40,7 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationMetricsListener;
  */
 public class ShmemWorker extends GridWorker {
     /** Worker name. */
-    private final static String WORKER_NAME = "shmem-worker";
+    private static final String WORKER_NAME = "shmem-worker";
 
     /** Finish listeners. */
     private final Set<Runnable> finishListeners = new GridConcurrentLinkedHashSet<>();

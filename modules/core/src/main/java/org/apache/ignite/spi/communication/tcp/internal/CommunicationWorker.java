@@ -55,7 +55,7 @@ import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpU
  */
 public class CommunicationWorker extends GridWorker {
     /** Worker name. */
-    private final static String WORKER_NAME = "tcp-comm-worker";
+    private static final String WORKER_NAME = "tcp-comm-worker";
 
     /** Config. */
     private final TcpCommunicationConfiguration cfg;
