@@ -152,18 +152,28 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestChangingFieldOrderAndPresence()
         {
+            // Create two different binary structure paths, than make one of them longer to defeat the optimization. 
+            TestChangingFieldOrderAndPresence(new[] {1, 0}, new[] {0}, new[] {0, 1});
+
+            // Growing path.
+            TestChangingFieldOrderAndPresence(new[] {1}, new[] {1, 2, 3, 4}, new[] {1, 2, 3, 4, 5, 6});
+
+            // Shrinking path.
+            TestChangingFieldOrderAndPresence(new[] {1}, new[] {1, 2, 3, 4}, new[] {1, 2, 3}, new[] {1, 2});
+        }
+
+        /// <summary>
+        /// Tests specified field combination.
+        /// </summary>
+        private static void TestChangingFieldOrderAndPresence(params int[][] fieldSequences)
+        {
             var marsh = new Marshaller(new BinaryConfiguration(typeof(CustomFieldOrder)));
 
-            Action<int[]> test = w =>
+            foreach (var fields in fieldSequences)
             {
-                CustomFieldOrder.Fields = w;
+                CustomFieldOrder.Fields = fields;
                 marsh.Marshal(new CustomFieldOrder());
-            };
-
-            // Create two different binary structure paths, than make one of them longer to defeat the optimization. 
-            test(new[] {1, 0});
-            test(new[] {0});
-            test(new[] {0, 1});
+            }
         }
 
         /// <summary>
