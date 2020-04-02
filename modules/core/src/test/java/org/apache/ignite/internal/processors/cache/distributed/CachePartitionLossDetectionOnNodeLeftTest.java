@@ -358,6 +358,32 @@ public class CachePartitionLossDetectionOnNodeLeftTest extends GridCommonAbstrac
     }
 
     /**
+     *
+     */
+    @Test
+    public void testResetOnLesserTopologyAfterRestart() throws Exception {
+        backups = 1;
+        dfltRegionPersistence = true;
+
+        IgniteEx crd = startGrids(5);
+        crd.cluster().active(true);
+
+        stopAllGrids();
+
+        crd = startGrids(2);
+        crd.cluster().active(true);
+
+        resetBaselineTopology();
+
+        assertFalse(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+        assertFalse(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+
+        crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
+
+        awaitPartitionMapExchange();
+    }
+
+    /**
      * Tests if lost is correctly detected if addinity is loaded on cache start.
      */
     private void doTestPartitionLossDetectionOnClientTopology(
