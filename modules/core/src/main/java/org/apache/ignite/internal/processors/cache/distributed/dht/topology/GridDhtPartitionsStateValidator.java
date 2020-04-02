@@ -417,8 +417,10 @@ public class GridDhtPartitionsStateValidator {
 
         for (Integer p : allKeys) {
             Map<UUID, IgnitePair<Long>> map = new HashMap<>();
+
             fillMapForPartition(invalidPartitionsCounters.get(p), map, true);
             fillMapForPartition(invalidPartitionsSize.get(p), map, false);
+
             sortedAllPartitions.put(p, map);
         }
 
