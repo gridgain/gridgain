@@ -161,7 +161,10 @@ namespace Apache.Ignite.Core.Tests.Binary
                 
                 marsh.Unmarshal<RandomFieldOrder>(bytes);
 
-            }, Environment.ProcessorCount, 10000);
+            }, Environment.ProcessorCount * 2, 50);
+
+            var desc = (BinaryFullTypeDescriptor) marsh.GetDescriptor(typeof(RandomFieldOrder));
+            Console.WriteLine(desc.WriterTypeStructure); 
         }
     }
 
@@ -407,17 +410,12 @@ namespace Apache.Ignite.Core.Tests.Binary
     {
         public const int FieldCount = 50;
 
-        public readonly string[] FieldNames = Enumerable.Range(0, FieldCount).Select(x => "Field_" + x).ToArray();
-        
         public void WriteBinary(IBinaryWriter writer)
         {
             foreach (var fieldName in GetRandomOrderFieldNames())
             {
                 writer.WriteString(fieldName, fieldName);
             }
-            
-            // TODO: What does this do? Do we have a missing check?
-            writer.WriteString(null, "NullField");
         }
 
         public void ReadBinary(IBinaryReader reader)
@@ -430,9 +428,9 @@ namespace Apache.Ignite.Core.Tests.Binary
             }
         }
         
-        private IEnumerable<string> GetRandomOrderFieldNames()
+        private static IEnumerable<string> GetRandomOrderFieldNames()
         {
-            return FieldNames.OrderBy(_ => Guid.NewGuid());
+            return Enumerable.Range(0, FieldCount).Select(x => "Field_" + x).OrderBy(_ => Guid.NewGuid());
         }
     }
 }
