@@ -145,6 +145,15 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(3, res.Nested.Baz);
             Assert.AreEqual(5, res.Nested.Qux);
         }
+    
+        /// <summary>
+        /// Runs write/read test in multiple threads, using random field order to create lots of schemas.
+        /// </summary>
+        [Test]
+        public void TestMultithreadedRandomOrderFields()
+        {
+    
+        }
     }
 
     [SuppressMessage("ReSharper", "InconsistentNaming")]
@@ -382,6 +391,39 @@ namespace Apache.Ignite.Core.Tests.Binary
             // Read in reverse order to defeat structure optimization.
             Qux = reader.ReadInt("qux");
             Baz = reader.ReadInt("baz");
+        }
+    }
+
+    public class RandomFieldOrder : IBinarizable
+    {
+        public const int FieldCount = 50;
+
+        public readonly string[] FieldNames = Enumerable.Range(0, FieldCount).Select(x => "Field_" + x).ToArray();
+        
+        public void WriteBinary(IBinaryWriter writer)
+        {
+            foreach (var fieldName in GetRandomOrderFieldNames())
+            {
+                writer.WriteString(fieldName, fieldName);
+            }
+            
+            // TODO: What does this do? Do we have a missing check?
+            writer.WriteString(null, "NullField");
+        }
+
+        public void ReadBinary(IBinaryReader reader)
+        {
+            foreach (var fieldName in GetRandomOrderFieldNames())
+            {
+                var fieldValue = reader.ReadString(fieldName);
+                
+                Assert.AreEqual(fieldName, fieldValue);
+            }
+        }
+        
+        private IEnumerable<string> GetRandomOrderFieldNames()
+        {
+            return FieldNames.OrderBy(_ => Guid.NewGuid());
         }
     }
 }
