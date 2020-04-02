@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * A {@link PipelineBlock}, which splits line according to CSV format rules and unquotes fields.
- * The next block {@link PipelineBlock#accept(Object, boolean)} is called per-line.
+ * A {@link PipelineBlock}, which splits line according to CSV format rules and unquotes fields. The next block {@link
+ * PipelineBlock#accept(Object, boolean)} is called per-line.
  */
 public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
     /**
@@ -70,11 +70,11 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
         int copyStart = 0;
         while (true) {
             if (current == length) {
-                if ( copy > 0) {
+                if (copy > 0) {
                     currentField.append(input, copyStart, copyStart + copy);
                 }
 
-                fields.add(currentField.toString().trim());
+                fields.add(currentField.toString());
                 break;
             }
 
@@ -86,31 +86,37 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
                         copy = 0;
-                    } else {
+                    }
+                    else {
                         readerState |= READER_STATE_QUOTED_EMPTY;
                     }
                     copyStart = current;
-                } else {
+                }
+                else {
                     copy++;
                 }
-            } else {
+            }
+            else {
                 if (c == fldDelim) {
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
                         copy = 0;
                     }
-                    fields.add(currentField.toString().trim());
+                    fields.add(currentField.toString());
                     currentField = new StringBuilder();
                     copyStart = current;
                     readerState = READER_STATE_UNDEF;
-                } else if (c == quoteChars && (readerState & READER_STATE_UNQUOTED) == 0) {
+                }
+                else if (c == quoteChars && (readerState & READER_STATE_UNQUOTED) == 0) {
                     readerState = READER_STATE_QUOTED | READER_STATE_QUOTED_STARTED;
                     if (prev == quoteChars) {
                         copy++;
-                    } else {
+                    }
+                    else {
                         copyStart = current;
                     }
-                } else {
+                }
+                else {
                     copy++;
                     if (readerState == READER_STATE_UNDEF) {
                         readerState = READER_STATE_UNQUOTED;
