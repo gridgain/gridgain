@@ -147,25 +147,22 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         /// <summary>
-        /// Tests a combination of changing field order and some fields being missing.
+        /// Tests a combination of changing field order and some fields being added or removed.
         /// </summary>
         [Test]
         public void TestChangingFieldOrderAndPresence()
         {
             var marsh = new Marshaller(new BinaryConfiguration(typeof(CustomFieldOrder)));
 
-            Action<int[], int[]> test = (w, r) =>
+            Action<int[]> test = w =>
             {
                 CustomFieldOrder.Fields = w;
-                var bytes = marsh.Marshal(new CustomFieldOrder());
-
-                CustomFieldOrder.Fields = r;
-                marsh.Unmarshal<CustomFieldOrder>(bytes);
+                marsh.Marshal(new CustomFieldOrder());
             };
 
-            test(new[] {1, 0}, new[] {1, 0});
-            test(new[] {0}, new[] {0});
-            test(new[] {0, 1}, new[] {1});
+            test(new[] {1, 0});
+            test(new[] {0});
+            test(new[] {0, 1});
         }
 
         /// <summary>
