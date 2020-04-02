@@ -423,8 +423,11 @@ namespace Apache.Ignite.Core.Tests.Binary
             foreach (var fieldName in GetRandomOrderFieldNames())
             {
                 var fieldValue = reader.ReadString(fieldName);
-                
-                Assert.AreEqual(fieldName, fieldValue);
+
+                if (fieldValue != null)
+                {
+                    Assert.AreEqual(fieldName, fieldValue);
+                }
             }
         }
         
