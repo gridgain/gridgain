@@ -18,7 +18,6 @@ package org.apache.ignite.testsuites;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.ignite.cache.RemoveAllDeadlockTest;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshallerPooledSelfTest;
 import org.junit.Ignore;
 import org.junit.Test;
