@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.function.Supplier;
 import javax.net.ssl.SSLEngine;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
@@ -33,8 +34,6 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
-
-import static org.apache.ignite.Ignition.ignite;
 
 /**
  * This class must be removed after refactoring. The role of this is concentrate login of cluster states.
@@ -56,25 +55,31 @@ public class ClusterStateProvider {
     /** Logger. */
     private final IgniteLogger log;
 
+    /** Ignite ex supplier. */
+    private final Supplier<Ignite> igniteExSupplier;
+
     /**
      * @param ignite Ignite.
      * @param locNodeSupplier Local node supplier.
      * @param tcpCommSpi Tcp communication spi.
      * @param stoppedSupplier Stopped supplier.
      * @param log Logger.
+     * @param igniteExSupplier Returns already exists instance from spi.
      */
     public ClusterStateProvider(
         IgniteEx ignite,
         Supplier<ClusterNode> locNodeSupplier,
         TcpCommunicationSpi tcpCommSpi,
         Supplier<Boolean> stoppedSupplier,
-        IgniteLogger log
+        IgniteLogger log,
+        Supplier<Ignite> igniteExSupplier
     ) {
         this.ignite = ignite;
         this.locNodeSupplier = locNodeSupplier;
         this.tcpCommSpi = tcpCommSpi;
         this.stoppedSupplier = stoppedSupplier;
         this.log = log;
+        this.igniteExSupplier = igniteExSupplier;
     }
 
     /**
@@ -146,7 +151,7 @@ public class ClusterStateProvider {
      * @return {@code True} if remote nodes support {@link HandshakeWaitMessage}.
      */
     public boolean isHandshakeWaitSupported() {
-        DiscoverySpi discoSpi = ignite().configuration().getDiscoverySpi();
+        DiscoverySpi discoSpi = igniteExSupplier.get().configuration().getDiscoverySpi();
 
         if (discoSpi instanceof IgniteDiscoverySpi)
             return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(

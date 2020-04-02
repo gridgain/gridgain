@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
@@ -123,6 +124,9 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
     /** Context initialize latch. */
     private final CountDownLatch ctxInitLatch;
 
+    /** Ignite ex supplier. */
+    private final Supplier<Ignite> igniteExSupplier;
+
     /** NIO server. */
     private volatile GridNioServerWrapper nioSrvWrapper;
 
@@ -153,6 +157,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
      * @param nioSrvWrapper Nio server wrapper.
      * @param ctxInitLatch Context initialize latch.
      * @param client Client.
+     * @param igniteExSupplier Returns already exists instance from spi.
      */
     public InboundConnectionHandler(
         IgniteLogger log,
@@ -167,7 +172,8 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         TcpCommunicationMetricsListener metricsLsnr,
         GridNioServerWrapper nioSrvWrapper,
         CountDownLatch ctxInitLatch,
-        boolean client
+        boolean client,
+        Supplier<Ignite> igniteExSupplier
     ) {
         this.log = log;
         this.cfg = cfg;
@@ -183,6 +189,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         this.nioSrvWrapper = nioSrvWrapper;
         this.ctxInitLatch = ctxInitLatch;
         this.client = client;
+        this.igniteExSupplier = igniteExSupplier;
     }
 
     /**
@@ -470,7 +477,7 @@ public class InboundConnectionHandler extends GridNioServerListenerAdapter<Messa
         final ClusterNode rmtNode = nodeGetter.apply(sndId);
 
         if (rmtNode == null) {
-            DiscoverySpi discoverySpi = ignite().configuration().getDiscoverySpi();
+            DiscoverySpi discoverySpi = igniteExSupplier.get().configuration().getDiscoverySpi();
 
             boolean unknownNode = true;
 

@@ -339,6 +339,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** Local node supplier. */
     private final Supplier<ClusterNode> locNodeSupplier = () -> getSpiContext().localNode();
 
+    /** Ignite ex supplier. */
+    private final Supplier<Ignite> igniteExSupplier = this::ignite;
+
     /** Ping node. */
     private final Function<UUID, Boolean> pingNode = (nodeId) -> getSpiContext().pingNode(nodeId);
 
@@ -644,7 +647,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             locNodeSupplier,
             this,
             isStopped,
-            log
+            log,
+            igniteExSupplier
         );
 
         try {
@@ -673,7 +677,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             metricsLsnr,
             nioSrvWrapper,
             ctxInitLatch,
-            client
+            client,
+            igniteExSupplier
         );
 
         TimeObjectProcessorWrapper timeObjProcessorWrapper = new TimeObjectProcessorWrapper(stateProvider);
