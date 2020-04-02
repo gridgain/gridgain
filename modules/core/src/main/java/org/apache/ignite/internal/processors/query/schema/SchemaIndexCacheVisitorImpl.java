@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.query.schema;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteCheckedException;
@@ -38,12 +39,16 @@ import org.apache.ignite.internal.util.worker.GridWorkerFuture;
 
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat.extraIndexBuildLogging;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 
 /**
  * Visitor who create/rebuild indexes in parallel by partition for a given cache.
  */
 public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
+    /** Is extra index rebuild logging enabled. */
+    private final boolean collectStat = getBoolean(IGNITE_ENABLE_EXTRA_INDEX_REBUILD_LOGGING, false);
+
     /** Cache context. */
     private final GridCacheContext cctx;
 
@@ -113,7 +118,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         buildIdxCompoundFut.listen(fut -> {
             Throwable err = fut.error();
 
-            if (isNull(err) && extraIndexBuildLogging() && log.isInfoEnabled()) {
+            if (isNull(err) && collectStat && log.isInfoEnabled()) {
                 try {
                     GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat> compoundFut =
                         (GridCompoundFuture<SchemaIndexCacheStat, SchemaIndexCacheStat>)fut;
@@ -123,10 +128,7 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
                     compoundFut.futures().stream()
                         .map(IgniteInternalFuture::result)
                         .filter(Objects::nonNull)
-                        .forEach(stat -> {
-                            resStat.scanned += stat.scanned;
-                            resStat.types.putAll(stat.types);
-                        });
+                        .forEach(resStat::accumulate);
 
                     log.info(indexStatStr(resStat));
                 }
@@ -140,6 +142,44 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
         });
 
         buildIdxCompoundFut.markInitialized();
+    }
+
+    /**
+     * Prints index cache stats to log.
+     *
+     * @param stat Index cache stats.
+     * @throws IgniteCheckedException if failed to get index size.
+     */
+    private String indexStatStr(SchemaIndexCacheStat stat) throws IgniteCheckedException {
+        SB res = new SB();
+
+        res.a("Details for cache rebuilding [name=" + cctx.cache().name() + ", grpName=" + cctx.group().name() + ']');
+        res.a(U.nl());
+        res.a("   Scanned rows " + stat.scannedKeys() + ", visited types " + stat.typeNames());
+        res.a(U.nl());
+
+        final GridQueryIndexing idx = cctx.kernalContext().query().getIndexing();
+
+        for (QueryTypeDescriptorImpl type : stat.types()) {
+            res.a("        Type name=" + type.name());
+            res.a(U.nl());
+
+            final String pk = "_key_PK";
+
+            res.a("            Index: name=" + pk + ", size=" + idx.indexSize(type.schemaName(), pk));
+            res.a(U.nl());
+
+            final Map<String, GridQueryIndexDescriptor> indexes = type.indexes();
+
+            for (GridQueryIndexDescriptor descriptor : indexes.values()) {
+                final long size = idx.indexSize(type.schemaName(), descriptor.name());
+
+                res.a("            Index: name=" + descriptor.name() + ", size=" + size);
+                res.a(U.nl());
+            }
+        }
+
+        return res.toString();
     }
 
     /**
