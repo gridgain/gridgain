@@ -1226,7 +1226,7 @@ public class GridDhtPartitionDemander {
          * Before sending messages, method awaits partitions clearing for full partitions.
          */
         public void requestPartitions() {
-            if (nonNull(stat))
+            if (availablePrintRebalanceStatistics())
                 stat.start(U.currentTimeMillis());
 
             if (!STATE_UPD.compareAndSet(this, RebalanceFutureState.INIT, RebalanceFutureState.STARTED)) {
@@ -1290,7 +1290,7 @@ public class GridDhtPartitionDemander {
                                     ", fullPartitions=" + S.compact(parts.fullSet()) +
                                     ", histPartitions=" + S.compact(parts.historicalSet()) + "]");
 
-                            if (nonNull(stat))
+                            if (availablePrintRebalanceStatistics())
                                 stat.start(supplierNode, U.currentTimeMillis());
 
                             ctx.io().sendOrderedMessage(supplierNode, d.topic(),
@@ -1421,7 +1421,7 @@ public class GridDhtPartitionDemander {
         @Override public boolean onDone(@Nullable Boolean res, @Nullable Throwable err) {
             if (super.onDone(res, err)) {
                 try {
-                    if (nonNull(stat) && !isInitial())
+                    if (availablePrintRebalanceStatistics() && !isInitial())
                         printRebalanceStatistics();
                 }
                 catch (IgniteCheckedException e) {
@@ -1779,7 +1779,7 @@ public class GridDhtPartitionDemander {
          */
         private void printRebalanceStatistics() throws IgniteCheckedException {
             assert isDone() : "RebalanceFuture should be done.";
-            assert nonNull(stat);
+            assert availablePrintRebalanceStatistics();
 
             stat.end(U.currentTimeMillis());
 

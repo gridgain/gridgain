@@ -108,16 +108,17 @@ public class CacheEntryInfoCollection implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeCollection("infos", infos, MessageCollectionItemType.MSG))
+                if (!writer.writeBoolean("historical", historical))
                     return false;
 
                 writer.incrementState();
 
             case 1:
-                if (!writer.writeBoolean("historical", historical))
+                if (!writer.writeCollection("infos", infos, MessageCollectionItemType.MSG))
                     return false;
 
                 writer.incrementState();
+
         }
 
         return true;
@@ -132,7 +133,7 @@ public class CacheEntryInfoCollection implements Message {
 
         switch (reader.state()) {
             case 0:
-                infos = reader.readCollection("infos", MessageCollectionItemType.MSG);
+                historical = reader.readBoolean("historical");
 
                 if (!reader.isLastRead())
                     return false;
@@ -140,12 +141,13 @@ public class CacheEntryInfoCollection implements Message {
                 reader.incrementState();
 
             case 1:
-                historical = reader.readBoolean("historical");
+                infos = reader.readCollection("infos", MessageCollectionItemType.MSG);
 
                 if (!reader.isLastRead())
                     return false;
 
                 reader.incrementState();
+
         }
 
         return reader.afterMessageRead(CacheEntryInfoCollection.class);

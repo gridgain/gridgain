@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -44,6 +45,7 @@ import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
+import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupRebalanceStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupSupplierRebalanceStatistics;
@@ -65,6 +67,7 @@ import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T4;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
@@ -433,6 +436,12 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
                 CacheGroupContext supGrpCtx = supplierNode.context().cache().cacheGroup(grpCtx.groupId());
                 GridDhtPartitionSupplier supplier = ((GridDhtPreloader)supGrpCtx.preloader()).supplier();
 
+                Method extractEntryInfo = U.findNonPublicMethod(
+                    supplier.getClass(),
+                    "extractEntryInfo",
+                    CacheDataRow.class
+                );
+
                 GridDhtPartitionDemandMessage demandMsg = assignEntry.getValue();
 
                 Set<Integer> remainingParts = new HashSet<>(demandMsg.partitions().fullSet());
@@ -447,7 +456,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
                     CacheDataRow row = rebIter.next();
 
                     int partId = row.partition();
-                    int bytes = supplier.extractEntryInfo(row).marshalledSize(supGrpCtx.cacheObjectContext());
+
+                    GridCacheEntryInfo cacheEntryInfo = (GridCacheEntryInfo)extractEntryInfo.invoke(supplier, row);
+                    int bytes = cacheEntryInfo.marshalledSize(supGrpCtx.cacheObjectContext());
 
                     grpStat.update(supplierNode.localNode(), partId, rebIter.historical(partId), 1, bytes);
                     remainingParts.remove(partId);
