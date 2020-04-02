@@ -161,7 +161,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 
                 marsh.Unmarshal<RandomFieldOrder>(bytes);
 
-            }, Environment.ProcessorCount * 2, 50);
+            }, Environment.ProcessorCount * 2, 100);
 
             var desc = (BinaryFullTypeDescriptor) marsh.GetDescriptor(typeof(RandomFieldOrder));
             Console.WriteLine(desc.WriterTypeStructure); 
@@ -430,7 +430,8 @@ namespace Apache.Ignite.Core.Tests.Binary
         
         private static IEnumerable<string> GetRandomOrderFieldNames()
         {
-            return Enumerable.Range(0, FieldCount).Select(x => "Field_" + x).OrderBy(_ => Guid.NewGuid());
+            return Enumerable.Range(0, FieldCount).Select(x => "Field_" + x).OrderBy(_ => Guid.NewGuid())
+                .Skip(IgniteUtils.ThreadLocalRandom.Next(FieldCount));
         }
     }
 }

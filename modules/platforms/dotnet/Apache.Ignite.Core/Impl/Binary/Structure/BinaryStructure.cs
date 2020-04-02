@@ -79,7 +79,8 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
         {
             Debug.Assert(fieldName != null);
             Debug.Assert(pathIdx <= _paths.Length);
-
+            
+            // TODO: Can NPE be caused by index wrap-up? Not likely, we'll run out of memory sooner.
             // Get path.
             BinaryStructureEntry[] path = _paths[pathIdx]; // GG-28406: OK
 
