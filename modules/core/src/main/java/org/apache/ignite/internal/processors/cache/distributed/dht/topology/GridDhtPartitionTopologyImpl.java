@@ -2050,9 +2050,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (updateRebalanceVer)
                 updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
 
-            // Own orphan moving partitions.
-            if (fut != null && !fut.events().hasServerLeft() && !fut.activateCluster())
-                ownLost();
+            // Own orphan moving partitions (having no suppliers).
+            if (fut != null && (fut.events().hasServerJoin() || fut.changedBaseline()))
+                ownOrphans();
         }
         finally {
             lock.writeLock().unlock();
@@ -2060,7 +2060,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
     }
 
     /** */
-    private void ownLost() {
+    private void ownOrphans() {
         for (int p = 0; p < grp.affinity().partitions(); p++) {
             boolean hasOwner = false;
 
