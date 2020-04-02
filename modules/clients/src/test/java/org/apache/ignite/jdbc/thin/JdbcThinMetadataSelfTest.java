@@ -657,6 +657,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_CURRENT.null.19",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_MAX.null.19",
                 "IGNITE.LOCAL_SQL_RUNNING_QUERIES.DISK_ALLOCATION_TOTAL.null.19",
+                "IGNITE.LOCAL_SQL_RUNNING_QUERIES.INITIATOR_ID.null.2147483647",
                 "IGNITE.NODES.NODE_ID.null.16",
                 "IGNITE.NODES.CONSISTENT_ID.null.2147483647",
                 "IGNITE.NODES.VERSION.null.2147483647",
