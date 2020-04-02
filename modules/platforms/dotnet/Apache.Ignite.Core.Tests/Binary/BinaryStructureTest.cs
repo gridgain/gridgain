@@ -160,6 +160,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 marsh.Marshal(new CustomFieldOrder());
             };
 
+            // Create two different binary structure paths, than make one of them longer to defeat the optimization. 
             test(new[] {1, 0});
             test(new[] {0});
             test(new[] {0, 1});
