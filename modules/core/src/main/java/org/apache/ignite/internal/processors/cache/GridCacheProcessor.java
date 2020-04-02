@@ -3742,8 +3742,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 final Collection<ClusterNode> owners = cache0.affinity().mapPartitionToPrimaryAndBackups(part);
 
                 if (owners.isEmpty())
-                    throw new ClusterTopologyCheckedException("Cannot reset lost partitions because there isn't " +
-                        "enough baseline nodes online");
+                    throw new ClusterTopologyCheckedException("Cannot reset lost partitions because no baseline nodes " +
+                            "are online [cache=" + cacheName + ", partition=" + part + ']');
             }
 
             DynamicCacheChangeRequest req = DynamicCacheChangeRequest.resetLostPartitions(ctx, cacheName);

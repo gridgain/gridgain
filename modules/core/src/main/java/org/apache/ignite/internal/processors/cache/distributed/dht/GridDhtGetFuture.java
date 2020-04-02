@@ -340,6 +340,7 @@ public final class GridDhtGetFuture<K, V> extends GridCompoundIdentityFuture<Col
             if (part == null)
                 return false;
 
+            // TODO invalid for READ_ONLY_SAFE ?
             if (!forceKeys && part.state() == LOST && !recovery) {
                 Throwable error = validate(cctx, key, READ, singleton(part.id()));
 
