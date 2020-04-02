@@ -80,7 +80,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
             Debug.Assert(pathIdx <= _paths.Length);
 
             // Get path.
-            BinaryStructureEntry[] path = _paths[pathIdx];
+            BinaryStructureEntry[] path = _paths[pathIdx]; // GG-28406: OK
 
             if (actionIdx < path.Length)
             {
@@ -96,6 +96,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
                     // Entry is a pointer to a jump table.
                     Debug.Assert(entry.Id < _jumps.Length);
 
+                    // TODO: GG-28406 suspect, _jumps[0] is always zero
                     BinaryStructureJumpTable jmpTbl = _jumps[entry.Id];
 
                     int pathIdx0 = jmpTbl.GetPathIndex(fieldName);
