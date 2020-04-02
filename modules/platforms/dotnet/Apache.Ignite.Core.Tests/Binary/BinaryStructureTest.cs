@@ -147,10 +147,34 @@ namespace Apache.Ignite.Core.Tests.Binary
         }
 
         /// <summary>
+        /// Tests a combination of changing field order and some fields being missing.
+        /// </summary>
+        [Test]
+        public void TestChangingFieldOrderAndPresence()
+        {
+            var marsh = new Marshaller(new BinaryConfiguration(typeof(CustomFieldOrder)));
+
+            Action<int[], int[]> test = (r, w) =>
+            {
+                CustomFieldOrder.Fields = w;
+                var bytes = marsh.Marshal(new CustomFieldOrder());
+
+                CustomFieldOrder.Fields = r;
+                marsh.Unmarshal<CustomFieldOrder>(bytes);
+            };
+
+            test(new[] {0}, new[] {1, 0});
+            test(new[] {0, 1}, new[] {1, 0});
+            test(new[] {1, 0}, new[] {1, 0});
+            test(new[] {0}, new[] {0});
+            test(new[] {1}, new[] {0, 1});
+        }
+
+        /// <summary>
         /// Tests object with random order and presence of fields.
         /// </summary>
         [Test]
-        public void TestRandomOrderFields()
+        public void TestRandomFieldOrderAndPresence()
         {
             var marsh = new Marshaller(new BinaryConfiguration(typeof(RandomFieldOrder)));
             var obj = new RandomFieldOrder();
@@ -167,7 +191,7 @@ namespace Apache.Ignite.Core.Tests.Binary
         /// Runs write/read test in multiple threads, using random field order to create lots of schemas.
         /// </summary>
         [Test]
-        public void TestMultithreadedRandomOrderFields()
+        public void TestMultithreadedRandomFields()
         {
             var marsh = new Marshaller(new BinaryConfiguration(typeof(RandomFieldOrder)));
             var obj = new RandomFieldOrder();
@@ -422,11 +446,13 @@ namespace Apache.Ignite.Core.Tests.Binary
 
     public class RandomFieldOrder : IBinarizable
     {
-        public const int FieldCount = 50;
+        public const int FieldCount = 5;
 
         public void WriteBinary(IBinaryWriter writer)
         {
-            foreach (var fieldName in GetRandomOrderFieldNames())
+            var fieldNames = GetRandomOrderFieldNames().ToArray();
+            
+            foreach (var fieldName in fieldNames)
             {
                 writer.WriteString(fieldName, fieldName);
             }
@@ -434,7 +460,9 @@ namespace Apache.Ignite.Core.Tests.Binary
 
         public void ReadBinary(IBinaryReader reader)
         {
-            foreach (var fieldName in GetRandomOrderFieldNames())
+            var fieldNames = GetRandomOrderFieldNames().ToArray();
+            
+            foreach (var fieldName in fieldNames)
             {
                 var fieldValue = reader.ReadString(fieldName);
 
@@ -449,6 +477,35 @@ namespace Apache.Ignite.Core.Tests.Binary
         {
             return Enumerable.Range(0, FieldCount).Select(x => "Field_" + x).OrderBy(_ => Guid.NewGuid())
                 .Skip(IgniteUtils.ThreadLocalRandom.Next(FieldCount));
+        }
+    }
+
+    public class CustomFieldOrder : IBinarizable
+    {
+        public static int[] Fields;
+
+        public void WriteBinary(IBinaryWriter writer)
+        {
+            foreach (var field in Fields)
+            {
+                var fieldName = "Field_" + field;
+                writer.WriteString(fieldName, fieldName);
+            }
+        }
+
+        public void ReadBinary(IBinaryReader reader)
+        {
+            foreach (var field in Fields)
+            {
+                var fieldName = "Field_" + field;
+                
+                var fieldValue = reader.ReadString(fieldName);
+                
+                if (fieldValue != null)
+                {
+                    Assert.AreEqual(fieldName, fieldValue);
+                }
+            }
         }
     }
 }
