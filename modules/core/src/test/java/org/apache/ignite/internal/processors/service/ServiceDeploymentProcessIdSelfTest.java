@@ -39,6 +39,9 @@ import static org.junit.Assert.assertEquals;
  */
 @RunWith(Parameterized.class)
 public class ServiceDeploymentProcessIdSelfTest {
+    /** Tests discovery event type. */
+    private final String testLabel;
+
     /** Tests discovery event. */
     private final DiscoveryEvent evt;
 
@@ -52,6 +55,7 @@ public class ServiceDeploymentProcessIdSelfTest {
      * @param data Tests data.
      */
     public ServiceDeploymentProcessIdSelfTest(String testLabel, IgniteBiTuple<DiscoveryEvent, AffinityTopologyVersion> data) {
+        this.testLabel = testLabel;
         this.evt = data.get1();
         this.topVer = data.get2();
 
@@ -89,6 +93,7 @@ public class ServiceDeploymentProcessIdSelfTest {
     /** */
     @Test
     public void topologyVersion() {
+        System.out.println("test with event type: " + testLabel);
         System.out.println("event = " + evt);
         System.out.println("topology version = " + topVer);
 
@@ -100,6 +105,7 @@ public class ServiceDeploymentProcessIdSelfTest {
     /** */
     @Test
     public void requestId() {
+        System.out.println("test with event type: " + testLabel);
         System.out.println("event = " + evt);
         System.out.println("topology version = " + topVer);
 
