@@ -1010,7 +1010,8 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
                     qry.getSchema(),
                     cliCtx,
                     qry.getSql(),
-                    qry.batchedArguments()
+                    qry.batchedArguments(),
+                    connCtx.queryInitiatorIdentifier()
                 );
 
                 for (int i = 0; i < cnt.size(); i++)

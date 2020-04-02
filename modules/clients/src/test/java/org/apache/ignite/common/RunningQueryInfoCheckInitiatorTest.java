@@ -23,7 +23,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
@@ -38,6 +39,8 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.jdbc.thin.JdbcThinAbstractSelfTest;
 import org.apache.ignite.lang.IgniteRunnable;
@@ -80,8 +83,6 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        TestSQLFunctions.reset();
-
         for (String cache : grid(0).cacheNames()) {
             if (!cache.equals("test"))
                 grid(0).cache(cache).destroy();
@@ -116,13 +117,13 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
     /**
      * @throws Exception If failed.
      */
-//    @Test
+    @Test
     public void testMultipleStatementsUserDefinedInitiatorId() throws Exception {
         final String initiatorId = "TestUserSpecifiedOriginator";
 
         GridTestUtils.runAsync(() -> {
             List<FieldsQueryCursor<List<?>>> curs = grid(0).context().query().querySqlFields(
-                new SqlFieldsQuery("SELECT 'qry0', test.awaitLatch(); SELECT 'qry1', test.awaitLatch()")
+                new SqlFieldsQuery("SELECT 'qry0', test.await(); SELECT 'qry1', test.await()")
                     .setQueryInitiatorId(initiatorId), false, false);
 
             for (FieldsQueryCursor<List<?>> cur : curs)
@@ -131,13 +132,11 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
 
         assertEquals(initiatorId, initiatorId(grid(0), "qry0", 1000));
 
-        TestSQLFunctions.reset();
+        TestSQLFunctions.unlockQuery();
 
         assertEquals(initiatorId, initiatorId(grid(0), "qry1", 1000));
 
-        checkRunningQueriesCount(grid(0), 1, 1000);
-
-        TestSQLFunctions.reset();
+        TestSQLFunctions.unlockQuery();
 
         checkRunningQueriesCount(grid(0), 0, 1000);
     }
@@ -150,7 +149,8 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
     public void testJdbcThinInitiatorId() throws Exception {
         Consumer<String> sqlExec = sql -> {
             GridTestUtils.runAsync(() -> {
-                    try (Connection conn = DriverManager.getConnection("jdbc:ignite:thin://127.0.0.1/?user=ignite&password=ignite")) {
+                    try (Connection conn = DriverManager.getConnection(
+                        "jdbc:ignite:thin://127.0.0.1/?user=ignite&password=ignite")) {
                         try (Statement stmt = conn.createStatement()) {
                             stmt.execute(sql);
                         }
@@ -229,12 +229,7 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
                     try (Connection conn = DriverManager.getConnection(
                         CFG_URL_PREFIX + "nodeId=" + grid0NodeId + "@modules/clients/src/test/config/jdbc-config.xml")) {
                         try (Statement stmt = conn.createStatement()) {
-                            try (ResultSet rs = stmt.executeQuery("SELECT test.awaitLatch()")) {
-                                // Read results: workaround for leak cursor GG-27123
-                                // Remove after fix.
-                                while (rs.next())
-                                    ;
-                            }
+                            stmt.execute(sql);
                         }
                     }
                     catch (SQLException e) {
@@ -252,18 +247,54 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
         check(sqlExec, initiatorChecker);
     }
 
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testJdbcThinStreamerInitiatorId() throws Exception {
+        final AtomicBoolean end = new AtomicBoolean();
+
+        IgniteInternalFuture f = GridTestUtils.runAsync(() -> {
+                try (Connection conn = DriverManager.getConnection(
+                    "jdbc:ignite:thin://127.0.0.1/?user=ignite&password=ignite")) {
+                    try (Statement stmt = conn.createStatement()) {
+                        stmt.execute("CREATE TABLE T (ID INT PRIMARY KEY, VAL INT)");
+
+                        stmt.execute("SET STREAMING ON");
+
+                        for(int i = 0; !end.get(); ++i)
+                            stmt.execute("INSERT INTO T VALUES(" + i + " , 0)");
+                    }
+                }
+                catch (SQLException e) {
+                    log.error("Unexpected exception", e);
+                }
+            });
+
+        Consumer<String> initiatorChecker = initiatorId -> {
+            assertTrue("Invalid initiator ID: " + initiatorId,
+                Pattern.compile("jdbc-thin:127\\.0\\.0\\.1:[0-9]+@ignite").matcher(initiatorId).matches());
+        };
+
+        initiatorChecker.accept(initiatorId(grid(0), "INSERT", 2000));
+
+        end.set(true);
+
+        f.get();
+    }
+
     /** */
     private void check(Consumer<String> sqlExec, Consumer<String> initiatorChecker) throws Exception {
-        checkInitiatorId(sqlExec, initiatorChecker, "SELECT test.awaitLatch()", "awaitLatch");
+        checkInitiatorId(sqlExec, initiatorChecker, "SELECT test.await()", "await");
 
         grid(0).context().query().querySqlFields(
             new SqlFieldsQuery("CREATE TABLE T (ID INT PRIMARY KEY, VAL INT)"), false).getAll();
 
         U.sleep(500);
 
-        checkInitiatorId(sqlExec, initiatorChecker, "INSERT INTO T VALUES (0, test.awaitLatch())", "awaitLatch");
+        checkInitiatorId(sqlExec, initiatorChecker, "INSERT INTO T VALUES (0, test.await())", "await");
 
-        checkInitiatorId(sqlExec, initiatorChecker, "UPDATE T SET VAL=test.awaitLatch() WHERE ID = 0", "awaitLatch");
+        checkInitiatorId(sqlExec, initiatorChecker, "UPDATE T SET VAL=test.await() WHERE ID = 0", "await");
     }
 
     /**
@@ -274,11 +305,9 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
         throws Exception {
         sqlExecutor.accept(sql);
 
-        TestSQLFunctions.awaitFuncCalled();
-
         initiatorChecker.accept(initiatorId(grid(0), sqlMatch, 2000));
 
-        TestSQLFunctions.reset();
+        TestSQLFunctions.unlockQuery();
 
         checkRunningQueriesCount(grid(0), 0, 2000);
     }
@@ -331,20 +360,13 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
      * Utility class with custom SQL functions.
      */
     public static class TestSQLFunctions {
-        /**
-         *
-         */
-        static volatile CountDownLatch latch = new CountDownLatch(1);
-        static volatile CountDownLatch funcCalledLatch = new CountDownLatch(1);
+        static final Phaser ph = new Phaser(2);
 
         /**
          * Recreate latches. Old latches are released.
          */
-        static void reset() {
-            latch.countDown();
-
-            latch = new CountDownLatch(1);
-            funcCalledLatch = new CountDownLatch(1);
+        static void unlockQuery() {
+            ph.arriveAndAwaitAdvance();
         }
 
         /**
@@ -353,27 +375,15 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
          * @return 0;
          */
         @QuerySqlFunction
-        public static long awaitLatch() {
+        public static long await() {
             try {
-                funcCalledLatch.countDown();
-
-                latch.await();
+                ph.arriveAndAwaitAdvance();
             }
             catch (Exception ignored) {
                 // No-op.
             }
 
             return 0;
-        }
-
-        /** */
-        public static void awaitFuncCalled() {
-            try {
-                funcCalledLatch.await();
-            }
-            catch (Exception ignored) {
-                // No-op.
-            }
         }
     }
 

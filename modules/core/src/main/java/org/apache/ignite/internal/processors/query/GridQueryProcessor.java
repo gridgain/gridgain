@@ -2450,7 +2450,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @return Update counter.
      */
     public long streamUpdateQuery(@Nullable final String cacheName, final String schemaName,
-        final IgniteDataStreamer<?, ?> streamer, final String qry, final Object[] args) {
+        final IgniteDataStreamer<?, ?> streamer, final String qry, final Object[] args,
+        String qryInitiatorId) {
         assert streamer != null;
 
         if (!busyLock.enterBusy())
@@ -2461,7 +2462,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
             return executeQuery(GridCacheQueryType.SQL_FIELDS, qry, cctx, new IgniteOutClosureX<Long>() {
                 @Override public Long applyx() throws IgniteCheckedException {
-                    return idx.streamUpdateQuery(schemaName, qry, args, streamer);
+                    return idx.streamUpdateQuery(schemaName, qry, args, streamer, qryInitiatorId);
                 }
             }, true);
         }
@@ -2481,7 +2482,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @return Update counters.
      */
     public List<Long> streamBatchedUpdateQuery(final String schemaName, final SqlClientContext cliCtx,
-        final String qry, final List<Object[]> args) {
+        final String qry, final List<Object[]> args, String qryInitiatorId) {
         checkxEnabled();
 
         if (!busyLock.enterBusy())
@@ -2490,7 +2491,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         try {
             return executeQuery(GridCacheQueryType.SQL_FIELDS, qry, null, new IgniteOutClosureX<List<Long>>() {
                 @Override public List<Long> applyx() throws IgniteCheckedException {
-                    return idx.streamBatchedUpdateQuery(schemaName, qry, args, cliCtx);
+                    return idx.streamBatchedUpdateQuery(schemaName, qry, args, cliCtx, qryInitiatorId);
                 }
             }, true);
         }

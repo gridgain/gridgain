@@ -496,7 +496,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
                 true,
                 null,
                 null,
-                SqlFieldsQuery.threadedQueryInitiatorId());
+                null);
 
             Throwable failReason = null;
             try {
@@ -646,11 +646,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         @Nullable Object[] params,
-        IgniteDataStreamer<?, ?> streamer
+        IgniteDataStreamer<?, ?> streamer,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         QueryParserResultDml dml = streamerParse(schemaName, qry);
 
-        return streamQuery0(qry, schemaName, streamer, dml, params);
+        return streamQuery0(qry, schemaName, streamer, dml, params, qryInitiatorId);
     }
 
     /** {@inheritDoc} */
@@ -659,7 +660,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         List<Object[]> params,
-        SqlClientContext cliCtx
+        SqlClientContext cliCtx,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         if (cliCtx == null || !cliCtx.isStream()) {
             U.warn(log, "Connection is not in streaming mode.");
@@ -676,7 +678,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         List<Long> ress = new ArrayList<>(params.size());
 
         for (int i = 0; i < params.size(); i++) {
-            long res = streamQuery0(qry, schemaName, streamer, dml, params.get(i));
+            long res = streamQuery0(qry, schemaName, streamer, dml, params.get(i), qryInitiatorId);
 
             ress.add(res);
         }
@@ -692,12 +694,13 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param streamer Streamer to feed data to.
      * @param dml DML statement.
      * @param args Statement arguments.
+     * @param qryInitiatorId Que
      * @return Number of rows in given INSERT statement.
      * @throws IgniteCheckedException if failed.
      */
     @SuppressWarnings({"unchecked"})
     private long streamQuery0(String qry, String schemaName, IgniteDataStreamer streamer, QueryParserResultDml dml,
-        final Object[] args) throws IgniteCheckedException {
+        final Object[] args, String qryInitiatorId) throws IgniteCheckedException {
         Long qryId = runningQryMgr.register(
             qry,
             GridCacheQueryType.SQL_FIELDS,
@@ -705,7 +708,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             true,
             null,
             null,
-            SqlFieldsQuery.threadedQueryInitiatorId());
+            qryInitiatorId);
 
         Exception failReason = null;
 

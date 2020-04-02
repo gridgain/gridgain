@@ -574,7 +574,8 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
                 OdbcUtils.prepareSchema(qry.getSchema()),
                 cliCtx,
                 qry.getSql(),
-                qry.batchedArguments()
+                qry.batchedArguments(),
+                connCtx.queryInitiatorIdentifier()
             );
         }
         catch (Exception e) {
