@@ -158,10 +158,9 @@ public class CacheWithDifferentDataRegionConfigurationTest extends GridCommonAbs
     }
 
     /**
-     * TODO broken
+     *
      */
     @Test
-    @Ignore
     public void firstNodeHasDefaultAndSecondWithTwoRegionsDefaultAndPersistenceAcceptable() throws Exception {
         IgniteEx node1 = node(NODE_1)
             .andCache(CACHE_1)
@@ -174,8 +173,6 @@ public class CacheWithDifferentDataRegionConfigurationTest extends GridCommonAbs
             .withRegion(REGION_2, PERSISTENCE)
             .andExclusiveCache(CACHE_2, REGION_2)
             .start();
-
-        node1.cluster().active(true);
 
         populateCache(node1, CACHE_1, 1000);
         populateCache(node2, CACHE_2, 350);

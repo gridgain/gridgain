@@ -2050,8 +2050,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
             if (updateRebalanceVer)
                 updateRebalanceVersion(assignment.topologyVersion(), assignment.assignment());
 
-            // Check if joining node has any supplier.
-            if (fut != null && fut.context().events().hasServerJoin())
+            // Own orphan moving partitions.
+            if (fut != null && !fut.events().hasServerLeft() && !fut.activateCluster())
                 ownLost();
         }
         finally {
