@@ -65,6 +65,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
         /// </summary>
         public int GetFieldId(string fieldName, byte fieldTypeId = 0)
         {
+            // TODO: This is never zero: a bug?
             _curStructAction++;
 
             if (_curStructUpdates == null && _portStruct != null)
