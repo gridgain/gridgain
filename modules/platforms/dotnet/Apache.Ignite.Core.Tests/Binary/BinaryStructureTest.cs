@@ -152,7 +152,16 @@ namespace Apache.Ignite.Core.Tests.Binary
         [Test]
         public void TestMultithreadedRandomOrderFields()
         {
-    
+            var marsh = new Marshaller(new BinaryConfiguration(typeof(RandomFieldOrder)));
+            var obj = new RandomFieldOrder();
+            
+            TestUtils.RunMultiThreaded(() =>
+            {
+                var bytes = marsh.Marshal(obj);
+                
+                marsh.Unmarshal<RandomFieldOrder>(bytes);
+
+            }, Environment.ProcessorCount, 10000);
         }
     }
 
