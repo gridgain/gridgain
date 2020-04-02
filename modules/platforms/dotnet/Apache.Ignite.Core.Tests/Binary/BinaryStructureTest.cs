@@ -145,6 +145,23 @@ namespace Apache.Ignite.Core.Tests.Binary
             Assert.AreEqual(3, res.Nested.Baz);
             Assert.AreEqual(5, res.Nested.Qux);
         }
+
+        /// <summary>
+        /// Tests object with random order and presence of fields.
+        /// </summary>
+        [Test]
+        public void TestRandomOrderFields()
+        {
+            var marsh = new Marshaller(new BinaryConfiguration(typeof(RandomFieldOrder)));
+            var obj = new RandomFieldOrder();
+
+            for (var i = 0; i < 100; i++)
+            {
+                var bytes = marsh.Marshal(obj);
+                
+                marsh.Unmarshal<RandomFieldOrder>(bytes);
+            }
+        }
     
         /// <summary>
         /// Runs write/read test in multiple threads, using random field order to create lots of schemas.
@@ -161,7 +178,7 @@ namespace Apache.Ignite.Core.Tests.Binary
                 
                 marsh.Unmarshal<RandomFieldOrder>(bytes);
 
-            }, Environment.ProcessorCount * 2, 5);
+            }, Environment.ProcessorCount, 5);
         }
     }
 

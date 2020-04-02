@@ -99,6 +99,12 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
                     // TODO: GG-28406 fails here, jmpTbl is null.
                     BinaryStructureJumpTable jmpTbl = _jumps[entry.Id];
 
+                    // TODO: Not sure this is a correct fix, find the root cause.
+                    // if (jmpTbl == null)
+                    // {
+                    //     return 0;
+                    // }
+
                     int pathIdx0 = jmpTbl.GetPathIndex(fieldName);
 
                     if (pathIdx0 < 0)
