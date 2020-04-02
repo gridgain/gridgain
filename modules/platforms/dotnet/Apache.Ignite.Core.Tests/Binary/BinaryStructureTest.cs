@@ -155,7 +155,7 @@ namespace Apache.Ignite.Core.Tests.Binary
             var marsh = new Marshaller(new BinaryConfiguration(typeof(RandomFieldOrder)));
             var obj = new RandomFieldOrder();
 
-            for (var i = 0; i < 100; i++)
+            for (var i = 0; i < 1000; i++)
             {
                 var bytes = marsh.Marshal(obj);
                 
