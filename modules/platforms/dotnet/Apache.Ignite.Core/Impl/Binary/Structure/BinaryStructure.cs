@@ -57,6 +57,10 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
         private BinaryStructure(BinaryStructureEntry[][] paths,
             BinaryStructureJumpTable[] jumps, IDictionary<string, byte> fieldTypes)
         {
+            Debug.Assert(paths != null);
+            Debug.Assert(jumps != null);
+            Debug.Assert(fieldTypes != null);
+            
             _paths = paths;
             _jumps = jumps;
             _fieldTypes = fieldTypes;
@@ -72,6 +76,7 @@ namespace Apache.Ignite.Core.Impl.Binary.Structure
         /// <returns>Field ID or zero in case there are no matching path.</returns>
         public int GetFieldId(string fieldName, byte fieldType, ref int pathIdx, int actionIdx)
         {
+            Debug.Assert(fieldName != null);
             Debug.Assert(pathIdx <= _paths.Length);
 
             // Get path.
