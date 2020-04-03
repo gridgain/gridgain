@@ -167,7 +167,6 @@ import org.apache.ignite.thread.IgniteThread;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Collections.emptyList;
-import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
