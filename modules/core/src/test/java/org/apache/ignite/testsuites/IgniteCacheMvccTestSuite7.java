@@ -29,6 +29,7 @@ import org.apache.ignite.internal.processors.cache.CacheDataRegionConfigurationT
 import org.apache.ignite.internal.processors.cache.CacheGroupMetricsTest;
 import org.apache.ignite.internal.processors.cache.MvccCacheGroupMetricsTest;
 import org.apache.ignite.internal.processors.cache.distributed.Cache64kPartitionsTest;
+import org.apache.ignite.internal.processors.cache.distributed.CachePartitionLostWhileClearingTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingPartitionCountersMvccTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingPartitionCountersTest;
 import org.apache.ignite.internal.processors.cache.distributed.rebalancing.GridCacheRebalancingWithAsyncClearingMvccTest;
@@ -68,6 +69,7 @@ public class IgniteCacheMvccTestSuite7 {
         // TODO IGNITE-10175: refactor these tests (use assume) to support both mvcc and non-mvcc modes after moving to JUnit4/5.
         ignoredTests.add(CacheGroupMetricsTest.class); // See MvccCacheGroupMetricsMBeanTest
         ignoredTests.add(GridCacheRebalancingPartitionCountersTest.class); // See GridCacheRebalancingPartitionCountersMvccTest
+        ignoredTests.add(CachePartitionLostWhileClearingTest.class); // Data loss partially works with MVCC.
 
         // Test logic is not compatible with MVCC style tx locking.
         ignoredTests.add(TxCrossCacheMapOnInvalidTopologyTest.class);
