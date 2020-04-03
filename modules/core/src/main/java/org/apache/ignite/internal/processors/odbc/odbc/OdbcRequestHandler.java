@@ -368,7 +368,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
         qry.setSchema(OdbcUtils.prepareSchema(schema));
         qry.setSkipReducerOnUpdate(cliCtx.isSkipReducerOnUpdate());
         qry.setNestedTxMode(nestedTxMode);
-        qry.setQueryInitiatorId(connCtx.queryInitiatorIdentifier());
+        qry.setQueryInitiatorId(connCtx.clientDescriptor());
 
         return qry;
     }
@@ -575,7 +575,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
                 cliCtx,
                 qry.getSql(),
                 qry.batchedArguments(),
-                connCtx.queryInitiatorIdentifier()
+                connCtx.clientDescriptor()
             );
         }
         catch (Exception e) {

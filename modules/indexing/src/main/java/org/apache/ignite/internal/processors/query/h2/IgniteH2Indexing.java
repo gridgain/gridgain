@@ -694,7 +694,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param streamer Streamer to feed data to.
      * @param dml DML statement.
      * @param args Statement arguments.
-     * @param qryInitiatorId Que
+     * @param qryInitiatorId Query initiator identifier.
      * @return Number of rows in given INSERT statement.
      * @throws IgniteCheckedException if failed.
      */

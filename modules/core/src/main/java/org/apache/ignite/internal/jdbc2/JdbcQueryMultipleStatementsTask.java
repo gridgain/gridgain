@@ -191,7 +191,7 @@ class JdbcQueryMultipleStatementsTask implements IgniteCallable<List<JdbcStateme
     }
 
     /**
-     * @return {@code true} if query with multiple statements is allowed.
+     * @return query initiator identifier.
      */
     protected String queryInitiatorId() {
         return null;

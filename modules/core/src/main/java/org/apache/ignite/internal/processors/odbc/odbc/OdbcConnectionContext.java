@@ -88,6 +88,7 @@ public class OdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /**
      * Constructor.
      * @param ctx Kernal Context.
+     * @param ses Client's NIO session.
      * @param busyLock Shutdown busy lock.
      * @param connId Connection ID.
      * @param maxCursors Maximum allowed cursors.
@@ -163,7 +164,7 @@ public class OdbcConnectionContext extends ClientListenerAbstractConnectionConte
             }
         };
 
-        initQueryInitiatorIdentifier("odbc");
+        initClientDescriptor("odbc");
 
         handler = new OdbcRequestHandler(ctx, busyLock, sender, maxCursors, distributedJoins, enforceJoinOrder,
             replicatedOnly, collocated, lazy, skipReducerOnUpdate, actx, nestedTxMode, ver, this);

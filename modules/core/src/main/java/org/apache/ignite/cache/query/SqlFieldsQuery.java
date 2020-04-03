@@ -93,8 +93,10 @@ public class SqlFieldsQuery extends Query<List<?>> {
      */
     private int updateBatchSize = DFLT_UPDATE_BATCH_SIZE;
 
-    /** Query's originator string (client host+port, user name,
-     * job name or any user's information about query initiator). */
+    /**
+     * Query's originator string (client host+port, user name,
+     * job name or any user's information about query initiator).
+     */
     private String qryInitiatorId;
 
     /**

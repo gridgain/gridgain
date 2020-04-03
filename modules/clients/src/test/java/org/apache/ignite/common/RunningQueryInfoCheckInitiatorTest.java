@@ -405,6 +405,6 @@ public class RunningQueryInfoCheckInitiatorTest extends JdbcThinAbstractSelfTest
         @Override public void run() {
             ((IgniteEx)ign).context().query().querySqlFields(
                 new SqlFieldsQuery(sql), false).getAll();
-        }    }
-
+        }
+    }
 }

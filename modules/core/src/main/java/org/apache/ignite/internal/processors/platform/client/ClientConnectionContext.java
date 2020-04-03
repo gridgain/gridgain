@@ -113,6 +113,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
      * Ctor.
      *
      * @param ctx Kernal context.
+     * @param ses Client's NIO session.
      * @param connId Connection ID.
      * @param maxCursors Max active cursors.
      * @param thinCfg Thin-client configuration.
@@ -176,7 +177,7 @@ public class ClientConnectionContext extends ClientListenerAbstractConnectionCon
 
         AuthorizationContext authCtx = authenticate(ses.certificates(), user, pwd);
 
-        initQueryInitiatorIdentifier("cli");
+        initClientDescriptor("cli");
 
         currentVer = ver;
 

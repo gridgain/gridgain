@@ -114,6 +114,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
     /**
      * Constructor.
      * @param ctx Kernal Context.
+     * @param ses Client's NIO session.
      * @param busyLock Shutdown busy lock.
      * @param connId Connection ID.
      * @param maxCursors Maximum allowed cursors.
@@ -226,7 +227,7 @@ public class JdbcConnectionContext extends ClientListenerAbstractConnectionConte
 
         protoCtx = new JdbcProtocolContext(ver, features, null, false);
 
-        initQueryInitiatorIdentifier("jdbc-thin");
+        initClientDescriptor("jdbc-thin");
 
         parser = new JdbcMessageParser(ctx, protoCtx);
 

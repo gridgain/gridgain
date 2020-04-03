@@ -118,7 +118,7 @@ public class JdbcConnection implements Connection {
     private static final IgniteProductVersion CLOSE_CURSOR_TASK_SUPPORTED_SINCE =
         IgniteProductVersion.fromString("8.7.13");
 
-    /** Multiple statements V2 task supported since version. */
+    /** Multiple statements V3 task supported since version. */
     private static final IgniteProductVersion MULTIPLE_STATEMENTS_TASK_V3_SUPPORTED_SINCE =
         IgniteProductVersion.fromString("8.7.16");
 
@@ -204,8 +204,15 @@ public class JdbcConnection implements Connection {
     /** Statements. */
     final Set<JdbcStatement> statements = new HashSet<>();
 
-    /** Query initiator ID. */
-    private final String qryInitiatorId;
+    /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     */
+    private final String clientDesc;
 
     /**
      * Creates new connection.
@@ -284,7 +291,7 @@ public class JdbcConnection implements Connection {
                     schemaName = QueryUtils.DFLT_SCHEMA;
             }
 
-            qryInitiatorId = "jdbc-v2:" + F.first(ignite.cluster().localNode().addresses()) + ":" + ignite.name();
+            clientDesc = "jdbc-v2:" + F.first(ignite.cluster().localNode().addresses()) + ":" + ignite.name();
         }
         catch (Exception e) {
             close();
@@ -986,10 +993,17 @@ public class JdbcConnection implements Connection {
     }
 
     /**
-     * @return Query initiator ID.
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     *
+     * @return Client descriptor string.
      */
-    String queryInitiatorId() {
-        return qryInitiatorId;
+    String clientDescriptor() {
+        return clientDesc;
     }
 
     /**

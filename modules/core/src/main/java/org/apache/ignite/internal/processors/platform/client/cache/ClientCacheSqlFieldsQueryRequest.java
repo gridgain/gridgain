@@ -92,7 +92,7 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
         ctx.incrementCursors();
 
         try {
-            qry.setQueryInitiatorId(ctx.queryInitiatorIdentifier());
+            qry.setQueryInitiatorId(ctx.clientDescriptor());
 
             // If cacheId is provided, we must check the cache for existence.
             if (cacheId() != 0) {

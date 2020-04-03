@@ -354,7 +354,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /**
      * Prepare context.
      *
-     * @param ses Session.
+     * @param ses Client's NIO session.
      * @param clientType Client type.
      * @return Context.
      * @throws IgniteCheckedException If failed.

@@ -121,7 +121,7 @@ public interface GridQueryIndexing {
      * @param qry Query.
      * @param params Query parameters.
      * @param cliCtx Client connection context.
-     * @param qryInitiatorId Query initiato ID.
+     * @param qryInitiatorId Query initiator ID.
      * @return Update counters.
      * @throws IgniteCheckedException If failed.
      */

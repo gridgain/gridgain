@@ -52,13 +52,22 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     /** Authorization context. */
     private AuthorizationContext authCtx;
 
-    /** Query initiator identifier. */
-    private String qryInitiatorId;
+    /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     */
+    private String clientDesc;
 
     /**
      * Constructor.
      *
      * @param ctx Kernal context.
+     * @param ses Client's NIO session.
+     * @param connId Connection ID.
      */
     protected ClientListenerAbstractConnectionContext(GridKernalContext ctx, GridNioSession ses,
         long connId) {
@@ -148,16 +157,24 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     /**
      *
      */
-    protected void initQueryInitiatorIdentifier(String prefix) {
-        qryInitiatorId = prefix + ":" + ses.remoteAddress().getHostString() + ":" + ses.remoteAddress().getPort();
+    protected void initClientDescriptor(String prefix) {
+        clientDesc = prefix + ":" + ses.remoteAddress().getHostString() + ":" + ses.remoteAddress().getPort();
 
         if (authCtx != null)
-            qryInitiatorId += "@" + authCtx.userName();
+            clientDesc += "@" + authCtx.userName();
     }
+
     /**
-     * @return Originator string.
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     *
+     * @return Client descriptor string.
      */
-    public String queryInitiatorIdentifier() {
-        return qryInitiatorId;
+    public String clientDescriptor() {
+        return clientDesc;
     }
 }
