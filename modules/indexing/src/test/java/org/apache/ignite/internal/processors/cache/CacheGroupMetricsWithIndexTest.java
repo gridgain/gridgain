@@ -238,7 +238,7 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
             cache2.query(new SqlFieldsQuery(createIdxSql)).getAll();
 
-            String selectIdxSql = "select * from information_schema.indexes where index_name='" + INDEX_NAME + "'";
+            String selectIdxSql = "select * from sys.indexes where index_name='" + INDEX_NAME + "'";
 
             List<List<?>> all = cache2.query(new SqlFieldsQuery(selectIdxSql)).getAll();
 
@@ -395,7 +395,7 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
             cache2.query(new SqlFieldsQuery(createIdxSql)).getAll();
 
-            String selectIdxSql = "select * from information_schema.indexes where index_name='" + INDEX_NAME + "'";
+            String selectIdxSql = "select * from sys.indexes where index_name='" + INDEX_NAME + "'";
 
             List<List<?>> all = cache2.query(new SqlFieldsQuery(selectIdxSql)).getAll();
 

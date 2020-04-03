@@ -2024,8 +2024,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
 
-        if (cctx.group().metrics() != null)
-            cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
+        cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
 
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
