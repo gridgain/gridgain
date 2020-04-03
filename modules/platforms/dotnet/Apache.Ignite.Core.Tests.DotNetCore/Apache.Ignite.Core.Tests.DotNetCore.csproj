@@ -98,6 +98,9 @@
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheAbstractTransactionalTest.cs" Link="Cache\CacheAbstractTransactionalTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheConfigurationTest.cs" Link="Cache\CacheConfigurationTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheCreateTest.cs" Link="Cache\CacheCreateTest.cs" />
+    <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheMetricsTest.cs">
+      <Link>Cache\CacheMetricsTest.cs</Link>
+    </Compile>
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CachePartitionedTest.cs" Link="Cache\CachePartitionedTest.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheTestAsyncWrapper.cs" Link="Cache\CacheTestAsyncWrapper.cs" />
     <Compile Include="..\Apache.Ignite.Core.Tests\Cache\CacheTestKey.cs" Link="Cache\CacheTestKey.cs" />
