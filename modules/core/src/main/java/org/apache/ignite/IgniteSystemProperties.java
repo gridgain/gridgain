@@ -1396,12 +1396,12 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_INDEX_COST_FUNCTION = "IGNITE_INDEX_COST_FUNCTION";
 
     /**
-     * Enables setting a non-empty attribute value of {@link
+     * Enables setting attribute value of {@link
      * TcpCommunicationSpi#ATTR_HOST_NAMES ATTR_HOST_NAMES} when value {@link
-     * IgniteConfiguration#getLocalHost getLocalHost} is not null.
+     * IgniteConfiguration#getLocalHost getLocalHost} is ip.
      * By default, {@code false}.
      */
-    public static final String IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR = "IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR";
+    public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
 
     /**
      * Enforces singleton.

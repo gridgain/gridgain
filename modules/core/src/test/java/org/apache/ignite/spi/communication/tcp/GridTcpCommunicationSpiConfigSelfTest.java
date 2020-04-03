@@ -16,10 +16,12 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import java.net.InetSocketAddress;
 import java.util.Collection;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractConfigTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
@@ -29,7 +31,7 @@ import static java.lang.Boolean.TRUE;
 import static java.lang.System.setProperty;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES;
 import static org.apache.ignite.internal.util.IgniteUtils.spiAttribute;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_HOST_NAMES;
 import static org.apache.ignite.testframework.GridTestUtils.getFreeCommPort;
@@ -40,7 +42,7 @@ import static org.apache.ignite.testframework.GridTestUtils.getFreeCommPort;
 @GridSpiTest(spi = TcpCommunicationSpi.class, group = "Communication SPI")
 public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfigTest<TcpCommunicationSpi> {
     /** Set null to {@link IgniteConfiguration#setLocalHost}. */
-    boolean setNullLocalHost;
+    private String locHost = "0.0.0.0";
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -50,13 +52,8 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
     }
 
     /** {@inheritDoc} */
-    @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName).setLocalHost("0.0.0.0");
-    }
-
-    /** {@inheritDoc} */
     @Override protected IgniteConfiguration optimize(IgniteConfiguration cfg) {
-        return super.optimize(cfg).setLocalHost(setNullLocalHost ? null : cfg.getLocalHost());
+        return super.optimize(cfg).setLocalHost(locHost);
     }
 
     /**
@@ -104,27 +101,42 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
     /**
      * Test checks that {@link TcpCommunicationSpi#ATTR_HOST_NAMES} attribute
      * is empty only if {@link
-     * IgniteSystemProperties#IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR} ==
+     * IgniteSystemProperties#IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES} ==
      * {@code false} and local host is set via {@link
      * IgniteConfiguration#setLocalHost}.
      *
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR, value = "false")
+    @WithSystemProperty(key = IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, value = "false")
     public void testLocalHost() throws Exception {
+        InetSocketAddress inetSockAddr = new InetSocketAddress(0);
+
+        String ip = inetSockAddr.getHostName();
+        String host = U.resolveLocalAddresses(inetSockAddr.getAddress()).get2().iterator().next();
+
+        log.info("Testing ip=" + ip + " host=" + host);
+
         int nodeIdx = 0;
+
+        locHost = ip;
         checkLocalHost(startGrid(nodeIdx++), false, true);
 
-        setNullLocalHost = true;
-        checkLocalHost(startGrid(nodeIdx++), true, false);
-
-        setProperty(IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR, TRUE.toString());
-
-        setNullLocalHost = false;
+        locHost = host;
         checkLocalHost(startGrid(nodeIdx++), false, false);
 
-        setNullLocalHost = true;
+        locHost = null;
+        checkLocalHost(startGrid(nodeIdx++), true, false);
+
+        setProperty(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, TRUE.toString());
+
+        locHost = ip;
+        checkLocalHost(startGrid(nodeIdx++), false, false);
+
+        locHost = host;
+        checkLocalHost(startGrid(nodeIdx++), false, false);
+
+        locHost = null;
         checkLocalHost(startGrid(nodeIdx++), true, false);
     }
 

@@ -169,7 +169,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -2226,8 +2226,11 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
         else
             connPlc = new FirstConnectionPolicy();
 
+        boolean locAddrIp;
+
         try {
             locHost = U.resolveLocalHost(locAddr);
+            locAddrIp = !F.isEmpty(locAddr) && locHost.toString().startsWith("/");
         }
         catch (IOException e) {
             throw new IgniteSpiException("Failed to initialize local address: " + locAddr, e);
@@ -2258,10 +2261,10 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
 
             Map<String, Object> res = new HashMap<>(5);
 
-            boolean setHostNameAttr = getBoolean(IGNITE_TCP_COMM_SET_LOCAL_HOST_ATTR, false) || isNull(locAddr);
+            boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) && locAddrIp;
 
             res.put(createSpiAttributeName(ATTR_ADDRS), addrs.get1());
-            res.put(createSpiAttributeName(ATTR_HOST_NAMES), setHostNameAttr ? addrs.get2() : emptyList());
+            res.put(createSpiAttributeName(ATTR_HOST_NAMES), setEmptyHostNamesAttr ? emptyList() : addrs.get2());
             res.put(createSpiAttributeName(ATTR_PORT), boundTcpPort);
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), boundTcpShmemPort >= 0 ? boundTcpShmemPort : null);
             res.put(createSpiAttributeName(ATTR_EXT_ADDRS), extAddrs);
