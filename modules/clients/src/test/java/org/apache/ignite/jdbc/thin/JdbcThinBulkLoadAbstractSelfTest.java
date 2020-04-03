@@ -847,7 +847,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                 assertEquals(1011, rs.getInt("age"));
                 assertEquals("FirstName 101112", rs.getString("firstName"));
                 if (checkLastName)
-                    assertEquals("LastName"+delimiter + " 1011" + delimiter + " 12", rs.getString("lastName"));
+                    assertEquals("LastName" + delimiter + " 1011" + delimiter + " 12", rs.getString("lastName"));
             }
             else
                 fail("Wrong ID: " + id);

@@ -70,9 +70,8 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
         int copyStart = 0;
         while (true) {
             if (current == length) {
-                if (copy > 0) {
+                if (copy > 0)
                     currentField.append(input, copyStart, copyStart + copy);
-                }
 
                 fields.add(currentField.toString());
                 break;
@@ -83,18 +82,18 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
             if ((readerState & READER_STATE_QUOTED_STARTED) != 0) {
                 if (c == quoteChars) {
                     readerState &= ~READER_STATE_QUOTED_STARTED;
+
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
                         copy = 0;
                     }
-                    else {
+                    else
                         readerState |= READER_STATE_QUOTED_EMPTY;
-                    }
+
                     copyStart = current;
                 }
-                else {
+                else
                     copy++;
-                }
             }
             else {
                 if (c == fldDelim) {
@@ -102,6 +101,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                         currentField.append(input, copyStart, copyStart + copy);
                         copy = 0;
                     }
+
                     fields.add(currentField.toString());
                     currentField = new StringBuilder();
                     copyStart = current;
@@ -109,18 +109,17 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                 }
                 else if (c == quoteChars && (readerState & READER_STATE_UNQUOTED) == 0) {
                     readerState = READER_STATE_QUOTED | READER_STATE_QUOTED_STARTED;
-                    if (prev == quoteChars) {
+
+                    if (prev == quoteChars)
                         copy++;
-                    }
-                    else {
+                    else
                         copyStart = current;
-                    }
                 }
                 else {
                     copy++;
-                    if (readerState == READER_STATE_UNDEF) {
+
+                    if (readerState == READER_STATE_UNDEF)
                         readerState = READER_STATE_UNQUOTED;
-                    }
                 }
             }
 
