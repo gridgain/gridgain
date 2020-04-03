@@ -2815,10 +2815,14 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (log.isInfoEnabled()) {
                     log.info("Affinity topology changed, no MOVING partitions will be owned " +
                         "[rebFinishedTopVer=" + rebFinishedTopVer +
-                        ", lastAffChangeVer=" + lastAffChangeVer + "]");
+                        ", lastAffChangeVer=" + lastAffChangeVer +
+                        ", grp=" + grp.cacheOrGroupName() + "]");
                 }
 
-                grp.preloader().forceRebalance();
+                // We should not force rebalancing here, otherwise a race is possible when single messages with partition
+                // states are send to coordinator after partitions are owned on checkpoint and forced rebalancing starts on
+                // the same topology and begins to send single message after each group rebalancing completion.
+                // This can trigger preliminary late affinity switching before forced rebalancing is completed.
 
                 return;
             }
