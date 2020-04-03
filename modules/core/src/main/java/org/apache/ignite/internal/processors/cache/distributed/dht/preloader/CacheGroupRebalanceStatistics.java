@@ -121,6 +121,7 @@ public class CacheGroupRebalanceStatistics {
      */
     public void start(long start) {
         this.start = start;
+        end = start;
     }
 
     /**
@@ -174,9 +175,15 @@ public class CacheGroupRebalanceStatistics {
     public void reset() {
         start = 0L;
         end = 0L;
-        attempt = 0;
 
         supplierStat.clear();
+    }
+
+    /**
+     * Reset attempt.
+     */
+    public void resetAttempt() {
+        attempt = 0;
     }
 
     /**

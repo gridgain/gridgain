@@ -74,6 +74,7 @@ public class CacheGroupSupplierRebalanceStatistics {
      */
     public void start(long start) {
         this.start = start;
+        end = start;
     }
 
     /**

@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Collectors;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -1737,12 +1737,12 @@ public class GridDhtPartitionDemander {
 
             p0 = Stream.concat(grp.affinity().cachedAffinity(previousTopVer).primaryPartitions(ctx.localNodeId()).stream(),
                 grp.affinity().cachedAffinity(previousTopVer).backupPartitions(ctx.localNodeId()).stream())
-                .collect(Collectors.toSet());
+                .collect(toSet());
 
             p1 = Stream.concat(grp.affinity().cachedAffinity(otherAssignments.topologyVersion())
                 .primaryPartitions(ctx.localNodeId()).stream(), grp.affinity()
                 .cachedAffinity(otherAssignments.topologyVersion()).backupPartitions(ctx.localNodeId()).stream())
-                .collect(Collectors.toSet());
+                .collect(toSet());
 
             // Not compatible if owners are different.
             if (p0.equals(p1))
@@ -1759,14 +1759,16 @@ public class GridDhtPartitionDemander {
         /**
          * Collect demander per cache groups. For print statistics.
          *
-         * @return List demanders.
+         * @param demanderPred Demander predicate.
+         * @return Set demanders.
          */
-        private Set<GridDhtPartitionDemander> demanders() {
+        private Set<GridDhtPartitionDemander> demanders(Predicate<? super GridDhtPartitionDemander> demanderPred) {
             return ctx.cacheContexts().stream()
                 .map(GridCacheContext::preloader)
                 .filter(GridDhtPreloader.class::isInstance)
                 .map(GridDhtPreloader.class::cast)
                 .map(GridDhtPreloader::demander)
+                .filter(demanderPred)
                 .collect(toSet());
         }
 
@@ -1797,13 +1799,17 @@ public class GridDhtPartitionDemander {
                     return;
             }
 
+            //exclude not rebalanced cache groups
+            Set<GridDhtPartitionDemander> demanders = demanders(d -> !d.rebalanceFut.isInitial());
+
             Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics> totalStats =
-                demanders().stream().collect(toMap(d -> d.grp, d -> d.totalRebStat));
+                demanders.stream().collect(toMap(d -> d.grp, d -> d.totalRebStat));
 
             if (log.isInfoEnabled())
                 log.info(totalRebalanceStatistic(totalStats));
 
             totalStats.forEach((grpCtx, totalStat) -> totalStat.reset());
+            demanders.forEach(d -> d.rebalanceFut.statistics().resetAttempt());
         }
 
         /**

@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.cache.distributed.rebalancing;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -31,6 +33,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.CacheAtomicityMode;
@@ -43,6 +46,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
@@ -66,9 +70,9 @@ import org.apache.ignite.internal.util.lang.GridTuple4;
 import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.T4;
 import org.apache.ignite.internal.util.typedef.internal.A;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.SystemPropertiesList;
@@ -89,6 +93,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_PDS_WAL_REBALANCE_
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_QUIET;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.UTILITY_CACHE_NAME;
+import static org.apache.ignite.internal.processors.cache.GridCacheUtils.cacheId;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatisticsUtils.availablePrintRebalanceStatistics;
 import static org.apache.ignite.internal.util.IgniteUtils.currentTimeMillis;
 import static org.apache.ignite.testframework.LogListener.matches;
@@ -129,7 +134,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             .setCacheConfiguration(cacheCfgs)
             .setRebalanceThreadPoolSize(5)
             .setGridLogger(listenLog)
-            .setDataStorageConfiguration(dsCfg);
+            .setDataStorageConfiguration(dsCfg)
+            .setCommunicationSpi(new TestRecordingCommunicationSpi());
     }
 
     /**
@@ -286,6 +292,111 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Test checks situation when rebalance is restarted for cache group,
+     * then 2 statistics will be printed for it.
+     *
+     * @throws Exception if any error occurs.
+     */
+    @Test
+    public void testBreakRebalanceChain() throws Exception {
+        String filteredNodePostfix = "_filtered";
+
+        IgnitePredicate<ClusterNode> nodeFilter =
+            clusterNode -> !clusterNode.consistentId().toString().contains(filteredNodePostfix);
+
+        cacheCfgs = new CacheConfiguration[] {
+            cacheConfiguration(DEFAULT_CACHE_NAME + 1, null, 15, 1)
+                .setRebalanceOrder(1)
+                .setNodeFilter(nodeFilter),
+            cacheConfiguration(DEFAULT_CACHE_NAME + 2, null, 15, 1)
+                .setRebalanceOrder(2),
+            cacheConfiguration(DEFAULT_CACHE_NAME + 3, null, 15, 1)
+                .setRebalanceOrder(3)
+                .setNodeFilter(nodeFilter)
+        };
+
+        int nodeCnt = 2;
+
+        startGrids(nodeCnt);
+        awaitPartitionMapExchange();
+
+        IgniteConfiguration cfg2 = getConfiguration(getTestIgniteInstanceName(nodeCnt++));
+        TestRecordingCommunicationSpi spi2 = (TestRecordingCommunicationSpi)cfg2.getCommunicationSpi();
+
+        GrpStatPred grpStatPred = new GrpStatPred();
+        TotalStatPred totalStatPred = new TotalStatPred();
+
+        LogListener[] logListeners = {
+            matches(grpStatPred).build(),
+            matches(totalStatPred).build(),
+            matches(Exception.class.getSimpleName()).build()
+        };
+
+        listenLog.registerAllListeners(logListeners);
+
+        spi2.blockMessages((clusterNode, msg) -> {
+            if (GridDhtPartitionDemandMessage.class.isInstance(msg)) {
+                GridDhtPartitionDemandMessage demandMsg = (GridDhtPartitionDemandMessage)msg;
+
+                if (demandMsg.groupId() == cacheId(DEFAULT_CACHE_NAME + 1))
+                    return true;
+            }
+            return false;
+        });
+
+        IgniteEx node2 = startGrid(cfg2);
+        spi2.waitForBlocked();
+
+        IgniteEx filteredNode = startGrid(getTestIgniteInstanceName(nodeCnt) + filteredNodePostfix);
+
+        for (CacheGroupContext grpCtx : filteredNode.context().cache().cacheGroups())
+            grpCtx.preloader().rebalanceFuture().get(10_000);
+
+        spi2.stopBlock();
+        awaitPartitionMapExchange();
+
+        assertTrue(logListeners[0].check());
+        assertTrue(logListeners[1].check());
+        assertFalse(logListeners[2].check());
+
+        assertEquals(2, totalStatPred.values.size());
+
+        List<GrpStat> restarted = new ArrayList<>();
+
+        for (GrpStat value : grpStatPred.values) {
+            IgniteEx node = value.get1();
+            CacheGroupRebalanceStatistics stat = value.get4();
+            boolean restartedCache = value.get2().cacheOrGroupName().equals(DEFAULT_CACHE_NAME + 2);
+
+            checkDuration(stat);
+
+            if (node == filteredNode || (node == node2 && !restartedCache)) {
+                assertTrue(value.get3().get());
+                assertEquals(1, stat.attempt());
+            }
+            else if (node == node2 && restartedCache)
+                restarted.add(value);
+            else
+                fail("Unexpected node=" + node.name());
+        }
+
+        assertEquals(2, restarted.size());
+    }
+
+    /**
+     * Checking that duration is not negative.
+     *
+     * @param stat Cache group rebaslance statistics.
+     */
+    private void checkDuration(CacheGroupRebalanceStatistics stat) {
+        requireNonNull(stat);
+
+        assertTrue((stat.end() - stat.start()) >= 0);
+
+        stat.supplierStatistics().values().forEach(supStat -> assertTrue((supStat.end() - supStat.start()) >= 0));
+    }
+
+    /**
      * Create and populate cluster.
      *
      * @param nodeCnt Node count.
@@ -340,9 +451,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * @param backups Count backup.
      * @return Cache configuration.
      */
-    private CacheConfiguration cacheConfiguration(String cacheName, String grpName, int parts, int backups) {
+    private CacheConfiguration cacheConfiguration(String cacheName, @Nullable String grpName, int parts, int backups) {
         requireNonNull(cacheName);
-        requireNonNull(grpName);
 
         return new CacheConfiguration<>(cacheName)
             .setCacheMode(CacheMode.PARTITIONED)
@@ -504,7 +614,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         long expStart,
         long expEnd,
         boolean hist
-    ) {
+    ) throws IgniteCheckedException {
         requireNonNull(expGrpStats);
         requireNonNull(expTotalStats);
         requireNonNull(grpStatPred);
@@ -524,12 +634,12 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         assertEquals(expGrpStats.size(), actGrpStatSize);
         assertTrue(actGrpStatSize > 0);
 
-        for (T4<IgniteEx, CacheGroupContext, Boolean, CacheGroupRebalanceStatistics> t4 : grpStatPred.values) {
+        for (T4<IgniteEx, CacheGroupContext, RebalanceFuture, CacheGroupRebalanceStatistics> t4 : grpStatPred.values) {
             if (nonNull(grpFilter) && !grpFilter.test(t4.get2()))
                 continue;
 
             //check that result was successful
-            assertTrue(t4.get3());
+            assertTrue(t4.get3().get());
 
             CacheGroupRebalanceStatistics actGrpStat = t4.get4();
             assertEquals(1, actGrpStat.attempt());
@@ -667,9 +777,31 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Class container for statistics of rebalance for cache group.
+     */
+    static class GrpStat extends T4<IgniteEx, CacheGroupContext, RebalanceFuture, CacheGroupRebalanceStatistics> {
+        /**
+         * Constructor.
+         *
+         * @param val1 Node.
+         * @param val2 Cache group context.
+         * @param val3 Rebalance future.
+         * @param val4 Rebalance statistics.
+         */
+        public GrpStat(
+            IgniteEx val1,
+            CacheGroupContext val2,
+            RebalanceFuture val3,
+            CacheGroupRebalanceStatistics val4
+        ) {
+            super(val1, val2, val3, val4);
+        }
+    }
+
+    /**
      * Predicate for getting rebalance statistics for cache group when listening log.
      */
-    class GrpStatPred extends StatPred<T4<IgniteEx, CacheGroupContext, Boolean, CacheGroupRebalanceStatistics>> {
+    class GrpStatPred extends StatPred<GrpStat> {
         /**
          * Default constructor.
          */
@@ -678,15 +810,15 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public T4<IgniteEx, CacheGroupContext, Boolean, CacheGroupRebalanceStatistics> value(
+        @Override public GrpStat value(
             Matcher m,
             IgniteThread t
         ) {
             IgniteEx node = grid(t.getIgniteInstanceName());
-            CacheGroupContext grpCtx = node.context().cache().cacheGroup(CU.cacheId(m.group(1)));
+            CacheGroupContext grpCtx = node.context().cache().cacheGroup(cacheId(m.group(1)));
             RebalanceFuture rebFut = (RebalanceFuture)grpCtx.preloader().rebalanceFuture();
 
-            return new T4<>(node, grpCtx, rebFut.result(), new CacheGroupRebalanceStatistics(rebFut.statistics()));
+            return new GrpStat(node, grpCtx, rebFut, new CacheGroupRebalanceStatistics(rebFut.statistics()));
         }
     }
 
