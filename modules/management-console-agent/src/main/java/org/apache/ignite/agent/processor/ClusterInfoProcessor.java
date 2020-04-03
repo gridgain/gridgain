@@ -129,25 +129,23 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
         if (log.isDebugEnabled())
             log.debug("Sending cluster info to Control Center");
 
-        ClusterInfo clusterInfo = createClusterInfo();
-
-        populateClusterInfo(clusterInfo);
-
-        mgr.send(buildClusterDest(cluster.id()), clusterInfo);
+        mgr.send(buildClusterDest(cluster.id()), buildClusterInfo());
     }
 
     /**
      * @return Create cluster info.
      */
     protected ClusterInfo createClusterInfo() {
-        return new ClusterInfo(cluster.id(), cluster.tag());
+        return new ClusterInfo();
     }
 
     /**
-     * @param clusterInfo Cluster info to populate with data.
+     * Build Cluster info.
      */
-    protected void populateClusterInfo(ClusterInfo clusterInfo) {
-        clusterInfo
+    private ClusterInfo buildClusterInfo() {
+        return createClusterInfo()
+            .setId(cluster.id())
+            .setTag(cluster.tag())
             .setActive(cluster.active())
             .setPersistenceEnabled(CU.isPersistenceEnabled(ctx.config()))
             .setBaselineParameters(
@@ -158,7 +156,6 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
             )
             .setSecure(ctx.authentication().enabled() || ctx.security().enabled())
             .setFeatures(getClusterFeatures(ctx, ctx.cluster().get().nodes()));
-
     }
 
     /** {@inheritDoc} */
