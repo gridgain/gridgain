@@ -3581,13 +3581,23 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
          * @param e Exception indicating that node is unreachable.
          */
         public void handleInverseConnection(ClusterNode node, NodeUnreachableException e) {
-            if (!inverseTcpConnectionFeatureIsSupported(node))
-                throw new IgniteSpiException(e);
+            if (!inverseTcpConnectionFeatureIsSupported(node)) {
+                IgniteSpiException spiE = new IgniteSpiException(e);
+
+                e.fut.onDone(spiE);
+
+                throw spiE;
+            }
 
             TcpCommunicationSpi tcpCommSpi = getTcpCommunicationSpi();
 
-            if (isPairedConnection(node, tcpCommSpi))
-                throw new IgniteSpiException("Inverse connection protocol doesn't support paired connections", e);
+            if (isPairedConnection(node, tcpCommSpi)) {
+                IgniteSpiException spiE = new IgniteSpiException("Inverse connection protocol doesn't support paired connections", e);
+
+                e.fut.onDone(spiE);
+
+                throw spiE;
+            }
 
             ConnectionKey connKey = new ConnectionKey(node.id(), e.connIdx, tcpCommSpi.getConnectionsPerNode());
 

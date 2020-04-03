@@ -2265,7 +2265,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), boundTcpShmemPort >= 0 ? boundTcpShmemPort : null);
             res.put(createSpiAttributeName(ATTR_EXT_ADDRS), extAddrs);
             res.put(createSpiAttributeName(ATTR_PAIRED_CONN), usePairedConnections);
-            res.put(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE), envType);
+            res.put(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE), envType.toString());
 
             return res;
         }
@@ -4259,9 +4259,9 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
      * @return {@code True} if remote node is
      */
     private boolean startedInVirtualizedEnvironment(ClusterNode node) {
-        EnvironmentType envType = node.attribute(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
+        String envType = node.attribute(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
 
-        return envType == EnvironmentType.VIRTUALIZED;
+        return EnvironmentType.VIRTUALIZED.toString().equals(envType);
     }
 
     /**
