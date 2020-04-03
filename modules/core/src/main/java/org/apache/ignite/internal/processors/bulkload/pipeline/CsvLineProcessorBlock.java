@@ -21,6 +21,7 @@ import org.apache.ignite.IgniteCheckedException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import org.apache.ignite.IgniteIllegalStateException;
 
 /**
  * A {@link PipelineBlock}, which splits line according to CSV format rules and unquotes fields. The next block {@link
@@ -36,12 +37,6 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
      * Quote character.
      */
     private final char quoteChars;
-
-    private static final int READER_STATE_UNDEF = 0;
-    private static final int READER_STATE_QUOTED = 1;
-    private static final int READER_STATE_UNQUOTED = 2;
-    private static final int READER_STATE_QUOTED_STARTED = 4;
-    private static final int READER_STATE_QUOTED_EMPTY = 8;
 
     /**
      * Creates a CSV line parser.
@@ -63,13 +58,18 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
         StringBuilder currentField = new StringBuilder(256);
         final int length = input.length();
         int copy = 0;
-        int readerState = READER_STATE_UNDEF;
+        ReaderState state = ReaderState.UNDEFINED;
 
         int current = 0;
         int prev = -1;
         int copyStart = 0;
+
         while (true) {
             if (current == length) {
+                if ((prev == quoteChars) == ((state == ReaderState.QUOTED && copy == 0)
+                    || state == ReaderState.UNQUOTED))
+                    throw new IgniteIllegalStateException("Unmatched quote found, CSV file is invalid");
+
                 if (copy > 0)
                     currentField.append(input, copyStart, copyStart + copy);
 
@@ -79,16 +79,14 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
 
             final char c = input.charAt(current++);
 
-            if ((readerState & READER_STATE_QUOTED_STARTED) != 0) {
+            if (state == ReaderState.QUOTED) {
                 if (c == quoteChars) {
-                    readerState &= ~READER_STATE_QUOTED_STARTED;
+                    state = ReaderState.UNDEFINED;
 
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
                         copy = 0;
                     }
-                    else
-                        readerState |= READER_STATE_QUOTED_EMPTY;
 
                     copyStart = current;
                 }
@@ -105,10 +103,10 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                     fields.add(currentField.toString());
                     currentField = new StringBuilder();
                     copyStart = current;
-                    readerState = READER_STATE_UNDEF;
+                    state = ReaderState.UNDEFINED;
                 }
-                else if (c == quoteChars && (readerState & READER_STATE_UNQUOTED) == 0) {
-                    readerState = READER_STATE_QUOTED | READER_STATE_QUOTED_STARTED;
+                else if (c == quoteChars && state != ReaderState.UNQUOTED) {
+                    state = ReaderState.QUOTED;
 
                     if (prev == quoteChars)
                         copy++;
@@ -118,8 +116,8 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                 else {
                     copy++;
 
-                    if (readerState == READER_STATE_UNDEF)
-                        readerState = READER_STATE_UNQUOTED;
+                    if (state == ReaderState.UNDEFINED)
+                        state = ReaderState.UNQUOTED;
                 }
             }
 
@@ -127,5 +125,19 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
         }
 
         nextBlock.accept(fields.toArray(new String[0]), isLastPortion);
+    }
+
+    /**
+     *
+     */
+    private enum ReaderState {
+        /** */
+        UNDEFINED,
+
+        /** */
+        UNQUOTED,
+
+        /** */
+        QUOTED
     }
 }

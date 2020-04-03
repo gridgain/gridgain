@@ -86,6 +86,18 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     private static final String BULKLOAD_RFC4180_PIPE_CSV_FILE_ =
             Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload_rfc4180_pipe.csv")).getAbsolutePath();
 
+    /** A CSV file with one record and unmatched quote at the start of field. */
+    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE1 =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched1.csv")).getAbsolutePath();
+
+    /** A CSV file with one record and unmatched quote at the end of the line. */
+    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE2 =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched2.csv")).getAbsolutePath();
+
+    /** A CSV file with one record and unmatched quote at the end of the line. */
+    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched3.csv")).getAbsolutePath();
+
     /** Basic COPY statement used in majority of the tests. */
     public static final String BASIC_SQL_COPY_STMT =
         "copy from '" + BULKLOAD_TWO_LINES_CSV_FILE + "'" +
@@ -245,6 +257,65 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
         assertEquals(1, updatesCnt);
 
         checkCacheContents(TBL_NAME, true, 1);
+    }
+
+
+
+    /**
+     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testOneLineFileForUnmatchedStartQuote() throws SQLException {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE1 + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
+
+                return null;
+            }
+        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+    }
+
+    /**
+     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testOneLineFileForUnmatchedEndQuote() throws SQLException {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE2 + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
+
+                return null;
+            }
+        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+    }
+
+    /**
+     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testOneLineFileForSingleEndQuote() throws SQLException {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
+
+                return null;
+            }
+        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
     }
 
     /**
@@ -847,7 +918,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                 assertEquals(1011, rs.getInt("age"));
                 assertEquals("FirstName 101112", rs.getString("firstName"));
                 if (checkLastName)
-                    assertEquals("LastName" + delimiter + " 1011" + delimiter + " 12", rs.getString("lastName"));
+                    assertEquals("LastName\"" + delimiter + "\" 1011" + delimiter + " 12", rs.getString("lastName"));
             }
             else
                 fail("Wrong ID: " + id);
