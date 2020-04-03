@@ -94,9 +94,17 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE2 =
         Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched2.csv")).getAbsolutePath();
 
-    /** A CSV file with one record and unmatched quote at the end of the line. */
+    /** A CSV file with one record and unmatched quote as the field content. */
     private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 =
         Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched3.csv")).getAbsolutePath();
+
+    /** A CSV file with one record and unmatched quote in the unquoted field content. */
+    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE4 =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched4.csv")).getAbsolutePath();
+
+    /** /** A CSV file with one record and unmatched quote in the quoted field content. */
+    private static final String BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE5 =
+        Objects.requireNonNull(resolveIgnitePath(CSV_FILE_SUBDIR + "bulkload1_unmatched5.csv")).getAbsolutePath();
 
     /** Basic COPY statement used in majority of the tests. */
     public static final String BASIC_SQL_COPY_STMT =
@@ -259,15 +267,13 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
         checkCacheContents(TBL_NAME, true, 1);
     }
 
-
-
     /**
-     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Verifies exception thrown if CSV row contains unmatched quote at the beginning of the field content.
      *
      * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForUnmatchedStartQuote() throws SQLException {
+    public void testOneLineFileForUnmatchedStartQuote() {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
@@ -281,12 +287,12 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Verifies exception thrown if CSV row contains unmatched quote in end of the field content.
      *
      * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForUnmatchedEndQuote() throws SQLException {
+    public void testOneLineFileForUnmatchedEndQuote() {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
@@ -300,16 +306,54 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
     }
 
     /**
-     * Imports one-entry CSV file into a table and checks the entry created using SELECT statement.
+     * Verifies exception thrown if CSV row contains unmatched quote as the only field content.
      *
      * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForSingleEndQuote() throws SQLException {
+    public void testOneLineFileForSingleEndQuote() {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
                     "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE3 + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
+
+                return null;
+            }
+        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+    }
+
+    /**
+     * Verifies exception thrown if CSV row contains single unmatched quote as the field content.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testOneLineFileForQuoteInContent() {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE4 + "' into " + TBL_NAME +
+                        " (_key, age, firstName, lastName)" +
+                        " format csv");
+
+                return null;
+            }
+        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+    }
+
+    /**
+     * Verifies exception thrown if CSV row contains unmatched quote in the quoted field content.
+     *
+     * @throws SQLException If failed.
+     */
+    @Test
+    public void testOneLineFileForQuoteInQuotedContent() {
+        GridTestUtils.assertThrows(log, new Callable<Object>() {
+            @Override public Object call() throws Exception {
+                stmt.executeUpdate(
+                    "copy from '" + BULKLOAD_ONE_LINE_CSV_FILE_UNMATCHED_QUOTE5 + "' into " + TBL_NAME +
                         " (_key, age, firstName, lastName)" +
                         " format csv");
 

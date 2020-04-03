@@ -56,18 +56,19 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
     public void accept(String input, boolean isLastPortion) throws IgniteCheckedException {
         List<String> fields = new ArrayList<>();
         StringBuilder currentField = new StringBuilder(256);
-        final int length = input.length();
-        int copy = 0;
         ReaderState state = ReaderState.UNDEFINED;
 
+        final int length = input.length();
+        int copy = 0;
         int current = 0;
         int prev = -1;
         int copyStart = 0;
 
+        boolean quotesMatched = true;
+
         while (true) {
             if (current == length) {
-                if ((prev == quoteChars) == ((state == ReaderState.QUOTED && copy == 0)
-                    || state == ReaderState.UNQUOTED))
+                if (!quotesMatched)
                     throw new IgniteIllegalStateException("Unmatched quote found, CSV file is invalid");
 
                 if (copy > 0)
@@ -82,6 +83,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
             if (state == ReaderState.QUOTED) {
                 if (c == quoteChars) {
                     state = ReaderState.UNDEFINED;
+                    quotesMatched = !quotesMatched;
 
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
@@ -107,6 +109,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                 }
                 else if (c == quoteChars && state != ReaderState.UNQUOTED) {
                     state = ReaderState.QUOTED;
+                    quotesMatched = !quotesMatched;
 
                     if (prev == quoteChars)
                         copy++;
@@ -114,6 +117,9 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                         copyStart = current;
                 }
                 else {
+                    if (c == quoteChars)
+                        quotesMatched = !quotesMatched;
+
                     copy++;
 
                     if (state == ReaderState.UNDEFINED)
