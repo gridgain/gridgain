@@ -275,6 +275,10 @@ public interface CacheMetricsMXBean extends CacheStatisticsMXBean, CacheMXBean, 
     public boolean isStoreByValue();
 
     /** {@inheritDoc} */
+    @Override @MXBeanDescription("Estimated rebalancing finish time.")
+    public long getEstimatedRebalancingFinishTime();
+
+    /** {@inheritDoc} */
     @Override @MXBeanDescription("True if statistics collection is enabled.")
     public boolean isStatisticsEnabled();
 

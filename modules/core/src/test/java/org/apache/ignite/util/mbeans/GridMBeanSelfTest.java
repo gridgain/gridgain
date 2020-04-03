@@ -21,7 +21,9 @@ import javax.management.MBeanInfo;
 import javax.management.MBeanOperationInfo;
 import javax.management.MBeanParameterInfo;
 import javax.management.StandardMBean;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.mxbean.IgniteStandardMXBean;
 import org.apache.ignite.mxbean.IgniteMXBean;
 import org.apache.ignite.mxbean.MXBeanDescription;
@@ -186,6 +188,24 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
         }
         finally {
             stopAllGrids();
+        }
+    }
+
+    /**
+     * Tests correct MBean interface.
+     *
+     * @throws Exception Thrown if test fails.
+     */
+    @Test
+    public void testIgniteKernalReturnsValidPublicThreadPoolSize() throws Exception {
+        try {
+            IgniteEx igniteCrd = startGrid(0);
+
+            IgniteMXBean igniteMXBean = getMxBean(igniteCrd.name(), "Kernal", IgniteMXBean.class, IgniteKernal.class);
+            assertEquals(IgniteConfiguration.DFLT_PUBLIC_THREAD_CNT, igniteMXBean.getPublicThreadPoolSize());
+        }
+        finally {
+            stopGrid();
         }
     }
 
