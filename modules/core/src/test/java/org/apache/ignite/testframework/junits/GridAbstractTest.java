@@ -1115,7 +1115,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         if (cfg == null)
             cfg = optimize(getConfiguration(igniteInstanceName));
 
-        IgniteEx locNode = grid(0);
+        IgniteEx locNode = (IgniteEx)F.first(G.allGrids());
 
         if (locNode != null) {
             DiscoverySpi discoverySpi = locNode.configuration().getDiscoverySpi();
@@ -1137,7 +1137,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             }
         }
 
-        return new IgniteProcessProxy(cfg, log, (x) -> grid(0), resetDiscovery, additionalRemoteJvmArgs());
+        return new IgniteProcessProxy(cfg, log, (x) -> locNode, resetDiscovery, additionalRemoteJvmArgs());
     }
 
     /**

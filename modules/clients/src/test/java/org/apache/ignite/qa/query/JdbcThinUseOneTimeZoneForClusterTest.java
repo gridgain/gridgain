@@ -16,18 +16,48 @@
 
 package org.apache.ignite.qa.query;
 
+import java.util.Collection;
 import java.util.List;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.query.UseOneTimeZoneForClusterTest;
 import org.apache.ignite.jdbc.JdbcTestUtils;
+import org.apache.ignite.lang.IgniteCallable;
+import org.apache.ignite.resources.IgniteInstanceResource;
 
 /**
  */
 public class JdbcThinUseOneTimeZoneForClusterTest extends UseOneTimeZoneForClusterTest {
-    /** Jdbc thin url. */
+    /** Jdbc thin url base. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1";
+
+    /** Jdbc thin url. */
+    private static String url = URL;
 
     /** {@inheritDoc} */
     @Override protected List<List<?>> sql(String sql, List<Object> params) throws Exception {
-        return JdbcTestUtils.sql(URL, sql, params);
+        return JdbcTestUtils.sql(url, sql, params);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void testClientsInDifferentTimeZones() throws Exception {
+        super.testClientsInDifferentTimeZones();
+
+        IgniteEx ign = grid(INIT_NODE_NAME);
+
+        Collection<Integer> thinPorts = ign.compute(ign.cluster().forClients()).broadcast(new IgniteCallable<Integer>() {
+            @IgniteInstanceResource
+            Ignite ign;
+
+            @Override public Integer call() {
+                return ((IgniteEx)ign).context().sqlListener().port();
+            }
+        });
+
+        for (int port : thinPorts) {
+            url = URL + ":" + port;
+
+            checkDates();
+        }
     }
 }
