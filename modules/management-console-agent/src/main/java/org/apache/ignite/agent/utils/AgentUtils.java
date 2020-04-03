@@ -227,6 +227,45 @@ public final class AgentUtils {
     }
 
     /**
+     * Creates agent processor.
+     *
+     * @param clsName Processor class name.
+     * @param paramTypes The parameter array.
+     * @param args array of objects to be passed as arguments to the constructor call.
+     * @return Agent processor.
+     */
+    public static <T extends GridProcessor> T createProcessor(String clsName, Class<?>[] paramTypes, Object... args) {
+        ClassLoader ldr = U.gridClassLoader();
+
+        try {
+            Class<?> mgrCls = ldr.loadClass(clsName);
+
+            return (T)mgrCls.getConstructor(paramTypes).newInstance(args);
+        }
+        catch (Exception ignored) {
+            // No-op.
+        }
+
+        return null;
+    }
+
+    /**
+     * Quietly start given processor ignoring possible checked exception.
+     *
+     * @param proc Processor.
+     */
+    public static void quiteStart(GridProcessor proc) {
+        if (proc != null) {
+            try {
+                proc.start();
+            }
+            catch (Exception ignored) {
+                // No-op.
+            }
+        }
+    }
+
+    /**
      * @param id Id.
      * @param nodeConsistentId Node consistent id.
      * @param e Exception.
