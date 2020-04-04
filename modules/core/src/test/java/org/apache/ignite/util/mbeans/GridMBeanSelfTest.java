@@ -205,7 +205,7 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
             assertEquals(IgniteConfiguration.DFLT_PUBLIC_THREAD_CNT, igniteMXBean.getPublicThreadPoolSize());
         }
         finally {
-            stopGrid();
+            stopGrid(0);
         }
     }
 
