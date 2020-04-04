@@ -39,6 +39,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
+    using Apache.Ignite.Core.Impl.Resource;
     using Apache.Ignite.Core.Impl.Transactions;
     using BinaryReader = Apache.Ignite.Core.Impl.Binary.BinaryReader;
     using BinaryWriter = Apache.Ignite.Core.Impl.Binary.BinaryWriter;
@@ -1660,8 +1661,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (scan != null && scan.Local)
                 {
                     // TODO: Should we check for server node? What happens on client?
-                    _nearCache.GetEntries<TK, TV>(null)
-                    
+                    return new EnumerableQueryCursor<ICacheEntry<TK, TV>>(ScanNear(scan));
                 }
             }
 
@@ -2060,6 +2060,34 @@ namespace Apache.Ignite.Core.Impl.Cache
             writer.Stream.Seek(pos, SeekOrigin.Begin);
             writer.WriteInt(count);
             writer.Stream.Seek(endPos, SeekOrigin.Begin);
+        }
+
+        private IEnumerable<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
+        {
+            // TODO: Inject resources
+            // TODO: Lock partition when specified 
+            // TODO: When there is no partition - does Java lock anything?
+            var entries = _nearCache.GetEntries<TK, TV>(qry.Partition);
+            var filter = qry.Filter;
+
+            if (filter != null)
+            {
+                ResourceProcessor.Inject(filter, Marshaller.Ignite);
+            }
+
+            foreach (var entry in entries)
+            {
+                if (filter == null || filter.Invoke(entry))
+                {
+                    yield return entry;
+                }
+            }
+
+            if (qry.Partition != null)
+            {
+                // TODO: Release partition
+                Console.WriteLine("Dispose");
+            }
         }
     }
 }
