@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -30,14 +31,12 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
-import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
@@ -114,7 +113,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadOnlySafe() throws Exception {
         partLossPlc = READ_ONLY_SAFE;
 
-        checkLostPartition(false, true);
+        checkLostPartition(false, true, 4, 3);
     }
 
     /**
@@ -124,7 +123,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadOnlyAll() throws Exception {
         partLossPlc = READ_ONLY_ALL; // Should be same as testReadOnlySafe.
 
-        checkLostPartition(false, true);
+        checkLostPartition(false, true, 4, 3);
     }
 
     /**
@@ -134,7 +133,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadWriteSafe() throws Exception {
         partLossPlc = IGNORE; // Should use safe policy instead.
 
-        checkLostPartition(false, true);
+        checkLostPartition(false, true, 4, 3);
     }
 
     /**
@@ -144,7 +143,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadWriteSafe_2() throws Exception {
         partLossPlc = READ_ONLY_SAFE;
 
-        checkLostPartition(false, true);
+        checkLostPartition(false, true, 4, 3);
     }
 
     /**
@@ -154,7 +153,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadWriteAll() throws Exception {
         partLossPlc = IGNORE; // Should be same as testReadWriteSafe.
 
-        checkLostPartition(false, true);
+        checkLostPartition(false, true, 4, 3);
     }
 
     /**
@@ -164,7 +163,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testIgnore() throws Exception {
         partLossPlc = IGNORE;
 
-        checkLostPartition(true, false);
+        checkLostPartition(true, false, 4, 3);
     }
 
     /**
@@ -174,7 +173,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testIgnore_2() throws Exception {
         partLossPlc = READ_WRITE_SAFE; // Should use safe policy.
 
-        checkLostPartition(true, true);
+        checkLostPartition(true, true, 4, 3);
     }
 
     /**
@@ -184,18 +183,18 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testIgnore_3() throws Exception {
         partLossPlc = READ_ONLY_SAFE; // Should use safe policy.
 
-        checkLostPartition(true, true);
+        checkLostPartition(true, true, 4, 3);
     }
 
     /**
      * @throws Exception if failed.
      */
-    private void checkLostPartition(boolean autoAdjust, boolean safe) throws Exception {
+    private void checkLostPartition(boolean autoAdjust, boolean safe, int nodes, int... stopNodes) throws Exception {
         String cacheName = ThreadLocalRandom.current().nextBoolean() ? CACHE_1 : CACHE_2;
 
         List<Integer> partEvts = Collections.synchronizedList(new ArrayList<>());
 
-        Collection<Integer> expLostParts = prepareTopology(autoAdjust, new P1<Event>() {
+        Collection<Integer> expLostParts = prepareTopology(nodes, autoAdjust, new P1<Event>() {
             @Override public boolean apply(Event evt) {
                 assert evt.type() == EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 
@@ -205,7 +204,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
                 return true;
             }
-        });
+        }, stopNodes);
 
         for (Ignite ig : G.allGrids()) {
             info("Checking node: " + ig.cluster().localNode().id());
@@ -221,10 +220,14 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         assertEquals(expLostParts, new HashSet<>(partEvts));
 
-        // Check that partition state does not change after we start a new node.
-        IgniteEx grd = startGrid(3);
+        // Check that partition state does not change after we return nodes.
+        for (int i = 0; i < stopNodes.length; i++) {
+            int node = stopNodes[i];
 
-        info("Newly started node: " + grd.cluster().localNode().id());
+            IgniteEx grd = startGrid(node);
+
+            info("Newly started node: " + grd.cluster().localNode().id());
+        }
 
         for (Ignite ig : G.allGrids())
             verifyCacheOps(cacheName, expLostParts, ig, safe);
@@ -250,11 +253,10 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     }
 
     /**
-     *
-     * @param canWrite {@code True} if writes are allowed.
-     * @param safe {@code True} if lost partition should trigger exception.
-     * @param part Lost partition ID.
-     * @param ig Ignite instance.
+     * @param cacheName Cache name.
+     * @param expLostParts Expected lost parts.
+     * @param ig Ignite.
+     * @param safe Safe.
      */
     private void verifyCacheOps(String cacheName, Collection<Integer> expLostParts, Ignite ig, boolean safe) {
         boolean readOnly = partLossPlc == READ_ONLY_SAFE || partLossPlc == READ_ONLY_ALL;
@@ -324,8 +326,8 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      * @return Lost partition ID.
      * @throws Exception If failed.
      */
-    private Collection<Integer> prepareTopology(boolean autoAdjust, P1<Event> lsnr) throws Exception {
-        final IgniteEx crd = startGrids(4);
+    private Collection<Integer> prepareTopology(int nodes, boolean autoAdjust, P1<Event> lsnr, int... stopNodes) throws Exception {
+        final IgniteEx crd = startGrids(nodes);
         crd.cluster().baselineAutoAdjustEnabled(autoAdjust);
         crd.cluster().active(true);
 
@@ -340,7 +342,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         client = true;
 
-        startGrid(4);
+        startGrid(nodes);
 
         client = false;
 
@@ -349,21 +351,29 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         awaitPartitionMapExchange();
 
-        ClusterNode killNode = ignite(3).cluster().localNode();
-
+        // TODO streamify
         Set<Integer> expLostParts = new LinkedHashSet<>();
 
-        for (int i = 0; i < aff.partitions(); i++) {
-            if (aff.isPrimary(killNode, i))
+        // Find partitions not owned by any alive nodes.
+        for (int i = 0; i < PARTS_CNT; i++) {
+            int c = 0;
+
+            for (int idx = 0; idx < nodes; idx++) {
+                if (Arrays.binarySearch(stopNodes, idx) < 0 && !aff.isPrimary(grid(idx).localNode(), i) && !aff.isBackup(grid(idx).localNode(), i))
+                    c++;
+            }
+
+            if (c == nodes - stopNodes.length)
                 expLostParts.add(i);
         }
 
-        assertFalse("No partition on node: " + killNode, expLostParts.isEmpty());
+        assertFalse("No partitions on the nodes", expLostParts.isEmpty());
 
         for (Ignite ignite : G.allGrids())
             ignite.events().localListen(lsnr, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
 
-        ignite(3).close();
+        for (int i = 0; i < stopNodes.length; i++)
+            stopGrid(stopNodes[i], true);
 
         return expLostParts;
     }
