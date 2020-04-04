@@ -1199,6 +1199,11 @@ public class PlatformCache extends PlatformAbstractTarget {
                 cache.enableStatistics(val == TRUE);
 
                 return TRUE;
+
+            case OP_CLEAR_STATISTICS:
+                cache.clearStatistics();
+
+                return TRUE;
         }
         return super.processInLongOutLong(type, val);
     }
