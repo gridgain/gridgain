@@ -629,7 +629,21 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestLocalScanQueryUsesKeysAndValuesFromNearCache()
         {
-            
+            // TODO: With and without filter, with and without partition
+            // TODO: All modes
+            // TODO: Test GetAll with numeration - should fail.
+            // TODO: Dispose does not work - fix it
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
+
+            var res = cache.Query(new ScanQuery<int, Foo> {Local = true});
+
+            foreach (var entry in res)
+            {
+                Assert.AreSame(entry.Value, cache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
+            }
+
+            res.GetAll();
         }
 
         /// <summary>
