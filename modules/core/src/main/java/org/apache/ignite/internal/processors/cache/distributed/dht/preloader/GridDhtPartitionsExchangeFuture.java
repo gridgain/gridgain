@@ -153,7 +153,6 @@ import static org.apache.ignite.internal.util.IgniteUtils.doInParallelUninterrup
 @SuppressWarnings({"TypeMayBeWeakened", "unchecked"})
 public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapter
     implements Comparable<GridDhtPartitionsExchangeFuture>, CachePartitionExchangeWorkerTask, IgniteDiagnosticAware {
-
     /** */
     public static final String EXCHANGE_LOG = "org.apache.ignite.internal.exchange.time";
 
@@ -2382,6 +2381,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     }
 
+                    // TODO why we need this ? it's exchange sync block.
                     if (!grpToRefresh.isEmpty()) {
                         if (log.isDebugEnabled())
                             log.debug("Refresh partitions due to partitions initialized when affinity ready [" +
@@ -2473,6 +2473,14 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         // Should execute this listener first, before any external listeners.
         // Listeners use stack as data structure.
         listen(f -> {
+            // TODO make good test.
+//            try {
+//                U.sleep(500);
+//            }
+//            catch (IgniteInterruptedCheckedException e) {
+//                e.printStackTrace();
+//            }
+
             // Update last finished future in the first.
             cctx.exchange().lastFinishedFuture(this);
 

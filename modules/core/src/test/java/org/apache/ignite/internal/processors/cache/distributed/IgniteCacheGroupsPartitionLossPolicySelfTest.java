@@ -45,6 +45,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 
@@ -112,7 +113,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      */
     @Test
     public void testReadOnlyAll() throws Exception {
-        partLossPlc = READ_ONLY_ALL;
+        partLossPlc = READ_ONLY_ALL; // Should be same as testReadOnlySafe.
 
         checkLostPartition(false);
     }
@@ -122,7 +123,17 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      */
     @Test
     public void testReadWriteSafe() throws Exception {
-        partLossPlc = PartitionLossPolicy.IGNORE; // Should be ignored.
+        partLossPlc = IGNORE; // Should use safe policy instead.
+
+        checkLostPartition(false);
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testReadWriteSafe_2() throws Exception {
+        partLossPlc = READ_ONLY_SAFE;
 
         checkLostPartition(false);
     }
@@ -132,7 +143,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      */
     @Test
     public void testReadWriteAll() throws Exception {
-        partLossPlc = PartitionLossPolicy.IGNORE; // Should be ignored.
+        partLossPlc = IGNORE; // Should be same as testReadWriteSafe.
 
         checkLostPartition(false);
     }
@@ -142,7 +153,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      */
     @Test
     public void testIgnore() throws Exception {
-        partLossPlc = PartitionLossPolicy.IGNORE;
+        partLossPlc = IGNORE;
 
         checkLostPartition(true);
     }
@@ -211,7 +222,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                 Integer actual = cache.get(p);
 
                 if (safe) {
-                    assertTrue("Reading from a lost partition should have failed: " + p,
+                    assertTrue("Reading from a lost partition should have failed [part=" + p + ']',
                             !cache.lostPartitions().contains(p));
 
                     if (actual == null)
@@ -223,10 +234,10 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                     assertEquals(expLostParts.contains(p) ? null : p, actual);
             }
             catch (CacheException e) {
-                assertTrue(X.hasCause(e, CacheInvalidStateException.class));
+                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
 
                 assertTrue("Read exception should only be triggered for a lost partition " +
-                    "[ex=" + e + ", part=" + p + ']', cache.lostPartitions().contains(p));
+                    "[ex=" + X.getFullStackTrace(e) + ", part=" + p + ']', cache.lostPartitions().contains(p));
             }
         }
 
@@ -238,19 +249,22 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                 if (!safe && expLostParts.contains(p))
                     cache.remove(p);
 
-                if (readOnly)
-                    fail("Writing to a cache containing lost partitions should have failed " + p);
+                if (readOnly) {
+                    assertTrue(!cache.lostPartitions().contains(p));
+
+                    fail("Writing to a cache containing lost partitions should have failed [part=" + p + ']');
+                }
 
                 if (safe) {
-                    assertTrue("Writing to a lost partition should have failed: " + p,
+                    assertTrue("Writing to a lost partition should have failed [part=" + p + ']',
                             !cache.lostPartitions().contains(p));
                 }
             }
             catch (CacheException e) {
-                assertTrue(X.hasCause(e, CacheInvalidStateException.class));
+                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
 
-                assertTrue("Write exception should only be triggered for a lost partition " +
-                        "[ex=" + e + ", part=" + p + ']', cache.lostPartitions().contains(p));
+                assertTrue("Write exception should only be triggered for a lost partition or in read-only mode " +
+                        "[ex=" + X.getFullStackTrace(e) + ", part=" + p + ']', readOnly || cache.lostPartitions().contains(p));
             }
         }
     }
@@ -326,7 +340,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
         ignite(3).close();
 
         // Events are disabled for IGNORE mode.
-        if (partLossPlc != PartitionLossPolicy.IGNORE) {
+        if (partLossPlc != IGNORE) {
             for (CountDownLatch latch : partLost)
                 assertTrue("Failed to wait for partition LOST event", latch.await(10, TimeUnit.SECONDS));
         }

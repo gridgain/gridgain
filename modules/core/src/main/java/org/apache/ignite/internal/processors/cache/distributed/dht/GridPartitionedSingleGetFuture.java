@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMessage;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils.BackupPostProcessingClosure;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.CacheVersionedValue;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearGetResponse;
@@ -60,6 +61,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.jetbrains.annotations.Nullable;
@@ -246,7 +248,23 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      */
     @SuppressWarnings("unchecked")
     private void map(AffinityTopologyVersion topVer) {
-        if (!validate(topVer))
+        final GridDhtPartitionsExchangeFuture pendingFut = cctx.shared().exchange().lastTopologyFuture();
+
+        // Finished DHT future is required for topology validation.
+        if (!pendingFut.isDone()) {
+            pendingFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
+                    if (fut.error() != null)
+                        onDone(fut.error());
+                    else
+                        map(topVer);
+                }
+            });
+
+            return;
+        }
+
+        if (!validate(pendingFut))
             return;
 
         ClusterNode node = mapKeyToNode(topVer);
@@ -821,13 +839,13 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      * @param topVer Topology version.
      * @return True if validate success, False is not.
      */
-    private boolean validate(AffinityTopologyVersion topVer) {
-        if (!checkRetryPermits(topVer))
+    private boolean validate(GridDhtTopologyFuture topFut) {
+        assert topFut.isDone() : topFut;
+
+        if (!checkRetryPermits(topFut.topologyVersion()))
             return false;
 
-        GridDhtTopologyFuture lastFut = cctx.shared().exchange().lastFinishedFuture();
-
-        Throwable error = lastFut.validateCache(cctx, recovery, true, key, null);
+        Throwable error = topFut.validateCache(cctx, recovery, true, key, null);
 
         if (error != null) {
             onDone(error);

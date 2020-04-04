@@ -50,6 +50,7 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,7 +58,6 @@ import org.jetbrains.annotations.Nullable;
  * Colocated get future.
  */
 public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAdapter<K, V> {
-
     /** Transaction label. */
     protected final String txLbl;
 
@@ -188,9 +188,25 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
         Map<ClusterNode, LinkedHashMap<KeyCacheObject, Boolean>> mapped,
         AffinityTopologyVersion topVer
     ) {
+        final GridDhtTopologyFuture pendingFut = cctx.shared().exchange().lastTopologyFuture();
+
+        // Finished DHT future is required for topology validation.
+        if (!pendingFut.isDone()) {
+            pendingFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
+                    if (fut.error() != null)
+                        onDone(fut.error());
+                    else
+                        map(keys, mapped, topVer);
+                }
+            });
+
+            return;
+        }
+
         Collection<ClusterNode> cacheNodes = CU.affinityNodes(cctx, topVer);
 
-        validate(cacheNodes, topVer);
+        validate(cacheNodes, pendingFut);
 
         // Future can be already done with some exception.
         if (isDone())
@@ -565,24 +581,24 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
     }
 
     /**
-     *
      * @param cacheNodes Cache affynity nodes.
-     * @param topVer Topology version.
+     * @param topFut Topology future.
      */
-    private void validate(Collection<ClusterNode> cacheNodes, AffinityTopologyVersion topVer) {
-        if (cacheNodes.isEmpty()) {
-            onDone(new ClusterTopologyServerNotFoundException("Failed to map keys for cache " +
-                "(all partition nodes left the grid) [topVer=" + topVer + ", cache=" + cctx.name() + ']'));
+    private void validate(Collection<ClusterNode> cacheNodes, GridDhtTopologyFuture topFut) {
+        assert topFut.isDone() : topFut;
+
+        Throwable err = topFut != null ? topFut.validateCache(cctx, recovery, true, null, keys) : null;
+
+        if (err != null) {
+            onDone(err);
 
             return;
         }
 
-        GridDhtTopologyFuture topFut = cctx.shared().exchange().lastFinishedFuture();
-
-        Throwable err = topFut != null ? topFut.validateCache(cctx, recovery, true, null, keys) : null;
-
-        if (err != null)
-            onDone(err);
+        // TODO move to validateCache.
+        if (cacheNodes.isEmpty())
+            onDone(new ClusterTopologyServerNotFoundException("Failed to map keys for cache " +
+                "(all partition nodes left the grid) [topVer=" + topFut.topologyVersion() + ", cache=" + cctx.name() + ']'));
     }
 
     /**

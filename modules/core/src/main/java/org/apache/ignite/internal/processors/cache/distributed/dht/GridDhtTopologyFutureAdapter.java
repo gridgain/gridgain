@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed.dht;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.TopologyValidator;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
@@ -29,8 +30,9 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
+import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.OperationType.WRITE;
 import static org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor.VOLATILE_DATA_REGION_NAME;
 
 /**
@@ -88,11 +90,9 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
             return new CacheInvalidStateException(
                 "Failed to perform cache operation (cache is stopped): " + cctx.name());
 
-        OperationType opType = read ? OperationType.READ : WRITE;
-
         CacheGroupContext grp = cctx.group();
 
-        if (cctx.shared().readOnlyMode() && opType == WRITE && !isSystemCache(cctx.name())
+        if (cctx.shared().readOnlyMode() && !read && !isSystemCache(cctx.name())
             && !VOLATILE_DATA_REGION_NAME.equals(cctx.group().dataRegion().config().getName())) {
             return new CacheInvalidStateException(
                     new IgniteClusterReadOnlyException("Failed to perform cache operation (cluster is in " +
@@ -104,7 +104,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         if (validation == null)
             return null;
 
-        if (opType == WRITE && !validation.isValid()) {
+        if (!read && !validation.isValid()) {
             return new CacheInvalidStateException("Failed to perform cache operation " +
                 "(cache topology is not valid): " + cctx.name());
         }
@@ -116,12 +116,11 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
             // TODO streamify.
             if (key != null)
-                return validate(cctx, key, opType, validation.lostPartitions());
+                return validate(cctx, key, read, validation.lostPartitions());
 
             if (keys != null) {
                 for (Object key0 : keys) {
-                    final CacheInvalidStateException res =
-                        validate(cctx, key0, opType, validation.lostPartitions());
+                    final CacheInvalidStateException res = validate(cctx, key0, read, validation.lostPartitions());
 
                     if (res != null)
                         return res;
@@ -182,21 +181,6 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
     }
 
     /**
-     * TODO remove bad stuff.
-     */
-    public enum OperationType {
-        /**
-         * Read operation.
-         */
-        READ,
-        /**
-         * Write operation.
-         */
-        WRITE
-    }
-
-
-    /**
      * TODO move to cache utils.
      * @param cctx Context.
      * @param key Key.
@@ -206,14 +190,18 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
     public static CacheInvalidStateException validate(
         GridCacheContext cctx,
         Object key,
-        OperationType opType,
+        boolean read,
         Collection<Integer> lostParts
     ) {
         // TODO optimize for KeyCacheObject.
+        final PartitionLossPolicy plc = cctx.config().getPartitionLossPolicy();
+
         final int part = cctx.affinity().partition(key);
 
-        return lostParts.contains(part) ? new CacheInvalidStateException("Failed to execute the cache operation " +
+        // Writes are forbidden to any partition in READ_ONLY_* modes.
+        return !read && (plc == READ_ONLY_SAFE || plc == READ_ONLY_ALL) || lostParts.contains(part) ?
+            new CacheInvalidStateException("Failed to execute the cache operation " +
             "(all partition owners have left the grid, partition data has been lost) [" +
-            "cacheName=" + cctx.name() + ", op=" + opType + ", partition=" + part + ", key=" + key + ']') : null;
+            "cacheName=" + cctx.name() + ", read=" + read + ", partition=" + part + ", key=" + key + ']') : null;
     }
 }
