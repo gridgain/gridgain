@@ -1653,6 +1653,18 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(qry, "qry");
 
+            if (IsNear)
+            {
+                var scan = qry as ScanQuery<TK, TV>;
+
+                if (scan != null && scan.Local)
+                {
+                    // TODO: Should we check for server node? What happens on client?
+                    _nearCache.GetEntries<TK, TV>(null)
+                    
+                }
+            }
+
             var cursor = DoOutOpObject((int) qry.OpId, writer => qry.Write(writer, IsKeepBinary));
 
             return new QueryCursor<TK, TV>(cursor, _flagKeepBinary);

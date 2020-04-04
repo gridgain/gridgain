@@ -626,6 +626,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(count, res.Count());
         }
 
+        [Test]
+        public void TestLocalScanQueryUsesKeysAndValuesFromNearCache()
+        {
+            
+        }
+
         /// <summary>
         /// Tests that expiry policy functionality plays well with platform near cache.
         /// </summary>
