@@ -19,9 +19,7 @@ package org.apache.ignite.internal.processors.cache.distributed;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -48,6 +46,7 @@ import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
+import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 
 /**
  * Tests partition loss policies working for in-memory groups with multiple caches.
@@ -105,7 +104,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadOnlySafe() throws Exception {
         partLossPlc = READ_ONLY_SAFE;
 
-        checkLostPartition(false);
+        checkLostPartition(false, true);
     }
 
     /**
@@ -115,7 +114,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadOnlyAll() throws Exception {
         partLossPlc = READ_ONLY_ALL; // Should be same as testReadOnlySafe.
 
-        checkLostPartition(false);
+        checkLostPartition(false, true);
     }
 
     /**
@@ -125,7 +124,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadWriteSafe() throws Exception {
         partLossPlc = IGNORE; // Should use safe policy instead.
 
-        checkLostPartition(false);
+        checkLostPartition(false, true);
     }
 
     /**
@@ -135,7 +134,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadWriteSafe_2() throws Exception {
         partLossPlc = READ_ONLY_SAFE;
 
-        checkLostPartition(false);
+        checkLostPartition(false, true);
     }
 
     /**
@@ -145,7 +144,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testReadWriteAll() throws Exception {
         partLossPlc = IGNORE; // Should be same as testReadWriteSafe.
 
-        checkLostPartition(false);
+        checkLostPartition(false, true);
     }
 
     /**
@@ -155,18 +154,44 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     public void testIgnore() throws Exception {
         partLossPlc = IGNORE;
 
-        checkLostPartition(true);
+        checkLostPartition(true, false);
     }
 
     /**
      * @throws Exception if failed.
      */
-    private void checkLostPartition(boolean autoAdjust) throws Exception {
+    @Test
+    public void testIgnore_2() throws Exception {
+        partLossPlc = READ_WRITE_SAFE; // Should use safe policy.
+
+        checkLostPartition(true, true);
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    @Test
+    public void testIgnore_3() throws Exception {
+        partLossPlc = READ_ONLY_SAFE; // Should use safe policy.
+
+        checkLostPartition(true, true);
+    }
+
+    /**
+     * @throws Exception if failed.
+     */
+    private void checkLostPartition(boolean autoAdjust, boolean safe) throws Exception {
         String cacheName = ThreadLocalRandom.current().nextBoolean() ? CACHE_1 : CACHE_2;
 
-        Collection<Integer> expLostParts = prepareTopology(autoAdjust);
+        Collection<Integer> expLostParts = prepareTopology(autoAdjust, new P1<Event>() {
+            @Override public boolean apply(Event evt) {
+                assert evt.type() == EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 
-        boolean safe = !autoAdjust;
+                CacheRebalancingEvent cacheEvt = (CacheRebalancingEvent)evt;
+
+                return false;
+            }
+        });
 
         for (Ignite ig : G.allGrids()) {
             info("Checking node: " + ig.cluster().localNode().id());
@@ -215,6 +240,9 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
         IgniteCache<Integer, Integer> cache = ig.cache(cacheName);
 
         int parts = ig.affinity(cacheName).partitions();
+
+        if (!safe)
+            assertTrue(cache.lostPartitions().isEmpty());
 
         // Check read.
         for (int p = 0; p < parts; p++) {
@@ -274,7 +302,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      * @return Lost partition ID.
      * @throws Exception If failed.
      */
-    private Collection<Integer> prepareTopology(boolean autoAdjust) throws Exception {
+    private Collection<Integer> prepareTopology(boolean autoAdjust, P1<Event> lsnr) throws Exception {
         final IgniteEx crd = startGrids(4);
         crd.cluster().baselineAutoAdjustEnabled(autoAdjust);
         crd.cluster().active(true);
@@ -310,40 +338,10 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         assertFalse("No partition on node: " + killNode, parts.isEmpty());
 
-        final CountDownLatch[] partLost = new CountDownLatch[3];
-
-        // Check events.
-        for (int i = 0; i < 3; i++) {
-            final CountDownLatch latch = new CountDownLatch(1);
-            partLost[i] = latch;
-
-            final int part0 = parts.iterator().next();
-
-            grid(i).events().localListen(new P1<Event>() {
-                @Override public boolean apply(Event evt) {
-                    assert evt.type() == EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
-
-                    CacheRebalancingEvent cacheEvt = (CacheRebalancingEvent)evt;
-
-                    if (cacheEvt.partition() == part0 && F.eq(cacheName, cacheEvt.cacheName())) {
-                        latch.countDown();
-
-                        // Auto-unsubscribe.
-                        return false;
-                    }
-
-                    return true;
-                }
-            }, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
-        }
+        for (Ignite ignite : G.allGrids())
+            ignite.events().localListen(lsnr, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
 
         ignite(3).close();
-
-        // Events are disabled for IGNORE mode.
-        if (partLossPlc != IGNORE) {
-            for (CountDownLatch latch : partLost)
-                assertTrue("Failed to wait for partition LOST event", latch.await(10, TimeUnit.SECONDS));
-        }
 
         return parts;
     }
