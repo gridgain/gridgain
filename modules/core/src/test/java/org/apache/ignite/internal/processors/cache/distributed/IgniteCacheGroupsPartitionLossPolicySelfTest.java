@@ -212,11 +212,13 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
             verifyCacheOps(cacheName, expLostParts, ig, safe);
         }
 
-        assertTrue(partEvts.toString(), GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            @Override public boolean apply() {
-                return expLostParts.size() * 2 * G.allGrids().size() == partEvts.size();
-            }
-        }, 5_000));
+        if (safe) {
+            assertTrue(partEvts.toString(), GridTestUtils.waitForCondition(new GridAbsPredicate() {
+                @Override public boolean apply() {
+                    return expLostParts.size() * 2 * G.allGrids().size() == partEvts.size();
+                }
+            }, 5_000));
+        }
 
         assertEquals(expLostParts, new HashSet<>(partEvts));
 
