@@ -16,8 +16,12 @@
 
 package org.apache.ignite.internal.processors.cache.distributed;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.cache.CacheException;
@@ -33,11 +37,14 @@ import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -52,6 +59,9 @@ import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
  * Tests partition loss policies working for in-memory groups with multiple caches.
  */
 public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbstractTest {
+    /** */
+    private static final int PARTS_CNT = 32;
+
     /** */
     private boolean client;
 
@@ -80,7 +90,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
             .setBackups(0)
             .setWriteSynchronizationMode(FULL_SYNC)
             .setPartitionLossPolicy(partLossPlc)
-            .setAffinity(new RendezvousAffinityFunction(false, 32));
+            .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
 
         CacheConfiguration ccfg2 = new CacheConfiguration(ccfg1)
             .setName(CACHE_2);
@@ -183,13 +193,17 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     private void checkLostPartition(boolean autoAdjust, boolean safe) throws Exception {
         String cacheName = ThreadLocalRandom.current().nextBoolean() ? CACHE_1 : CACHE_2;
 
+        List<Integer> partEvts = Collections.synchronizedList(new ArrayList<>());
+
         Collection<Integer> expLostParts = prepareTopology(autoAdjust, new P1<Event>() {
             @Override public boolean apply(Event evt) {
                 assert evt.type() == EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 
                 CacheRebalancingEvent cacheEvt = (CacheRebalancingEvent)evt;
 
-                return false;
+                partEvts.add(cacheEvt.partition());
+
+                return true;
             }
         });
 
@@ -198,6 +212,14 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
             verifyCacheOps(cacheName, expLostParts, ig, safe);
         }
+
+        assertTrue(partEvts.toString(), GridTestUtils.waitForCondition(new GridAbsPredicate() {
+            @Override public boolean apply() {
+                return expLostParts.size() * 2 * G.allGrids().size() == partEvts.size();
+            }
+        }, 5_000));
+
+        assertEquals(expLostParts, new HashSet<>(partEvts));
 
         // Check that partition state does not change after we start a new node.
         IgniteEx grd = startGrid(3);
@@ -329,20 +351,20 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         ClusterNode killNode = ignite(3).cluster().localNode();
 
-        Set<Integer> parts = new LinkedHashSet<>();
+        Set<Integer> expLostParts = new LinkedHashSet<>();
 
         for (int i = 0; i < aff.partitions(); i++) {
             if (aff.isPrimary(killNode, i))
-                parts.add(i);
+                expLostParts.add(i);
         }
 
-        assertFalse("No partition on node: " + killNode, parts.isEmpty());
+        assertFalse("No partition on node: " + killNode, expLostParts.isEmpty());
 
         for (Ignite ignite : G.allGrids())
             ignite.events().localListen(lsnr, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
 
         ignite(3).close();
 
-        return parts;
+        return expLostParts;
     }
 }
