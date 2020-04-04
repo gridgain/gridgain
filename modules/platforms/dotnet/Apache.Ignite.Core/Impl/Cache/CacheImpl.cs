@@ -1658,7 +1658,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 var scan = qry as ScanQuery<TK, TV>;
 
-                if (scan != null && scan.Local)
+                if (scan != null && scan.Local && scan.Partition != null)
                 {
                     // TODO: Should we check for server node? What happens on client?
                     return new EnumerableQueryCursor<ICacheEntry<TK, TV>>(ScanNear(scan));
