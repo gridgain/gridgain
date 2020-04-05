@@ -632,7 +632,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // TODO: With and without filter, with and without partition
             // TODO: All modes
             // TODO: Test GetAll with numeration - should fail.
-            // TODO: Dispose does not work - fix it
+            // TODO: Make sure partition is released in all cases (no enumeration, partial enumeration, full enumeration)
+            //
             var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
 

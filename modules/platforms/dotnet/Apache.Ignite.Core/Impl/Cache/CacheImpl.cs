@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
+    using System.Reflection;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
@@ -1664,10 +1665,10 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 var scan = qry as ScanQuery<TK, TV>;
 
-                if (scan != null && scan.Local && scan.Partition != null)
+                if (scan != null && scan.Local)
                 {
                     // TODO: Should we check for server node? What happens on client?
-                    return new EnumerableQueryCursor<ICacheEntry<TK, TV>>(ScanNear(scan));
+                    return ScanNear(scan);
                 }
             }
 
@@ -2094,13 +2095,12 @@ namespace Apache.Ignite.Core.Impl.Cache
                 throw new Exception("Failed to release partition");
             }
         }
-        
+
         /// <summary>
         /// Performs Scan query over Near Cache.
         /// </summary>
-        private IEnumerable<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
+        private EnumerableQueryCursor<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
         {
-            var entries = _nearCache.GetEntries<TK, TV>(qry.Partition);
             var filter = qry.Filter;
 
             if (filter != null)
@@ -2109,27 +2109,27 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
 
             var part = qry.Partition;
+            Action dispose = null;
 
             if (part != null)
             {
                 ReservePartition((int) part);
+                dispose = () => ReleasePartition((int) part);
             }
 
-            try
+            return new EnumerableQueryCursor<ICacheEntry<TK, TV>>(ScanNear(qry.Filter, part), dispose);
+        }
+
+        /// <summary>
+        /// Performs Scan query over Near Cache.
+        /// </summary>
+        private IEnumerable<ICacheEntry<TK, TV>> ScanNear(ICacheEntryFilter<TK, TV> filter, int? part)
+        {
+            foreach (var entry in _nearCache.GetEntries<TK, TV>(part))
             {
-                foreach (var entry in entries)
+                if (filter == null || filter.Invoke(entry))
                 {
-                    if (filter == null || filter.Invoke(entry))
-                    {
-                        yield return entry;
-                    }
-                }
-            }
-            finally
-            {
-                if (part != null)
-                {
-                    ReleasePartition((int) part);
+                    yield return entry;
                 }
             }
         }
