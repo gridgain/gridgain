@@ -2099,7 +2099,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Performs Scan query over Near Cache.
         /// </summary>
-        private EnumerableQueryCursor<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
+        private IQueryCursor<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
         {
             var filter = qry.Filter;
 
@@ -2114,24 +2114,11 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (part != null)
             {
                 ReservePartition((int) part);
+                
                 dispose = () => ReleasePartition((int) part);
             }
 
-            return new EnumerableQueryCursor<ICacheEntry<TK, TV>>(ScanNear(qry.Filter, part), dispose);
-        }
-
-        /// <summary>
-        /// Performs Scan query over Near Cache.
-        /// </summary>
-        private IEnumerable<ICacheEntry<TK, TV>> ScanNear(ICacheEntryFilter<TK, TV> filter, int? part)
-        {
-            foreach (var entry in _nearCache.GetEntries<TK, TV>(part))
-            {
-                if (filter == null || filter.Invoke(entry))
-                {
-                    yield return entry;
-                }
-            }
+            return new NearQueryCursor<TK, TV>(_nearCache, filter, part, dispose);
         }
     }
 }

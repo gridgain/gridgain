@@ -21,32 +21,48 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
+    using Apache.Ignite.Core.Impl.Cache.Near;
 
     /// <summary>
-    /// Query cursor that wraps IEnumerable.
+    /// Query cursor over platform near cache.
     /// </summary>
-    public sealed class EnumerableQueryCursor<T> : IQueryCursor<T>
+    internal sealed class NearQueryCursor<TK, TV> : IQueryCursor<ICacheEntry<TK, TV>>
     {
         /** */
-        private readonly IEnumerable<T> _enumerable;
-
+        private readonly INearCache _nearCache;
+        
         /** */
         private readonly Action _dispose;
 
         /** */
+        private ICacheEntryFilter<TK, TV> _filter;
+        
+        /** */
+        private readonly int? _partition;
+
+        /** */
         private bool _disposed;
 
+        /** */
+        private bool _iteratorCalled;
+
         /// <summary>
-        /// Initializes a new instance of <see cref="EnumerableQueryCursor{T}"/>.
+        /// Initializes a new instance of <see cref="NearQueryCursor{TK, TV}"/>.
         /// </summary>
-        /// <param name="enumerable">Enumerable to wrap.</param>
+        /// <param name="nearCache">Near cache</param>
+        /// <param name="filter">Filter.</param>
+        /// <param name="partition">Partition.</param>
         /// <param name="dispose">Dispose action.</param>
-        public EnumerableQueryCursor(IEnumerable<T> enumerable, Action dispose = null)
+        internal NearQueryCursor(INearCache nearCache, ICacheEntryFilter<TK, TV> filter = null, 
+            int? partition = null, Action dispose = null)
         {
-            Debug.Assert(enumerable != null);
+            Debug.Assert(nearCache != null);
             
-            _enumerable = enumerable;
+            _nearCache = nearCache;
+            _filter = filter;
+            _partition = partition;
             _dispose = dispose;
 
             if (_dispose == null)
@@ -56,30 +72,20 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         }
 
         /** <inheritdoc /> */
-        public IList<T> GetAll()
+        public IList<ICacheEntry<TK, TV>> GetAll()
         {
-            ThrowIfDisposed();
-
-            var res = _enumerable.ToList();
-            
-            Dispose();
-
-            return res;
+            return GetEnumerable().ToList();
         }
 
         /** <inheritdoc /> */
-        public IEnumerator<T> GetEnumerator()
+        public IEnumerator<ICacheEntry<TK, TV>> GetEnumerator()
         {
-            ThrowIfDisposed();
-            
-            return _enumerable.GetEnumerator();
+            return GetEnumerable().GetEnumerator();
         }
 
         /** <inheritdoc /> */
         IEnumerator IEnumerable.GetEnumerator()
         {
-            ThrowIfDisposed();
-            
             return GetEnumerator();
         }
 
@@ -91,14 +97,36 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         }
 
         /// <summary>
-        /// Throws <see cref="ObjectDisposedException"/> if this instance has been disposed.
+        /// Gets the enumerable.
         /// </summary>
-        private void ThrowIfDisposed()
+        private IEnumerable<ICacheEntry<TK, TV>> GetEnumerable()
         {
             if (_disposed)
             {
                 throw new ObjectDisposedException(GetType().Name, 
-                    "Object has been disposed. Query cursor can not be enumerated multiple times");
+                    "Object has been disposed. Query cursor can not be enumerated multiple times.");
+            }
+            
+            if (_iteratorCalled)
+            {
+                throw new InvalidOperationException("Query cursor can not be enumerated multiple times.");
+            }
+            
+            _iteratorCalled = true;
+
+            try
+            {
+                foreach (var entry in _nearCache.GetEntries<TK, TV>(_partition))
+                {
+                    if (_filter == null || _filter.Invoke(entry))
+                    {
+                        yield return entry;
+                    }
+                }
+            }
+            finally
+            {
+                Dispose();
             }
         }
 
@@ -121,7 +149,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <summary>
         /// Finalizer.
         /// </summary>
-        ~EnumerableQueryCursor()
+        ~NearQueryCursor()
         {
             ReleaseUnmanagedResources();
         }
