@@ -2078,8 +2078,10 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (!reserved)
             {
-                // TODO: What does Java do in this case?
-                throw new Exception("TODO: Failed to reserve partition - invalid or not local");
+                // Java exception for Scan Query in this case is 'No queryable nodes for partition N',
+                // which is a bit confusing.
+                throw new InvalidOperationException(
+                    string.Format("Failed to reserve partition {0}, it does not belong to the local node.", part));
             }
         }
 
@@ -2092,7 +2094,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (!released)
             {
-                throw new Exception("Failed to release partition");
+                throw new InvalidOperationException("Failed to release partition");
             }
         }
 

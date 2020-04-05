@@ -658,15 +658,28 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
-        public void TestLocalScanQueryWithPartitionReservesPartition()
+        public void TestLocalScanQueryWithPartitionReservesPartitionAndReleasesItOnDispose()
         {
+            // Check reserved, then check released after full iteration
             Assert.Fail("TODO");
         }
 
         [Test]
         public void TestLocalScanQueryWithPartitionThrowsOnRemoteKeys()
         {
-            Assert.Fail("TODO");
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            
+            // TODO: Generic type mismatch here breaks the near cache usage!
+            var qry = new ScanQuery<int, Foo>
+            {
+                Local = true,
+                Partition = 
+                    _grid2.GetAffinity(cache.Name).GetPrimaryPartitions(_grid2.GetCluster().GetLocalNode()).First()
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() => cache.Query(qry).GetAll());
+            
+            Assert.AreEqual("1", ex.Message);
         }
 
         /// <summary>
