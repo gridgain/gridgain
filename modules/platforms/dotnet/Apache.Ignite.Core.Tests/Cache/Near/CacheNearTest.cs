@@ -669,17 +669,22 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
             
+            var partition = _grid2.GetAffinity(cache.Name)
+                .GetPrimaryPartitions(_grid2.GetCluster().GetLocalNode())
+                .First();
+            
             // TODO: Generic type mismatch here breaks the near cache usage!
             var qry = new ScanQuery<int, Foo>
             {
                 Local = true,
-                Partition = 
-                    _grid2.GetAffinity(cache.Name).GetPrimaryPartitions(_grid2.GetCluster().GetLocalNode()).First()
+                Partition = partition
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() => cache.Query(qry).GetAll());
             
-            Assert.AreEqual("1", ex.Message);
+            Assert.AreEqual(
+                string.Format("Failed to reserve partition {0}, it does not belong to the local node.", partition), 
+                ex.Message);
         }
 
         /// <summary>
