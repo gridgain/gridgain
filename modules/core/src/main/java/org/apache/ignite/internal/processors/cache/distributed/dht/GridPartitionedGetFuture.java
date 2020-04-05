@@ -188,25 +188,29 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
         Map<ClusterNode, LinkedHashMap<KeyCacheObject, Boolean>> mapped,
         AffinityTopologyVersion topVer
     ) {
-        final GridDhtTopologyFuture pendingFut = cctx.shared().exchange().lastTopologyFuture();
+        GridDhtTopologyFuture validateFut = cctx.shared().exchange().lastTopologyFuture();
 
         // Finished DHT future is required for topology validation.
-        if (!pendingFut.isDone()) {
-            pendingFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
-                @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
-                    if (fut.error() != null)
-                        onDone(fut.error());
-                    else
-                        map(keys, mapped, topVer);
-                }
-            });
+        if (!validateFut.isDone()) {
+            if (!validateFut.initialVersion().after(topVer)) {
+                validateFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                    @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
+                        if (fut.error() != null)
+                            onDone(fut.error());
+                        else
+                            map(keys, mapped, topVer);
+                    }
+                });
 
-            return;
+                return;
+            }
+            else
+                validateFut = cctx.shared().exchange().lastFinishedFuture();
         }
 
         Collection<ClusterNode> cacheNodes = CU.affinityNodes(cctx, topVer);
 
-        validate(cacheNodes, pendingFut);
+        validate(cacheNodes, validateFut);
 
         // Future can be already done with some exception.
         if (isDone())

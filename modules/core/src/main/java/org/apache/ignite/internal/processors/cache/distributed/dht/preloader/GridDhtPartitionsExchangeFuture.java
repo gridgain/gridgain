@@ -352,12 +352,15 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     private volatile boolean partitionsReceived;
 
     /** Latest (by update sequences) full message with exchangeId == null, need to be processed right after future is done. */
+    @GridToStringExclude
     private GridDhtPartitionsFullMessage delayedLatestMsg;
 
     /** Future for wait all exchange listeners comepleted. */
+    @GridToStringExclude
     private final GridFutureAdapter<?> afterLsnrCompleteFut = new GridFutureAdapter<>();
 
     /** Time bag to measure and store exchange stages times. */
+    @GridToStringExclude
     private final TimeBag timeBag;
 
     /** Start time of exchange. */
@@ -369,10 +372,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
     /** Discovery lag / Clocks discrepancy, calculated on coordinator when all single messages are received. */
     private T2<Long, UUID> discoveryLag;
 
-    /** Partitions scheduled for clearing before rebalance for this topology version. */
+    /** Partitions scheduled for clearing before rebalancing for this topology version. */
     private Map<Integer, Set<Integer>> clearingPartitions;
 
     /** Tracing span. */
+    @GridToStringExclude
     private Span span = NoopSpan.INSTANCE;
 
     /** This future finished with 'cluster is fully rebalanced' state. */

@@ -248,23 +248,28 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      */
     @SuppressWarnings("unchecked")
     private void map(AffinityTopologyVersion topVer) {
-        final GridDhtPartitionsExchangeFuture pendingFut = cctx.shared().exchange().lastTopologyFuture();
+        GridDhtPartitionsExchangeFuture validateFut = cctx.shared().exchange().lastTopologyFuture();
 
+        // TODO copypaste.
         // Finished DHT future is required for topology validation.
-        if (!pendingFut.isDone()) {
-            pendingFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
-                @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
-                    if (fut.error() != null)
-                        onDone(fut.error());
-                    else
-                        map(topVer);
-                }
-            });
+        if (!validateFut.isDone()) {
+            if (!validateFut.initialVersion().after(topVer)) {
+                validateFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                    @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
+                        if (fut.error() != null)
+                            onDone(fut.error());
+                        else
+                            map(topVer);
+                    }
+                });
 
-            return;
+                return;
+            }
+            else
+                validateFut = cctx.shared().exchange().lastFinishedFuture();
         }
 
-        if (!validate(pendingFut))
+        if (!validate(validateFut))
             return;
 
         ClusterNode node = mapKeyToNode(topVer);
