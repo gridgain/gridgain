@@ -643,7 +643,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     }
                     : null,
                 Partition = withPartition 
-                    ? _grid.GetAffinity(cache.Name).GetPrimaryPartitions(_grid.GetCluster().GetLocalNode()).First() 
+                    ? _grid.GetAffinity(cache.Name).GetPartition(TestUtils.GetPrimaryKey(_grid, cache.Name)) 
                     : (int?) null
             };
             
