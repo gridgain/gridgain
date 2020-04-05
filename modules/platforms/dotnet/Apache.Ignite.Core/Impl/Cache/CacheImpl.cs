@@ -2094,12 +2094,12 @@ namespace Apache.Ignite.Core.Impl.Cache
                 throw new Exception("Failed to release partition");
             }
         }
-
+        
+        /// <summary>
+        /// Performs Scan query over Near Cache.
+        /// </summary>
         private IEnumerable<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
         {
-            // TODO: Inject resources
-            // TODO: Lock partition when specified 
-            // TODO: When there is no partition - does Java lock anything?
             var entries = _nearCache.GetEntries<TK, TV>(qry.Partition);
             var filter = qry.Filter;
 
@@ -2115,19 +2115,22 @@ namespace Apache.Ignite.Core.Impl.Cache
                 ReservePartition((int) part);
             }
 
-            foreach (var entry in entries)
+            try
             {
-                if (filter == null || filter.Invoke(entry))
+                foreach (var entry in entries)
                 {
-                    yield return entry;
+                    if (filter == null || filter.Invoke(entry))
+                    {
+                        yield return entry;
+                    }
                 }
             }
-
-            if (part != null)
+            finally
             {
-                // TODO: Release partition
-                Console.WriteLine("Dispose");
-                ReleasePartition((int) part);
+                if (part != null)
+                {
+                    ReleasePartition((int) part);
+                }
             }
         }
     }
