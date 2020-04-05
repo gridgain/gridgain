@@ -627,17 +627,27 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
-        public void TestLocalScanQueryUsesKeysAndValuesFromNearCache()
+        public void TestLocalScanQueryUsesKeysAndValuesFromNearCache([Values(true, false)] bool withFilter,
+            [Values(true, false)] bool withPartition)
         {
-            // TODO: With and without filter, with and without partition
-            // TODO: All modes
-            // TODO: Test GetAll with numeration - should fail.
-            // TODO: Make sure partition is released in all cases (no enumeration, partial enumeration, full enumeration)
-            //
             var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
 
-            var res = cache.Query(new ScanQuery<int, Foo> {Local = true});
+            var qry = new ScanQuery<int, Foo>
+            {
+                Local = true,
+                Filter = withFilter 
+                    ? new ScanQueryNearCacheFilter
+                    {
+                        CacheName = cache.Name
+                    }
+                    : null,
+                Partition = withPartition 
+                    ? _grid.GetAffinity(cache.Name).GetPrimaryPartitions(_grid.GetCluster().GetLocalNode()).First() 
+                    : (int?) null
+            };
+            
+            var res = cache.Query(qry);
 
             foreach (var entry in res)
             {
@@ -645,6 +655,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             }
 
             Assert.Throws<ObjectDisposedException>(() => res.GetAll());
+        }
+
+        [Test]
+        public void TestLocalScanQueryWithPartitionReservesPartition()
+        {
+            Assert.Fail("TODO");
+        }
+
+        [Test]
+        public void TestLocalScanQueryWithPartitionThrowsOnRemoteKeys()
+        {
+            Assert.Fail("TODO");
         }
 
         /// <summary>
