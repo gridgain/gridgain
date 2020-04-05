@@ -2068,6 +2068,33 @@ namespace Apache.Ignite.Core.Impl.Cache
             writer.Stream.Seek(endPos, SeekOrigin.Begin);
         }
 
+        /// <summary>
+        /// Reserves specified partition.
+        /// </summary>
+        private void ReservePartition(int part)
+        {
+            var reserved = Target.InLongOutLong((int) CacheOp.ReservePartition, part) == True;
+
+            if (!reserved)
+            {
+                // TODO: What does Java do in this case?
+                throw new Exception("TODO: Failed to reserve partition - invalid or not local");
+            }
+        }
+
+        /// <summary>
+        /// Releases specified partition.
+        /// </summary>
+        private void ReleasePartition(int part)
+        {
+            var released = Target.InLongOutLong((int) CacheOp.ReleasePartition, part) == True;
+
+            if (!released)
+            {
+                throw new Exception("Failed to release partition");
+            }
+        }
+
         private IEnumerable<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
         {
             // TODO: Inject resources
@@ -2081,6 +2108,13 @@ namespace Apache.Ignite.Core.Impl.Cache
                 ResourceProcessor.Inject(filter, Marshaller.Ignite);
             }
 
+            var part = qry.Partition;
+
+            if (part != null)
+            {
+                ReservePartition((int) part);
+            }
+
             foreach (var entry in entries)
             {
                 if (filter == null || filter.Invoke(entry))
@@ -2089,10 +2123,11 @@ namespace Apache.Ignite.Core.Impl.Cache
                 }
             }
 
-            if (qry.Partition != null)
+            if (part != null)
             {
                 // TODO: Release partition
                 Console.WriteLine("Dispose");
+                ReleasePartition((int) part);
             }
         }
     }
