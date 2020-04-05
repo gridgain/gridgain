@@ -1208,6 +1208,11 @@ public class PlatformCache extends PlatformAbstractTarget {
 
                 return TRUE;
 
+            case OP_CLEAR_STATISTICS:
+                cache.clearStatistics();
+
+                return TRUE;
+
             case OP_RESERVE_PARTITION: {
                 GridDhtLocalPartition locPart = getLocalPartition((int)val);
 
