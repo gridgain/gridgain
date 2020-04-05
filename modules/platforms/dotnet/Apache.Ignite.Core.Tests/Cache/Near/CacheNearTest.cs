@@ -644,7 +644,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Assert.AreSame(entry.Value, cache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
             }
 
-            res.GetAll();
+            Assert.Throws<ObjectDisposedException>(() => res.GetAll());
         }
 
         /// <summary>
