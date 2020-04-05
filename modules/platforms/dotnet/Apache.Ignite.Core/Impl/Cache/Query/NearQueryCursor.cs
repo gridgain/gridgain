@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private bool _disposed;
 
         /** */
-        private bool _iteratorCalled;
+        private bool _iterCalled;
 
         /// <summary>
         /// Initializes a new instance of <see cref="NearQueryCursor{TK, TV}"/>.
@@ -107,13 +107,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                     "Object has been disposed. Query cursor can not be enumerated multiple times.");
             }
             
-            if (_iteratorCalled)
+            if (_iterCalled)
             {
                 throw new InvalidOperationException("Query cursor can not be enumerated multiple times.");
             }
             
-            _iteratorCalled = true;
+            _iterCalled = true;
 
+            return GetEnumerableInternal();
+        }
+
+        /// <summary>
+        /// Gets the enumerable.
+        /// </summary>
+        private IEnumerable<ICacheEntry<TK, TV>> GetEnumerableInternal()
+        {
             try
             {
                 foreach (var entry in _nearCache.GetEntries<TK, TV>(_partition))
