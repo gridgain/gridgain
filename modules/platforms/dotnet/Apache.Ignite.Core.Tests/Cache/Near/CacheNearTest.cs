@@ -689,10 +689,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.IsFalse(isReserved());
 
-            // TODO:
-            // * exception in filter
-            // * partial iteration
-            // * no iteration
+            // Full iteration.
             using (var cursor = cache.Query(qry))
             {
                 Assert.IsTrue(isReserved());
@@ -713,16 +710,39 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             }
             
             Assert.IsFalse(isReserved());
-        }
+            
+            // Partial iteration with LINQ.
+            using (var cursor = cache.Query(qry))
+            {
+                Assert.IsTrue(isReserved());
 
-        /// <summary>
-        /// Tests that exception in <see cref="ScanQuery{TK,TV}.Filter"/> stops the iteration
-        /// and releases the partition. 
-        /// </summary>
-        [Test]
-        public void TestLocalScanQueryReleasesPartitionOnException()
-        {
-            // TODO
+                var item = cursor.FirstOrDefault();
+                Assert.IsNotNull(item);
+
+                // Released because LINQ disposes the iterator. 
+                Assert.IsFalse(isReserved());
+            }
+            
+            Assert.IsFalse(isReserved());
+            
+            // Partial iteration.
+            using (var cursor = cache.Query(qry))
+            {
+                Assert.IsTrue(isReserved());
+
+                var moved = cursor.GetEnumerator().MoveNext();
+                Assert.IsTrue(moved);
+
+                Assert.IsTrue(isReserved());
+            }
+            
+            Assert.IsFalse(isReserved());
+            
+            // No iteration.
+            
+            // GetAll without using block.
+            
+            // Exception in filter.
         }
 
         /// <summary>
