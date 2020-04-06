@@ -658,6 +658,30 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         [Test]
+        public void TestLocalScanQueryWithTypeMismatchUsesKeysAndValuesFromNearCache(
+            [Values(true, false)] bool withPartition)
+        {
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
+
+            // Query generic types do not match cache generic types.
+            var qry = new ScanQuery<object, object>
+            {
+                Local = true,
+                Partition = withPartition 
+                    ? _grid.GetAffinity(cache.Name).GetPartition(TestUtils.GetPrimaryKey(_grid, cache.Name)) 
+                    : (int?) null
+            };
+            
+            var res = cache.Query(qry);
+
+            foreach (var entry in res)
+            {
+                Assert.AreSame(entry.Value, cache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
+            }
+        }
+
+        [Test]
         public void TestLocalScanQueryWithPartitionReservesPartitionAndReleasesItOnDispose()
         {
             // Check reserved, then check released after full iteration
