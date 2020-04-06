@@ -28,20 +28,17 @@ import org.apache.ignite.IgniteIllegalStateException;
  * PipelineBlock#accept(Object, boolean)} is called per-line.
  */
 public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
-    /**
-     * Field delimiter pattern.
-     */
+    public static final String[] EMPTY_STR_ARRAY = new String[0];
+    /** Field delimiter pattern. */
     private final char fldDelim;
 
-    /**
-     * Quote character.
-     */
+    /** Quote character. */
     private final char quoteChars;
 
     /**
      * Creates a CSV line parser.
      *
-     * @param fldDelim   The pattern for the field delimiter.
+     * @param fldDelim The pattern for the field delimiter.
      * @param quoteChars Quoting character.
      */
     public CsvLineProcessorBlock(Pattern fldDelim, String quoteChars) {
@@ -52,11 +49,12 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
     /**
      * {@inheritDoc}
      */
-    @Override
-    public void accept(String input, boolean isLastPortion) throws IgniteCheckedException {
+    @Override public void accept(String input, boolean isLastPortion) throws IgniteCheckedException {
         List<String> fields = new ArrayList<>();
+
         StringBuilder currentField = new StringBuilder(256);
-        ReaderState state = ReaderState.UNDEFINED;
+
+        ReaderState state = ReaderState.IDLE;
 
         final int length = input.length();
         int copy = 0;
@@ -82,11 +80,12 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
 
             if (state == ReaderState.QUOTED) {
                 if (c == quoteChars) {
-                    state = ReaderState.UNDEFINED;
+                    state = ReaderState.IDLE;
                     quotesMatched = !quotesMatched;
 
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
+
                         copy = 0;
                     }
 
@@ -99,16 +98,20 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
                 if (c == fldDelim) {
                     if (copy > 0) {
                         currentField.append(input, copyStart, copyStart + copy);
+
                         copy = 0;
                     }
 
                     fields.add(currentField.toString());
+
                     currentField = new StringBuilder();
                     copyStart = current;
-                    state = ReaderState.UNDEFINED;
+
+                    state = ReaderState.IDLE;
                 }
                 else if (c == quoteChars && state != ReaderState.UNQUOTED) {
                     state = ReaderState.QUOTED;
+
                     quotesMatched = !quotesMatched;
 
                     if (prev == quoteChars)
@@ -122,7 +125,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
 
                     copy++;
 
-                    if (state == ReaderState.UNDEFINED)
+                    if (state == ReaderState.IDLE)
                         state = ReaderState.UNQUOTED;
                 }
             }
@@ -130,7 +133,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
             prev = c;
         }
 
-        nextBlock.accept(fields.toArray(new String[0]), isLastPortion);
+        nextBlock.accept(fields.toArray(EMPTY_STR_ARRAY), isLastPortion);
     }
 
     /**
@@ -138,7 +141,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
      */
     private enum ReaderState {
         /** */
-        UNDEFINED,
+        IDLE,
 
         /** */
         UNQUOTED,

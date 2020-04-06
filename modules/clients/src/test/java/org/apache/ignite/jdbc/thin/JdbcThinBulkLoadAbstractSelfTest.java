@@ -307,8 +307,6 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
     /**
      * Verifies exception thrown if CSV row contains unmatched quote as the only field content.
-     *
-     * @throws SQLException If failed.
      */
     @Test
     public void testOneLineFileForSingleEndQuote() {
@@ -326,8 +324,6 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
     /**
      * Verifies exception thrown if CSV row contains single unmatched quote as the field content.
-     *
-     * @throws SQLException If failed.
      */
     @Test
     public void testOneLineFileForQuoteInContent() {
@@ -345,8 +341,6 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
     /**
      * Verifies exception thrown if CSV row contains unmatched quote in the quoted field content.
-     *
-     * @throws SQLException If failed.
      */
     @Test
     public void testOneLineFileForQuoteInQuotedContent() {
@@ -928,6 +922,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
      * @param tblName Table name to query.
      * @param checkLastName Check 'lastName' column (not imported in some tests).
      * @param recCnt Number of records to expect.
+     * @param delimiter The delimiter of fields.
      * @throws SQLException When one of checks has failed.
      */
     private void checkCacheContents(String tblName, boolean checkLastName, int recCnt, char delimiter) throws SQLException {
