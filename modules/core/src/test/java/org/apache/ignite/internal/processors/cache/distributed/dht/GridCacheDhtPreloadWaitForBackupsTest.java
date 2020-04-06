@@ -522,40 +522,6 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
      * @throws Exception If failed.
      */
     @Test
-    public void testRollingRestartEmulationInReadOnlyCluster() throws Exception {
-        cacheMode = CacheMode.PARTITIONED;
-        atomicityMode = CacheAtomicityMode.ATOMIC;
-        synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
-        backups = 1;
-
-        int nodesCnt = 4;
-
-        startGrids(nodesCnt);
-
-        grid(0).cluster().active(true);
-
-        for (int i = 0; i < cacheSize(); i++)
-            grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).put(i, i);
-
-        ignite(0).cluster().readOnly(true);
-
-        for (int rollingRestartCycles = 0; rollingRestartCycles < 2; rollingRestartCycles++) {
-            for (int i = 0; i < nodesCnt; i++) {
-                grid(i).close();
-
-                startGrid(i);
-            }
-        }
-
-        // Data shouldn't be lost.
-        for (int i = 0; i < cacheSize(); i++)
-            assertEquals(i, grid(i % 2).cache("cache" + (1 + (i >> 3) % 3)).get(i));
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
     public void testRollingRestartEmulationWithOnlyHalfNodesInBaseline() throws Exception {
         cacheMode = CacheMode.PARTITIONED;
         atomicityMode = CacheAtomicityMode.ATOMIC;
