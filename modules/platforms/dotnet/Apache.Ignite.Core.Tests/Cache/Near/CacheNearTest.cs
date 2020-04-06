@@ -36,6 +36,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
+    using NUnit.Framework.Constraints;
 
     /// <summary>
     /// Near cache test.
@@ -660,8 +661,42 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestLocalScanQueryWithPartitionReservesPartitionAndReleasesItOnDispose()
         {
-            // Check reserved, then check released after full iteration
-            Assert.Fail("TODO");
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
+            var part = _grid.GetAffinity(cache.Name).GetPartition(key);
+
+            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
+            
+            var qry = new ScanQuery<int, Foo>
+            {
+                Local = true,
+                Partition = part
+            };
+
+            Func<bool> isReserved = () => IsPartitionReserved(_grid, cache.Name, part);
+            
+            Assert.IsFalse(isReserved());
+
+            using (var cursor = cache.Query(qry))
+            {
+                Assert.IsTrue(isReserved());
+
+                using (var enumerator = cursor.GetEnumerator())
+                {
+                    Assert.IsTrue(isReserved());
+                    
+                    while (enumerator.MoveNext())
+                    {
+                        Assert.IsTrue(isReserved());
+                    }
+                    
+                    Assert.IsFalse(isReserved());
+                }
+                
+                Assert.IsFalse(isReserved());
+            }
+            
+            Assert.IsFalse(isReserved());
         }
 
         [Test]
@@ -1435,6 +1470,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         private void WaitForRebalance()
         {
             TestUtils.WaitForTrueCondition(() => _grid2.GetAffinity(CacheName).MapKeyToNode(1).IsLocal, 2000);
+        }
+
+        /// <summary>
+        /// Gets a value indicating whether specified partition is reserved.
+        /// </summary>
+        private bool IsPartitionReserved(IIgnite ignite, string cacheName, int part)
+        {
+            const string taskName = "org.apache.ignite.platform.PlatformIsPartitionReservedTask";
+
+            return ignite.GetCompute().ExecuteJavaTask<bool>(taskName, new object[] {cacheName, part});
         }
 
         /** */

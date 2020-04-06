@@ -76,7 +76,7 @@ public class PlatformIsPartitionReservedTask extends ComputeTaskAdapter<Object[]
 
             GridDhtPartitionTopology top = ctx.cache().cache(cacheName).context().topology();
 
-            return top.localPartition(part).reservations() > 0;
+            return top.localPartition(part, top.readyTopologyVersion(), false).reservations() > 0;
         }
     }
 }
