@@ -36,7 +36,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
-    using NUnit.Framework.Constraints;
 
     /// <summary>
     /// Near cache test.
