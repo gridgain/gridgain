@@ -16,6 +16,7 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader.latch;
 
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
@@ -45,7 +46,8 @@ public class ExchangeLatchManagerTest extends GridCommonAbstractTest {
     private static final String STALE_ACK_LOG_MSG = "Ignoring stale latch's acknowledge";
 
     /** Message happens when assertion was broken. */
-    public static final String ERROR_MSG = "An error occurred processing the message.*LatchAckMessage";
+    public static final Pattern ERROR_MSG = Pattern.compile("An error occurred processing the message.*"
+        + LatchAckMessage.class.getSimpleName());
 
     /** Grid logger. */
     public ListeningTestLogger gridLogger;
