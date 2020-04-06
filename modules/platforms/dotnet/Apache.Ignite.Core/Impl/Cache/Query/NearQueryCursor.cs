@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private readonly Action _dispose;
 
         /** */
-        private ICacheEntryFilter<TK, TV> _filter;
+        private readonly ICacheEntryFilter<TK, TV> _filter;
         
         /** */
         private readonly int? _partition;
