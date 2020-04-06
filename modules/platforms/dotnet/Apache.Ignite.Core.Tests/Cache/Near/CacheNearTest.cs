@@ -673,7 +673,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 .GetPrimaryPartitions(_grid2.GetCluster().GetLocalNode())
                 .First();
             
-            // TODO: Generic type mismatch here breaks the near cache usage!
             var qry = new ScanQuery<int, Foo>
             {
                 Local = true,
