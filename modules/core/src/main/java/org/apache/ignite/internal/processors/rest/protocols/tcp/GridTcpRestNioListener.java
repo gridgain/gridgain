@@ -16,12 +16,15 @@
 
 package org.apache.ignite.internal.processors.rest.protocols.tcp;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
@@ -56,6 +59,7 @@ import org.apache.ignite.internal.util.nio.GridNioFuture;
 import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.CI1;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
@@ -139,6 +143,9 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
     /** Handler for all Redis requests. */
     private GridRedisNioListener redisLsnr;
 
+    /** Storage of pending futures. */
+    Map<GridNioSession, List<IgniteInternalFuture>> sesFutMap = new ConcurrentHashMap<>();
+
     /**
      * Creates listener which will convert incoming tcp packets to rest requests and forward them to
      * a given rest handler.
@@ -176,6 +183,8 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
 
     /** {@inheritDoc} */
     @Override public void onDisconnected(GridNioSession ses, @Nullable Exception e) {
+        onSessionClosed(ses);
+
         if (e != null) {
             if (e instanceof RuntimeException)
                 U.error(log, "Failed to process request from remote client: " + ses, e);
@@ -202,7 +211,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                     ", ver=" + ver +
                     ", supported=" + SUPP_VERS + ']');
 
-                ses.close();
+                onSessionClosed(ses);
             }
             else {
                 byte marshId = hs.marshallerId();
@@ -213,7 +222,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                     } catch (IgniteInterruptedCheckedException e) {
                         U.error(log, "Marshaller is not initialized.", e);
 
-                        ses.close();
+                        onSessionClosed(ses);
 
                         return;
                     }
@@ -225,7 +234,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                     U.error(log, "Client marshaller ID is invalid. Note that .NET and C++ clients " +
                         "are supported only in enterprise edition [ses=" + ses + ", marshId=" + marshId + ']');
 
-                    ses.close();
+                    onSessionClosed(ses);
                 }
                 else {
                     ses.addMeta(MARSHALLER.ordinal(), marsh);
@@ -237,9 +246,15 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
         else {
             final GridRestRequest req = createRestRequest(ses, msg);
 
-            if (req != null)
-                hnd.handleAsync(req).listen(new CI1<IgniteInternalFuture<GridRestResponse>>() {
+            if (req != null) {
+                IgniteInternalFuture<GridRestResponse> taskFut = hnd.handleAsync(req);
+
+                addSesFut(ses, taskFut);
+
+                taskFut.listen(new CI1<IgniteInternalFuture<GridRestResponse>>() {
                     @Override public void apply(IgniteInternalFuture<GridRestResponse> fut) {
+                        removeSesFut(ses, taskFut);
+
                         GridClientResponse res = new GridClientResponse();
 
                         res.requestId(msg.requestId());
@@ -283,10 +298,77 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                         });
                     }
                 });
+            }
             else
                 U.error(log, "Failed to process client request (unknown packet type) [ses=" + ses +
                     ", msg=" + msg + ']');
         }
+    }
+
+    /**
+     * Memorize operation future until it was not completed.
+     *
+     * @param ses Session.
+     * @param fut Operation future.
+     */
+    private void addSesFut(GridNioSession ses, IgniteInternalFuture fut) {
+        synchronized (ses) {
+            List<IgniteInternalFuture> futs = sesFutMap.get(ses);
+
+            if (futs == null) {
+                futs = new ArrayList<>();
+
+                List<IgniteInternalFuture> oldFuts = sesFutMap.put(ses, futs);
+
+                assert oldFuts == null;
+            }
+
+            futs.add(fut);
+        }
+    }
+
+    /**
+     * Remove completed future from internal structure.
+     *
+     * @param ses Session.
+     * @param fut Operation future.
+     */
+    private void removeSesFut(GridNioSession ses, IgniteInternalFuture fut) {
+        assert fut.isDone() : "Operation is running ses=" + ses;
+
+        synchronized (ses) {
+            List<IgniteInternalFuture> futs = sesFutMap.get(ses);
+
+            if (!F.isEmpty(futs))
+                futs.remove(fut);
+
+            if (F.isEmpty(futs))
+                sesFutMap.remove(ses);
+        }
+    }
+
+    /**
+     * Close all future associated with given session.
+     *
+     * @param ses Session.
+     */
+    public void onSessionClosed(GridNioSession ses) {
+        synchronized (ses) {
+            List<IgniteInternalFuture> pendingFuts = sesFutMap.remove(ses);
+
+            if (!F.isEmpty(pendingFuts)) {
+                for (IgniteInternalFuture fut : pendingFuts) {
+                    try {
+                        fut.cancel();
+                    }
+                    catch (IgniteCheckedException e) {
+                        log.warning("Future was not cancel by reason=" + e.getMessage());
+                    }
+                }
+            }
+        }
+
+        ses.close();
     }
 
     /**
@@ -399,6 +481,6 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
      * @param ses Session, that was inactive.
      */
     @Override public void onSessionIdleTimeout(GridNioSession ses) {
-        ses.close();
+        onSessionClosed(ses);
     }
 }
