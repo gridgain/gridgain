@@ -662,6 +662,8 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         public void TestLocalScanQueryWithPartitionReservesPartitionAndReleasesItOnDispose()
         {
             var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            
+            Thread.Sleep(3000);
             var key = TestUtils.GetPrimaryKey(_grid, cache.Name);
             var part = _grid.GetAffinity(cache.Name).GetPartition(key);
 

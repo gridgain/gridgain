@@ -24,8 +24,8 @@ import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.compute.ComputeTaskAdapter;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,8 +41,11 @@ public class PlatformIsPartitionReservedTask extends ComputeTaskAdapter<Object[]
     /** {@inheritDoc} */
     @NotNull @Override public Map<? extends ComputeJob, ClusterNode> map(List<ClusterNode> subgrid,
         @Nullable Object[] arg) {
+        //noinspection OptionalGetWithoutIsPresent
+        ClusterNode localNode = subgrid.stream().filter(ClusterNode::isLocal).findFirst().get();
+
         return Collections.singletonMap(
-                new PlatformIsPartitionReservedJob((String)arg[0], (Integer)arg[1]), F.first(subgrid));
+                new PlatformIsPartitionReservedJob((String)arg[0], (Integer)arg[1]), localNode);
     }
 
     /** {@inheritDoc} */
@@ -76,7 +79,11 @@ public class PlatformIsPartitionReservedTask extends ComputeTaskAdapter<Object[]
 
             GridDhtPartitionTopology top = ctx.cache().cache(cacheName).context().topology();
 
-            return top.localPartition(part, top.readyTopologyVersion(), false).reservations() > 0;
+            GridDhtLocalPartition locPart = top.localPartition(part, top.readyTopologyVersion(), false);
+
+            assert locPart != null;
+
+            return locPart.reservations() > 0;
         }
     }
 }

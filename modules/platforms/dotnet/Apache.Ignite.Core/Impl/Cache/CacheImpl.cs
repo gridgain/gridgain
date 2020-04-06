@@ -2095,7 +2095,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (!released)
             {
-                throw new InvalidOperationException("Failed to release partition");
+                throw new InvalidOperationException("Failed to release partition: " + part);
             }
         }
 
