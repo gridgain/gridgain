@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.communication.tcp;
 
+import java.io.Serializable;
 import java.net.InetAddress;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.AddressResolver;
@@ -42,7 +43,10 @@ import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.DFLT_T
  * Class of configuration for {@link TcpCommunicationSpi} segregation. Uses for refactoring.
  */
 @IgniteExperimental
-public class TcpCommunicationConfiguration {
+public class TcpCommunicationConfiguration implements Serializable {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 5471893193030200809L;
+
     /** Address resolver. */
     private AddressResolver addrRslvr;
 
