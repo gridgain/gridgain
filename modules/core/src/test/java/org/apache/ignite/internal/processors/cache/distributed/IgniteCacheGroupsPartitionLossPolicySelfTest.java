@@ -18,20 +18,20 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -43,18 +43,17 @@ import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
-import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.X;
-import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import static java.util.Arrays.asList;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
-import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
@@ -62,6 +61,7 @@ import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 /**
  * Tests partition loss policies working for in-memory groups with multiple caches.
  */
+@RunWith(Parameterized.class)
 public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbstractTest {
     /** */
     private static final int PARTS_CNT = 32;
@@ -70,15 +70,63 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     private boolean client;
 
     /** */
-    private PartitionLossPolicy partLossPlc;
+    @Parameterized.Parameter(value = 0)
+    public CacheAtomicityMode atomicityMode;
 
-    private int backups;
+    /** */
+    @Parameterized.Parameter(value = 1)
+    public PartitionLossPolicy partLossPlc;
+
+    /** */
+    @Parameterized.Parameter(value = 2)
+    public int backups;
+
+    /** */
+    @Parameterized.Parameter(value = 3)
+    public boolean autoAdjust;
+
+    /** */
+    @Parameterized.Parameter(value = 4)
+    public int nodes;
+
+    /** */
+    @Parameterized.Parameter(value = 5)
+    public int[] stopNodes;
+
+    /** Expect safe policy handling. */
+    @Parameterized.Parameter(value = 6)
+    public boolean safe;
 
     /** */
     private static final String GROUP_NAME = "group";
 
     /** */
     private static final String[] CACHES = new String[]{"cache1", "cache2"};
+
+    /** */
+    @Parameterized.Parameters(name = "{0} {1} {2} {3} {4} expSafe={6}")
+    public static List<Object[]> parameters() {
+        ArrayList<Object[]> params = new ArrayList<>();
+
+        int[] stopIdxs = {2};
+
+//        params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, 0, false, 3, stopIdxs, true});
+//        params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, false, 3, stopIdxs, true});
+//        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, 0, false, 3, stopIdxs, true});
+//        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, 0, false, 3, stopIdxs, true});
+//        params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, 0, true, 3, stopIdxs, true});
+//        params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, true, 3, stopIdxs, false});
+//        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, 0, true, 3, stopIdxs, true});
+//        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, 0, true, 3, stopIdxs, true});
+
+        stopIdxs = new int[]{3, 2};
+        params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, 0, false, 4, stopIdxs, true});
+
+//        if (!MvccFeatureChecker.forcedMvcc())
+//            params.add(new Object[]{ATOMIC});
+
+        return params;
+    }
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
@@ -108,13 +156,6 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     }
 
     /** {@inheritDoc} */
-    @Override protected void beforeTest() throws Exception {
-        backups = 0;
-
-        super.beforeTest();
-    }
-
-    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
         stopAllGrids();
     }
@@ -123,97 +164,10 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      * @throws Exception if failed.
      */
     @Test
-    public void testReadOnlySafe() throws Exception {
-        partLossPlc = READ_ONLY_SAFE;
-
-        checkLostPartition(false, true, 4, 3);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testReadOnlyAll() throws Exception {
-        partLossPlc = READ_ONLY_ALL; // Should be same as testReadOnlySafe.
-
-        checkLostPartition(false, true, 4, 3);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testReadWriteSafe() throws Exception {
-        partLossPlc = IGNORE; // Should use safe policy instead.
-
-        checkLostPartition(false, true, 4, 3);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testReadWriteSafe_2() throws Exception {
-        partLossPlc = READ_ONLY_SAFE;
-
-        checkLostPartition(false, true, 4, 3);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testReadWriteAll() throws Exception {
-        partLossPlc = IGNORE; // Should be same as testReadWriteSafe.
-
-        checkLostPartition(false, true, 4, 3);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testIgnore() throws Exception {
-        partLossPlc = IGNORE;
-
-        checkLostPartition(true, false, 4, 3);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testIgnore_2() throws Exception {
-        partLossPlc = READ_WRITE_SAFE; // Should use safe policy.
-
-        checkLostPartition(true, true, 4, 3);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testIgnore_3() throws Exception {
-        partLossPlc = READ_ONLY_SAFE; // Should use safe read-only policy.
-
-        checkLostPartition(true, true, 4, 3);
-    }
-
-    @Test
-    public void testReadWriteSafeAfterKillTwoNodesWithDelayWithPersistence() throws Exception {
-        partLossPlc = READ_ONLY_SAFE;
-        backups = 1;
-
-        checkLostPartition(false, true, 4, 3, 2);
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    private void checkLostPartition(boolean autoAdjust, boolean safe, int nodes, int... stopNodes) throws Exception {
+    public void checkLostPartition() throws Exception {
         String cacheName = CACHES[ThreadLocalRandom.current().nextInt(CACHES.length)];
 
-        List<Integer> partEvts = Collections.synchronizedList(new ArrayList<>());
+        Map<UUID, Set<Integer>> lostMap = new ConcurrentHashMap<>();
 
         Set<Integer> expLostParts = prepareTopology(nodes, autoAdjust, new P1<Event>() {
             @Override public boolean apply(Event evt) {
@@ -221,7 +175,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
                 CacheRebalancingEvent cacheEvt = (CacheRebalancingEvent)evt;
 
-                partEvts.add(cacheEvt.partition());
+                lostMap.computeIfAbsent(evt.node().id(), k -> new HashSet<>()).add(cacheEvt.partition());
 
                 return true;
             }
@@ -235,16 +189,6 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                 continue;
 
             verifyCacheOps(cacheName, expLostParts, ig, safe);
-        }
-
-        if (safe) {
-            assertTrue(partEvts.toString(), GridTestUtils.waitForCondition(new GridAbsPredicate() {
-                @Override public boolean apply() {
-                    return expLostParts.size() * CACHES.length * G.allGrids().size() == partEvts.size();
-                }
-            }, 5_000));
-
-            assertEquals(expLostParts, new HashSet<>(partEvts));
         }
 
         // Check that partition state does not change after we return nodes.
@@ -277,6 +221,17 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                 cache.get(i);
 
                 cache.put(i, i);
+            }
+        }
+
+        if (safe) {
+            for (Ignite ig : G.allGrids()) {
+                if (Arrays.binarySearch(stopNodesSorted, getTestIgniteInstanceIndex(ig.name())) >= 0)
+                    continue;
+
+                Set<Integer> lostParts = lostMap.get(ig.cluster().localNode().id());
+
+                assertEquals(expLostParts, lostParts);
             }
         }
     }
@@ -452,7 +407,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         client = false;
 
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < nodes; i++)
             info(">>> Node [idx=" + i + ", nodeId=" + ignite(i).cluster().localNode().id() + ']');
 
         awaitPartitionMapExchange();
