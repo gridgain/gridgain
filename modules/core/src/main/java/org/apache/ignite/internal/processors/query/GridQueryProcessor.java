@@ -135,11 +135,8 @@ import static org.apache.ignite.internal.processors.query.schema.SchemaOperation
  * Indexing processor.
  */
 public class GridQueryProcessor extends GridProcessorAdapter {
-    /** Key for information about index inline sizes in discovery databag. */
-    private static final String INLINE_SIZE_KEY = "inline_sizes";
-
-    /** Key for information about active proposals in discovery databag. */
-    private static final String ACTIVE_PROPOSALS_KEY = "proposals";
+    /** Warn message if some indexes have different inline sizes on the nodes. */
+    public static final String INLINE_SIZES_DIFFER_WARN_MSG_FORMAT = "Inline sizes on local node and node %s are different. Please drop and create again these indexes, for avoinding performance problems with SQL queries. Problem indexes: %s";
 
     /** Queries detail metrics eviction frequency. */
     private static final int QRY_DETAIL_METRICS_EVICTION_FREQ = 3_000;
@@ -358,35 +355,31 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             proposals = new LinkedHashMap<>(activeProposals);
         }
 
+        dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), proposals);
+
         if (nodeSupportedCheckIndexInlineSize(dataBag.joiningNodeId()))
-            dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectIndexesInfo(proposals));
-        else {
-            // Support backward compatibility.
-            dataBag.addGridCommonData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), proposals);
+            dataBag.addNodeSpecificData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectSecondaryIndexesInlineSize());
+    }
+
+    /** {@inheritDoc} */
+    @Override public void onJoiningNodeDataReceived(DiscoveryDataBag.JoiningNodeDiscoveryData data) {
+        if (data.hasJoiningNodeData() && data.joiningNodeData() instanceof Map) {
+            Map<String, Integer> joiningNodeIndexesInlineSize = (Map<String, Integer>)data.joiningNodeData();
+
+            checkInlineSizes(idx.secondaryIndexesInlineSize(), joiningNodeIndexesInlineSize, data.joiningNodeId());
         }
     }
 
     /** {@inheritDoc} */
     @Override public void collectJoiningNodeData(DiscoveryDataBag dataBag) {
-        dataBag.addJoiningNodeData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectIndexesInfo(null));
+        dataBag.addJoiningNodeData(DiscoveryDataExchangeType.QUERY_PROC.ordinal(), collectSecondaryIndexesInlineSize());
     }
 
     /** {@inheritDoc} */
     @Override public void onGridDataReceived(DiscoveryDataBag.GridDiscoveryData data) {
         // Preserve proposals.
-        LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> activeProposals;
-
-        HashMap<String, Serializable> indexesInfo = null;
-
-        if (data.commonData() instanceof HashMap) {
-            indexesInfo = (HashMap<String, Serializable>)data.commonData();
-
-            activeProposals = (LinkedHashMap<UUID, SchemaProposeDiscoveryMessage>)indexesInfo.get(ACTIVE_PROPOSALS_KEY);
-        }
-        else {
-            // Backward compatibility.
-            activeProposals = (LinkedHashMap<UUID, SchemaProposeDiscoveryMessage>)data.commonData();
-        }
+        LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> activeProposals =
+            (LinkedHashMap<UUID, SchemaProposeDiscoveryMessage>)data.commonData();
 
         // Process proposals as if they were received as regular discovery messages.
         if (!F.isEmpty(activeProposals)) {
@@ -396,8 +389,18 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             }
         }
 
-        if (!F.isEmpty(indexesInfo) && !F.isEmpty((Map<QueryIndexKey, Integer>)indexesInfo.get(INLINE_SIZE_KEY)))
-            checkInlineSizes((Map<QueryIndexKey, Integer>)indexesInfo.get(INLINE_SIZE_KEY));
+        if (!F.isEmpty(data.nodeSpecificData())) {
+            Map<String, Integer> indexesInlineSize = idx.secondaryIndexesInlineSize();
+
+            if (!F.isEmpty(indexesInlineSize)) {
+                Map<UUID, Serializable> nodeSpecific = data.nodeSpecificData();
+
+                for (UUID nodeId : nodeSpecific.keySet()) {
+                    if (nodeSpecific.get(nodeId) instanceof Map)
+                        checkInlineSizes(indexesInlineSize, (Map<String, Integer>)nodeSpecific.get(nodeId), nodeId);
+                }
+            }
+        }
     }
 
     /**
@@ -414,56 +417,43 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Collects information for sending by discovery during node join.
+     * Compares indexes inline size on remote and local and fires warn message, if difference found.
      *
-     * @param proposals Active proposals. For joining node must be {@code null}.
-     * @return Information for sending by discovery.
+     * @param local Information about indexes inline size on local node.
+     * @param remote Information about indexes inline size on remote node.
+     * @param remoteNodeId Remote node id.
      */
-    private HashMap<String, Serializable> collectIndexesInfo(
-        @Nullable LinkedHashMap<UUID, SchemaProposeDiscoveryMessage> proposals
-    ) {
-        HashMap<String, Serializable> data = new HashMap<>();
-
-        data.put(INLINE_SIZE_KEY, collectIndexInlineSizes());
-
-        if (proposals != null)
-            data.put(ACTIVE_PROPOSALS_KEY, proposals);
-
-        return data;
-    }
-
-    // TODO:
-    private void checkInlineSizes(Map<QueryIndexKey, Integer> remote) {
-        boolean hasDiff = false;
-
-        log.error("GG-23133 loc: " + collectIndexInlineSizes() + ", remote: " + remote);
-
+    private void checkInlineSizes(Map<String, Integer> local, Map<String, Integer> remote, UUID remoteNodeId) {
         SB sb = new SB();
 
-        for (QueryIndexKey key : idxs.keySet()) {
-            QueryIndexDescriptorImpl locDesc = idxs.get(key);
+        if (log.isDebugEnabled())
+            log.debug("Check inline sizes on remote node with node id: " + remoteNodeId + ". Local: " + local + ", remote: " + remote);
 
-            if (locDesc != null) {
+        for (String indexFullname : local.keySet()) {
+            if (remote.containsKey(indexFullname)) {
+                int localInlineSize = local.get(indexFullname);
+                int remoteInlineSize = remote.get(indexFullname);
 
+                if (localInlineSize != remoteInlineSize)
+                    sb.a(indexFullname).a("(").a(localInlineSize).a(",").a(remoteInlineSize).a(")").a(",");
             }
+        }
+
+        if (sb.length() > 0) {
+            sb.setLength(sb.length() - 1);
+
+            log.warning(String.format(INLINE_SIZES_DIFFER_WARN_MSG_FORMAT, remoteNodeId, sb));
         }
     }
 
     /**
-     * Collects information about local indexes inline size.
-     *
-     * @return Information about indexes inline size.
+     * @return Serialiazible information about secondary indexes inline size.
+     * @see GridQueryIndexing#secondaryIndexesInlineSize()
      */
-    private HashMap<QueryIndexKey, Integer> collectIndexInlineSizes() {
-        HashMap<QueryIndexKey, Integer> sizes = new HashMap<>(idxs.size());
+    private Serializable collectSecondaryIndexesInlineSize() {
+        Map<String, Integer> map = idx.secondaryIndexesInlineSize();
 
-        for (Map.Entry<QueryIndexKey, QueryIndexDescriptorImpl> e : idxs.entrySet())
-            sizes.put(e.getKey(), e.getValue().inlineSize());
-
-        // TODO remove me!
-        log.error("GG-23133 " + ctx.igniteInstanceName() + " " + sizes);
-
-        return sizes;
+        return map instanceof Serializable ? (Serializable)map : new HashMap<>(map);
     }
 
     /**
