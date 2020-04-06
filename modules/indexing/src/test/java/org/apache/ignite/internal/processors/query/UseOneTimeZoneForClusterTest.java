@@ -16,10 +16,15 @@
 
 package org.apache.ignite.internal.processors.query;
 
+import java.sql.Date;
+import java.sql.Time;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.TimeZone;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -29,9 +34,14 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
+import org.apache.ignite.internal.processors.odbc.jdbc.JdbcUtils;
+import org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration;
+import org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteRunnable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
+import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
 import org.junit.Test;
 
 /**
@@ -213,7 +223,96 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
             awaitPartitionMapExchange(false, true,
                 Collections.singleton(ignInit.localNode()), false);
 
-            stopGrid(ignPrev.name());
+            IgniteProcessProxy.stop(ignPrev.name(), false);
+
+            checkDates();
+        }
+    }
+
+    /**
+     */
+    @Test
+    public void testChangeTimeZone() throws Exception {
+        IgniteEx cli = startGrid(INIT_NODE_NAME);
+
+        startGrid(0);
+
+        cli.cluster().active(true);
+
+        sql("DROP TABLE IF EXISTS TZ_TEST", Collections.emptyList());
+
+        sql("CREATE TABLE IF NOT EXISTS TZ_TEST (" +
+            "id int, " +
+            "dateVal DATE, " +
+            "timeVal TIME, " +
+            "tsVal TIMESTAMP, " +
+            "PRIMARY KEY (id)) WITH \"TEMPLATE=REPLICATED\"", Collections.emptyList());
+
+        fillData();
+
+        DistributedSqlConfiguration cliSqlDistrCfg = ((IgniteH2Indexing)cli.context().query().getIndexing())
+            .distributedConfiguration();
+
+        TimeZone initTz = cliSqlDistrCfg.timeZone();
+
+        SimpleDateFormat fmtDate = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat fmtTime = new SimpleDateFormat("HH:mm:ss");
+        SimpleDateFormat fmtTs = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
+
+        Date date = new Date(119, 8, 9);
+        Time time = new Time(9, 9, 9);
+        Timestamp ts = new Timestamp(119, 8, 9, 9, 9, 9, 909000000);
+
+        for (int i = 0; i < TIME_ZONES.length; ++i) {
+            TimeZone tz = TimeZone.getTimeZone(TIME_ZONES[i]);
+
+            cliSqlDistrCfg.updateTimeZone(tz).get();
+
+            // Backward convert date/time.
+            String strDate = fmtDate.format(JdbcUtils.convertWithTimeZone(date, tz, initTz));
+            String strTime = fmtTime.format(JdbcUtils.convertWithTimeZone(time, tz, initTz));
+            String strTs = fmtTs.format(JdbcUtils.convertWithTimeZone(ts, tz, initTz));
+
+            checkDates(strDate, strTime, strTs);
+        }
+
+        cliSqlDistrCfg.updateTimeZone(initTz).get();
+
+        checkDates();
+    }
+
+    /**
+     */
+    @Test
+    public void testChangeTimeZonePersistence() throws Exception {
+        IgniteEx cli = startGrid(INIT_NODE_NAME);
+
+        Ignite ignPrev = startRemoteGrid("srv", TIME_ZONES[0]);
+
+        cli.cluster().active(true);
+
+        sql("DROP TABLE IF EXISTS TZ_TEST", Collections.emptyList());
+
+        sql("CREATE TABLE IF NOT EXISTS TZ_TEST (" +
+            "id int, " +
+            "dateVal DATE, " +
+            "timeVal TIME, " +
+            "tsVal TIMESTAMP, " +
+            "PRIMARY KEY (id)) WITH \"TEMPLATE=REPLICATED\"", Collections.emptyList());
+
+        fillData();
+
+        checkDates();
+
+        for (int i = 1; i < TIME_ZONES.length; ++i) {
+            log.info("+++ STOP " + ignPrev.name());
+
+            IgniteProcessProxy.stop("srv", false);
+            log.info("+++ STOPPED");
+
+            U.sleep(2000);
+
+            ignPrev = startRemoteGrid("srv", TIME_ZONES[i]);
 
             checkDates();
         }
@@ -240,6 +339,12 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
     /**
      */
     protected void checkDates() throws Exception {
+        checkDates("2019-09-09", "09:09:09", "2019-09-09 09:09:09.909");
+    }
+
+    /**
+     */
+    protected void checkDates(String date, String time, String ts) throws Exception {
         List<List<?>> res = sql("SELECT " +
             "id, " +
             "CAST(dateVal AS VARCHAR), " +
@@ -250,9 +355,9 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
         assertEquals(KEYS_CNT, res.size());
 
         for (List<?> row : res) {
-            assertEquals("2019-09-09", row.get(1));
-            assertEquals("09:09:09", row.get(2));
-            assertEquals("2019-09-09 09:09:09.909", row.get(3));
+            assertEquals(date, row.get(1));
+            assertEquals(time, row.get(2));
+            assertEquals(ts, row.get(3));
         }
     }
 
