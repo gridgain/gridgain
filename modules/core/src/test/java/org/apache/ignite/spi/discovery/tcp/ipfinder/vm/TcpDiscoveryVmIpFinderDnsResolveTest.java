@@ -32,7 +32,7 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
      * @throws Exception if failed.
      */
     @Test
-    public void testPortReleasedAfterFailure() throws Exception {
+    public void testFqdnResolveAfterDnsHostChange() throws Exception {
         MyHostNameService hostNameService = new MyHostNameService("10.0.0.1", "test.domain");
 
         INameService.install(hostNameService);
