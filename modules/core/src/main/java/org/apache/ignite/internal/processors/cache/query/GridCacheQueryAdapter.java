@@ -42,6 +42,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.cluster.ClusterGroupEmptyCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtUnreservedPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
@@ -542,14 +543,14 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
 
         if (nodes.isEmpty()) {
             if (part != null) {
-                if (forceLocal) {
-                    throw new IgniteCheckedException("No queryable nodes for partition " + part
-                        + " [forced local query=" + this + "]");
+                if (cctx.topology().lostPartitions().contains(part)) {
+                    throw new CacheInvalidStateException("Failed to execute scan query because cache partition has been " +
+                        "lost [cacheName=" + cctx.name() + ", part=" + part + "]");
                 }
 
-                if (cctx.topology().lostPartitions().contains(part)) {
-                    throw new IgniteCheckedException("Failed to execute scan query because cache partition has been " +
-                        "lost [cacheName=" + cctx.name() + ", part=" + part + "]");
+                if (forceLocal) {
+                    throw new IgniteCheckedException("No queryable nodes for partition " + part
+                            + " [forced local query=" + this + "]");
                 }
             }
 

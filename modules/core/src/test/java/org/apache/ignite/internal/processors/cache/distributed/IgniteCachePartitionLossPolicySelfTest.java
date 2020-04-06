@@ -125,9 +125,6 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        cfg.setFailureDetectionTimeout(10000000L);
-        cfg.setClientFailureDetectionTimeout(10000000L);
-
         cfg.setCommunicationSpi(new TestDelayingCommunicationSpi() {
             /** {@inheritDoc} */
             @Override protected boolean delayMessage(Message msg, GridIoMessage ioMsg) {

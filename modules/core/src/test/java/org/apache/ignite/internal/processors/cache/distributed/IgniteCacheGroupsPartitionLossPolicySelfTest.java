@@ -31,6 +31,7 @@ import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
+import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheRebalancingEvent;
@@ -39,7 +40,6 @@ import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.X;
@@ -71,10 +71,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
     private static final String GROUP_NAME = "group";
 
     /** */
-    private static final String CACHE_1 = "cache1";
-
-    /** */
-    private static final String CACHE_2 = "cache2";
+    private static final String[] CACHES = new String[]{"cache1", "cache2"};
 
     /** {@inheritDoc} */
     @SuppressWarnings("unchecked")
@@ -83,18 +80,19 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         cfg.setClientMode(client);
 
-        CacheConfiguration ccfg1 = new CacheConfiguration(CACHE_1)
-            .setGroupName(GROUP_NAME)
-            .setCacheMode(PARTITIONED)
-            .setBackups(0)
-            .setWriteSynchronizationMode(FULL_SYNC)
-            .setPartitionLossPolicy(partLossPlc)
-            .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
+        CacheConfiguration[] ccfgs = new CacheConfiguration[CACHES.length];
 
-        CacheConfiguration ccfg2 = new CacheConfiguration(ccfg1)
-            .setName(CACHE_2);
+        for (int i = 0; i < ccfgs.length; i++) {
+            ccfgs[i] = new CacheConfiguration(CACHES[i])
+                    .setGroupName(GROUP_NAME)
+                    .setCacheMode(PARTITIONED)
+                    .setBackups(0)
+                    .setWriteSynchronizationMode(FULL_SYNC)
+                    .setPartitionLossPolicy(partLossPlc)
+                    .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
+        }
 
-        cfg.setCacheConfiguration(ccfg1, ccfg2);
+        cfg.setCacheConfiguration(ccfgs);
 
         cfg.setIncludeEventTypes(EventType.EVTS_ALL);
 
@@ -190,7 +188,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      * @throws Exception if failed.
      */
     private void checkLostPartition(boolean autoAdjust, boolean safe, int nodes, int... stopNodes) throws Exception {
-        String cacheName = ThreadLocalRandom.current().nextBoolean() ? CACHE_1 : CACHE_2;
+        String cacheName = CACHES[ThreadLocalRandom.current().nextInt(CACHES.length)];
 
         List<Integer> partEvts = Collections.synchronizedList(new ArrayList<>());
 
@@ -215,7 +213,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
         if (safe) {
             assertTrue(partEvts.toString(), GridTestUtils.waitForCondition(new GridAbsPredicate() {
                 @Override public boolean apply() {
-                    return expLostParts.size() * 2 * G.allGrids().size() == partEvts.size();
+                    return expLostParts.size() * CACHES.length * G.allGrids().size() == partEvts.size();
                 }
             }, 5_000));
 
@@ -235,7 +233,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
             verifyCacheOps(cacheName, expLostParts, ig, safe);
 
         if (safe)
-            ignite(0).resetLostPartitions(F.asList(CACHE_1, CACHE_2));
+            ignite(0).resetLostPartitions(Arrays.asList(CACHES));
 
         awaitPartitionMapExchange(true, true, null);
 
@@ -321,6 +319,49 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                         "[ex=" + X.getFullStackTrace(e) + ", part=" + p + ']', readOnly || cache.lostPartitions().contains(p));
             }
         }
+
+        // Check queries.
+        for (int p = 0; p < parts; p++) {
+            boolean loc = ig.affinity(cacheName).isPrimary(ig.cluster().localNode(), p);
+
+            try {
+                runQuery(ig, cacheName, false, p);
+
+                assertTrue("Query over lost partition should have failed: safe=" + safe +
+                        ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
+            } catch (Exception e) {
+                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+            }
+
+            if (loc) {
+                try {
+                    runQuery(ig, cacheName, true, p);
+
+                    assertTrue("Query over lost partition should have failed: safe=" + safe +
+                            ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
+                } catch (Exception e) {
+                    assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+                }
+            }
+        }
+    }
+
+    /**
+     * @param ig Ignite.
+     * @param cacheName Cache name.
+     * @param loc Local.
+     * @param part Partition.
+     */
+    protected void runQuery(Ignite ig, String cacheName, boolean loc, int part) {
+        IgniteCache cache = ig.cache(cacheName);
+
+        ScanQuery qry = new ScanQuery();
+        qry.setPartition(part);
+
+        if (loc)
+            qry.setLocal(true);
+
+        cache.query(qry).getAll();
     }
 
     /**
@@ -333,13 +374,11 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
         crd.cluster().baselineAutoAdjustEnabled(autoAdjust);
         crd.cluster().active(true);
 
-        final String cacheName = ThreadLocalRandom.current().nextBoolean() ? CACHE_1 : CACHE_2;
-
-        Affinity<Object> aff = ignite(0).affinity(cacheName);
+        Affinity<Object> aff = ignite(0).affinity(CACHES[0]);
 
         for (int i = 0; i < aff.partitions(); i++) {
-            ignite(0).cache(CACHE_1).put(i, i);
-            ignite(0).cache(CACHE_2).put(i, i);
+            for (String cacheName0 : CACHES)
+                ignite(0).cache(cacheName0).put(i, i);
         }
 
         client = true;
