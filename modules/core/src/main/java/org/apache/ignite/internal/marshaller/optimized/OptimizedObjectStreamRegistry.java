@@ -30,27 +30,18 @@ import org.apache.ignite.internal.util.typedef.internal.U;
  */
 class OptimizedObjectStreamRegistry {
     /** Holders. */
-    private static final ThreadLocal<StreamHolder> holders = new ThreadLocal<>();
+    private final ThreadLocal<StreamHolder> holders = new ThreadLocal<>();
 
     /** Output streams pool. */
-    private static BlockingQueue<OptimizedObjectOutputStream> outPool;
+    private final BlockingQueue<OptimizedObjectOutputStream> outPool;
 
     /** Input streams pool. */
-    private static BlockingQueue<OptimizedObjectInputStream> inPool;
+    private final BlockingQueue<OptimizedObjectInputStream> inPool;
 
     /**
      * Ensures singleton.
      */
-    private OptimizedObjectStreamRegistry() {
-        // No-op.
-    }
-
-    /**
-     * Sets streams pool size.
-     *
-     * @param size Streams pool size.
-     */
-    static void poolSize(int size) {
+    OptimizedObjectStreamRegistry(int size) {
         if (size > 0) {
             outPool = new LinkedBlockingQueue<>(size);
             inPool = new LinkedBlockingQueue<>(size);
@@ -72,7 +63,7 @@ class OptimizedObjectStreamRegistry {
      * @return Object output stream.
      * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If thread is interrupted while trying to take holder from pool.
      */
-    static OptimizedObjectOutputStream out() throws IgniteInterruptedCheckedException {
+    OptimizedObjectOutputStream out() throws IgniteInterruptedCheckedException {
         if (outPool != null) {
             try {
                 return outPool.take();
@@ -92,7 +83,7 @@ class OptimizedObjectStreamRegistry {
      * @return Object input stream.
      * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If thread is interrupted while trying to take holder from pool.
      */
-    static OptimizedObjectInputStream in() throws IgniteInterruptedCheckedException {
+    OptimizedObjectInputStream in() throws IgniteInterruptedCheckedException {
         if (inPool != null) {
             try {
                 return inPool.take();
@@ -111,7 +102,7 @@ class OptimizedObjectStreamRegistry {
      *
      * @param out Object output stream.
      */
-    static void closeOut(OptimizedObjectOutputStream out) {
+    void closeOut(OptimizedObjectOutputStream out) {
         U.close(out, null);
 
         if (outPool != null) {
@@ -132,7 +123,7 @@ class OptimizedObjectStreamRegistry {
      *
      * @param in Object input stream.
      */
-    static void closeIn(OptimizedObjectInputStream in) {
+    void closeIn(OptimizedObjectInputStream in) {
         U.close(in, null);
 
         if (inPool != null) {
@@ -152,9 +143,8 @@ class OptimizedObjectStreamRegistry {
      * Gets holder from pool or thread local.
      *
      * @return Stream holder.
-     * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If thread is interrupted while trying to take holder from pool.
      */
-    private static StreamHolder holder() throws IgniteInterruptedCheckedException {
+    private StreamHolder holder() {
         StreamHolder holder = holders.get();
 
         if (holder == null)
