@@ -60,6 +60,7 @@ import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteDeploymentCheckedException;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.direct.DirectMessageReader;
 import org.apache.ignite.internal.direct.DirectMessageWriter;
@@ -1006,6 +1007,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
     /** {@inheritDoc} */
     @Override public void stop(boolean cancel) throws IgniteCheckedException {
+        invConnHandler.onStop();
+
         stopSpi();
 
         if (log.isDebugEnabled())
@@ -3611,14 +3614,10 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 fut = oldFut;
 
                 fut.listen(f -> {
-                    try {
-                        f.get();
-
+                    if (f.error() != null)
+                        oldFut0.onDone(f.error());
+                    else
                         oldFut0.onDone();
-                    }
-                    catch (IgniteCheckedException ex) {
-                        oldFut0.onDone(ex);
-                    }
                 });
             }
             else {
@@ -3650,11 +3649,12 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
                 fut.get(getInverseConnectionWaitTimeout());
             }
             catch (Throwable ex) {
-                log.warning("Failed to wait for establishing inverse communication connection from node " + node,
-                    ex);
+                String msg = "Failed to wait for establishing inverse communication connection from node " + node;
+
+                log.warning(msg, ex);
 
                 if (!fut.isDone())
-                    fut.onDone(ex);
+                    fut.onDone(new IgniteCheckedException(msg, ex));
 
                 if (ex instanceof IgniteCheckedException) {
                     IgniteSpiException spiE = new IgniteSpiException(e);
@@ -3681,6 +3681,13 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             for (Entry<ConnectionKey, GridFutureAdapter<?>> entry : connMap.entrySet()) {
                 if (entry.getKey().nodeId().equals(nodeId))
                     entry.getValue().onDone(new IgniteCheckedException("Node " + nodeId + " left grid."));
+            }
+        }
+
+        /** */
+        public void onStop() {
+            for (GridFutureAdapter<?> fut : connMap.values()) {
+                fut.onDone(new NodeStoppingException("Node is stopping"));
             }
         }
     }

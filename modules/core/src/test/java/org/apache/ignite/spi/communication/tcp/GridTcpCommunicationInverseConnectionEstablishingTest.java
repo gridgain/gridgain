@@ -267,7 +267,7 @@ public class GridTcpCommunicationInverseConnectionEstablishingTest extends GridC
         IgniteInternalFuture<?> fut = GridTestUtils.runAsync(() ->
             grid(SRVS_NUM - 1).context().io().sendIoTest(grid(SRVS_NUM).localNode(), new byte[10], false));
 
-        assertTrue(GridTestUtils.waitForCondition(() -> fut.isDone(), 20_000));
+        assertTrue(GridTestUtils.waitForCondition(fut::isDone, 20_000));
     }
 
     /**
