@@ -36,6 +36,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
+    using NUnit.Framework.Constraints;
 
     /// <summary>
     /// Near cache test.
@@ -684,6 +685,24 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(
                 string.Format("Failed to reserve partition {0}, it does not belong to the local node.", partition), 
                 ex.Message);
+        }
+
+        [Test]
+        public void TestLocalScanQueryFromClientNode()
+        {
+            var cache = _grid.CreateCache<int, Foo>(TestUtils.TestName);
+            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
+
+            var clientCache = _client.CreateNearCache<int, Foo>(cache.Name, new NearCacheConfiguration(),
+                new PlatformNearCacheConfiguration());
+            
+            // Promote key to near cache.
+            clientCache.Get(2);
+            
+            var res = clientCache.Query(new ScanQuery<int, Foo> {Local = true}).GetAll().Single();
+            
+            Assert.AreEqual(2, res.Key);
+            Assert.AreSame(clientCache.Get(2), res.Value);
         }
 
         /// <summary>
