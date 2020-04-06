@@ -152,8 +152,8 @@ public class GridNioServerWrapper {
     /** Workers registry. */
     private final WorkersRegistry workersRegistry;
 
-    /** Metric manager supplier. */
-    private final Supplier<GridMetricManager> metricMgrSupplier;
+    /** Metric manager. */
+    private final GridMetricManager metricMgr;
 
     /** Recovery descs. */
     private final ConcurrentMap<ConnectionKey, GridNioRecoveryDescriptor> recoveryDescs = GridConcurrentFactory.newMap();
@@ -215,7 +215,7 @@ public class GridNioServerWrapper {
         GridNioServerListener<Message> srvLsnr,
         String igniteInstanceName,
         WorkersRegistry workersRegistry,
-        Supplier<GridMetricManager> metricMgrSupplier
+        @Nullable GridMetricManager metricMgr
     ) {
         this.log = log;
         this.cfg = cfg;
@@ -232,7 +232,7 @@ public class GridNioServerWrapper {
         this.srvLsnr = srvLsnr;
         this.igniteInstanceName = igniteInstanceName;
         this.workersRegistry = workersRegistry;
-        this.metricMgrSupplier = metricMgrSupplier;
+        this.metricMgr = metricMgr;
     }
 
     /**
@@ -821,8 +821,6 @@ public class GridNioServerWrapper {
                     .messageQueueSizeListener(queueSizeMonitor)
                     .tracing(tracing)
                     .readWriteSelectorsAssign(cfg.usePairedConnections());
-
-                GridMetricManager metricMgr = metricMgrSupplier.get();
 
                 if (metricMgr != null) {
                     builder.workerListener(workersRegistry)

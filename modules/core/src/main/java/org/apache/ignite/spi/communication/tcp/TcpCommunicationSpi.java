@@ -331,31 +331,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         "Total number of messages received by current node from the given node";
 
     /** Connect gate. */
-    private final ConnectGateway connectGate;
-
-    /** Node getter. */
-    private final Function<UUID, ClusterNode> nodeGetter = (nodeId) -> getSpiContext().node(nodeId);
-
-    /** Local node supplier. */
-    private final Supplier<ClusterNode> locNodeSupplier = () -> getSpiContext().localNode();
-
-    /** Ignite ex supplier. */
-    private final Supplier<Ignite> igniteExSupplier = this::ignite;
-
-    /** Ping node. */
-    private final Function<UUID, Boolean> pingNode = (nodeId) -> getSpiContext().pingNode(nodeId);
-
-    /** Metric manager supplier. */
-    private final Supplier<GridMetricManager> metricManagerSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null;
-
-    /** Failure processor supplier. */
-    private final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().failure() : null;
-
-    /** Exception registry supplier. */
-    private final Supplier<IgniteExceptionRegistry> eRegistrySupplier = this::getExceptionRegistry;
-
-    /** Is stopped. */
-    private final Supplier<Boolean> isStopped = () -> getSpiContext().isStopping();
+    private final ConnectGateway connectGate = new ConnectGateway();
 
     /** Context initialization latch. */
     private final CountDownLatch ctxInitLatch = new CountDownLatch(1);
@@ -394,13 +370,6 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** State provider. */
     private ClusterStateProvider stateProvider;
-
-    /**
-     * Default constructor.
-     */
-    public TcpCommunicationSpi() {
-        connectGate = new ConnectGateway();
-    }
 
     /**
      * {@inheritDoc} This call should be change after refactoring. It produces dependency hell. Because {@link
@@ -637,6 +606,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** {@inheritDoc} */
     @Override public void spiStart(String igniteInstanceName) throws IgniteSpiException {
+        final Function<UUID, ClusterNode> nodeGetter = (nodeId) -> getSpiContext().node(nodeId);
+        final Supplier<ClusterNode> locNodeSupplier = () -> getSpiContext().localNode();
+        final Supplier<Ignite> igniteExSupplier = this::ignite;
+        final Function<UUID, Boolean> pingNode = (nodeId) -> getSpiContext().pingNode(nodeId);
+        final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().failure() : null;
+        final Supplier<Boolean> isStopped = () -> getSpiContext().isStopping();
+
         cfg.failureDetectionTimeout(ignite.configuration().getFailureDetectionTimeout());
 
         attributeNames = new AttributeNames(
@@ -706,13 +682,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             locNodeSupplier,
             connectGate,
             stateProvider,
-            eRegistrySupplier,
+            this::getExceptionRegistry,
             commWorker,
             ignite.configuration(),
             this.srvLsnr,
             getName(),
             getWorkersRegistry(ignite),
-            metricManagerSupplier
+            ((IgniteEx)ignite).context().metric()
         );
 
         this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
@@ -874,7 +850,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             failureProcessorSupplier,
             nodeGetter,
             pingNode,
-            eRegistrySupplier,
+            this::getExceptionRegistry,
             nioSrvWrapper,
             getWorkersRegistry(ignite),
             getName()
@@ -1152,7 +1128,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      */
     public Collection<InetSocketAddress> nodeAddresses(ClusterNode node, boolean filterReachableAddrs)
         throws IgniteCheckedException {
-        return CommunicationTcpUtils.nodeAddresses(node, filterReachableAddrs, attributeNames, locNodeSupplier);
+        return CommunicationTcpUtils.nodeAddresses(node, filterReachableAddrs, attributeNames, () -> getSpiContext().localNode());
     }
 
     /**

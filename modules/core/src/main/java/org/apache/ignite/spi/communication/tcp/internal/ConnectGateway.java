@@ -16,6 +16,7 @@
 
 package org.apache.ignite.spi.communication.tcp.internal;
 
+import java.io.Serializable;
 import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.GridSpinReadWriteLock;
@@ -24,7 +25,10 @@ import org.apache.ignite.lang.IgniteFuture;
 /**
  * Lock and error control work flow.
  */
-public class ConnectGateway {
+public class ConnectGateway implements Serializable {
+    /** Serial version uid. */
+    private static final long serialVersionUID = 8798048262450037107L;
+
     /** Lock. */
     private GridSpinReadWriteLock lock = new GridSpinReadWriteLock();
 
