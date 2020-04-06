@@ -68,6 +68,12 @@ public class PlatformIsPartitionReservedTask extends ComputeTaskAdapter<Object[]
         @IgniteInstanceResource
         private Ignite ignite;
 
+        /**
+         * Constructor.
+         *
+         * @param cacheName Cache name.
+         * @param part Partition.
+         */
         public PlatformIsPartitionReservedJob(String cacheName, Integer part) {
             this.cacheName = cacheName;
             this.part = part;
