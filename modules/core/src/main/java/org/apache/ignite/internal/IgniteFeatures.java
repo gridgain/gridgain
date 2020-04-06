@@ -143,7 +143,7 @@ public enum IgniteFeatures {
     PARTITION_RECONCILIATION(34),
 
     /** */
-    CHECK_INDEX_INLINE_SIZES_ON_JOIN(36);
+    CHECK_INDEX_INLINE_SIZES(36);
 
     /**
      * Unique feature identifier.

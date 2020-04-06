@@ -125,7 +125,7 @@ import static java.util.Objects.nonNull;
 import static org.apache.ignite.events.EventType.EVT_CACHE_QUERY_EXECUTED;
 import static org.apache.ignite.internal.GridTopic.TOPIC_SCHEMA;
 import static org.apache.ignite.internal.IgniteComponentType.INDEXING;
-import static org.apache.ignite.internal.IgniteFeatures.CHECK_INDEX_INLINE_SIZES_ON_JOIN;
+import static org.apache.ignite.internal.IgniteFeatures.CHECK_INDEX_INLINE_SIZES;
 import static org.apache.ignite.internal.binary.BinaryUtils.fieldTypeName;
 import static org.apache.ignite.internal.binary.BinaryUtils.typeByClass;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SCHEMA_POOL;
@@ -404,7 +404,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * Checks that server node with {@code nodeId} is supported {@link IgniteFeatures#CHECK_INDEX_INLINE_SIZES_ON_JOIN}.
+     * Checks that server node with {@code nodeId} is supported {@link IgniteFeatures#CHECK_INDEX_INLINE_SIZES}.
      *
      * @param nodeId Node id.
      * @return {@code true} if node with {@code nodeId} is server node and the node supports feature, {@code false}
@@ -413,7 +413,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     private boolean nodeSupportedCheckIndexInlineSize(UUID nodeId) {
         IgnitePredicate<ClusterNode> nodeFilter = n -> !n.isClient() && !n.isDaemon() && nodeId.equals(n.id());
 
-        return IgniteFeatures.selectedNodesSupport(ctx, CHECK_INDEX_INLINE_SIZES_ON_JOIN, nodeFilter);
+        return IgniteFeatures.selectedNodesSupport(ctx, CHECK_INDEX_INLINE_SIZES, nodeFilter);
     }
 
     /**
