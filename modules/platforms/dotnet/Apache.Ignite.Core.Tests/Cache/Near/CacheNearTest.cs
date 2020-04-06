@@ -36,7 +36,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Log;
     using Apache.Ignite.Core.Tests.Client.Cache;
     using NUnit.Framework;
-    using NUnit.Framework.Constraints;
 
     /// <summary>
     /// Near cache test.
@@ -574,6 +573,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(11, clientCache[1]);
         }
 
+        /// <summary>
+        /// Tests that scan query uses near cache to pass values to <see cref="ScanQuery{TK,TV}.Filter"/> when possible.
+        /// </summary>
         [Test]
         public void TestScanQueryFilterUsesValueFromNearCache(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
@@ -594,6 +596,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(count, res.Count());
         }
 
+        /// <summary>
+        /// Tests that scan query falls back to deserialized value from Java when near cache value is missing.
+        /// </summary>
         [Test]
         public void TestScanQueryFilterUsesFallbackValueWhenNotInNearCache(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
@@ -627,6 +632,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.AreEqual(count, res.Count());
         }
 
+        /// <summary>
+        /// Tests that local scan query uses near cache directly, avoiding Java roundtrip. 
+        /// </summary>
         [Test]
         public void TestLocalScanQueryUsesKeysAndValuesFromNearCache([Values(true, false)] bool withFilter,
             [Values(true, false)] bool withPartition)
@@ -658,6 +666,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.Throws<ObjectDisposedException>(() => res.GetAll());
         }
 
+        /// <summary>
+        /// Tests that local scan query reserves the partition when <see cref="ScanQuery{TK,TV}.Partition"/> is set. 
+        /// </summary>
         [Test]
         public void TestLocalScanQueryWithPartitionReservesPartitionAndReleasesItOnDispose()
         {
@@ -705,6 +716,29 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsFalse(isReserved());
         }
 
+        /// <summary>
+        /// Tests that exception in <see cref="ScanQuery{TK,TV}.Filter"/> stops the iteration
+        /// and releases the partition. 
+        /// </summary>
+        [Test]
+        public void TestLocalScanQueryReleasesPartitionOnException()
+        {
+            // TODO
+        }
+
+        /// <summary>
+        /// Tests that invalid <see cref="ScanQuery{TK,TV}.Partition"/> causes correct exception.
+        /// </summary>
+        [Test]
+        public void TestLocalScanQueryWithInvalidPartitionId()
+        {
+            // TODO: Check that exception is adequate.
+        }
+
+        /// <summary>
+        /// Tests that local scan query throws an exception when <see cref="ScanQuery{TK,TV}.Partition"/> is specified,
+        /// but that partition can not be reserved (belongs to remote node).
+        /// </summary>
         [Test]
         public void TestLocalScanQueryWithPartitionThrowsOnRemoteKeys()
         {
@@ -726,7 +760,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 string.Format("Failed to reserve partition {0}, it does not belong to the local node.", partition), 
                 ex.Message);
         }
-
+        
         [Test]
         public void TestLocalScanQueryFromClientNode()
         {
