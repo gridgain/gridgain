@@ -802,6 +802,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 ex.Message);
         }
         
+        /// <summary>
+        /// Tests local scan query on client node.
+        /// </summary>
         [Test]
         public void TestLocalScanQueryFromClientNode()
         {
@@ -1556,7 +1559,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// <summary>
         /// Gets a value indicating whether specified partition is reserved.
         /// </summary>
-        private bool IsPartitionReserved(IIgnite ignite, string cacheName, int part)
+        private static bool IsPartitionReserved(IIgnite ignite, string cacheName, int part)
         {
             const string taskName = "org.apache.ignite.platform.PlatformIsPartitionReservedTask";
 
