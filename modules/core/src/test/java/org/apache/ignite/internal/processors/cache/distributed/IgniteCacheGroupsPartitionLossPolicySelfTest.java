@@ -23,8 +23,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import javax.cache.CacheException;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
@@ -179,7 +183,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      */
     @Test
     public void testIgnore_3() throws Exception {
-        partLossPlc = READ_ONLY_SAFE; // Should use safe policy.
+        partLossPlc = READ_ONLY_SAFE; // Should use safe read-only policy.
 
         checkLostPartition(true, true, 4, 3);
     }
@@ -192,7 +196,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
 
         List<Integer> partEvts = Collections.synchronizedList(new ArrayList<>());
 
-        Collection<Integer> expLostParts = prepareTopology(nodes, autoAdjust, new P1<Event>() {
+        Set<Integer> expLostParts = prepareTopology(nodes, autoAdjust, new P1<Event>() {
             @Override public boolean apply(Event evt) {
                 assert evt.type() == EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 
@@ -258,7 +262,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      * @param ig Ignite.
      * @param safe Safe.
      */
-    private void verifyCacheOps(String cacheName, Collection<Integer> expLostParts, Ignite ig, boolean safe) {
+    private void verifyCacheOps(String cacheName, Set<Integer> expLostParts, Ignite ig, boolean safe) {
         boolean readOnly = partLossPlc == READ_ONLY_SAFE || partLossPlc == READ_ONLY_ALL;
 
         IgniteCache<Integer, Integer> cache = ig.cache(cacheName);
@@ -268,7 +272,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
         if (!safe)
             assertTrue(cache.lostPartitions().isEmpty());
 
-        // Check read.
+        // Check single reads.
         for (int p = 0; p < parts; p++) {
             try {
                 Integer actual = cache.get(p);
@@ -276,9 +280,6 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                 if (safe) {
                     assertTrue("Reading from a lost partition should have failed [part=" + p + ']',
                             !cache.lostPartitions().contains(p));
-
-                    if (actual == null)
-                        System.out.println();
 
                     assertEquals(p, actual.intValue());
                 }
@@ -293,7 +294,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
             }
         }
 
-        // Check write.
+        // Check single writes.
         for (int p = 0; p < parts; p++) {
             try {
                 cache.put(p, p);
@@ -318,6 +319,45 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                 assertTrue("Write exception should only be triggered for a lost partition or in read-only mode " +
                         "[ex=" + X.getFullStackTrace(e) + ", part=" + p + ']', readOnly || cache.lostPartitions().contains(p));
             }
+        }
+
+        Set<Integer> notLost = IntStream.range(0, parts).boxed().filter(p -> !expLostParts.contains(p)).collect(Collectors.toSet());
+
+        try {
+            Map<Integer, Integer> res = cache.getAll(expLostParts);
+
+            assertFalse("Reads from lost partitions should have been allowed only in non-safe mode", safe);
+        }
+        catch (CacheException e) {
+            assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+        }
+
+        try {
+            Map<Integer, Integer> res = cache.getAll(notLost);
+        }
+        catch (Exception e) {
+            fail("Reads from non lost partitions should have been always allowed");
+        }
+
+        try {
+            cache.putAll(expLostParts.stream().collect(Collectors.toMap(k -> k, v -> v)));
+
+            assertFalse("Writes to lost partitions should have been allowed only in non-safe mode", safe);
+
+            cache.removeAll(expLostParts);
+        }
+        catch (CacheException e) {
+            assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+        }
+
+        try {
+            cache.putAll(notLost.stream().collect(Collectors.toMap(k -> k, v -> v)));
+
+            assertTrue("Writes to non-lost partitions should have been allowed only in read-write or non-safe mode",
+                    !safe || !readOnly);
+        }
+        catch (CacheException e) {
+            assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
         }
 
         // Check queries.
@@ -369,7 +409,7 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
      * @return Lost partition ID.
      * @throws Exception If failed.
      */
-    private Collection<Integer> prepareTopology(int nodes, boolean autoAdjust, P1<Event> lsnr, int... stopNodes) throws Exception {
+    private Set<Integer> prepareTopology(int nodes, boolean autoAdjust, P1<Event> lsnr, int... stopNodes) throws Exception {
         final IgniteEx crd = startGrids(nodes);
         crd.cluster().baselineAutoAdjustEnabled(autoAdjust);
         crd.cluster().active(true);
