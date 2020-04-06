@@ -34,13 +34,13 @@ namespace Apache.Ignite.Core.Cache.Configuration
     /// <para />
     /// Supported operations (async counterparts included):
     /// <list type="bullet">
-    /// <item><see cref="ICache{TK,TV}.Get"/>, <see cref="ICache{TK,TV}.TryGet"/></item>
-    /// <item><see cref="ICache{TK,TV}.GetAll"/></item>
-    /// <item><see cref="ICache{TK,TV}.ContainsKey"/>, <see cref="ICache{TK,TV}.ContainsKeys"/></item>
-    /// <item><see cref="ICache{TK,TV}.LocalPeek"/>, <see cref="ICache{TK,TV}.TryLocalPeek"/></item>
-    /// <item><see cref="ICache{TK,TV}.GetLocalEntries"/></item>
-    /// <item><see cref="ICache{TK,TV}.GetLocalSize"/></item>
-    /// <item><see cref="ICache{TK,TV}.Query(QueryBase)"/> with <see cref="ScanQuery{TK,TV}"/></item>
+    /// <item><term><see cref="ICache{TK,TV}.Get"/>, <see cref="ICache{TK,TV}.TryGet"/></term></item>
+    /// <item><term><see cref="ICache{TK,TV}.GetAll"/></term></item>
+    /// <item><term><see cref="ICache{TK,TV}.ContainsKey"/>, <see cref="ICache{TK,TV}.ContainsKeys"/></term></item>
+    /// <item><term><see cref="ICache{TK,TV}.LocalPeek"/>, <see cref="ICache{TK,TV}.TryLocalPeek"/></term></item>
+    /// <item><term><see cref="ICache{TK,TV}.GetLocalEntries"/></term></item>
+    /// <item><term><see cref="ICache{TK,TV}.GetLocalSize"/></term></item>
+    /// <item><term><see cref="ICache{TK,TV}.Query(QueryBase)"/> with <see cref="ScanQuery{TK,TV}"/></term></item>
     /// </list>
     /// </summary>
     public class PlatformNearCacheConfiguration
