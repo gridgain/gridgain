@@ -403,7 +403,7 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
             if (set == null)
                 fieldsMeta = new ArrayList<>();
             else {
-                fieldsMeta = results.currentResultSet().fieldsMeta();
+                fieldsMeta = set.fieldsMeta();
 
                 if (log.isDebugEnabled()) {
                     for (OdbcColumnMeta meta : fieldsMeta)

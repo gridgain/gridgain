@@ -170,6 +170,13 @@ namespace ignite
                 SqlResult::Type MakeRequestMoreResults();
 
                 /**
+                 * Make result set metadata request.
+                 *
+                 * @return Result.
+                 */
+                SqlResult::Type MakeRequestResultsetMeta();
+
+                /**
                  * Process column conversion operation result.
                  *
                  * @param convRes Conversion result.
@@ -178,7 +185,17 @@ namespace ignite
                  * @return General SQL result.
                  */
                 SqlResult::Type ProcessConversionResult(app::ConversionResult::Type convRes, int32_t rowIdx,
-                    int32_t columnIdx);
+                    int32_t columnIdx);;
+
+                /**
+                 * Process column conversion operation result.
+                 *
+                 * @param convRes Conversion result.
+                 * @param rowIdx Row index.
+                 * @param columnIdx Column index.
+                 * @return General SQL result.
+                 */
+                void SetResultsetMeta(const meta::ColumnMetaVector& value);
 
                 /**
                  * Close query.
@@ -196,8 +213,11 @@ namespace ignite
                 /** Parameter bindings. */
                 const app::ParameterSet& params;
 
-                /** Columns metadata. */
-                std::auto_ptr<meta::ColumnMetaVector> resultMeta;
+                /** Result set metadata is available */
+                bool resultMetaAvailable;
+
+                /** Result set metadata. */
+                meta::ColumnMetaVector resultMeta;
 
                 /** Cursor. */
                 std::auto_ptr<Cursor> cursor;

@@ -54,11 +54,11 @@ public class OdbcResultSet {
 
         if (this.cursor.isQuery()) {
             iter = this.cursor.iterator();
-            meta = new ArrayList<>();
+            meta = OdbcUtils.convertMetadata(this.cursor.fieldsMeta(), ver);
         }
         else {
             iter = null;
-            meta = OdbcUtils.convertMetadata(this.cursor.fieldsMeta(), ver);
+            meta = new ArrayList<>();
         }
     }
 

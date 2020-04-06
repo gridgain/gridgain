@@ -135,14 +135,8 @@ namespace ignite
         {
             const meta::ColumnMetaVector* meta = GetMeta();
 
-            std::cout << meta << std::endl;
-
             if (!meta)
-            {
-                AddStatusRecord("Metadata is not available for the query");
-
                 return SqlResult::AI_ERROR;
-            }
 
             res = static_cast<int32_t>(meta->size());
 
@@ -1009,7 +1003,11 @@ namespace ignite
         const meta::ColumnMetaVector* Statement::GetMeta()
         {
             if (!currentQuery.get())
+            {
+                AddStatusRecord(SqlState::SHY010_SEQUENCE_ERROR, "Query is not executed.");
+
                 return 0;
+            }
 
             return currentQuery->GetMeta();
         }
@@ -1043,20 +1041,15 @@ namespace ignite
                 strbuf, buflen, reslen, numbuf));
         }
 
-        SqlResult::Type Statement::InternalGetColumnAttribute(uint16_t colIdx,
-            uint16_t attrId, char* strbuf, int16_t buflen, int16_t* reslen,
-            SqlLen* numbuf)
+        SqlResult::Type Statement::InternalGetColumnAttribute(uint16_t colIdx, uint16_t attrId, char* strbuf,
+            int16_t buflen, int16_t* reslen, SqlLen* numbuf)
         {
             const meta::ColumnMetaVector *meta = GetMeta();
 
             if (!meta)
-            {
-                AddStatusRecord(SqlState::SHY010_SEQUENCE_ERROR, "Query is not executed.");
-
                 return SqlResult::AI_ERROR;
-            }
 
-            if (colIdx > meta->size() + 1 || colIdx < 1)
+            if (colIdx > meta->size() || colIdx < 1)
             {
                 AddStatusRecord(SqlState::SHY000_GENERAL_ERROR,
                     "Column index is out of range.", 0, colIdx);
