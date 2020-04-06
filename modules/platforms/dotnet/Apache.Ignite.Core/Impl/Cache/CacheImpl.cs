@@ -1664,7 +1664,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (IsNear)
             {
                 // NOTE: Users can pass a ScanQuery that has different generic arguments.
-                // We do not support this scenarios for near cache scan optimization.
+                // We do not support this scenario for near cache scan optimization.
                 var scan = qry as ScanQuery<TK, TV>;
 
                 if (scan != null && scan.Local)
