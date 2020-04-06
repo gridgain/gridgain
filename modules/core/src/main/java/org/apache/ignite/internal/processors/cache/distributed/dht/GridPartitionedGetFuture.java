@@ -39,6 +39,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheEntryRemovedExceptio
 import org.apache.ignite.internal.processors.cache.GridCacheMessage;
 import org.apache.ignite.internal.processors.cache.IgniteCacheExpiryPolicy;
 import org.apache.ignite.internal.processors.cache.KeyCacheObject;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtInvalidPartitionException;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearGetRequest;
 import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
@@ -188,11 +189,13 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
         Map<ClusterNode, LinkedHashMap<KeyCacheObject, Boolean>> mapped,
         AffinityTopologyVersion topVer
     ) {
-        GridDhtTopologyFuture validateFut = cctx.shared().exchange().lastTopologyFuture();
+        GridDhtPartitionsExchangeFuture validateFut = cctx.shared().exchange().lastTopologyFuture();
 
         // Finished DHT future is required for topology validation.
         if (!validateFut.isDone()) {
-            if (!validateFut.initialVersion().after(topVer)) {
+            if (validateFut.initialVersion().after(topVer) || validateFut.exchangeActions().hasStop())
+                validateFut = cctx.shared().exchange().lastFinishedFuture();
+            else {
                 validateFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
                     @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
                         if (fut.error() != null)
@@ -204,8 +207,6 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
 
                 return;
             }
-            else
-                validateFut = cctx.shared().exchange().lastFinishedFuture();
         }
 
         Collection<ClusterNode> cacheNodes = CU.affinityNodes(cctx, topVer);

@@ -25,7 +25,6 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cluster.ClusterTopologyException;
 import org.apache.ignite.internal.util.typedef.G;
-import org.junit.Test;
 
 /**
  *
@@ -55,32 +54,25 @@ public class IgniteCachePartitionMapUpdateSafeLossPolicyTest extends IgniteCache
 
     /** {@inheritDoc} */
     @Override protected void stopGrid(int idx) {
-        if (idx == 8)
-            System.out.println();
+        List<Ignite> grids0 = G.allGrids();
 
         super.stopGrid(idx);
 
-        List<Ignite> grids = G.allGrids();
-
-        if (grids.isEmpty())
+        if (grids0.size() == 1)
             return;
 
         Stream.of(CACHE1, CACHE2).forEach(new Consumer<String>() {
             @Override public void accept(String cache) {
-                lostCnt.addAndGet(grids.get(0).cache(cache).lostPartitions().size());
+                Ignite testGrid = G.allGrids().get(0);
+
+                lostCnt.addAndGet(testGrid.cache(cache).lostPartitions().size());
 
                 try {
-                    grids.get(0).resetLostPartitions(Collections.singleton(cache));
+                    testGrid.resetLostPartitions(Collections.singleton(cache));
                 } catch (ClusterTopologyException ignored) {
-                    // Expected.
+                    // No-op.
                 }
             }
         });
-    }
-
-    @Test
-    @Override
-    public void testRandom() throws Exception {
-        super.testRandom();
     }
 }

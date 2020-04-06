@@ -253,7 +253,9 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
         // TODO copypaste.
         // Finished DHT future is required for topology validation.
         if (!validateFut.isDone()) {
-            if (!validateFut.initialVersion().after(topVer)) {
+            if (validateFut.initialVersion().after(topVer) || validateFut.exchangeActions().hasStop())
+                validateFut = cctx.shared().exchange().lastFinishedFuture();
+            else {
                 validateFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
                     @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
                         if (fut.error() != null)
@@ -265,8 +267,6 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
 
                 return;
             }
-            else
-                validateFut = cctx.shared().exchange().lastFinishedFuture();
         }
 
         if (!validate(validateFut))

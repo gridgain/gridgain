@@ -218,9 +218,9 @@ public class IgniteCacheGroupsPartitionLossPolicySelfTest extends GridCommonAbst
                     return expLostParts.size() * 2 * G.allGrids().size() == partEvts.size();
                 }
             }, 5_000));
-        }
 
-        assertEquals(expLostParts, new HashSet<>(partEvts));
+            assertEquals(expLostParts, new HashSet<>(partEvts));
+        }
 
         // Check that partition state does not change after we return nodes.
         for (int i = 0; i < stopNodes.length; i++) {
