@@ -285,6 +285,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
     /** Memory manager */
     private QueryMemoryManager memoryMgr;
 
+    /** Distributed config. */
+    private DistributedSqlConfiguration distrCfg;
+
     /** */
     private final IgniteInClosure<? super IgniteInternalFuture<?>> logger = new IgniteInClosure<IgniteInternalFuture<?>>() {
         @Override public void apply(IgniteInternalFuture<?> fut) {
@@ -311,6 +314,9 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
     /** Query message listener. */
     private GridMessageListener qryLsnr;
+
+    /** Functions manager. */
+    private FunctionsManager funcMgr;
 
     /**
      * @return Kernal context.
@@ -483,7 +489,14 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         H2TableDescriptor tbl = schemaMgr.tableForType(schemaName, cacheName, typeName);
 
         if (tbl != null && tbl.luceneIndex() != null) {
-            Long qryId = runningQueryManager().register(qry, TEXT, schemaName, true, null, null);
+            Long qryId = runningQueryManager().register(
+                qry,
+                TEXT,
+                schemaName,
+                true,
+                null,
+                null,
+                null);
 
             Throwable failReason = null;
             try {
@@ -633,11 +646,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         @Nullable Object[] params,
-        IgniteDataStreamer<?, ?> streamer
+        IgniteDataStreamer<?, ?> streamer,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         QueryParserResultDml dml = streamerParse(schemaName, qry);
 
-        return streamQuery0(qry, schemaName, streamer, dml, params);
+        return streamQuery0(qry, schemaName, streamer, dml, params, qryInitiatorId);
     }
 
     /** {@inheritDoc} */
@@ -646,7 +660,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         List<Object[]> params,
-        SqlClientContext cliCtx
+        SqlClientContext cliCtx,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         if (cliCtx == null || !cliCtx.isStream()) {
             U.warn(log, "Connection is not in streaming mode.");
@@ -663,7 +678,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         List<Long> ress = new ArrayList<>(params.size());
 
         for (int i = 0; i < params.size(); i++) {
-            long res = streamQuery0(qry, schemaName, streamer, dml, params.get(i));
+            long res = streamQuery0(qry, schemaName, streamer, dml, params.get(i), qryInitiatorId);
 
             ress.add(res);
         }
@@ -679,13 +694,21 @@ public class IgniteH2Indexing implements GridQueryIndexing {
      * @param streamer Streamer to feed data to.
      * @param dml DML statement.
      * @param args Statement arguments.
+     * @param qryInitiatorId Query initiator identifier.
      * @return Number of rows in given INSERT statement.
      * @throws IgniteCheckedException if failed.
      */
     @SuppressWarnings({"unchecked"})
     private long streamQuery0(String qry, String schemaName, IgniteDataStreamer streamer, QueryParserResultDml dml,
-        final Object[] args) throws IgniteCheckedException {
-        Long qryId = runningQryMgr.register(qry, GridCacheQueryType.SQL_FIELDS, schemaName, true, null, null);
+        final Object[] args, String qryInitiatorId) throws IgniteCheckedException {
+        Long qryId = runningQryMgr.register(
+            qry,
+            GridCacheQueryType.SQL_FIELDS,
+            schemaName,
+            true,
+            null,
+            null,
+            qryInitiatorId);
 
         Exception failReason = null;
 
@@ -1546,7 +1569,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
             qryDesc.schemaName(),
             qryDesc.local(),
             memoryMgr.createQueryMemoryTracker(qryParams.maxMemory()),
-            cancel
+            cancel,
+            qryDesc.queryInitiatorId()
         );
     }
 
@@ -2024,6 +2048,8 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         GridFutureAdapter<Void> rebuildCacheIdxFut = new GridFutureAdapter<>();
 
+        cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
+
         rebuildCacheIdxFut.listen(fut -> {
             Throwable err = fut.error();
 
@@ -2178,6 +2204,10 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         connMgr.setH2Serializer(h2Serializer);
 
         registerAggregateFunctions();
+
+        distrCfg = new DistributedSqlConfiguration(ctx.internalSubscriptionProcessor(), log);
+
+        funcMgr = new FunctionsManager(this, distrCfg);
     }
 
     /** {@inheritDoc} */
@@ -3234,5 +3264,12 @@ public class IgniteH2Indexing implements GridQueryIndexing {
 
         if (log.isDebugEnabled())
             log.debug("Aggregation function " + fnName + "(" + cls.getName() + ") has been registered.");
+    }
+
+    /**
+     * @return Distributed configuration.
+     */
+    public DistributedSqlConfiguration distributedConfiguration() {
+        return distrCfg;
     }
 }

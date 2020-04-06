@@ -41,7 +41,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /** Read func. */
         private readonly Func<BinaryReader, T> _readFunc;
 
-        /** Wherther "GetAll" was called. */
+        /** Whether "GetAll" was called. */
         private bool _getAllCalled;
 
         /** Whether "GetEnumerator" was called. */
