@@ -74,7 +74,7 @@ namespace ignite
     {
         namespace query
         {
-            ColumnMetadataQuery::ColumnMetadataQuery(diagnostic::Diagnosable& diag, 
+            ColumnMetadataQuery::ColumnMetadataQuery(diagnostic::DiagnosableAdapter& diag,
                 Connection& connection, const std::string& schema,
                 const std::string& table, const std::string& column) :
                 Query(diag, QueryType::COLUMN_METADATA),
@@ -134,9 +134,9 @@ namespace ignite
                 return result;
             }
 
-            const meta::ColumnMetaVector& ColumnMetadataQuery::GetMeta() const
+            const meta::ColumnMetaVector* ColumnMetadataQuery::GetMeta()
             {
-                return columnsMeta;
+                return &columnsMeta;
             }
 
             SqlResult::Type ColumnMetadataQuery::FetchNextRow(app::ColumnBindingMap & columnBindings)
@@ -310,7 +310,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
+                    diag.AddStatusRecord(err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }

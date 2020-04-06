@@ -27,7 +27,7 @@ namespace ignite
     {
         namespace query
         {
-            DataQuery::DataQuery(diagnostic::Diagnosable& diag, Connection& connection, const std::string& sql,
+            DataQuery::DataQuery(diagnostic::DiagnosableAdapter& diag, Connection& connection, const std::string& sql,
                 const app::ParameterSet& params, int32_t& timeout) :
                 Query(diag, QueryType::DATA),
                 connection(connection),
@@ -56,9 +56,9 @@ namespace ignite
                 return MakeRequestExecute();
             }
 
-            const meta::ColumnMetaVector & DataQuery::GetMeta() const
+            const meta::ColumnMetaVector* DataQuery::GetMeta()
             {
-                return resultMeta;
+                return resultMeta.get();
             }
 
             SqlResult::Type DataQuery::FetchNextRow(app::ColumnBindingMap& columnBindings)
@@ -95,7 +95,7 @@ namespace ignite
 
                 if (!row)
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, "Unknown error.");
+                    diag.AddStatusRecord("Unknown error.");
 
                     return SqlResult::AI_ERROR;
                 }
@@ -163,7 +163,7 @@ namespace ignite
                 {
                     cursor.reset();
 
-                    resultMeta.clear();
+                    resultMeta.reset();
 
                     rowsAffectedIdx = 0;
 
@@ -241,7 +241,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
+                    diag.AddStatusRecord(err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }
@@ -255,19 +255,23 @@ namespace ignite
                     return SqlResult::AI_ERROR;
                 }
 
-                resultMeta.assign(rsp.GetMeta().begin(), rsp.GetMeta().end());
+                if (!resultMeta.get())
+                    resultMeta.reset(new meta::ColumnMetaVector());
+
+                resultMeta->assign(rsp.GetMeta().begin(), rsp.GetMeta().end());
 
                 rowsAffected = rsp.GetAffectedRows();
 
                 LOG_MSG("Query id: " << rsp.GetQueryId());
                 LOG_MSG("Affected Rows list size: " << rowsAffected.size());
 
-                for (size_t i = 0; i < resultMeta.size(); ++i)
+                for (size_t i = 0; i < resultMeta->size(); ++i)
                 {
-                    LOG_MSG("\n[" << i << "] SchemaName:     " << resultMeta[i].GetSchemaName()
-                        <<  "\n[" << i << "] TypeName:       " << resultMeta[i].GetTableName()
-                        <<  "\n[" << i << "] ColumnName:     " << resultMeta[i].GetColumnName()
-                        <<  "\n[" << i << "] ColumnType:     " << static_cast<int32_t>(resultMeta[i].GetDataType()));
+                    meta::ColumnMeta& meta = resultMeta->at(i);
+                    LOG_MSG("\n[" << i << "] SchemaName:     " << meta.GetSchemaName()
+                        <<  "\n[" << i << "] TypeName:       " << meta.GetTableName()
+                        <<  "\n[" << i << "] ColumnName:     " << meta.GetColumnName()
+                        <<  "\n[" << i << "] ColumnType:     " << static_cast<int32_t>(meta.GetDataType()));
                 }
 
                 cursor.reset(new Cursor(rsp.GetQueryId()));
@@ -294,7 +298,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
+                    diag.AddStatusRecord(err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }
@@ -332,7 +336,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
+                    diag.AddStatusRecord(err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }
@@ -373,7 +377,7 @@ namespace ignite
                 }
                 catch (const IgniteError& err)
                 {
-                    diag.AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
+                    diag.AddStatusRecord(err.GetText());
 
                     return SqlResult::AI_ERROR;
                 }

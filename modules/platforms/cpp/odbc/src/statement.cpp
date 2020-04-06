@@ -135,9 +135,11 @@ namespace ignite
         {
             const meta::ColumnMetaVector* meta = GetMeta();
 
+            std::cout << meta << std::endl;
+
             if (!meta)
             {
-                AddStatusRecord(SqlState::SHY010_SEQUENCE_ERROR, "Query is not executed.");
+                AddStatusRecord("Metadata is not available for the query");
 
                 return SqlResult::AI_ERROR;
             }
@@ -357,7 +359,7 @@ namespace ignite
         {
             if (!buf)
             {
-                AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, "Data buffer is NULL.");
+                AddStatusRecord("Data buffer is NULL.");
 
                 return SqlResult::AI_ERROR;
             }
@@ -888,7 +890,7 @@ namespace ignite
             {
                 case SQL_DROP:
                 {
-                    AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, "Deprecated, call SQLFreeHandle instead");
+                    AddStatusRecord("Deprecated, call SQLFreeHandle instead");
 
                     return SqlResult::AI_ERROR;
                 }
@@ -1004,12 +1006,12 @@ namespace ignite
             return res;
         }
 
-        const meta::ColumnMetaVector* Statement::GetMeta() const
+        const meta::ColumnMetaVector* Statement::GetMeta()
         {
             if (!currentQuery.get())
                 return 0;
 
-            return &currentQuery->GetMeta();
+            return currentQuery->GetMeta();
         }
 
         bool Statement::DataAvailable() const
@@ -1308,7 +1310,7 @@ namespace ignite
             }
             catch (const IgniteError& err)
             {
-                AddStatusRecord(SqlState::SHY000_GENERAL_ERROR, err.GetText());
+                AddStatusRecord(err.GetText());
 
                 return SqlResult::AI_ERROR;
             }

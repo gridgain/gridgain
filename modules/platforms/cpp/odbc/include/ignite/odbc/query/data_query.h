@@ -45,7 +45,7 @@ namespace ignite
                  * @param params SQL params.
                  * @param timeout Timeout.
                  */
-                DataQuery(diagnostic::Diagnosable& diag, Connection& connection, const std::string& sql,
+                DataQuery(diagnostic::DiagnosableAdapter& diag, Connection& connection, const std::string& sql,
                     const app::ParameterSet& params, int32_t& timeout);
 
                 /**
@@ -65,7 +65,7 @@ namespace ignite
                  *
                  * @return Column metadata.
                  */
-                virtual const meta::ColumnMetaVector& GetMeta() const;
+                virtual const meta::ColumnMetaVector* GetMeta();
 
                 /**
                  * Fetch next result row to application buffers.
@@ -197,7 +197,7 @@ namespace ignite
                 const app::ParameterSet& params;
 
                 /** Columns metadata. */
-                meta::ColumnMetaVector resultMeta;
+                std::auto_ptr<meta::ColumnMetaVector> resultMeta;
 
                 /** Cursor. */
                 std::auto_ptr<Cursor> cursor;
