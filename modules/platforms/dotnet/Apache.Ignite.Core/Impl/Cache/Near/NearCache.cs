@@ -197,10 +197,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
             NearCacheManager.ThreadLocalPair.Value = null;
         }
 
-        /**
-         * <param name="partition"></param>
-         * <inheritdoc /> 
-         */
+        /** <inheritdoc /> */
         public IEnumerable<ICacheEntry<TKey, TVal>> GetEntries<TKey, TVal>(int? partition)
         {
             if (_stopped)
