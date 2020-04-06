@@ -679,6 +679,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.IsFalse(isReserved());
 
+            // TODO:
+            // * exception in filter
+            // * partial iteration
+            // * no iteration
             using (var cursor = cache.Query(qry))
             {
                 Assert.IsTrue(isReserved());
