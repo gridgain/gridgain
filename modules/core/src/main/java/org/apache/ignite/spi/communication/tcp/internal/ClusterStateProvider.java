@@ -41,7 +41,7 @@ import org.apache.ignite.spi.discovery.DiscoverySpi;
 @IgniteExperimental
 public class ClusterStateProvider {
     /** Ignite. */
-    private final IgniteEx ignite;
+    private final Ignite ignite;
 
     /** Local node supplier. */
     private final Supplier<ClusterNode> locNodeSupplier;
@@ -67,7 +67,7 @@ public class ClusterStateProvider {
      * @param igniteExSupplier Returns already exists instance from spi.
      */
     public ClusterStateProvider(
-        IgniteEx ignite,
+        Ignite ignite,
         Supplier<ClusterNode> locNodeSupplier,
         TcpCommunicationSpi tcpCommSpi,
         Supplier<Boolean> stoppedSupplier,
@@ -89,7 +89,7 @@ public class ClusterStateProvider {
         boolean disconnected = false;
 
         if (ignite instanceof IgniteKernal)
-            disconnected = ignite.context().clientDisconnected();
+            disconnected = ((IgniteEx)ignite).context().clientDisconnected();
 
         return disconnected;
     }
@@ -161,7 +161,7 @@ public class ClusterStateProvider {
             Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
 
             return IgniteFeatures.allNodesSupports(
-                (ignite != null) ? ignite.context() : null,
+                (ignite != null) ? ((IgniteEx)ignite).context() : null,
                 nodes,
                 IgniteFeatures.TCP_COMMUNICATION_SPI_HANDSHAKE_WAIT_MESSAGE);
         }
@@ -171,7 +171,7 @@ public class ClusterStateProvider {
      * @return Node ID message.
      */
     public NodeIdMessage nodeIdMessage() {
-        final UUID locNodeId = (ignite != null) ? ignite.context().localNodeId() :
+        final UUID locNodeId = (ignite != null && ignite instanceof IgniteKernal) ? ((IgniteEx)ignite).context().localNodeId() :
             safeLocalNodeId();
 
         return new NodeIdMessage(locNodeId);

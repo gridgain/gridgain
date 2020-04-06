@@ -176,7 +176,7 @@ public class GridNioServerWrapper {
         .getBoolean(IgniteSystemProperties.IGNITE_TROUBLESHOOTING_LOGGER);
 
     /** NIO server. */
-    private GridNioServer<Message> nioSrvr;
+    private GridNioServer<Message> nioSrv;
 
     /** Stopping flag (set to {@code true} when SPI gets stopping signal). */
     private volatile boolean stopping = false;
@@ -239,15 +239,15 @@ public class GridNioServerWrapper {
      * Starts nio server.
      */
     public void start() {
-        nioSrvr.start();
+        nioSrv.start();
     }
 
     /**
      * Stops nio server.
      */
     public void stop() {
-        if (nioSrvr != null)
-            nioSrvr.stop();
+        if (nioSrv != null)
+            nioSrv.stop();
 
         stopping = true;
     }
@@ -256,7 +256,7 @@ public class GridNioServerWrapper {
      * Clears resources for gc.
      */
     public void clear() {
-        nioSrvr = null;
+        nioSrv = null;
     }
 
     /**
@@ -455,7 +455,7 @@ public class GridNioServerWrapper {
                         meta.put(CONN_IDX_META, connKey);
                         meta.put(GridNioServer.RECOVERY_DESC_META_KEY, recoveryDesc);
 
-                        ses = nioSrvr.createSession(ch, meta, false, null).get();
+                        ses = nioSrv.createSession(ch, meta, false, null).get();
                     }
                     finally {
                         if (ses == null) {
@@ -593,14 +593,14 @@ public class GridNioServerWrapper {
      * Returns original nio server instance.
      */
     public GridNioServer<Message> nio() {
-        return nioSrvr;
+        return nioSrv;
     }
 
     /**
      * @param srv Server.
      */
     public void nio(GridNioServer<Message> srv) {
-        nioSrvr = srv;
+        nioSrv = srv;
     }
 
     /**

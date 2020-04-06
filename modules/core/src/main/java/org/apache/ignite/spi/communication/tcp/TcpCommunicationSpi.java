@@ -366,6 +366,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     /** Stopping flag (set to {@code true} when SPI gets stopping signal). */
     private volatile boolean stopping;
 
+    /** Incoming message listener. */
+    private CommunicationListener<Message> lsnr;
+
     /** Logger. */
     @LoggerResource
     private IgniteLogger log;
@@ -405,7 +408,12 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
      */
     @Deprecated
     @Override public void setListener(CommunicationListener<Message> lsnr) {
-        this.srvLsnr.listener(lsnr);
+        synchronized (this) {
+            if(srvLsnr == null)
+                this.lsnr = lsnr;
+            else
+                this.srvLsnr.listener(lsnr);
+        }
     }
 
     /**
@@ -643,7 +651,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
 
         this.stateProvider = new ClusterStateProvider(
-            (IgniteEx)ignite,
+            ignite,
             locNodeSupplier,
             this,
             isStopped,
@@ -663,23 +671,28 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else
             connPlc = new FirstConnectionPolicy();
 
-        this.srvLsnr = new InboundConnectionHandler(
-            log,
-            cfg,
-            nodeGetter,
-            locNodeSupplier,
-            stateProvider,
-            clientPool,
-            commWorker,
-            connectGate,
-            failureProcessorSupplier,
-            attributeNames,
-            metricsLsnr,
-            nioSrvWrapper,
-            ctxInitLatch,
-            client,
-            igniteExSupplier
-        );
+        synchronized (this) {
+            this.srvLsnr = new InboundConnectionHandler(
+                log,
+                cfg,
+                nodeGetter,
+                locNodeSupplier,
+                stateProvider,
+                clientPool,
+                commWorker,
+                connectGate,
+                failureProcessorSupplier,
+                attributeNames,
+                metricsLsnr,
+                nioSrvWrapper,
+                ctxInitLatch,
+                client,
+                igniteExSupplier
+            );
+
+            if (lsnr != null)
+                this.srvLsnr.listener(lsnr);
+        }
 
         TimeObjectProcessorWrapper timeObjProcessorWrapper = new TimeObjectProcessorWrapper(stateProvider);
 
