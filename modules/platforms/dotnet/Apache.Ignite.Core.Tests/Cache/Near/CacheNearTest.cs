@@ -723,8 +723,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 Assert.IsFalse(isReserved());
             }
             
-            Assert.IsFalse(isReserved());
-            
             // Partial iteration.
             using (var cursor = cache.Query(qry))
             {
@@ -738,11 +736,19 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             Assert.IsFalse(isReserved());
             
-            // No iteration.
-            
             // GetAll without using block.
+            using (var cursor = cache.Query(qry))
+            {
+                Assert.IsTrue(isReserved());
+
+                var res = cursor.GetAll();
+                Assert.IsNotEmpty(res);
+
+                Assert.IsFalse(isReserved());
+            }
             
             // Exception in filter.
+            // TODO
         }
 
         /// <summary>
