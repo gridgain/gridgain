@@ -1768,6 +1768,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         private static ulong ReverseByteOrder(ulong l)
         {
             // Fastest way would be to use bswap processor instruction.
+            // Use BinaryPrimitives.ReverseEndianness on .NET Core 2.1+
             return ((l >> 56) & 0x00000000000000FF) | ((l >> 40) & 0x000000000000FF00) |
                    ((l >> 24) & 0x0000000000FF0000) | ((l >> 8) & 0x00000000FF000000) |
                    ((l << 8) & 0x000000FF00000000) | ((l << 24) & 0x0000FF0000000000) |

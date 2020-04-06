@@ -88,8 +88,6 @@ public class SchemaIndexCacheVisitorImpl implements SchemaIndexCacheVisitor {
 
         List<GridDhtLocalPartition> locParts = cctx.topology().localPartitions();
 
-        cctx.group().metrics().setIndexBuildCountPartitionsLeft(locParts.size());
-
         if (locParts.isEmpty()) {
             buildIdxFut.onDone();
 
