@@ -49,8 +49,10 @@ import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheOperationContext;
 import org.apache.ignite.internal.processors.cache.CachePartialUpdateCheckedException;
+import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.IgniteCacheProxy;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.query.QueryCursorEx;
 import org.apache.ignite.internal.processors.platform.PlatformAbstractTarget;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
@@ -82,7 +84,7 @@ import static org.apache.ignite.internal.processors.platform.client.ClientConnec
 /**
  * Native cache wrapper implementation.
  */
-@SuppressWarnings({"unchecked", "WeakerAccess"})
+@SuppressWarnings({"unchecked", "WeakerAccess", "rawtypes"})
 public class PlatformCache extends PlatformAbstractTarget {
     /** */
     public static final int OP_CLEAR = 1;
@@ -1657,10 +1659,17 @@ public class PlatformCache extends PlatformAbstractTarget {
      * @param part Partition id.
      * @return Partition when local, null otherwise.
      */
-    private GridDhtLocalPartition getLocalPartition(int part) {
-        AffinityTopologyVersion ver = cache.context().topology().readyTopologyVersion();
+    private GridDhtLocalPartition getLocalPartition(int part) throws IgniteCheckedException {
+        GridCacheContext cctx = cache.context();
 
-        return cache.context().topology().localPartition(part, ver, false);
+        if (part < 0 || part >= cctx.affinity().partitions())
+            throw new IgniteCheckedException("Invalid partition number: " + part);
+
+        GridDhtPartitionTopology top = cctx.topology();
+
+        AffinityTopologyVersion ver = top.readyTopologyVersion();
+
+        return top.localPartition(part, ver, false);
     }
 
     /**

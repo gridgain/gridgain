@@ -29,6 +29,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Cache.Store;
+    using Apache.Ignite.Core.Common;
     using Apache.Ignite.Core.Datastream;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl;
@@ -757,7 +758,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         [Test]
         public void TestLocalScanQueryWithInvalidPartitionId()
         {
-            // TODO: Check that exception is adequate.
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            var qry = new ScanQuery<int, Foo> {Local = true, Partition = 1024};
+            
+            var ex = Assert.Throws<IgniteException>(() => cache.Query(qry));
+            
+            Assert.AreEqual("Invalid partition number: 1024", ex.Message);
         }
 
         /// <summary>
