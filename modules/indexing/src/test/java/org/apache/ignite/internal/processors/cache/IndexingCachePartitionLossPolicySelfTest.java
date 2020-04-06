@@ -20,6 +20,7 @@ import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePartitionLossPolicySelfTest;
 
 /**
@@ -27,57 +28,25 @@ import org.apache.ignite.internal.processors.cache.distributed.IgniteCachePartit
  */
 public class IndexingCachePartitionLossPolicySelfTest extends IgniteCachePartitionLossPolicySelfTest {
     /** {@inheritDoc} */
-    @Override protected CacheConfiguration<Integer, Integer> cacheConfiguration() {
-        CacheConfiguration<Integer, Integer> ccfg = super.cacheConfiguration();
+    @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
+        IgniteConfiguration cfg = super.getConfiguration(gridName);
 
-        ccfg.setIndexedTypes(Integer.class, Integer.class);
+        for (CacheConfiguration ccfg : cfg.getCacheConfiguration())
+            ccfg.setIndexedTypes(Integer.class, Integer.class);
 
-        return ccfg;
+        return cfg;
     }
 
     /** {@inheritDoc} */
-    @Override protected void checkQueryPasses(Ignite node, boolean loc, int... parts) {
-        executeQuery(node, loc, parts);
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void checkQueryFails(Ignite node, boolean loc, int... parts) {
-        // TODO: Local queries ignore partition loss, see https://issues.apache.org/jira/browse/IGNITE-7039.
-        if (loc)
-            return;
-
-        try {
-            executeQuery(node, loc, parts);
-
-            fail("Exception is not thrown.");
-        }
-        catch (Exception e) {
-            boolean exp = e.getMessage() != null &&
-                e.getMessage().contains("Failed to execute query because cache partition has been lost");
-
-            if (!exp)
-                throw e;
-        }
-    }
-
-    /**
-     * Execute SQL query on a given node.
-     *
-     * @param parts Partitions.
-     * @param node Node.
-     * @param loc Local flag.
-     */
-    private static void executeQuery(Ignite node, boolean loc, int... parts) {
-        IgniteCache cache = node.cache(DEFAULT_CACHE_NAME);
+    @Override protected void runQuery(Ignite ig, String cacheName, boolean loc, int part) {
+        IgniteCache cache = ig.cache(DEFAULT_CACHE_NAME);
 
         SqlFieldsQuery qry = new SqlFieldsQuery("SELECT * FROM Integer");
 
-        if (parts != null && parts.length != 0)
-            qry.setPartitions(parts);
+        qry.setPartitions(part);
 
         if (loc)
             qry.setLocal(true);
 
         cache.query(qry).getAll();
-    }
-}
+    }}
