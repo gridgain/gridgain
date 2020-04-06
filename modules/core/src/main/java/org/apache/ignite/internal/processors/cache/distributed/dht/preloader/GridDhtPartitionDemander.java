@@ -779,12 +779,12 @@ public class GridDhtPartitionDemander {
                                         ", entry=" + entryHist.get(entryHist.size() - 1) + ']');
 
                                 return; // Skip current partition.
-                            } else {
-                                entryCnt.incrementAndGet();
-
-                                for (GridCacheMvccEntryInfo entryInfo : entryHist)
-                                    byteCnt.addAndGet(entryInfo.marshalledSize(cctx.cacheObjectContext()));
                             }
+                            
+                            entryCnt.incrementAndGet();
+
+                            for (GridCacheMvccEntryInfo entryInfo : entryHist)
+                                byteCnt.addAndGet(entryInfo.marshalledSize(cctx.cacheObjectContext()));
 
                             //TODO: IGNITE-11330: Update metrics for touched cache only.
                             for (GridCacheContext ctx : grp.caches()) {
@@ -855,10 +855,10 @@ public class GridDhtPartitionDemander {
                                 "preloading (will skip) [p=" + p + ", entry=" + entry + ']');
 
                         return;
-                    } else {
-                        entryCnt.incrementAndGet();
-                        byteCnt.addAndGet(entry.marshalledSize(cctx.cacheObjectContext()));
                     }
+
+                    entryCnt.incrementAndGet();
+                    byteCnt.addAndGet(entry.marshalledSize(cctx.cacheObjectContext()));
 
                     //TODO: IGNITE-11330: Update metrics for touched cache only.
                     for (GridCacheContext ctx : grp.caches()) {
