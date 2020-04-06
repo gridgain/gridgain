@@ -32,6 +32,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
+import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.util.typedef.F;
@@ -90,8 +91,8 @@ public class ReducePartitionMapper {
             if (!lostParts.isEmpty()) {
                 for (int part : lostParts) {
                     if (parts == null || Arrays.binarySearch(parts, part) >= 0) {
-                        throw new CacheException("Failed to execute query because cache partition has been " +
-                                "lost [cacheName=" + cctx.name() + ", part=" + part + ']');
+                        throw new CacheException(new CacheInvalidStateException("Failed to execute query because cache partition has been " +
+                                "lost [cacheName=" + cctx.name() + ", part=" + part + ']'));
                     }
                 }
             }

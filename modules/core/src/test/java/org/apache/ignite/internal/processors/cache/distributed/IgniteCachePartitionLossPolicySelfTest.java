@@ -18,6 +18,7 @@ package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -36,16 +37,21 @@ import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.Affinity;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ScanQuery;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.CacheInvalidStateException;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -94,37 +100,33 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     @Parameterized.Parameter(value = 5)
     public int[] stopNodes;
 
-    /** Expect safe policy handling. */
-    @Parameterized.Parameter(value = 6)
-    public boolean safe;
-
     /** */
     private static final String[] CACHES = new String[]{"cache1", "cache2"};
 
     /** */
-    @Parameterized.Parameters(name = "{0} {1} {2} {3} {4} expectLost={6}")
+    @Parameterized.Parameters(name = "{0} {1} {2} {3} {4}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        int[] stopIdxs = {2};
+        for (Integer backups : Arrays.asList(0, 1, 2)) {
+            int nodes = backups + 2;
+            int[] stopIdxs = new int[backups + 1];
 
-        params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, 0, false, 3, stopIdxs, true});
-        params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, false, 3, stopIdxs, true}); // should use READ_WRITE_SAFE.
-        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, 0, false, 3, stopIdxs, true});
-        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, 0, false, 3, stopIdxs, true});
-        params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, 0, true, 3, stopIdxs, true});
-        params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, true, 3, stopIdxs, false});
-        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, 0, true, 3, stopIdxs, true});
-        params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, 0, true, 3, stopIdxs, true});
+            List<Integer> tmp = IntStream.range(0, nodes).boxed().collect(Collectors.toList());
+            Collections.shuffle(tmp);
 
-//        stopIdxs = new int[]{3, 2};
-//        params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, 0, false, 4, stopIdxs, true});
+            for (int i = 0; i < stopIdxs.length; i++)
+                stopIdxs[i] = tmp.get(i);
 
-        stopIdxs = new int[]{0, 3, 2};
-        params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, 2, false, 4, stopIdxs, true});
-
-//        if (!MvccFeatureChecker.forcedMvcc())
-//            params.add(new Object[]{ATOMIC});
+            params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, backups, false, nodes, stopIdxs});
+            params.add(new Object[]{TRANSACTIONAL, IGNORE, backups, false, nodes, stopIdxs});
+            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, backups, false, nodes, stopIdxs});
+            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, backups, false, nodes, stopIdxs});
+            params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, backups, true, nodes, stopIdxs});
+            params.add(new Object[]{TRANSACTIONAL, IGNORE, backups, true, nodes, stopIdxs});
+            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, backups, true, nodes, stopIdxs});
+            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, backups, true, nodes, stopIdxs});
+        }
 
         return params;
     }
@@ -133,6 +135,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     @SuppressWarnings("unchecked")
     @Override protected IgniteConfiguration getConfiguration(String gridName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
+
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
 
         cfg.setConsistentId(gridName);
 
@@ -169,6 +173,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     public void checkLostPartition() throws Exception {
         log.info("Stop sequence: " + IntStream.of(stopNodes).boxed().collect(Collectors.toList()));
 
+        boolean safe = !(partLossPlc == IGNORE && autoAdjust);
+
         String cacheName = CACHES[ThreadLocalRandom.current().nextInt(CACHES.length)];
 
         Map<UUID, Set<Integer>> lostMap = new ConcurrentHashMap<>();
@@ -203,8 +209,6 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
             info("Newly started node: " + grd.cluster().localNode().id());
         }
-
-        doSleep(2000);
 
         for (int i = 0; i < nodes + 1; i++)
             verifyCacheOps(cacheName, expLostParts, grid(i), safe);
@@ -437,8 +441,16 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         assertFalse("Expecting lost partitions for the test scneario", expLostParts.isEmpty());
 
-        for (Ignite ignite : G.allGrids())
+        for (Ignite ignite : G.allGrids()) {
+            // Prevent rebalancing to bring partitions in owning state.
+            TestRecordingCommunicationSpi.spi(ignite).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                    return msg instanceof GridDhtPartitionDemandMessage;
+                }
+            });
+
             ignite.events().localListen(lsnr, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
+        }
 
         for (int i = 0; i < stopNodes.length; i++)
             stopGrid(stopNodes[i], true);

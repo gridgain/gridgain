@@ -39,14 +39,15 @@ public class IndexingCachePartitionLossPolicySelfTest extends IgniteCachePartiti
 
     /** {@inheritDoc} */
     @Override protected void runQuery(Ignite ig, String cacheName, boolean loc, int part) {
-        IgniteCache cache = ig.cache(DEFAULT_CACHE_NAME);
+        IgniteCache cache = ig.cache(cacheName);
 
         SqlFieldsQuery qry = new SqlFieldsQuery("SELECT * FROM Integer");
 
         qry.setPartitions(part);
 
-        if (loc)
-            qry.setLocal(true);
+        // TODO https://issues.apache.org/jira/browse/IGNITE-7039
+        // if (loc)
+        //    qry.setLocal(true);
 
         cache.query(qry).getAll();
     }}
