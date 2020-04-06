@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Security;
     using System.Threading;
     using System.Threading.Tasks;
     using System.Transactions;
@@ -749,7 +750,16 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             }
             
             // Exception in filter.
-            // TODO
+            qry.Filter = new ScanQueryNearCacheFilter {FailKey = key};
+            
+            using (var cursor = cache.Query(qry))
+            {
+                Assert.IsTrue(isReserved());
+
+                Assert.Throws<SecurityException>(() => cursor.GetAll());
+
+                Assert.IsFalse(isReserved());
+            }
         }
 
         /// <summary>
