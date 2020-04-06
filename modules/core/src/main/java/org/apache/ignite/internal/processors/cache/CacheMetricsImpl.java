@@ -26,8 +26,9 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.store.GridCacheWriteBehindStore;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
+import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.util.collection.ImmutableIntSet;
 import org.apache.ignite.internal.util.collection.IntSet;
@@ -35,6 +36,8 @@ import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
 
 /**
@@ -58,6 +61,15 @@ public class CacheMetricsImpl implements CacheMetrics {
      * {@code "cache.sys-cache"}, for example.
      */
     public static final String CACHE_METRICS = "cache";
+
+    /** Histogram buckets for duration get, put, remove, commit, rollback operations in nanoseconds. */
+    public static final long[] HISTOGRAM_BUCKETS = new long[] {
+        NANOSECONDS.convert(1, MILLISECONDS),
+        NANOSECONDS.convert(10, MILLISECONDS),
+        NANOSECONDS.convert(100, MILLISECONDS),
+        NANOSECONDS.convert(250, MILLISECONDS),
+        NANOSECONDS.convert(1000, MILLISECONDS)
+    };
 
     /** Number of reads. */
     private final AtomicLongMetric reads;
@@ -107,20 +119,20 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Number of removed entries. */
     private final AtomicLongMetric rmCnt;
 
-    /** Put time taken nanos. */
-    private final AtomicLongMetric putTimeNanos;
+    /** Total put time taken nanos. */
+    private final AtomicLongMetric putTimeTotal;
 
-    /** Get time taken nanos. */
-    private final AtomicLongMetric getTimeNanos;
+    /** Total get time taken nanos. */
+    private final AtomicLongMetric getTimeTotal;
 
-    /** Remove time taken nanos. */
-    private final AtomicLongMetric rmvTimeNanos;
+    /** Total remove time taken nanos. */
+    private final AtomicLongMetric rmvTimeTotal;
 
-    /** Commit transaction time taken nanos. */
-    private final AtomicLongMetric commitTimeNanos;
+    /** Total commit transaction time taken nanos. */
+    private final AtomicLongMetric commitTimeTotal;
 
-    /** Commit transaction time taken nanos. */
-    private final AtomicLongMetric rollbackTimeNanos;
+    /** Total rollback transaction time taken nanos. */
+    private final AtomicLongMetric rollbackTimeTotal;
 
     /** Number of reads from off-heap memory. */
     private final AtomicLongMetric offHeapGets;
@@ -160,6 +172,21 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** Number of currently clearing partitions for rebalancing. */
     private final AtomicLongMetric rebalanceClearingPartitions;
+
+    /** Get time. */
+    private final HistogramMetric getTime;
+
+    /** Put time. */
+    private final HistogramMetric putTime;
+
+    /** Remove time. */
+    private final HistogramMetric rmvTime;
+
+    /** Commit time. */
+    private final HistogramMetric commitTime;
+
+    /** Rollback time. */
+    private final HistogramMetric rollbackTime;
 
     /** Cache metrics. */
     @GridToStringExclude
@@ -251,19 +278,19 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rmCnt = mreg.longMetric("CacheRemovals", "The total number of removals from the cache.");
 
-        putTimeNanos = mreg.longMetric("PutTime",
+        putTimeTotal = mreg.longMetric("PutTimeTotal",
             "The total time of cache puts, in nanoseconds.");
 
-        getTimeNanos = mreg.longMetric("GetTime",
+        getTimeTotal = mreg.longMetric("GetTimeTotal",
             "The total time of cache gets, in nanoseconds.");
 
-        rmvTimeNanos = mreg.longMetric("RemovalTime",
+        rmvTimeTotal = mreg.longMetric("RemoveTimeTotal",
             "The total time of cache removal, in nanoseconds.");
 
-        commitTimeNanos = mreg.longMetric("CommitTime",
+        commitTimeTotal = mreg.longMetric("CommitTimeTotal",
             "The total time of commit, in nanoseconds.");
 
-        rollbackTimeNanos = mreg.longMetric("RollbackTime",
+        rollbackTimeTotal = mreg.longMetric("RollbackTimeTotal",
             "The total time of rollback, in nanoseconds.");
 
         offHeapGets = mreg.longMetric("OffHeapGets",
@@ -310,6 +337,16 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         rebalanceClearingPartitions = mreg.longMetric("RebalanceClearingPartitionsLeft",
             "Number of partitions need to be cleared before actual rebalance start.");
+
+        getTime = mreg.histogram("GetTime", HISTOGRAM_BUCKETS, "Get time in nanoseconds.");
+
+        putTime = mreg.histogram("PutTime", HISTOGRAM_BUCKETS, "Put time in nanoseconds.");
+
+        rmvTime = mreg.histogram("RemoveTime", HISTOGRAM_BUCKETS, "Remove time in nanoseconds.");
+
+        commitTime = mreg.histogram("CommitTime", HISTOGRAM_BUCKETS, "Commit time in nanoseconds.");
+
+        rollbackTime = mreg.histogram("RollbackTime", HISTOGRAM_BUCKETS, "Rollback time in nanoseconds.");
     }
 
     /**
@@ -547,7 +584,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public float getAverageTxCommitTime() {
-        long timeNanos = commitTimeNanos.value();
+        long timeNanos = commitTimeTotal.value();
 
         long commitsCnt = txCommits.value();
 
@@ -559,7 +596,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public float getAverageTxRollbackTime() {
-        long timeNanos = rollbackTimeNanos.value();
+        long timeNanos = rollbackTimeTotal.value();
 
         long rollbacksCnt = txRollbacks.value();
 
@@ -591,11 +628,11 @@ public class CacheMetricsImpl implements CacheMetrics {
         evictCnt.reset();
         txCommits.reset();
         txRollbacks.reset();
-        putTimeNanos.reset();
-        rmvTimeNanos.reset();
-        getTimeNanos.reset();
-        commitTimeNanos.reset();
-        rollbackTimeNanos.reset();
+        putTimeTotal.reset();
+        rmvTimeTotal.reset();
+        getTimeTotal.reset();
+        commitTimeTotal.reset();
+        rollbackTimeTotal.reset();
 
         entryProcessorPuts.reset();
         entryProcessorRemovals.reset();
@@ -612,6 +649,12 @@ public class CacheMetricsImpl implements CacheMetrics {
         offHeapHits.reset();
         offHeapMisses.reset();
         offHeapEvicts.reset();
+
+        getTime.reset();
+        putTime.reset();
+        rmvTime.reset();
+        commitTime.reset();
+        rollbackTime.reset();
 
         clearRebalanceCounters();
 
@@ -751,7 +794,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public float getAverageGetTime() {
-        long timeNanos = getTimeNanos.value();
+        long timeNanos = getTimeTotal.value();
 
         long readsCnt = reads.value();
 
@@ -763,7 +806,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public float getAveragePutTime() {
-        long timeNanos = putTimeNanos.value();
+        long timeNanos = putTimeTotal.value();
 
         long putsCnt = writes.value();
 
@@ -775,7 +818,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** {@inheritDoc} */
     @Override public float getAverageRemoveTime() {
-        long timeNanos = rmvTimeNanos.value();
+        long timeNanos = rmvTimeTotal.value();
 
         long removesCnt = rmCnt.value();
 
@@ -938,7 +981,9 @@ public class CacheMetricsImpl implements CacheMetrics {
      */
     public void onTxCommit(long duration) {
         txCommits.increment();
-        commitTimeNanos.add(duration);
+        commitTimeTotal.add(duration);
+
+        commitTime.value(duration);
 
         if (delegate != null)
             delegate.onTxCommit(duration);
@@ -951,7 +996,9 @@ public class CacheMetricsImpl implements CacheMetrics {
      */
     public void onTxRollback(long duration) {
         txRollbacks.increment();
-        rollbackTimeNanos.add(duration);
+        rollbackTimeTotal.add(duration);
+
+        rollbackTime.value(duration);
 
         if (delegate != null)
             delegate.onTxRollback(duration);
@@ -963,7 +1010,9 @@ public class CacheMetricsImpl implements CacheMetrics {
      * @param duration the time taken in nanoseconds.
      */
     public void addGetTimeNanos(long duration) {
-        getTimeNanos.add(duration);
+        getTimeTotal.add(duration);
+
+        getTime.value(duration);
 
         if (delegate != null)
             delegate.addGetTimeNanos(duration);
@@ -975,7 +1024,9 @@ public class CacheMetricsImpl implements CacheMetrics {
      * @param duration the time taken in nanoseconds.
      */
     public void addPutTimeNanos(long duration) {
-        putTimeNanos.add(duration);
+        putTimeTotal.add(duration);
+
+        putTime.value(duration);
 
         if (delegate != null)
             delegate.addPutTimeNanos(duration);
@@ -987,7 +1038,9 @@ public class CacheMetricsImpl implements CacheMetrics {
      * @param duration the time taken in nanoseconds.
      */
     public void addRemoveTimeNanos(long duration) {
-        rmvTimeNanos.add(duration);
+        rmvTimeTotal.add(duration);
+
+        rmvTime.value(duration);
 
         if (delegate != null)
             delegate.addRemoveTimeNanos(duration);
@@ -999,8 +1052,8 @@ public class CacheMetricsImpl implements CacheMetrics {
      * @param duration the time taken in nanoseconds.
      */
     public void addRemoveAndGetTimeNanos(long duration) {
-        rmvTimeNanos.add(duration);
-        getTimeNanos.add(duration);
+        rmvTimeTotal.add(duration);
+        getTimeTotal.add(duration);
 
         if (delegate != null)
             delegate.addRemoveAndGetTimeNanos(duration);
@@ -1012,8 +1065,8 @@ public class CacheMetricsImpl implements CacheMetrics {
      * @param duration the time taken in nanoseconds.
      */
     public void addPutAndGetTimeNanos(long duration) {
-        putTimeNanos.add(duration);
-        getTimeNanos.add(duration);
+        putTimeTotal.add(duration);
+        getTimeTotal.add(duration);
 
         if (delegate != null)
             delegate.addPutAndGetTimeNanos(duration);
