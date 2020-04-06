@@ -215,7 +215,7 @@ public final class AgentUtils {
      *
      * @param proc Process.
      */
-    public static void quiteStop(GridProcessor proc) {
+    public static void quietStop(GridProcessor proc) {
         if (proc != null) {
             try {
                 proc.stop(true);
@@ -254,7 +254,7 @@ public final class AgentUtils {
      *
      * @param proc Processor.
      */
-    public static void quiteStart(GridProcessor proc) {
+    public static void quietStart(GridProcessor proc) {
         if (proc != null) {
             try {
                 proc.start();

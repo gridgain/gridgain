@@ -63,7 +63,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
 import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
-import static org.apache.ignite.agent.utils.AgentUtils.quiteStop;
+import static org.apache.ignite.agent.utils.AgentUtils.quietStop;
 import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -176,7 +176,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
 
             exporter.export();
 
-            quiteStop(exporter);
+            quietStop(exporter);
         }
         else
             log.warning("Management console requires DISTRIBUTED_METASTORAGE and CLUSTER_ID_AND_TAG features for work");
@@ -187,10 +187,10 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
         if (isManagementConsoleFeaturesEnabled()) {
             ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-            quiteStop(messagesProc);
-            quiteStop(metricExporter);
-            quiteStop(evtsExporter);
-            quiteStop(spanExporter);
+            quietStop(messagesProc);
+            quietStop(metricExporter);
+            quietStop(evtsExporter);
+            quietStop(spanExporter);
 
             disconnect();
         }
@@ -200,12 +200,12 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
      * Stop processors.
      */
     protected void onDisconnect() {
-        quiteStop(cacheProc);
-        quiteStop(distributedActProc);
-        quiteStop(actDispatcher);
-        quiteStop(metricProc);
-        quiteStop(clusterProc);
-        quiteStop(mgr);
+        quietStop(cacheProc);
+        quietStop(distributedActProc);
+        quietStop(actDispatcher);
+        quietStop(metricProc);
+        quietStop(clusterProc);
+        quietStop(mgr);
     }
 
     /**
