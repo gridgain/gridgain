@@ -53,9 +53,13 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
     @LoggerResource
     private IgniteLogger log;
 
-    /** Addresses. */
+    /** Addresses from the configuration or IGNITE_TCP_DISCOVERY_ADDRESSES. */
     @GridToStringInclude
-    private Collection<InetSocketAddress> addrs;
+    private Collection<String> addrs = new LinkedHashSet<>();
+
+    /** Registered InetSocketAddresses. */
+    @GridToStringInclude
+    private Collection<InetSocketAddress> registeredAddrs = new LinkedHashSet<>();
 
     /**
      * Initialize from system property.
@@ -64,15 +68,13 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
         String ips = IgniteSystemProperties.getString(IGNITE_TCP_DISCOVERY_ADDRESSES);
 
         if (!F.isEmpty(ips)) {
-            Collection<InetSocketAddress> addrsList = new LinkedHashSet<>();
-
             for (String s : ips.split(",")) {
                 if (!F.isEmpty(s)) {
                     s = s.trim();
 
                     if (!F.isEmpty(s)) {
                         try {
-                            addrsList.addAll(address(s));
+                            addrs.add(s);
                         }
                         catch (IgniteSpiException e) {
                             throw new IgniteException(e);
@@ -80,11 +82,7 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
                     }
                 }
             }
-
-            addrs = addrsList;
         }
-        else
-            addrs = new LinkedHashSet<>();
     }
 
     /**
@@ -135,12 +133,7 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
         if (F.isEmpty(addrs))
             return this;
 
-        Collection<InetSocketAddress> newAddrs = new LinkedHashSet<>();
-
-        for (String ipStr : addrs)
-            newAddrs.addAll(address(ipStr));
-
-        this.addrs = newAddrs;
+        this.addrs = new LinkedHashSet<>(addrs);
 
         return this;
     }
@@ -241,25 +234,30 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
 
     /** {@inheritDoc} */
     @Override public synchronized Collection<InetSocketAddress> getRegisteredAddresses() {
-        return Collections.unmodifiableCollection(addrs);
+        Collection<InetSocketAddress> resolvedAddrs = new LinkedHashSet<>();
+
+        for (String ipStr : addrs)
+            resolvedAddrs.addAll(address(ipStr));
+
+        resolvedAddrs.addAll(registeredAddrs);
+
+        return resolvedAddrs;
     }
 
     /** {@inheritDoc} */
     @Override public synchronized void registerAddresses(Collection<InetSocketAddress> addrs) {
         assert !F.isEmpty(addrs);
 
-        this.addrs = new LinkedHashSet<>(this.addrs);
-
-        this.addrs.addAll(addrs);
+        if (!F.isEmpty(addrs))
+            this.registeredAddrs.addAll(addrs);
     }
 
     /** {@inheritDoc} */
     @Override public synchronized void unregisterAddresses(Collection<InetSocketAddress> addrs) {
         assert !F.isEmpty(addrs);
 
-        this.addrs = new LinkedHashSet<>(this.addrs);
-
-        this.addrs.removeAll(addrs);
+        if (!F.isEmpty(addrs))
+            this.registeredAddrs.removeAll(addrs);
     }
 
     /** {@inheritDoc} */
