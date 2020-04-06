@@ -733,7 +733,8 @@ public class QueryParser {
             qry.isEnforceJoinOrder(),
             qry.isLocal(),
             skipReducerOnUpdate,
-            batched
+            batched,
+            qry.getQueryInitiatorId()
         );
     }
 }
