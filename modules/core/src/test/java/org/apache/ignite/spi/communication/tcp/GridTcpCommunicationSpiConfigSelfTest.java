@@ -22,16 +22,16 @@ import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.testframework.junits.GridAbstractTest;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.spi.GridSpiAbstractConfigTest;
 import org.apache.ignite.testframework.junits.spi.GridSpiTest;
 import org.junit.Test;
 
-import static java.lang.Boolean.TRUE;
-import static java.lang.System.setProperty;
 import static java.util.Objects.isNull;
 import static java.util.Objects.requireNonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES;
+import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.util.IgniteUtils.spiAttribute;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_HOST_NAMES;
 import static org.apache.ignite.testframework.GridTestUtils.getFreeCommPort;
@@ -41,7 +41,10 @@ import static org.apache.ignite.testframework.GridTestUtils.getFreeCommPort;
  */
 @GridSpiTest(spi = TcpCommunicationSpi.class, group = "Communication SPI")
 public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfigTest<TcpCommunicationSpi> {
-    /** Set null to {@link IgniteConfiguration#setLocalHost}. */
+    /**
+     * Set value to {@link IgniteConfiguration#setLocalHost} after
+     * {@link GridAbstractTest#optimize}.
+     */
     private String locHost = "0.0.0.0";
 
     /** {@inheritDoc} */
@@ -99,17 +102,18 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
     }
 
     /**
-     * Test checks that {@link TcpCommunicationSpi#ATTR_HOST_NAMES} attribute
-     * is empty only if {@link
+     * Test checks that attribute {@link TcpCommunicationSpi#ATTR_HOST_NAMES}
+     * is empty only if ip is set to {@link IgniteConfiguration#setLocalHost}
+     * and property {@link
      * IgniteSystemProperties#IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES} ==
-     * {@code false} and local host is set via {@link
-     * IgniteConfiguration#setLocalHost}.
+     * {@code false} (default value).
      *
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, value = "false")
-    public void testLocalHost() throws Exception {
+    public void testEmptyHostNameAttrByDefault() throws Exception {
+        assertFalse(getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false));
+
         InetSocketAddress inetSockAddr = new InetSocketAddress(0);
 
         String ip = inetSockAddr.getHostName();
@@ -120,24 +124,41 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
         int nodeIdx = 0;
 
         locHost = ip;
-        checkLocalHost(startGrid(nodeIdx++), false, true);
+        checkHostNamesAttr(startGrid(nodeIdx++), false, true);
 
         locHost = host;
-        checkLocalHost(startGrid(nodeIdx++), false, false);
+        checkHostNamesAttr(startGrid(nodeIdx++), false, false);
 
         locHost = null;
-        checkLocalHost(startGrid(nodeIdx++), true, false);
+        checkHostNamesAttr(startGrid(nodeIdx++), true, false);
+    }
 
-        setProperty(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, TRUE.toString());
+    /**
+     * Test checks that attribute {@link TcpCommunicationSpi#ATTR_HOST_NAMES}
+     * is not empty.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, value = "true")
+    public void testNotEmptyHostNameAttr() throws Exception {
+        InetSocketAddress inetSockAddr = new InetSocketAddress(0);
+
+        String ip = inetSockAddr.getHostName();
+        String host = U.resolveLocalAddresses(inetSockAddr.getAddress()).get2().iterator().next();
+
+        log.info("Testing ip=" + ip + " host=" + host);
+
+        int nodeIdx = 0;
 
         locHost = ip;
-        checkLocalHost(startGrid(nodeIdx++), false, false);
+        checkHostNamesAttr(startGrid(nodeIdx++), false, false);
 
         locHost = host;
-        checkLocalHost(startGrid(nodeIdx++), false, false);
+        checkHostNamesAttr(startGrid(nodeIdx++), false, false);
 
         locHost = null;
-        checkLocalHost(startGrid(nodeIdx++), true, false);
+        checkHostNamesAttr(startGrid(nodeIdx++), true, false);
     }
 
     /**
@@ -149,7 +170,7 @@ public class GridTcpCommunicationSpiConfigSelfTest extends GridSpiAbstractConfig
      * @param emptyHostNamesAttr Check whether {@link
      *      TcpCommunicationSpi#ATTR_HOST_NAMES} attribute is empty.
      */
-    private void checkLocalHost(IgniteEx node, boolean emptyLocHost, boolean emptyHostNamesAttr) {
+    private void checkHostNamesAttr(IgniteEx node, boolean emptyLocHost, boolean emptyHostNamesAttr) {
         requireNonNull(node);
 
         IgniteConfiguration cfg = node.configuration();
