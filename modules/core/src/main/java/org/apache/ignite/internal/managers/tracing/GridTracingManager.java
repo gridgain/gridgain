@@ -42,6 +42,8 @@ import static org.apache.ignite.internal.processors.tracing.SpanTags.NODE;
  * Tracing Manager.
  */
 public class GridTracingManager extends GridManagerAdapter<TracingSpi> implements Tracing {
+    /** */
+    public static final Scope[] EMPTY_SCOPE_ARRAY = new Scope[0];
 
     /** Traceable messages handler. */
     private final TraceableMessagesHandler msgHnd;
@@ -108,55 +110,54 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
         return span;
     }
 
-
-
-    // TODO: 20.02.20 Rename.
-    // TODO: 20.02.20 Rework comments.
-    private Span fooBar(Span parentSpan, SpanType trace, Scope... supportedScopes) {
+    /**
+     * Generates child span if it's possible due to parent/child supported scopes, othewise returns patent span as is.
+     * @param parentSpan Parent span.
+     * @param spanTypeToCreate Span type to create.
+     * @param supportedScopes Supported scopes.
+     * @return Span to propogate with.
+     */
+    private Span generateSpan(Span parentSpan, SpanType spanTypeToCreate, Scope... supportedScopes) {
         if (parentSpan instanceof DeferredSpan)
-            return getSpi().create(trace, ((DeferredSpan)parentSpan).serializedSpan());
+            return getSpi().create(spanTypeToCreate, ((DeferredSpan)parentSpan).serializedSpan());
 
         if (parentSpan == null || parentSpan == NoopSpan.INSTANCE) {
-            // If there's no parent span or parent span is NoopSpan than =>
-            // create new span that will be closed when TraceSurroundings will be closed.
+            // If there's no parent span or parent span is NoopSpan then
+            // create new span that will be closed when TraceSurroundings.
             // Use union of scope and supportedScopes as span supported scopes.
-            return getSpi().create(trace, null, supportedScopes);
+            return getSpi().create(spanTypeToCreate, null, supportedScopes);
         }
         else {
-            // If there's is parent span =>
-            // If parent span supports given scope =>
-
-            if (parentSpan.isChainable(trace.scope())) {
+            // If there's is parent span and parent span supports given scope then...
+            if (parentSpan.isChainable(spanTypeToCreate.scope())) {
                 // create new span as child span for parent span, using parents span supported scopes.
-                // TODO: 20.02.20 Consolidate array and set as input and output parameters of supportedScopes().
-                Set<Scope> mergedSupportedScopes = new HashSet<>();
-                // TODO: 27.02.20 Innaficient.
-                mergedSupportedScopes.addAll(parentSpan.supportedScopes());
-                mergedSupportedScopes.add(parentSpan.type().scope());
-                mergedSupportedScopes.remove(trace.scope());
 
-                return getSpi().create(trace, parentSpan, mergedSupportedScopes.toArray(new Scope[0]));
+                Set<Scope> mergedSupportedScopes = new HashSet<>(parentSpan.supportedScopes());
+                mergedSupportedScopes.add(parentSpan.type().scope());
+                mergedSupportedScopes.remove(spanTypeToCreate.scope());
+
+                return getSpi().create(spanTypeToCreate, parentSpan, mergedSupportedScopes.toArray(EMPTY_SCOPE_ARRAY));
             }
             else {
                 // do nothing;
                 return NoopSpan.INSTANCE;
-                // "suppress" parent span for a while, create new span as separate one.
-                // return spi.create(trace, null, supportedScopes);
             }
         }
     }
 
     /** {@inheritDoc} */
     @Override public Span create(@NotNull SpanType trace, @Nullable Span parentSpan) {
-        return enrichWithLocalNodeParameters(fooBar(parentSpan, trace));
+        return enrichWithLocalNodeParameters(generateSpan(parentSpan, trace));
     }
 
+    /** {@inheritDoc} */
     @Override public Span create(@NotNull SpanType trace, @Nullable byte[] serializedSpan) {
         return enrichWithLocalNodeParameters(getSpi().create(trace, serializedSpan));
     }
 
+    /** {@inheritDoc} */
     @Override public Span create(@NotNull SpanType trace, @Nullable Span parentSpan, Scope... supportedScopes) {
-        return enrichWithLocalNodeParameters(fooBar(parentSpan, trace, supportedScopes));
+        return enrichWithLocalNodeParameters(generateSpan(parentSpan, trace, supportedScopes));
     }
 
     /** {@inheritDoc} */
