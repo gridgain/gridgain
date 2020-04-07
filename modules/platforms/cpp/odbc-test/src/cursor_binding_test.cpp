@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     // Preloading data.
     InsertTestBatch(0, ROWS_COUNT, ROWS_COUNT);
 
-    SQLINTEGER i32Fields[ROW_ARRAY_SIZE];
+    SQLINTEGER i32Fields[ROW_ARRAY_SIZE] = {0};
     SQLLEN i32FieldsInd[ROW_ARRAY_SIZE];
 
     SQLCHAR strFields[ROW_ARRAY_SIZE][STRING_SIZE];
@@ -153,11 +153,11 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     ret = SQLBindCol(stmt, 2, SQL_C_CHAR, strFields, STRING_SIZE, strFieldsLen);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
-    ret = SQLBindCol(stmt, 3, SQL_C_DOUBLE, doubleFields, STRING_SIZE, doubleFieldsInd);
+    ret = SQLBindCol(stmt, 3, SQL_C_DOUBLE, doubleFields, 0, doubleFieldsInd);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     // Execute a statement to retrieve rows from the Orders table.
-    SQLCHAR sql[] = "SELECT i32Field, strField, doubleField FROM TestType ORDER BY i32Field";
+    SQLCHAR sql[] = "SELECT i32Field, strField, doubleField FROM TestType ORDER BY _key";
     ret = SQLExecDirect(stmt, sql, SQL_NTS);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
@@ -171,8 +171,8 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
         CHECK_TEST_VALUES(i, i);
     }
 
-    ret = SQLFetchScroll(stmt, SQL_FETCH_NEXT, 0);
-    BOOST_CHECK_EQUAL(ret, SQL_NO_DATA);
+    ret = SQLFetch(stmt);
+    ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     BOOST_CHECK_EQUAL(NumRowsFetched, ROWS_COUNT - ROW_ARRAY_SIZE);
 
@@ -181,6 +181,15 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
         int64_t testIdx = i + ROW_ARRAY_SIZE;
         CHECK_TEST_VALUES(i, testIdx);
     }
+
+    for (int64_t i = NumRowsFetched; i < ROW_ARRAY_SIZE; i++)
+    {
+        BOOST_TEST_INFO("Checking row status for row: " << i);
+        BOOST_CHECK(RowStatus[i] == SQL_ROW_NOROW);
+    }
+
+    ret = SQLFetchScroll(stmt, SQL_FETCH_NEXT, 0);
+    BOOST_CHECK_EQUAL(ret, SQL_NO_DATA);
 
     // Close the cursor.
     ret = SQLCloseCursor(stmt);
