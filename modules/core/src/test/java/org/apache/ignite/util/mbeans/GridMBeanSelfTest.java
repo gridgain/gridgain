@@ -202,6 +202,7 @@ public class GridMBeanSelfTest extends GridCommonAbstractTest {
             IgniteEx igniteCrd = startGrid(0);
 
             IgniteMXBean igniteMXBean = getMxBean(igniteCrd.name(), "Kernal", IgniteMXBean.class, IgniteKernal.class);
+
             assertEquals(IgniteConfiguration.DFLT_PUBLIC_THREAD_CNT, igniteMXBean.getPublicThreadPoolSize());
         }
         finally {
