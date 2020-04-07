@@ -70,7 +70,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Collections.emptyMap;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
-import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.getUpdateCountersSnapshot;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.IDLE_DATA_ALTERATION_MSG;
 
 /**
  * Task for comparing update counters and checksums between primary and backup partitions of specified caches.
@@ -253,12 +253,8 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
 
             completionCntr.set(0);
 
-            /** Update counters per partition per group. */
-            final Map<Integer, Map<Integer, Long>> partsWithCntrsPerGrp =
-                getUpdateCountersSnapshot(ignite, grpIds);
-
             List<Future<Map<PartitionKeyV2, PartitionHashRecordV2>>> partHashCalcFuts =
-                calcPartitionHashAsync(grpIds, new IdleVerifyUtility.IdleChecker(ignite, partsWithCntrsPerGrp));
+                calcPartitionHashAsync(grpIds);
 
             Map<PartitionKeyV2, PartitionHashRecordV2> res = new HashMap<>();
 
@@ -352,8 +348,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
 
         /** */
         private List<Future<Map<PartitionKeyV2, PartitionHashRecordV2>>> calcPartitionHashAsync(
-            Set<Integer> grpIds,
-            Runnable idleCheck
+            Set<Integer> grpIds
         ) {
             List<Future<Map<PartitionKeyV2, PartitionHashRecordV2>>> partHashCalcFutures = new ArrayList<>();
 
@@ -366,7 +361,7 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                 List<GridDhtLocalPartition> parts = grpCtx.topology().localPartitions();
 
                 for (GridDhtLocalPartition part : parts)
-                    partHashCalcFutures.add(calculatePartitionHashAsync(grpCtx, part, idleCheck));
+                    partHashCalcFutures.add(calculatePartitionHashAsync(grpCtx, part));
             }
 
             return partHashCalcFutures;
@@ -503,30 +498,24 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
         /**
          * @param grpCtx Group context.
          * @param part Local partition.
-         * @param idleCheck Idle check operation.
          */
         private Future<Map<PartitionKeyV2, PartitionHashRecordV2>> calculatePartitionHashAsync(
             final CacheGroupContext grpCtx,
-            final GridDhtLocalPartition part,
-            Runnable idleCheck
+            final GridDhtLocalPartition part
         ) {
-            return ForkJoinPool.commonPool().submit(() -> calculatePartitionHash(grpCtx, part, idleCheck));
+            return ForkJoinPool.commonPool().submit(() -> calculatePartitionHash(grpCtx, part));
         }
 
         /**
          * @param grpCtx Group context.
          * @param part Local partition.
-         * @param idleCheck Idle check operation.
          */
         private Map<PartitionKeyV2, PartitionHashRecordV2> calculatePartitionHash(
             CacheGroupContext grpCtx,
-            GridDhtLocalPartition part,
-            Runnable idleCheck
+            GridDhtLocalPartition part
         ) {
             if (!part.reserve())
                 return emptyMap();
-
-            idleCheck.run();
 
             int partHash = 0;
             long partSize;
@@ -574,9 +563,9 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                 long updateCntrAfter = part.updateCounter();
 
                 if (updateCntrBefore != updateCntrAfter) {
-                    throw new GridNotIdleException("Update counter of partition [grpId=" +
-                        grpCtx.groupId() + ", partId=" + part.id() + "] changed during hash calculation [before=" +
-                        updateCntrBefore + ", after=" + updateCntrAfter + "]");
+                    throw new GridNotIdleException(IDLE_DATA_ALTERATION_MSG + "[grpName=" + grpCtx.cacheOrGroupName() +
+                        ", grpId=" + grpCtx.groupId() + ", partId=" + part.id() + "] changed during hash calculation " +
+                        "[before=" + updateCntrBefore + ", after=" + updateCntrAfter + "]");
                 }
             }
             catch (IgniteCheckedException e) {
