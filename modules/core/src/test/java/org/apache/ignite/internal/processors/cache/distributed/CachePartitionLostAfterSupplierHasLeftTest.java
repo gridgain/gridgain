@@ -17,9 +17,11 @@
 package org.apache.ignite.internal.processors.cache.distributed;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
@@ -30,9 +32,14 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
+import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.lang.IgniteBiPredicate;
+import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
@@ -41,21 +48,23 @@ import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 
 /**
  * Test scenario: last supplier has left while a partition on demander is cleared before sending first demand request.
- * Baseline is enabled (persistent mode).
- * TODO same test for in-memory with enabled baseline.
- * <p>
- * Expected result: no assertions are triggered.
  */
-public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest {
+public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstractTest {
     /** */
     private static final int PARTS_CNT = 64;
 
     /** */
     private PartitionLossPolicy lossPlc;
 
+    /** */
+    private boolean persistence;
+
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+        cfg.setCommunicationSpi(new TestRecordingCommunicationSpi());
+
+        cfg.setActiveOnStart(false);
 
         cfg.setConsistentId(igniteInstanceName);
 
@@ -65,7 +74,7 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
                 .setWalSegmentSize(4 * 1024 * 1024)
                 .setDefaultDataRegionConfiguration(
                     new DataRegionConfiguration()
-                        .setPersistenceEnabled(true)
+                        .setPersistenceEnabled(persistence)
                         .setMaxSize(100L * 1024 * 1024))
         );
 
@@ -105,6 +114,18 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
     @Test
     public void testPartitionLostWhileClearing_FailOnCrd() throws Exception {
         lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+        persistence = true;
+
+        doTestPartitionLostWhileClearing(2);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPartitionLostWhileClearing_FailOnCrd_Volatile() throws Exception {
+        lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+        persistence = false;
 
         doTestPartitionLostWhileClearing(2);
     }
@@ -115,6 +136,18 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
     @Test
     public void testPartitionLostWhileClearing_FailOnFullMessage() throws Exception {
         lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+        persistence = true;
+
+        doTestPartitionLostWhileClearing(3);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPartitionLostWhileClearing_FailOnFullMessage_Volatile() throws Exception {
+        lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+        persistence = false;
 
         doTestPartitionLostWhileClearing(3);
     }
@@ -124,7 +157,19 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
      */
     @Test
     public void testPartitionLostWhileClearing_FailOnCrd_Unsafe() throws Exception {
-        lossPlc = PartitionLossPolicy.IGNORE; // With baseline READ_WRITE_SAFE is used instead of IGNORE.
+        lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
+        persistence = true;
+
+        doTestPartitionLostWhileClearing(2);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPartitionLostWhileClearing_FailOnCrd_Unsafe_Volatile() throws Exception {
+        lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
+        persistence = false;
 
         doTestPartitionLostWhileClearing(2);
     }
@@ -134,18 +179,102 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
      */
     @Test
     public void testPartitionLostWhileClearing_FailOnFullMessage_Unsafe() throws Exception {
-        lossPlc = PartitionLossPolicy.IGNORE; // With baseline READ_WRITE_SAFE is used instead of IGNORE.
+        lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
+        persistence = true;
 
         doTestPartitionLostWhileClearing(3);
     }
 
     /**
+     *
+     */
+    @Test
+    public void testPartitionConsistencyOnSupplierRestart() throws Exception {
+        lossPlc = PartitionLossPolicy.READ_ONLY_SAFE;
+        persistence = true;
+
+        int entryCnt = PARTS_CNT * 200;
+
+        IgniteEx crd = (IgniteEx)startGridsMultiThreaded(2);
+
+        crd.cluster().active(true);
+
+        IgniteCache<Integer, String> cache0 = crd.cache(DEFAULT_CACHE_NAME);
+
+        for (int i = 0; i < entryCnt / 2; i++)
+            cache0.put(i, String.valueOf(i));
+
+        forceCheckpoint();
+
+        stopGrid(1);
+
+        for (int i = entryCnt / 2; i < entryCnt; i++)
+            cache0.put(i, String.valueOf(i));
+
+        final IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(1));
+
+        final TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
+
+        spi1.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            @Override public boolean apply(ClusterNode node, Message msg) {
+                if (msg instanceof GridDhtPartitionDemandMessage) {
+                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage)msg;
+
+                    return msg0.groupId() == CU.cacheId(DEFAULT_CACHE_NAME);
+                }
+
+                return false;
+            }
+        });
+
+        startGrid(cfg);
+
+        spi1.waitForBlocked(1);
+
+        // Will cause a cancellation of rebalancing because a supplier has left.
+        stopGrid(0);
+
+        awaitPartitionMapExchange();
+
+        final Collection<Integer> lostParts = grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions();
+
+        assertEquals(PARTS_CNT, lostParts.size());
+
+        final IgniteEx g0 = startGrid(0);
+
+        final Collection<Integer> lostParts2 = g0.cache(DEFAULT_CACHE_NAME).lostPartitions();
+
+        assertEquals(PARTS_CNT, lostParts2.size());
+
+        spi1.stopBlock();
+
+        g0.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
+
+        awaitPartitionMapExchange();
+
+        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPartitionLostWhileClearing_FailOnFullMessage_Unsafe_Volatile() throws Exception {
+        lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
+        persistence = false;
+
+        doTestPartitionLostWhileClearing(3);
+    }
+
+    /**
+     * Test scenario: last supplier has left while a partition on demander is cleared before sending first demand request.
+     *
      * @param cnt Nodes count.
      * @throws Exception If failed.
      */
     private void doTestPartitionLostWhileClearing(int cnt) throws Exception {
         IgniteEx crd = startGrids(cnt);
-
+        crd.cluster().baselineAutoAdjustEnabled(false);
         crd.cluster().active(true);
 
         int partId = -1;
@@ -181,6 +310,7 @@ public class CachePartitionLostWhileClearingTest extends GridCommonAbstractTest 
         final GridDhtLocalPartition part = g1.cachex(DEFAULT_CACHE_NAME).context().topology().localPartition(partId);
 
         assertEquals(GridDhtPartitionState.LOST, part.state());
+        assertTrue(g1.cachex(DEFAULT_CACHE_NAME).lostPartitions().contains(partId));
 
         // Will own a clearing partition.
         g1.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));

@@ -39,6 +39,7 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
@@ -101,6 +102,9 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     public int[] stopNodes;
 
     /** */
+    private Boolean otherRegionPersistence;
+
+    /** */
     private static final String[] CACHES = new String[]{"cache1", "cache2"};
 
     /** */
@@ -153,6 +157,13 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
                     .setReadFromBackup(false) // Remove to reproduce a bug with reading from deleted partition.
                     .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
         }
+
+//        if (otherRegionPersistence != null) {
+//            DataRegionConfiguration otherRegCfg = new DataRegionConfiguration();
+//            otherRegCfg.setName(OTHER_CACHE).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(otherRegionPersistence);
+//
+//            dsCfg.setDataRegionConfigurations(otherRegCfg);
+//        }
 
         cfg.setCacheConfiguration(ccfgs);
 

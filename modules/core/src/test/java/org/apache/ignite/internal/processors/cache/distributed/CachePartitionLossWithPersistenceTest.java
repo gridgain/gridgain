@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.cache.PartitionLossPolicy;
@@ -39,7 +38,6 @@ import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.util.typedef.G;
-import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -49,8 +47,7 @@ import org.junit.Test;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_WRITE_SAFE;
 
 /**
- * Test scenario: supplier is left during rebalancing leaving partition in OWNING state (but actually LOST) because only
- * one owner left. <p> Expected result: no assertions are triggered.
+ *
  */
 public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTest {
     /** */
@@ -112,75 +109,26 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     }
 
     /**
-     *
+     * Tests activation on partial baseline with lost partitions.
      */
     @Test
-    public void testPartitionConsistencyOnSupplierRestart() throws Exception {
-        doTestPartitionConsistencyOnSupplierRestart();
-    }
-
-    /** */
-    private void doTestPartitionConsistencyOnSupplierRestart() throws Exception {
-        int entryCnt = PARTS_CNT * 200;
-
-        IgniteEx crd = (IgniteEx)startGridsMultiThreaded(2);
-
+    public void testResetOnLesserTopologyAfterRestart() throws Exception {
+        IgniteEx crd = startGrids(5);
         crd.cluster().active(true);
 
-        IgniteCache<Integer, String> cache0 = crd.cache(DEFAULT_CACHE_NAME);
+        stopAllGrids();
 
-        for (int i = 0; i < entryCnt / 2; i++)
-            cache0.put(i, String.valueOf(i));
+        crd = startGrids(2);
+        crd.cluster().active(true);
 
-        forceCheckpoint();
+        resetBaselineTopology();
 
-        stopGrid(1);
+        assertFalse(grid(0).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
+        assertFalse(grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions().isEmpty());
 
-        for (int i = entryCnt / 2; i < entryCnt; i++)
-            cache0.put(i, String.valueOf(i));
-
-        final IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(1));
-
-        final TestRecordingCommunicationSpi spi1 = (TestRecordingCommunicationSpi)cfg.getCommunicationSpi();
-
-        spi1.blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-            @Override public boolean apply(ClusterNode node, Message msg) {
-                if (msg instanceof GridDhtPartitionDemandMessage) {
-                    GridDhtPartitionDemandMessage msg0 = (GridDhtPartitionDemandMessage)msg;
-
-                    return msg0.groupId() == CU.cacheId(DEFAULT_CACHE_NAME);
-                }
-
-                return false;
-            }
-        });
-
-        startGrid(cfg);
-
-        spi1.waitForBlocked(1);
-
-        // Will cause a cancellation of rebalancing because a supplier has left.
-        stopGrid(0);
+        crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 
         awaitPartitionMapExchange();
-
-        final Collection<Integer> lostParts = grid(1).cache(DEFAULT_CACHE_NAME).lostPartitions();
-
-        assertEquals(PARTS_CNT, lostParts.size());
-
-        final IgniteEx g0 = startGrid(0);
-
-        final Collection<Integer> lostParts2 = g0.cache(DEFAULT_CACHE_NAME).lostPartitions();
-
-        assertEquals(PARTS_CNT, lostParts2.size());
-
-        spi1.stopBlock();
-
-        g0.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
-
-        awaitPartitionMapExchange();
-
-        assertPartitionsSame(idleVerify(grid(0), DEFAULT_CACHE_NAME));
     }
 
     /**
@@ -208,7 +156,12 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         doTestConsistencyAfterResettingLostPartitions(2, false);
     }
 
+
     /**
+     * Test scenario: two nodes are left causing data loss and later returned to topology in various order.
+     * <p>
+     * Expected result: after resetting lost state partitions are synced and no data loss occured. No assertions happened
+     * due to updates going to moving partitions.
      *
      * @param partResetMode Reset mode:
      * <ul>
@@ -216,9 +169,9 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
      *     <li>1 - reset then both nodes are returned.</li>
      *     <li>2 - reset then both nodes are returned and new node is added to baseline causing partition movement.</li>
      * </ul>
-     * @param delayRebalance {@code True} to delay rebalancing.
+     * @param testPutToMovingPart {@code True} to try updating moving partition.
      */
-    private void doTestConsistencyAfterResettingLostPartitions(int partResetMode, boolean delayRebalance) throws Exception {
+    private void doTestConsistencyAfterResettingLostPartitions(int partResetMode, boolean testPutToMovingPart) throws Exception {
         lossPlc = READ_WRITE_SAFE;
 
         IgniteEx crd = startGrids(2);
@@ -259,7 +212,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
 
         assertEquals(lostParts, g1LostParts);
 
-        if (delayRebalance) {
+        if (testPutToMovingPart) {
             // Block rebalancing from g2 to g1 to ensure a primary partition is in moving state.
             TestRecordingCommunicationSpi.spi(g1).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
@@ -281,7 +234,7 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
         if (partResetMode == 1)
             crd.resetLostPartitions(Collections.singleton(DEFAULT_CACHE_NAME));
 
-        if (delayRebalance) {
+        if (testPutToMovingPart) {
             TestRecordingCommunicationSpi.spi(g1).waitForBlocked();
 
             /** Try put to moving partition. Due to forced reassignment g2 should be a primary for the partition. */
