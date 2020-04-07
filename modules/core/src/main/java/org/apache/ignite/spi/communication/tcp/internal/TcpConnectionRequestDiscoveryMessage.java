@@ -30,7 +30,12 @@ import org.jetbrains.annotations.Nullable;
 import static org.apache.ignite.internal.IgniteFeatures.INVERSE_TCP_CONNECTION;
 
 /**
- * TODO
+ * Message is part of communication via discovery protocol.
+ *
+ * It is used when a node (say node A) cannot establish a communication connection to other node (node B) in topology
+ * due to firewall or network configuration and sends this message requesting inverse connection:
+ * node B receives request and opens communication connection to node A
+ * thus allowing both nodes to communicate to each other.
  */
 @TcpDiscoveryRequiredFeatureSupport(feature = INVERSE_TCP_CONNECTION)
 public class TcpConnectionRequestDiscoveryMessage implements DiscoveryCustomMessage {
