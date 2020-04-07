@@ -688,7 +688,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             this.srvLsnr,
             getName(),
             getWorkersRegistry(ignite),
-            ((IgniteEx)ignite).context().metric()
+            ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null
         );
 
         this.srvLsnr.setNioSrvWrapper(nioSrvWrapper);
