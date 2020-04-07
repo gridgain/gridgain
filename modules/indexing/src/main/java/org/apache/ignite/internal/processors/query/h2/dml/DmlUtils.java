@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.cache.processor.MutableEntry;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -190,12 +191,8 @@ public class DmlUtils {
         if (plan.rowCount() == 1) {
             IgniteBiTuple t = plan.processRow(cursor.iterator().next());
 
-            if (cctx.cache().putIfAbsent(t.getKey(), t.getValue())) {
-                if (cursor instanceof AutoCloseable)
-                    U.closeQuiet((AutoCloseable)cursor);
-
+            if (cctx.cache().putIfAbsent(t.getKey(), t.getValue()))
                 return 1;
-            }
             else
                 throw new TransactionDuplicateKeyException("Duplicate key during INSERT [key=" + t.getKey() + ']');
         }
