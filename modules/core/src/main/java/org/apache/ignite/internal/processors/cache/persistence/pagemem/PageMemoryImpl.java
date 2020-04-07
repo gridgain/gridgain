@@ -2709,7 +2709,7 @@ public class PageMemoryImpl implements PageMemoryEx {
             if (meta || pageIn.meta)
                 return meta ? 1 : -1;
 
-            if(dirty == pageIn.dirty)
+            if (dirty == pageIn.dirty)
                 return Long.compare(ts, pageIn.ts);
 
             return dirty ? 1 : -1;

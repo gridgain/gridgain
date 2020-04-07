@@ -505,7 +505,7 @@ public class GridTaskProcessor extends GridProcessorAdapter implements IgniteCha
      * @return Task name or {@code null} if not found.
      */
     public String resolveTaskName(int taskNameHash) {
-        assert !isPersistenceEnabled || !ctx.cache().context().database().checkpointLockIsHeldByThread():
+        assert !isPersistenceEnabled || !ctx.cache().context().database().checkpointLockIsHeldByThread() :
             "Resolving a task name should not be executed under the checkpoint lock.";
 
         if (taskNameHash == 0)

@@ -78,8 +78,7 @@ public class VisorDrTopologyTaskArgs extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException {
         flags = in.readInt();
     }
 }

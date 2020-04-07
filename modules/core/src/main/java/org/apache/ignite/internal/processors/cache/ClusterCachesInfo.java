@@ -2551,8 +2551,7 @@ class ClusterCachesInfo {
          * REVERSE comparator for cache descriptors (first user caches).
          */
         static Comparator<DynamicCacheDescriptor> REVERSE = new Comparator<DynamicCacheDescriptor>() {
-            @Override
-            public int compare(DynamicCacheDescriptor o1, DynamicCacheDescriptor o2) {
+            @Override public int compare(DynamicCacheDescriptor o1, DynamicCacheDescriptor o2) {
                 return -DIRECT.compare(o1, o2);
             }
         };

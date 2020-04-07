@@ -62,6 +62,9 @@
             <property name="allowMultipleEmptyLinesInsideClassMembers" value="false" />
         </module>
 
+        <!-- @Override annotations on the same line with a method declaration check. -->
+        <module name="org.apache.ignite.tools.checkstyle.OverrideAnnotationOnTheSameLineCheck"/>
+
         <!--
             Checks the padding between the identifier of a method definition, constructor definition, method call, or
             constructor invocation; and the left parenthesis of the parameter list.

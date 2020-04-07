@@ -283,8 +283,7 @@ public class H2ManagedLocalResult implements LocalResult {
     }
 
     /** {@inheritDoc} */
-    @Override
-    public void reset() {
+    @Override public void reset() {
         rowId = -1;
         currentRow = null;
         if (external != null)
@@ -301,11 +300,11 @@ public class H2ManagedLocalResult implements LocalResult {
         if (!closed && rowId < rowCount) {
             rowId++;
             if (rowId < rowCount) {
-                if (external != null) {
+                if (external != null)
                     currentRow = external.next();
-                } else {
+                else
                     currentRow = rows.get(rowId);
-                }
+
                 return true;
             }
             currentRow = null;

@@ -47,8 +47,7 @@ public class SqlDataTypesCoverageTests extends AbstractDataTypesCoverageTest {
 
     /** {@inheritDoc} */
     @Before
-    @Override
-    public void init() throws Exception {
+    @Override public void init() throws Exception {
         super.init();
     }
 

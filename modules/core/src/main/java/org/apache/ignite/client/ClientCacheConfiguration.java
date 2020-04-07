@@ -679,8 +679,7 @@ public final class ClientCacheConfiguration implements Serializable {
     /**
      * {@inheritDoc}
      */
-    @Override
-    public String toString() {
+    @Override public String toString() {
         return S.toString(ClientCacheConfiguration.class, this);
     }
 }

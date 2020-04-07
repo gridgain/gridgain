@@ -136,8 +136,7 @@ public class IgniteSink<IN> extends RichSinkFunction<IN> {
      *
      * @throws IgniteException If failed.
      */
-    @Override
-    public void open(Configuration parameter) {
+    @Override public void open(Configuration parameter) {
         A.notNull(igniteCfgFile, "Ignite config file");
         A.notNull(cacheName, "Cache name");
 
@@ -164,8 +163,7 @@ public class IgniteSink<IN> extends RichSinkFunction<IN> {
      *
      * @throws IgniteException If failed.
      */
-    @Override
-    public void close() {
+    @Override public void close() {
         if (stopped)
             return;
 
@@ -181,8 +179,7 @@ public class IgniteSink<IN> extends RichSinkFunction<IN> {
      * @param in IN.
      */
     @SuppressWarnings("unchecked")
-    @Override
-    public void invoke(IN in) {
+    @Override public void invoke(IN in) {
         try {
             if (!(in instanceof Map))
                 throw new IgniteException("Map as a streamer input is expected!");

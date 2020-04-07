@@ -1555,8 +1555,7 @@ public class GridFilenameUtils {
          *
          * @return a string describing the sensitivity
          */
-        @Override
-        public String toString() {
+        @Override public String toString() {
             return name;
         }
 

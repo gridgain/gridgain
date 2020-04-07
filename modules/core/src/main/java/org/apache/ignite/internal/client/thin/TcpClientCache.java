@@ -401,16 +401,14 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
     /**
      * {@inheritDoc}
      */
-    @Override
-    public void clear() throws ClientException {
+    @Override public void clear() throws ClientException {
         ch.request(ClientOperation.CACHE_CLEAR, this::writeCacheInfo);
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public <K1, V1> ClientCache<K1, V1> withKeepBinary() {
+    @Override public <K1, V1> ClientCache<K1, V1> withKeepBinary() {
         return keepBinary ? (ClientCache<K1, V1>) this :
                 new TcpClientCache<>(name, ch, marsh, transactions, true, expiryPlc);
     }
@@ -418,16 +416,14 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
     /**
      * {@inheritDoc}
      */
-    @Override
-    public <K1, V1> ClientCache<K1, V1> withExpirePolicy(ExpiryPolicy expiryPlc) {
+    @Override public <K1, V1> ClientCache<K1, V1> withExpirePolicy(ExpiryPolicy expiryPlc) {
         return withExpiryPolicy(expiryPlc);
     }
 
     /**
      * {@inheritDoc}
      */
-    @Override
-    public <K1, V1> ClientCache<K1, V1> withExpiryPolicy(ExpiryPolicy expiryPlc) {
+    @Override public <K1, V1> ClientCache<K1, V1> withExpiryPolicy(ExpiryPolicy expiryPlc) {
         return new TcpClientCache<>(name, ch, marsh, transactions, keepBinary, expiryPlc);
     }
 

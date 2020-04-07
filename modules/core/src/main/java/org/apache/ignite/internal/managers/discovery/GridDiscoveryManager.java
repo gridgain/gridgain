@@ -505,8 +505,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
             }
 
             /** {@inheritDoc} */
-            @Override
-            public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
+            @Override public IgniteFuture<?> onDiscovery(int type, long topVer, ClusterNode node,
                 Collection<ClusterNode> topSnapshot,
                 Map<Long, Collection<ClusterNode>> topHist, DiscoverySpiCustomMessage data) {
                 return onDiscovery(new DiscoveryNotification(type, topVer, node, topSnapshot, topHist, data, null));

@@ -77,8 +77,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     /** Entry processor, performing removal. */
     private final CacheEntryProcessor<Integer, Integer, Object> removingProcessor =
         new CacheEntryProcessor<Integer, Integer, Object>() {
-            @Override
-            public Object process(
+            @Override public Object process(
                     MutableEntry<Integer, Integer> entry,
                     Object... arguments
             ) throws EntryProcessorException {
@@ -92,8 +91,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     /** Entry processor, performing reading. */
     private final CacheEntryProcessor<Integer, Integer, Object> readingProcessor =
         new CacheEntryProcessor<Integer, Integer, Object>() {
-            @Override
-            public Object process(
+            @Override public Object process(
                     MutableEntry<Integer, Integer> entry,
                     Object... arguments
             ) throws EntryProcessorException {
@@ -107,8 +105,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
     /** Entry processor, performing updating. */
     private final CacheEntryProcessor<Integer, Integer, Object> updatingProcessor =
         new CacheEntryProcessor<Integer, Integer, Object>() {
-            @Override
-            public Object process(
+            @Override public Object process(
                     MutableEntry<Integer, Integer> entry,
                     Object... arguments
             ) throws EntryProcessorException {
@@ -208,10 +205,10 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         // Invoke update on cache.
         for (int i = 0; i < KEY_CNT; i++)
             jcache.invoke(i, new CacheEntryProcessor<Object, Object, Object>() {
-                @Override
-                public Object process(MutableEntry<Object, Object> entry,
-                                      Object... arguments) throws EntryProcessorException {
-
+                @Override public Object process(
+                    MutableEntry<Object, Object> entry,
+                    Object... arguments
+                ) throws EntryProcessorException {
                     Object key = entry.getKey();
 
                     entry.setValue(key);
@@ -223,8 +220,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         // Read-only invoke on cache.
         for (int i = 0; i < KEY_CNT; i++)
             jcache.invoke(i, new CacheEntryProcessor<Object, Object, Object>() {
-                @Override
-                public Object process(MutableEntry<Object, Object> entry,
+                @Override public Object process(MutableEntry<Object, Object> entry,
                                       Object... arguments) throws EntryProcessorException {
 
                     entry.getKey();
@@ -236,8 +232,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         // Remove invoke on cache.
         for (int i = 0; i < KEY_CNT; i++)
             jcache.invoke(i, new CacheEntryProcessor<Object, Object, Object>() {
-                @Override
-                public Object process(MutableEntry<Object, Object> entry,
+                @Override public Object process(MutableEntry<Object, Object> entry,
                                       Object... arguments) throws EntryProcessorException {
 
                     entry.remove();
@@ -1262,8 +1257,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         final Integer key = primaryKey(cache0);
 
         cache0.invoke(key, new CacheEntryProcessor<Integer, Integer, Object>() {
-            @Override
-            public Object process(MutableEntry<Integer, Integer> entry,
+            @Override public Object process(MutableEntry<Integer, Integer> entry,
                                   Object... arguments) throws EntryProcessorException {
 
                 entry.setValue(1);
@@ -1289,8 +1283,7 @@ public abstract class GridCacheAbstractMetricsSelfTest extends GridCacheAbstract
         assertEquals(maxTime, minTime, 0.001f);
 
         cache0.invoke(key, new CacheEntryProcessor<Integer, Integer, Object>() {
-            @Override
-            public Object process(MutableEntry<Integer, Integer> entry,
+            @Override public Object process(MutableEntry<Integer, Integer> entry,
                                   Object... arguments) throws EntryProcessorException {
 
                 entry.setValue(1);

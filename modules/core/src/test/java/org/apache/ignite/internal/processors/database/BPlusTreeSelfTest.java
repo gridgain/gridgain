@@ -2860,8 +2860,7 @@ public class BPlusTreeSelfTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override
-        protected int getLockRetries() {
+        @Override protected int getLockRetries() {
             return numRetries;
         }
     }

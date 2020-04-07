@@ -3016,7 +3016,7 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
             assert reserved.get();
 
             for (OrderedMessageContainer mc = msgs.poll(); mc != null; mc = msgs.poll()) {
-                try(TraceSurroundings ignore = support(ctx.tracing().create(
+                try (TraceSurroundings ignore = support(ctx.tracing().create(
                     COMMUNICATION_ORDERED_PROCESS, mc.parentSpan))) {
                     try {
                         OrderedMessageContainer fmc = mc;

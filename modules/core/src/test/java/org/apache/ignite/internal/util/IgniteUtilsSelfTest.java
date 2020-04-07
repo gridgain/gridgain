@@ -1114,8 +1114,7 @@ public class IgniteUtilsSelfTest extends GridCommonAbstractTest {
 
         // Busy one thread from the pool.
         executorService.submit(new Runnable() {
-            @Override
-            public void run() {
+            @Override public void run() {
                 try {
                     poolThreadLatch.await();
                 }

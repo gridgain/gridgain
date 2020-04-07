@@ -194,8 +194,7 @@ public class VisorDrCacheTaskArgs extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         regex = in.readUTF();
         config = in.readBoolean();
         metrics = in.readBoolean();

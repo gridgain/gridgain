@@ -1118,7 +1118,7 @@ public class GridCacheCommandHandler extends GridRestCommandHandlerAdapter {
 
         /** {@inheritDoc} */
         @Override public Collection<GridCacheSqlMetadata> execute() {
-            try{
+            try {
                if (future == null) {
                     if (!ignite.cluster().active())
                         return Collections.emptyList();

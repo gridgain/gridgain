@@ -79,6 +79,7 @@ public class SpanTags {
 
     /** */
     public static final String MESSAGE = "message";
+
     /** */
     public static final String MESSAGE_CLASS = "message.class";
 

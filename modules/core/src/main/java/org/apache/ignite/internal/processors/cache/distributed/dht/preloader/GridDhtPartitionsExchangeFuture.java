@@ -2420,7 +2420,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             span.addTag(SpanTags.ERROR, errf::toString);
         }
 
-
         try {
             waitUntilNewCachesAreRegistered();
 

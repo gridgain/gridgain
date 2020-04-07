@@ -203,8 +203,7 @@ public class VisorDrNodeTaskResult extends IgniteDataTransferObject {
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
+    @Override protected void readExternalData(byte protoVer, ObjectInput in) throws IOException, ClassNotFoundException {
         dataCenterId = in.readByte();
         dataNode = in.readBoolean();
         addresses = in.readUTF();

@@ -102,8 +102,7 @@ public class TestingCluster implements Closeable {
         Iterable<InstanceSpec> transformed = Iterables.transform(
                 servers,
                 new Function<TestingZooKeeperServer, InstanceSpec>() {
-                    @Override
-                    public InstanceSpec apply(TestingZooKeeperServer server) {
+                    @Override public InstanceSpec apply(TestingZooKeeperServer server) {
                         return server.getInstanceSpec();
                     }
                 }

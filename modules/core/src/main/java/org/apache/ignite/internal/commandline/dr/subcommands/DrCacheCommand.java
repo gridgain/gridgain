@@ -165,8 +165,7 @@ public class DrCacheCommand extends
     }
 
     /** {@inheritDoc} */
-    @Override
-    protected VisorDrCacheTaskResult execute0(GridClientConfiguration clientCfg, GridClient client) throws Exception {
+    @Override protected VisorDrCacheTaskResult execute0(GridClientConfiguration clientCfg, GridClient client) throws Exception {
         return execute0(client, arg());
     }
 
