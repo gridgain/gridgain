@@ -24,6 +24,16 @@
 #include <sql.h>
 #include <sqlext.h>
 
+#include <boost/test/unit_test.hpp>
+
+#ifndef BOOST_TEST_CONTEXT
+#   define BOOST_TEST_CONTEXT(...)
+#endif
+
+#ifndef BOOST_TEST_INFO
+#   define BOOST_TEST_INFO(...)
+#endif
+
 #include <string>
 
 #include "ignite/ignite.h"
