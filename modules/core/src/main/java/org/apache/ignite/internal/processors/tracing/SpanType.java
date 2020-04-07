@@ -145,14 +145,25 @@ public enum SpanType {
     /** Affinity calculation. */
     OTHER_AFFINITY_CALCULATION(Scope.AFFINITY, "affinity.calculation", 40);
 
+    /** Scope */
     private Scope scope;
 
+    /** Trace name. */
     private String traceName;
 
+    /** Index. */
     private int idx;
 
+    /** Values. */
     private static final SpanType[] VALS;
 
+    /**
+     * Constructor.
+     *
+     * @param scope Scope.
+     * @param traceName Trace name.
+     * @param idx Index.
+     */
     SpanType(Scope scope, String traceName, int idx) {
         this.scope = scope;
         this.traceName = traceName;
@@ -194,6 +205,10 @@ public enum SpanType {
             VALS[trace.idx] = trace;
     }
 
+    /**
+     * @param idx Index.
+     * @return Enum instance based on specified index.
+     */
     public static SpanType fromIndex(int idx) {
         return idx < 0 || idx >= VALS.length ? null : VALS[idx];
     }
