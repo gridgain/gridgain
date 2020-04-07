@@ -16,12 +16,16 @@
 
 package org.apache.ignite.spi.tracing.opencensus;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import io.opencensus.trace.Annotation;
 import io.opencensus.trace.AttributeValue;
+import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanStatus;
+import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
@@ -34,11 +38,27 @@ public class OpenCensusSpanAdapter implements Span {
     /** Flag indicates that span is ended. */
     private volatile boolean ended;
 
+    private final SpanType trace;
+
+    private final Set<Scope> supportedScopes;
+
     /**
      * @param span OpenCensus span delegate.
      */
-    public OpenCensusSpanAdapter(io.opencensus.trace.Span span) {
+    // TODO: 20.02.20 How to extract scope from opencensus.trace.Span? Should we really do this.
+    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType trace) {
         this.span = span;
+        this.trace = trace;
+        supportedScopes = Collections.emptySet();
+    }
+
+    /**
+     * @param span OpenCensus span delegate.
+     */
+    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType trace, Set<Scope> supportedScopes) {
+        this.span = span;
+        this.trace = trace;
+        this.supportedScopes = supportedScopes;
     }
 
     /** Implementation object. */
@@ -116,5 +136,17 @@ public class OpenCensusSpanAdapter implements Span {
     /** {@inheritDoc} */
     @Override public boolean isEnded() {
         return ended;
+    }
+
+    /** {@inheritDoc} */
+    @Override public SpanType type() {
+        return trace;
+    }
+
+    @Override public Set<Scope> supportedScopes() {
+        if (SpanType.TX_NEAR_PREPARE.equals(trace)){
+            System.out.printf("!!!");
+        }
+        return supportedScopes;
     }
 }

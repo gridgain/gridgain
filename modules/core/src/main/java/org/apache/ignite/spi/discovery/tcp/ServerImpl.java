@@ -4819,7 +4819,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                 TcpDiscoveryNodeAddedMessage nodeAddedMsg = new TcpDiscoveryNodeAddedMessage(locNodeId,
                     node, data, spi.gridStartTime);
 
-                nodeAddedMsg = tracing.messages().branch(nodeAddedMsg, msg);
+                // TODO: 26.02.20 Restore, commented because of java.lang.ClassCastException: org.apache.ignite.internal.processors.tracing.NoopSpan cannot be cast to org.apache.ignite.spi.tracing.opencensus.OpenCensusSpanAdapter
+//                nodeAddedMsg = tracing.messages().branch(nodeAddedMsg, msg);
 
                 nodeAddedMsg.client(msg.client());
 
@@ -5026,7 +5027,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                         addFinishMsg.clientNodeAttributes(node.attributes());
                     }
 
-                    addFinishMsg = tracing.messages().branch(addFinishMsg, msg);
+                    // TODO: 26.02.20 Restore, commented because of java.lang.ClassCastException: org.apache.ignite.internal.processors.tracing.NoopSpan cannot be cast to org.apache.ignite.spi.tracing.opencensus.OpenCensusSpanAdapter
+//                    addFinishMsg = tracing.messages().branch(addFinishMsg, msg);
 
                     addFinishMsg.spanContainer().span()
                         .addTag(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID), node.id().toString())

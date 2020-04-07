@@ -36,13 +36,18 @@ public class NoopTracing implements Tracing {
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull String name, @Nullable Span parentSpan) {
-        return NOOP_SPI.create(name, parentSpan);
+    @Override public Span create(@NotNull SpanType trace, @Nullable Span parentSpan) {
+        return NOOP_SPI.create(trace, parentSpan);
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull String name, @Nullable byte[] serializedSpanBytes) {
-        return NOOP_SPI.create(name, serializedSpanBytes);
+    @Override public Span create(@NotNull SpanType trace, @Nullable byte[] serializedSpan) {
+        return NOOP_SPI.create(trace, serializedSpan);
+    }
+
+    /** {@inheritDoc} */
+    @Override public Span create(@NotNull SpanType trace, @Nullable Span parentSpan, Scope... supportedScopes) {
+        return NOOP_SPI.create(trace, parentSpan, supportedScopes);
     }
 
     /** {@inheritDoc} */

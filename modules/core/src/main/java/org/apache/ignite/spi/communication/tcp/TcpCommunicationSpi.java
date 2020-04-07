@@ -78,6 +78,7 @@ import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.managers.eventstorage.HighPriorityListener;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.NoopTracing;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
 import org.apache.ignite.internal.processors.tracing.Tracing;
@@ -171,9 +172,6 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
-import static org.apache.ignite.internal.processors.tracing.MTC.isTraceable;
-import static org.apache.ignite.internal.processors.tracing.MTC.trace;
-import static org.apache.ignite.internal.processors.tracing.MTC.traceTag;
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
 import static org.apache.ignite.plugin.extensions.communication.Message.DIRECT_TYPE_SIZE;
@@ -797,10 +795,8 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
             }
 
             @Override public void onMessage(final GridNioSession ses, Message msg) {
-                if (isTraceable()) {
-                    trace("Communication received");
-                    traceTag(SpanTags.MESSAGE, traceName(msg));
-                }
+                MTC.span().addLog("Communication received");
+                MTC.span().addTag(SpanTags.MESSAGE, traceName(msg));
 
                 ConnectionKey connKey = ses.meta(CONN_IDX_META);
 
@@ -4101,7 +4097,7 @@ public class TcpCommunicationSpi extends IgniteSpiAdapter implements Communicati
     protected void notifyListener(UUID sndId, Message msg, IgniteRunnable msgC) {
         CommunicationListener<Message> lsnr = this.lsnr;
 
-        trace( "Communication listeners notified");
+        MTC.span().addLog("Communication listeners notified");
 
         if (lsnr != null)
             // Notify listener of a new message.

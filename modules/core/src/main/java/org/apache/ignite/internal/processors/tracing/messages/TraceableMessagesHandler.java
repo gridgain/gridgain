@@ -20,8 +20,6 @@ import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.SpanManager;
 
-import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
-
 /**
  * Helper to handle traceable messages.
  */
@@ -46,17 +44,17 @@ public class TraceableMessagesHandler {
      * from contained serialized span {@link SpanContainer#serializedSpanBytes()}
      *
      * @param msg Traceable message.
-     * @see org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable
      */
     public void afterReceive(TraceableMessage msg) {
         if (log.isDebugEnabled())
             log.debug("Received traceable message: " + msg);
 
-        if (msg.spanContainer().span() == NoopSpan.INSTANCE && msg.spanContainer().serializedSpanBytes() != null)
-            msg.spanContainer().span(
-                spanMgr.create(traceName(msg.getClass()), msg.spanContainer().serializedSpanBytes())
-                    .addLog("Received")
-            );
+        // TODO: 26.02.20 Нахера это нужно? Это только для NoopSpan
+//        if (msg.spanContainer().span() == NoopSpan.INSTANCE && msg.spanContainer().serializedSpanBytes() != null)
+//            msg.spanContainer().span(
+//                spanMgr.deserialize(msg.spanContainer().serializedSpanBytes())
+//                    .addLog("Received")
+//            );
     }
 
     /**
@@ -78,6 +76,7 @@ public class TraceableMessagesHandler {
      * @param <T> Traceable message type.
      * @return Branched message with span context from parent message.
      */
+    // TODO: 19.02.20 Нахера это нужно?
     public <T extends TraceableMessage> T branch(T msg, TraceableMessage parent) {
         assert parent.spanContainer().span() != null : parent;
 
@@ -86,7 +85,7 @@ public class TraceableMessagesHandler {
         );
 
         msg.spanContainer().span(
-            spanMgr.create(traceName(msg.getClass()), parent.spanContainer().span())
+            spanMgr.create(TraceableMessagesTable.traceName(msg.getClass()), parent.spanContainer().span())
                 .addLog("Created")
         );
 
@@ -96,6 +95,7 @@ public class TraceableMessagesHandler {
     /**
      * @param msg Message.
      */
+    // TODO: 19.02.20 Why we end span through TracebleMessagesHandler.
     public void finishProcessing(TraceableMessage msg) {
         if (log.isDebugEnabled())
             log.debug("Processed traceable message: " + msg);

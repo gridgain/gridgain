@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.tracing;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Logical piece of a trace that represents a single operation.
@@ -50,9 +51,9 @@ public interface Span {
      * Adds log to span with additional attributes.
      *
      * @param logDesc Log description.
-     * @param attributes Attributes.
+     * @param attrs Attributes.
      */
-    public Span addLog(String logDesc, Map<String, String> attributes);
+    public Span addLog(String logDesc, Map<String, String> attrs);
     /**
      * Explicitly set status for span.
      *
@@ -67,4 +68,22 @@ public interface Span {
      * @return {@code true} if span has already ended.
      */
     public boolean isEnded();
+
+    /**
+     * @return Type of given span.
+     */
+    public SpanType type();
+
+    /**
+     * @return Set of supported scopes.
+     */
+    public Set<Scope> supportedScopes();
+
+    /**
+     * @param scope Chainable scope candidate.
+     * @return {@code true} if given span is chainable with other spans with specified scope.
+     */
+    public default boolean isChainable(Scope scope) {
+        return type().scope() == scope || supportedScopes().contains(scope);
+    }
 }
