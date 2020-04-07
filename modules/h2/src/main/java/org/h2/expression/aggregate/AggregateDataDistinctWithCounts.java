@@ -25,7 +25,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
     private TreeMap<Value, LongDataCounter> values;
 
-    private long memReserved;
+    private H2MemoryTracker tracker;
 
     /**
      * Creates new instance of data for aggregate that needs distinct values
@@ -57,15 +57,15 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
             a = new LongDataCounter();
             values.put(v, a);
 
-            H2MemoryTracker memTracker;
-            if ((memTracker = ses.memoryTracker()) != null) {
+            if (tracker == null && ses.memoryTracker() != null)
+                tracker = ses.memoryTracker().createChildTracker();
+
+            if (tracker != null) {
                 long size = Constants.MEMORY_OBJECT;
 
                 size += v.getMemory();
 
-                memTracker.reserved(size);
-
-                memReserved += size;
+                tracker.reserve(size);
             }
         }
         a.count++;
@@ -78,7 +78,7 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
     @Override
     public long getMemory() {
-        return memReserved;
+        return tracker.reserved();
     }
 
     @Override
@@ -97,11 +97,10 @@ class AggregateDataDistinctWithCounts extends AggregateData  {
 
     /** {@inheritDoc} */
     @Override public void cleanup(Session ses) {
-        H2MemoryTracker memTracker;
-        if (values != null && (memTracker = ses.memoryTracker()) != null) {
+        if (values != null && tracker != null) {
             values = null;
 
-            memTracker.released(memReserved);
+            tracker.release(tracker.reserved());
         }
     }
 }

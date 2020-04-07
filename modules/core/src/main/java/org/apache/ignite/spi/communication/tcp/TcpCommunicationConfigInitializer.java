@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.configuration.AddressResolver;
+import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
@@ -48,6 +49,7 @@ import org.apache.ignite.spi.communication.tcp.internal.FirstConnectionPolicy;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ADDRS;
+import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_ENVIRONMENT_TYPE;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_EXT_ADDRS;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_HOST_NAMES;
 import static org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi.ATTR_PAIRED_CONN;
@@ -793,7 +795,13 @@ cfg.socketSendBuffer(sockSndBuf);
                 "Specified 'unackedMsgsBufSize' is too low, it should be at least 'ackSndThreshold * 5'.");
         }
 
+        EnvironmentType envType = ignite.configuration().getEnvironmentType();
 
+        if (cfg.usePairedConnections()) {
+            if (envType == EnvironmentType.VIRTUALIZED)
+                throw new IgniteSpiException("Node using paired connections " +
+                    "is not allowed to start in virtualized environment.");
+        }
 
         // Set local node attributes.
         try {
@@ -810,6 +818,7 @@ cfg.socketSendBuffer(sockSndBuf);
             res.put(createSpiAttributeName(ATTR_SHMEM_PORT), cfg.boundTcpShmemPort() >= 0 ? cfg.boundTcpShmemPort() : null);
             res.put(createSpiAttributeName(ATTR_EXT_ADDRS), extAddrs);
             res.put(createSpiAttributeName(ATTR_PAIRED_CONN), cfg.usePairedConnections());
+            res.put(createSpiAttributeName(ATTR_ENVIRONMENT_TYPE), envType.toString());
 
             return res;
         }

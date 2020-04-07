@@ -35,6 +35,7 @@ import org.apache.ignite.internal.IgniteFutureTimeoutCheckedException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
@@ -243,6 +244,7 @@ public class IgnitePersistentStoreDataStructuresTest extends GridCommonAbstractT
     /**
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28395")
     @Test
     public void testLockVolatility() throws Exception {
         Ignite ignite = startGrids(4);
@@ -267,6 +269,7 @@ public class IgnitePersistentStoreDataStructuresTest extends GridCommonAbstractT
     /**
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28395")
     @Test
     public void testSemaphoreVolatility() throws Exception {
         Ignite ignite = startGrids(4);
@@ -291,6 +294,7 @@ public class IgnitePersistentStoreDataStructuresTest extends GridCommonAbstractT
     /**
      * @throws Exception If failed.
      */
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28395")
     @Test
     public void testLatchVolatility() throws Exception {
         Ignite ignite = startGrids(4);

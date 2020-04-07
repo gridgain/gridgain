@@ -19,12 +19,15 @@ package org.apache.ignite.spi.communication.tcp.internal;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.SocketChannel;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Function;
@@ -35,12 +38,14 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.tracing.Tracing;
 import org.apache.ignite.internal.util.GridConcurrentFactory;
 import org.apache.ignite.internal.util.IgniteExceptionRegistry;
+import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridConnectionBytesVerifyFilter;
 import org.apache.ignite.internal.util.nio.GridDirectParser;
@@ -79,6 +84,7 @@ import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeMessage2;
 import org.apache.ignite.spi.communication.tcp.messages.NodeIdMessage;
 import org.apache.ignite.spi.communication.tcp.messages.RecoveryLastReceivedMessage;
+import org.apache.ignite.spi.discovery.IgniteDiscoveryThread;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.util.nio.GridNioSessionMetaKey.SSL_META;
@@ -180,6 +186,9 @@ public class GridNioServerWrapper {
 
     /** Stopping flag (set to {@code true} when SPI gets stopping signal). */
     private volatile boolean stopping = false;
+
+    /** Client pool for client futures. */
+    private ConnectionClientPool clientPool;
 
     /**
      * @param log Logger.
@@ -290,6 +299,19 @@ public class GridNioServerWrapper {
      * @throws IgniteCheckedException If establish connection fails.
      */
     public GridNioSession createNioSession(ClusterNode node, int connIdx) throws IgniteCheckedException {
+        boolean locNodeIsSrv = !locNodeSupplier.get().isClient() && !locNodeSupplier.get().isDaemon();
+
+        if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
+            if (node.isClient() && startedInVirtualizedEnvironment(node)) {
+                String msg = "Failed to connect to node " + node.id() +
+                    " because it is started n virtualized environment; inverse connection will be requested.";
+
+                GridFutureAdapter<?> fut = clientPool.getFut(new ConnectionKey(node.id(), connIdx, -1));
+
+                throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
+            }
+        }
+
         Collection<InetSocketAddress> addrs = nodeAddresses(node, cfg.filterReachableAddresses(), attrs, locNodeSupplier);
 
         GridNioSession ses = null;
@@ -307,9 +329,15 @@ public class GridNioServerWrapper {
             );
         }
 
+        Set<InetSocketAddress> failedAddrsSet = new HashSet<>();
+        int skippedAddrs = 0;
+
         for (InetSocketAddress addr : addrs) {
-            if (addr.isUnresolved())
+            if (addr.isUnresolved()) {
+                failedAddrsSet.add(addr);
+
                 continue;
+            }
 
             TimeoutStrategy connTimeoutStgy = new ExponentialBackoffTimeoutStrategy(
                 totalTimeout,
@@ -326,6 +354,9 @@ public class GridNioServerWrapper {
                         log.debug("Skipping local address [addr=" + addr +
                             ", locAddrs=" + node.attribute(attrs.addresses()) +
                             ", node=" + node + ']');
+
+                    skippedAddrs++;
+
                     break;
                 }
 
@@ -538,6 +569,10 @@ public class GridNioServerWrapper {
                         break;
                     }
 
+                    // Inverse communication protocol works only for client nodes.
+                    if (node.isClient() && isNodeUnreachableException(e))
+                        failedAddrsSet.add(addr);
+
                     if (isRecoverableException(e))
                         U.sleep(DFLT_RECONNECT_DELAY);
                     else {
@@ -568,10 +603,42 @@ public class GridNioServerWrapper {
                 break;
         }
 
-        if (ses == null)
+        if (ses == null) {
+            if (!(Thread.currentThread() instanceof IgniteDiscoveryThread) && locNodeIsSrv) {
+                if (node.isClient() && (addrs.size() - skippedAddrs == failedAddrsSet.size())) {
+                    String msg = "Failed to connect to all addresses of node " + node.id() + ": " + failedAddrsSet +
+                        "; inverse connection will be requested.";
+
+                    GridFutureAdapter<?> fut = clientPool.getFut(new ConnectionKey(node.id(), connIdx, -1));
+
+                    throw new NodeUnreachableException(msg, null, node.id(), connIdx, fut);
+                }
+            }
+
             processSessionCreationError(node, addrs, errs == null ? new IgniteCheckedException("No session found") : errs);
+        }
 
         return ses;
+    }
+
+    /**
+     * Checks if exception indicates that client is unreachable.
+     *
+     * @param e Exception to check.
+     * @return {@code True} if exception shows that client is unreachable, {@code false} otherwise.
+     */
+    private boolean isNodeUnreachableException(Exception e) {
+        return e instanceof SocketTimeoutException;
+    }
+
+    /**
+     * @param node Node.
+     * @return {@code True} if remote node is
+     */
+    private boolean startedInVirtualizedEnvironment(ClusterNode node) {
+        String envType = node.attribute(attrs.environmentType());
+
+        return EnvironmentType.VIRTUALIZED.toString().equals(envType);
     }
 
     /**
@@ -1011,7 +1078,7 @@ public class GridNioServerWrapper {
                 }
             }
 
-            UUID rmtNodeId0 = U.bytesToUuid(buf.array(), Message.DIRECT_TYPE_SIZE);
+            UUID rmtNodeId0 = U.bytesToUuid(buf.array(), DIRECT_TYPE_SIZE);
 
             if (!rmtNodeId.equals(rmtNodeId0))
                 throw new HandshakeException("Remote node ID is not as expected [expected=" + rmtNodeId +
@@ -1082,7 +1149,7 @@ public class GridNioServerWrapper {
 
                 decode.flip();
 
-                rcvCnt = decode.getLong(Message.DIRECT_TYPE_SIZE);
+                rcvCnt = decode.getLong(DIRECT_TYPE_SIZE);
 
                 if (decode.limit() > RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE) {
                     decode.position(RecoveryLastReceivedMessage.MESSAGE_FULL_SIZE);
@@ -1110,7 +1177,7 @@ public class GridNioServerWrapper {
                     i += read;
                 }
 
-                rcvCnt = buf.getLong(Message.DIRECT_TYPE_SIZE);
+                rcvCnt = buf.getLong(DIRECT_TYPE_SIZE);
             }
 
             if (log.isDebugEnabled())
@@ -1210,5 +1277,12 @@ public class GridNioServerWrapper {
      */
     public void communicationWorker(CommunicationWorker commWorker) {
         this.commWorker = commWorker;
+    }
+
+    /**
+     * @param pool Client pool.
+     */
+    public void clientPool(ConnectionClientPool pool) {
+        clientPool = pool;
     }
 }

@@ -33,6 +33,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.AddressResolver;
+import org.apache.ignite.configuration.EnvironmentType;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
@@ -84,6 +85,7 @@ import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.RoundRobinConnectionPolicy;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationConnectionCheckFuture;
 import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationSpiMBeanImpl;
+import org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage;
 import org.apache.ignite.spi.communication.tcp.internal.TimeObjectProcessorWrapper;
 import org.apache.ignite.spi.communication.tcp.internal.shmem.ShmemAcceptWorker;
 import org.apache.ignite.thread.IgniteThread;
@@ -94,6 +96,7 @@ import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
 import static org.apache.ignite.internal.processors.tracing.MTC.trace;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.NOOP;
+import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
 
 /**
  * <tt>TcpCommunicationSpi</tt> is default communication SPI which uses
@@ -216,6 +219,9 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
 
     /** Attr paired connection. */
     public static final String ATTR_PAIRED_CONN = "comm.tcp.pairedConnection";
+
+    /** Attribute with information of {@link EnvironmentType environment} local node is started in. */
+    public static final String ATTR_ENVIRONMENT_TYPE = "comm.environment.type";
 
     /** Default port which node sets listener to (value is <tt>47100</tt>). */
     public static final int DFLT_PORT = 47100;
@@ -619,8 +625,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             createSpiAttributeName(ATTR_ADDRS),
             createSpiAttributeName(ATTR_HOST_NAMES),
             createSpiAttributeName(ATTR_EXT_ADDRS),
-            createSpiAttributeName(ATTR_PORT)
-        );
+            createSpiAttributeName(ATTR_PORT),
+            createSpiAttributeName(ATTR_ENVIRONMENT_TYPE));
 
         boolean client = Boolean.TRUE.equals(ignite().configuration().isClientMode());
 
@@ -706,7 +712,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             nioSrvWrapper
         );
 
-        this.srvLsnr.setClientPool(clientPool);
+        srvLsnr.setClientPool(clientPool);
+        nioSrvWrapper.clientPool(clientPool);
 
         discoLsnr = new DiscoveryListener(clientPool, metricsLsnr);
 
@@ -1066,7 +1073,15 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         else {
             GridCommunicationClient client = null;
 
-            int connIdx = connPlc.connectionIndex();
+            int connIdx;
+
+            if (msg instanceof TcpConnectionIndexAwareMessage) {
+                int msgConnIdx = ((TcpConnectionIndexAwareMessage)msg).connectionIndex();
+
+                connIdx = msgConnIdx == UNDEFINED_CONNECTION_INDEX ? connPlc.connectionIndex() : msgConnIdx;
+            }
+            else
+                connIdx = connPlc.connectionIndex();
 
             try {
                 boolean retry;

@@ -229,6 +229,9 @@ public class ConnectionClientPool {
                         fut.onDone(client0);
                     }
                     catch (Throwable e) {
+                        if (e instanceof NodeUnreachableException)
+                            throw e;
+
                         fut.onDone(e);
 
                         if (e instanceof Error)
@@ -369,12 +372,12 @@ public class ConnectionClientPool {
         if (client == null) {
             assert node != null;
 
-            StringJoiner joiner = new StringJoiner(", ");
+            StringJoiner joiner = new StringJoiner(", ", "null, node addrs=[", "]");
 
             for (InetSocketAddress addr : nodeAddresses(node, cfg.filterReachableAddresses(), attrs, locNodeSupplier))
                 joiner.add(addr.toString());
 
-            return "null, node addrs=[" + joiner.toString() + "]";
+            return joiner.toString();
         }
         else
             return client.toString();
@@ -508,7 +511,7 @@ public class ConnectionClientPool {
                     break;
             }
             else {
-                newClients = Arrays.copyOf(curClients, curClients.length);
+                newClients = curClients.clone();
                 newClients[connIdx] = addClient;
 
                 if (clients.replace(node.id(), curClients, newClients))
@@ -577,6 +580,13 @@ public class ConnectionClientPool {
      */
     public void removeFut(ConnectionKey connKey, GridFutureAdapter<GridCommunicationClient> fut) {
         clientFuts.remove(connKey, fut);
+    }
+
+    /**
+     * @param connKey Connection key.
+     */
+    public GridFutureAdapter<GridCommunicationClient> getFut(ConnectionKey connKey) {
+        return clientFuts.get(connKey);
     }
 
     /**

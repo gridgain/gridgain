@@ -125,8 +125,8 @@ public class GridReduceQueryExecutor {
     /** */
     private IgniteLogger log;
 
-    /** */
-    private final AtomicLong qryIdGen = new AtomicLong();
+    /** Generator of ids for query requests. */
+    private final AtomicLong qryReqIdGen = new AtomicLong();
 
     /** */
     private final ConcurrentMap<Long, ReduceQueryRun> runs = new ConcurrentHashMap<>();
@@ -151,7 +151,7 @@ public class GridReduceQueryExecutor {
     };
 
     /** Default query timeout. */
-    private final long dfltQueryTimeout = IgniteSystemProperties.getLong(IGNITE_SQL_RETRY_TIMEOUT, DFLT_RETRY_TIMEOUT);
+    private final long dfltQryTimeout = IgniteSystemProperties.getLong(IGNITE_SQL_RETRY_TIMEOUT, DFLT_RETRY_TIMEOUT);
 
     /** Partition mapper. */
     private ReducePartitionMapper mapper;
@@ -334,8 +334,8 @@ public class GridReduceQueryExecutor {
      * @param maxMem Query memory limit.
      * @return Rows iterator.
      */
-    @SuppressWarnings({"BusyWait", "IfMayBeConditional"})
     public Iterator<List<?>> query(
+        @Nullable final Long qryId,
         String schemaName,
         final GridCacheTwoStepQuery qry,
         boolean keepBinary,
@@ -382,7 +382,7 @@ public class GridReduceQueryExecutor {
 
         final boolean skipMergeTbl = !qry.explain() && qry.skipMergeTable() || singlePartMode;
 
-        final int segmentsPerIndex = qry.explain() || qry.isReplicatedOnly() ? 1 :
+        final int segmentsPerIdx = qry.explain() || qry.isReplicatedOnly() ? 1 :
             mapper.findFirstPartitioned(cacheIds).config().getQueryParallelism();
 
         final long retryTimeout = retryTimeout(timeoutMillis);
@@ -418,19 +418,19 @@ public class GridReduceQueryExecutor {
 
             H2PooledConnection conn = h2.connections().connection(schemaName);
 
-            final long qryReqId = qryIdGen.incrementAndGet();
+            final long qryReqId = qryReqIdGen.incrementAndGet();
 
             boolean retry = false;
             boolean release = true;
 
             try {
                 final ReduceQueryRun r = createReduceQueryRun(conn, mapQueries, nodes,
-                    pageSize, segmentsPerIndex, skipMergeTbl, qry.explain(), dataPageScanEnabled);
+                    pageSize, segmentsPerIdx, skipMergeTbl, qry.explain(), dataPageScanEnabled);
 
                 runs.put(qryReqId, r);
 
                 try {
-                    cancel.set(() -> send(nodes, new GridQueryCancelRequest(qryReqId), null, true));
+                    cancel.add(() -> send(nodes, new GridQueryCancelRequest(qryReqId), null, true));
 
                     GridH2QueryRequest req = new GridH2QueryRequest()
                         .requestId(qryReqId)
@@ -444,7 +444,8 @@ public class GridReduceQueryExecutor {
                         .flags(queryFlags(qry, enforceJoinOrder, lazy, dataPageScanEnabled))
                         .timeout(timeoutMillis)
                         .schemaName(schemaName)
-                        .maxMemory(maxMem);
+                        .maxMemory(maxMem)
+                        .runningQryId(qryId);
 
                     if (mvccTracker != null)
                         req.mvccSnapshot(mvccTracker.snapshot());
@@ -481,8 +482,6 @@ public class GridReduceQueryExecutor {
                     if (retry) {
                         lastRun = runs.remove(qryReqId);
                         assert lastRun != null;
-
-                        continue;
                     } else {
                         Iterator<List<?>> resIter;
 
@@ -520,7 +519,7 @@ public class GridReduceQueryExecutor {
 
                             H2Utils.bindParameters(stmt, F.asList(rdc.parameters(params)));
 
-                            ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId);
+                            ReduceH2QueryInfo qryInfo = new ReduceH2QueryInfo(stmt, qry.originalSql(), qryReqId, qryId);
 
                             ResultSet res = h2.executeSqlQueryWithTimer(stmt, conn,
                                 rdc.query(),
@@ -662,12 +661,12 @@ public class GridReduceQueryExecutor {
 
                 // Copy queries here because node ID will be changed below.
                 for (GridCacheSqlQuery mapQry : qry.mapQueries()) {
-                    final GridCacheSqlQuery copy = mapQry.copy();
+                    final GridCacheSqlQuery cp = mapQry.copy();
 
-                    mapQueries.add(copy);
+                    mapQueries.add(cp);
 
                     if (qry.explain())
-                        copy.query("EXPLAIN " + mapQry.query()).parameterIndexes(mapQry.parameterIndexes());
+                        cp.query("EXPLAIN " + mapQry.query()).parameterIndexes(mapQry.parameterIndexes());
                 }
             }
         }
@@ -681,7 +680,7 @@ public class GridReduceQueryExecutor {
      * @param mapQueries Map queries.
      * @param nodes Target nodes.
      * @param pageSize Page size.
-     * @param segmentsPerIndex Segments per-index.
+     * @param segmentsPerIdx Segments per-index.
      * @param skipMergeTbl Skip merge table flag.
      * @param explain Explain query flag.
      * @param dataPageScanEnabled DataPage scan enabled flag.
@@ -692,7 +691,7 @@ public class GridReduceQueryExecutor {
         List<GridCacheSqlQuery> mapQueries,
         Collection<ClusterNode> nodes,
         int pageSize,
-        int segmentsPerIndex,
+        int segmentsPerIdx,
         boolean skipMergeTbl,
         boolean explain,
         Boolean dataPageScanEnabled) {
@@ -736,14 +735,14 @@ public class GridReduceQueryExecutor {
                 reducer.setSources(singletonList(node), 1); // Replicated tables can have only 1 segment.
             }
             else
-                reducer.setSources(nodes, segmentsPerIndex);
+                reducer.setSources(nodes, segmentsPerIdx);
 
             reducer.setPageSize(r.pageSize());
 
             r.reducers().add(reducer);
         }
 
-        r.init( (r.reducers().size() - replicatedQrysCnt) * nodes.size() * segmentsPerIndex + replicatedQrysCnt);
+        r.init( (r.reducers().size() - replicatedQrysCnt) * nodes.size() * segmentsPerIdx + replicatedQrysCnt);
 
         return r;
     }
@@ -772,7 +771,7 @@ public class GridReduceQueryExecutor {
      * @param parts Partitions.
      * @param cacheIds Cache ids.
      * @param topVer Topology version.
-     * @return
+     * @return Mapping of cluster node to partitions.
      */
     private ReducePartitionMapResult createMapping(GridCacheTwoStepQuery qry,
         @Nullable int[] parts,
@@ -864,7 +863,7 @@ public class GridReduceQueryExecutor {
             }
         }
 
-        final long reqId = qryIdGen.incrementAndGet();
+        final long reqId = qryReqIdGen.incrementAndGet();
 
         final DmlDistributedUpdateRun r = new DmlDistributedUpdateRun(nodes.size());
 
@@ -897,7 +896,7 @@ public class GridReduceQueryExecutor {
 
             final Collection<ClusterNode> finalNodes = nodes;
 
-            cancel.set(() -> {
+            cancel.add(() -> {
                 r.future().onCancelled();
 
                 send(finalNodes, new GridQueryCancelRequest(reqId), null, true);
@@ -1056,14 +1055,16 @@ public class GridReduceQueryExecutor {
         List<List<?>> lists = new ArrayList<>(qry.mapQueries().size() + 1);
 
         for (int i = 0, mapQrys = qry.mapQueries().size(); i < mapQrys; i++) {
-            ResultSet rs = h2.executeSqlQueryWithTimer(c,
+            ResultSet rs = h2.executeSqlQueryWithTimer(
+                c,
                 "SELECT PLAN FROM " + mergeTableIdentifier(i),
                 null,
                 0,
                 null,
                 null,
                 null,
-                0);
+                0
+            );
 
             lists.add(F.asList(getPlan(rs)));
         }
@@ -1078,16 +1079,16 @@ public class GridReduceQueryExecutor {
 
         GridCacheSqlQuery rdc = qry.reduceQuery();
 
-
-
-        ResultSet rs = h2.executeSqlQueryWithTimer(c,
+        ResultSet rs = h2.executeSqlQueryWithTimer(
+            c,
             "EXPLAIN " + rdc.query(),
             F.asList(rdc.parameters(params)),
             0,
             null,
             null,
             null,
-            0);
+            0
+        );
 
         lists.add(F.asList(getPlan(rs)));
 
@@ -1176,7 +1177,6 @@ public class GridReduceQueryExecutor {
      * @return Table.
      * @throws IgniteCheckedException If failed.
      */
-    @SuppressWarnings("unchecked")
     private ReduceTable createMergeTable(H2PooledConnection conn, GridCacheSqlQuery qry, boolean explain)
         throws IgniteCheckedException {
         try {
@@ -1220,7 +1220,7 @@ public class GridReduceQueryExecutor {
             else
                 data.columns = planColumns();
 
-            boolean sortedIndex = !F.isEmpty(qry.sortColumns());
+            boolean sortedIdx = !F.isEmpty(qry.sortColumns());
 
             ReduceTable tbl = new ReduceTable(data);
 
@@ -1228,9 +1228,9 @@ public class GridReduceQueryExecutor {
 
             if (explain) {
                 idxs.add(new UnsortedReduceIndexAdapter(ctx, tbl,
-                    sortedIndex ? MERGE_INDEX_SORTED : MERGE_INDEX_UNSORTED));
+                    sortedIdx ? MERGE_INDEX_SORTED : MERGE_INDEX_UNSORTED));
             }
-            else if (sortedIndex) {
+            else if (sortedIdx) {
                 List<GridSqlSortColumn> sortCols = (List<GridSqlSortColumn>)qry.sortColumns();
 
                 SortedReduceIndexAdapter sortedMergeIdx = new SortedReduceIndexAdapter(ctx, tbl, MERGE_INDEX_SORTED,
@@ -1284,7 +1284,7 @@ public class GridReduceQueryExecutor {
         if (qryTimeout > 0)
             return qryTimeout;
 
-        return dfltQueryTimeout;
+        return dfltQryTimeout;
     }
 
     /**

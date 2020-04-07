@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -185,23 +186,24 @@ public class CacheGroupMetricsImpl {
         this.idxBuildCntPartitionsLeft.value(idxBuildCntPartitionsLeft);
     }
 
-    /**
-     * Decrement number of partitions need processed for finished indexes create or rebuilding.
-     */
+    /** Decrement number of partitions need processed for finished indexes create or rebuilding. */
     public void decrementIndexBuildCountPartitionsLeft() {
         idxBuildCntPartitionsLeft.decrement();
     }
-
     /**
-     * Increments number of local partitions initialized on current node.
+     * Add number of partitions before processed indexes create or rebuilding.
+     * @param partitions Count partition for add.
      */
+    public void addIndexBuildCountPartitionsLeft(long partitions) {
+        idxBuildCntPartitionsLeft.add(partitions);
+    }
+
+    /** Increments number of local partitions initialized on current node. */
     public void incrementInitializedLocalPartitions() {
         initLocalPartitionsNumber.increment();
     }
 
-    /**
-     * Decrements number of local partitions initialized on current node.
-     */
+    /** Decrements number of local partitions initialized on current node. */
     public void decrementInitializedLocalPartitions() {
         initLocalPartitionsNumber.decrement();
     }
@@ -244,7 +246,7 @@ public class CacheGroupMetricsImpl {
      *
      * @param pred Predicate.
      */
-    private int numberOfPartitionCopies(IntBiPredicate pred) {
+    private int numberOfPartitionCopies(boolean loc, BiFunction<Integer, Integer, Integer> conv) {
         GridDhtPartitionFullMap partFullMap = ctx.topology().partitionMap(false);
 
         if (partFullMap == null)
@@ -255,6 +257,10 @@ public class CacheGroupMetricsImpl {
         int res = -1;
 
         for (int part = 0; part < parts; part++) {
+            if (loc && (ctx.topology().localPartition(part) == null ||
+                ctx.topology().localPartition(part).state() != GridDhtPartitionState.OWNING))
+                continue;
+
             int cnt = 0;
 
             for (Map.Entry<UUID, GridDhtPartitionMap> entry : partFullMap.entrySet()) {
@@ -262,8 +268,10 @@ public class CacheGroupMetricsImpl {
                     cnt++;
             }
 
-            if (part == 0 || pred.apply(res, cnt))
+            if (res == -1)
                 res = cnt;
+
+            res = conv.apply(res, cnt);
         }
 
         return res;
@@ -271,20 +279,17 @@ public class CacheGroupMetricsImpl {
 
     /** */
     public int getMinimumNumberOfPartitionCopies() {
-        return numberOfPartitionCopies(new IntBiPredicate() {
-            @Override public boolean apply(int targetVal, int nextVal) {
-                return nextVal < targetVal;
-            }
-        });
+        return numberOfPartitionCopies(false, Math::min);
     }
 
     /** */
     public int getMaximumNumberOfPartitionCopies() {
-        return numberOfPartitionCopies(new IntBiPredicate() {
-            @Override public boolean apply(int targetVal, int nextVal) {
-                return nextVal > targetVal;
-            }
-        });
+        return numberOfPartitionCopies(false, Math::max);
+    }
+
+    /** */
+    public int getLocalNodeMinimumNumberOfPartitionCopies() {
+        return numberOfPartitionCopies(true, Math::min);
     }
 
     /**

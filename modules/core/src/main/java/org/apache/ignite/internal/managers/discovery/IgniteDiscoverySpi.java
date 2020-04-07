@@ -33,6 +33,12 @@ public interface IgniteDiscoverySpi extends DiscoverySpi {
     IgnitePredicate<ClusterNode> ALL_NODES = node -> true;
 
     /**
+     * Predicate to filter server nodes. Might be used in
+     * {@link IgniteDiscoverySpi#allNodesSupport(IgniteFeatures, IgnitePredicate)}.
+     */
+    IgnitePredicate<ClusterNode> SRV_NODES = node -> !node.isClient() && !node.isDaemon();
+
+    /**
      * @param nodeId Node ID.
      * @return {@code True} if node joining or already joined topology.
      */

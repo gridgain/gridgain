@@ -113,6 +113,7 @@ import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateFinishMess
 import org.apache.ignite.internal.processors.cluster.ChangeGlobalStateMessage;
 import org.apache.ignite.internal.processors.cluster.DiscoveryDataClusterState;
 import org.apache.ignite.internal.processors.datastructures.DataStructuresProcessor;
+import org.apache.ignite.internal.processors.platform.cache.PlatformCacheManager;
 import org.apache.ignite.internal.processors.plugin.CachePluginManager;
 import org.apache.ignite.internal.processors.query.QuerySchema;
 import org.apache.ignite.internal.processors.query.QuerySchemaPatch;
@@ -1352,6 +1353,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
         CacheConflictResolutionManager rslvrMgr = pluginMgr.createComponent(CacheConflictResolutionManager.class);
         GridCacheDrManager drMgr = pluginMgr.createComponent(GridCacheDrManager.class);
         CacheStoreManager storeMgr = pluginMgr.createComponent(CacheStoreManager.class);
+        PlatformCacheManager platformMgr = ctx.platform().cacheManager();
 
         if (cfgStore == null)
             storeMgr.initialize(cfgStore, sesHolders);
@@ -1388,7 +1390,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             drMgr,
             rslvrMgr,
             pluginMgr,
-            affMgr
+            affMgr,
+            platformMgr
         );
 
         cacheCtx.cacheObjectContext(cacheObjCtx);
@@ -1491,6 +1494,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
              * 5. CacheContinuousQueryManager (note, that we start it for DHT cache though).
              * 6. GridCacheDgcManager
              * 7. GridCacheTtlManager.
+             * 8. PlatformCacheManager.
              * ===============================================
              */
             evictMgr = cfg.isOnheapCacheEnabled() ? new GridCacheEvictionManager() : new CacheOffheapEvictionManager();
@@ -1525,7 +1529,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 drMgr,
                 rslvrMgr,
                 pluginMgr,
-                affMgr
+                affMgr,
+                platformMgr
             );
 
             cacheCtx.cacheObjectContext(cacheObjCtx);

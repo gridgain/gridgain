@@ -38,6 +38,7 @@ import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheContext;
+import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.typedef.F;
@@ -132,11 +133,7 @@ public class QueryActionsController {
 
                 SqlFieldsQuery qry = prepareQuery(arg);
 
-                GridCacheContext cctx = F.isEmpty(arg.getCacheName())
-                        ? null
-                        : ctx.cache().cache(arg.getCacheName()).context();
-
-                for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(cctx, qry, null, true, false, qryHolder.cancelHook())) {
+                for (FieldsQueryCursor<List<?>> cur : qryProc.querySqlFields(null, qry, null, true, false, qryHolder.cancelHook())) {
                     CursorHolder cursorHolder = new CursorHolder(cur);
 
                     QueryResult res = fetchSqlQueryResult(cursorHolder, arg.getPageSize());

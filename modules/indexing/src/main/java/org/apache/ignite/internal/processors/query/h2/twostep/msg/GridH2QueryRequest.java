@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.cache.mvcc.MvccSnapshot;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryMarshallable;
 import org.apache.ignite.internal.processors.cache.query.GridCacheSqlQuery;
 import org.apache.ignite.internal.processors.cache.query.QueryTable;
+import org.apache.ignite.internal.processors.query.RunningQueryManager;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -162,6 +163,10 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
     /** Memory available for query. */
     private long maxMem;
 
+    /** Id of the query assigned by {@link RunningQueryManager}. */
+    @GridDirectTransient
+    private Long runningQryId;
+
     /**
      * Required by {@link Externalizable}
      */
@@ -189,6 +194,7 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
         mvccSnapshot = req.mvccSnapshot;
         txReq = req.txReq;
         maxMem = req.maxMem;
+        runningQryId = req.runningQryId;
     }
 
     /**
@@ -499,6 +505,27 @@ public class GridH2QueryRequest implements Message, GridCacheQueryMarshallable {
      */
     public GridH2QueryRequest maxMemory(long maxMem) {
         this.maxMem = maxMem;
+
+        return this;
+    }
+
+    /**
+     * Id of the query assigned by {@link RunningQueryManager}.
+     *
+     * @return Running query id.
+     */
+    public Long runningQryId() {
+        return runningQryId;
+    }
+
+    /**
+     * Sets id of the query assigned by {@link RunningQueryManager}.
+     *
+     * @param runningQryId Running query id.
+     * @return {@code this} for chaining.
+     */
+    public GridH2QueryRequest runningQryId(Long runningQryId) {
+        this.runningQryId = runningQryId;
 
         return this;
     }

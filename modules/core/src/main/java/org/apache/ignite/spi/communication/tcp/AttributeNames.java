@@ -41,6 +41,9 @@ public class AttributeNames {
     /** Port. */
     private final String port;
 
+    /** */
+    private final String environmentType;
+
     /**
      * @param pairedConn Paired connection.
      * @param shmemPort Shmem port.
@@ -48,6 +51,7 @@ public class AttributeNames {
      * @param hostNames Host names.
      * @param extAttrs Externalizable attributes.
      * @param port Port.
+     * @param environmentType Environment type.
      */
     public AttributeNames(
         String pairedConn,
@@ -55,14 +59,15 @@ public class AttributeNames {
         String addrs,
         String hostNames,
         String extAttrs,
-        String port
-    ) {
+        String port,
+        String environmentType) {
         this.pairedConn = pairedConn;
         this.shmemPort = shmemPort;
         this.addrs = addrs;
         this.hostNames = hostNames;
         this.extAttrs = extAttrs;
         this.port = port;
+        this.environmentType = environmentType;
     }
 
     /**
@@ -105,5 +110,12 @@ public class AttributeNames {
      */
     public String port() {
         return port;
+    }
+
+    /**
+     * @return Environment type.
+     */
+    public String environmentType() {
+        return environmentType;
     }
 }

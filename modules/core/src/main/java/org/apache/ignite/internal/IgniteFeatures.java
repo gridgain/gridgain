@@ -17,11 +17,16 @@
 package org.apache.ignite.internal;
 
 import java.util.BitSet;
+import java.util.Collection;
 import org.apache.ignite.cluster.ClusterNode;
+import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
+import org.apache.ignite.spi.discovery.DiscoverySpi;
 
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
@@ -115,6 +120,9 @@ public enum IgniteFeatures {
     /** */
     MANAGEMENT_CONSOLE(28),
 
+    /** Cluster has task to clear sender store. */
+    WC_DR_CLEAR_SENDER_STORE(29),
+
     /** Distributed change timeout for dump long operations. */
     DISTRIBUTED_CHANGE_LONG_OPERATIONS_DUMP_TIMEOUT(30),
 
@@ -122,7 +130,10 @@ public enum IgniteFeatures {
     WC_GET_CACHE_VALUE(31),
 
     /** Partition reconciliation utility. */
-    PARTITION_RECONCILIATION(34);
+    PARTITION_RECONCILIATION(34),
+
+    /** Inverse connection: sending a request over discovery to establish a communication connection. */
+    INVERSE_TCP_CONNECTION(35);
 
     /**
      * Unique feature identifier.
@@ -208,6 +219,26 @@ public enum IgniteFeatures {
         }
 
         return true;
+    }
+
+    /**
+     * Check that feature is supported by all nodes passing the provided predicate.
+     *
+     * @param ctx Kernal context.
+     * @param feature Feature to check.
+     * @param pred Predicate to filter out nodes that should not be checked for feature support.
+     * @return {@code True} if all nodes passed the predicate support the feature.
+     */
+    public static boolean allNodesSupport(GridKernalContext ctx, IgniteFeatures feature, IgnitePredicate<ClusterNode> pred) {
+        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
+
+        if (discoSpi instanceof IgniteDiscoverySpi)
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature, pred);
+        else {
+            Collection<ClusterNode> nodes = F.view(discoSpi.getRemoteNodes(), pred);
+
+            return allNodesSupports(ctx, nodes, feature);
+        }
     }
 
     /**

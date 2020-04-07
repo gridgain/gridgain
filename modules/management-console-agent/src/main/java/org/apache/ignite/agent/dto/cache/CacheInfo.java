@@ -23,7 +23,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
  */
 public class CacheInfo {
     /** Cache name. */
-    private String name;
+    private String cacheName;
 
     /** Cache ID. */
     private int cacheId;
@@ -32,7 +32,7 @@ public class CacheInfo {
     private boolean createdBySql;
 
     /** Cache group. */
-    private String grp;
+    private String cacheGroup;
 
     /** System cache. */
     private boolean sysCache;
@@ -40,16 +40,16 @@ public class CacheInfo {
     /**
      * @return Cache name.
      */
-    public String getName() {
-        return name;
+    public String getCacheName() {
+        return cacheName;
     }
 
     /**
-     * @param name Name.
+     * @param cacheName Name.
      * @return {@code This} for chaining method calls.
      */
-    public CacheInfo setName(String name) {
-        this.name = name;
+    public CacheInfo setCacheName(String cacheName) {
+        this.cacheName = cacheName;
 
         return this;
     }
@@ -74,8 +74,18 @@ public class CacheInfo {
     /**
      * @return Cache group.
      */
-    public String getGroup() {
-        return grp;
+    public String getCacheGroup() {
+        return cacheGroup;
+    }
+
+    /**
+     * @param cacheGroup Group.
+     * @return {@code This} for chaining method calls.
+     */
+    public CacheInfo setCacheGroup(String cacheGroup) {
+        this.cacheGroup = cacheGroup;
+
+        return this;
     }
 
     /**
@@ -95,16 +105,6 @@ public class CacheInfo {
         return this;
     }
 
-    /**
-     * @param grp Group.
-     * @return {@code This} for chaining method calls.
-     */
-    public CacheInfo setGroup(String grp) {
-        this.grp = grp;
-
-        return this;
-    }
-    
     /**
      * @return {@code True} if system cache.
      */

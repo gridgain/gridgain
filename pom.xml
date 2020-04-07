@@ -106,6 +106,7 @@
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
                 <module>examples</module>
+                <module>examples-ml</module>
                 <module>modules/benchmarks</module>
                 <module>modules/compatibility</module>
                 <module>modules/geospatial</module>
@@ -390,73 +391,73 @@
                                         <replaceregexp byline="true">
                                             <regexp pattern="pushd &quot;%~dp0&quot;/\.\./\.\.(\s*&amp;::.+)?" />
                                             <substitution expression="pushd &quot;%~dp0&quot;/.." />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="IGNITE_HOME_TMP=&quot;\$\(dirname &quot;\$\{IGNITE_HOME_TMP\}&quot;\)&quot;(\s*#.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="set SCRIPTS_HOME=%IGNITE_HOME%\\bin(\s*&amp;::.*)?" />
                                             <substitution expression="set SCRIPTS_HOME=%IGNITE_HOME%\\\\bin" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="SCRIPTS_HOME=&quot;\$\{IGNITE_HOME_TMP\}/bin&quot;(\s*#.*)?" />
                                             <substitution expression="SCRIPTS_HOME=&quot;$${IGNITE_HOME_TMP}/bin&quot;" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="\. &quot;\$\{SCRIPTS_HOME\}&quot;/include/build-classpath.sh(\s*#.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="call &quot;%SCRIPTS_HOME%\\include\\build-classpath.bat&quot;(\s*&amp;::.*)?" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="ENABLE_ASSERTIONS=.*" />
                                             <substitution expression="ENABLE_ASSERTIONS=&quot;0&quot;" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.sh" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="ENABLE_ASSERTIONS=.*" />
                                             <substitution expression="ENABLE_ASSERTIONS=0" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
                                         <replaceregexp byline="true">
                                             <regexp pattern="-DIGNITE_UPDATE_NOTIFIER=false" />
                                             <substitution expression="" />
-                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}/bin">
-                                                <include name="**/*.sh" />
-                                                <include name="**/*.bat" />
+                                            <fileset dir="${basedir}/target/release-package-${ignite.edition}">
+                                                <include name="bin/**/*.sh" />
+                                                <include name="bin/**/*.bat" />
                                             </fileset>
                                         </replaceregexp>
 
@@ -538,54 +539,6 @@
                                     <appendAssemblyId>false</appendAssemblyId>
                                 </configuration>
                             </execution>
-
-                            <execution>
-                                <id>dependencies-visor-console</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/dependencies-visor-console.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}/bin</outputDirectory>
-                                    <finalName>include</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>dependencies-sqlline</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/dependencies-sqlline.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}</outputDirectory>
-                                    <finalName>bin</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
-
-                            <execution>
-                                <id>scala-scripts</id>
-                                <phase>validate</phase>
-                                <goals>
-                                    <goal>single</goal>
-                                </goals>
-                                <configuration>
-                                    <descriptors>
-                                        <descriptor>assembly/release-scala.xml</descriptor>
-                                    </descriptors>
-                                    <outputDirectory>target/release-package-${ignite.edition}</outputDirectory>
-                                    <finalName>bin</finalName>
-                                    <appendAssemblyId>false</appendAssemblyId>
-                                </configuration>
-                            </execution>
                         </executions>
                     </plugin>
 
@@ -655,6 +608,7 @@
             <id>examples</id>
             <modules>
                 <module>examples</module>
+                <module>examples-ml</module>
             </modules>
         </profile>
 

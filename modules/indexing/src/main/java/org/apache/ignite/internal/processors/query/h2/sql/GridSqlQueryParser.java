@@ -68,6 +68,7 @@ import org.h2.command.dml.SelectUnion;
 import org.h2.command.dml.Update;
 import org.h2.engine.Constants;
 import org.h2.engine.FunctionAlias;
+import org.h2.engine.UserAggregate;
 import org.h2.expression.Alias;
 import org.h2.expression.BinaryOperation;
 import org.h2.expression.Expression;
@@ -80,6 +81,7 @@ import org.h2.expression.ValueExpression;
 import org.h2.expression.aggregate.AbstractAggregate;
 import org.h2.expression.aggregate.Aggregate;
 import org.h2.expression.aggregate.AggregateType;
+import org.h2.expression.aggregate.JavaAggregate;
 import org.h2.expression.condition.CompareLike;
 import org.h2.expression.condition.Comparison;
 import org.h2.expression.condition.ConditionAndOr;
@@ -2323,6 +2325,20 @@ public class GridSqlQueryParser {
 
         if (expression instanceof Parameter)
             return new GridSqlParameter(((Parameter)expression).getIndex());
+
+        if (expression instanceof JavaAggregate) {
+            JavaAggregate agg = (JavaAggregate)expression;
+
+            UserAggregate userAgg = agg.getUserAggregate();
+            Expression[] args = ABSTRACT_AGGREGATE_ARGS.get(agg);
+
+            GridSqlAggregateFunction fun = new GridSqlAggregateFunction(GridSqlFunctionType.UNKNOWN_FUNCTION, userAgg.getName(), DISTINCT.get(agg));
+
+            for (Expression arg : args)
+                fun.addChild(parseExpression(arg, calcTypes));
+
+            return fun;
+        }
 
         if (expression instanceof Aggregate) {
             AggregateType type = TYPE.get((Aggregate)expression);

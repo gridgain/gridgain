@@ -18,6 +18,9 @@ package org.apache.ignite.internal.processors.cache.query;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import javax.cache.CacheException;
+import org.apache.ignite.cache.query.QueryCancelledException;
 import org.apache.ignite.internal.processors.cache.QueryCursorImpl;
 import org.apache.ignite.internal.processors.query.GridQueryCancel;
 import org.apache.ignite.internal.processors.query.QueryUtils;
@@ -30,6 +33,11 @@ import org.apache.ignite.internal.processors.query.RunningQueryManager;
  */
 public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
     /** */
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<RegisteredQueryCursor, Exception> FAIL_REASON_UPDATER
+        = AtomicReferenceFieldUpdater.newUpdater(RegisteredQueryCursor.class, Exception.class, "failReason");
+
+    /** */
     private final AtomicBoolean unregistered = new AtomicBoolean(false);
 
     /** */
@@ -39,7 +47,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
     private Long qryId;
 
     /** Exception caused query failed or {@code null} if it succeded. */
-    private Exception failReason;
+    private volatile Exception failReason;
 
     /**
      * @param iterExec Query executor.
@@ -62,26 +70,27 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
     /** {@inheritDoc} */
     @Override protected Iterator<T> iter() {
         try {
-            if (lazy())
-                return new RegisteredIterator(super.iter());
-            else
-                return super.iter();
+            return lazy() ? new RegisteredIterator(super.iter()) : super.iter();
         }
         catch (Exception e) {
-            failReason = e;
-
-            if (QueryUtils.wasCancelled(failReason))
-                unregisterQuery();
-
-            throw e;
+            throw failReason(e);
         }
     }
 
     /** {@inheritDoc} */
     @Override public void close() {
-        unregisterQuery();
-
         super.close();
+
+        unregisterQuery();
+    }
+
+    /**
+     * Cancels query.
+     */
+    public void cancel() {
+        FAIL_REASON_UPDATER.compareAndSet(this, null, new QueryCancelledException());
+
+        close();
     }
 
     /**
@@ -112,12 +121,7 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
                 return delegateIt.hasNext();
             }
             catch (Exception e) {
-                failReason = e;
-
-                if (QueryUtils.wasCancelled(failReason))
-                    unregisterQuery();
-
-                throw e;
+                throw failReason(e);
             }
         }
 
@@ -127,13 +131,22 @@ public class RegisteredQueryCursor<T> extends QueryCursorImpl<T> {
                 return delegateIt.next();
             }
             catch (Exception e) {
-                failReason = e;
-
-                if (QueryUtils.wasCancelled(failReason))
-                    unregisterQuery();
-
-                throw e;
+                throw failReason(e);
             }
         }
+    }
+
+    /**
+     * Process incoming exception. Sets fail reason if needed, unregisters query
+     * and converts exception to {@link CacheException}.
+     *
+     * @param e Exception.
+     * @return Fail reason.
+     */
+    private CacheException failReason(Exception e) {
+        if (FAIL_REASON_UPDATER.compareAndSet(this, null, e) && QueryUtils.wasCancelled(failReason))
+            unregisterQuery();
+
+        return failReason instanceof CacheException ? (CacheException)failReason : new CacheException(failReason);
     }
 }
