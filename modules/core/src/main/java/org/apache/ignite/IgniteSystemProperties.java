@@ -1398,8 +1398,8 @@ public final class IgniteSystemProperties {
     /**
      * Enables setting attribute value of {@link
      * TcpCommunicationSpi#ATTR_HOST_NAMES ATTR_HOST_NAMES} when value {@link
-     * IgniteConfiguration#getLocalHost getLocalHost} is ip.
-     * By default, {@code false}.
+     * IgniteConfiguration#getLocalHost getLocalHost} is ip, for backward
+     * compatibility. By default, {@code false}.
      */
     public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
 
