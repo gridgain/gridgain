@@ -88,7 +88,7 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_IDX;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.util.IgniteUtils.error;
-import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.updCountersSnapshot;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.getUpdateCountersSnapshot;
 
 /**
  * Closure that locally validates indexes of given caches.
@@ -232,8 +232,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         Set<Integer> grpIds = collectGroupIds();
 
         /** Update counters per partition per group. */
-        final T2<Set<Integer>, Map<Integer, Set<Map.Entry<Integer, Long>>>> partsWithCntrsPerGrp =
-            updCountersSnapshot(ignite, grpIds);
+        final Map<Integer, Map<Integer, Long>> partsWithCntrsPerGrp =
+            getUpdateCountersSnapshot(ignite, grpIds);
 
         List<T2<CacheGroupContext, GridDhtLocalPartition>> partArgs = new ArrayList<>();
         List<T2<GridCacheContext, Index>> idxArgs = new ArrayList<>();

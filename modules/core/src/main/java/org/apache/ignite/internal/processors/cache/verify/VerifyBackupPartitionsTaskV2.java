@@ -57,7 +57,6 @@ import org.apache.ignite.internal.processors.cache.verify.PartitionHashRecordV2.
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.lang.GridIterator;
 import org.apache.ignite.internal.util.typedef.F;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.internal.visor.verify.VisorIdleVerifyTaskArg;
@@ -71,7 +70,7 @@ import org.jetbrains.annotations.Nullable;
 import static java.util.Collections.emptyMap;
 import static org.apache.ignite.cache.CacheMode.LOCAL;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.FLAG_DATA;
-import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.updCountersSnapshot;
+import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.getUpdateCountersSnapshot;
 
 /**
  * Task for comparing update counters and checksums between primary and backup partitions of specified caches.
@@ -255,8 +254,8 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
             completionCntr.set(0);
 
             /** Update counters per partition per group. */
-            final T2<Set<Integer>, Map<Integer, Set<Map.Entry<Integer, Long>>>> partsWithCntrsPerGrp =
-                updCountersSnapshot(ignite, grpIds);
+            final Map<Integer, Map<Integer, Long>> partsWithCntrsPerGrp =
+                getUpdateCountersSnapshot(ignite, grpIds);
 
             List<Future<Map<PartitionKeyV2, PartitionHashRecordV2>>> partHashCalcFuts =
                 calcPartitionHashAsync(grpIds, new IdleVerifyUtility.IdleChecker(ignite, partsWithCntrsPerGrp));

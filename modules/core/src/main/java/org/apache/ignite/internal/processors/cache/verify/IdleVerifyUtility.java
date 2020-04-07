@@ -18,10 +18,8 @@ package org.apache.ignite.internal.processors.cache.verify;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,7 +35,6 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
-import org.apache.ignite.internal.util.typedef.T2;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.jetbrains.annotations.Nullable;
 
@@ -103,13 +100,13 @@ public class IdleVerifyUtility {
      *
      * @param ign Ignite instance.
      * @param grpIds Group Id`s.
-     * @return Current group id`s and distribution partitions with update counters per group.
+     * @return Current groups distribution with update counters per partitions.
      */
-    public static T2<Set<Integer>, Map<Integer, Set<Map.Entry<Integer, Long>>>> updCountersSnapshot(
+    public static Map<Integer, Map<Integer, Long>> getUpdateCountersSnapshot(
         IgniteEx ign,
         Set<Integer> grpIds
     ) {
-        Map<Integer, Set<Map.Entry<Integer, Long>>> partsWithCountersPerGrp = new HashMap<>();
+        Map<Integer, Map<Integer, Long>> partsWithCountersPerGrp = new HashMap<>();
 
         for (Integer grpId : grpIds) {
             CacheGroupContext grpCtx = ign.context().cache().cacheGroup(grpId);
@@ -119,18 +116,18 @@ public class IdleVerifyUtility {
 
             GridDhtPartitionTopology top = grpCtx.topology();
 
-            Set<Map.Entry<Integer, Long>> partsWithCounters =
-                partsWithCountersPerGrp.computeIfAbsent(grpId, k -> new HashSet<>());
+            Map<Integer, Long> partsWithCounters =
+                partsWithCountersPerGrp.computeIfAbsent(grpId, k -> new HashMap<>());
 
             for (GridDhtLocalPartition part : top.currentLocalPartitions()) {
                 if (part.state() != GridDhtPartitionState.OWNING)
                     continue;
 
-                partsWithCounters.add(new AbstractMap.SimpleEntry<>(part.id(), part.updateCounter()));
+                partsWithCounters.put(part.id(), part.updateCounter());
             }
         }
 
-        return new T2<>(grpIds, partsWithCountersPerGrp);
+        return partsWithCountersPerGrp;
     }
 
     /**
@@ -142,20 +139,20 @@ public class IdleVerifyUtility {
      */
     public static List<Integer> compareUpdCounters(
         IgniteEx ign,
-        T2<Set<Integer>, Map<Integer, Set<Map.Entry<Integer, Long>>>> cntrsIn
+        Map<Integer, Map<Integer, Long>> cntrsIn
     ) {
-        T2<Set<Integer>, Map<Integer, Set<Map.Entry<Integer, Long>>>> curCntrs =
-            updCountersSnapshot(ign, cntrsIn.getKey());
+        Map<Integer, Map<Integer, Long>> curCntrs =
+            getUpdateCountersSnapshot(ign, cntrsIn.keySet());
 
         List<Integer> diff = new ArrayList<>();
 
-        for (Integer grp : cntrsIn.getValue().keySet()) {
-            Set<Map.Entry<Integer, Long>> partsWithCntrsCur = curCntrs.getValue().get(grp);
+        for (Integer grp : cntrsIn.keySet()) {
+            Map<Integer, Long> partsWithCntrsCur = curCntrs.get(grp);
 
             if (partsWithCntrsCur == null)
                 throw new GridNotIdleException("Possibly rebalance in progress? Group not found: " + grp);
 
-            Set<Map.Entry<Integer, Long>> partsWithCntrsIn = cntrsIn.getValue().get(grp);
+            Map<Integer, Long> partsWithCntrsIn = cntrsIn.get(grp);
 
             if (!partsWithCntrsIn.equals(partsWithCntrsCur))
                 diff.add(grp);
@@ -172,10 +169,10 @@ public class IdleVerifyUtility {
         private final IgniteEx ig;
 
         /** Group id`s snapshot with partitions and counters distrubution. */
-        private final T2<Set<Integer>, Map<Integer, Set<Map.Entry<Integer, Long>>>> partsWithCntrsPerGrp;
+        private final Map<Integer, Map<Integer, Long>> partsWithCntrsPerGrp;
 
         /** */
-        public IdleChecker(IgniteEx ig, T2<Set<Integer>, Map<Integer, Set<Map.Entry<Integer, Long>>>> partsWithCntrsPerGrp) {
+        public IdleChecker(IgniteEx ig, Map<Integer, Map<Integer, Long>> partsWithCntrsPerGrp) {
             this.ig = ig;
             this.partsWithCntrsPerGrp = partsWithCntrsPerGrp;
         }

@@ -23,6 +23,7 @@ import java.io.ObjectOutput;
 import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -142,7 +143,7 @@ public class IdleVerifyResultV2 extends VisorDataTransferObject {
      * @return Moving partitions.
      */
     public Map<PartitionKeyV2, List<PartitionHashRecordV2>> movingPartitions() {
-        return movingPartitions;
+        return Collections.unmodifiableMap(movingPartitions);
     }
 
     /**
