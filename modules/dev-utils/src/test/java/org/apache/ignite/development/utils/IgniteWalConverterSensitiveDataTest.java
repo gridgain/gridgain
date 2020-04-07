@@ -19,9 +19,9 @@ package org.apache.ignite.development.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.List;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -32,14 +32,15 @@ import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecord.RecordType;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.CU;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.wal.record.UnsupportedWalRecord;
@@ -47,9 +48,14 @@ import org.junit.Test;
 
 import static java.lang.String.valueOf;
 import static java.lang.System.setOut;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
-import static org.apache.ignite.testframework.wal.record.RecordUtils.buildWalRecord;
+import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 
+/**
+ * Class for testing sensitive data when reading {@link WALRecord} using
+ * {@link IgniteWalConverter}.
+ */
 @WithSystemProperty(key = "PRINT_RECORDS", value = "true")
 public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest {
     /** Sensitive data. */
@@ -85,7 +91,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         GridKernalContext kernalCtx = crd.context();
         IgniteWriteAheadLogManager wal = kernalCtx.cache().context().wal();
 
-        for (WALRecord walRecord : build()) {
+        for (WALRecord walRecord : withSensitiveData()) {
             if (!UnsupportedWalRecord.class.isInstance(walRecord) && !SwitchSegmentRecord.class.isInstance(walRecord))
                 wal.log(walRecord);
         }
@@ -102,6 +108,13 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         PAGE_SIZE = cfg.getDataStorageConfiguration().getPageSize();
 
         stopGrid(nodeId);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        clearGridToStringClassCache();
     }
 
     /** {@inheritDoc} */
@@ -134,13 +147,38 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
             )).setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
     }
 
+    /**
+     * Test checks that by default sensitive data is displayed in
+     * {@link WALRecord} when use {@link IgniteWalConverter}.
+     *
+     * @throws Exception If failed.
+     */
     @Test
-    public void test_0() throws Exception {
+    public void testShowSensitiveDataByDefault() throws Exception {
+        assertTrue(S.includeSensitive());
+
         injectTestSystemOut();
 
         IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
 
         assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA);
+    }
+
+    /**
+     * Test verifies that sensitive data will be hidden (by default).
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
+    public void testHideSensitiveDataByDefault() throws Exception {
+        assertFalse(S.includeSensitive());
+
+        injectTestSystemOut();
+
+        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
+
+        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA);
     }
 
     /**
@@ -151,17 +189,17 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     }
 
     /**
-     * Creating {@link WALRecord} instances.
+     * Creating {@link WALRecord} instances with sensitive data.
      *
-     * @return {@link WALRecord} instances.
+     * @return {@link WALRecord} instances with sensitive data.
      */
-    private Collection<WALRecord> build() {
+    private Collection<WALRecord> withSensitiveData() {
         List<WALRecord> walRecords = new ArrayList<>();
 
-        EnumSet<RecordType> recordTypes = EnumSet.allOf(RecordType.class);
+        int cacheId = CU.cacheId(DEFAULT_CACHE_NAME);
 
-        DataRecord dataRecord = new DataRecord(new DataEntry(
-            CU.cacheId(DEFAULT_CACHE_NAME),
+        DataEntry dataEntry = new DataEntry(
+            cacheId,
             new KeyCacheObjectImpl(SENSITIVE_DATA, null, 0),
             new CacheObjectImpl(SENSITIVE_DATA, null),
             GridCacheOperation.CREATE,
@@ -170,13 +208,12 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
             0,
             0,
             0
-        ));
-        walRecords.add(dataRecord);
-        recordTypes.remove(dataRecord.type());
+        );
 
-        //Adding records without sensitive data
-        for (RecordType recordType : recordTypes)
-            walRecords.add(buildWalRecord(recordType));
+        byte[] sensitiveDataBytes = SENSITIVE_DATA.getBytes(StandardCharsets.UTF_8);
+
+        walRecords.add(new DataRecord(dataEntry));
+        walRecords.add(new MetastoreDataRecord(SENSITIVE_DATA, sensitiveDataBytes));
 
         return walRecords;
     }
