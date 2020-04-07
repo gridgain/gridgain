@@ -183,13 +183,41 @@ namespace ignite
             Ignition::StopAll(true);
         }
 
-        std::string OdbcTestSuite::getTestString(int64_t ind)
+        std::string OdbcTestSuite::GetTestString(int64_t idx)
         {
             std::stringstream builder;
 
-            builder << "String#" << ind;
+            builder << "String#" << idx;
 
             return builder.str();
+        }
+
+        void OdbcTestSuite::CheckTestStringValue(int idx, const std::string &value)
+        {
+            BOOST_TEST_INFO("Test index: " << idx);
+            BOOST_CHECK_EQUAL(value, GetTestString(idx));
+        }
+
+        int32_t OdbcTestSuite::GetTestI32Field(int64_t idx)
+        {
+            return static_cast<int32_t>(idx * 32);
+        }
+
+        void OdbcTestSuite::CheckTestI32Value(int idx, int32_t value)
+        {
+            BOOST_TEST_INFO("Test index: " << idx);
+            BOOST_CHECK_EQUAL(value, GetTestI32Field(idx));
+        }
+
+        double OdbcTestSuite::GetTestDoubleField(int64_t idx)
+        {
+            return static_cast<double>(idx * 0.25f);
+        }
+
+        void OdbcTestSuite::CheckTestDoubleValue(int idx, double value)
+        {
+            BOOST_TEST_INFO("Test index: " << idx);
+            BOOST_CHECK_EQUAL(value, GetTestDoubleField(idx));
         }
 
         void OdbcTestSuite::CheckSQLDiagnosticError(int16_t handleType, SQLHANDLE handle, const std::string& expectSqlState)
@@ -259,7 +287,7 @@ namespace ignite
             for (SQLSMALLINT i = 0; i < recordsNum; ++i)
             {
                 key = i + 1;
-                std::string val = getTestString(i);
+                std::string val = GetTestString(i);
 
                 strncpy(strField, val.c_str(), sizeof(strField));
                 strFieldLen = SQL_NTS;
@@ -336,14 +364,14 @@ namespace ignite
                 keys[i] = seed;
                 i8Fields[i] = seed * 8;
                 i16Fields[i] = seed * 16;
-                i32Fields[i] = seed * 32;
+                i32Fields[i] = GetTestI32Field(seed);
 
-                std::string val = getTestString(seed);
+                std::string val = GetTestString(seed);
                 strncpy(strFields.GetData() + 1024 * i, val.c_str(), 1023);
                 strFieldsLen[i] = val.size();
 
                 floatFields[i] = seed * 0.5f;
-                doubleFields[i] = seed * 0.25f;
+                doubleFields[i] = GetTestDoubleField(seed);
                 boolFields[i] = seed % 2 == 0;
 
                 dateFields[i].year = 2017 + seed / 365;
@@ -544,7 +572,7 @@ namespace ignite
                 if (!SQL_SUCCEEDED(ret))
                     BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-                std::string expectedStr = getTestString(selectedRecordsNum);
+                std::string expectedStr = GetTestString(selectedRecordsNum);
                 int64_t expectedKey = selectedRecordsNum;
 
                 BOOST_CHECK_EQUAL(key, expectedKey);
@@ -625,7 +653,7 @@ namespace ignite
                 if (!SQL_SUCCEEDED(ret))
                     BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
-                std::string expectedStr = getTestString(selectedRecordsNum);
+                std::string expectedStr = GetTestString(selectedRecordsNum);
                 int64_t expectedKey = selectedRecordsNum;
 
                 BOOST_CHECK_EQUAL(key, expectedKey);

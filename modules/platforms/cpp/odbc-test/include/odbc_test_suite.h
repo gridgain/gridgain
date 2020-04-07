@@ -96,7 +96,7 @@ namespace ignite
 
             /**
              * Insert requested number of TestType values with all defaults except
-             * for the strFields, which are generated using getTestString().
+             * for the strFields, which are generated using GetTestString().
              *
              * @param recordsNum Number of records to insert.
              * @param merge Set to true to use merge instead.
@@ -132,10 +132,47 @@ namespace ignite
             /**
              * Get test string.
              *
-             * @param ind Index.
+             * @param idx Index.
              * @return Corresponding test string.
              */
-            static std::string getTestString(int64_t ind);
+            static std::string GetTestString(int64_t idx);
+
+            /**
+             * Check strField test value.
+             * @param idx Index.
+             * @param value Value to test.
+             */
+            static void CheckTestStringValue(int idx, const std::string& value);
+
+            /**
+             * Get test i32Field.
+             *
+             * @param idx Index.
+             * @return Corresponding i32Field value.
+             */
+            static int32_t GetTestI32Field(int64_t idx);
+
+            /**
+             * Check i32Field test value.
+             * @param idx Index.
+             * @param value Value to test.
+             */
+            static void CheckTestI32Value(int idx, int32_t value);
+
+            /**
+             * Get test doubleField.
+             *
+             * @param idx Index.
+             * @return Corresponding doubleField value.
+             */
+            static double GetTestDoubleField(int64_t idx);
+
+            /**
+             * Check doubleField test value.
+             * @param idx Index.
+             * @param value Value to test.
+             */
+            static void CheckTestDoubleValue(int idx, double value);
 
             /**
              * Check that SQL error has expected SQL state.
