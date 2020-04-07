@@ -183,6 +183,39 @@ namespace ignite
             Ignition::StopAll(true);
         }
 
+        int8_t OdbcTestSuite::GetTestI8Field(int64_t idx)
+        {
+            return static_cast<int8_t>(idx * 8);
+        }
+
+        void OdbcTestSuite::CheckTestI8Value(int idx, int8_t value)
+        {
+            BOOST_TEST_INFO("Test index: " << idx);
+            BOOST_CHECK_EQUAL(value, GetTestI8Field(idx));
+        }
+
+        int16_t OdbcTestSuite::GetTestI16Field(int64_t idx)
+        {
+            return static_cast<int16_t>(idx * 16);
+        }
+
+        void OdbcTestSuite::CheckTestI16Value(int idx, int16_t value)
+        {
+            BOOST_TEST_INFO("Test index: " << idx);
+            BOOST_CHECK_EQUAL(value, GetTestI16Field(idx));
+        }
+
+        int32_t OdbcTestSuite::GetTestI32Field(int64_t idx)
+        {
+            return static_cast<int32_t>(idx * 32);
+        }
+
+        void OdbcTestSuite::CheckTestI32Value(int idx, int32_t value)
+        {
+            BOOST_TEST_INFO("Test index: " << idx);
+            BOOST_CHECK_EQUAL(value, GetTestI32Field(idx));
+        }
+
         std::string OdbcTestSuite::GetTestString(int64_t idx)
         {
             std::stringstream builder;
@@ -198,15 +231,15 @@ namespace ignite
             BOOST_CHECK_EQUAL(value, GetTestString(idx));
         }
 
-        int32_t OdbcTestSuite::GetTestI32Field(int64_t idx)
+        float OdbcTestSuite::GetTestFloatField(int64_t idx)
         {
-            return static_cast<int32_t>(idx * 32);
+            return static_cast<float>(idx * 0.5f);
         }
 
-        void OdbcTestSuite::CheckTestI32Value(int idx, int32_t value)
+        void OdbcTestSuite::CheckTestFloatValue(int idx, float value)
         {
             BOOST_TEST_INFO("Test index: " << idx);
-            BOOST_CHECK_EQUAL(value, GetTestI32Field(idx));
+            BOOST_CHECK_EQUAL(value, GetTestFloatField(idx));
         }
 
         double OdbcTestSuite::GetTestDoubleField(int64_t idx)
@@ -218,6 +251,112 @@ namespace ignite
         {
             BOOST_TEST_INFO("Test index: " << idx);
             BOOST_CHECK_EQUAL(value, GetTestDoubleField(idx));
+        }
+
+        bool OdbcTestSuite::GetTestBoolField(int64_t idx)
+        {
+            return static_cast<bool>(idx % 2 == 0);
+        }
+
+        void OdbcTestSuite::CheckTestBoolValue(int idx, bool value)
+        {
+            BOOST_TEST_INFO("Test index: " << idx);
+            BOOST_CHECK_EQUAL(value, GetTestBoolField(idx));
+        }
+
+        void OdbcTestSuite::GetTestDateField(int64_t idx, SQL_DATE_STRUCT& val)
+        {
+            val.year = 2017 + idx / 365;
+            val.month = ((idx / 28) % 12) + 1;
+            val.day = (idx % 28) + 1;
+        }
+
+        void OdbcTestSuite::CheckTestDateValue(int idx, const SQL_DATE_STRUCT& val)
+        {
+            BOOST_TEST_CONTEXT("Test index: " << idx)
+            {
+                SQL_DATE_STRUCT expected;
+                GetTestDateField(idx, expected);
+
+                BOOST_CHECK_EQUAL(val.year, expected.year);
+                BOOST_CHECK_EQUAL(val.month, expected.month);
+                BOOST_CHECK_EQUAL(val.day, expected.day);
+            }
+        }
+
+        void OdbcTestSuite::GetTestTimeField(int64_t idx, SQL_TIME_STRUCT& val)
+        {
+            val.hour = (idx / 3600) % 24;
+            val.minute = (idx / 60) % 60;
+            val.second = idx % 60;
+        }
+
+        void OdbcTestSuite::CheckTestTimeValue(int idx, const SQL_TIME_STRUCT& val)
+        {
+            BOOST_TEST_CONTEXT("Test index: " << idx)
+            {
+                SQL_TIME_STRUCT expected;
+                GetTestTimeField(idx, expected);
+
+                BOOST_CHECK_EQUAL(val.hour, expected.hour);
+                BOOST_CHECK_EQUAL(val.minute, expected.minute);
+                BOOST_CHECK_EQUAL(val.second, expected.second);
+            }
+        }
+
+        void OdbcTestSuite::GetTestTimestampField(int64_t idx, SQL_TIMESTAMP_STRUCT& val)
+        {
+            SQL_DATE_STRUCT date;
+            GetTestDateField(idx, date);
+
+            SQL_TIME_STRUCT time;
+            GetTestTimeField(idx, time);
+
+            val.year = date.year;
+            val.month = date.month;
+            val.day = date.day;
+            val.hour = time.hour;
+            val.minute = time.minute;
+            val.second = time.second;
+            val.fraction = static_cast<uint64_t>(std::abs(idx * 914873)) % 1000000000;
+        }
+
+        void OdbcTestSuite::CheckTestTimestampValue(int idx, const SQL_TIMESTAMP_STRUCT& val)
+        {
+            BOOST_TEST_CONTEXT("Test index: " << idx)
+            {
+                SQL_TIMESTAMP_STRUCT expected;
+                GetTestTimestampField(idx, expected);
+
+                BOOST_CHECK_EQUAL(val.year, expected.year);
+                BOOST_CHECK_EQUAL(val.month, expected.month);
+                BOOST_CHECK_EQUAL(val.day, expected.day);
+                BOOST_CHECK_EQUAL(val.hour, expected.hour);
+                BOOST_CHECK_EQUAL(val.minute, expected.minute);
+                BOOST_CHECK_EQUAL(val.second, expected.second);
+                BOOST_CHECK_EQUAL(val.fraction, expected.fraction);
+            }
+        }
+
+        void OdbcTestSuite::GetTestI8ArrayField(int64_t idx, int8_t* val, size_t valLen)
+        {
+            for (int j = 0; j < valLen; ++j)
+                val[j] = idx * valLen + j;
+        }
+
+        void OdbcTestSuite::CheckTestI8ArrayValue(int idx, const int8_t* val, size_t valLen)
+        {
+            BOOST_TEST_CONTEXT("Test index: " << idx)
+            {
+                common::FixedSizeArray<int8_t> expected(valLen);
+                GetTestI8ArrayField(idx, expected.GetData(), expected.GetSize());
+
+                for (int j = 0; j < valLen; ++j)
+                {
+                    BOOST_TEST_INFO("Byte index: " << j);
+                    BOOST_CHECK_EQUAL(val[j], expected[j]);
+                }
+            }
         }
 
         void OdbcTestSuite::CheckSQLDiagnosticError(int16_t handleType, SQLHANDLE handle, const std::string& expectSqlState)
@@ -362,36 +501,23 @@ namespace ignite
                 int seed = from + i;
 
                 keys[i] = seed;
-                i8Fields[i] = seed * 8;
-                i16Fields[i] = seed * 16;
+                i8Fields[i] = GetTestI8Field(seed);
+                i16Fields[i] = GetTestI16Field(seed);
                 i32Fields[i] = GetTestI32Field(seed);
 
                 std::string val = GetTestString(seed);
                 strncpy(strFields.GetData() + 1024 * i, val.c_str(), 1023);
                 strFieldsLen[i] = val.size();
 
-                floatFields[i] = seed * 0.5f;
+                floatFields[i] = GetTestFloatField(seed);
                 doubleFields[i] = GetTestDoubleField(seed);
-                boolFields[i] = seed % 2 == 0;
+                boolFields[i] = GetTestBoolField(seed);
 
-                dateFields[i].year = 2017 + seed / 365;
-                dateFields[i].month = ((seed / 28) % 12) + 1;
-                dateFields[i].day = (seed % 28) + 1;
+                GetTestDateField(seed, dateFields[i]);
+                GetTestTimeField(seed, timeFields[i]);
+                GetTestTimestampField(seed, timestampFields[i]);
 
-                timeFields[i].hour = (seed / 3600) % 24;
-                timeFields[i].minute = (seed / 60) % 60;
-                timeFields[i].second = seed % 60;
-
-                timestampFields[i].year = dateFields[i].year;
-                timestampFields[i].month = dateFields[i].month;
-                timestampFields[i].day = dateFields[i].day;
-                timestampFields[i].hour = timeFields[i].hour;
-                timestampFields[i].minute = timeFields[i].minute;
-                timestampFields[i].second = timeFields[i].second;
-                timestampFields[i].fraction = static_cast<uint64_t>(std::abs(seed * 914873)) % 1000000000;
-
-                for (int j = 0; j < 42; ++j)
-                    i8ArrayFields[i * 42 + j] = seed * 42 + j;
+                GetTestI8ArrayField(seed, &i8ArrayFields[i*42], 42);
                 i8ArrayFieldsLen[i] = 42;
             }
 
