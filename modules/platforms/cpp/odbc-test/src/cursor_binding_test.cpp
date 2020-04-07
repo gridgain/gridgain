@@ -97,7 +97,8 @@ BOOST_FIXTURE_TEST_SUITE(CursorBindingTestSuite, CursorBindingTestSuiteFixture)
                                                                                                                     \
             int32_t i32Field = static_cast<int32_t>(i32Fields[idx]);                                                \
             double doubleField = static_cast<double>(doubleFields[idx]);                                            \
-            std::string strField(&strFields[idx], static_cast<size_t>(strFieldsLen[idx]));                          \
+            std::string strField(reinterpret_cast<char*>(&strFields[idx][0]),                                       \
+                static_cast<size_t>(strFieldsLen[idx]));                                                            \
                                                                                                                     \
             CheckTestI32Value(testIdx, i32Field);                                                                   \
             CheckTestDoubleValue(testIdx, doubleField);                                                             \
@@ -117,13 +118,13 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     InsertTestBatch(0, ROWS_COUNT, ROWS_COUNT);
 
     SQLINTEGER i32Fields[ROW_ARRAY_SIZE];
-    SQLINTEGER i32FieldsInd[ROW_ARRAY_SIZE];
+    SQLLEN i32FieldsInd[ROW_ARRAY_SIZE];
 
     SQLCHAR strFields[ROW_ARRAY_SIZE][STRING_SIZE];
-    SQLINTEGER strFieldsLen[ROW_ARRAY_SIZE];
+    SQLLEN strFieldsLen[ROW_ARRAY_SIZE];
 
     SQLDOUBLE doubleFields[ROW_ARRAY_SIZE];
-    SQLINTEGER doubleFieldsInd[ROW_ARRAY_SIZE];
+    SQLLEN doubleFieldsInd[ROW_ARRAY_SIZE];
 
     SQLUSMALLINT RowStatus[ROW_ARRAY_SIZE];
     SQLUINTEGER NumRowsFetched;
@@ -135,7 +136,7 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     ret = SQLSetStmtAttr(stmt, SQL_ATTR_ROW_BIND_TYPE, SQL_BIND_BY_COLUMN, 0);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
-    ret = SQLSetStmtAttr(stmt, SQL_ATTR_ROW_ARRAY_SIZE, ROW_ARRAY_SIZE, 0);
+    ret = SQLSetStmtAttr(stmt, SQL_ATTR_ROW_ARRAY_SIZE, reinterpret_cast<SQLPOINTER*>(ROW_ARRAY_SIZE), 0);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     ret = SQLSetStmtAttr(stmt, SQL_ATTR_ROW_STATUS_PTR, RowStatus, 0);
@@ -156,15 +157,16 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     // Execute a statement to retrieve rows from the Orders table.
-    ret = SQLExecDirect(stmt, "SELECT i32Field, strField, doubleField FROM TestType ORDER BY i32Field", SQL_NTS);
+    SQLCHAR sql[] = "SELECT i32Field, strField, doubleField FROM TestType ORDER BY i32Field";
+    ret = SQLExecDirect(stmt, sql, SQL_NTS);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     ret = SQLFetchScroll(stmt, SQL_FETCH_NEXT, 0);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
-    BOOST_CHECK_EQUAL(NumRowsFetched, ROW_ARRAY_SIZE);
+    BOOST_CHECK_EQUAL(NumRowsFetched, (SQLUINTEGER)ROW_ARRAY_SIZE);
 
-    for (i = 0; i < NumRowsFetched; i++)
+    for (int64_t i = 0; i < NumRowsFetched; i++)
     {
         CHECK_TEST_VALUES(i, i);
     }
@@ -174,7 +176,7 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
 
     BOOST_CHECK_EQUAL(NumRowsFetched, ROWS_COUNT - ROW_ARRAY_SIZE);
 
-    for (i = 0; i < NumRowsFetched; i++)
+    for (int64_t i = 0; i < NumRowsFetched; i++)
     {
         int64_t testIdx = i + ROW_ARRAY_SIZE;
         CHECK_TEST_VALUES(i, testIdx);
