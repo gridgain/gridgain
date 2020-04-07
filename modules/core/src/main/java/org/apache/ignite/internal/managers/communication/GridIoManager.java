@@ -3686,9 +3686,8 @@ public class GridIoManager extends GridManagerAdapter<CommunicationSpi<Serializa
 
         /** */
         public void onStop() {
-            for (GridFutureAdapter<?> fut : connMap.values()) {
+            for (GridFutureAdapter<?> fut : connMap.values())
                 fut.onDone(new NodeStoppingException("Node is stopping"));
-            }
         }
     }
 }
