@@ -170,7 +170,6 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
         MTC.supportInitial(cctx.kernalContext().tracing().create(TX, (Span)null));
 
         try {
-
             GridNearTxLocal tx = cctx.tm().userTx(sysCacheCtx);
 
             if (tx != null)

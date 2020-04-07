@@ -27,6 +27,7 @@ import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.distributed.near.GridNearTxLocal;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.future.IgniteFinishedFutureImpl;
 import org.apache.ignite.internal.util.future.IgniteFutureImpl;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
@@ -44,7 +45,9 @@ import org.apache.ignite.transactions.TransactionIsolation;
 import org.apache.ignite.transactions.TransactionState;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_COMMIT;
 import static org.apache.ignite.transactions.TransactionState.SUSPENDED;
+import static org.apache.ignite.internal.processors.tracing.MTC.TraceSurroundings;
 
 /**
  * Cache transaction proxy.
@@ -294,21 +297,24 @@ public class TransactionProxyImpl<K, V> implements TransactionProxy, Externaliza
 
     /** {@inheritDoc} */
     @Override public void commit() {
-        enter();
+        try (TraceSurroundings ignored =
+                 MTC.support(cctx.kernalContext().tracing().create(TX_COMMIT, MTC.span()))) {
+            enter();
 
-        try {
-            IgniteInternalFuture<IgniteInternalTx> commitFut = cctx.commitTxAsync(tx);
+            try {
+                IgniteInternalFuture<IgniteInternalTx> commitFut = cctx.commitTxAsync(tx);
 
-            if (async)
-                saveFuture(commitFut);
-            else
-                commitFut.get();
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
-        finally {
-            leave();
+                if (async)
+                    saveFuture(commitFut);
+                else
+                    commitFut.get();
+            }
+            catch (IgniteCheckedException e) {
+                throw U.convertException(e);
+            }
+            finally {
+                leave();
+            }
         }
     }
 
