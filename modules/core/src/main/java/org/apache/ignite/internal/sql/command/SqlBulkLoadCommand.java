@@ -153,6 +153,13 @@ public class SqlBulkLoadCommand implements SqlCommand {
 
                 parseCsvOptions(lex, fmt);
 
+                String delimiter = fmt.fieldSeparator().toString();
+                String quoteChars = fmt.quoteChars();
+
+                if (delimiter.equals(quoteChars))
+                    throw error(lex, "Invalid delimiter or quote chars: delim is " + delimiter
+                        + ", quote char is " + quoteChars);
+
                 inputFormat = fmt;
 
                 break;

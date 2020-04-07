@@ -58,8 +58,12 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
             .nextCommand();
 
         new SqlParser(null,
-                "copy from 'into' into Person (_key, age, firstName, lastName) format csv delimiter ','")
-                .nextCommand();
+            "copy from 'into' into Person (_key, age, firstName, lastName) format csv delimiter ','")
+            .nextCommand();
+
+        assertParseError(null,
+            "copy from 'into' into Person (_key, age, firstName, lastName) format csv delimiter '\"'",
+            "Invalid delimiter or quote chars");
 
         assertParseError(null,
             "copy from 'any.file' to Person (_key, age, firstName, lastName) format csv",

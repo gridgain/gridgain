@@ -16,12 +16,12 @@
 
 package org.apache.ignite.internal.processors.bulkload.pipeline;
 
+import java.sql.SQLException;
 import org.apache.ignite.IgniteCheckedException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.apache.ignite.IgniteIllegalStateException;
 
 /**
  * A {@link PipelineBlock}, which splits line according to CSV format rules and unquotes fields. The next block {@link
@@ -29,11 +29,18 @@ import org.apache.ignite.IgniteIllegalStateException;
  */
 public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
     public static final String[] EMPTY_STR_ARRAY = new String[0];
+
     /** Field delimiter pattern. */
     private final char fldDelim;
 
     /** Quote character. */
     private final char quoteChars;
+
+    /** Lines count. */
+    private int line = 0;
+
+    /** Symbol count. */
+    private int symbol = 0;
 
     /**
      * Creates a CSV line parser.
@@ -64,10 +71,13 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
 
         boolean quotesMatched = true;
 
+        line++;
+        symbol = 0;
+
         while (true) {
             if (current == length) {
                 if (!quotesMatched)
-                    throw new IgniteIllegalStateException("Unmatched quote found, CSV file is invalid");
+                    throw new IgniteCheckedException(new SQLException("Unmatched quote found at the end of line " + line + ", symbol " + symbol));
 
                 if (copy > 0)
                     currentField.append(input, copyStart, copyStart + copy);
@@ -77,6 +87,7 @@ public class CsvLineProcessorBlock extends PipelineBlock<String, String[]> {
             }
 
             final char c = input.charAt(current++);
+            symbol++;
 
             if (state == ReaderState.QUOTED) {
                 if (c == quoteChars) {

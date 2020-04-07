@@ -273,7 +273,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
      * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForUnmatchedStartQuote() {
+    public void testOneLineFileForUnmatchedStartQuote() throws SQLException {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
@@ -283,7 +283,9 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+        }, SQLException.class, "Unmatched quote found at line");
+
+        checkCacheContents(TBL_NAME, true, 0);
     }
 
     /**
@@ -292,7 +294,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
      * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForUnmatchedEndQuote() {
+    public void testOneLineFileForUnmatchedEndQuote() throws SQLException {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
@@ -302,14 +304,18 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+        }, SQLException.class, "Unmatched quote found at line");
+
+        checkCacheContents(TBL_NAME, true, 0);
     }
 
     /**
      * Verifies exception thrown if CSV row contains unmatched quote as the only field content.
+     *
+     * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForSingleEndQuote() {
+    public void testOneLineFileForSingleEndQuote() throws SQLException {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
@@ -319,14 +325,18 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+        }, SQLException.class, "Unmatched quote found at line");
+
+        checkCacheContents(TBL_NAME, true, 0);
     }
 
     /**
      * Verifies exception thrown if CSV row contains single unmatched quote as the field content.
+     *
+     * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForQuoteInContent() {
+    public void testOneLineFileForQuoteInContent() throws SQLException {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
@@ -336,14 +346,18 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+        }, SQLException.class, "Unmatched quote found at line");
+
+        checkCacheContents(TBL_NAME, true, 0);
     }
 
     /**
      * Verifies exception thrown if CSV row contains unmatched quote in the quoted field content.
+     *
+     * @throws SQLException If failed.
      */
     @Test
-    public void testOneLineFileForQuoteInQuotedContent() {
+    public void testOneLineFileForQuoteInQuotedContent() throws SQLException {
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
                 stmt.executeUpdate(
@@ -353,7 +367,9 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found, CSV file is invalid");
+        }, SQLException.class, "Unmatched quote found at line");
+
+        checkCacheContents(TBL_NAME, true, 0);
     }
 
     /**
@@ -438,9 +454,9 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                         " (_key, age, firstName, lastName)" +
                         " format csv");
 
-        assertEquals(4, updatesCnt);
+        assertEquals(7, updatesCnt);
 
-        checkCacheContents(TBL_NAME, true, 4);
+        checkCacheContents(TBL_NAME, true, 7);
     }
 
     /**
@@ -456,9 +472,9 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                         " (_key, age, firstName, lastName)" +
                         " format csv delimiter ','");
 
-        assertEquals(4, updatesCnt);
+        assertEquals(7, updatesCnt);
 
-        checkCacheContents(TBL_NAME, true, 4, ',');
+        checkCacheContents(TBL_NAME, true, 7, ',');
     }
 
     /**
@@ -474,9 +490,9 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
                         " (_key, age, firstName, lastName)" +
                         " format csv delimiter '|'");
 
-        assertEquals(4, updatesCnt);
+        assertEquals(7, updatesCnt);
 
-        checkCacheContents(TBL_NAME, true, 4, '|');
+        checkCacheContents(TBL_NAME, true, 7, '|');
     }
 
     /**
@@ -935,30 +951,26 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
         while (rs.next()) {
             int id = rs.getInt("_key");
 
-            if (id == 123) {
-                assertEquals(12, rs.getInt("age"));
-                assertEquals("FirstName123 MiddleName123", rs.getString("firstName"));
-                if (checkLastName)
-                    assertEquals("LastName123", rs.getString("lastName"));
-            }
-            else if (id == 456) {
-                assertEquals(45, rs.getInt("age"));
-                assertEquals("FirstName456", rs.getString("firstName"));
-                if (checkLastName)
-                    assertEquals("LastName456", rs.getString("lastName"));
-            }
-            else if (id == 789) {
-                assertEquals(78, rs.getInt("age"));
-                assertEquals("FirstName789 plus \"quoted\"", rs.getString("firstName"));
-                if (checkLastName)
-                    assertEquals("LastName 789", rs.getString("lastName"));
-            }
-            else if (id == 101112) {
-                assertEquals(1011, rs.getInt("age"));
-                assertEquals("FirstName 101112", rs.getString("firstName"));
-                if (checkLastName)
-                    assertEquals("LastName\"" + delimiter + "\" 1011" + delimiter + " 12", rs.getString("lastName"));
-            }
+            SyntheticPerson sp = new SyntheticPerson(rs.getInt("age"),
+                rs.getString("firstName"), rs.getString("lastName"));
+
+            if (id == 123)
+                sp.validateValues(12, "FirstName123 MiddleName123", "LastName123", checkLastName);
+            else if (id == 234)
+                sp.validateValues(23, "FirstName|234", "", checkLastName);
+            else if (id == 345)
+                sp.validateValues(34, "FirstName,345", "", checkLastName);
+            else if (id == 456)
+                sp.validateValues(45, "FirstName456", "LastName456", checkLastName);
+            else if (id == 567)
+                sp.validateValues(56, "", "", checkLastName);
+            else if (id == 678)
+                sp.validateValues(67, "", null, checkLastName);
+            else if (id == 789)
+                sp.validateValues(78, "FirstName789 plus \"quoted\"", "LastName 789", checkLastName);
+            else if (id == 101112)
+                sp.validateValues(1011, "FirstName 101112",
+                    "LastName\"" + delimiter + "\" 1011" + delimiter + " 12", checkLastName);
             else
                 fail("Wrong ID: " + id);
 
@@ -966,6 +978,13 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
         }
 
         assertEquals(recCnt, cnt);
+    }
+
+    /**
+     *
+     */
+    private void checkCSVEntryContent(ResultSet rs) {
+
     }
 
     /**
@@ -1099,6 +1118,35 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
             ByteBuffer encodedBuf = actualCharset.encode(input);
 
             return appliedCharset.decode(encodedBuf).toString();
+        }
+    }
+
+    /**
+     *
+     */
+    private class SyntheticPerson {
+        /** */
+        int age;
+
+        /** */
+        String firstName;
+
+        /** */
+        String lastName;
+
+        /** */
+        public SyntheticPerson(int age, String firstName, String lastName) {
+            this.age = age;
+            this.firstName = firstName;
+            this.lastName = lastName;
+        }
+
+        /** */
+        public void validateValues(int age, String firstName, String lastName, boolean checkLastName) {
+            assertEquals(age, this.age);
+            assertEquals(firstName, this.firstName);
+            if (checkLastName)
+                assertEquals(lastName, this.lastName);
         }
     }
 }
