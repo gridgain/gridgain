@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cache.CacheAtomicityMode;
 import org.apache.ignite.cache.CacheMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
@@ -45,7 +46,9 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.util.typedef.X;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteFuture;
@@ -55,6 +58,7 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.apache.ignite.transactions.TransactionConcurrency;
 import org.apache.ignite.transactions.TransactionIsolation;
+import org.apache.ignite.transactions.TransactionRollbackException;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -920,7 +924,7 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
                             threadProgressTracker.compute(Thread.currentThread().getId(),
                                 (tId, ops) -> ops == null ? 1 : ops + 1);
                         }
-                        catch (CacheException | ClusterTopologyException e) {
+                        catch (CacheException | ClusterTopologyException | TransactionRollbackException e) {
                             awaitTopology(e);
                         }
                     }
@@ -939,7 +943,17 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
      *
      * @param e Original exception.
      */
-    private void awaitTopology(Throwable e) {
+    private void awaitTopology(Throwable e) throws IgniteCheckedException {
+        if (e instanceof TransactionRollbackException) {
+            TransactionRollbackException e0 = (TransactionRollbackException) e;
+
+            ClusterTopologyCheckedException e00 = X.cause(e0, ClusterTopologyCheckedException.class);
+            IgniteInternalFuture f;
+
+            if (e00 != null && (f = e00.retryReadyFuture()) != null)
+                f.get();
+        }
+
         ClusterTopologyException ex = X.cause(e, ClusterTopologyException.class);
         IgniteFuture f;
 

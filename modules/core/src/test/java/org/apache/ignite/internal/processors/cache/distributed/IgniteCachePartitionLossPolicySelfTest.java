@@ -196,7 +196,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
                 CacheRebalancingEvent cacheEvt = (CacheRebalancingEvent)evt;
 
-                lostMap.computeIfAbsent(evt.node().id(), k -> new HashSet<>()).add(cacheEvt.partition());
+                lostMap.computeIfAbsent(evt.node().id(), k -> Collections.synchronizedSet(new HashSet<>())).add(cacheEvt.partition());
 
                 return true;
             }
@@ -431,8 +431,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         awaitPartitionMapExchange();
 
-        // TODO streamify
-        Set<Integer> expLostParts = new LinkedHashSet<>();
+        Set<Integer> expLostParts = new HashSet<>();
 
         int[] stopNodesSorted = Arrays.copyOf(stopNodes, stopNodes.length);
         Arrays.sort(stopNodesSorted);
