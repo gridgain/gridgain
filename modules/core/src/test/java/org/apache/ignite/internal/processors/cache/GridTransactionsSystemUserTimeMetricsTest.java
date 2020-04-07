@@ -348,7 +348,8 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
 
         long completionTime = System.currentTimeMillis();
 
-        ClientTxTestResult res = new ClientTxTestResult(startTime, completionTime, metricSet(CLIENT, null, TX_METRICS));
+        ClientTxTestResult res =
+                new ClientTxTestResult(startTime, completionTime, metricRegistry(CLIENT, null, TX_METRICS));
 
         return res;
     }

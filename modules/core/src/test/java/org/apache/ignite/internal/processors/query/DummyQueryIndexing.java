@@ -87,7 +87,8 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         @Nullable Object[] params,
-        IgniteDataStreamer<?, ?> streamer
+        IgniteDataStreamer<?, ?> streamer,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         return 0;
     }
@@ -97,7 +98,8 @@ public class DummyQueryIndexing implements GridQueryIndexing {
         String schemaName,
         String qry,
         List<Object[]> params,
-        SqlClientContext cliCtx
+        SqlClientContext cliCtx,
+        String qryInitiatorId
     ) throws IgniteCheckedException {
         return null;
     }
