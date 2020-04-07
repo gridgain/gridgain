@@ -60,20 +60,24 @@ public class StopNodeOnSqlQueryWithIncompatibleTypeTest extends AbstractIndexing
     @Test
     public void test() {
         sql("CREATE TABLE TEST (ID INT PRIMARY KEY, val_int INT, VAL_OBJ OTHER)");
-        sql("CREATE INDEX TEST_VAL_OBJ ON TEST(VAL_INT)");
+        sql("CREATE INDEX TEST_VAL_INT ON TEST(VAL_INT)");
+        sql("CREATE INDEX TEST_VAL_OBJ ON TEST(VAL_OBJ)");
 
         sql("INSERT INTO TEST VALUES (0, 0, ?)", Instant.now());
 
-        for (int i = 0; i < 1000; ++i) {
-            try {
-                sql("SELECT * FROM TEST WHERE VAL_INT < CURRENT_TIMESTAMP()").getAll();
-            }
-            catch (Throwable ignored) {
-                // No-op.
-            }
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_OBJ < CURRENT_TIMESTAMP()").getAll();
 
-            assertFalse("Iter " + i,  grid().context().isStopping());
-        }
+            return null;
+        }, CacheException.class, null);
+
+        GridTestUtils.assertThrows(log, () -> {
+            sql("SELECT * FROM TEST WHERE VAL_INT < CURRENT_TIMESTAMP()").getAll();
+
+            return null;
+        }, CacheException.class, null);
+
+        assertFalse(grid().context().isStopping());
     }
 
     /**
