@@ -2415,8 +2415,12 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                 Map<Integer, CacheGroupValidation> m = U.newHashMap(cctx.cache().cacheGroups().size());
 
-                for (CacheGroupContext grp : cctx.cache().cacheGroups())
-                    m.put(grp.groupId(), validateCacheGroup(grp, events().lastEvent().topologyNodes()));
+                for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
+                    CacheGroupValidation valRes = validateCacheGroup(grp, events().lastEvent().topologyNodes());
+
+                    if (!valRes.isValid() || valRes.hasLostPartitions())
+                        m.put(grp.groupId(), valRes);
+                }
 
                 grpValidRes = m;
             }

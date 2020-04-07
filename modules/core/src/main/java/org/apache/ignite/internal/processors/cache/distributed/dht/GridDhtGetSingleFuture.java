@@ -46,8 +46,6 @@ import org.apache.ignite.lang.IgniteUuid;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static java.util.Collections.singleton;
-import static org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter.validate;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 
@@ -310,16 +308,6 @@ public final class GridDhtGetSingleFuture<K, V> extends GridFutureAdapter<GridCa
                 return false;
 
             assert this.part == -1;
-
-            if (!forceKeys && part.state() == LOST && !recovery) {
-                Throwable error = validate(cctx, key, true, singleton(part.id()));
-
-                if (error != null) {
-                    onDone(null, error);
-
-                    return false;
-                }
-            }
 
             // By reserving, we make sure that partition won't be unloaded while processed.
             if (part.reserve()) {

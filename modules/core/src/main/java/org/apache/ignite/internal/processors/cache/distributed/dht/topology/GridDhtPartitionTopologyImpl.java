@@ -2293,9 +2293,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         + ", topVer=" + resTopVer + "]");
                 }
 
-                if (lostParts != null && safe)
-                    grp.needsRecovery(true);
-
                 return changed;
             }
             finally {
@@ -2344,8 +2341,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 // checkEvictions(updSeq, grp.affinity().readyAffinity(resTopVer));
 
                 lostParts = null;
-
-                grp.needsRecovery(false);
             }
             finally {
                 lock.writeLock().unlock();

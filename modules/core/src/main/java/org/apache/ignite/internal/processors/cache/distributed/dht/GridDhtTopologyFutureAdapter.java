@@ -82,9 +82,10 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         if (err != null)
             return new CacheInvalidStateException(err);
 
-        if (!clusterIsActive)
+        if (!clusterIsActive) {
             return new CacheInvalidStateException(
-                "Failed to perform cache operation (cluster is not activated): " + cctx.name());
+                    "Failed to perform cache operation (cluster is not activated): " + cctx.name());
+        }
 
         if (cctx.cache() == null)
             return new CacheInvalidStateException(
@@ -106,25 +107,33 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         if (!read && !validation.isValid()) {
             return new CacheInvalidStateException("Failed to perform cache operation " +
-                "(cache topology is not valid): " + cctx.name());
+                    "(cache topology is not valid): " + cctx.name());
         }
 
-        if (validation.hasLostPartitions()) {
-            if (key == null && keys == null)
-                return new CacheInvalidStateException("Failed to perform a cache operation " +
+        PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
+
+        if (!read && (lossPlc == READ_ONLY_SAFE || lossPlc == READ_ONLY_ALL)) {
+            return new CacheInvalidStateException(
+                 "Failed to write to cache (cache is moved to a read-only state): " + cctx.name());
+        }
+
+        // Reads from any partition are allowed in recovery mode.
+        if (read && recovery)
+            return null;
+
+        if (key == null && keys == null)
+            return new CacheInvalidStateException("Failed to perform a cache operation " +
                     "(the cache has lost partitions [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
 
-            // TODO streamify.
-            if (key != null)
-                return validate(cctx, key, read, validation.lostPartitions());
+        if (key != null)
+            return validate(cctx, key, validation.lostPartitions());
 
-            if (keys != null) {
-                for (Object key0 : keys) {
-                    final CacheInvalidStateException res = validate(cctx, key0, read, validation.lostPartitions());
+        if (keys != null) {
+            for (Object key0 : keys) {
+                final CacheInvalidStateException res = validate(cctx, key0, validation.lostPartitions());
 
-                    if (res != null)
-                        return res;
-                }
+                if (res != null)
+                    return res;
             }
         }
 
@@ -181,27 +190,21 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
     }
 
     /**
-     * TODO move to cache utils.
      * @param cctx Context.
      * @param key Key.
-     * @param opType Operation type.
      * @param lostParts Lost partitions.
      */
-    public static CacheInvalidStateException validate(
+    private CacheInvalidStateException validate(
         GridCacheContext cctx,
         Object key,
-        boolean read,
         Collection<Integer> lostParts
     ) {
         // TODO optimize for KeyCacheObject.
-        final PartitionLossPolicy plc = cctx.config().getPartitionLossPolicy();
-
         final int part = cctx.affinity().partition(key);
 
-        // Writes are forbidden to any partition in READ_ONLY_* modes.
-        return !read && (plc == READ_ONLY_SAFE || plc == READ_ONLY_ALL) || lostParts.contains(part) ?
+        return lostParts.contains(part) ?
             new CacheInvalidStateException("Failed to execute the cache operation " +
             "(all partition owners have left the grid, partition data has been lost) [" +
-            "cacheName=" + cctx.name() + ", read=" + read + ", partition=" + part + ", key=" + key + ']') : null;
+            "cacheName=" + cctx.name() + ", partition=" + part + ", key=" + key + ']') : null;
     }
 }

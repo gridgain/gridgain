@@ -113,7 +113,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         ArrayList<Object[]> params = new ArrayList<>();
 
         for (Integer backups : Arrays.asList(0, 1, 2)) {
-            int nodes = backups + 2;
+            int nodes = backups + 3;
             int[] stopIdxs = new int[backups + 1];
 
             List<Integer> tmp = IntStream.range(0, nodes).boxed().collect(Collectors.toList());
@@ -453,11 +453,13 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         for (Ignite ignite : G.allGrids()) {
             // Prevent rebalancing to bring partitions in owning state.
-            TestRecordingCommunicationSpi.spi(ignite).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
-                @Override public boolean apply(ClusterNode clusterNode, Message msg) {
-                    return msg instanceof GridDhtPartitionDemandMessage;
-                }
-            });
+            if (backups > 0) {
+                TestRecordingCommunicationSpi.spi(ignite).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+                    @Override public boolean apply(ClusterNode clusterNode, Message msg) {
+                        return msg instanceof GridDhtPartitionDemandMessage;
+                    }
+                });
+            }
 
             ignite.events().localListen(lsnr, EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST);
         }
