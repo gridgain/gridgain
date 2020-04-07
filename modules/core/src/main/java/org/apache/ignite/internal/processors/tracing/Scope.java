@@ -21,19 +21,19 @@ package org.apache.ignite.internal.processors.tracing;
  */
 public enum Scope {
     /** Discovery scope. */
-    Discovery((short)1),
+    DISCOVERY((short)1),
 
     /** Exchange scope. */
-    Exchange((short)2),
+    EXCHANGE((short)2),
 
     /** Communication scope. */
-    Communication((short)3),
+    COMMUNICATION((short)3),
 
     /** Transactional scope. */
     TX((short)4),
 
-    /** Other scope. */
-    OTHER((short)5);
+    /** Affinity scope. */
+    AFFINITY((short)5);
 
     /** Scope index. */
     private final short idx;
