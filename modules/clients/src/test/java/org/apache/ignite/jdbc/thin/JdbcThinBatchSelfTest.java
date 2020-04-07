@@ -742,15 +742,11 @@ public class JdbcThinBatchSelfTest extends JdbcThinAbstractDmlStatementSelfTest 
             fail("BatchUpdateException must be thrown res=" + Arrays.toString(res));
         }
         catch (BatchUpdateException e) {
-            log.warning("+++", e);
             checkThereAreNotUsedConnections();
 
             int[] updCnts = e.getUpdateCounts();
 
             assertEquals("Invalid update counts size", BATCH_SIZE, updCnts.length);
-
-            for (int u : updCnts)
-                System.out.println("+++ " + u);
 
             for (int i = 0; i < BATCH_SIZE; ++i) {
                 assertEquals("Invalid update count[" + i + ']',
