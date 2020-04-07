@@ -217,7 +217,11 @@ BOOST_AUTO_TEST_CASE(TestColAttributesColumnScale)
 
 BOOST_AUTO_TEST_CASE(TestColAttributesColumnLengthPrepare)
 {
+    StartAdditionalNode("Node2");
+
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    InsertTestStrings(1);
 
     SQLCHAR req[] = "select strField from TestType";
     SQLPrepare(stmt, req, SQL_NTS);
@@ -232,11 +236,25 @@ BOOST_AUTO_TEST_CASE(TestColAttributesColumnLengthPrepare)
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
     BOOST_CHECK_EQUAL(intVal, 60);
+
+    ret = SQLExecute(stmt);
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    ret = SQLColAttribute(stmt, 1, SQL_COLUMN_LENGTH, strBuf, sizeof(strBuf), &strLen, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(intVal, 60);
 }
 
 BOOST_AUTO_TEST_CASE(TestColAttributesColumnPresicionPrepare)
 {
+    StartAdditionalNode("Node2");
+
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    InsertTestStrings(1);
 
     SQLCHAR req[] = "select strField from TestType";
     SQLPrepare(stmt, req, SQL_NTS);
@@ -251,11 +269,25 @@ BOOST_AUTO_TEST_CASE(TestColAttributesColumnPresicionPrepare)
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
 
     BOOST_CHECK_EQUAL(intVal, 60);
+
+    ret = SQLExecute(stmt);
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    ret = SQLColAttribute(stmt, 1, SQL_COLUMN_PRECISION, strBuf, sizeof(strBuf), &strLen, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    BOOST_CHECK_EQUAL(intVal, 60);
 }
 
 BOOST_AUTO_TEST_CASE(TestColAttributesColumnScalePrepare)
 {
+    StartAdditionalNode("Node2");
+
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache");
+
+    InsertTestStrings(1);
 
     SQLCHAR req[] = "select strField from TestType";
     SQLPrepare(stmt, req, SQL_NTS);
@@ -265,6 +297,14 @@ BOOST_AUTO_TEST_CASE(TestColAttributesColumnScalePrepare)
     SQLSMALLINT strLen;
 
     SQLRETURN ret = SQLColAttribute(stmt, 1, SQL_COLUMN_SCALE, strBuf, sizeof(strBuf), &strLen, &intVal);
+
+    if (!SQL_SUCCEEDED(ret))
+        BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
+
+    ret = SQLExecute(stmt);
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    ret = SQLColAttribute(stmt, 1, SQL_COLUMN_SCALE, strBuf, sizeof(strBuf), &strLen, &intVal);
 
     if (!SQL_SUCCEEDED(ret))
         BOOST_FAIL(GetOdbcErrorMessage(SQL_HANDLE_STMT, stmt));
@@ -513,6 +553,8 @@ BOOST_AUTO_TEST_CASE(TestDdlColumnsMetaEscaped)
 
 BOOST_AUTO_TEST_CASE(TestSQLNumResultColsAfterSQLPrepare)
 {
+    StartAdditionalNode("Node2");
+
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=PUBLIC");
 
     SQLRETURN ret = ExecQuery("create table TestSqlPrepare(id int primary key, test1 varchar, test2 long, test3 varchar)");
@@ -525,6 +567,16 @@ BOOST_AUTO_TEST_CASE(TestSQLNumResultColsAfterSQLPrepare)
     ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
 
     SQLSMALLINT columnCount = 0;
+
+    ret = SQLNumResultCols(stmt, &columnCount);
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    BOOST_CHECK_EQUAL(columnCount, 4);
+
+    ret = SQLExecute(stmt);
+    ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+
+    columnCount = 0;
 
     ret = SQLNumResultCols(stmt, &columnCount);
     ODBC_FAIL_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
