@@ -189,14 +189,14 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
         Map<ClusterNode, LinkedHashMap<KeyCacheObject, Boolean>> mapped,
         AffinityTopologyVersion topVer
     ) {
-        GridDhtPartitionsExchangeFuture validateFut = cctx.shared().exchange().lastTopologyFuture();
+        GridDhtPartitionsExchangeFuture fut = cctx.shared().exchange().lastTopologyFuture();
 
         // Finished DHT future is required for topology validation.
-        if (!validateFut.isDone()) {
-            if (validateFut.initialVersion().after(topVer) || validateFut.exchangeActions().hasStop())
-                validateFut = cctx.shared().exchange().lastFinishedFuture();
+        if (!fut.isDone()) {
+            if (fut.initialVersion().after(topVer) || (fut.exchangeActions() != null && fut.exchangeActions().hasStop()))
+                fut = cctx.shared().exchange().lastFinishedFuture();
             else {
-                validateFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                fut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
                     @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
                         if (fut.error() != null)
                             onDone(fut.error());
@@ -211,7 +211,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
 
         Collection<ClusterNode> cacheNodes = CU.affinityNodes(cctx, topVer);
 
-        validate(cacheNodes, validateFut);
+        validate(cacheNodes, fut);
 
         // Future can be already done with some exception.
         if (isDone())
@@ -255,7 +255,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
 
             // If this is the primary or backup node for the keys.
             if (n.isLocal()) {
-                GridDhtFuture<Collection<GridCacheEntryInfo>> fut = cache()
+                GridDhtFuture<Collection<GridCacheEntryInfo>> fut0 = cache()
                     .getDhtAsync(
                         n.id(),
                         -1,
@@ -272,7 +272,7 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                         mvccSnapshot()
                     );
 
-                Collection<Integer> invalidParts = fut.invalidPartitions();
+                Collection<Integer> invalidParts = fut0.invalidPartitions();
 
                 if (!F.isEmpty(invalidParts)) {
                     Collection<KeyCacheObject> remapKeys = new ArrayList<>(keysSize);
@@ -294,12 +294,12 @@ public class GridPartitionedGetFuture<K, V> extends CacheDistributedGetFutureAda
                 }
 
                 // Add new future.
-                add(fut.chain(f -> {
+                add(fut0.chain(f -> {
                     try {
                         return createResultMap(f.get());
                     }
                     catch (Exception e) {
-                        U.error(log, "Failed to get values from dht cache [fut=" + fut + "]", e);
+                        U.error(log, "Failed to get values from dht cache [fut=" + fut0 + "]", e);
 
                         onDone(e);
 

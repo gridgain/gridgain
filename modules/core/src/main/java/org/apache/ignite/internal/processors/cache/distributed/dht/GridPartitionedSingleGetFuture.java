@@ -248,15 +248,15 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
      */
     @SuppressWarnings("unchecked")
     private void map(AffinityTopologyVersion topVer) {
-        GridDhtPartitionsExchangeFuture validateFut = cctx.shared().exchange().lastTopologyFuture();
+        GridDhtPartitionsExchangeFuture fut = cctx.shared().exchange().lastTopologyFuture();
 
         // TODO copypaste.
         // Finished DHT future is required for topology validation.
-        if (!validateFut.isDone()) {
-            if (validateFut.initialVersion().after(topVer) || validateFut.exchangeActions().hasStop())
-                validateFut = cctx.shared().exchange().lastFinishedFuture();
+        if (!fut.isDone()) {
+            if (fut.initialVersion().after(topVer) || (fut.exchangeActions() != null && fut.exchangeActions().hasStop()))
+                fut = cctx.shared().exchange().lastFinishedFuture();
             else {
-                validateFut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
+                fut.listen(new IgniteInClosure<IgniteInternalFuture<AffinityTopologyVersion>>() {
                     @Override public void apply(IgniteInternalFuture<AffinityTopologyVersion> fut) {
                         if (fut.error() != null)
                             onDone(fut.error());
@@ -269,7 +269,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
             }
         }
 
-        if (!validate(validateFut))
+        if (!validate(fut))
             return;
 
         ClusterNode node = mapKeyToNode(topVer);
@@ -285,7 +285,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
 
         // Read value if node is localNode.
         if (node.isLocal()) {
-            GridDhtFuture<GridCacheEntryInfo> fut = cctx.dht()
+            GridDhtFuture<GridCacheEntryInfo> fut0 = cctx.dht()
                 .getDhtSingleAsync(
                     node.id(),
                     -1,
@@ -302,7 +302,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                     mvccSnapshot
                 );
 
-            Collection<Integer> invalidParts = fut.invalidPartitions();
+            Collection<Integer> invalidParts = fut0.invalidPartitions();
 
             if (!F.isEmpty(invalidParts)) {
                 addNodeAsInvalid(node);
@@ -313,14 +313,14 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
                 map(updTopVer);
             }
             else {
-                fut.listen(f -> {
+                fut0.listen(f -> {
                     try {
                         GridCacheEntryInfo info = f.get();
 
                         setResult(info);
                     }
                     catch (Exception e) {
-                        U.error(log, "Failed to get values from dht cache [fut=" + fut + "]", e);
+                        U.error(log, "Failed to get values from dht cache [fut=" + fut0 + "]", e);
 
                         onDone(e);
                     }
