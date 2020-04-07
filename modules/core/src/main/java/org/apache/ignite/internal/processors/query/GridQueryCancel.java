@@ -49,7 +49,6 @@ public class GridQueryCancel {
      * Executes cancel closure.
      */
     public synchronized void cancel() {
-        System.out.println("+++ cancel " + this);
         if (canceled)
             return;
 
