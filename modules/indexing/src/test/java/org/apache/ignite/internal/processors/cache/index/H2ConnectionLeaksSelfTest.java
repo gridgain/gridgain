@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.cache.index;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.CacheConfiguration;
@@ -183,23 +184,39 @@ public class H2ConnectionLeaksSelfTest extends AbstractIndexingCommonTest {
         sql(grid(0),"INSERT INTO TEST_F VALUES (?, CURRENT_TIMESTAMP())", 0);
 
         checkConnectionLeaks();
+
+        // Check leaks after error on insert single row.
+        GridTestUtils.assertThrows(log, ()-> {
+            sql(grid(0), "INSERT INTO TEST_F VALUES (1/?, CURRENT_TIMESTAMP())", 0);
+        }, IgniteSQLException.class, "Division by zero");
+
+        checkConnectionLeaks();
     }
 
-    /**
+     /**
      * @throws Exception On failed.
      */
     @Test
-    public void testMultipleRowsInsertWithNotConstantValuesAndError() throws Exception {
+    public void testMultipleRowsInsertWithNotConstantValues() throws Exception {
         startGridAndPopulateCache(1);
 
         sql(grid(0), "CREATE TABLE TEST_F(ID INT PRIMARY KEY, TS TIMESTAMP)");
 
+        sql(grid(0), "INSERT INTO TEST_F VALUES " +
+                "(?, CURRENT_TIMESTAMP()), " +
+                "(?, CURRENT_TIMESTAMP()), " +
+                "(?, CURRENT_TIMESTAMP())",
+            0, 1, 2);
+
+        checkConnectionLeaks();
+
+        // Check leaks after error on insert multiple rows.
         GridTestUtils.assertThrows(log, () -> sql(grid(0), "INSERT INTO TEST_F VALUES " +
                     "(?, CURRENT_TIMESTAMP()), " +
                     "(?, CURRENT_TIMESTAMP()), " +
                     "(?, CURRENT_TIMESTAMP())",
-                0, "FAIL", 1),
-            IgniteSQLException.class, "Data conversion error converting");
+                3, 0, 4),
+            IgniteSQLException.class, "Failed to INSERT some keys because they are already in cache [keys=[0]]");
 
         checkConnectionLeaks();
     }
