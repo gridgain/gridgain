@@ -39,7 +39,10 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
+import org.apache.ignite.configuration.DataRegionConfiguration;
+import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.configuration.WALMode;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
@@ -103,10 +106,14 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     public int[] stopNodes;
 
     /** */
+    @Parameterized.Parameter(value = 6)
+    public boolean persistence;
+
+    /** */
     private static final String[] CACHES = new String[]{"cache1", "cache2"};
 
     /** */
-    @Parameterized.Parameters(name = "{0} {1} {2} {3} {4}")
+    @Parameterized.Parameters(name = "{0} {1} {2} {3} {4} {6}")
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
@@ -115,7 +122,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         for (CacheAtomicityMode mode : Arrays.asList(TRANSACTIONAL, ATOMIC)) {
             // Test always scenarios.
-            params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, false, 3, new int[]{2}});
+            params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, false, 3, new int[]{2}, false});
 
             // Random scenarios.
             for (Integer backups : Arrays.asList(0, 1, 2)) {
@@ -128,14 +135,25 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
                 for (int i = 0; i < stopIdxs.length; i++)
                     stopIdxs[i] = tmp.get(i);
 
-                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, false, nodes, stopIdxs});
-                params.add(new Object[]{mode, IGNORE, backups, false, nodes, stopIdxs});
-                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, false, nodes, stopIdxs});
-                params.add(new Object[]{mode, READ_ONLY_ALL, backups, false, nodes, stopIdxs});
-                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, true, nodes, stopIdxs});
-                params.add(new Object[]{mode, IGNORE, backups, true, nodes, stopIdxs});
-                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, true, nodes, stopIdxs});
-                params.add(new Object[]{mode, READ_ONLY_ALL, backups, true, nodes, stopIdxs});
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, IGNORE, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, false, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, true, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, IGNORE, backups, true, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, true, nodes, stopIdxs, false});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, true, nodes, stopIdxs, false});
+
+                boolean ignored = false; // Autoadjust is currently ignored for persistent mode.
+
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, IGNORE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, IGNORE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, ignored, nodes, stopIdxs, true});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, ignored, nodes, stopIdxs, true});
             }
         }
 
@@ -152,6 +170,16 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         cfg.setConsistentId(gridName);
 
         cfg.setClientMode(client);
+
+        cfg.setDataStorageConfiguration(
+                new DataStorageConfiguration()
+                        .setWalMode(WALMode.LOG_ONLY)
+                        .setWalSegmentSize(4 * 1024 * 1024)
+                        .setDefaultDataRegionConfiguration(
+                                new DataRegionConfiguration()
+                                        .setPersistenceEnabled(persistence)
+                                        .setMaxSize(100L * 1024 * 1024))
+        );
 
         CacheConfiguration[] ccfgs = new CacheConfiguration[CACHES.length];
 
@@ -172,8 +200,19 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     }
 
     /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        cleanPersistenceDir();
+    }
+
+    /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
+        super.afterTest();
+
         stopAllGrids();
+
+        cleanPersistenceDir();
     }
 
     /**
@@ -183,7 +222,7 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     public void checkLostPartition() throws Exception {
         log.info("Stop sequence: " + IntStream.of(stopNodes).boxed().collect(Collectors.toList()));
 
-        boolean safe = !(partLossPlc == IGNORE && autoAdjust);
+        boolean safe = persistence || !(partLossPlc == IGNORE && autoAdjust);
 
         String cacheName = CACHES[ThreadLocalRandom.current().nextInt(CACHES.length)];
 
