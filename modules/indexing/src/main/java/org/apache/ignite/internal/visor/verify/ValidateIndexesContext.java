@@ -19,8 +19,7 @@ package org.apache.ignite.internal.visor.verify;
 /**
  * Validate indexes context.
  */
-public interface ValidateIndexContext {
-
+public interface ValidateIndexesContext {
     /**
      * Returns a boolean value meaning whether the check is canceled or not.
      *

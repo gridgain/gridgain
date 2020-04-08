@@ -130,6 +130,7 @@ public class VisorValidateIndexesTask extends VisorMultiNodeTask<VisorValidateIn
             }
         }
 
+        /** {@inheritDoc} */
         @Override public void cancel() {
             log.warning("Index validation was cancelled.");
 

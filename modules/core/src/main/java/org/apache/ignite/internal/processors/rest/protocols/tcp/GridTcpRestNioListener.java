@@ -144,7 +144,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
     private GridRedisNioListener redisLsnr;
 
     /** Storage of pending futures. */
-    Map<GridNioSession, List<IgniteInternalFuture>> sesFutMap = new ConcurrentHashMap<>();
+    private final Map<GridNioSession, List<IgniteInternalFuture>> sesFutMap = new ConcurrentHashMap<>();
 
     /**
      * Creates listener which will convert incoming tcp packets to rest requests and forward them to
@@ -362,7 +362,7 @@ public class GridTcpRestNioListener extends GridNioServerListenerAdapter<GridCli
                         fut.cancel();
                     }
                     catch (IgniteCheckedException e) {
-                        log.warning("Future was not cancel by reason=" + e.getMessage());
+                        log.warning("Future was not cancel.", e);
                     }
                 }
             }

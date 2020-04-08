@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -30,6 +30,7 @@ import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.visor.verify.ValidateIndexesClosure;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.ListeningTestLogger;
@@ -45,26 +46,23 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
     /** Load loop cycles. */
     private static final int LOAD_LOOP = 500_000;
 
-    /** Count of caches. */
-    private static final int CACHES = 100;
-
     /** Log listener. */
     private ListeningTestLogger lnsrLog;
 
     /** {@inheritDoc} */
     @Override protected void beforeTest() throws Exception {
-        super.beforeTestsStarted();
+        super.beforeTest();
 
         cleanPersistenceDir();
     }
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
-        super.afterTestsStopped();
-
         stopAllGrids();
 
         cleanPersistenceDir();
+
+        super.afterTest();
     }
 
     /** {@inheritDoc} */
@@ -78,7 +76,7 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
                     .setMaxSize(200L * 1024 * 1024)
                 )
             )
-            .setCacheConfiguration(new CacheConfiguration<Integer, Integer>(DEFAULT_CACHE_NAME)
+            .setCacheConfiguration(new CacheConfiguration<Integer, UserValue>(DEFAULT_CACHE_NAME)
                 .setName(DEFAULT_CACHE_NAME)
                 .setQueryEntities(Collections.singleton(createQueryEntity())));
     }
@@ -162,16 +160,12 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "UserValue{" +
-                "x=" + x +
-                ", y=" + y +
-                ", z=" + z +
-                '}';
+            return S.toString(UserValue.class, this);
         }
     }
 
     /**
-     * Cehcks that validate_indexes command will cancel after it interrupted.
+     * Checks that validate_indexes command will cancel after it interrupted.
      *
      * @throws Exception If failed.
      */
@@ -183,10 +177,7 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
 
         ignite.cluster().active(true);
 
-        IgniteCache cache = ignite(0).cache(DEFAULT_CACHE_NAME);
-
-        for (int i = 0; i < 500_000; i++)
-            cache.put(i, new UserValue(i));
+        preloadeData(ignite);
 
         LogListener lnsrValidationStarted = LogListener.matches("Current progress of ValidateIndexesClosure").build();
         LogListener lnsrValidationCancelled = LogListener.matches("Index validation was cancelled.").build();
@@ -207,6 +198,18 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
     }
 
     /**
+     * Preload data to default cache.
+     *
+     * @param ignite Ignite.
+     */
+    private void preloadeData(IgniteEx ignite) {
+        try (IgniteDataStreamer streamr = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
+            for (int i = 0; i < LOAD_LOOP; i++)
+                streamr.addData(i, new UserValue(i));
+        }
+    }
+
+    /**
      * Test invokes index validation closure and canceling it after started.
      *
      * @throws Exception If failed.
@@ -217,10 +220,7 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
 
         ignite0.cluster().active(true);
 
-        IgniteCache<Integer, UserValue> cache = ignite0.cache(DEFAULT_CACHE_NAME);
-
-        for (int i = 0; i < LOAD_LOOP; i++)
-            cache.put(i, new UserValue(i));
+        preloadeData(ignite0);
 
         AtomicBoolean cancelled = new AtomicBoolean(false);
 

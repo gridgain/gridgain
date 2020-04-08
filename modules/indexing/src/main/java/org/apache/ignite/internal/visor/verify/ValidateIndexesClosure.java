@@ -162,7 +162,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     private final Set<Integer> failCalcCacheSizeGrpIds = newSetFromMap(new ConcurrentHashMap<>());
 
     /** Validate index context. */
-    private final ValidateIndexContext validateCtx;
+    private final ValidateIndexesContext validateCtx;
 
     /**
      * Constructor.
@@ -174,7 +174,14 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * @param checkCrc Check CRC sum on stored pages on disk.
      * @param checkSizes Check that index size and cache size are same.
      */
-    public ValidateIndexesClosure(ValidateIndexContext validateCtx, Set<String> cacheNames, int checkFirst, int checkThrough, boolean checkCrc, boolean checkSizes) {
+    public ValidateIndexesClosure(
+        ValidateIndexesContext validateCtx,
+        Set<String> cacheNames,
+        int checkFirst,
+        int checkThrough,
+        boolean checkCrc,
+        boolean checkSizes
+    ) {
         this.validateCtx = validateCtx;
         this.cacheNames = cacheNames;
         this.checkFirst = checkFirst;
@@ -295,24 +302,24 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         totalIndexes = idxArgs.size();
 
         for (T2<CacheGroupContext, GridDhtLocalPartition> t2 : partArgs)
-            procPartFutures.add(processPartitionAsync(validateCtx, t2.get1(), t2.get2()));
+            procPartFutures.add(processPartitionAsync(t2.get1(), t2.get2()));
 
         for (T2<GridCacheContext, Index> t2 : idxArgs)
-            procIdxFutures.add(processIndexAsync(validateCtx, t2.get1(), t2.get2()));
+            procIdxFutures.add(processIndexAsync(t2.get1(), t2.get2()));
 
         if (checkSizes) {
             for (T2<CacheGroupContext, GridDhtLocalPartition> partArg : partArgs) {
                 CacheGroupContext cacheGrpCtx = partArg.get1();
                 GridDhtLocalPartition locPart = partArg.get2();
 
-                cacheSizeFutures.add(new T3<>(cacheGrpCtx, locPart, calcCacheSizeAsync(validateCtx, cacheGrpCtx, locPart)));
+                cacheSizeFutures.add(new T3<>(cacheGrpCtx, locPart, calcCacheSizeAsync(cacheGrpCtx, locPart)));
             }
 
             for (T2<GridCacheContext, Index> idxArg : idxArgs) {
                 GridCacheContext cacheCtx = idxArg.get1();
                 Index idx = idxArg.get2();
 
-                idxSizeFutures.add(new T3<>(cacheCtx, idx, calcIndexSizeAsync(validateCtx, cacheCtx, idx)));
+                idxSizeFutures.add(new T3<>(cacheCtx, idx, calcIndexSizeAsync(cacheCtx, idx)));
             }
         }
 
@@ -496,29 +503,25 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     }
 
     /**
-     * @param validateCtx Validation context.
      * @param grpCtx Group context.
      * @param part Local partition.
      */
     private Future<Map<PartitionKey, ValidateIndexesPartitionResult>> processPartitionAsync(
-        ValidateIndexContext validateCtx,
         CacheGroupContext grpCtx,
         GridDhtLocalPartition part
     ) {
         return calcExecutor.submit(new Callable<Map<PartitionKey, ValidateIndexesPartitionResult>>() {
             @Override public Map<PartitionKey, ValidateIndexesPartitionResult> call() throws Exception {
-                return processPartition(validateCtx, grpCtx, part);
+                return processPartition(grpCtx, part);
             }
         });
     }
 
     /**
-     * @param validateCtx Validation context.
      * @param grpCtx Group context.
      * @param part Local partition.
      */
     private Map<PartitionKey, ValidateIndexesPartitionResult> processPartition(
-        ValidateIndexContext validateCtx,
         CacheGroupContext grpCtx,
         GridDhtLocalPartition part
     ) {
@@ -655,8 +658,27 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
         return Collections.singletonMap(partKey, partRes);
     }
 
-    private boolean checkEntryPresentInIndex(CacheGroupContext grpCtx, ValidateIndexesPartitionResult partRes,
-        boolean enoughIssues, CacheDataRow row, GridCacheContext cacheCtx, H2CacheRow h2Row, Index idx) {
+    /**
+     * Checks is h2 row present in specified index.
+     *
+     * @param grpCtx Group context.
+     * @param partRes Validation result.
+     * @param enoughIssues Flag means was issue happen before.
+     * @param row Data row.
+     * @param cacheCtx Grid cache context.
+     * @param h2Row H2 row.
+     * @param idx Index.
+     * @return True if issue have ever happened, false otherwise.
+     */
+    private boolean checkEntryPresentInIndex(
+        CacheGroupContext grpCtx,
+        ValidateIndexesPartitionResult partRes,
+        boolean enoughIssues,
+        CacheDataRow row,
+        GridCacheContext cacheCtx,
+        H2CacheRow h2Row,
+        Index idx
+    ) {
         try {
             Cursor cursor = idx.find((Session)null, h2Row, h2Row);
 
@@ -674,6 +696,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
             enoughIssues |= partRes.reportIssue(is);
         }
+
         return enoughIssues;
     }
 
@@ -701,12 +724,10 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     }
 
     /**
-     * @param validateCtx Validation context.
      * @param ctx Context.
      * @param idx Index.
      */
     private Future<Map<String, ValidateIndexesPartitionResult>> processIndexAsync(
-        ValidateIndexContext validateCtx,
         GridCacheContext ctx,
         Index idx
     ) {
@@ -716,7 +737,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 BPlusTree.suspendFailureDiagnostic.set(true);
 
                 try {
-                    return processIndex(validateCtx, ctx, idx);
+                    return processIndex(ctx, idx);
                 }
                 finally {
                     BPlusTree.suspendFailureDiagnostic.set(false);
@@ -726,12 +747,10 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     }
 
     /**
-     * @param validateCtx Validation context.
      * @param ctx Context.
      * @param idx Index.
      */
     private Map<String, ValidateIndexesPartitionResult> processIndex(
-        ValidateIndexContext validateCtx,
         GridCacheContext ctx,
         Index idx
     ) {
@@ -877,31 +896,30 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     /**
      * Asynchronous calculation of caches size with divided by tables.
      *
-     * @param validateCtx Validation context.
      * @param grpCtx Cache group context.
      * @param locPart Local partition.
      * @return Future with cache sizes.
      */
     private Future<CacheSize> calcCacheSizeAsync(
-        ValidateIndexContext validateCtx,
         CacheGroupContext grpCtx,
         GridDhtLocalPartition locPart
     ) {
         return calcExecutor.submit(() -> {
-            return calcCacheSize(validateCtx, grpCtx, locPart);
+            return calcCacheSize(grpCtx, locPart);
         });
     }
 
     /**
      * Calculation of caches size with divided by tables.
      *
-     * @param validateCtx Validation context.
      * @param grpCtx Cache group context.
      * @param locPart Local partition.
-     * @return Future with cache sizes.
+     * @return Cache size representation object.
      */
-    private ValidateIndexesClosure.CacheSize calcCacheSize(ValidateIndexContext validateCtx, CacheGroupContext grpCtx,
-        GridDhtLocalPartition locPart) {
+    private ValidateIndexesClosure.CacheSize calcCacheSize(
+        CacheGroupContext grpCtx,
+        GridDhtLocalPartition locPart
+    ) {
         try {
             if (validateCtx.isCancelled())
                 return new CacheSize(null, emptyMap());
@@ -994,30 +1012,27 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
     /**
      * Asynchronous calculation of the index size for cache.
      *
-     * @param validateCtx Validation context.
      * @param cacheCtx Cache context.
      * @param idx      Index.
      * @return Future with index size.
      */
     private Future<T2<Throwable, Long>> calcIndexSizeAsync(
-        ValidateIndexContext validateCtx,
         GridCacheContext cacheCtx,
         Index idx
     ) {
         return calcExecutor.submit(() -> {
-            return calcIndexSize(validateCtx, cacheCtx, idx);
+            return calcIndexSize(cacheCtx, idx);
         });
     }
 
     /**
      * Calculation of the index size for cache.
      *
-     * @param validateCtx Validation context.
      * @param cacheCtx Cache context.
      * @param idx      Index.
-     * @return Future with index size.
+     * @return Toule contains exception if it happened and size of index.
      */
-    private T2<Throwable, Long> calcIndexSize(ValidateIndexContext validateCtx, GridCacheContext cacheCtx, Index idx) {
+    private T2<Throwable, Long> calcIndexSize(GridCacheContext cacheCtx, Index idx) {
         if (validateCtx.isCancelled())
             return new T2<>(null, 0L);
 
