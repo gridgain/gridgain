@@ -45,7 +45,7 @@ public class TooManyOpenFilesTcpCommunicationSpiTest extends GridCommonAbstractT
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
             .setFailureHandler(new StopNodeFailureHandler())
-            .setCommunicationSpi(new TooManyOpenFilesTcpCommunicationSpi())
+          //  .setCommunicationSpi(new TooManyOpenFilesTcpCommunicationSpi())
             .setConsistentId(igniteInstanceName)
             .setCacheConfiguration(
                 new CacheConfiguration<>(DEFAULT_CACHE_NAME)
@@ -77,7 +77,7 @@ public class TooManyOpenFilesTcpCommunicationSpiTest extends GridCommonAbstractT
      */
     @Test
     public void testTooManyOpenFilesErr() throws Exception {
-        IgniteEx crd = startGrids(3);
+        /*IgniteEx crd = startGrids(3);
         crd.cluster().active(true);
 
         IgniteEx stopNode = grid(2);
@@ -106,23 +106,25 @@ public class TooManyOpenFilesTcpCommunicationSpiTest extends GridCommonAbstractT
             log.error("Error wait commit", e);
         }
 
-        assertTrue(waitForCondition(((IgniteKernal)stopNode)::isStopping, 60_000));
+        assertTrue(waitForCondition(((IgniteKernal)stopNode)::isStopping, 60_000));*/
+
+        fail();
     }
 
     /**
      * Class for emulating "Too many open files" error in
      * {@link TcpCommunicationSpi}.
      */
-    private static class TooManyOpenFilesTcpCommunicationSpi extends TcpCommunicationSpi {
-        /** Flag for throwing an exception "Too many open files". */
+    /*private static class TooManyOpenFilesTcpCommunicationSpi extends TcpCommunicationSpi {
+        *//** Flag for throwing an exception "Too many open files". *//*
         private final AtomicBoolean throwException = new AtomicBoolean();
 
-        /** {@inheritDoc} */
+        *//** {@inheritDoc} *//*
         @Override protected SocketChannel openSocketChannel() throws IOException {
             if (throwException.get())
                 throw new SocketException("Too many open files");
 
             return super.openSocketChannel();
         }
-    }
+    }*/
 }
