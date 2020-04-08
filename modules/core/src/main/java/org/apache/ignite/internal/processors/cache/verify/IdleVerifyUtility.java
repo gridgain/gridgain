@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.cache.verify;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -172,6 +171,9 @@ public class IdleVerifyUtility {
      * Idle checker.
      */
     public static class IdleChecker implements IgniteInClosure<Integer> {
+        /** */
+        private static final long serialVersionUID = 0L;
+
         /** */
         private final IgniteEx ig;
 
