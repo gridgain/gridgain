@@ -138,10 +138,9 @@ namespace Apache.Ignite.Core.Tests.Cache
             {
                 VerifyCacheOperations(cache, part, canWrite, safe);
 
-                // Check recover cache.
+                // Check reads from a cache in recover mode.
                 var recoverCache = cache.WithPartitionRecover();
-                recoverCache[part] = part;
-                Assert.AreEqual(part, recoverCache[part]);
+                var res = recoverCache[part];
             }
 
             // Reset and verify.
