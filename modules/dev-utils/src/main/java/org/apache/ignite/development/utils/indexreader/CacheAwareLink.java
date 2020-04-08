@@ -16,7 +16,7 @@
 package org.apache.ignite.development.utils.indexreader;
 
 /**
- *
+ * Link that is representing page id with offset and cache id.
  */
 class CacheAwareLink {
     /** */

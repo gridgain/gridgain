@@ -23,7 +23,7 @@ import java.util.Map;
 import static org.apache.ignite.development.utils.indexreader.IgniteIndexReader.getCacheId;
 
 /**
- * Traverse context, which is unique for traversal of one single tree.
+ * Traverse context, which is used for tree traversal and is unique for traversal of one single tree.
  */
 class TreeTraverseContext {
     /** Tree name. */

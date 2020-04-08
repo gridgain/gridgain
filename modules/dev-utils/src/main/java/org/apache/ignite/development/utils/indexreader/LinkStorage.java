@@ -27,7 +27,7 @@ import static org.apache.ignite.internal.pagemem.PageIdUtils.*;
 import static org.apache.ignite.internal.pagemem.PageIdUtils.pageIndex;
 
 /**
- * Stores link items.
+ * Stores links to data pages.
  */
 class LinkStorage implements ItemStorage<CacheAwareLink> {
     /** */

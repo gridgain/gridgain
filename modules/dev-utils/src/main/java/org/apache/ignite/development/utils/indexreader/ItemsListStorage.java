@@ -22,7 +22,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * Stores index items (items of meta tree).
+ * Stores all index items.
  */
 class ItemsListStorage<T> implements ItemStorage<T> {
     private final List<T> store = new LinkedList<>();

@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- *
+ * This class is used to store result of tree traversal.
  */
 class TreeTraversalInfo {
     /** Page type statistics. */

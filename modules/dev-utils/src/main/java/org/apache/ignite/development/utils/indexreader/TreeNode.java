@@ -20,7 +20,7 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import java.util.List;
 
 /**
- * Tree node info.
+ * Tree node info. It is used to represent tree nodes in recursive traversal.
  */
 class TreeNode {
     /** */

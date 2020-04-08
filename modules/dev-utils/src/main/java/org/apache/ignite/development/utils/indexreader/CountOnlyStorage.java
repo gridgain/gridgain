@@ -20,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Iterator;
 
 /**
- * Imitates item storage, but stores only items count.
+ * Imitates item storage, but stores only items count. It can be used when storing each item is not necessary.
  */
 class CountOnlyStorage<T> implements ItemStorage<T> {
     /** */

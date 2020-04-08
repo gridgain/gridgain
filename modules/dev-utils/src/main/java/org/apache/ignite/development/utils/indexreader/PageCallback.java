@@ -16,7 +16,7 @@
 package org.apache.ignite.development.utils.indexreader;
 
 /**
- *
+ * Callback that will be executed for each page of the tree while traversing, if it's set.
  */
 interface PageCallback {
     /** */
