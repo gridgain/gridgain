@@ -137,6 +137,8 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         int cntPreload = 100;
 
+        int maxItems = 10000;
+
         createCacheAndPreload(ig, cntPreload, 8);
 
         GridCacheDatabaseSharedManager db = null;
@@ -168,13 +170,13 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
                     else
                         ldr.removeData(i);
 
-                    if (i % 10 == 0) {
+                    if (i == maxItems / 2)
                         startLoading.countDown();
 
+                    if (i % 10 == 0)
                         ldr.flush();
-                    }
 
-                    if (++i == 10000) {
+                    if (++i == maxItems) {
                         addFlag = !addFlag;
 
                         i = 0;
@@ -187,7 +189,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         startLoading.await();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc", "--check-sizes"));
 
         stopFlag.set(true);
 
@@ -202,7 +204,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
         if (persistenceEnable())
             db.enableCheckpoints(true).get();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "validate_indexes", "--check-crc", "--check-sizes"));
 
         out = testOut.toString();
 
