@@ -254,7 +254,7 @@ namespace ignite
              *
              * @return Column metadata.
              */
-            const meta::ColumnMetaVector* GetMeta() const;
+            const meta::ColumnMetaVector* GetMeta();
 
             /**
              * Check if data is available.
