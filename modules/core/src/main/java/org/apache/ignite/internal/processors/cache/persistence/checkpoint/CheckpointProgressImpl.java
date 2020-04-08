@@ -152,7 +152,7 @@ public class CheckpointProgressImpl implements CheckpointProgress {
     /**
      * @return Destroy queue.
      */
-    public PartitionDestroyQueue getDestroyQueue() {
+    @Override public PartitionDestroyQueue getDestroyQueue() {
         return destroyQueue;
     }
 
