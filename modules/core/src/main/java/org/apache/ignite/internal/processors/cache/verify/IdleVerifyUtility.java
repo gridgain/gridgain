@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.verify;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.topology.Grid
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.apache.ignite.lang.IgniteInClosure;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -125,6 +128,7 @@ public class IdleVerifyUtility {
 
                 partsWithCounters.put(part.id(), part.updateCounter());
             }
+
         }
 
         return partsWithCountersPerGrp;
@@ -135,28 +139,31 @@ public class IdleVerifyUtility {
      *
      * @param ign Ignite instance.
      * @param cntrsIn Group id`s with counters per partitions per groups distribution.
+     * @param grpId Group id to compare.
      * @return Diff with grpId info between two sets.
      */
     public static List<Integer> compareUpdCounters(
         IgniteEx ign,
-        Map<Integer, Map<Integer, Long>> cntrsIn
-    ) {
+        Map<Integer, Map<Integer, Long>> cntrsIn,
+        Integer grpId
+    ) throws IgniteCheckedException {
         Map<Integer, Map<Integer, Long>> curCntrs =
-            getUpdateCountersSnapshot(ign, cntrsIn.keySet());
+            getUpdateCountersSnapshot(ign, Collections.singleton(grpId));
+
+        if (curCntrs.isEmpty())
+            throw new IgniteCheckedException("Requested group not found: grpId=" + grpId);
 
         List<Integer> diff = new ArrayList<>();
 
-        for (Integer grp : cntrsIn.keySet()) {
-            Map<Integer, Long> partsWithCntrsCur = curCntrs.get(grp);
+        Map<Integer, Long> partsWithCntrsCur = curCntrs.get(grpId);
 
-            if (partsWithCntrsCur == null)
-                throw new GridNotIdleException("Possibly rebalance in progress? Group not found: " + grp);
+        if (partsWithCntrsCur == null)
+            throw new GridNotIdleException("Possibly rebalance in progress? Group not found: " + grpId);
 
-            Map<Integer, Long> partsWithCntrsIn = cntrsIn.get(grp);
+        Map<Integer, Long> partsWithCntrsIn = cntrsIn.get(grpId);
 
-            if (!partsWithCntrsIn.equals(partsWithCntrsCur))
-                diff.add(grp);
-        }
+        if (!partsWithCntrsIn.equals(partsWithCntrsCur))
+            diff.add(grpId);
 
         return diff;
     }
@@ -164,7 +171,7 @@ public class IdleVerifyUtility {
     /**
      * Idle checker.
      */
-    public static class IdleChecker implements Runnable {
+    public static class IdleChecker implements IgniteInClosure<Integer> {
         /** */
         private final IgniteEx ig;
 
@@ -177,22 +184,29 @@ public class IdleVerifyUtility {
             this.partsWithCntrsPerGrp = partsWithCntrsPerGrp;
         }
 
-        /** {@inheritDoc} */
-        @Override public void run() {
-            List<Integer> diff = compareUpdCounters(ig, partsWithCntrsPerGrp);
+        /** */
+        @Override public void apply(Integer grpId) {
+            List<Integer> diff;
+
+            try {
+                diff = compareUpdCounters(ig, partsWithCntrsPerGrp, grpId);
+            }
+            catch (IgniteCheckedException e) {
+                throw new GridNotIdleException("Requested group not found: grpId=" + grpId);
+            }
 
             SB sb = new SB();
 
             if (!diff.isEmpty()) {
-                for (int grpId : diff) {
+                for (int grpId0 : diff) {
                     if (sb.length() != 0)
                         sb.a(", ");
                     else
                         sb.a("\"");
 
-                    DynamicCacheDescriptor desc = ig.context().cache().cacheDescriptor(grpId);
+                    DynamicCacheDescriptor desc = ig.context().cache().cacheDescriptor(grpId0);
 
-                    CacheGroupContext grpCtx = ig.context().cache().cacheGroup(desc == null ? grpId : desc.groupId());
+                    CacheGroupContext grpCtx = ig.context().cache().cacheGroup(desc == null ? grpId0 : desc.groupId());
 
                     sb.a(grpCtx.cacheOrGroupName());
                 }
