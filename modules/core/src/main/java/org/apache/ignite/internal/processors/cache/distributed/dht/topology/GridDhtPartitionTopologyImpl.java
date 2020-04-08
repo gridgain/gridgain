@@ -1614,7 +1614,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                         for (Integer part : lostParts) {
                             GridDhtLocalPartition locPart = localPartition(part);
 
-                            if (locPart != null) {
+                            // EVICTED partitions should not be marked directly as LOST, or
+                            // part.clearFuture lifecycle will be broken after resetting.
+                            // New partition should be created instead.
+                            if (locPart != null && locPart.state() != EVICTED) {
                                 locPart.markLost();
 
                                 GridDhtPartitionMap locMap = partMap.get(ctx.localNodeId());

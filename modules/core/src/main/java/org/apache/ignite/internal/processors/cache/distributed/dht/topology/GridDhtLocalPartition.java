@@ -927,7 +927,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
             finally {
                 clearEvicting();
 
-                clearFuture.finish();
+                clearFuture.finish(); // Invokes clear future listeners.
             }
         }
 
