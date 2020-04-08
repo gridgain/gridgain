@@ -528,7 +528,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
         synchronizationMode = CacheWriteSynchronizationMode.PRIMARY_SYNC;
         backups = 1;
 
-        int nodesCnt = 6;
+        int nodesCnt = 4;
 
         startGrids(nodesCnt/2);
 
@@ -550,7 +550,7 @@ public class GridCacheDhtPreloadWaitForBackupsTest extends GridCommonAbstractTes
             }
         }
 
-        assertEquals(3, ignite(0).cluster().currentBaselineTopology().size());
+        assertEquals(nodesCnt / 2, ignite(0).cluster().currentBaselineTopology().size());
 
         // Data shouldn't be lost.
         for (int i = 0; i < cacheSize(); i++)
