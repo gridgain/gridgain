@@ -111,10 +111,9 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
                     "(cache topology is not valid): " + cctx.name());
         }
 
-        PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
+        // We have some lost partitions.
 
-        if (lossPlc == IGNORE)
-            return null;
+        PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
 
         if (!read && (lossPlc == READ_ONLY_SAFE || lossPlc == READ_ONLY_ALL)) {
             return new CacheInvalidStateException(

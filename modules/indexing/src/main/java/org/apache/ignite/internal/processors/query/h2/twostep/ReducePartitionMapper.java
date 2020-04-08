@@ -416,8 +416,8 @@ public class ReducePartitionMapper {
             List<ClusterNode> owners = cctx.topology().owners(p);
 
             if (F.isEmpty(owners)) {
-                // Handle special case: no mapping is configured for a partition.
-                if (F.isEmpty(cctx.affinity().assignment(NONE).get(p))) {
+                // Handle special case: no mapping is configured for a partition or a lost partition is found.
+                if (F.isEmpty(cctx.affinity().assignment(NONE).get(p)) || cctx.topology().lostPartitions().contains(p)) {
                     partLocs[p] = UNMAPPED_PARTS; // Mark unmapped partition.
 
                     continue;
