@@ -20,9 +20,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,7 +39,6 @@ import org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction;
 import org.apache.ignite.cache.query.ScanQuery;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.configuration.CacheConfiguration;
-import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.CacheRebalancingEvent;
 import org.apache.ignite.events.Event;
@@ -51,6 +50,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
 import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -58,6 +58,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.ignite.cache.CacheAtomicityMode.ATOMIC;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
@@ -102,9 +103,6 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     public int[] stopNodes;
 
     /** */
-    private Boolean otherRegionPersistence;
-
-    /** */
     private static final String[] CACHES = new String[]{"cache1", "cache2"};
 
     /** */
@@ -112,24 +110,33 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
     public static List<Object[]> parameters() {
         ArrayList<Object[]> params = new ArrayList<>();
 
-        for (Integer backups : Arrays.asList(0, 1, 2)) {
-            int nodes = backups + 3;
-            int[] stopIdxs = new int[backups + 1];
+        Random r = new Random();
+        System.out.println("Seed: " + U.field(r, "seed"));
 
-            List<Integer> tmp = IntStream.range(0, nodes).boxed().collect(Collectors.toList());
-            Collections.shuffle(tmp);
+        for (CacheAtomicityMode mode : Arrays.asList(TRANSACTIONAL, ATOMIC)) {
+            // Test always scenarios.
+            params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, false, 3, new int[]{2}});
 
-            for (int i = 0; i < stopIdxs.length; i++)
-                stopIdxs[i] = tmp.get(i);
+            // Random scenarios.
+            for (Integer backups : Arrays.asList(0, 1, 2)) {
+                int nodes = backups + 3;
+                int[] stopIdxs = new int[backups + 1];
 
-            params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, backups, false, nodes, stopIdxs});
-            params.add(new Object[]{TRANSACTIONAL, IGNORE, backups, false, nodes, stopIdxs});
-            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, backups, false, nodes, stopIdxs});
-            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, backups, false, nodes, stopIdxs});
-            params.add(new Object[]{TRANSACTIONAL, READ_WRITE_SAFE, backups, true, nodes, stopIdxs});
-            params.add(new Object[]{TRANSACTIONAL, IGNORE, backups, true, nodes, stopIdxs});
-            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_SAFE, backups, true, nodes, stopIdxs});
-            params.add(new Object[]{TRANSACTIONAL, READ_ONLY_ALL, backups, true, nodes, stopIdxs});
+                List<Integer> tmp = IntStream.range(0, nodes).boxed().collect(Collectors.toList());
+                Collections.shuffle(tmp, r);
+
+                for (int i = 0; i < stopIdxs.length; i++)
+                    stopIdxs[i] = tmp.get(i);
+
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, false, nodes, stopIdxs});
+                params.add(new Object[]{mode, IGNORE, backups, false, nodes, stopIdxs});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, false, nodes, stopIdxs});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, false, nodes, stopIdxs});
+                params.add(new Object[]{mode, READ_WRITE_SAFE, backups, true, nodes, stopIdxs});
+                params.add(new Object[]{mode, IGNORE, backups, true, nodes, stopIdxs});
+                params.add(new Object[]{mode, READ_ONLY_SAFE, backups, true, nodes, stopIdxs});
+                params.add(new Object[]{mode, READ_ONLY_ALL, backups, true, nodes, stopIdxs});
+            }
         }
 
         return params;
@@ -154,16 +161,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
                     .setBackups(backups)
                     .setWriteSynchronizationMode(FULL_SYNC)
                     .setPartitionLossPolicy(partLossPlc)
-                    .setReadFromBackup(false) // Remove to reproduce a bug with reading from deleted partition.
                     .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
         }
-
-//        if (otherRegionPersistence != null) {
-//            DataRegionConfiguration otherRegCfg = new DataRegionConfiguration();
-//            otherRegCfg.setName(OTHER_CACHE).setInitialSize(size).setMaxSize(size).setPersistenceEnabled(otherRegionPersistence);
-//
-//            dsCfg.setDataRegionConfigurations(otherRegCfg);
-//        }
 
         cfg.setCacheConfiguration(ccfgs);
 
