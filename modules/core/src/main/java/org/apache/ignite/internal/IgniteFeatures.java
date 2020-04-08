@@ -142,7 +142,10 @@ public enum IgniteFeatures {
     /** Partition reconciliation utility. */
     PARTITION_RECONCILIATION(34),
 
-    /** */
+    /** Inverse connection: sending a request over discovery to establish a communication connection. */
+    INVERSE_TCP_CONNECTION(35),
+
+    /** Check secondary indexes inline size on join/by control utility request. */
     CHECK_INDEX_INLINE_SIZES(36);
 
     /**
@@ -248,44 +251,40 @@ public enum IgniteFeatures {
      * @return {@code True} if all nodes in the cluster support given feature.
      */
     public static boolean allNodesSupport(@Nullable GridKernalContext ctx, DiscoverySpi discoSpi, IgniteFeatures feature) {
-        return selectedNodesSupport(ctx, discoSpi, feature, F.alwaysTrue());
+        return allNodesSupport(ctx, discoSpi, feature, F.alwaysTrue());
     }
 
     /**
-     * Checks that feature supported by all passed throw {@code filter} nodes.
+     * Check that feature is supported by all nodes passing the provided predicate.
      *
      * @param ctx Kernal context.
      * @param feature Feature to check.
-     * @param filter Filter for selecting checked nodes.
-     * @return if feature is declared to be supported by all selected nodes.
+     * @param pred Predicate to filter out nodes that should not be checked for feature support.
+     * @return {@code True} if all nodes passed the predicate support the feature.
      */
-    public static boolean selectedNodesSupport(
-        GridKernalContext ctx,
-        IgniteFeatures feature,
-        IgnitePredicate<ClusterNode> filter
-    ) {
-        return selectedNodesSupport(ctx, ctx.config().getDiscoverySpi(), feature, filter);
+    public static boolean allNodesSupport(GridKernalContext ctx, IgniteFeatures feature, IgnitePredicate<ClusterNode> pred) {
+        return allNodesSupport(ctx, ctx.config().getDiscoverySpi(), feature, pred);
     }
 
     /**
-     * Checks that feature supported by all passed throw {@code filter} nodes.
+     * Check that feature is supported by all nodes passing the provided predicate.
      *
      * @param ctx Kernal context (can be null).
-     * @param discoSpi Instance of {@link DiscoverySpi}.
+     * @param discoSpi Discovery SPI implementation.
      * @param feature Feature to check.
-     * @param filter Filter for selecting checked nodes.
-     * @return if feature is declared to be supported by all selected nodes.
+     * @param pred Predicate to filter out nodes that should not be checked for feature support.
+     * @return {@code True} if all nodes passed the predicate support the feature.
      */
-    public static boolean selectedNodesSupport(
+    public static boolean allNodesSupport(
         @Nullable GridKernalContext ctx,
         DiscoverySpi discoSpi,
         IgniteFeatures feature,
-        IgnitePredicate<ClusterNode> filter
+        IgnitePredicate<ClusterNode> pred
     ) {
         if (discoSpi instanceof IgniteDiscoverySpi)
-            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature, filter);
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature, pred);
         else
-            return allNodesSupports(ctx, F.view(discoSpi.getRemoteNodes(), filter), feature);
+            return allNodesSupports(ctx, F.view(discoSpi.getRemoteNodes(), pred), feature);
     }
 
     /**
