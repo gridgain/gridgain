@@ -111,7 +111,8 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
                     "(cache topology is not valid): " + cctx.name());
         }
 
-        // We have some lost partitions.
+        if (!validation.hasLostPartitions())
+            return null;
 
         PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
 
@@ -180,7 +181,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
          * @return True if lost partition is present, False if not.
          */
         public boolean hasLostPartitions() {
-            return !F.isEmpty(lostParts);
+            return !lostParts.isEmpty();
         }
 
         /**
