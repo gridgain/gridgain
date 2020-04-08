@@ -151,6 +151,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             metaStorage = ctx.distributedMetastorage();
             evtsExporter = new EventsExporter(ctx);
             metricExporter = new MetricsExporter(ctx);
+            actDispatcher = new ActionDispatcher(ctx);
 
             if (isTracingEnabled())
                 spanExporter = new SpanExporter(ctx);
@@ -188,6 +189,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
             ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
             quietStop(messagesProc);
+            quietStop(actDispatcher);
             quietStop(metricExporter);
             quietStop(evtsExporter);
             quietStop(spanExporter);
@@ -202,7 +204,6 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
     protected void onDisconnect() {
         quietStop(cacheProc);
         quietStop(distributedActProc);
-        quietStop(actDispatcher);
         quietStop(metricProc);
         quietStop(clusterProc);
         quietStop(mgr);
@@ -386,7 +387,6 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
         mgr = new WebSocketManager(ctx);
 
         sesRegistry = new SessionRegistry(ctx);
-        actDispatcher = new ActionDispatcher(ctx);
         distributedActProc = new DistributedActionProcessor(ctx);
 
         metricProc = new MetricsProcessor(ctx, mgr);
