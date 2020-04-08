@@ -613,8 +613,8 @@ public class VerifyBackupPartitionsTaskV2 extends ComputeTaskAdapter<VisorIdleVe
                     throw e;
                 }
                 catch (Exception | AssertionError e) {
-                    String msg = new SB("CRC check of partition: ").a(part.id()).a(", for cache group ")
-                        .a(grpCtx.cacheOrGroupName()).a(" failed.")
+                    String msg = new SB("CRC check of partition: ").a(part.id()).a(", for cache group \"")
+                        .a(grpCtx.cacheOrGroupName()).a("\" failed.")
                         .a(pageStore != null ? " file: " + pageStore.getFileAbsolutePath() : "").toString();
 
                     log.error(msg, e);
