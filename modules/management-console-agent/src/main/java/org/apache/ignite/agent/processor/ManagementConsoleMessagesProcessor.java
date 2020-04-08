@@ -56,7 +56,7 @@ public class ManagementConsoleMessagesProcessor extends GridProcessorAdapter {
     @Override public void stop(boolean cancel) {
         ctx.grid().message().stopLocalListen(TOPIC_MANAGEMENT_CONSOLE, lsnr);
 
-        quietStop(snd);
+        quietStop(snd, log);
     }
 
     /**

@@ -25,6 +25,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.apache.ignite.IgniteAuthenticationException;
 import org.apache.ignite.IgniteCheckedException;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.agent.action.Session;
 import org.apache.ignite.agent.dto.action.JobResponse;
 import org.apache.ignite.agent.dto.action.ResponseError;
@@ -214,14 +215,15 @@ public final class AgentUtils {
      * Quietly closes given processor ignoring possible checked exception.
      *
      * @param proc Process.
+     * @param log Logger.
      */
-    public static void quietStop(GridProcessor proc) {
+    public static void quietStop(GridProcessor proc, IgniteLogger log) {
         if (proc != null) {
             try {
                 proc.stop(true);
             }
-            catch (Exception ignored) {
-                // No-op.
+            catch (Exception ex) {
+                U.warn(log, ex.getMessage(), ex);
             }
         }
     }
@@ -229,12 +231,13 @@ public final class AgentUtils {
     /**
      * Creates agent processor.
      *
+     * @param log Logger.
      * @param clsName Processor class name.
      * @param paramTypes The parameter array.
      * @param args array of objects to be passed as arguments to the constructor call.
      * @return Agent processor.
      */
-    public static <T extends GridProcessor> T createProcessor(String clsName, Class<?>[] paramTypes, Object... args) {
+    public static <T extends GridProcessor> T createProcessor(IgniteLogger log, String clsName, Class<?>[] paramTypes, Object... args) {
         ClassLoader ldr = U.gridClassLoader();
 
         try {
@@ -242,8 +245,8 @@ public final class AgentUtils {
 
             return (T)mgrCls.getConstructor(paramTypes).newInstance(args);
         }
-        catch (Exception ignored) {
-            // No-op.
+        catch (Exception ex) {
+            U.warn(log, ex.getMessage(), ex);
         }
 
         return null;
@@ -253,14 +256,15 @@ public final class AgentUtils {
      * Quietly start given processor ignoring possible checked exception.
      *
      * @param proc Processor.
+     * @param log Logger.
      */
-    public static void quietStart(GridProcessor proc) {
+    public static void quietStart(GridProcessor proc, IgniteLogger log) {
         if (proc != null) {
             try {
                 proc.start();
             }
-            catch (Exception ignored) {
-                // No-op.
+            catch (Exception ex) {
+                U.warn(log, ex.getMessage(), ex);
             }
         }
     }

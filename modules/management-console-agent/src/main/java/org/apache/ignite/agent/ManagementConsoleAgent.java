@@ -177,7 +177,7 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
 
             exporter.export();
 
-            quietStop(exporter);
+            quietStop(exporter, log);
         }
         else
             log.warning("Management console requires DISTRIBUTED_METASTORAGE and CLUSTER_ID_AND_TAG features for work");
@@ -188,11 +188,11 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
         if (isManagementConsoleFeaturesEnabled()) {
             ctx.event().removeDiscoveryEventListener(this::launchAgentListener, EVTS_DISCOVERY);
 
-            quietStop(messagesProc);
-            quietStop(actDispatcher);
-            quietStop(metricExporter);
-            quietStop(evtsExporter);
-            quietStop(spanExporter);
+            quietStop(messagesProc, log);
+            quietStop(actDispatcher, log);
+            quietStop(metricExporter, log);
+            quietStop(evtsExporter, log);
+            quietStop(spanExporter, log);
 
             disconnect();
         }
@@ -202,11 +202,11 @@ public class ManagementConsoleAgent extends GridProcessorAdapter implements Mana
      * Stop processors.
      */
     protected void onDisconnect() {
-        quietStop(cacheProc);
-        quietStop(distributedActProc);
-        quietStop(metricProc);
-        quietStop(clusterProc);
-        quietStop(mgr);
+        quietStop(cacheProc, log);
+        quietStop(distributedActProc, log);
+        quietStop(metricProc, log);
+        quietStop(clusterProc, log);
+        quietStop(mgr, log);
     }
 
     /**
