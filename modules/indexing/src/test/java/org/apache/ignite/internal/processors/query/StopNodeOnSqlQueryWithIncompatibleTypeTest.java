@@ -55,7 +55,6 @@ public class StopNodeOnSqlQueryWithIncompatibleTypeTest extends AbstractIndexing
     }
 
     /**
-     * Test local query execution.
      */
     @Test
     public void test() {
