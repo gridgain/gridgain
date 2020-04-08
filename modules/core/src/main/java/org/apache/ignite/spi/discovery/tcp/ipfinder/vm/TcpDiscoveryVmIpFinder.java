@@ -16,7 +16,9 @@
 
 package org.apache.ignite.spi.discovery.tcp.ipfinder.vm;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -55,7 +57,7 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
 
     /** Addresses from the configuration or IGNITE_TCP_DISCOVERY_ADDRESSES. */
     @GridToStringInclude
-    private Collection<String> addrs = new LinkedHashSet<>();
+    private Collection<String> addrs = new ArrayList<>();
 
     /** Registered InetSocketAddresses. */
     @GridToStringInclude
@@ -133,7 +135,11 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
         if (F.isEmpty(addrs))
             return this;
 
-        this.addrs = new LinkedHashSet<>(addrs);
+        //validate one time that addresses can be resolved. It helps to save the previous behavior.
+        for (String ipStr : addrs)
+            address(ipStr);
+
+        this.addrs = new ArrayList<>(addrs);
 
         return this;
     }
@@ -175,8 +181,20 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
                 return addresses(ipStr, "\\:", errMsg);
         }
 
-        // Provided address does not contain port (will use default one).
-        return Collections.singleton(new InetSocketAddress(ipStr, 0));
+        Collection<InetSocketAddress> col = new LinkedHashSet<>();
+
+        try {
+            InetAddress[] inetAddresses = InetAddress.getAllByName(ipStr);
+
+            for (InetAddress addrs : inetAddresses)
+                col.add(new InetSocketAddress(addrs, 0));
+        }
+        catch (UnknownHostException ignored) {
+            //save previous behavior on UnknownHostException
+            col = Collections.singleton(new InetSocketAddress(ipStr, 0));
+        }
+
+        return col;
     }
 
     /**
@@ -205,15 +223,19 @@ public class TcpDiscoveryVmIpFinder extends TcpDiscoveryIpFinderAdapter {
                     if (port2 < port1 || port1 == port2 || port1 <= 0 || port2 <= 0)
                         throw new IgniteSpiException(errMsg);
 
-                    Collection<InetSocketAddress> res = new ArrayList<>(port2 - port1);
+                    Collection<InetSocketAddress> res = new ArrayList<>();
 
-                    // Upper bound included.
-                    for (int i = port1; i <= port2; i++)
-                        res.add(new InetSocketAddress(addrStr, i));
+                    InetAddress[] inetAddresses = InetAddress.getAllByName(addrStr);
+
+                    for (InetAddress curAddr : inetAddresses) {
+                        // Upper bound included.
+                        for (int i = port1; i <= port2; i++)
+                            res.add(new InetSocketAddress(curAddr, i));
+                    }
 
                     return res;
                 }
-                catch (IllegalArgumentException e) {
+                catch (IllegalArgumentException | UnknownHostException e) {
                     throw new IgniteSpiException(errMsg, e);
                 }
             }
