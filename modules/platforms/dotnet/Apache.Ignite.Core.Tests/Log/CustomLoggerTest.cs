@@ -537,6 +537,7 @@ namespace Apache.Ignite.Core.Tests.Log
         /// </summary>
         private struct CustomEnum
         {
+            // ReSharper disable once UnusedMember.Local
             public int Field { get; set; }
         }
     }
