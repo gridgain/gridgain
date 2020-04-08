@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.cache.QueryIndexType;
@@ -37,7 +38,7 @@ import org.apache.ignite.testframework.ListeningTestLogger;
 import org.apache.ignite.testframework.LogListener;
 import org.junit.Test;
 
-import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_UNEXPECTED_ERROR;
 
 /**
  * Checks cancel of execution validate_indexes command.
@@ -186,7 +187,7 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
         lnsrLog.registerListener(lnsrValidationCancelled);
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() ->
-            assertNotSame(EXIT_CODE_OK, execute("--cache", "validate_indexes")));
+            assertSame(EXIT_CODE_UNEXPECTED_ERROR, execute("--cache", "validate_indexes")));
 
         assertTrue(GridTestUtils.waitForCondition(lnsrValidationStarted::check, 10_000));
 
@@ -236,16 +237,8 @@ public class GridCommandHandlerInterruptCommandTest extends GridCommandHandlerAb
 
         listeningLogger.registerListener(lnsrValidationStarted);
 
-        IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
-            try {
-                clo.call();
-
-                fail("Validation should be cancelled.");
-            }
-            catch (Exception e) {
-                assertEquals(ValidateIndexesClosure.CANCELLED_MSG, e.getMessage());
-            }
-        });
+        IgniteInternalFuture fut = GridTestUtils.runAsync(() ->
+            GridTestUtils.assertThrows(log, clo::call, IgniteException.class, ValidateIndexesClosure.CANCELLED_MSG));
 
         assertTrue(GridTestUtils.waitForCondition(lnsrValidationStarted::check, 10_000));
 

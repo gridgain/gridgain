@@ -727,10 +727,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * @param ctx Context.
      * @param idx Index.
      */
-    private Future<Map<String, ValidateIndexesPartitionResult>> processIndexAsync(
-        GridCacheContext ctx,
-        Index idx
-    ) {
+    private Future<Map<String, ValidateIndexesPartitionResult>> processIndexAsync(GridCacheContext ctx, Index idx) {
         return calcExecutor.submit(new Callable<Map<String, ValidateIndexesPartitionResult>>() {
             /** {@inheritDoc} */
             @Override public Map<String, ValidateIndexesPartitionResult> call() {
@@ -750,10 +747,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * @param ctx Context.
      * @param idx Index.
      */
-    private Map<String, ValidateIndexesPartitionResult> processIndex(
-        GridCacheContext ctx,
-        Index idx
-    ) {
+    private Map<String, ValidateIndexesPartitionResult> processIndex(GridCacheContext ctx, Index idx) {
         if (validateCtx.isCancelled())
             return emptyMap();
 
@@ -916,10 +910,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * @param locPart Local partition.
      * @return Cache size representation object.
      */
-    private ValidateIndexesClosure.CacheSize calcCacheSize(
-        CacheGroupContext grpCtx,
-        GridDhtLocalPartition locPart
-    ) {
+    private ValidateIndexesClosure.CacheSize calcCacheSize(CacheGroupContext grpCtx,GridDhtLocalPartition locPart) {
         try {
             if (validateCtx.isCancelled())
                 return new CacheSize(null, emptyMap());
@@ -1013,7 +1004,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * Asynchronous calculation of the index size for cache.
      *
      * @param cacheCtx Cache context.
-     * @param idx      Index.
+     * @param idx Index.
      * @return Future with index size.
      */
     private Future<T2<Throwable, Long>> calcIndexSizeAsync(
@@ -1029,8 +1020,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
      * Calculation of the index size for cache.
      *
      * @param cacheCtx Cache context.
-     * @param idx      Index.
-     * @return Toule contains exception if it happened and size of index.
+     * @param idx Index.
+     * @return Tuple contains exception if it happened and size of index.
      */
     private T2<Throwable, Long> calcIndexSize(GridCacheContext cacheCtx, Index idx) {
         if (validateCtx.isCancelled())
