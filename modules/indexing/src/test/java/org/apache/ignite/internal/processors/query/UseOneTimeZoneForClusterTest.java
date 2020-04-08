@@ -57,6 +57,9 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
     /** Time zones to check. */
     private static final String[] TIME_ZONES = {"EST5EDT", "IST", "Europe/Moscow"};
 
+    /** Enable persistence for test. */
+    private boolean persistence;
+
     /** Time zone ID for other JVM to start remote grid. */
     private String tzId;
 
@@ -83,13 +86,15 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
             cfg.setClientMode(true);
         }
 
-        return cfg
-            .setClientMode(igniteInstanceName.startsWith("cli"))
-            .setDataStorageConfiguration(new DataStorageConfiguration()
+        if (persistence) {
+            cfg.setDataStorageConfiguration(new DataStorageConfiguration()
                 .setDefaultDataRegionConfiguration(new DataRegionConfiguration()
                     .setPersistenceEnabled(true)
                 )
             );
+        }
+
+        return cfg.setClientMode(igniteInstanceName.startsWith("cli"));
     }
 
     /**
@@ -110,9 +115,12 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
     }
 
     /**
+     *
      */
     @Test
     public void testServerNodes() throws Exception {
+        persistence = true;
+
         IgniteEx ignInit = startGrid(INIT_NODE_NAME);
 
         for (String tz : TIME_ZONES)
@@ -138,6 +146,8 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testClientsInDifferentTimeZones() throws Exception {
+        persistence = true;
+
         IgniteEx ignInit = startGrid(INIT_NODE_NAME);
 
         for (String tz : TIME_ZONES)
@@ -196,6 +206,8 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testPersistence() throws Exception {
+        persistence = true;
+
         IgniteEx ignInit = startGrid(INIT_NODE_NAME);
 
         Ignite ignPrev = startRemoteGrid("tz-" + TIME_ZONES[0], TIME_ZONES[0]);
@@ -233,6 +245,8 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testChangeTimeZone() throws Exception {
+        persistence = false;
+
         IgniteEx cli = startGrid(INIT_NODE_NAME);
 
         startGrid(0);
@@ -285,6 +299,8 @@ public class UseOneTimeZoneForClusterTest extends AbstractIndexingCommonTest {
      */
     @Test
     public void testChangeTimeZonePersistence() throws Exception {
+        persistence = true;
+
         IgniteEx cli = startGrid(INIT_NODE_NAME);
 
         Ignite ignPrev = startRemoteGrid("srv", TIME_ZONES[0]);
