@@ -676,7 +676,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             }
 
-            Assert.Throws<ObjectDisposedException>(() => res.GetAll());
+            if (withPartition)
+            {
+                Assert.Throws<ObjectDisposedException>(() => res.GetAll());
+            }
         }
 
         /// <summary>
