@@ -153,12 +153,7 @@ public class SqlBulkLoadCommand implements SqlCommand {
 
                 parseCsvOptions(lex, fmt);
 
-                String delimiter = fmt.fieldSeparator().toString();
-                String quoteChars = fmt.quoteChars();
-
-                if (delimiter.equals(quoteChars))
-                    throw error(lex, "Invalid delimiter or quote chars: delim is " + delimiter
-                        + ", quote char is " + quoteChars);
+                validateCsvParserFormat(lex, fmt);
 
                 inputFormat = fmt;
 
@@ -229,6 +224,25 @@ public class SqlBulkLoadCommand implements SqlCommand {
                     return;
             }
         }
+    }
+
+    /**
+     * Parses the optional parameters.
+     *
+     * @param lex The lexer.
+     * @param format CSV format object to validate.
+     */
+    private void validateCsvParserFormat(SqlLexer lex, BulkLoadCsvFormat format) {
+        String delimiter = format.fieldSeparator().toString();
+        String quoteChars = format.quoteChars();
+
+        if (delimiter.length() > 1 || quoteChars.length() > 1)
+            throw error(lex, "Delimiter or quote chars must consist of single character: delim is '" + delimiter
+                + "', quote char is '" + quoteChars + "'");
+
+        if (delimiter.equals(quoteChars))
+            throw error(lex, "Invalid delimiter or quote chars: delim is '" + delimiter
+                + "', quote char is '" + quoteChars + "'");
     }
 
     /**
