@@ -88,7 +88,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestReadOnlyAll()
         {
-            TestPartitionLoss(PartitionLossPolicy.ReadOnlyAll, false, false);
+            TestPartitionLoss(PartitionLossPolicy.ReadOnlyAll, false, true);
         }
 
         /// <summary>
@@ -97,7 +97,7 @@ namespace Apache.Ignite.Core.Tests.Cache
         [Test]
         public void TestReadWriteAll()
         {
-            TestPartitionLoss(PartitionLossPolicy.ReadWriteAll, true, false);
+            TestPartitionLoss(PartitionLossPolicy.ReadWriteAll, true, true);
         }
 
         /// <summary>
@@ -138,9 +138,10 @@ namespace Apache.Ignite.Core.Tests.Cache
             {
                 VerifyCacheOperations(cache, part, canWrite, safe);
 
-                // Check reads from a cache in recover mode.
+                // Check reads are possible from a cache in recover mode.
                 var recoverCache = cache.WithPartitionRecover();
-                var res = recoverCache[part];
+                int res;
+                Assert.IsFalse(recoverCache.TryGet(part, out res));
             }
 
             // Reset and verify.

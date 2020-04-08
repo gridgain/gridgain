@@ -30,6 +30,7 @@ import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.cache.PartitionLossPolicy.IGNORE;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_ALL;
 import static org.apache.ignite.cache.PartitionLossPolicy.READ_ONLY_SAFE;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isSystemCache;
@@ -112,6 +113,9 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
 
         PartitionLossPolicy lossPlc = grp.config().getPartitionLossPolicy();
 
+        if (lossPlc == IGNORE)
+            return null;
+
         if (!read && (lossPlc == READ_ONLY_SAFE || lossPlc == READ_ONLY_ALL)) {
             return new CacheInvalidStateException(
                  "Failed to write to cache (cache is moved to a read-only state): " + cctx.name());
@@ -121,23 +125,22 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
         if (read && recovery)
             return null;
 
-        if (key == null && keys == null)
-            return new CacheInvalidStateException("Failed to perform a cache operation " +
-                    "(the cache has lost partitions [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
-
         if (key != null)
-            return validate(cctx, key, validation.lostPartitions());
+            return validateKey(cctx, key, validation.lostPartitions());
 
         if (keys != null) {
             for (Object key0 : keys) {
-                final CacheInvalidStateException res = validate(cctx, key0, validation.lostPartitions());
+                final CacheInvalidStateException res = validateKey(cctx, key0, validation.lostPartitions());
 
                 if (res != null)
                     return res;
             }
+
+            return null;
         }
 
-        return null;
+        return new CacheInvalidStateException("Failed to perform a cache operation " +
+                "(the cache has lost partitions [cacheGrp=" + cctx.group().name() + ", cache=" + cctx.name() + ']');
     }
 
     /**
@@ -194,7 +197,7 @@ public abstract class GridDhtTopologyFutureAdapter extends GridFutureAdapter<Aff
      * @param key Key.
      * @param lostParts Lost partitions.
      */
-    private CacheInvalidStateException validate(
+    private CacheInvalidStateException validateKey(
         GridCacheContext cctx,
         Object key,
         Collection<Integer> lostParts

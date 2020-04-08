@@ -40,9 +40,6 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED
 /**
  * Cache validator metrics test.
  */
-@WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true")
-@WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true")
-@WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "true")
 public class CacheValidatorMetricsTest extends GridCommonAbstractTest implements Serializable {
     /** Cache name 1. */
     private static String CACHE_NAME_1 = "cache1";
@@ -60,7 +57,8 @@ public class CacheValidatorMetricsTest extends GridCommonAbstractTest implements
             .setName(CACHE_NAME_1)
             .setCacheMode(CacheMode.PARTITIONED)
             .setBackups(0)
-            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
+            .setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL)
+            .setPartitionLossPolicy(PartitionLossPolicy.READ_ONLY_SAFE);
 
         CacheConfiguration cCfg2 = new CacheConfiguration()
             .setName(CACHE_NAME_2)
