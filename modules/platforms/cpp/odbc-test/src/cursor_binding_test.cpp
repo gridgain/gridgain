@@ -133,6 +133,8 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     enum { ROW_ARRAY_SIZE = 10 };
     enum { BUFFER_SIZE = 1024 };
 
+    StartAdditionalNode("Node2");
+
     Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PAGE_SIZE=8");
 
     // Preloading data.
@@ -269,6 +271,17 @@ BOOST_AUTO_TEST_CASE(TestCursorBindingColumnWise)
     // Close the cursor.
     ret = SQLCloseCursor(stmt);
     ODBC_THROW_ON_ERROR(ret, SQL_HANDLE_STMT, stmt);
+}
+
+BOOST_AUTO_TEST_CASE(TestCursorBindingRowWise)
+{
+    Connect("DRIVER={Apache Ignite};ADDRESS=127.0.0.1:11110;SCHEMA=cache;PAGE_SIZE=8");
+
+    SQLRETURN ret = SQLSetStmtAttr(stmt, SQL_ATTR_ROW_BIND_TYPE, reinterpret_cast<SQLPOINTER*>(42), 0);
+
+    BOOST_CHECK_EQUAL(ret, SQL_ERROR);
+
+    CheckSQLStatementDiagnosticError("HYC00");
 }
 
 BOOST_AUTO_TEST_SUITE_END()
