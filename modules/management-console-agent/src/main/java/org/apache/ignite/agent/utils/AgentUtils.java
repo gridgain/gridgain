@@ -217,7 +217,7 @@ public final class AgentUtils {
      * @param proc Process.
      * @param log Logger.
      */
-    public static void quietStop(GridProcessor proc, IgniteLogger log) {
+    public static void stopProcessor(GridProcessor proc, IgniteLogger log) {
         if (proc != null) {
             try {
                 proc.stop(true);
@@ -258,7 +258,7 @@ public final class AgentUtils {
      * @param proc Processor.
      * @param log Logger.
      */
-    public static void quietStart(GridProcessor proc, IgniteLogger log) {
+    public static void startProcessor(GridProcessor proc, IgniteLogger log) {
         if (proc != null) {
             try {
                 proc.start();

@@ -29,7 +29,7 @@ import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CO
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterNodeConfigurationDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildEventsDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildSaveSpanDest;
-import static org.apache.ignite.agent.utils.AgentUtils.quietStop;
+import static org.apache.ignite.agent.utils.AgentUtils.stopProcessor;
 
 /**
  * Control Center messages processor.
@@ -56,7 +56,7 @@ public class ManagementConsoleMessagesProcessor extends GridProcessorAdapter {
     @Override public void stop(boolean cancel) {
         ctx.grid().message().stopLocalListen(TOPIC_MANAGEMENT_CONSOLE, lsnr);
 
-        quietStop(snd, log);
+        stopProcessor(snd, log);
     }
 
     /**
