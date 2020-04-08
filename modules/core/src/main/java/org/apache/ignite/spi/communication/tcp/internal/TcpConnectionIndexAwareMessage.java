@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.processors.odbc.odbc;
+package org.apache.ignite.spi.communication.tcp.internal;
 
-/**
- * ODBC query get params meta request.
- */
-public class OdbcQueryGetParamsMetaRequest extends OdbcQueryGetQueryMetaRequest {
+import org.apache.ignite.plugin.extensions.communication.Message;
+
+/** */
+public interface TcpConnectionIndexAwareMessage extends Message {
+    /** */
+    public static final int UNDEFINED_CONNECTION_INDEX = -1;
+
     /**
-     * @param schema Schema.
-     * @param query SQL Query.
+     * @return {@link #UNDEFINED_CONNECTION_INDEX} if standard index has to be used. Desired connection index otherwise.
      */
-    public OdbcQueryGetParamsMetaRequest(String schema, String query) {
-        super(META_PARAMS, schema, query);
-    }
+    public int connectionIndex();
 }

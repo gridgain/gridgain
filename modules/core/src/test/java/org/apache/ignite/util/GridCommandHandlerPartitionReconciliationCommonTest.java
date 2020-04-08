@@ -74,7 +74,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * <b>Test steps:</b>
      * <ol>
      *     <li>Emulate non-consistency when keys were updated on primary and 2 backups</li>
-     *     <li>Start bin/control.sh --cache partition-reconciliation</li>
+     *     <li>Start bin/control.sh --cache partition_reconciliation</li>
      * </ol>
      * <b>Expected result:</b>
      * <ul>
@@ -100,7 +100,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--local-output"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--local-output"));
 
         assertContains(log, testOut.toString(), "INCONSISTENT KEYS: 1");
     }
@@ -115,7 +115,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * <b>Test steps:</b>
      * <ol>
      *     <li>Emulate non-consistency when keys were updated on primary and 2 backups</li>
-     *     <li>Start bin/control.sh --cache partition-reconciliation</li>
+     *     <li>Start bin/control.sh --cache partition_reconciliation</li>
      * </ol>
      * <b>Expected result:</b>
      * <ul>
@@ -142,7 +142,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation"));
 
         assertContains(log, testOut.toString(), "INCONSISTENT KEYS: 1");
 
@@ -158,7 +158,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * <b>Test steps:</b>
      * <ol>
      *     <li>Emulate non-consistency when keys were updated on primary and 2 backups</li>
-     *     <li>Start bin/control.sh --cache partition-reconciliation --local-output</li>
+     *     <li>Start bin/control.sh --cache partition_reconciliation --local-output</li>
      * </ol>
      * <b>Expected result:</b>
      * <ul>
@@ -184,7 +184,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
 
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--local-output"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--local-output"));
 
         assertContains(log, testOut.toString(), "INCONSISTENT KEYS: 1");
 
@@ -199,7 +199,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * </ul>
      * <b>Test steps:</b>
      * <ol>
-     *     <li>Start bin/control.sh --cache partition-reconciliation --local-output --include-sensitive</li>
+     *     <li>Start bin/control.sh --cache partition_reconciliation --local-output --include-sensitive</li>
      * </ol>
      * <b>Expected result:</b>
      * <ul>
@@ -210,7 +210,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
     public void testConsoleOutputContainsWarningAboutSensitiveInformation() {
         injectTestSystemOut();
 
-        assertEquals(EXIT_CODE_OK, execute("--cache", "partition-reconciliation", "--local-output", "--include-sensitive"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", "partition_reconciliation", "--local-output", "--include-sensitive"));
 
         assertContains(
             log,
@@ -226,7 +226,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * </ul>
      * <b>Test steps:</b>
      * <ol>
-     *     <li>Start bin/control.sh --cache partition-reconciliation --local-output</li>
+     *     <li>Start bin/control.sh --cache partition_reconciliation --local-output</li>
      * </ol>
      * <b>Expected result:</b>
      * <ul>
@@ -256,7 +256,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
 
         CommandHandler hnd = new CommandHandler();
 
-        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition-reconciliation", "--local-output"));
+        assertEquals(EXIT_CODE_OK, execute(hnd,"--cache", "partition_reconciliation", "--local-output"));
 
         assertContains(log, testOut.toString(), "INCONSISTENT KEYS: 1");
 
@@ -287,7 +287,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
      * </ul>
      * <b>Test steps:</b>
      * <ol>
-     *     <li>Start bin/control.sh --cache partition-reconciliation --local-output --recheck-delay 10</li>
+     *     <li>Start bin/control.sh --cache partition_reconciliation --local-output --recheck-delay 10</li>
      *     <li>Try to gracefuly stop a node/cluster.</li>
      * </ol>
      * <b>Expected result:</b>
@@ -353,7 +353,7 @@ public class GridCommandHandlerPartitionReconciliationCommonTest
             execute(
                 hnd,
                 "--cache",
-                "partition-reconciliation",
+                "partition_reconciliation",
                 "--load-factor", "0.1",
                 "--batch-size", Integer.toString(batchSize),
                 "--recheck-attempts", Integer.toString(recheckAttempts),
