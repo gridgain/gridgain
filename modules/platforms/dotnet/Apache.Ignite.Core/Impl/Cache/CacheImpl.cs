@@ -1667,7 +1667,8 @@ namespace Apache.Ignite.Core.Impl.Cache
                 // We do not support this scenario for near cache scan optimization.
                 var scan = qry as ScanQuery<TK, TV>;
 
-                if (scan != null && scan.Local)
+                // Local scan with Partition can be satisfied directly from platform cache on server nodes.
+                if (scan != null && scan.Local && scan.Partition != null)
                 {
                     return ScanNear(scan);
                 }

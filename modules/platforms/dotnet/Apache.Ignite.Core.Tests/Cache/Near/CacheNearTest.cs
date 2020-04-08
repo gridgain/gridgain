@@ -662,7 +662,18 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             foreach (var entry in res)
             {
-                Assert.AreSame(entry.Value, cache.LocalPeek(entry.Key, CachePeekMode.PlatformNear));
+                var localValue = cache.LocalPeek(entry.Key, CachePeekMode.PlatformNear);
+                
+                if (withPartition)
+                {
+                    // Local scan with partition works directly through platform cache.
+                    Assert.AreSame(entry.Value, localValue);
+                }
+                else
+                {
+                    // Local scan without partition works through Java.
+                    Assert.AreNotSame(entry.Value, localValue);
+                }
             }
 
             Assert.Throws<ObjectDisposedException>(() => res.GetAll());
@@ -817,10 +828,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             // Promote key to near cache.
             clientCache.Get(2);
             
-            var res = clientCache.Query(new ScanQuery<int, Foo> {Local = true}).GetAll().Single();
-            
-            Assert.AreEqual(2, res.Key);
-            Assert.AreSame(clientCache.Get(2), res.Value);
+            var res = clientCache.Query(new ScanQuery<int, Foo> {Local = true}).GetAll();
+
+            // Local scan on client node returns empty collection.
+            Assert.AreEqual(1, clientCache.GetLocalSize(CachePeekMode.Near));
+            Assert.AreEqual(1, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.IsEmpty(res);
         }
 
         /// <summary>
