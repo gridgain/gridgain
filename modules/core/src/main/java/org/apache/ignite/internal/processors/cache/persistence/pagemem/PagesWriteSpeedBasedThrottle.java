@@ -135,7 +135,7 @@ public class PagesWriteSpeedBasedThrottle implements PagesWriteThrottlePolicy {
 
         CheckpointProgress progress = cpProgress.apply();
 
-        AtomicInteger writtenPagesCntr = progress == null ? null : cpProgress.apply().writtenPagesCounter();
+        AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 
         if (writtenPagesCntr == null) {
             speedForMarkAll = 0;

@@ -96,7 +96,7 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
         if (!shouldThrottle && !throttleOnlyPagesInCheckpoint) {
             CheckpointProgress progress = cpProgress.apply();
 
-            AtomicInteger writtenPagesCntr = progress == null ? null : cpProgress.apply().writtenPagesCounter();
+            AtomicInteger writtenPagesCntr = progress == null ? null : progress.writtenPagesCounter();
 
             if (progress == null || writtenPagesCntr == null)
                 return; // Don't throttle if checkpoint is not running.

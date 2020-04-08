@@ -267,4 +267,13 @@ public class CheckpointProgressImpl implements CheckpointProgress {
         syncedPagesCntr = new AtomicInteger();
         evictedPagesCntr = new AtomicInteger();
     }
+
+    /** {@inheritDoc} */
+    @Override public void clearCounters() {
+        currCheckpointPagesCnt = 0;
+
+        writtenPagesCntr = null;
+        syncedPagesCntr = null;
+        evictedPagesCntr = null;
+    }
 }
