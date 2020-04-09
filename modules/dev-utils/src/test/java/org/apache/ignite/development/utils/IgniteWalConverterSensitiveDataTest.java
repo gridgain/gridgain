@@ -153,6 +153,10 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
             )).setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL));
     }
 
+//    todo: Need test for:
+//    todo: org.apache.ignite.IgniteSystemProperties#getEnum(java.lang.Class<E>, java.lang.String, E)
+//    todo: org.apache.ignite.internal.util.tostring.GridToStringBuilder#sensitiveStrategy
+
     /**
      * Test checks that by default sensitive data is displayed in
      * {@link WALRecord} when use {@link IgniteWalConverter}.
