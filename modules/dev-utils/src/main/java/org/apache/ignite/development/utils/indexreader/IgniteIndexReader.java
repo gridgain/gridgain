@@ -976,6 +976,8 @@ public class IgniteIndexReader implements AutoCloseable {
                 validationInfo.errors
             );
 
+            totalErr.addAndGet(validationInfo.errors.size());
+
             cacheIdxSizes.computeIfAbsent(getCacheAndTypeId(idxName), k -> new HashMap<>())
                 .put(idxName, validationInfo.itemStorage.size());
         });
