@@ -16,8 +16,6 @@
 
 namespace Apache.Ignite.Core.Tests.Cache
 {
-    using System;
-    using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Events;

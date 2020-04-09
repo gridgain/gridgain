@@ -23,7 +23,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System.Linq;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
-    using Apache.Ignite.Core.Impl.Cache.Near;
+    using Apache.Ignite.Core.Impl.Cache.Platform;
 
     /// <summary>
     /// Query cursor over platform near cache.
@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     internal sealed class NearQueryCursor<TK, TV> : IQueryCursor<ICacheEntry<TK, TV>>
     {
         /** */
-        private readonly INearCache _nearCache;
+        private readonly IPlatformCache _platformCache;
         
         /** */
         private readonly Action _dispose;
@@ -51,16 +51,16 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <summary>
         /// Initializes a new instance of <see cref="NearQueryCursor{TK, TV}"/>.
         /// </summary>
-        /// <param name="nearCache">Near cache</param>
+        /// <param name="platformCache">Near cache</param>
         /// <param name="filter">Filter.</param>
         /// <param name="partition">Partition.</param>
         /// <param name="dispose">Dispose action.</param>
-        internal NearQueryCursor(INearCache nearCache, ICacheEntryFilter<TK, TV> filter = null, 
+        internal NearQueryCursor(IPlatformCache platformCache, ICacheEntryFilter<TK, TV> filter = null, 
             int? partition = null, Action dispose = null)
         {
-            Debug.Assert(nearCache != null);
+            Debug.Assert(platformCache != null);
             
-            _nearCache = nearCache;
+            _platformCache = platformCache;
             _filter = filter;
             _partition = partition;
             _dispose = dispose;
@@ -124,7 +124,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             try
             {
-                foreach (var entry in _nearCache.GetEntries<TK, TV>(_partition))
+                foreach (var entry in _platformCache.GetEntries<TK, TV>(_partition))
                 {
                     if (_filter == null || _filter.Invoke(entry))
                     {

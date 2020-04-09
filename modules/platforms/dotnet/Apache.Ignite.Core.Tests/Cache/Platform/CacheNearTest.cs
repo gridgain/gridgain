@@ -621,7 +621,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             // Clear near cache using internal API.
             foreach (var ignite in Ignition.GetAll())
             {
-                var nearCache = ((Ignite) ignite).NearCacheManager.TryGetNearCache(BinaryUtils.GetCacheId(cache.Name));
+                var nearCache = ((Ignite) ignite).PlatformCacheManager.TryGetPlatformCache(BinaryUtils.GetCacheId(cache.Name));
 
                 if (nearCache != null)
                 {

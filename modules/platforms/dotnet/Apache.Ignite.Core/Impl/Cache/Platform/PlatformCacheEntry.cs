@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Cache.Near
+namespace Apache.Ignite.Core.Impl.Cache.Platform
 {
     using System.Diagnostics;
     using System.Threading;
 
     /// <summary>
-    /// Near cache entry.
+    /// Platform cache entry.
     /// </summary>
     /// <typeparam name="T">Value type.</typeparam>
-    internal class NearCacheEntry<T>
+    internal class PlatformCacheEntry<T>
     {
         /** Value. */
         private readonly T _value;
@@ -37,9 +37,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         private object _version;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="NearCacheEntry{T}"/> class.
+        /// Initializes a new instance of <see cref="PlatformCacheEntry{T}"/> class.
         /// </summary>
-        public NearCacheEntry(T value, object version, int partition)
+        public PlatformCacheEntry(T value, object version, int partition)
         {
             Debug.Assert(version != null);
             

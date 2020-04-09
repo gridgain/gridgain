@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Impl
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Cache;
-    using Apache.Ignite.Core.Impl.Cache.Near;
+    using Apache.Ignite.Core.Impl.Cache.Platform;
     using Apache.Ignite.Core.Impl.Client;
     using Apache.Ignite.Core.Impl.Cluster;
     using Apache.Ignite.Core.Impl.Common;
@@ -144,7 +144,7 @@ namespace Apache.Ignite.Core.Impl
         private readonly PluginProcessor _pluginProcessor;
 
         /** Near cache manager. */
-        private readonly NearCacheManager _nearCacheManager;
+        private readonly PlatformCacheManager _platformCacheManager;
 
         /// <summary>
         /// Constructor.
@@ -188,7 +188,7 @@ namespace Apache.Ignite.Core.Impl
 
             _pluginProcessor = new PluginProcessor(this);
             
-            _nearCacheManager = new NearCacheManager(this);
+            _platformCacheManager = new PlatformCacheManager(this);
         }
 
         /// <summary>
@@ -1060,9 +1060,9 @@ namespace Apache.Ignite.Core.Impl
         /// <summary>
         /// Gets the near cache manager.
         /// </summary>
-        public NearCacheManager NearCacheManager
+        public PlatformCacheManager PlatformCacheManager
         {
-            get { return _nearCacheManager; }
+            get { return _platformCacheManager; }
         }
 
         /// <summary>

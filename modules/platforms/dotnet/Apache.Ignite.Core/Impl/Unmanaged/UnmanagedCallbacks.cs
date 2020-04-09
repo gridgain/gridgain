@@ -434,7 +434,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             {
                 var cacheId = stream.ReadInt();
 
-                _ignite.NearCacheManager.Update(cacheId, stream, _ignite.Marshaller);
+                _ignite.PlatformCacheManager.Update(cacheId, stream, _ignite.Marshaller);
             }
 
             return 0;
@@ -448,7 +448,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             int cacheId = (int)(cacheIdAndPartition & 0xFFFFFFFF);
             int partition = (int) (cacheIdAndPartition >> 32);
 
-            _ignite.NearCacheManager.UpdateFromThreadLocal(
+            _ignite.PlatformCacheManager.UpdateFromThreadLocal(
                 cacheId, partition, new AffinityTopologyVersion(verMajor, (int) verMinor));
                 
             return 0;
@@ -460,7 +460,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// <param name="cacheId">Cache id.</param>
         private long OnCacheStopped(long cacheId)
         {
-            _ignite.NearCacheManager.Stop((int) cacheId);
+            _ignite.PlatformCacheManager.Stop((int) cacheId);
             
             return 0;
         }
@@ -473,7 +473,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             var affinityTopologyVersion = new AffinityTopologyVersion(topologyVersion, (int) minorTopologyVersion);
             
-            _ignite.NearCacheManager.OnAffinityTopologyVersionChanged(affinityTopologyVersion);
+            _ignite.PlatformCacheManager.OnAffinityTopologyVersionChanged(affinityTopologyVersion);
             
             return 0;
         }

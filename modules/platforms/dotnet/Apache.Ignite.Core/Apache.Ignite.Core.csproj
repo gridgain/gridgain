@@ -85,10 +85,10 @@
     <Compile Include="Failure\StopNodeFailureHandler.cs" />
     <Compile Include="Failure\StopNodeOrHaltFailureHandler.cs" />
     <Compile Include="Impl\Binary\BinaryHashCodeUtils.cs" />
-    <Compile Include="Impl\Cache\Near\INearCache.cs" />
-    <Compile Include="Impl\Cache\Near\NearCache.cs" />
-    <Compile Include="Impl\Cache\Near\NearCacheEntry.cs" />
-    <Compile Include="Impl\Cache\Near\NearCacheManager.cs" />
+    <Compile Include="Impl\Cache\Platform\IPlatformCache.cs" />
+    <Compile Include="Impl\Cache\Platform\PlatformCache.cs" />
+    <Compile Include="Impl\Cache\Platform\PlatformCacheEntry.cs" />
+    <Compile Include="Impl\Cache\Platform\PlatformCacheManager.cs" />
     <Compile Include="Impl\Cache\QueryMetricsImpl.cs" />
     <Compile Include="Impl\Cache\Query\NearQueryCursor.cs" />
     <Compile Include="Impl\Client\ClientContextBase.cs" />

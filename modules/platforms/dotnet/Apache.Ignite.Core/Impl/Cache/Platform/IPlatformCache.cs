@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Cache.Near
+namespace Apache.Ignite.Core.Impl.Cache.Platform
 {
     using System.Collections.Generic;
     using Apache.Ignite.Core.Cache;
@@ -25,7 +25,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
     /// <summary>
     /// Non-generic near cache facade.
     /// </summary>
-    internal interface INearCache
+    internal interface IPlatformCache
     {
         /// <summary>
         /// Gets a value indicating whether near cache has been stopped.

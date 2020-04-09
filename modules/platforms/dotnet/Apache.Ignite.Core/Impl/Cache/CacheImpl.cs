@@ -33,7 +33,7 @@ namespace Apache.Ignite.Core.Impl.Cache
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Cache.Expiry;
-    using Apache.Ignite.Core.Impl.Cache.Near;
+    using Apache.Ignite.Core.Impl.Cache.Platform;
     using Apache.Ignite.Core.Impl.Cache.Query;
     using Apache.Ignite.Core.Impl.Cache.Query.Continuous;
     using Apache.Ignite.Core.Impl.Client;
@@ -75,7 +75,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         private readonly Func<IBinaryStream, Exception> _readException;
 
         /** Near cache. */
-        private readonly INearCache _nearCache;
+        private readonly IPlatformCache _platformCache;
 
         /// <summary>
         /// Constructor.
@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (configuration.PlatformCacheConfiguration != null)
             {
-                _nearCache = _ignite.NearCacheManager.GetOrCreateNearCache(configuration);
+                _platformCache = _ignite.PlatformCacheManager.GetOrCreatePlatformCache(configuration);
             }
         }
 
@@ -121,7 +121,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// </summary>
         private bool IsNear
         {
-            get { return _nearCache != null && !_nearCache.IsStopped; }
+            get { return _platformCache != null && !_platformCache.IsStopped; }
         }
 
         /// <summary>
@@ -376,7 +376,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
 
             TV _;
-            if (CanUseNear && _nearCache.TryGetValue(key, out _))
+            if (CanUseNear && _platformCache.TryGetValue(key, out _))
             {
                 return true;
             }
@@ -390,7 +390,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
 
             TV _;
-            if (CanUseNear && _nearCache.TryGetValue(key, out _))
+            if (CanUseNear && _platformCache.TryGetValue(key, out _))
             {
                 return TaskRunner.FromResult(true);
             }
@@ -414,7 +414,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV _;
-                        if (!_nearCache.TryGetValue(key, out _))
+                        if (!_platformCache.TryGetValue(key, out _))
                         {
                             allKeysAreNear = false;
                             break;
@@ -452,7 +452,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV _;
-                        if (!_nearCache.TryGetValue(key, out _))
+                        if (!_platformCache.TryGetValue(key, out _))
                         {
                             allKeysAreNear = false;
                             break;
@@ -497,7 +497,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (hasPlatformCache)
             {
-                if (_nearCache != null && _nearCache.TryGetValue(key, out value))
+                if (_platformCache != null && _platformCache.TryGetValue(key, out value))
                 {
                     return true;
                 }
@@ -543,7 +543,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
 
             TV val;
-            if (CanUseNear && _nearCache.TryGetValue(key, out val))
+            if (CanUseNear && _platformCache.TryGetValue(key, out val))
             {
                 return val;
             }
@@ -565,7 +565,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             IgniteArgumentCheck.NotNull(key, "key");
 
             TV val;
-            if (CanUseNear && _nearCache.TryGetValue(key, out val))
+            if (CanUseNear && _platformCache.TryGetValue(key, out val))
             {
                 return TaskRunner.FromResult(val);
             }
@@ -584,7 +584,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            if (CanUseNear && _nearCache.TryGetValue(key, out value))
+            if (CanUseNear && _platformCache.TryGetValue(key, out value))
             {
                 return true;
             }
@@ -629,7 +629,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
                         
                         TV val;
-                        if (_nearCache.TryGetValue(key, out val))
+                        if (_platformCache.TryGetValue(key, out val))
                         {
                             res = res ?? new List<ICacheEntry<TK, TV>>();
                             res.Add(new CacheEntry<TK, TV>(key, val));
@@ -684,7 +684,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                         var key = enumerator.Current;
 
                         TV val;
-                        if (_nearCache.TryGetValue(key, out val))
+                        if (_platformCache.TryGetValue(key, out val))
                         {
                             res = res ?? new List<ICacheEntry<TK, TV>>();
                             res.Add(new CacheEntry<TK, TV>(key, val));
@@ -731,7 +731,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                     // Near Cache optimization on primary nodes:
                     // Update from Java comes in this same thread, so we don't need to pass key/val from Java.
                     // However, we still rely on a callback to maintain the order of updates.
-                    _nearCache.SetThreadLocalPair(key, val);
+                    _platformCache.SetThreadLocalPair(key, val);
                 }
 
                 DoOutOp(CacheOp.PutWithNear, key, val);
@@ -740,7 +740,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 if (near)
                 {
-                    _nearCache.ResetThreadLocalPair();
+                    _platformCache.ResetThreadLocalPair();
                 }
             }
         }
@@ -1271,9 +1271,9 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             if (hasPlatformCache)
             {
-                if (_nearCache != null)
+                if (_platformCache != null)
                 {
-                    size += _nearCache.GetSize(part);
+                    size += _platformCache.GetSize(part);
                 }
 
                 if (modes0 == 0)
@@ -1723,10 +1723,10 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (onlyPlatformCacheMode)
                 {
                     // Only PlatformNear.
-                    return _nearCache.GetEntries<TK, TV>();
+                    return _platformCache.GetEntries<TK, TV>();
                 }
 
-                return _nearCache.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
+                return _platformCache.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
             }
 
             if (!IsNear && onlyPlatformCacheMode)
@@ -2049,7 +2049,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             while (enumerator.MoveNext())
             {
                 TV val;
-                if (_nearCache.TryGetValue(enumerator.Current, out val))
+                if (_platformCache.TryGetValue(enumerator.Current, out val))
                 {
                     if (!discardResults)
                     {
@@ -2121,7 +2121,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 dispose = () => ReleasePartition((int) part);
             }
 
-            return new NearQueryCursor<TK, TV>(_nearCache, filter, part, dispose);
+            return new NearQueryCursor<TK, TV>(_platformCache, filter, part, dispose);
         }
     }
 }
