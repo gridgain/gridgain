@@ -105,6 +105,8 @@ public class IgniteCacheTxIteratorSelfTest extends GridCommonAbstractTest {
     public void checkModes(int gridCnt) throws Exception {
         startGrids(gridCnt);
 
+        doSleep(1000);
+
         try {
             for (CacheMode mode : CacheMode.values()) {
                 for (CacheAtomicityMode atomMode : CacheAtomicityMode.values()) {
