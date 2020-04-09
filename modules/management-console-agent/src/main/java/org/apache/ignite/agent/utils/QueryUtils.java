@@ -157,8 +157,8 @@ public class QueryUtils {
         qry.setEnforceJoinOrder(arg.isEnforceJoinOrder());
         qry.setLazy(arg.isLazy());
 
-        if (!F.isEmpty(arg.getCacheName()))
-            qry.setSchema(arg.getCacheName());
+        if (!F.isEmpty(arg.getDefaultSchema()))
+            qry.setSchema(arg.getDefaultSchema());
 
         if (!F.isEmpty(arg.getParameters()))
             qry.setArgs(arg.getParameters());

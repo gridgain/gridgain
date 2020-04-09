@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -21,12 +21,12 @@ namespace Apache.Ignite.Benchmarks.Interop
     using Apache.Ignite.Core.Cache;
 
     /// <summary>
-    /// Cache Get benchmark.
+    /// Cache put benchmark with Platform Cache enabled.
     /// </summary>
-    internal class GetNearBenchmark : PlatformBenchmarkBase
+    internal class PutWithPlatformCacheBenchmark : PlatformBenchmarkBase
     {
         /** Cache name. */
-        private const string CacheName = "cacheNear";
+        private const string CacheName = "cachePlatform";
 
         /** Native cache wrapper. */
         private ICache<int, Employee> _cache;
@@ -35,29 +35,24 @@ namespace Apache.Ignite.Benchmarks.Interop
         protected override void OnStarted()
         {
             base.OnStarted();
-            
-            BatchSize = 1000;
 
             _cache = Node.GetCache<int, Employee>(CacheName);
-
-            for (int i = 0; i < Emps.Length; i++)
-                _cache.Put(i, Emps[i]);
         }
 
         /** <inheritDoc /> */
         protected override void GetDescriptors(ICollection<BenchmarkOperationDescriptor> descs)
         {
-            descs.Add(BenchmarkOperationDescriptor.Create("GetNear", Get, 1));
+            descs.Add(BenchmarkOperationDescriptor.Create("PutWithPlatformCache", Put, 1));
         }
         
         /// <summary>
-        /// Cache get.
+        /// Cache put.
         /// </summary>
-        private void Get(BenchmarkState state)
+        private void Put(BenchmarkState state)
         {
-            var idx = BenchmarkUtils.GetRandomInt(Dataset);
+            int idx = BenchmarkUtils.GetRandomInt(Dataset);
 
-            _cache.Get(idx);
+            _cache.Put(idx, Emps[idx]);
         }
     }
 }
