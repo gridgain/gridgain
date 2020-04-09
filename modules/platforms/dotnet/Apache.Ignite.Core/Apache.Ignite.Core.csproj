@@ -90,7 +90,7 @@
     <Compile Include="Impl\Cache\Platform\PlatformCacheEntry.cs" />
     <Compile Include="Impl\Cache\Platform\PlatformCacheManager.cs" />
     <Compile Include="Impl\Cache\QueryMetricsImpl.cs" />
-    <Compile Include="Impl\Cache\Query\NearQueryCursor.cs" />
+    <Compile Include="Impl\Cache\Query\PlatformCacheQueryCursor.cs" />
     <Compile Include="Impl\Client\ClientContextBase.cs" />
     <Compile Include="Impl\Client\ClientOpExtensions.cs" />
     <Compile Include="Impl\Client\ClientRequestContext.cs" />

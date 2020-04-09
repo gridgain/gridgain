@@ -839,7 +839,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that expiry policy functionality plays well with platform near cache.
+        /// Tests that expiry policy functionality plays well with platform cache.
         /// </summary>
         [Test]
         public void TestExpiryPolicyRemovesValuesFromPlatformCache(
@@ -1215,7 +1215,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that backup entries are reflected in Platform Near Cache.
+        /// Tests that backup entries are reflected in platform cache.
         /// </summary>
         [Test]
         public void TestPlatformCachingWithBackups()

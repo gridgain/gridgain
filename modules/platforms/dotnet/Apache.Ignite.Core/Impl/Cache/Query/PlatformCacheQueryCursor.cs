@@ -26,9 +26,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using Apache.Ignite.Core.Impl.Cache.Platform;
 
     /// <summary>
-    /// Query cursor over platform near cache.
+    /// Query cursor over platform cache.
     /// </summary>
-    internal sealed class NearQueryCursor<TK, TV> : IQueryCursor<ICacheEntry<TK, TV>>
+    internal sealed class PlatformCacheQueryCursor<TK, TV> : IQueryCursor<ICacheEntry<TK, TV>>
     {
         /** */
         private readonly IPlatformCache _platformCache;
@@ -49,13 +49,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private bool _iterCalled;
 
         /// <summary>
-        /// Initializes a new instance of <see cref="NearQueryCursor{TK, TV}"/>.
+        /// Initializes a new instance of <see cref="PlatformCacheQueryCursor{TK,TV}"/>.
         /// </summary>
-        /// <param name="platformCache">Near cache</param>
+        /// <param name="platformCache">Platform cache</param>
         /// <param name="filter">Filter.</param>
         /// <param name="partition">Partition.</param>
         /// <param name="dispose">Dispose action.</param>
-        internal NearQueryCursor(IPlatformCache platformCache, ICacheEntryFilter<TK, TV> filter = null, 
+        internal PlatformCacheQueryCursor(IPlatformCache platformCache, ICacheEntryFilter<TK, TV> filter = null, 
             int? partition = null, Action dispose = null)
         {
             Debug.Assert(platformCache != null);
@@ -157,7 +157,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <summary>
         /// Finalizer.
         /// </summary>
-        ~NearQueryCursor()
+        ~PlatformCacheQueryCursor()
         {
             ReleaseUnmanagedResources();
         }

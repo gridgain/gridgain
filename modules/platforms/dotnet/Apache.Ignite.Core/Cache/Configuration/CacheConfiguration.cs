@@ -948,7 +948,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         public bool EncryptionEnabled { get; set; }
 
         /// <summary>
-        /// Gets or sets platform near cache configuration.
+        /// Gets or sets platform cache configuration.
         /// More details: <see cref="PlatformCacheConfiguration"/>. 
         /// </summary>
         public PlatformCacheConfiguration PlatformCacheConfiguration { get; set; }

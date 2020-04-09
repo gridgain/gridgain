@@ -1722,7 +1722,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 if (onlyPlatformCacheMode)
                 {
-                    // Only PlatformNear.
+                    // Only platform cache.
                     return _platformCache.GetEntries<TK, TV>();
                 }
 
@@ -2121,7 +2121,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 dispose = () => ReleasePartition((int) part);
             }
 
-            return new NearQueryCursor<TK, TV>(_platformCache, filter, part, dispose);
+            return new PlatformCacheQueryCursor<TK, TV>(_platformCache, filter, part, dispose);
         }
     }
 }
