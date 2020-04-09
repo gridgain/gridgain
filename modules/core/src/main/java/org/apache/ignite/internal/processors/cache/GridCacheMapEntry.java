@@ -6998,14 +6998,14 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             proc.context().updatePlatformCache(this.cctx.cacheId(), keyBytes, valBytes, partition(), ver);
         } catch (Throwable e) {
-            U.error(log, "Failed to update Platform Near Cache: " + e);
+            U.error(log, "Failed to update Platform Cache: " + e);
         }
     }
 
     /**
-     * Gets a value indicating whether platform near cache exists for current cache.
+     * Gets a value indicating whether platform cache exists for current cache.
      *
-     * @return True when Platform Near Cache exists for this cache; false otherwise.
+     * @return True when platform cache exists for this cache; false otherwise.
      */
     @SuppressWarnings("rawtypes")
     private boolean hasPlatformCache() {

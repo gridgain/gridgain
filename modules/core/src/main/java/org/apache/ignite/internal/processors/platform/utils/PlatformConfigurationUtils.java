@@ -320,7 +320,7 @@ public class PlatformConfigurationUtils {
     }
 
     /**
-     * Reads platform near config.
+     * Reads platform cache config.
      *
      * @param in Stream.
      * @return PlatformCacheConfiguration.

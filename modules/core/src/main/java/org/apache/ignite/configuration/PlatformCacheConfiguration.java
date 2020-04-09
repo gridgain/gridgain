@@ -21,9 +21,9 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import java.io.Serializable;
 
 /**
- * Platform near cache configuration.
+ * Platform cache configuration.
  * <p>
- * Additional near caching mechanism on platform side (.NET).
+ * Additional caching mechanism on platform side (.NET).
  */
 public class PlatformCacheConfiguration implements Serializable {
     /** */
@@ -85,7 +85,7 @@ public class PlatformCacheConfiguration implements Serializable {
     }
 
     /**
-     * Gets a value indicating whether platform near cache should store keys and values in binary form.
+     * Gets a value indicating whether platform cache should store keys and values in binary form.
      *
      * @return Whether binary mode is enabled.
      */
@@ -94,7 +94,7 @@ public class PlatformCacheConfiguration implements Serializable {
     }
 
     /**
-     * Sets a value indicating whether platform near cache should store keys and values in binary form.
+     * Sets a value indicating whether platform cache should store keys and values in binary form.
      *
      * @param keepBinary Whether binary mode is enabled.
      * @return {@code this} for chaining.

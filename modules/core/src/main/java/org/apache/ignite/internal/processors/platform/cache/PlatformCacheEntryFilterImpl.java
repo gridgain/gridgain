@@ -72,7 +72,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
             try {
                 if (platfromCacheEnabled) {
-                    // Normally, platform near cache already has the value.
+                    // Normally, platform cache already has the value.
                     // Put value to platform thread local so it can be requested when missing.
                     writer.writeBoolean(false);
                     ctx.kernalContext().platform().setThreadLocal(v);
@@ -108,7 +108,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
     /** {@inheritDoc} */
     @SuppressWarnings("rawtypes")
     @Override public void cacheContext(GridCacheContext cctx) {
-        // This initializer is called for Scan Query filters, which can use Platform Near cache.
+        // This initializer is called for Scan Query filters, which can use platform cache.
         if (ptr != 0)
             return;
 
@@ -125,7 +125,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
      */
     @IgniteInstanceResource
     public void setIgniteInstance(Ignite ignite) {
-        // This initializer is called for Cache Store filters, which can not use Platform Near Cache.
+        // This initializer is called for Cache Store filters, which can not use platform cache.
         if (ptr != 0)
             return;
 
@@ -137,7 +137,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
     /**
      * Initializes this instance.
      *
-     * @param cacheId Optional cache id for Platform Near cache.
+     * @param cacheId Optional cache id for platform cache.
      */
     private void init(Integer cacheId) {
         try (PlatformMemory mem = ctx.memory().allocate()) {

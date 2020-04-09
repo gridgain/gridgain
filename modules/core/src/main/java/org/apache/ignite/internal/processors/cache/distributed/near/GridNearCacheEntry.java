@@ -413,7 +413,7 @@ public class GridNearCacheEntry extends GridDistributedCacheEntry {
 
                 update(val, expireTime, ttl, ver, true);
 
-                // Special case for Platform near cache: start tracking near entry.
+                // Special case for platform cache: start tracking near entry.
                 updatePlatformCache(val, topVer);
 
                 if (cctx.deferredDelete() && !isInternal()) {

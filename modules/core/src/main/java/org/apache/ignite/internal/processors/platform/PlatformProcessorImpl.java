@@ -837,7 +837,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
     }
 
     /**
-     * Sets platform near config when present in the given reader.
+     * Sets platform cache config when present in the given reader.
      *
      * @param reader Reader.
      * @param cache Cache.
