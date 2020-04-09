@@ -386,5 +386,4 @@ public class JdbcThinTimezoneTest extends AbstractIndexingCommonTest {
 
         startRemoteGrid(name, optimize(getConfiguration(name)), null);
     }
-
 }

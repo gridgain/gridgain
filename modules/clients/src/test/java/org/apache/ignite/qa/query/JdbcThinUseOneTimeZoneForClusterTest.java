@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.query.UseOneTimeZoneForClusterTest;
 import org.apache.ignite.jdbc.JdbcTestUtils;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
+import org.junit.Test;
 
 /**
  */
@@ -40,6 +41,7 @@ public class JdbcThinUseOneTimeZoneForClusterTest extends UseOneTimeZoneForClust
     }
 
     /** {@inheritDoc} */
+    @Test
     @Override public void testClientsInDifferentTimeZones() throws Exception {
         super.testClientsInDifferentTimeZones();
 
