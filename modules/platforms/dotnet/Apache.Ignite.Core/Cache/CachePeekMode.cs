@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Cache
         
         /// <summary>
         /// Peeks value from local native .NET near cache
-        /// (see <see cref="CacheConfiguration.PlatformNearConfiguration"/>). 
+        /// (see <see cref="CacheConfiguration.PlatformCacheConfiguration"/>). 
         /// </summary>
         PlatformNear = 0x1000
     }

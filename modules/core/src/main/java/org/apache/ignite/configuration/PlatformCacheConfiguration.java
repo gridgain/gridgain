@@ -25,7 +25,7 @@ import java.io.Serializable;
  * <p>
  * Additional near caching mechanism on platform side (.NET).
  */
-public class PlatformNearCacheConfiguration implements Serializable {
+public class PlatformCacheConfiguration implements Serializable {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -55,7 +55,7 @@ public class PlatformNearCacheConfiguration implements Serializable {
      * @param keyTypeName Key type name.
      * @return {@code this} for chaining.
      */
-    public PlatformNearCacheConfiguration setKeyTypeName(String keyTypeName) {
+    public PlatformCacheConfiguration setKeyTypeName(String keyTypeName) {
         this.keyTypeName = keyTypeName;
 
         return this;
@@ -78,7 +78,7 @@ public class PlatformNearCacheConfiguration implements Serializable {
      * @param valueTypeName Key type name.
      * @return {@code this} for chaining.
      */
-    public PlatformNearCacheConfiguration setValueTypeName(String valueTypeName) {
+    public PlatformCacheConfiguration setValueTypeName(String valueTypeName) {
         this.valueTypeName = valueTypeName;
 
         return this;
@@ -99,7 +99,7 @@ public class PlatformNearCacheConfiguration implements Serializable {
      * @param keepBinary Whether binary mode is enabled.
      * @return {@code this} for chaining.
      */
-    public PlatformNearCacheConfiguration setKeepBinary(boolean keepBinary) {
+    public PlatformCacheConfiguration setKeepBinary(boolean keepBinary) {
         this.keepBinary = keepBinary;
 
         return this;
@@ -107,6 +107,6 @@ public class PlatformNearCacheConfiguration implements Serializable {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(PlatformNearCacheConfiguration.class, this, super.toString());
+        return S.toString(PlatformCacheConfiguration.class, this, super.toString());
     }
 }

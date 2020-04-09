@@ -83,7 +83,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         {
                             EvictionPolicy = new FifoEvictionPolicy {MaxSize = NearCacheMaxSize},
                         },
-                        PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                        PlatformCacheConfiguration = new PlatformCacheConfiguration(),
                         Name = CacheName,
                         QueryEntities = new[]
                         {
@@ -339,7 +339,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 NearConfiguration = new NearCacheConfiguration(),
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformCacheConfiguration = new PlatformCacheConfiguration()
             };
             
             var cache1 = _grid.CreateCache<int, int>(cfg);
@@ -365,7 +365,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 NearConfiguration = new NearCacheConfiguration(),
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformCacheConfiguration = new PlatformCacheConfiguration()
             };
             
             var cache1 = _grid.CreateCache<int, Foo>(cfg);
@@ -394,7 +394,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 Name = cacheName,
                 NearConfiguration = new NearCacheConfiguration(),
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformCacheConfiguration = new PlatformCacheConfiguration()
             };
 
             var cache = _client.CreateCache<int, int>(cfg, cfg.NearConfiguration);
@@ -417,13 +417,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 Name = TestUtils.TestName,
                 NearConfiguration = new NearCacheConfiguration(),
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                PlatformCacheConfiguration = new PlatformCacheConfiguration(),
                 CacheStoreFactory = new FailingCacheStore(),
                 WriteThrough = true
             };
 
             var cache = GetIgnite(mode).CreateCache<int, Foo>(cfg, new NearCacheConfiguration(), 
-                new PlatformNearCacheConfiguration());
+                new PlatformCacheConfiguration());
             
             // First write succeeds.
             cache.Put(1, new Foo(1));
@@ -481,7 +481,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         BatchSize = 1
                     },
                 },
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformCacheConfiguration = new PlatformCacheConfiguration()
             };
 
             var ignite = GetIgnite(mode);
@@ -515,7 +515,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                     }
             };
 
-            var platformCfg = new PlatformNearCacheConfiguration();
+            var platformCfg = new PlatformCacheConfiguration();
 
             var clientCache = getOrCreate 
                 ? _client.GetOrCreateNearCache<int, Foo>(serverCache.Name, nearCfg, platformCfg)
@@ -562,7 +562,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         MaxSize = 1
                     }
                 },
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformCacheConfiguration = new PlatformCacheConfiguration()
             };
 
             var serverCache = _grid.CreateCache<int, int>(cfg);
@@ -826,7 +826,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
 
             var clientCache = _client.CreateNearCache<int, Foo>(cache.Name, new NearCacheConfiguration(),
-                new PlatformNearCacheConfiguration());
+                new PlatformCacheConfiguration());
             
             // Promote key to near cache.
             clientCache.Get(2);
@@ -870,7 +870,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 Name = TestUtils.TestName,
                 NearConfiguration = new NearCacheConfiguration(),
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration
+                PlatformCacheConfiguration = new PlatformCacheConfiguration
                 {
                     KeepBinary = true
                 }
@@ -878,7 +878,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             var clientCache = _client.CreateCache<int, Foo>(cfg);
             var serverCache = _grid2.GetCache<int, object>(cfg.Name);
-            Assert.IsTrue(serverCache.GetConfiguration().PlatformNearConfiguration.KeepBinary);
+            Assert.IsTrue(serverCache.GetConfiguration().PlatformCacheConfiguration.KeepBinary);
             
             // Put non-binary from client. There is no near cache on client.
             clientCache[1] = new Foo(2);
@@ -1225,7 +1225,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 CacheMode = CacheMode.Partitioned,
                 Backups = 1,
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                PlatformCacheConfiguration = new PlatformCacheConfiguration(),
                 WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync
             };
 
@@ -1255,7 +1255,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 CacheMode = CacheMode.Replicated,
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                PlatformCacheConfiguration = new PlatformCacheConfiguration(),
                 WriteSynchronizationMode = CacheWriteSynchronizationMode.FullSync
             };
 
@@ -1285,7 +1285,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {
                 AtomicityMode = CacheAtomicityMode.Transactional,
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                PlatformCacheConfiguration = new PlatformCacheConfiguration(),
                 NearConfiguration = new NearCacheConfiguration()
             };
 
@@ -1321,7 +1321,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration
+                PlatformCacheConfiguration = new PlatformCacheConfiguration
                 {
                     KeyTypeName = typeof(int).FullName,
                     ValueTypeName = typeof(Guid).FullName
@@ -1362,7 +1362,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 Name = TestUtils.TestName,
                 NearConfiguration = new NearCacheConfiguration(),
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration(),
+                PlatformCacheConfiguration = new PlatformCacheConfiguration(),
                 CacheStoreFactory = new FailingCacheStore()
             };
 
@@ -1412,7 +1412,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             };
             
-            var platformCfg = new PlatformNearCacheConfiguration();
+            var platformCfg = new PlatformCacheConfiguration();
 
             var serverCache = _grid.CreateCache<int, int>(serverCfg);
             var clientCache = _client.CreateNearCache<int, int>(serverCache.Name, clientCfg, platformCfg);
@@ -1449,7 +1449,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                         MaxSize = entryCount
                     }
                 },
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformCacheConfiguration = new PlatformCacheConfiguration()
             };
             
             var clientCfg = new NearCacheConfiguration
@@ -1460,7 +1460,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 }
             };
             
-            var platformCfg = new PlatformNearCacheConfiguration();
+            var platformCfg = new PlatformCacheConfiguration();
             
             var serverCache = _grid.CreateCache<int, int>(serverCfg);
             var clientCache = _client.CreateNearCache<int, int>(serverCache.Name, clientCfg, platformCfg);
@@ -1511,7 +1511,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             {
                 NearConfiguration = nearConfiguration, 
                 Name = name,
-                PlatformNearConfiguration = new PlatformNearCacheConfiguration()
+                PlatformCacheConfiguration = new PlatformCacheConfiguration()
             };
 
             return GetIgnite(mode).GetOrCreateCache<TK, TV>(cacheConfiguration, nearConfiguration);

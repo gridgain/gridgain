@@ -404,7 +404,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             };
             var server = Ignition.Start(cfg);
             var serverCache = server.CreateCache<int, Foo>(new CacheConfiguration(CacheName)
-                {PlatformNearConfiguration = new PlatformNearCacheConfiguration()});
+                {PlatformCacheConfiguration = new PlatformCacheConfiguration()});
 
             var clientCfg = new IgniteConfiguration(cfg)
             {
@@ -494,7 +494,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var cacheConfiguration = new CacheConfiguration(CacheName)
             {
                 NearConfiguration = serverNear ? new NearCacheConfiguration() : null,
-                PlatformNearConfiguration = serverNear ? new PlatformNearCacheConfiguration() : null,
+                PlatformCacheConfiguration = serverNear ? new PlatformCacheConfiguration() : null,
                 Backups = backups
             };
             

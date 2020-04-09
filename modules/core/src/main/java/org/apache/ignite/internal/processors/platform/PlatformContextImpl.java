@@ -594,14 +594,14 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isNativeNearCacheSupported() {
+    @Override public boolean isPlatformCacheSupported() {
         return platform.equals(PlatformUtils.PLATFORM_DOTNET);
     }
 
     /** {@inheritDoc} */
-    @Override public void updateNearCache(int cacheId, byte[] keyBytes, byte[] valBytes,
-                                          int part, AffinityTopologyVersion ver) {
-        if (!isNativeNearCacheSupported())
+    @Override public void updatePlatformCache(int cacheId, byte[] keyBytes, byte[] valBytes,
+                                              int part, AffinityTopologyVersion ver) {
+        if (!isPlatformCacheSupported())
             return;
 
         Boolean useTls = nearUpdateUseThreadLocal.get();
@@ -643,12 +643,12 @@ public class PlatformContextImpl implements PlatformContext, PartitionsExchangeA
     }
 
     /** {@inheritDoc} */
-    @Override public void enableThreadLocalForNearUpdate() {
+    @Override public void enableThreadLocalForPlatformCacheUpdate() {
         nearUpdateUseThreadLocal.set(true);
     }
 
     /** {@inheritDoc} */
-    @Override public void disableThreadLocalForNearUpdate() {
+    @Override public void disableThreadLocalForPlatformCacheUpdate() {
         nearUpdateUseThreadLocal.set(false);
     }
 

@@ -104,7 +104,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             _readException = stream => ReadException(Marshaller.StartUnmarshal(stream));
 
-            if (configuration.PlatformNearConfiguration != null)
+            if (configuration.PlatformCacheConfiguration != null)
             {
                 _nearCache = _ignite.NearCacheManager.GetOrCreateNearCache(configuration);
             }

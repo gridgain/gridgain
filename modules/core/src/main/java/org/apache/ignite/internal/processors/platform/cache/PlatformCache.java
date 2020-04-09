@@ -834,12 +834,12 @@ public class PlatformCache extends PlatformAbstractTarget {
                 }
 
                 case OP_PUT_WITH_NEAR:
-                    platformCtx.enableThreadLocalForNearUpdate();
+                    platformCtx.enableThreadLocalForPlatformCacheUpdate();
 
                     try {
                         cache.put(reader.readObjectDetached(), reader.readObjectDetached());
                     } finally {
-                        platformCtx.disableThreadLocalForNearUpdate();
+                        platformCtx.disableThreadLocalForPlatformCacheUpdate();
                     }
 
                     return TRUE;

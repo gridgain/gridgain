@@ -175,7 +175,7 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(99, af.Partitions);
             Assert.IsTrue(af.ExcludeNeighbors);
             
-            var platformNear = cacheCfg.PlatformNearConfiguration;
+            var platformNear = cacheCfg.PlatformCacheConfiguration;
             Assert.AreEqual("int", platformNear.KeyTypeName);
             Assert.AreEqual("string", platformNear.ValueTypeName);
             Assert.IsTrue(platformNear.KeepBinary);
@@ -759,7 +759,7 @@ namespace Apache.Ignite.Core.Tests
                                 MaxSize = 555
                             }
                         },
-                        PlatformNearConfiguration = new PlatformNearCacheConfiguration
+                        PlatformCacheConfiguration = new PlatformCacheConfiguration
                         {
                             KeyTypeName = typeof(int).FullName,
                             ValueTypeName = typeof(string).FullName,

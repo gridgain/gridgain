@@ -34,7 +34,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
     private static final long serialVersionUID = 0L;
 
     /** */
-    private transient boolean platfromNearEnabled;
+    private transient boolean platfromCacheEnabled;
 
     /**
      * {@link java.io.Externalizable} support.
@@ -71,7 +71,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
             writer.writeObject(k);
 
             try {
-                if (platfromNearEnabled) {
+                if (platfromCacheEnabled) {
                     // Normally, platform near cache already has the value.
                     // Put value to platform thread local so it can be requested when missing.
                     writer.writeBoolean(false);
@@ -86,7 +86,7 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
                 return ctx.gateway().cacheEntryFilterApply(mem.pointer()) != 0;
             }
             finally {
-                if (platfromNearEnabled) {
+                if (platfromCacheEnabled) {
                     ctx.kernalContext().platform().setThreadLocal(null);
                 }
             }
@@ -114,10 +114,10 @@ public class PlatformCacheEntryFilterImpl extends PlatformAbstractPredicate impl
 
         ctx = cctx.kernalContext().platform().context();
 
-        platfromNearEnabled = cctx.config().getPlatformNearConfiguration() != null &&
-                ctx.isNativeNearCacheSupported();
+        platfromCacheEnabled = cctx.config().getPlatformCacheConfiguration() != null &&
+                ctx.isPlatformCacheSupported();
 
-        init(platfromNearEnabled ? cctx.cacheId() : null);
+        init(platfromCacheEnabled ? cctx.cacheId() : null);
     }
 
     /**

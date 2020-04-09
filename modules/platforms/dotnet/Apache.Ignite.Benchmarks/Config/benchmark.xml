@@ -42,7 +42,7 @@
                         <bean class="org.apache.ignite.configuration.NearCacheConfiguration" />
                     </property>
                     <property name="platformNearConfiguration">
-                        <bean class="org.apache.ignite.configuration.PlatformNearCacheConfiguration">
+                        <bean class="org.apache.ignite.configuration.PlatformCacheConfiguration">
                             <property name="keyTypeName" value="System.Int32" />
                             <property name="valueTypeName" value="Apache.Ignite.Benchmarks.Model.Employee" />
                         </bean>
@@ -54,7 +54,7 @@
                         <bean class="org.apache.ignite.configuration.NearCacheConfiguration" />
                     </property>
                     <property name="platformNearConfiguration">
-                        <bean class="org.apache.ignite.configuration.PlatformNearCacheConfiguration">
+                        <bean class="org.apache.ignite.configuration.PlatformCacheConfiguration">
                             <!-- Do not specify types: near cache defaults to ConcurrentDictionary<object, object> -->
                         </bean>
                     </property>

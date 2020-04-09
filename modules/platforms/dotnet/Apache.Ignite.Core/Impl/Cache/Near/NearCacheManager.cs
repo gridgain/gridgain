@@ -138,7 +138,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// </summary>
         private INearCache CreateNearCache(CacheConfiguration cacheConfiguration)
         {
-            var nearCfg = cacheConfiguration.PlatformNearConfiguration;
+            var nearCfg = cacheConfiguration.PlatformCacheConfiguration;
             Debug.Assert(nearCfg != null);
             
             Func<object> affinityTopologyVersionFunc = () => _affinityTopologyVersion;
@@ -164,7 +164,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 {
                     throw new InvalidOperationException(string.Format(
                         "Can not create .NET Near Cache: {0}.{1} is invalid. Failed to resolve type: '{2}'", 
-                        typeof(PlatformNearCacheConfiguration).Name, fieldName, typeName));
+                        typeof(PlatformCacheConfiguration).Name, fieldName, typeName));
                 }
 
                 return resolved;

@@ -615,7 +615,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
                         ? (IgniteCacheProxy)ctx.grid().createCache(cfg, PlatformConfigurationUtils.readNearConfiguration(reader))
                         : (IgniteCacheProxy)ctx.grid().createCache(cfg);
 
-                setPlatformNear(reader, cache);
+                setPlatformCache(reader, cache);
 
                 return createPlatformCache(cache);
             }
@@ -628,7 +628,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
                         PlatformConfigurationUtils.readNearConfiguration(reader))
                         : (IgniteCacheProxy)ctx.grid().getOrCreateCache(cfg);
 
-                setPlatformNear(reader, cache);
+                setPlatformCache(reader, cache);
 
                 return createPlatformCache(cache);
             }
@@ -703,7 +703,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().createNearCache(cacheName, cfg);
 
-                setPlatformNear(reader, cache);
+                setPlatformCache(reader, cache);
 
                 return createPlatformCache(cache);
             }
@@ -715,7 +715,7 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
 
                 IgniteCacheProxy cache = (IgniteCacheProxy)ctx.grid().getOrCreateNearCache(cacheName, cfg);
 
-                setPlatformNear(reader, cache);
+                setPlatformCache(reader, cache);
 
                 return createPlatformCache(cache);
             }
@@ -842,10 +842,10 @@ public class PlatformProcessorImpl extends GridProcessorAdapter implements Platf
      * @param reader Reader.
      * @param cache Cache.
      */
-    private static void setPlatformNear(BinaryRawReaderEx reader, IgniteCacheProxy cache) {
+    private static void setPlatformCache(BinaryRawReaderEx reader, IgniteCacheProxy cache) {
         if (reader.readBoolean())
-            cache.context().cache().configuration().setPlatformNearConfiguration(
-                    PlatformConfigurationUtils.readPlatformNearConfiguration(reader));
+            cache.context().cache().configuration().setPlatformCacheConfiguration(
+                    PlatformConfigurationUtils.readPlatformCacheConfiguration(reader));
     }
 
     /**
