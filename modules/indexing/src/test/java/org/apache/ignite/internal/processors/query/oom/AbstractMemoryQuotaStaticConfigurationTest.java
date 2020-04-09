@@ -61,7 +61,7 @@ public abstract class AbstractMemoryQuotaStaticConfigurationTest extends DiskSpi
     }
 
     /** */
-    protected boolean startClient() {
+    @Override protected boolean startClient() {
         return false;
     }
 

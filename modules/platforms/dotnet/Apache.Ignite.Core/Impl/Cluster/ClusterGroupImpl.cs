@@ -153,6 +153,12 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /** */
         private const int OpDataStorageMetrics = 37;
 
+        /** */
+        private const int OpEnableStatistics = 38;
+
+        /** */
+        private const int OpClearStatistics = 39;
+
         /** Initial Ignite instance. */
         private readonly IIgniteInternal _ignite;
         
@@ -450,6 +456,28 @@ namespace Apache.Ignite.Core.Impl.Cluster
             return _services.Value;
         }
 
+        /** <inheritDoc /> */
+        public void EnableStatistics(IEnumerable<string> cacheNames, bool enabled)
+        {
+            IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
+
+            DoOutOp(OpEnableStatistics,
+                w =>
+                {
+                    w.WriteBoolean(enabled);
+
+                    WriteStrings(w, cacheNames);
+                });
+        }
+
+        /** <inheritdoc /> */
+        public void ClearStatistics(IEnumerable<string> cacheNames)
+        {
+            IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
+
+            DoOutOp(OpClearStatistics, w => WriteStrings(w, cacheNames));
+        }
+
         /// <summary>
         /// Creates the services.
         /// </summary>
@@ -570,21 +598,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         {
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
 
-            DoOutOp(OpResetLostPartitions, w =>
-            {
-                var pos = w.Stream.Position;
-
-                var count = 0;
-                w.WriteInt(count);  // Reserve space.
-
-                foreach (var cacheName in cacheNames)
-                {
-                    w.WriteString(cacheName);
-                    count++;
-                }
-
-                w.Stream.WriteInt(pos, count);
-            });
+            DoOutOp(OpResetLostPartitions, w => WriteStrings(w, cacheNames));
         }
 
         /// <summary>
@@ -751,6 +765,27 @@ namespace Apache.Ignite.Core.Impl.Cluster
             Debug.Assert(_nodes != null, "At least one topology update should have occurred.");
 
             return _nodes;
+        }
+
+        /// <summary>
+        /// Writes strings
+        /// </summary>
+        /// <param name="writer">Writer</param>
+        /// <param name="strings">Strings</param>
+        private static void WriteStrings(BinaryWriter writer, IEnumerable<string> strings)
+        {
+            var pos = writer.Stream.Position;
+
+            var count = 0;
+            writer.WriteInt(count);  // Reserve space.
+
+            foreach (var cacheName in strings)
+            {
+                writer.WriteString(cacheName);
+                count++;
+            }
+
+            writer.Stream.WriteInt(pos, count);
         }
     }
 }

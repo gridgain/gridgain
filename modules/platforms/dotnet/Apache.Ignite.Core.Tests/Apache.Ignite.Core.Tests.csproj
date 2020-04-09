@@ -116,6 +116,14 @@
     <Compile Include="Cache\CacheTimeoutOnPmeTransactionalTest.cs" />
     <Compile Include="Cache\DataRegionMetricsTest.cs" />
     <Compile Include="Cache\DataStorageMetricsTest.cs" />
+    <Compile Include="Cache\Near\CacheNearCreateDestroy.cs" />
+    <Compile Include="Cache\Near\CacheNearTopologyChangeTest.cs" />
+    <Compile Include="Cache\Near\CacheNearTest.cs" />
+    <Compile Include="Cache\Near\FailingCacheStore.cs" />
+    <Compile Include="Cache\Near\Foo.cs" />
+    <Compile Include="Cache\Near\ScanQueryNearCacheFilter.cs" />
+    <Compile Include="Cache\Near\ScanQueryNoNearCacheFilter.cs" />
+    <Compile Include="Cache\Near\StoreNoNearCacheFilter.cs" />
     <Compile Include="Cache\PartitionPreloadTest.cs" />
     <Compile Include="Cache\PersistenceTest.cs" />
     <Compile Include="Cache\PersistentStoreTestObsolete.cs" />
@@ -164,6 +172,8 @@
     <Compile Include="Client\ClientServerCacheAdapterExtensions.cs" />
     <Compile Include="Client\ClientServerCompatibilityTest.cs" />
     <Compile Include="Client\ClientTestBase.cs" />
+    <Compile Include="Client\Cluster\ClientClusterGroupTests.cs" />
+    <Compile Include="Client\Cluster\ClientClusterTests.cs" />
     <Compile Include="Client\EndpointTest.cs" />
     <Compile Include="Client\RawSecureSocketTest.cs" />
     <Compile Include="Client\RawSocketTest.cs" />
@@ -171,6 +181,7 @@
     <Compile Include="Client\IgniteClientConfigurationTest.cs" />
     <Compile Include="Common\IgniteProductVersionTests.cs" />
     <Compile Include="Compute\ComputeApiTest.JavaTask.cs" />
+    <Compile Include="Compute\ComputeWithExecutorTest.cs" />
     <Compile Include="Deployment\CacheGetFunc.cs" />
     <Compile Include="Deployment\GetAddressFunc.cs" />
     <Compile Include="Deployment\PeerAssemblyLoadingAllApisTest.cs" />
@@ -221,6 +232,7 @@
     <Compile Include="EnvVar.cs" />
     <Compile Include="EventsTestLocalListeners.cs" />
     <Compile Include="FailureHandlerTest.cs" />
+    <Compile Include="IgniteUtilsTest.cs" />
     <Compile Include="Impl\Compute\ComputeImplTest.cs" />
     <Compile Include="JavaServer.cs" />
     <Compile Include="Log\ConsoleLoggerTest.cs" />
@@ -253,7 +265,6 @@
     <Compile Include="Cache\Affinity\AffinityFunctionTest.cs" />
     <Compile Include="Cache\CacheConfigurationTest.cs" />
     <Compile Include="Cache\CacheDynamicStartTest.cs" />
-    <Compile Include="Cache\CacheNearTest.cs" />
     <Compile Include="Cache\CacheTestAsyncWrapper.cs" />
     <Compile Include="Cache\CacheAbstractTest.cs" />
     <Compile Include="Cache\Affinity\AffinityTest.cs" />
@@ -427,6 +438,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Config\Client\server-with-ssl.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Config\Compute\compute-grid-custom-executor.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Config\Compute\compute-grid1.xml">

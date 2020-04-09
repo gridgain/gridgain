@@ -22,6 +22,8 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi;
 import org.apache.ignite.internal.processors.ru.RollingUpgradeStatus;
 import org.apache.ignite.internal.processors.schedule.IgniteNoopScheduleProcessor;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.spi.communication.tcp.messages.HandshakeWaitMessage;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
@@ -138,7 +140,10 @@ public enum IgniteFeatures {
     VOLATILE_DATA_STRUCTURES_REGION(33),
 
     /** Partition reconciliation utility. */
-    PARTITION_RECONCILIATION(34);
+    PARTITION_RECONCILIATION(34),
+
+    /** Inverse connection: sending a request over discovery to establish a communication connection. */
+    INVERSE_TCP_CONNECTION(35);
 
     /**
      * Unique feature identifier.
@@ -239,6 +244,26 @@ public enum IgniteFeatures {
             return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature);
         else {
             Collection<ClusterNode> nodes = discoSpi.getRemoteNodes();
+
+            return allNodesSupports(ctx, nodes, feature);
+        }
+    }
+
+    /**
+     * Check that feature is supported by all nodes passing the provided predicate.
+     *
+     * @param ctx Kernal context.
+     * @param feature Feature to check.
+     * @param pred Predicate to filter out nodes that should not be checked for feature support.
+     * @return {@code True} if all nodes passed the predicate support the feature.
+     */
+    public static boolean allNodesSupport(GridKernalContext ctx, IgniteFeatures feature, IgnitePredicate<ClusterNode> pred) {
+        DiscoverySpi discoSpi = ctx.config().getDiscoverySpi();
+
+        if (discoSpi instanceof IgniteDiscoverySpi)
+            return ((IgniteDiscoverySpi)discoSpi).allNodesSupport(feature, pred);
+        else {
+            Collection<ClusterNode> nodes = F.view(discoSpi.getRemoteNodes(), pred);
 
             return allNodesSupports(ctx, nodes, feature);
         }

@@ -33,6 +33,7 @@ import javax.cache.processor.EntryProcessor;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.pagemem.FullPageId;
@@ -107,7 +108,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.cache.GridCacheTtlManager.UNWIND_THROTTLING_TIMEOUT;
+import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.OWNING;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
@@ -117,6 +118,13 @@ import static org.apache.ignite.internal.util.lang.GridCursor.EMPTY_CURSOR;
  * Used when persistence enabled.
  */
 public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl implements DbCheckpointListener {
+    /**
+     * Throttling timeout in millis which avoid excessive PendingTree access on unwind
+     * if there is nothing to clean yet.
+     */
+    private final long unwindThrottlingTimeout = Long.getLong(
+        IgniteSystemProperties.IGNITE_UNWIND_THROTTLING_TIMEOUT, 500L);
+
     /** */
     private IndexStorage indexStorage;
 
@@ -538,9 +546,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                             PagePartitionMetaIO io = PagePartitionMetaIO.VERSIONS.forPage(pageAddr);
 
                             if (recoverState != null) {
-                                io.setPartitionState(pageAddr, (byte) recoverState.intValue());
+                                changed = io.setPartitionState(pageAddr, (byte)recoverState.intValue());
 
-                                changed = updateState(part, recoverState);
+                                updateState(part, recoverState);
 
                                 if (log.isDebugEnabled())
                                     log.debug("Restored partition state (from WAL) " +
@@ -549,9 +557,9 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
                                         ", size=" + part.fullSize() + "]");
                             }
                             else {
-                                int stateId = (int) io.getPartitionState(pageAddr);
+                                int stateId = io.getPartitionState(pageAddr);
 
-                                changed = updateState(part, stateId);
+                                updateState(part, stateId);
 
                                 if (log.isDebugEnabled())
                                     log.debug("Restored partition state (from page memory) " +
@@ -605,20 +613,15 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
     /**
      * @param part Partition to restore state for.
      * @param stateId State enum ordinal.
-     * @return Updated flag.
      */
-    private boolean updateState(GridDhtLocalPartition part, int stateId) {
+    private void updateState(GridDhtLocalPartition part, int stateId) {
         if (stateId != -1) {
             GridDhtPartitionState state = GridDhtPartitionState.fromOrdinal(stateId);
 
             assert state != null;
 
-            part.restoreState(state == GridDhtPartitionState.EVICTED ? GridDhtPartitionState.RENTING : state);
-
-            return true;
+            part.restoreState(state == EVICTED ? RENTING : state);
         }
-
-        return false;
     }
 
     /**
@@ -2673,7 +2676,7 @@ public class GridCacheOffheapManager extends IgniteCacheOffheapManagerImpl imple
             if (cleared < amount) {
                 lastThrottledCacheId = cctx.cacheId();
 
-                nextStoreCleanTimeNanos = nowNanos + U.millisToNanos(UNWIND_THROTTLING_TIMEOUT);
+                nextStoreCleanTimeNanos = nowNanos + U.millisToNanos(unwindThrottlingTimeout);
             }
 
             return cleared;

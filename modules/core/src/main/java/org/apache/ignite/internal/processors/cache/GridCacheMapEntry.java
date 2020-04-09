@@ -80,6 +80,7 @@ import org.apache.ignite.internal.processors.cache.version.GridCacheVersionedEnt
 import org.apache.ignite.internal.processors.dr.GridDrType;
 import org.apache.ignite.internal.processors.query.QueryTypeDescriptorImpl;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheStat;
+import org.apache.ignite.internal.processors.platform.PlatformProcessor;
 import org.apache.ignite.internal.processors.query.schema.SchemaIndexCacheVisitorClosure;
 import org.apache.ignite.internal.transactions.IgniteTxDuplicateKeyCheckedException;
 import org.apache.ignite.internal.transactions.IgniteTxSerializationCheckedException;
@@ -537,13 +538,16 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         boolean deferred = false;
         GridCacheVersion ver0 = null;
 
+        cctx.shared().database().checkpointReadLock();
+
         lockEntry();
 
         try {
             checkObsolete();
 
             if (isStartVersion() && ((flags & IS_UNSWAPPED_MASK) == 0)) {
-                assert row == null || row.key() == key : "Unexpected row key";
+                assert row == null || Objects.equals(row.key(), key) :
+                        "Unexpected row key [row.key=" + row.key() + ", cacheEntry.key=" + key + "]";
 
                 CacheDataRow read = row == null ? cctx.offheap().read(this) : row;
 
@@ -571,6 +575,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         }
         finally {
             unlockEntry();
+
+            cctx.shared().database().checkpointReadUnlock();
         }
 
         if (obsolete) {
@@ -1614,6 +1620,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (intercept)
             cctx.config().getInterceptor().onAfterPut(new CacheLazyEntry(cctx, key, key0, val, val0, keepBinary, updateCntr0));
 
+        updatePlatformNearCache(val, topVer);
+
         return valid ? new GridCacheUpdateTxResult(true, updateCntr0, logPtr) :
             new GridCacheUpdateTxResult(false, logPtr);
     }
@@ -2208,6 +2216,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else
                     cctx.config().getInterceptor().onAfterRemove(new CacheLazyEntry(cctx, key, key0, old, old0, keepBinary, 0L));
             }
+
+            updatePlatformNearCache(op == UPDATE ? updated : null, cctx.affinity().affinityTopologyVersion());
         }
         finally {
             unlockEntry();
@@ -2514,6 +2524,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                 else
                     cctx.config().getInterceptor().onAfterRemove(entry);
             }
+
+            updatePlatformNearCache(c.op == UPDATE ? updateVal : null, topVer);
         }
         finally {
             unlockEntry();
@@ -3491,6 +3503,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         topVer);
                 }
 
+                updatePlatformNearCache(val, topVer);
+
                 onUpdateFinished(updateCntr);
 
                 if (!fromStore && cctx.store().isLocal()) {
@@ -4089,17 +4103,10 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (log.isTraceEnabled())
             log.trace("onExpired clear [key=" + key + ", entry=" + System.identityHashCode(this) + ']');
 
-        cctx.shared().database().checkpointReadLock();
-
-        try {
-            if (cctx.mvccEnabled())
-                cctx.offheap().mvccRemoveAll(this);
-            else
-                removeValue();
-        }
-        finally {
-            cctx.shared().database().checkpointReadUnlock();
-        }
+        if (cctx.mvccEnabled())
+            cctx.offheap().mvccRemoveAll(this);
+        else
+            removeValue();
 
         if (cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED)) {
             cctx.events().addEvent(partition(),
@@ -4118,6 +4125,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         }
 
         cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
+
+        updatePlatformNearCache(null, null);
 
         return rmvd;
     }
@@ -5871,6 +5880,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
 
+            entry.updatePlatformNearCache(null, null);
+
             return null;
         }
     }
@@ -6243,6 +6254,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             }
 
             cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
+
+            entry.updatePlatformNearCache(null, null);
 
             return true;
         }
@@ -6960,5 +6973,44 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
      */
     private static IgniteTxSerializationCheckedException serializationError() {
         return new IgniteTxSerializationCheckedException("Cannot serialize transaction due to write conflict (transaction is marked for rollback)");
+    }
+
+    /**
+     * Invokes platform near cache callback, if applicable.
+     *
+     * @param val Updated value, null on remove.
+     * @param val Topology version, null on remove.
+     */
+    protected void updatePlatformNearCache(@Nullable CacheObject val, @Nullable AffinityTopologyVersion ver) {
+        if (!hasPlatformNearCache())
+            return;
+
+        PlatformProcessor proc = this.cctx.kernalContext().platform();
+        if (!proc.hasContext() || !proc.context().isNativeNearCacheSupported())
+            return;
+
+        try {
+            CacheObjectContext ctx = this.cctx.cacheObjectContext();
+
+            // val is null when entry is removed.
+            byte[] keyBytes = this.key.valueBytes(ctx);
+            byte[] valBytes = val == null ? null : val.valueBytes(ctx);
+
+            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes, partition(), ver);
+        } catch (Throwable e) {
+            U.error(log, "Failed to update Platform Near Cache: " + e);
+        }
+    }
+
+    /**
+     * Gets a value indicating whether platform near cache exists for current cache.
+     *
+     * @return True when Platform Near Cache exists for this cache; false otherwise.
+     */
+    @SuppressWarnings("rawtypes")
+    private boolean hasPlatformNearCache() {
+        GridCacheAdapter cache = cctx.cache();
+
+        return cache != null && cache.cacheCfg.getPlatformNearConfiguration() != null;
     }
 }

@@ -16,11 +16,13 @@
 
 package org.apache.ignite.internal.processors.odbc;
 
+import java.security.cert.Certificate;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -38,6 +40,9 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     /** Kernal context. */
     protected final GridKernalContext ctx;
 
+    /** Nio session. */
+    protected final GridNioSession ses;
+
     /** Security context or {@code null} if security is disabled. */
     private SecurityContext secCtx;
 
@@ -48,13 +53,27 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     private AuthorizationContext authCtx;
 
     /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     */
+    private String clientDesc;
+
+    /**
      * Constructor.
      *
      * @param ctx Kernal context.
+     * @param ses Client's NIO session.
+     * @param connId Connection ID.
      */
-    protected ClientListenerAbstractConnectionContext(GridKernalContext ctx, long connId) {
+    protected ClientListenerAbstractConnectionContext(GridKernalContext ctx, GridNioSession ses,
+        long connId) {
         this.ctx = ctx;
         this.connId = connId;
+        this.ses = ses;
     }
 
     /**
@@ -85,9 +104,10 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
      * @return Auth context.
      * @throws IgniteCheckedException If failed.
      */
-    protected AuthorizationContext authenticate(String user, String pwd) throws IgniteCheckedException {
+    protected AuthorizationContext authenticate(Certificate[] certificates, String user, String pwd)
+        throws IgniteCheckedException {
         if (ctx.security().enabled())
-            authCtx = authenticateExternal(user, pwd).authorizationContext();
+            authCtx = authenticateExternal(certificates, user, pwd).authorizationContext();
         else if (ctx.authentication().enabled()) {
             if (F.isEmpty(user))
                 throw new IgniteAccessControlException("Unauthenticated sessions are prohibited.");
@@ -106,7 +126,8 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     /**
      * Do 3-rd party authentication.
      */
-    private AuthenticationContext authenticateExternal(String user, String pwd) throws IgniteCheckedException {
+    private AuthenticationContext authenticateExternal(Certificate[] certificates, String user, String pwd)
+        throws IgniteCheckedException {
         SecurityCredentials cred = new SecurityCredentials(user, pwd);
 
         AuthenticationContext authCtx = new AuthenticationContext();
@@ -115,6 +136,7 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
         authCtx.subjectId(UUID.randomUUID());
         authCtx.nodeAttributes(Collections.emptyMap());
         authCtx.credentials(cred);
+        authCtx.certificates(certificates);
 
         secCtx = ctx.security().authenticate(authCtx);
 
@@ -130,5 +152,29 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     @Override public void onDisconnected() {
         if (ctx.security().enabled())
             ctx.security().onSessionExpired(secCtx.subject().id());
+    }
+
+    /**
+     *
+     */
+    protected void initClientDescriptor(String prefix) {
+        clientDesc = prefix + ":" + ses.remoteAddress().getHostString() + ":" + ses.remoteAddress().getPort();
+
+        if (authCtx != null)
+            clientDesc += "@" + authCtx.userName();
+    }
+
+    /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     *
+     * @return Client descriptor string.
+     */
+    public String clientDescriptor() {
+        return clientDesc;
     }
 }

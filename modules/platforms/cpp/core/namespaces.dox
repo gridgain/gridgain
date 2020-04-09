@@ -15,15 +15,15 @@
  */
 
 /**
- * \mainpage Apache Ignite C++
+ * \mainpage GridGain C++
  *
- * Apache Ignite In-Memory Database and Caching Platformis a high-performance, integrated and distributed in-memory platform for
+ * GridGain In-Memory Database and Caching Platformis a high-performance, integrated and distributed in-memory platform for
  * computing and transacting on large-scale data sets in real-time, orders of magnitude faster than possible with
  * traditional disk-based or flash-based technologies.
  */
 
  /**
-  * Apache %Ignite API.
+  * %Ignite API.
   */
 namespace ignite
 {
@@ -69,6 +69,22 @@ namespace ignite
                 // Empty.
             }
         }
+    }
+
+    /**
+     * %Ignite %Cluster API.
+     */
+    namespace cluster
+    {
+        // Empty.
+    }
+
+    /**
+     * %Ignite %Compute API.
+     */
+    namespace compute
+    {
+        // Empty.
     }
 
     /**
