@@ -168,6 +168,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param busyLock Shutdown latch.
      * @param sender Results sender.
      * @param maxCursors Maximum allowed cursors.
+     * @param maxMem Memory quota.
      * @param distributedJoins Distributed joins flag.
      * @param enforceJoinOrder Enforce join order flag.
      * @param collocated Collocated flag.
@@ -175,6 +176,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
      * @param autoCloseCursors Flag to automatically close server cursors.
      * @param lazy Lazy query execution flag.
      * @param skipReducerOnUpdate Skip reducer on update flag.
+     * @param nestedTxMode Transactional mode.
      * @param dataPageScanEnabled Enable scan data page mode.
      * @param updateBatchSize Size of internal batch for DML queries.
      * @param actx Authentication context.
@@ -612,7 +614,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
 
             qry.setArgs(req.arguments());
             qry.setAutoCommit(req.autoCommit());
-            // t0d0 check compatibility with old versions
+
             if (req.explicitTimeout()) {
                 // Timeout is handled on a client side, do not handle it on a server side.
                 qry.setTimeout(0, TimeUnit.MILLISECONDS);
@@ -1352,6 +1354,7 @@ public class JdbcRequestHandler implements ClientListenerRequestHandler {
     /**
      * Get partition map for a cache.
      * @param cacheDesc Cache descriptor.
+     * @param affVer Affinity version.
      * @return Partitions mapping for cache.
      */
     private Map<UUID, Set<Integer>> getPartitionsMap(DynamicCacheDescriptor cacheDesc, AffinityTopologyVersion affVer) {

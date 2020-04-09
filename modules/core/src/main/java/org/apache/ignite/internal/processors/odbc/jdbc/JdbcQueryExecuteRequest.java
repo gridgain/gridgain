@@ -25,10 +25,6 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_7_0;
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
-import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_2;
-
 /**
  * JDBC query execute request.
  */
@@ -59,6 +55,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
     /** Flag, that signals, that query expects partition response in response. */
     private boolean partResReq;
 
+    /** Explicit timeout. */
     private boolean explicitTimeout;
 
     /** */
@@ -165,8 +162,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         if (protoCtx.isAffinityAwarenessSupported())
             writer.writeBoolean(partResReq);
 
-//        if (check flags)
-//            writer.writeBoolean(explicitTimeout);
+        if (protoCtx.features().contains(JdbcThinFeature.QUERY_TIMEOUT))
+            writer.writeBoolean(explicitTimeout);
     }
 
     /** {@inheritDoc} */
@@ -207,9 +204,8 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
             // TODO: GG-25595 remove when version 8.7.X support ends
         }
 
-//        if (check flags)
-//            explicitTimeout = reader.readBoolean();
-
+        if (protoCtx.features().contains(JdbcThinFeature.QUERY_TIMEOUT))
+            explicitTimeout = reader.readBoolean();
     }
 
     /**

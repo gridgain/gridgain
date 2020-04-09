@@ -30,7 +30,10 @@ public enum JdbcThinFeature implements ThinProtocolFeature {
      * This TZ is used to convert date / time / timestamp object to server
      * timezone before sent data, and convert from this timezone after receive results.
      */
-    TIME_ZONE(1)
+    TIME_ZONE(1),
+
+    /** Add ability to set set explicit query timeout on the cluster node by the JDBC client. */
+    QUERY_TIMEOUT(2)
     ;
 
     /** */
