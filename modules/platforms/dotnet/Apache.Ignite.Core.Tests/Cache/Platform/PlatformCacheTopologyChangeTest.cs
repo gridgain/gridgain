@@ -188,7 +188,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
                     throw new ArgumentOutOfRangeException();
             }
             
-            // Updates are propagated to client near cache.
+            // Updates are propagated to client platform cache.
             _cache[2][Key3] = new Foo(3);
             
             TestUtils.WaitForTrueCondition(() => clientCache[Key3].Bar == 3);
@@ -200,11 +200,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that when new server node joins, near cache data is retained for all keys
+        /// Tests that when new server node joins, platform cache data is retained for all keys
         /// that are NOT moved to a new server.
         /// </summary>
         [Test]
-        public void TestServerNodeJoinDoesNotAffectNonPrimaryKeysInNearCache()
+        public void TestServerNodeJoinDoesNotAffectNonPrimaryKeysInPlatformCache()
         {
             var key = 0;
             InitNodes(2);
@@ -228,10 +228,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that client node entering topology does not cause any near caches invalidation.
+        /// Tests that client node entering topology does not cause any platform caches invalidation.
         /// </summary>
         [Test]
-        public void TestClientNodeJoinOrLeaveDoesNotAffectNearCacheDataOnOtherNodes()
+        public void TestClientNodeJoinOrLeaveDoesNotAffectPlatformCacheDataOnOtherNodes()
         {
             InitNodes(2);
             _cache[2] = InitClientAndCache();
@@ -253,24 +253,24 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
 
             Action<int> putData = offset => forEachCacheAndKey((cache, key) => cache[key] = new Foo(key + offset));
             
-            Action<int> checkNearData = offset => forEachCacheAndKey((cache, key) => 
+            Action<int> checkPlatformData = offset => forEachCacheAndKey((cache, key) => 
                 Assert.AreEqual(key + offset, cache.LocalPeek(key, CachePeekMode.Platform).Bar));
 
-            // Put data and verify near cache.
+            // Put data and verify platform cache.
             putData(0);
-            checkNearData(0);
+            checkPlatformData(0);
 
-            // Start new client node, check near data, stop client node, check near data.
+            // Start new client node, check platform data, stop client node, check platform data.
             using (InitClient())
             {
-                checkNearData(0);
+                checkPlatformData(0);
                 putData(1);
-                checkNearData(1);
+                checkPlatformData(1);
             }
 
-            checkNearData(1);
+            checkPlatformData(1);
             putData(2);
-            checkNearData(2);
+            checkPlatformData(2);
             
             Assert.AreEqual(3, _cache[0][1].Bar);
         }
@@ -279,7 +279,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         /// Test multiple topology changes.
         /// </summary>
         [Test]
-        public void TestContinuousTopologyChangeMaintainsCorrectNearCacheData([Values(0, 1, 2)] int backups)
+        public void TestContinuousTopologyChangeMaintainsCorrectPlatformCacheData([Values(0, 1, 2)] int backups)
         {
             // Start 5 servers and 1 client.
             // Server 0 and client node always run
@@ -337,10 +337,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that client reconnect to a restarted cluster stops near cache.
+        /// Tests that client reconnect to a restarted cluster stops platform cache.
         /// </summary>
         [Test]
-        public void TestClientNodeReconnectWithClusterRestartStopsNearCache()
+        public void TestClientNodeReconnectWithClusterRestartStopsPlatformCache()
         {
             InitNodes(1);
             var clientCache = InitClientAndCache();
@@ -364,12 +364,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             InitNodes(1);
             Assert.IsTrue(reconnectTask.Wait(TimeSpan.FromSeconds(10)));
             
-            // Near cache is empty.
+            // Platform cache is empty.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));
             Assert.IsEmpty(clientCache.GetLocalEntries(CachePeekMode.Platform));
             Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(1, CachePeekMode.Platform));
             
-            // Cache still works for new entries, near cache is being bypassed.
+            // Cache still works for new entries, platform cache is being bypassed.
             var serverCache = _cache[0];
             
             serverCache[1] = new Foo(11);
@@ -381,7 +381,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             Assert.AreEqual(22, foo.Bar);
             Assert.AreNotSame(foo, clientCache[1]);
             
-            // This is a full cluster restart, so client near cache is stopped. 
+            // This is a full cluster restart, so client platform cache is stopped. 
             Assert.IsNull(clientCache.GetConfiguration().NearConfiguration);
             
             var ex = Assert.Throws<CacheException>(() =>
@@ -393,7 +393,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         /// Tests client reconnect to the same cluster (no cluster restart).
         /// </summary>
         [Test]
-        public void TestClientNodeReconnectWithoutClusterRestartKeepsNearCache()
+        public void TestClientNodeReconnectWithoutClusterRestartKeepsPlatformCache()
         {
             var cfg = new IgniteConfiguration(TestUtils.GetTestConfiguration())
             {
@@ -419,7 +419,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             
             PerformClientReconnect(client);
             
-            // Near cache data is removed after disconnect.
+            // Platform cache data is removed after disconnect.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));
             
             // Updates work as expected.
@@ -429,11 +429,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Checks that near cache performance is adequate after topology change.
+        /// Checks that platform cache performance is adequate after topology change.
         /// (Topology change causes additional entry validation).
         /// </summary>
         [Test]
-        public void TestNearCacheTopologyVersionValidationPerformance()
+        public void TestPlatformCacheTopologyVersionValidationPerformance()
         {
             InitNodes(1);
             var cache = InitClientAndCache();
