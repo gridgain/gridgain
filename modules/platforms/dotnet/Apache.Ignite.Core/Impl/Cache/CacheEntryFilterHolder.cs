@@ -92,7 +92,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 if (_platformCache == null || !_platformCache.TryGetValue(key, out val))
                 {
                     // Request value from Java.
-                    // This should be rare, because primary keys are always in .NET Near Cache.
+                    // This should be rare, because primary keys are always in platform cache.
                     val = _marsh.Ignite.GetJavaThreadLocal();
                 }
             }

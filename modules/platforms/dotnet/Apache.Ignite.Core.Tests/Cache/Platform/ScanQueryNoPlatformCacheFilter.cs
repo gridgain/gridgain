@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -21,13 +21,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     using NUnit.Framework;
 
     /// <summary>
-    /// Entry filter for cache store: ensures that values do not come from Platform Near Cache.
+    /// Scan query filter that checks whether values come from platform cache.
     /// </summary>
-    public class StoreNoNearCacheFilter : ICacheEntryFilter<int, Foo>
+    public class ScanQueryNoPlatformCacheFilter : ICacheEntryFilter<int, Foo>
     {
-        /// <summary>
-        /// Gets or sets the cache name.
-        /// </summary>
         public string CacheName { get; set; }
         
         [InstanceResource]
@@ -37,12 +34,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         {
             var cache = Ignite.GetCache<int, Foo>(CacheName);
 
-            var nearVal = cache.LocalPeek(entry.Key);
+            Foo _;
+            var hasPlatformVal = cache.TryLocalPeek(entry.Key, out _, CachePeekMode.Platform);
 
-            Assert.AreNotSame(nearVal, entry.Value);
-            Assert.AreNotEqual(nearVal.Bar, entry.Value.Bar);
+            Assert.IsFalse(hasPlatformVal);
+            Assert.AreEqual(entry.Key, entry.Value.Bar);
 
-            return Ignite.GetAffinity(CacheName).IsPrimary(Ignite.GetCluster().GetLocalNode(), entry.Key);
+            return true;
         }
     }
 }

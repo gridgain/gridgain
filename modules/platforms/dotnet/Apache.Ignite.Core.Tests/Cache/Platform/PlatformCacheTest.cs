@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     /// <summary>
     /// Near cache test.
     /// </summary>
-    public class CacheNearTest
+    public sealed class PlatformCacheTest
     {
         /** */
         private const string CacheName = "default";
@@ -66,7 +66,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         /// Fixture set up.
         /// </summary>
         [TestFixtureSetUp]
-        public virtual void FixtureSetUp()
+        public void FixtureSetUp()
         {
             _logger = new ListLogger(new ConsoleLogger())
             {
@@ -209,7 +209,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
 
             if (localPut)
             {
-                // Local put through the same cache instance: obj is in .NET Near Cache directly.
+                // Local put through the same cache instance: obj is in platform cache directly.
                 cache[key] = obj;
             }
             else
@@ -310,10 +310,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that primary keys are always up-to-date in .NET Near Cache.
+        /// Tests that primary keys are always up-to-date in platform cache.
         /// </summary>
         [Test]
-        public void TestPrimaryKeyOnServerNodeIsAddedToNearCacheAfterRemotePut()
+        public void TestPrimaryKeyOnServerNodeIsAddedToPlatformCacheAfterRemotePut()
         {
             var clientCache = _client.GetCache<int, int>(CacheName);
             var serverCache = _grid.GetCache<int, int>(CacheName);
@@ -530,13 +530,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             clientCache.GetAll(nearKeys);
             Assert.AreEqual(nearKeys.Length, clientCache.GetLocalSize(CachePeekMode.Platform));
 
-            // Check that Get returns instance from .NET near cache.
+            // Check that Get returns instance from platform cache.
             foreach (var key in nearKeys)
             {
                 Assert.AreSame(clientCache.LocalPeek(key, CachePeekMode.Platform), clientCache.Get(key));
             }
             
-            // Check that GetAll returns instances from .NET near cache.
+            // Check that GetAll returns instances from platform cache.
             var all = clientCache.GetAll(nearKeys);
             foreach (var entry in all)
             {
@@ -588,7 +588,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             cache.PutAll(Enumerable.Range(1, count).Select(x => new KeyValuePair<int, Foo>(x, new Foo(x))));
 
             // Filter will check that value comes from native near cache.
-            var filter = new ScanQueryNearCacheFilter
+            var filter = new ScanQueryPlatformCacheFilter
             {
                 CacheName = cache.Name
             };
@@ -613,7 +613,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             cache.PutAll(data);
 
             // Filter will check that value does not come from native near cache.
-            var filter = new ScanQueryNoNearCacheFilter
+            var filter = new ScanQueryNoPlatformCacheFilter
             {
                 CacheName = cache.Name
             };
@@ -648,7 +648,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             {
                 Local = true,
                 Filter = withFilter 
-                    ? new ScanQueryNearCacheFilter
+                    ? new ScanQueryPlatformCacheFilter
                     {
                         CacheName = cache.Name
                     }
@@ -764,7 +764,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             }
             
             // Exception in filter.
-            qry.Filter = new ScanQueryNearCacheFilter {FailKey = key};
+            qry.Filter = new ScanQueryPlatformCacheFilter {FailKey = key};
             
             using (var cursor = cache.Query(qry))
             {
@@ -1375,7 +1375,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             cache[key] = new Foo(1);
             
             // Filter asserts that values do not come from near cache.
-            var filter = new StoreNoNearCacheFilter
+            var filter = new StoreNoPlatformCacheFilter
             {
                 CacheName = cache.Name
             };

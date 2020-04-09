@@ -51,7 +51,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
 
         /// <summary>
         /// Initializes a new instance of the <see cref="PlatformCache{TK,TV}"/> class.
-        /// Called via reflection from <see cref="PlatformCacheManager.CreateNearCache"/>. 
+        /// Called via reflection from <see cref="PlatformCacheManager.CreatePlatformCache"/>. 
         /// </summary>
         public PlatformCache(Func<object> affinityTopologyVersionFunc, CacheAffinityImpl affinity, bool keepBinary)
         {

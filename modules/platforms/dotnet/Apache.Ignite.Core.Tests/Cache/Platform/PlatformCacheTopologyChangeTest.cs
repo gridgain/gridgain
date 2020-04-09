@@ -30,9 +30,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     using NUnit.Framework;
 
     /// <summary>
-    /// Tests Near Cache behavior when cluster topology changes.
+    /// Tests platform cache behavior when cluster topology changes.
     /// </summary>
-    public class CacheNearTopologyChangeTest
+    public class PlatformCacheTopologyChangeTest
     {
         /** */
         private const string CacheName = "c";
