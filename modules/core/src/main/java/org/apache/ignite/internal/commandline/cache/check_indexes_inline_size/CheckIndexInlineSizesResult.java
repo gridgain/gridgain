@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.visor.cache;
+package org.apache.ignite.internal.commandline.cache.check_indexes_inline_size;
 
 import java.io.IOException;
 import java.io.ObjectInput;
@@ -23,11 +23,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.dto.IgniteDataTransferObject;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Represents information about secondary indexes inline size from the cluster nodes.
  */
+@GridInternal
 public class CheckIndexInlineSizesResult extends IgniteDataTransferObject {
     /** */
     private static final long serialVersionUID = 0L;

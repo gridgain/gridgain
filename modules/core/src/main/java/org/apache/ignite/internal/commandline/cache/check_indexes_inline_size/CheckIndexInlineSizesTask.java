@@ -14,21 +14,23 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.visor.cache;
+package org.apache.ignite.internal.commandline.cache.check_indexes_inline_size;
 
 import java.util.List;
 import java.util.Map;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.compute.ComputeJobResult;
 import org.apache.ignite.internal.commandline.cache.CheckIndexInlineSizes;
+import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.visor.VisorJob;
-import org.apache.ignite.internal.visor.VisorOneNodeTask;
+import org.apache.ignite.internal.visor.VisorMultiNodeTask;
 import org.jetbrains.annotations.Nullable;
 
 /**
  * Task for {@link CheckIndexInlineSizes} command.
  */
-public class CheckIndexInlineSizesTask extends VisorOneNodeTask<Void, CheckIndexInlineSizesResult> {
+@GridInternal
+public class CheckIndexInlineSizesTask extends VisorMultiNodeTask<Void, CheckIndexInlineSizesResult, CheckIndexInlineSizesResult> {
     /** */
     private static final long serialVersionUID = 0L;
 

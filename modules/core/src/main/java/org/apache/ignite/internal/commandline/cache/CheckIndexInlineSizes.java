@@ -32,8 +32,9 @@ import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.Command;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
-import org.apache.ignite.internal.visor.cache.CheckIndexInlineSizesResult;
-import org.apache.ignite.internal.visor.cache.CheckIndexInlineSizesTask;
+import org.apache.ignite.internal.visor.VisorTaskArgument;
+import org.apache.ignite.internal.commandline.cache.check_indexes_inline_size.CheckIndexInlineSizesResult;
+import org.apache.ignite.internal.commandline.cache.check_indexes_inline_size.CheckIndexInlineSizesTask;
 
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
@@ -58,20 +59,23 @@ public class CheckIndexInlineSizes implements Command<Void> {
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            Set<GridClientNode> serverNodes = client.compute().nodes().stream()
+            Set<UUID> serverNodes = client.compute().nodes().stream()
                 .filter(node -> Objects.equals(node.attribute(ATTR_CLIENT_MODE), false))
+                .map(GridClientNode::nodeId)
                 .collect(toSet());
 
-            Set<GridClientNode> supportedServerNodes = serverNodes.stream()
+            Set<UUID> supportedServerNodes = client.compute().nodes().stream()
                 .filter(CheckIndexInlineSizes::checkIndexInlineSizesSupported)
+                .map(GridClientNode::nodeId)
                 .collect(toSet());
 
-            CheckIndexInlineSizesResult res =
-                client.compute().projection(supportedServerNodes).execute(CheckIndexInlineSizesTask.class.getName(), null);
+            CheckIndexInlineSizesResult res = client.compute().execute(
+                CheckIndexInlineSizesTask.class.getName(),
+                new VisorTaskArgument<>(supportedServerNodes, false)
+            );
 
             Set<UUID> unsupportedNodes = serverNodes.stream()
                 .filter(n -> !supportedServerNodes.contains(n))
-                .map(GridClientNode::nodeId)
                 .collect(toSet());
 
             analizeResults(log, unsupportedNodes, res);
