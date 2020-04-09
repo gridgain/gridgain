@@ -59,10 +59,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
         
         /// <summary>
-        /// Tests that near cache is cleared for the key when primary node leaves.
+        /// Tests that platform cache is cleared for the key when primary node leaves.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeLeaveClearsNearCache()
+        public void TestPrimaryNodeLeaveClearsPlatformCache()
         {
             InitNodes(3);
             var clientCache = InitClientAndCache();
@@ -79,7 +79,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             _ignite[2].Dispose();
             Assert.IsTrue(_ignite[0].WaitTopology(3));
 
-            // Check that key is not stuck in near cache.
+            // Check that key is not stuck in platform cache.
             TestUtils.WaitForTrueCondition(() => !_cache[0].ContainsKey(Key3));
             Assert.Throws<KeyNotFoundException>(() => _cache[0].Get(Key3));
             Assert.Throws<KeyNotFoundException>(() => _cache[1].Get(Key3));
@@ -106,11 +106,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that near cache works correctly after primary node changes for a given key.
+        /// Tests that platform cache works correctly after primary node changes for a given key.
         /// GridNearCacheEntry -> GridDhtCacheEntry.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeChangeClearsNearCacheDataOnServer()
+        public void TestPrimaryNodeChangeClearsPlatformCacheDataOnServer()
         {
             InitNodes(2);
             
@@ -123,12 +123,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             // New node enters and becomes primary for the key.
             InitNode(2);
             
-            // GridCacheNearEntry does not yet exist on old primary node, so near cache data is removed on .NET side.
+            // GridCacheNearEntry does not yet exist on old primary node, so platform cache data is removed on .NET side.
             Foo foo;
             Assert.IsFalse(_cache[0].TryLocalPeek(Key3, out foo, CachePeekMode.Platform));
             Assert.IsFalse(_cache[1].TryLocalPeek(Key3, out foo, CachePeekMode.Platform));
             
-            // Check value on the new node: it should be already in near cache, because key is primary.
+            // Check value on the new node: it should be already in platform cache, because key is primary.
             Assert.AreEqual(-1, _cache[2].LocalPeek(Key3, CachePeekMode.Platform).Bar);
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
             Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
@@ -144,12 +144,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
         
         /// <summary>
-        /// Tests that near cache works correctly on client node after primary node changes for a given key.
+        /// Tests that platform cache works correctly on client node after primary node changes for a given key.
         /// </summary>
         [Test]
-        public void TestPrimaryNodeChangeClearsNearCacheDataOnClient(
-            [Values(NearCheckMode.Entries, NearCheckMode.Peek, NearCheckMode.Size, NearCheckMode.TryPeek)] 
-            NearCheckMode checkMode)
+        public void TestPrimaryNodeChangeClearsPlatformCacheDataOnClient(
+            [Values(PlatformCheckMode.Entries, PlatformCheckMode.Peek, PlatformCheckMode.Size, PlatformCheckMode.TryPeek)] 
+            PlatformCheckMode checkMode)
         {
             InitNodes(2);
             var clientCache = InitClientAndCache();
@@ -164,23 +164,23 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             
             // Client node cache is cleared.
             // Check with different methods: important because every method calls entry validation separately
-            // (covers all NearCache.IsValid calls).
+            // (covers all PlatformCache.IsValid calls).
             switch (checkMode)
             {
-                case NearCheckMode.Peek:
+                case PlatformCheckMode.Peek:
                     Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(Key3, CachePeekMode.Platform));
                     break;
                 
-                case NearCheckMode.TryPeek:
+                case PlatformCheckMode.TryPeek:
                     Foo _;
                     Assert.IsFalse(clientCache.TryLocalPeek(Key3, out _, CachePeekMode.Platform));
                     break;
                 
-                case NearCheckMode.Size:
+                case PlatformCheckMode.Size:
                     Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));
                     break;
                 
-                case NearCheckMode.Entries:
+                case PlatformCheckMode.Entries:
                     Assert.AreEqual(0, clientCache.GetLocalEntries(CachePeekMode.Platform).Count());
                     break;
                 
@@ -600,9 +600,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Near cache check modes: how we can verify near cache contents in a test.
+        /// Platform cache check modes: how we can verify platform cache contents in a test.
         /// </summary>
-        public enum NearCheckMode
+        public enum PlatformCheckMode
         {
             Peek,
             TryPeek,
