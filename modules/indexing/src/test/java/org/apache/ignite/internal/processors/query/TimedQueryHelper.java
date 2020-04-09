@@ -1,0 +1,83 @@
+/*
+ * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.internal.processors.query;
+
+import java.util.Collections;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.query.annotations.QuerySqlFunction;
+import org.apache.ignite.configuration.CacheConfiguration;
+
+/**
+ * This class helps to prepare a query which will run for a specific amount of time
+ * and able to be cancelled by timeout.
+ * Some tricks is needed because internally (H2) a query is checked for timeout after retrieving every N rows.
+ */
+public class TimedQueryHelper {
+    private static final int ROW_COUNT = 250;
+
+    private final long executionTime;
+    private final String cacheName;
+
+    public TimedQueryHelper(long executionTime, String cacheName) {
+        assert executionTime >= ROW_COUNT;
+
+        this.executionTime = executionTime;
+        this.cacheName = cacheName;
+    }
+
+    public void createCache(Ignite ign) {
+        IgniteCache<Object, Object> cache = ign.createCache(new CacheConfiguration<>(cacheName)
+            .setSqlSchema("PUBLIC")
+            .setQueryEntities(Collections.singleton(
+                new QueryEntity(Integer.class, Integer.class).setTableName(cacheName)))
+            .setSqlFunctionClasses(TimedQueryHelper.class));
+
+        Map<Integer, Integer> entries = IntStream.range(0, ROW_COUNT).boxed()
+            .collect(Collectors.toMap(Function.identity(), Function.identity()));
+
+        cache.putAll(entries);
+    }
+
+    public String buildTimedQuery() {
+        long rowTimeout = executionTime / ROW_COUNT;
+
+        return "select longProcess(_val, " + rowTimeout + ") from " + cacheName;
+    }
+
+    public String buildTimedUpdateQuery() {
+        long rowTimeout = executionTime / ROW_COUNT;
+
+        return "update " + cacheName + " set _val = longProcess(_val, " + rowTimeout + ")";
+    }
+
+    @QuerySqlFunction
+    public static int longProcess(int i, long millis) {
+        try {
+            Thread.sleep(millis);
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return i;
+    }
+}

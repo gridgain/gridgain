@@ -50,6 +50,12 @@ import org.apache.ignite.internal.processors.odbc.ClientListenerResponse;
 import org.apache.ignite.internal.processors.odbc.ClientListenerResponseSender;
 import org.apache.ignite.internal.processors.odbc.jdbc.JdbcParameterMeta;
 import org.apache.ignite.internal.processors.odbc.odbc.escape.OdbcEscapeUtils;
+import org.apache.ignite.internal.processors.query.GridQueryProperty;
+import org.apache.ignite.internal.processors.query.GridQueryTypeDescriptor;
+import org.apache.ignite.internal.processors.query.IgniteSQLException;
+import org.apache.ignite.internal.processors.query.NestedTxMode;
+import org.apache.ignite.internal.processors.query.QueryUtils;
+import org.apache.ignite.internal.processors.query.SqlClientContext;
 import org.apache.ignite.internal.util.GridSpinBusyLock;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.F;
@@ -59,7 +65,9 @@ import org.apache.ignite.internal.util.worker.GridWorker;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.transactions.TransactionAlreadyCompletedException;
 import org.apache.ignite.transactions.TransactionDuplicateKeyException;
+import org.apache.ignite.transactions.TransactionMixedModeException;
 import org.apache.ignite.transactions.TransactionSerializationException;
+import org.apache.ignite.transactions.TransactionUnsupportedConcurrencyException;
 
 import static org.apache.ignite.internal.processors.odbc.odbc.OdbcRequest.*;
 
@@ -336,8 +344,9 @@ public class OdbcRequestHandler implements ClientListenerRequestHandler {
         SqlFieldsQueryEx qry = makeQuery(schema, sql);
 
         qry.setArgs(args);
-        qry.setTimeout(timeout, TimeUnit.SECONDS);
         qry.setAutoCommit(autoCommit);
+
+        QueryUtils.copyQueryTimeout(qry, timeout, TimeUnit.SECONDS);
 
         return qry;
     }

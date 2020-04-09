@@ -52,6 +52,9 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Threaded query originator. */
     private static ThreadLocal<String> threadedQryInitiatorId = new ThreadLocal<>();
 
+    /** Default value of Query timeout. Default is -1 means no timeout is set. */
+    private static final int DFLT_QUERY_TIMEOUT = -1;
+
     /** Do not remove. For tests only. */
     @SuppressWarnings("NonConstantFieldWithUpperCaseName")
     private static boolean DFLT_LAZY;
@@ -67,7 +70,7 @@ public class SqlFieldsQuery extends Query<List<?>> {
     private boolean collocated;
 
     /** Query timeout in millis. */
-    private int timeout;
+    private int timeout = DFLT_QUERY_TIMEOUT;
 
     /** */
     private boolean enforceJoinOrder;

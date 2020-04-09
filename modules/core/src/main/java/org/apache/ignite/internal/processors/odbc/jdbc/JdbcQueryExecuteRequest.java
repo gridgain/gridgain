@@ -25,6 +25,10 @@ import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_7_0;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_0;
+import static org.apache.ignite.internal.processors.odbc.jdbc.JdbcConnectionContext.VER_2_8_2;
+
 /**
  * JDBC query execute request.
  */
@@ -55,8 +59,9 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
     /** Flag, that signals, that query expects partition response in response. */
     private boolean partResReq;
 
-    /**
-     */
+    private boolean explicitTimeout;
+
+    /** */
     JdbcQueryExecuteRequest() {
         super(QRY_EXEC);
 
@@ -73,7 +78,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
      * @param args Arguments list.
      */
     public JdbcQueryExecuteRequest(JdbcStatementType stmtType, String schemaName, int pageSize, int maxRows,
-        boolean autoCommit, String sqlQry, Object[] args) {
+        boolean autoCommit, boolean explicitTimeout, String sqlQry, Object[] args) {
         super(QRY_EXEC);
 
         this.schemaName = F.isEmpty(schemaName) ? null : schemaName;
@@ -83,6 +88,7 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         this.args = args;
         this.stmtType = stmtType;
         this.autoCommit = autoCommit;
+        this.explicitTimeout = explicitTimeout;
     }
 
     /**
@@ -158,6 +164,9 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
 
         if (protoCtx.isAffinityAwarenessSupported())
             writer.writeBoolean(partResReq);
+
+//        if (check flags)
+//            writer.writeBoolean(explicitTimeout);
     }
 
     /** {@inheritDoc} */
@@ -197,6 +206,10 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
         catch (Exception ignored) {
             // TODO: GG-25595 remove when version 8.7.X support ends
         }
+
+//        if (check flags)
+//            explicitTimeout = reader.readBoolean();
+
     }
 
     /**
@@ -211,6 +224,13 @@ public class JdbcQueryExecuteRequest extends JdbcRequest {
      */
     public void partitionResponseRequest(boolean partResReq) {
         this.partResReq = partResReq;
+    }
+
+    /**
+     * @return Query timeout.
+     */
+    public boolean explicitTimeout() {
+        return explicitTimeout;
     }
 
     /** {@inheritDoc} */

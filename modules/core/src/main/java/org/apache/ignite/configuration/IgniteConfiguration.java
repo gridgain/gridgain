@@ -46,6 +46,7 @@ import org.apache.ignite.failure.FailureHandler;
 import org.apache.ignite.internal.managers.eventstorage.GridEventStorageManager;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProcessor;
 import org.apache.ignite.internal.processors.tracing.TracingSpi;
+import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.lang.IgniteAsyncCallback;
 import org.apache.ignite.lang.IgniteExperimental;
@@ -261,6 +262,9 @@ public class IgniteConfiguration {
     /** Default value of environment type is {@link EnvironmentType#STAND_ALONE}. */
     private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STAND_ALONE;
 
+    /** Default query timeout. */
+    public static final long DFLT_QRY_TIMEOUT = 0;
+
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
 
@@ -311,6 +315,9 @@ public class IgniteConfiguration {
 
     /** SQL query history size. */
     private int sqlQryHistSize = DFLT_SQL_QUERY_HISTORY_SIZE;
+
+    /** Default query timeout. */
+    private long dfltQryTimeout = DFLT_QRY_TIMEOUT;
 
     /** Ignite installation folder. */
     private String igniteHome;
@@ -649,6 +656,7 @@ public class IgniteConfiguration {
         consistentId = cfg.getConsistentId();
         daemon = cfg.isDaemon();
         dataStreamerPoolSize = cfg.getDataStreamerThreadPoolSize();
+        dfltQryTimeout = cfg.getDefaultQueryTimeout();
         deployMode = cfg.getDeploymentMode();
         discoStartupDelay = cfg.getDiscoveryStartupDelay();
         execCfgs = cfg.getExecutorConfiguration();
@@ -1108,6 +1116,36 @@ public class IgniteConfiguration {
      */
     public IgniteConfiguration setSqlQueryHistorySize(int size) {
         sqlQryHistSize = size;
+
+        return this;
+    }
+
+    /**
+     * Defines the default query timeout.
+     *
+     * Defaults to {@link #DFLT_QRY_TIMEOUT}.
+     * {@code 0} means there is no timeout (this
+     * is a default value)
+     *
+     * @return Default query timeout.
+     */
+    public long getDefaultQueryTimeout() {
+        return dfltQryTimeout;
+    }
+
+    /**
+     * Sets timeout in milliseconds for default query timeout.
+     * {@code 0} means there is no timeout (this
+     * is a default value)
+     *
+     * @param dfltQryTimeout Timeout in milliseconds.
+     * @return {@code this} for chaining.
+     */
+    public IgniteConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
+        A.ensure(dfltQryTimeout >= 0 && dfltQryTimeout <= Integer.MAX_VALUE,
+            "default query timeout value should be valid Integer.");
+
+        this.dfltQryTimeout = dfltQryTimeout;
 
         return this;
     }

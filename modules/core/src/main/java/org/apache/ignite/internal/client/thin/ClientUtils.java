@@ -484,7 +484,8 @@ final class ClientUtils {
         out.writeBoolean(qry.isEnforceJoinOrder());
         out.writeBoolean(qry.isCollocated());
         out.writeBoolean(qry.isLazy());
-        out.writeLong(qry.getTimeout());
+        // t0d0 explicit compatibility should be introduced as negative timeout will break old server
+        out.writeLong(Math.max(qry.getTimeout(), 0));
         out.writeBoolean(true); // include column names
     }
 

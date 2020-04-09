@@ -81,8 +81,9 @@ public class ClientCacheSqlFieldsQueryRequest extends ClientCacheDataRequest imp
                 .setReplicatedOnly(replicatedOnly)
                 .setEnforceJoinOrder(enforceJoinOrder)
                 .setCollocated(collocated)
-                .setLazy(lazy)
-                .setTimeout(timeout, TimeUnit.MILLISECONDS);
+                .setLazy(lazy);
+
+        QueryUtils.copyQueryTimeout(qry, timeout, TimeUnit.MILLISECONDS);
 
         this.qry = qry;
     }
