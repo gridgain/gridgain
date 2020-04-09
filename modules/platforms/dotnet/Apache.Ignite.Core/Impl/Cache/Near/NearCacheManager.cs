@@ -163,7 +163,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
                 if (resolved == null)
                 {
                     throw new InvalidOperationException(string.Format(
-                        "Can not create .NET Near Cache: {0}.{1} is invalid. Failed to resolve type: '{2}'", 
+                        "Can not create .NET Platform Cache: {0}.{1} is invalid. Failed to resolve type: '{2}'", 
                         typeof(PlatformCacheConfiguration).Name, fieldName, typeName));
                 }
 

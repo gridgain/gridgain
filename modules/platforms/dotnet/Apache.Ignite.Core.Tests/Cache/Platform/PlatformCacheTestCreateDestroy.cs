@@ -78,10 +78,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that near cache data is cleared when underlying cache is destroyed.
+        /// Tests that platform cache data is cleared when underlying cache is destroyed.
         /// </summary>
         [Test]
-        public void TestDestroyCacheClearsNearCacheData(
+        public void TestDestroyCacheClearsPlatformCacheData(
             [Values(CacheTestMode.ServerLocal, CacheTestMode.ServerRemote, CacheTestMode.Client)] CacheTestMode mode)
         {
             var cfg = new CacheConfiguration
@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that near cache data is cleared when cache is destroyed and then created again with the same name.
+        /// Tests that platform cache data is cleared when cache is destroyed and then created again with the same name.
         /// </summary>
         [Test]
         public void TestCreateWithSameNameAfterDestroyClearsOldData(
@@ -181,13 +181,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             
             var key = TestUtils.GetPrimaryKey(_grid, cfg.Name);
             
-            // Not in near on non-primary node.
+            // Not in platform cache on non-primary node.
             cache2[key] = new Foo(key);
             Assert.AreEqual(key, cache2[key].Bar);
             
             Assert.AreEqual(0, cache2.GetLocalEntries(CachePeekMode.Platform).Count());
             
-            // In near on primary node.
+            // In platform cache on primary node.
             Assert.AreEqual(key, cache1.GetLocalEntries(CachePeekMode.Platform).Single().Key);
         }
 
@@ -195,7 +195,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         /// Tests that invalid config is handled properly.
         /// </summary>
         [Test]
-        public void TestCreateNearCacheWithInvalidKeyValueTypeNames([Values(true, false)] bool client, 
+        public void TestCreatePlatformCacheWithInvalidKeyValueTypeNames([Values(true, false)] bool client, 
             [Values(true, false)] bool keyOrValue)
         {
             var cfg = new CacheConfiguration(TestUtils.TestName)
@@ -212,7 +212,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             var err = Assert.Throws<InvalidOperationException>(() => ignite.CreateCache<int, int>(cfg));
 
             var expectedMessage = string.Format(
-                "Can not create .NET Near Cache: PlatformCacheConfiguration.{0} is invalid. " +
+                "Can not create .NET Platform Cache: PlatformCacheConfiguration.{0} is invalid. " +
                 "Failed to resolve type: 'invalid'", keyOrValue ? "KeyTypeName" : "ValueTypeName");
             
             Assert.AreEqual(expectedMessage, err.Message);
