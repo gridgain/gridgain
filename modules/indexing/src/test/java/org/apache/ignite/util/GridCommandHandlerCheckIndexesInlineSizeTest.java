@@ -34,7 +34,7 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
     private static final String STR = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     /** Nodes count. */
-    private static final int NODES_CNT = 1;
+    private static final int NODES_CNT = 2;
 
     /** Max payload inline index size for local node. */
     private static final int INITIAL_PAYLOAD_SIZE = 1;
@@ -54,15 +54,15 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
 
         startGrids(NODES_CNT).cluster().active(true);
 
-        executeSql(grid(0), "CREATE TABLE t (i INT, l LONG, s0 VARCHAR, s1 VARCHAR, PRIMARY KEY (i, s0))");
+        executeSql(grid(0), "CREATE TABLE TEST_TABLE (i INT, l LONG, s0 VARCHAR, s1 VARCHAR, PRIMARY KEY (i, s0))");
 
         for (int i = 0; i < 10; i++)
-            executeSql(grid(0), "INSERT INTO t (i, l, s0, s1) VALUES (?, ?, ?, ?)", i, i * i, STR + i, STR + i * i);
+            executeSql(grid(0), "INSERT INTO TEST_TABLE (i, l, s0, s1) VALUES (?, ?, ?, ?)", i, i * i, STR + i, STR + i * i);
 
-        executeSql(grid(0), "CREATE INDEX i_idx ON t(i)");
-        executeSql(grid(0), "CREATE INDEX l_idx ON t(l)");
-        executeSql(grid(0), "CREATE INDEX s0_idx ON t(s0) INLINE_SIZE 10");
-        executeSql(grid(0), "CREATE INDEX s1_idx ON t(s1)");
+        executeSql(grid(0), "CREATE INDEX i_idx ON TEST_TABLE(i)");
+        executeSql(grid(0), "CREATE INDEX l_idx ON TEST_TABLE(l)");
+        executeSql(grid(0), "CREATE INDEX s0_idx ON TEST_TABLE(s0) INLINE_SIZE 10");
+        executeSql(grid(0), "CREATE INDEX s1_idx ON TEST_TABLE(s1)");
     }
 
     /** {@inheritDoc} */
