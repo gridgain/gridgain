@@ -135,7 +135,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
         log.info("");
 
         log.info("Recommendations:");
-        log.info(INDENT + "Check that value of property " + IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE + " are same on all nodes.");
+        log.info(INDENT + "Check that value of property " + IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE + " are the same on all nodes.");
         log.info(INDENT + "Recreate indexes with different inline size.");
     }
 

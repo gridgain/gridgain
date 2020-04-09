@@ -49,7 +49,7 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
     private static final String STR = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
     /** */
-    private static final String INDEXES_WARN_MSG_FORMAT = "PUBLIC#T#L_IDX(%d,%d),PUBLIC#T#I_IDX(%d,%d),PUBLIC#T#S1_IDX(%d,%d)";
+    private static final String INDEXES_WARN_MSG_FORMAT = "PUBLIC#TEST_TABLE#L_IDX(%d,%d),PUBLIC#TEST_TABLE#S1_IDX(%d,%d),PUBLIC#TEST_TABLE#I_IDX(%d,%d)";
 
     /** Nodes count. */
     private static final int NODES_CNT = 3;
@@ -98,15 +98,15 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
 
         startGrids(NODES_CNT).cluster().active(true);
 
-        executeSql(grid(0), "CREATE TABLE t (i INT, l LONG, s0 VARCHAR, s1 VARCHAR, PRIMARY KEY (i, s0))");
+        executeSql(grid(0), "CREATE TABLE TEST_TABLE (i INT, l LONG, s0 VARCHAR, s1 VARCHAR, PRIMARY KEY (i, s0))");
 
         for (int i = 0; i < 10; i++)
-            executeSql(grid(0), "INSERT INTO t (i, l, s0, s1) VALUES (?, ?, ?, ?)", i, i * i, STR + i, STR + i * i);
+            executeSql(grid(0), "INSERT INTO TEST_TABLE (i, l, s0, s1) VALUES (?, ?, ?, ?)", i, i * i, STR + i, STR + i * i);
 
-        executeSql(grid(0), "CREATE INDEX i_idx ON t(i)");
-        executeSql(grid(0), "CREATE INDEX l_idx ON t(l)");
-        executeSql(grid(0), "CREATE INDEX s0_idx ON t(s0) INLINE_SIZE 10");
-        executeSql(grid(0), "CREATE INDEX s1_idx ON t(s1)");
+        executeSql(grid(0), "CREATE INDEX i_idx ON TEST_TABLE(i)");
+        executeSql(grid(0), "CREATE INDEX l_idx ON TEST_TABLE(l)");
+        executeSql(grid(0), "CREATE INDEX s0_idx ON TEST_TABLE(s0) INLINE_SIZE 10");
+        executeSql(grid(0), "CREATE INDEX s1_idx ON TEST_TABLE(s1)");
     }
 
     /** {@inheritDoc} */
