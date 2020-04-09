@@ -57,6 +57,9 @@ public class GridRunningQueryInfo {
     @GridToStringExclude
     private final QueryRunningFuture fut = new QueryRunningFuture();
 
+    /** Originator. */
+    private final String qryInitiatorId;
+
     /**
      * Constructor.
      *
@@ -68,6 +71,7 @@ public class GridRunningQueryInfo {
      * @param startTime Query start time.
      * @param cancel Query cancel.
      * @param loc Local query flag.
+     * @param qryInitiatorId Query's initiator identifier.
      */
     public GridRunningQueryInfo(
         Long id,
@@ -78,7 +82,8 @@ public class GridRunningQueryInfo {
         long startTime,
         GridQueryCancel cancel,
         boolean loc,
-        GridQueryMemoryMetricProvider memMetricProvider
+        GridQueryMemoryMetricProvider memMetricProvider,
+        String qryInitiatorId
     ) {
         this.id = id;
         this.nodeId = nodeId;
@@ -89,6 +94,7 @@ public class GridRunningQueryInfo {
         this.cancel = cancel;
         this.loc = loc;
         this.memMetricProvider = memMetricProvider;
+        this.qryInitiatorId = qryInitiatorId;
     }
 
     /**
@@ -174,6 +180,14 @@ public class GridRunningQueryInfo {
      */
     public boolean local() {
         return loc;
+    }
+
+    /**
+     * @return Query's originator string (client host+port, user name,
+     * job name or any user's information about query initiator).
+     */
+    public String queryInitiatorId() {
+        return qryInitiatorId;
     }
 
     /**{@inheritDoc} */

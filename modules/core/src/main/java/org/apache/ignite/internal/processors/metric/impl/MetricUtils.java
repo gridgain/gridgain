@@ -31,6 +31,12 @@ public class MetricUtils {
     /** Metric name part separator. */
     public static final String SEPARATOR = ".";
 
+    /** Histogram metric last interval high bound. */
+    public static final String INF = "_inf";
+
+    /** Histogram name divider. */
+    public static final char HISTOGRAM_NAME_DIVIDER = '_';
+
     /**
      * Example - metric registry name - "io.statistics.PRIMARY_KEY_IDX".
      * root = io - JMX tree root.
@@ -130,6 +136,36 @@ public class MetricUtils {
             assert names[i] != null && !names[i].isEmpty() : i + " element is empty [" + String.join(".", names) + "]";
 
         return true;
+    }
+
+    /**
+     * Generates histogram bucket names.
+     *
+     * Example of metric names if bounds are 10,100:
+     *  histogram_0_10 (less than 10)
+     *  histogram_10_100 (between 10 and 100)
+     *  histogram_100_inf (more than 100)
+     *
+     * @param metric Histogram metric.
+     * @return Histogram intervals names.
+     */
+    public static String[] histogramBucketNames(HistogramMetric metric) {
+        String name = metric.name();
+        long[] bounds = metric.bounds();
+
+        String[] names = new String[bounds.length + 1];
+
+        long min = 0;
+
+        for (int i = 0; i < bounds.length; i++) {
+            names[i] = name + HISTOGRAM_NAME_DIVIDER + min + HISTOGRAM_NAME_DIVIDER + bounds[i];
+
+            min = bounds[i];
+        }
+
+        names[bounds.length] = name + HISTOGRAM_NAME_DIVIDER + min + INF;
+
+        return names;
     }
 
     /**

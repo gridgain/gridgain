@@ -26,6 +26,8 @@ import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.HistogramMetric;
 import org.apache.ignite.spi.metric.jmx.JmxMetricExporterSpi;
 import org.apache.ignite.testframework.GridTestUtils.RunnableX;
 import org.junit.Test;
@@ -38,12 +40,16 @@ import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.GC_CPU_LOAD_DESCRIPTION;
 import static org.apache.ignite.internal.processors.metric.GridMetricManager.SYS_METRICS;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
+import static org.apache.ignite.spi.metric.jmx.MetricRegistryMBean.searchHistogram;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrowsWithCause;
 
 /** */
 public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     private static IgniteEx ignite;
+
+    /** */
+    private static final String REGISTRY_NAME = "test_registry";
 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
@@ -80,7 +86,7 @@ public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testSysJmxMetrics() throws Exception {
-        DynamicMBean sysMBean = metricSet(ignite.name(), null, SYS_METRICS);
+        DynamicMBean sysMBean = metricRegistry(ignite.name(), null, SYS_METRICS);
 
         Set<String> res = stream(sysMBean.getMBeanInfo().getAttributes())
             .map(MBeanFeatureInfo::getName)
@@ -111,7 +117,7 @@ public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
     /** */
     @Test
     public void testDataRegionJmxMetrics() throws Exception {
-        DynamicMBean dataRegionMBean = metricSet(ignite.name(), "io", "dataregion.default");
+        DynamicMBean dataRegionMBean = metricRegistry(ignite.name(), "io", "dataregion.default");
 
         Set<String> res = stream(dataRegionMBean.getMBeanInfo().getAttributes())
             .map(MBeanFeatureInfo::getName)
@@ -130,17 +136,120 @@ public class JmxMetricExporterSpiTest extends AbstractExporterSpiTest {
 
         assertThrowsWithCause(new RunnableX() {
             @Override public void runx() throws Exception {
-                metricSet(ignite.name(), "filtered", "metric");
+                metricRegistry(ignite.name(), "filtered", "metric");
             }
         }, IgniteException.class);
 
-        DynamicMBean bean1 = metricSet(ignite.name(), "other", "prefix");
+        DynamicMBean bean1 = metricRegistry(ignite.name(), "other", "prefix");
 
         assertEquals(42L, bean1.getAttribute("test"));
         assertEquals(43L, bean1.getAttribute("test2"));
 
-        DynamicMBean bean2 = metricSet(ignite.name(), "other", "prefix2");
+        DynamicMBean bean2 = metricRegistry(ignite.name(), "other", "prefix2");
 
         assertEquals(44L, bean2.getAttribute("test3"));
+    }
+
+    /** */
+    @Test
+    public void testHistogramSearchByName() throws Exception {
+        MetricRegistry mreg = new MetricRegistry("test", "test", null);
+
+        createTestHistogram(mreg);
+
+        assertEquals(Long.valueOf(1), searchHistogram("histogram_0_50", mreg));
+        assertEquals(Long.valueOf(2), searchHistogram("histogram_50_500", mreg));
+        assertEquals(Long.valueOf(3), searchHistogram("histogram_500_inf", mreg));
+
+        assertEquals(Long.valueOf(1), searchHistogram("histogram_with_underscore_0_50", mreg));
+        assertEquals(Long.valueOf(2), searchHistogram("histogram_with_underscore_50_500", mreg));
+        assertEquals(Long.valueOf(3), searchHistogram("histogram_with_underscore_500_inf", mreg));
+
+        assertNull(searchHistogram("unknown", mreg));
+        assertNull(searchHistogram("unknown_0", mreg));
+        assertNull(searchHistogram("unknown_0_50", mreg));
+        assertNull(searchHistogram("unknown_test", mreg));
+        assertNull(searchHistogram("unknown_test_test", mreg));
+        assertNull(searchHistogram("unknown_0_inf", mreg));
+
+        assertNull(searchHistogram("histogram", mreg));
+        assertNull(searchHistogram("histogram_0", mreg));
+        assertNull(searchHistogram("histogram_0_100", mreg));
+        assertNull(searchHistogram("histogram_0_inf", mreg));
+        assertNull(searchHistogram("histogram_0_500", mreg));
+
+        assertNull(searchHistogram("histogram_with_underscore", mreg));
+        assertNull(searchHistogram("histogram_with_underscore_0", mreg));
+        assertNull(searchHistogram("histogram_with_underscore_0_100", mreg));
+        assertNull(searchHistogram("histogram_with_underscore_0_inf", mreg));
+        assertNull(searchHistogram("histogram_with_underscore_0_500", mreg));
+    }
+
+    /** */
+    @Test
+    public void testHistogramExport() throws Exception {
+        MetricRegistry mreg = ignite.context().metric().registry("histogramTest");
+
+        createTestHistogram(mreg);
+
+        DynamicMBean bean = metricRegistry(ignite.name(), null, "histogramTest");
+
+        MBeanAttributeInfo[] attrs = bean.getMBeanInfo().getAttributes();
+
+        assertEquals(6, attrs.length);
+
+        assertEquals(1L, bean.getAttribute("histogram_0_50"));
+        assertEquals(2L, bean.getAttribute("histogram_50_500"));
+        assertEquals(3L, bean.getAttribute("histogram_500_inf"));
+
+        assertEquals(1L, bean.getAttribute("histogram_with_underscore_0_50"));
+        assertEquals(2L, bean.getAttribute("histogram_with_underscore_50_500"));
+        assertEquals(3L, bean.getAttribute("histogram_with_underscore_500_inf"));
+    }
+
+    /** */
+    @Test
+    public void testJmxHistogramNamesExport() throws Exception {
+        MetricRegistry reg = ignite.context().metric().registry(REGISTRY_NAME);
+
+        String simpleName = "testhist";
+        String nameWithUnderscore = "test_hist";
+
+        reg.histogram(simpleName, new long[] {10, 100}, null);
+        reg.histogram(nameWithUnderscore, new long[] {10, 100}, null);
+
+        DynamicMBean mbn = metricRegistry(ignite.name(), null, REGISTRY_NAME);
+
+        assertNotNull(mbn.getAttribute(simpleName + '_' + 0 + '_' + 10));
+        assertEquals(0L, mbn.getAttribute(simpleName + '_' + 0 + '_' + 10));
+        assertNotNull(mbn.getAttribute(simpleName + '_' + 10 + '_' + 100));
+        assertEquals(0L, mbn.getAttribute(simpleName + '_' + 10 + '_' + 100));
+        assertNotNull(mbn.getAttribute(nameWithUnderscore + '_' + 10 + '_' + 100));
+        assertEquals(0L, mbn.getAttribute(nameWithUnderscore + '_' + 10 + '_' + 100));
+        assertNotNull(mbn.getAttribute(simpleName + '_' + 100 + "_inf"));
+        assertEquals(0L, mbn.getAttribute(simpleName + '_' + 100 + "_inf"));
+    }
+
+    /** */
+    private void createTestHistogram(MetricRegistry mreg) {
+        long[] bounds = new long[] {50, 500};
+
+        HistogramMetric histogram = mreg.histogram("histogram", bounds, null);
+
+        histogram.value(10);
+        histogram.value(51);
+        histogram.value(60);
+        histogram.value(600);
+        histogram.value(600);
+        histogram.value(600);
+
+        histogram = mreg.histogram("histogram_with_underscore", bounds, null);
+
+        histogram.value(10);
+        histogram.value(51);
+        histogram.value(60);
+        histogram.value(600);
+        histogram.value(600);
+        histogram.value(600);
     }
 }
