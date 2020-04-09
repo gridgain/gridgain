@@ -143,7 +143,7 @@ public enum SpanType {
 
     // Affinity
     /** Affinity calculation. */
-    OTHER_AFFINITY_CALCULATION(Scope.AFFINITY, "affinity.calculation", 40);
+    AFFINITY_CALCULATION(Scope.AFFINITY, "affinity.calculation", 40);
 
     /** Scope */
     private Scope scope;
