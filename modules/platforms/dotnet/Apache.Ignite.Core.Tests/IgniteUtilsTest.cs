@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Tests
 
             var allModes = Enum.GetValues(typeof(CachePeekMode)).Cast<CachePeekMode>().ToArray();
             var allModesExceptNative = allModes
-                .Where(m => m != CachePeekMode.PlatformNear).ToArray();
+                .Where(m => m != CachePeekMode.Platform).ToArray();
             
             foreach (var mode in allModesExceptNative)
             {
@@ -53,8 +53,8 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(Tuple.Create(12, false), EncodePeekModes(CachePeekMode.Backup, CachePeekMode.Primary));
             
             Assert.AreEqual(Tuple.Create(8, false), EncodePeekModes(CachePeekMode.Backup));
-            Assert.AreEqual(Tuple.Create(8, true), EncodePeekModes(CachePeekMode.Backup | CachePeekMode.PlatformNear));
-            Assert.AreEqual(Tuple.Create(8, true), EncodePeekModes(CachePeekMode.Backup, CachePeekMode.PlatformNear));
+            Assert.AreEqual(Tuple.Create(8, true), EncodePeekModes(CachePeekMode.Backup | CachePeekMode.Platform));
+            Assert.AreEqual(Tuple.Create(8, true), EncodePeekModes(CachePeekMode.Backup, CachePeekMode.Platform));
         }
 
         /// <summary>

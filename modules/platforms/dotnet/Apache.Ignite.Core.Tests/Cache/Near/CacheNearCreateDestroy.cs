@@ -212,7 +212,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             ignite.DestroyCache(cache.Name);
             
             cache = ignite.CreateCache<int, int>(cfg, new NearCacheConfiguration());
-            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.AreEqual(0, cache.GetLocalSize(CachePeekMode.Platform));
         }
 
         /// <summary>
@@ -229,25 +229,25 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
                 new PlatformCacheConfiguration());
             
             Assert.AreEqual(2, clientCache[1]);
-            Assert.AreEqual(1, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.AreEqual(1, clientCache.GetLocalSize(CachePeekMode.Platform));
 
             var clientCache2 = _client.GetOrCreateNearCache<int, int>(cache.Name, new NearCacheConfiguration(),
                 new PlatformCacheConfiguration());
             
             Assert.AreEqual(2, clientCache2[1]);
-            Assert.AreEqual(1, clientCache2.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.AreEqual(1, clientCache2.GetLocalSize(CachePeekMode.Platform));
 
             var clientCache3 = _client.CreateCache<int, int>(new CacheConfiguration(cache.Name + "3"), 
                 new NearCacheConfiguration(), new PlatformCacheConfiguration());
 
             clientCache3[1] = 2;
-            Assert.AreEqual(2, clientCache3.LocalPeek(1, CachePeekMode.PlatformNear));
+            Assert.AreEqual(2, clientCache3.LocalPeek(1, CachePeekMode.Platform));
             
             var clientCache4 = _client.GetOrCreateCache<int, int>(new CacheConfiguration(cache.Name + "4"), 
                 new NearCacheConfiguration(), new PlatformCacheConfiguration());
 
             clientCache4[1] = 2;
-            Assert.AreEqual(2, clientCache4.LocalPeek(1, CachePeekMode.PlatformNear));
+            Assert.AreEqual(2, clientCache4.LocalPeek(1, CachePeekMode.Platform));
         }
 
         /// <summary>
@@ -270,10 +270,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             cache2[key] = new Foo(key);
             Assert.AreEqual(key, cache2[key].Bar);
             
-            Assert.AreEqual(0, cache2.GetLocalEntries(CachePeekMode.PlatformNear).Count());
+            Assert.AreEqual(0, cache2.GetLocalEntries(CachePeekMode.Platform).Count());
             
             // In near on primary node.
-            Assert.AreEqual(key, cache1.GetLocalEntries(CachePeekMode.PlatformNear).Single().Key);
+            Assert.AreEqual(key, cache1.GetLocalEntries(CachePeekMode.Platform).Single().Key);
         }
 
         /// <summary>
@@ -297,7 +297,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             var err = Assert.Throws<InvalidOperationException>(() => ignite.CreateCache<int, int>(cfg));
 
             var expectedMessage = string.Format(
-                "Can not create .NET Near Cache: PlatformNearCacheConfiguration.{0} is invalid. " +
+                "Can not create .NET Near Cache: PlatformCacheConfiguration.{0} is invalid. " +
                 "Failed to resolve type: 'invalid'", keyOrValue ? "KeyTypeName" : "ValueTypeName");
             
             Assert.AreEqual(expectedMessage, err.Message);

@@ -61,9 +61,9 @@ namespace Apache.Ignite.Core.Cache
         Offheap = 0x20,
         
         /// <summary>
-        /// Peeks value from local native .NET near cache
+        /// Peeks value from local native .NET cache
         /// (see <see cref="CacheConfiguration.PlatformCacheConfiguration"/>). 
         /// </summary>
-        PlatformNear = 0x1000
+        Platform = 0x1000
     }
 }

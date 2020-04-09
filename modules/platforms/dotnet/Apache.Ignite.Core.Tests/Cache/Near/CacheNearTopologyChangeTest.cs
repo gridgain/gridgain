@@ -125,11 +125,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             // GridCacheNearEntry does not yet exist on old primary node, so near cache data is removed on .NET side.
             Foo foo;
-            Assert.IsFalse(_cache[0].TryLocalPeek(Key3, out foo, CachePeekMode.PlatformNear));
-            Assert.IsFalse(_cache[1].TryLocalPeek(Key3, out foo, CachePeekMode.PlatformNear));
+            Assert.IsFalse(_cache[0].TryLocalPeek(Key3, out foo, CachePeekMode.Platform));
+            Assert.IsFalse(_cache[1].TryLocalPeek(Key3, out foo, CachePeekMode.Platform));
             
             // Check value on the new node: it should be already in near cache, because key is primary.
-            Assert.AreEqual(-1, _cache[2].LocalPeek(Key3, CachePeekMode.PlatformNear).Bar);
+            Assert.AreEqual(-1, _cache[2].LocalPeek(Key3, CachePeekMode.Platform).Bar);
             Assert.AreEqual(-1, _cache[2][Key3].Bar);
             Assert.AreSame(_cache[2][Key3], _cache[2][Key3]);
             
@@ -168,20 +168,20 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             switch (checkMode)
             {
                 case NearCheckMode.Peek:
-                    Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(Key3, CachePeekMode.PlatformNear));
+                    Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(Key3, CachePeekMode.Platform));
                     break;
                 
                 case NearCheckMode.TryPeek:
                     Foo _;
-                    Assert.IsFalse(clientCache.TryLocalPeek(Key3, out _, CachePeekMode.PlatformNear));
+                    Assert.IsFalse(clientCache.TryLocalPeek(Key3, out _, CachePeekMode.Platform));
                     break;
                 
                 case NearCheckMode.Size:
-                    Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+                    Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));
                     break;
                 
                 case NearCheckMode.Entries:
-                    Assert.AreEqual(0, clientCache.GetLocalEntries(CachePeekMode.PlatformNear).Count());
+                    Assert.AreEqual(0, clientCache.GetLocalEntries(CachePeekMode.Platform).Count());
                     break;
                 
                 default:
@@ -194,7 +194,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             TestUtils.WaitForTrueCondition(() => clientCache[Key3].Bar == 3);
 
             Foo foo;
-            Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.PlatformNear));
+            Assert.IsTrue(clientCache.TryLocalPeek(Key3, out foo, CachePeekMode.Platform));
             Assert.AreNotSame(clientInstance, foo);
             Assert.AreEqual(3, foo.Bar);
         }
@@ -254,7 +254,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Action<int> putData = offset => forEachCacheAndKey((cache, key) => cache[key] = new Foo(key + offset));
             
             Action<int> checkNearData = offset => forEachCacheAndKey((cache, key) => 
-                Assert.AreEqual(key + offset, cache.LocalPeek(key, CachePeekMode.PlatformNear).Bar));
+                Assert.AreEqual(key + offset, cache.LocalPeek(key, CachePeekMode.Platform).Bar));
 
             // Put data and verify near cache.
             putData(0);
@@ -348,7 +348,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             
             var keys = Enumerable.Range(1, 100).ToList();
             keys.ForEach(k => clientCache[k] = new Foo(k));
-            Assert.AreEqual(keys.Count, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.AreEqual(keys.Count, clientCache.GetLocalSize(CachePeekMode.Platform));
             Assert.IsNotNull(clientCache.GetConfiguration().NearConfiguration);
             
             // Stop the only server node, client goes into disconnected mode.
@@ -365,9 +365,9 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
             Assert.IsTrue(reconnectTask.Wait(TimeSpan.FromSeconds(10)));
             
             // Near cache is empty.
-            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
-            Assert.IsEmpty(clientCache.GetLocalEntries(CachePeekMode.PlatformNear));
-            Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(1, CachePeekMode.PlatformNear));
+            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));
+            Assert.IsEmpty(clientCache.GetLocalEntries(CachePeekMode.Platform));
+            Assert.Throws<KeyNotFoundException>(() => clientCache.LocalPeek(1, CachePeekMode.Platform));
             
             // Cache still works for new entries, near cache is being bypassed.
             var serverCache = _cache[0];
@@ -415,17 +415,17 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var clientCache = client.GetOrCreateNearCache<int, Foo>(CacheName, new NearCacheConfiguration());
             clientCache[1] = new Foo(2);
-            Assert.AreEqual(2, clientCache.LocalPeek(1, CachePeekMode.PlatformNear).Bar);
+            Assert.AreEqual(2, clientCache.LocalPeek(1, CachePeekMode.Platform).Bar);
             
             PerformClientReconnect(client);
             
             // Near cache data is removed after disconnect.
-            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.PlatformNear));
+            Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));
             
             // Updates work as expected.
             Assert.AreEqual(2, clientCache[1].Bar);
             serverCache[1] = new Foo(33);
-            TestUtils.WaitForTrueCondition(() => 33 == clientCache.LocalPeek(1, CachePeekMode.PlatformNear).Bar);
+            TestUtils.WaitForTrueCondition(() => 33 == clientCache.LocalPeek(1, CachePeekMode.Platform).Bar);
         }
 
         /// <summary>

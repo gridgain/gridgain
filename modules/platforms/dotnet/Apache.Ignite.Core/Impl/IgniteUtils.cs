@@ -224,7 +224,7 @@ namespace Apache.Ignite.Core.Impl
             }
 
             // Clear NativeNear bit: Java does not understand it.
-            const int platformNear = (int) CachePeekMode.PlatformNear;
+            const int platformNear = (int) CachePeekMode.Platform;
             const int all = (int) CachePeekMode.All;
             hasPlatformNear = (res & platformNear) == platformNear || (res & all) == all;
             
