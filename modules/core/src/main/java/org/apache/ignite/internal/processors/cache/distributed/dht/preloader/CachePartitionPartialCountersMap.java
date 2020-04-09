@@ -225,7 +225,6 @@ public class CachePartitionPartialCountersMap implements Serializable {
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        // TODO bug remove zeroes from output
         StringBuilder sb = new StringBuilder("CachePartitionPartialCountersMap {");
 
         for (int i = 0; i < partIds.length; i++) {

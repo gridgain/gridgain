@@ -68,7 +68,6 @@ import static org.apache.ignite.internal.processors.cache.distributed.dht.topolo
 
 /**
  * Partition topology for node which does not have any local partitions.
- * TODO set lostParts on coordinator.
  */
 @GridToStringExclude
 public class GridClientPartitionTopology implements GridDhtPartitionTopology {
@@ -149,7 +148,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             int grpId,
             int parts,
             Object similarAffKey,
-            PartitionLossPolicy partLossPlc) {
+            PartitionLossPolicy partLossPlc
+    ) {
         this.cctx = cctx;
         this.discoCache = discoCache;
         this.grpId = grpId;
@@ -1034,7 +1034,6 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
                     U.resolveClassLoader(cctx.kernalContext().config())
             );
 
-            // TODO fix copypaste.
             boolean compatibleWithIgnorePlc = isInMemoryCluster
                     && state.isBaselineAutoAdjustEnabled() && state.baselineAutoAdjustTimeout() == 0L;
 
@@ -1265,8 +1264,6 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
         Set<Integer> haveHist,
         GridDhtPartitionsExchangeFuture exchFut
     ) {
-        // TODO get rid of copypaste.
-        // TODO should it be called on client top ?
         Map<UUID, Set<Integer>> res = new HashMap<>();
 
         lock.writeLock().lock();

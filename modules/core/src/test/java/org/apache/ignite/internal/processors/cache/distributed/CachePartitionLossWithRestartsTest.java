@@ -38,11 +38,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 /**
- * Tests partition loss detection in various configurations.
- * TODO persistent mode shoud be moved to cache7 suite.
  *
- * TODO do not start txlog region if no mvcc.
- * TODO finish test!
  */
 @RunWith(Parameterized.class)
 public class CachePartitionLossWithRestartsTest extends GridCommonAbstractTest {
@@ -173,7 +169,6 @@ public class CachePartitionLossWithRestartsTest extends GridCommonAbstractTest {
 
         stopGrid(1);
 
-        // TODO client topology is not removed on client after starting a cache.
         final Set<Integer> lost1 = new HashSet<>(crd.cache(DEFAULT_CACHE_NAME).lostPartitions());
         final Set<Integer> lost2 = new HashSet<>(grid(2).cache(DEFAULT_CACHE_NAME).lostPartitions());
         final Set<Integer> lost3 = new HashSet<>(g3.cache(DEFAULT_CACHE_NAME).lostPartitions());

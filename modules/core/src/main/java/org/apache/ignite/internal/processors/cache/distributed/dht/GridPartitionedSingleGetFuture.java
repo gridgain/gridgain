@@ -250,7 +250,6 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
     private void map(AffinityTopologyVersion topVer) {
         GridDhtPartitionsExchangeFuture fut = cctx.shared().exchange().lastTopologyFuture();
 
-        // TODO copypaste.
         // Finished DHT future is required for topology validation.
         if (!fut.isDone()) {
             if (fut.initialVersion().after(topVer) || (fut.exchangeActions() != null && fut.exchangeActions().hasStop()))

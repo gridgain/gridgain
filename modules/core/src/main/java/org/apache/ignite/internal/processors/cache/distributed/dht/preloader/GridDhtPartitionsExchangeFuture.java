@@ -694,7 +694,7 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         return firstDiscoEvt0.type() == DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT
             || !firstDiscoEvt0.eventNode().isClient()
-            || firstDiscoEvt0.eventNode().isLocal() // TODO can be replaced with localJoinExchange()
+            || firstDiscoEvt0.eventNode().isLocal()
             || ((firstDiscoEvt.type() == EVT_NODE_JOINED) &&
                 cctx.cache().hasCachesReceivedFromJoin(firstDiscoEvt.eventNode()));
     }
@@ -1029,7 +1029,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             onDone(e);
         }
         catch (Throwable e) {
-            // TODO FH always ?
             if (reconnectOnError(e))
                 onDone(new IgniteNeedReconnectException(cctx.localNode(), e));
             else {
@@ -2385,7 +2384,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
                     }
 
-                    // TODO why we need this ? it's exchange sync block.
                     if (!grpToRefresh.isEmpty()) {
                         if (log.isDebugEnabled())
                             log.debug("Refresh partitions due to partitions initialized when affinity ready [" +
@@ -2481,14 +2479,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         // Should execute this listener first, before any external listeners.
         // Listeners use stack as data structure.
         listen(f -> {
-            // TODO make good test.
-//            try {
-//                U.sleep(500);
-//            }
-//            catch (IgniteInterruptedCheckedException e) {
-//                e.printStackTrace();
-//            }
-
             // Update last finished future in the first.
             cctx.exchange().lastFinishedFuture(this);
 
@@ -3457,9 +3447,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * @param resTopVer Result topology version.
      */
     private void detectLostPartitions(AffinityTopologyVersion resTopVer) {
-        // TODO remove.
-        AtomicInteger detected = new AtomicInteger();
-
         try {
             // Reserve at least 2 threads for system operations.
             doInParallelUninterruptibly(
@@ -3475,23 +3462,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                         GridDhtPartitionTopology top = grp != null ? grp.topology() :
                                 cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
 
-                        if (top.detectLostPartitions(resTopVer, this))
-                            detected.incrementAndGet();
+                        top.detectLostPartitions(resTopVer, this);
 
                         return null;
                     });
-        }
-        catch (IgniteCheckedException e) {
+        } catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         }
-
-//        if (detected.get() > 0) {
-//            if (log.isDebugEnabled())
-//                log.debug("Partitions have been scheduled to resend [reason=" +
-//                    "Lost partitions detect on " + resTopVer + "]");
-//
-//            cctx.exchange().scheduleResendPartitions();
-//        }
 
         timeBag.finishGlobalStage("Detect lost partitions");
     }
@@ -4485,7 +4462,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     else
                         cctx.affinity().onServerJoinWithExchangeMergeProtocol(this, false);
 
-                    // TODO parallelize.
                     for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                         if (grp.isLocal() || cacheGroupStopping(grp.groupId()))
                             continue;

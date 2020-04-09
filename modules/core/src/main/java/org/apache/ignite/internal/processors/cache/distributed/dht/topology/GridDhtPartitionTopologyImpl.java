@@ -76,8 +76,6 @@ import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_CACHE_REBALANCE_PART_DATA_LOST;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ExchangeType.ALL;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.preloader.ExchangeType.NONE;
@@ -160,9 +158,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /** Factory used for re-creating partition during it's lifecycle. */
     private PartitionFactory partFactory;
-
-    /** */
-    private final boolean bltForVolatileCachesSup = isFeatureEnabled(IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE);
 
     /**
      * @param ctx Cache shared context.
@@ -501,7 +496,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
      *  @param affVer Affinity version.
      * @param aff Affinity assignments.
      * @param updateSeq Update sequence.
-     * @param exchFut
      */
     private void createPartitions(AffinityTopologyVersion affVer,
                                   List<List<ClusterNode>> aff,
@@ -1267,13 +1261,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 Collection<UUID> affIds = affAssignment.getIds(p);
 
                 for (UUID nodeId : diffIds) {
-                    if (affIds.contains(nodeId)) {
-                        // TODO do we need this ?
-                        U.warn(log, "Node from diff is affinity node, skipping it [grp=" + grp.cacheOrGroupName() +
-                            ", node=" + nodeId + ']');
-
+                    if (affIds.contains(nodeId))
                         continue;
-                    }
 
                     if (hasState(p, nodeId, OWNING, MOVING, RENTING)) {
                         ClusterNode n = ctx.discovery().node(nodeId);
@@ -1602,10 +1591,10 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                     return false;
                 }
 
-                // Apply lost partitions from full message.
                 if (exchangeVer != null) {
                     assert exchangeVer.compareTo(readyTopVer) >= 0 && exchangeVer.compareTo(lastTopChangeVer) >= 0;
 
+                    // Apply lost partitions from full message.
                     lastTopChangeVer = readyTopVer = exchangeVer;
 
                     if (lostParts != null) {
@@ -1665,7 +1654,6 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 GridDhtPartitionMap nodeMap = partMap.get(ctx.localNodeId());
 
                 // Only in real exchange occurred.
-                // TODO persistenceEnabled is buggy.
                 if (exchangeVer != null &&
                     nodeMap != null &&
                     grp.persistenceEnabled() &&
@@ -2185,7 +2173,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (node2part == null)
                     return false;
 
-                // Do not trigger lost partition events on start.
+                // Do not trigger lost partition events on activation.
                 boolean evt = fut != null && !fut.activateCluster();
 
                 // TODO consider merged events.
@@ -2202,7 +2190,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 boolean compatibleWithIgnorePlc = isInMemoryCluster
                         && state.isBaselineAutoAdjustEnabled() && state.baselineAutoAdjustTimeout() == 0L;
 
-                // Calculate how loss data is handled.
+                // Calculate how data loss is handled.
                 boolean safe = grp.config().getPartitionLossPolicy() != PartitionLossPolicy.IGNORE || !compatibleWithIgnorePlc;
 
                 int parts = grp.affinity().partitions();
@@ -2333,15 +2321,11 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                                 updateLocal(locPart.id(), locPart.state(), updSeq, resTopVer);
 
                                 // Reset counters to zero for triggering full rebalance.
-                                // TODO force full rebalance ?
                                 locPart.resetInitialUpdateCounter();
                             }
                         }
                     }
                 }
-
-                // TODO do we need this ? LOST partitions are subject for eviction on afiinity change.
-                // checkEvictions(updSeq, grp.affinity().readyAffinity(resTopVer));
 
                 lostParts = null;
             }
@@ -2457,7 +2441,7 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                         U.warn(log, "Partitions have been scheduled for rebalancing due to outdated update counter "
                             + "[grp=" + grp.cacheOrGroupName()
-                            + ", initialVer=" + exchFut.initialVersion() // TODO output final version.
+                            + ", topVer=" + exchFut.initialVersion()
                             + ", nodeId=" + nodeId
                             + ", partsFull=" + S.compact(rebalancedParts)
                             + ", partsHistorical=" + S.compact(historical) + "]");

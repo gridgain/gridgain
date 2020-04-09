@@ -307,7 +307,8 @@ public class GridDhtPartitionDemander {
 
                 ((GridFutureAdapter)grp.preloader().syncFuture()).onDone();
 
-                // Required to trigger late affinity switch (see testCommitReorderWithRollbackNoRebalanceAfterRestart).
+                // Required to trigger late affinity switch when baseline node returns to the topology with the same
+                // counters (see testCommitReorderWithRollbackNoRebalanceAfterRestart).
                 if (grp.persistenceEnabled())
                     ctx.exchange().scheduleResendPartitions();
 

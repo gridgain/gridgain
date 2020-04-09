@@ -2341,9 +2341,9 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
                     List<ClusterNode> owners = top.owners(p, evts.topologyVersion());
 
                     // If current owners are empty no supplier can exist.
-                    // A group with lost partitions never rebalanced.
+                    // A group with lost partitions never gets rebalanced so should not be added to waitInfo.
                     if (!owners.isEmpty() && !owners.containsAll(idealAssignment.get(p)) && !top.lostPartitions().contains(p))
-                        rebalanceInfo.add(aff.groupId(), p, newNodes); // TODO is this enough? Maybe not, check owner lost during rebalancing ?
+                        rebalanceInfo.add(aff.groupId(), p, newNodes);
                 }
             }
         }
@@ -2367,7 +2367,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
         int part,
         ClusterNode curPrimary,
         List<ClusterNode> newNodes,
-        @Nullable WaitRebalanceInfo rebalance) {
+        @Nullable WaitRebalanceInfo rebalance
+    ) {
         assert curPrimary != null;
         assert !F.isEmpty(newNodes);
         assert !curPrimary.equals(newNodes.get(0));

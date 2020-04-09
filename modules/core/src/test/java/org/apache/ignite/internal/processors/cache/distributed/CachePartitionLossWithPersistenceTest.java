@@ -132,10 +132,10 @@ public class CachePartitionLossWithPersistenceTest extends GridCommonAbstractTes
     }
 
     /**
-     * TODO failing - part desync. Joining node cannot be a supplier.
+     *
      */
     @Test
-    @Ignore
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28521")
     public void testConsistencyAfterResettingLostPartitions_1() throws Exception {
         doTestConsistencyAfterResettingLostPartitions(0, false);
     }

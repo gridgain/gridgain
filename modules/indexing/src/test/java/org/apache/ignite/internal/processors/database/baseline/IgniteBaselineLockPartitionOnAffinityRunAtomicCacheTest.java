@@ -88,9 +88,4 @@ public class IgniteBaselineLockPartitionOnAffinityRunAtomicCacheTest extends Ign
     @Override protected void afterTestsStopped() throws Exception {
         cleanPersistenceDir();
     }
-
-    @Test
-    @Override public void testReservedPartitionCacheOp() throws Exception {
-        super.testReservedPartitionCacheOp();
-    }
 }

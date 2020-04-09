@@ -83,7 +83,6 @@ public class PartitionUpdateCounterTrackingImpl implements PartitionUpdateCounte
 
     /**
      * Initial counter points to last sequential update after WAL recovery.
-     * TODO just remove and use LWM.
      * @deprecated TODO FIXME https://issues.apache.org/jira/browse/IGNITE-11794
      */
     @Deprecated private volatile long initCntr;

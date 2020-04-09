@@ -224,7 +224,6 @@ public abstract class GridNearTxAbstractEnlistFuture<T> extends GridCacheCompoun
                     }
 
                     if (err == null)
-                        // TODO need fix
                         err = fut.validateCache(cctx, false, false, null, null);
 
                     if (err != null) {
@@ -321,7 +320,6 @@ public abstract class GridNearTxAbstractEnlistFuture<T> extends GridCacheCompoun
             cctx.topology().readUnlock(); topLocked = false;
 
             if (fut.isDone()) {
-                // TODO need fix
                 Throwable err = fut.validateCache(cctx, false, false, null, null);
 
                 if (err != null) {

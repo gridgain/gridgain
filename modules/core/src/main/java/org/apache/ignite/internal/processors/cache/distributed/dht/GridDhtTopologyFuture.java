@@ -78,7 +78,6 @@ public interface GridDhtTopologyFuture extends IgniteInternalFuture<AffinityTopo
      * @param key Key (optimization to avoid collection creation).
      * @param keys Keys involved in a cache operation.
      * @return Not null exception if cache is in invalid state.
-     * TODO disallow key=null,keys=null
      */
     @Nullable public CacheInvalidStateException validateCache(
         GridCacheContext cctx,

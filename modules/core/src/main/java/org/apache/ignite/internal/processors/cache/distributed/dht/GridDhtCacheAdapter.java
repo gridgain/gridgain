@@ -731,14 +731,6 @@ public abstract class GridDhtCacheAdapter<K, V> extends GridDistributedCacheAdap
         try {
             int keysSize = keys.size();
 
-            // TODO need this ?
-//            GridDhtTopologyFuture topFut = ctx.shared().exchange().lastFinishedFuture();
-//
-//            Throwable ex = topFut != null ? topFut.validateCache(ctx, recovery, /*read*/true, null, keys) : null;
-//
-//            if (ex != null)
-//                return new GridFinishedFuture<>(ex);
-
             final Map<K1, V1> map = keysSize == 1 ?
                 (Map<K1, V1>)new IgniteBiTuple<>() :
                 U.<K1, V1>newHashMap(keysSize);

@@ -27,8 +27,6 @@ import org.junit.Test;
 
 /**
  * Tests if node maps are correct for caches created on client node join.
- * TODO new cache is started on joining node
- * TODO add more tests.
  */
 public class ClientCreateCacheGroupOnJoinNodeMapsTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */

@@ -25,8 +25,7 @@ import org.jetbrains.annotations.Nullable;
  * Partition loss policy. Defines how a cache will behave in a case when one or more partitions are lost
  * because of a node(s) failure.
  * <p>
- * A partition is considered <em>lost</em> if all owning nodes had left a topology
- * and returned later (or maybe only subset of owners).
+ * A partition is considered <em>lost</em> if all owning nodes had left a topology.
  * <p>
  * All <code>*_SAFE</code> policies prevent a user from interaction with partial data in lost partitions until
  * {@link Ignite#resetLostPartitions(Collection)} method is called. <code>*_ALL</code> policies allow working with
@@ -42,7 +41,6 @@ public enum PartitionLossPolicy {
     /**
      * All writes to the cache will be failed with an exception, reads will only be allowed for keys in
      * non-lost partitions. Reads from lost partitions will be failed with an exception.
-     * TODO always forced for mvcc
      */
     READ_ONLY_SAFE,
 
@@ -66,10 +64,10 @@ public enum PartitionLossPolicy {
     READ_WRITE_ALL,
 
     /**
-     * If partition was lost silently ignore it and allow further operations with a partition.
-     * Partition loss events are not fired using this mode.
-     * Usable only for in-memory caches when baseline is disabled.
-     * Ignored for persistent mode, instead READ_WRITE_SAFE is used.
+     * If a partition was lost silently ignore it and allow any operations with a partition.
+     * Partition loss events are not fired if using this mode.
+     * For pure in-memory caches the policy will work only when baseline auto adjust is enabled with zero timeout.
+     * If persistence is enabled, the policy is always ignored. READ_WRITE_SAFE is used instead.
      */
     IGNORE;
 

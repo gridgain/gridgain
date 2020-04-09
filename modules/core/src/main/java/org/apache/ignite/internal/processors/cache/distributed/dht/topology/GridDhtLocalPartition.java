@@ -557,7 +557,11 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
                     assert toState != EVICTED || reservations() == 0 : this;
 
                     try {
-                        // Log lost partitions as owning. TODO do not log if OWNING -> LOST.
+                        // Optimization: do not log OWNING -> OWNING.
+                        if (prevState == OWNING && toState == LOST)
+                            return true;
+
+                        // Log LOST partitions as OWNING.
                         ctx.wal().log(new PartitionMetaStateRecord(grp.groupId(), id, toState == LOST ? OWNING : toState, 0));
                     }
                     catch (IgniteCheckedException e) {
@@ -1140,7 +1144,7 @@ public class GridDhtLocalPartition extends GridCacheConcurrentMapImpl implements
 
                     // Do not clear fresh rows in case of partition reloading.
                     // This is required because normal updates are possible to moving partition which is currently cleared.
-                    // We can clean OWNING partition if it has been reset from lost state.
+                    // We can clean OWNING partition if a partition has been reset from lost state.
                     // In this case new updates must be preserved.
                     if (row.version().compareTo(clearVer) >= 0 && (state() == MOVING || state() == OWNING))
                         continue;

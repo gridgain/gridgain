@@ -382,7 +382,6 @@ public class GridLocalCache<K, V> extends GridCacheAdapter<K, V> {
 
                 GridDhtTopologyFuture topFut = ctx.shared().exchange().lastFinishedFuture();
 
-                // TODO do we need this for local cache?
                 Throwable ex = topFut != null ? topFut.validateCache(ctx, recovery, /*read*/true, null, keys) : null;
 
                 if (ex != null)

@@ -1688,9 +1688,4 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
             return false;
         }
     }
-
-    @Override
-    protected long getTestTimeout() {
-        return super.getTestTimeout() * 1000;
-    }
 }

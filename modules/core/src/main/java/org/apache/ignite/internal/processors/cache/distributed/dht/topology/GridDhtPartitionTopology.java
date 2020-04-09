@@ -326,7 +326,7 @@ public interface GridDhtPartitionTopology {
     public void applyUpdateCounters();
 
     /**
-     * Checks if there is at least one owner for each partition in the cache topology for local node.
+     * Checks if there is at least one owner for each partition in the cache topology for a local node.
      * If not marks such a partition as LOST or OWNING depending on a policy.
      *
      * @param resTopVer Exchange result version.

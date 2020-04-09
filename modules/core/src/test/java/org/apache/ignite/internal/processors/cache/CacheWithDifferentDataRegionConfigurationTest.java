@@ -396,9 +396,6 @@ public class CacheWithDifferentDataRegionConfigurationTest extends GridCommonAbs
         public IgniteEx start() throws Exception {
             IgniteConfiguration cfg = getConfiguration(gridName);
 
-            cfg.setFailureDetectionTimeout(10000000L);
-            cfg.setClientFailureDetectionTimeout(10000000L);
-
             cfg.setConsistentId(gridName);
 
             DataStorageConfiguration storageCfg = new DataStorageConfiguration();
