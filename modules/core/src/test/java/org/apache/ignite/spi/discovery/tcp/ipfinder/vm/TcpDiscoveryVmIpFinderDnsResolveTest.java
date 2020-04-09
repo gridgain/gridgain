@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2020 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
@@ -57,18 +57,18 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     private static String IP2 = "10.0.0.2";
 
     /** DNS service */
-    private static TwoIpRoundRobinDnsService hostNameService;
+    private static TwoIpRoundRobinDnsService hostNameSvc;
 
     /** original DNS */
-    private static Object nameService;
+    private static Object nameSvc;
 
     /**
      */
     @BeforeClass
     public static void before() throws Exception {
-        hostNameService = new TwoIpRoundRobinDnsService(FQDN, MULTI_FQDN, IP1, IP2);
+        hostNameSvc = new TwoIpRoundRobinDnsService(FQDN, MULTI_FQDN, IP1, IP2);
 
-        INameService.install(hostNameService);
+        INameService.install(hostNameSvc);
     }
 
     /**
@@ -85,11 +85,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     public void testFqdnResolveWhenDnsCantResolveHostName() throws Exception {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
-        Set<String> addresses = new HashSet<>();
+        Set<String> addrs = new HashSet<>();
 
-        addresses.add(BAD_FQDN);
+        addrs.add(BAD_FQDN);
 
-        ipFinder.setAddresses(addresses);
+        ipFinder.setAddresses(addrs);
 
         Collection<InetSocketAddress> resolved1 = ipFinder.getRegisteredAddresses();
 
@@ -107,11 +107,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     public void testFqdnResolveAfterDnsHostChange() throws Exception {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
-        Set<String> addresses = new HashSet<>();
+        Set<String> addrs = new HashSet<>();
 
-        addresses.add(FQDN);
+        addrs.add(FQDN);
 
-        ipFinder.setAddresses(addresses);
+        ipFinder.setAddresses(addrs);
 
         Collection<InetSocketAddress> resolved1 = ipFinder.getRegisteredAddresses();
 
@@ -120,7 +120,7 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
         //because of JAVA networkaddress cache ttl can be turn on.
         //will be great to change current test and run it in separate JVM.
         //and set there -Dsun.net.inetaddr.ttl=0 -Dsun.net.inetaddr.negative.ttl=0
-        Thread.sleep(60_000);
+        Thread.sleep(50_000);
 
         Collection<InetSocketAddress> resolved2 = ipFinder.getRegisteredAddresses();
 
@@ -140,11 +140,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     public void testFqdnWithPortRangeResolveWithTwoIpRoundRobinDns() throws Exception {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
-        Set<String> addresses = new HashSet<>();
+        Set<String> addrs = new HashSet<>();
 
-        addresses.add(FQDN + ":47500..47509");
+        addrs.add(FQDN + ":47500..47509");
 
-        ipFinder.setAddresses(addresses);
+        ipFinder.setAddresses(addrs);
 
         Collection<InetSocketAddress> resolved = ipFinder.getRegisteredAddresses();
 
@@ -161,13 +161,13 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
         String host = first.getHostName();
 
         while (it.hasNext()) {
-            InetSocketAddress current = it.next();
+            InetSocketAddress curr = it.next();
 
-            assertTrue("IP address isn't the same. ip - " + current.getAddress().getHostAddress() + " expected " + ip,
-                ip.equals(current.getAddress().getHostAddress()));
+            assertTrue("IP address isn't the same. ip - " + curr.getAddress().getHostAddress() + " expected " + ip,
+                ip.equals(curr.getAddress().getHostAddress()));
 
-            assertTrue("FQDN isn't the same. cur - " + current.getHostName() + " expected " + host,
-                host.equals(current.getHostName()));
+            assertTrue("FQDN isn't the same. cur - " + curr.getHostName() + " expected " + host,
+                host.equals(curr.getHostName()));
         }
     }
 
@@ -178,11 +178,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     public void testFqdnResolveAfterDnsHostChangeWithRegisteredAddrs() throws Exception {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
-        Set<String> addresses = new HashSet<>();
+        Set<String> addrs = new HashSet<>();
 
-        addresses.add(FQDN);
+        addrs.add(FQDN);
 
-        ipFinder.setAddresses(addresses);
+        ipFinder.setAddresses(addrs);
 
         Collection<InetSocketAddress> registerAddrs = new HashSet<>();
 
@@ -198,20 +198,20 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         Iterator<InetSocketAddress> it = resolved.iterator();
 
-        InetSocketAddress address1 = it.next();
+        InetSocketAddress addr1 = it.next();
 
-        InetSocketAddress address2 = it.next();
+        InetSocketAddress addr2 = it.next();
 
-        assertNotNull(address1);
+        assertNotNull(addr1);
 
-        assertNotNull(address2);
+        assertNotNull(addr2);
 
-        assertTrue(FQDN.equals(address1.getHostName()) || LOCAL_HOST.equals(address1.getHostName()));
+        assertTrue(FQDN.equals(addr1.getHostName()) || LOCAL_HOST.equals(addr1.getHostName()));
 
-        assertTrue(FQDN.equals(address2.getHostName()) || LOCAL_HOST.equals(address2.getHostName()));
+        assertTrue(FQDN.equals(addr2.getHostName()) || LOCAL_HOST.equals(addr2.getHostName()));
 
-        assertFalse("Addresses are the same. Adrrs1 - " + address1.getAddress() +
-            " Adrrs2 - " + address2.getAddress(), address1.equals(address2));
+        assertFalse("Addresses are the same. Adrrs1 - " + addr1.getAddress() +
+            " Adrrs2 - " + addr2.getAddress(), addr1.equals(addr2));
     }
 
     /**
@@ -221,11 +221,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     public void testMultiFqdnResolveWithPortRange() throws Exception {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
-        Collection<String> addresses = new ArrayList<>();
+        Collection<String> addrs = new ArrayList<>();
 
-        addresses.add(MULTI_FQDN + ":47500..47509");
+        addrs.add(MULTI_FQDN + ":47500..47509");
 
-        ipFinder.setAddresses(addresses);
+        ipFinder.setAddresses(addrs);
 
         Collection<InetSocketAddress> resolved = ipFinder.getRegisteredAddresses();
 
@@ -235,24 +235,24 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         Iterator<InetSocketAddress> it = resolved.iterator();
 
-        int countIp1 = 0;
+        int cntIp1 = 0;
 
-        int countIp2 = 0;
+        int cntIp2 = 0;
 
         while (it.hasNext()) {
-            InetSocketAddress current = it.next();
+            InetSocketAddress curr = it.next();
 
-            assertTrue(MULTI_FQDN.equals(current.getHostName()));
+            assertTrue(MULTI_FQDN.equals(curr.getHostName()));
 
-            if (IP1.equals(current.getAddress().getHostAddress()))
-                countIp1++;
-            if (IP2.equals(current.getAddress().getHostAddress()))
-                countIp2++;
+            if (IP1.equals(curr.getAddress().getHostAddress()))
+                cntIp1++;
+            if (IP2.equals(curr.getAddress().getHostAddress()))
+                cntIp2++;
         }
 
-        assertTrue(countIp1 == 10);
+        assertTrue(cntIp1 == 10);
 
-        assertTrue(countIp2 == 10);
+        assertTrue(cntIp2 == 10);
     }
 
     /**
@@ -262,11 +262,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     public void testMultiFqdnResolve() throws Exception {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
-        Collection<String> addresses = new ArrayList<>();
+        Collection<String> addrs = new ArrayList<>();
 
-        addresses.add(MULTI_FQDN);
+        addrs.add(MULTI_FQDN);
 
-        ipFinder.setAddresses(addresses);
+        ipFinder.setAddresses(addrs);
 
         Collection<InetSocketAddress> resolved = ipFinder.getRegisteredAddresses();
 
@@ -276,18 +276,18 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         Iterator<InetSocketAddress> it = resolved.iterator();
 
-        InetSocketAddress address1 = it.next();
+        InetSocketAddress addr1 = it.next();
 
-        InetSocketAddress address2 = it.next();
+        InetSocketAddress addr2 = it.next();
 
-        assertNotNull(address1);
+        assertNotNull(addr1);
 
-        assertNotNull(address2);
+        assertNotNull(addr2);
 
-        assertTrue(MULTI_FQDN.equals(address1.getHostName()) && MULTI_FQDN.equals(address2.getHostName()));
+        assertTrue(MULTI_FQDN.equals(addr1.getHostName()) && MULTI_FQDN.equals(addr2.getHostName()));
 
-        assertFalse("Addresses are the same. Adrrs1 - " + address1.getAddress() +
-            " Adrrs2 - " + address2.getAddress(), address1.equals(address2));
+        assertFalse("Addresses are the same. Adrrs1 - " + addr1.getAddress() +
+            " Adrrs2 - " + addr2.getAddress(), addr1.equals(addr2));
     }
 
     /**
@@ -320,28 +320,28 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         /** {@inheritDoc} */
         @Override
-        public InetAddress[] lookupAllHostAddr(String paramString) throws UnknownHostException {
-            if (fqdn.equals(paramString)) {
+        public InetAddress[] lookupAllHostAddr(String paramStr) throws UnknownHostException {
+            if (fqdn.equals(paramStr)) {
                 String ip = needReturnIp1 ? ip1 : ip2;
 
                 needReturnIp1 = !needReturnIp1;
 
-                final byte[] arrayOfByte = sun.net.util.IPAddressUtil.textToNumericFormatV4(ip);
+                final byte[] arrOfByte = sun.net.util.IPAddressUtil.textToNumericFormatV4(ip);
 
-                final InetAddress address = InetAddress.getByAddress(paramString, arrayOfByte);
+                final InetAddress addr = InetAddress.getByAddress(paramStr, arrOfByte);
 
-                return new InetAddress[] {address};
+                return new InetAddress[] {addr};
             }
-            else if (multipleFqdn.equals(paramString)) {
-                final byte[] arrayOfByte1 = sun.net.util.IPAddressUtil.textToNumericFormatV4(ip1);
+            else if (multipleFqdn.equals(paramStr)) {
+                final byte[] arrOfByte1 = sun.net.util.IPAddressUtil.textToNumericFormatV4(ip1);
 
-                final byte[] arrayOfByte2 = sun.net.util.IPAddressUtil.textToNumericFormatV4(ip2);
+                final byte[] arrOfByte2 = sun.net.util.IPAddressUtil.textToNumericFormatV4(ip2);
 
-                final InetAddress address1 = InetAddress.getByAddress(paramString, arrayOfByte1);
+                final InetAddress addr1 = InetAddress.getByAddress(paramStr, arrOfByte1);
 
-                final InetAddress address2 = InetAddress.getByAddress(paramString, arrayOfByte2);
+                final InetAddress addr2 = InetAddress.getByAddress(paramStr, arrOfByte2);
 
-                return new InetAddress[] {address1, address2};
+                return new InetAddress[] {addr1, addr2};
             }
             else
                 throw new UnknownHostException();
@@ -349,7 +349,7 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
 
         /** {@inheritDoc} */
         @Override
-        public String getHostByAddr(byte[] paramArrayOfByte) throws UnknownHostException {
+        public String getHostByAddr(byte[] paramArrOfByte) throws UnknownHostException {
             throw new UnknownHostException();
         }
 
@@ -359,12 +359,12 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
                 return true;
             if (o == null || getClass() != o.getClass())
                 return false;
-            TwoIpRoundRobinDnsService service = (TwoIpRoundRobinDnsService)o;
-            return needReturnIp1 == service.needReturnIp1 &&
-                Objects.equals(ip1, service.ip1) &&
-                Objects.equals(ip2, service.ip2) &&
-                Objects.equals(fqdn, service.fqdn) &&
-                Objects.equals(multipleFqdn, service.multipleFqdn);
+            TwoIpRoundRobinDnsService svc = (TwoIpRoundRobinDnsService)o;
+            return needReturnIp1 == svc.needReturnIp1 &&
+                Objects.equals(ip1, svc.ip1) &&
+                Objects.equals(ip2, svc.ip2) &&
+                Objects.equals(fqdn, svc.fqdn) &&
+                Objects.equals(multipleFqdn, svc.multipleFqdn);
         }
 
         /** {@inheritDoc} */
@@ -374,61 +374,61 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
         }
     }
 
-    /** {@inheritDoc} */
+    /** */
     public interface INameService extends InvocationHandler {
-        /** {@inheritDoc} */
+        /** */
         static void install(
             INameService dns) throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException, ClassNotFoundException {
-            final Class<?> inetAddressClass = InetAddress.class;
+            final Class<?> inetAddrCls = InetAddress.class;
 
             Object neu;
 
-            Field nameServiceField;
+            Field nameSvcField;
 
             try {
                 //JAVA 9+ class
                 final Class<?> iface = Class.forName("java.net.InetAddress$NameService");
 
-                nameServiceField = inetAddressClass.getDeclaredField("nameService");
+                nameSvcField = inetAddrCls.getDeclaredField("nameService");
 
                 neu = Proxy.newProxyInstance(iface.getClassLoader(), new Class<?>[] {iface}, dns);
             }
             catch (final ClassNotFoundException | NoSuchFieldException e) {
                 //JAVA <8 class
-                nameServiceField = inetAddressClass.getDeclaredField("nameServices");
+                nameSvcField = inetAddrCls.getDeclaredField("nameServices");
 
                 final Class<?> iface = Class.forName("sun.net.spi.nameservice.NameService");
 
-                neu = Arrays.asList(Proxy.newProxyInstance(iface.getClassLoader(), new Class<?>[] {iface}, dns));
+                neu = Collections.singletonList(Proxy.newProxyInstance(iface.getClassLoader(), new Class<?>[] {iface}, dns));
             }
 
-            nameServiceField.setAccessible(true);
+            nameSvcField.setAccessible(true);
 
-            nameService = nameServiceField.get(inetAddressClass);
+            nameSvc = nameSvcField.get(inetAddrCls);
 
-            nameServiceField.set(inetAddressClass, neu);
+            nameSvcField.set(inetAddrCls, neu);
         }
 
         /** */
         static void uninstall() throws IllegalArgumentException, IllegalAccessException, NoSuchFieldException, SecurityException {
-            final Class<?> inetAddressClass = InetAddress.class;
+            final Class<?> inetAddrCls = InetAddress.class;
 
-            Field nameServiceField;
+            Field nameSvcField;
 
             try {
                 //JAVA 9+ class
                 Class.forName("java.net.InetAddress$NameService");
 
-                nameServiceField = inetAddressClass.getDeclaredField("nameService");
+                nameSvcField = inetAddrCls.getDeclaredField("nameService");
             }
             catch (final ClassNotFoundException | NoSuchFieldException e) {
                 //JAVA <8 class
-                nameServiceField = inetAddressClass.getDeclaredField("nameServices");
+                nameSvcField = inetAddrCls.getDeclaredField("nameServices");
             }
 
-            nameServiceField.setAccessible(true);
+            nameSvcField.setAccessible(true);
 
-            nameServiceField.set(inetAddressClass, nameService);
+            nameSvcField.set(inetAddrCls, nameSvc);
         }
 
         /**
@@ -450,7 +450,7 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
         String getHostByAddr(final byte[] addr) throws UnknownHostException;
 
         /** */
-        @Override default public Object invoke(final Object proxy, final Method method,
+        @Override default Object invoke(final Object proxy, final Method method,
             final Object[] args) throws Throwable {
             switch (method.getName()) {
                 case "lookupAllHostAddr":
