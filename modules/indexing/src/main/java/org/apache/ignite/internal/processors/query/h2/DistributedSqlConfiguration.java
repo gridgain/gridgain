@@ -64,7 +64,7 @@ public class DistributedSqlConfiguration {
         = new SimpleDistributedProperty<>("sql.disabledFunctions");
 
     /** Value of cluster time zone. */
-    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sqlTimeZone");
+    private final SimpleDistributedProperty<TimeZone> timeZone = new SimpleDistributedProperty<>("sql.timeZone");
 
     /**
      * @param isp Subscription processor.
@@ -93,32 +93,39 @@ public class DistributedSqlConfiguration {
                         DFLT_DISABLED_FUNCS,
                         log);
 
-                    TimeZone tz = timeZone.get();
-
-                    if (tz == null) {
-                        try {
-                            timeZone.propagateAsync(null, TimeZone.getDefault())
-                                .listen((IgniteInClosure<IgniteInternalFuture<?>>)future -> {
-                                    if (future.error() != null)
-                                        log.error("Cannot set default value of '" + timeZone.getName() + '\'', future.error());
-                                });
-                        }
-                        catch (IgniteCheckedException e) {
-                            log.error("Cannot initiate setting default value of '" + timeZone.getName() + '\'', e);
-                        }
-
-                    }
-                    else {
-                        if (!tz.equals(TimeZone.getDefault())) {
-                            log.warning("Node time zone is '" + TimeZone.getDefault().getID() + "'. " +
-                                "SQL timezone is set up to '" + tz.getID() + '\'');
-                        }
-
-                        DateTimeUtils.setTimeZone(tz);
-                    }
+                    setTimeZoneDefault(log);
                 }
             }
         );
+    }
+
+    /**
+     * @param log Logger.
+     */
+    private void setTimeZoneDefault(IgniteLogger log) {
+        TimeZone tz = timeZone.get();
+
+        if (tz == null) {
+            try {
+                timeZone.propagateAsync(null, TimeZone.getDefault())
+                    .listen((IgniteInClosure<IgniteInternalFuture<?>>)future -> {
+                        if (future.error() != null)
+                            log.error("Cannot set default value of '" + timeZone.getName() + '\'', future.error());
+                    });
+            }
+            catch (IgniteCheckedException e) {
+                log.error("Cannot initiate setting default value of '" + timeZone.getName() + '\'', e);
+            }
+
+        }
+        else {
+            if (!tz.equals(TimeZone.getDefault())) {
+                log.warning("Node time zone is '" + TimeZone.getDefault().getID() + "'. " +
+                    "SQL timezone is set up to '" + tz.getID() + '\'');
+            }
+
+            DateTimeUtils.setTimeZone(tz);
+        }
     }
 
     /**
