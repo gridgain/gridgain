@@ -116,7 +116,8 @@
     <Compile Include="Cache\CacheTimeoutOnPmeTransactionalTest.cs" />
     <Compile Include="Cache\DataRegionMetricsTest.cs" />
     <Compile Include="Cache\DataStorageMetricsTest.cs" />
-    <Compile Include="Cache\Platform\CacheNearCreateDestroy.cs" />
+    <Compile Include="Cache\NearCacheTest.cs" />
+    <Compile Include="Cache\Platform\PlatformCacheTestCreateDestroy.cs" />
     <Compile Include="Cache\Platform\CacheNearTopologyChangeTest.cs" />
     <Compile Include="Cache\Platform\CacheNearTest.cs" />
     <Compile Include="Cache\Platform\FailingCacheStore.cs" />
