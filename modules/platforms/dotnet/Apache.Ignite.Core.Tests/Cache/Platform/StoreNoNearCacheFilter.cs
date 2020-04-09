@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Cache.Near
+namespace Apache.Ignite.Core.Tests.Cache.Platform
 {
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Resource;
     using NUnit.Framework;
 
     /// <summary>
-    /// Scan query filter that checks whether values come from native near cache.
+    /// Entry filter for cache store: ensures that values do not come from Platform Near Cache.
     /// </summary>
-    public class ScanQueryNoNearCacheFilter : ICacheEntryFilter<int, Foo>
+    public class StoreNoNearCacheFilter : ICacheEntryFilter<int, Foo>
     {
+        /// <summary>
+        /// Gets or sets the cache name.
+        /// </summary>
         public string CacheName { get; set; }
         
         [InstanceResource]
@@ -34,13 +37,12 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         {
             var cache = Ignite.GetCache<int, Foo>(CacheName);
 
-            Foo _;
-            var hasNearVal = cache.TryLocalPeek(entry.Key, out _, CachePeekMode.Platform);
+            var nearVal = cache.LocalPeek(entry.Key);
 
-            Assert.IsFalse(hasNearVal);
-            Assert.AreEqual(entry.Key, entry.Value.Bar);
+            Assert.AreNotSame(nearVal, entry.Value);
+            Assert.AreNotEqual(nearVal.Bar, entry.Value.Bar);
 
-            return true;
+            return Ignite.GetAffinity(CacheName).IsPrimary(Ignite.GetCluster().GetLocalNode(), entry.Key);
         }
     }
 }

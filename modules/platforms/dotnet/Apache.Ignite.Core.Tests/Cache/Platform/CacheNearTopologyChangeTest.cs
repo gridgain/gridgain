@@ -15,7 +15,7 @@
  */
 
 // ReSharper disable AccessToModifiedClosure
-namespace Apache.Ignite.Core.Tests.Cache.Near
+namespace Apache.Ignite.Core.Tests.Cache.Platform
 {
     using System;
     using System.Collections.Generic;

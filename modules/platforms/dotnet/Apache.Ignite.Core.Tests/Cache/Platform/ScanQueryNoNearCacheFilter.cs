@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Tests.Cache.Near
+namespace Apache.Ignite.Core.Tests.Cache.Platform
 {
-    using System.Security;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Resource;
     using NUnit.Framework;
@@ -24,36 +23,22 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
     /// <summary>
     /// Scan query filter that checks whether values come from native near cache.
     /// </summary>
-    public class ScanQueryNearCacheFilter : ICacheEntryFilter<int, Foo>
+    public class ScanQueryNoNearCacheFilter : ICacheEntryFilter<int, Foo>
     {
-        /// <summary>
-        /// Gets or sets the cache name.
-        /// </summary>
         public string CacheName { get; set; }
         
-        /// <summary>
-        /// Gets or sets the key that should cause an exception in <see cref="Invoke"/>. 
-        /// </summary>
-        public int? FailKey { get; set; }
-        
-        /// <summary>
-        /// Injected Ignite.
-        /// </summary>
         [InstanceResource]
         public IIgnite Ignite { get; set; }
         
-        /** <inheritdoc /> */
         public bool Invoke(ICacheEntry<int, Foo> entry)
         {
-            if (entry.Key == FailKey)
-            {
-                throw new SecurityException("Crash in filter");
-            }
-            
             var cache = Ignite.GetCache<int, Foo>(CacheName);
-            var nearVal = cache.LocalPeek(entry.Key, CachePeekMode.Platform);
 
-            Assert.AreSame(nearVal, entry.Value);
+            Foo _;
+            var hasNearVal = cache.TryLocalPeek(entry.Key, out _, CachePeekMode.Platform);
+
+            Assert.IsFalse(hasNearVal);
+            Assert.AreEqual(entry.Key, entry.Value.Bar);
 
             return true;
         }
