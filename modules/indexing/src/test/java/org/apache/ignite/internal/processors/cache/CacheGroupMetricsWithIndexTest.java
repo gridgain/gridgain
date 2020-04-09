@@ -48,16 +48,22 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  */
 public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
     /** */
-    private static final String GROUP_NAME = "group1";
+    private static final String GROUP_NAME = "group2";
 
     /** */
-    private static final String CACHE_NAME = "cache1";
+    private static final String CACHE_NAME2 = "cache2";
 
     /** */
-    private static final String OBJECT_NAME = "MyObject";
+    private static final String CACHE_NAME3 = "cache3";
 
     /** */
-    private static final String TABLE = "\"" + CACHE_NAME + "\"." + OBJECT_NAME;
+    private static final String OBJECT_NAME2 = "MyObject2";
+
+    /** */
+    private static final String OBJECT_NAME3 = "MyObject3";
+
+    /** */
+    private static final String TABLE = "\"" + CACHE_NAME2 + "\"." + OBJECT_NAME2;
 
     /** */
     private static final String KEY_NAME = "id";
@@ -79,8 +85,33 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         for (CacheConfiguration cacheCfg : cfg.getCacheConfiguration()) {
-            if (GROUP_NAME.equals(cacheCfg.getGroupName()) && CACHE_NAME.equals(cacheCfg.getName())) {
-                QueryEntity qryEntity = new QueryEntity(Long.class.getCanonicalName(), OBJECT_NAME);
+            if (GROUP_NAME.equals(cacheCfg.getGroupName()) && CACHE_NAME2.equals(cacheCfg.getName())) {
+                QueryEntity qryEntity = new QueryEntity(Long.class.getCanonicalName(), OBJECT_NAME2);
+
+                qryEntity.setKeyFieldName(KEY_NAME);
+
+                LinkedHashMap<String, String> fields = new LinkedHashMap<>();
+
+                fields.put(KEY_NAME, Long.class.getCanonicalName());
+
+                fields.put(COLUMN1_NAME, Integer.class.getCanonicalName());
+
+                fields.put(COLUMN2_NAME, String.class.getCanonicalName());
+
+                qryEntity.setFields(fields);
+
+                ArrayList<QueryIndex> indexes = new ArrayList<>();
+
+                indexes.add(new QueryIndex(COLUMN1_NAME));
+
+                indexes.add(new QueryIndex(COLUMN2_NAME));
+
+                qryEntity.setIndexes(indexes);
+
+                cacheCfg.setQueryEntities(Collections.singletonList(qryEntity));
+            }
+            else if (GROUP_NAME.equals(cacheCfg.getGroupName()) && CACHE_NAME3.equals(cacheCfg.getName())) {
+                QueryEntity qryEntity = new QueryEntity(Long.class.getCanonicalName(), OBJECT_NAME3);
 
                 qryEntity.setKeyFieldName(KEY_NAME);
 
@@ -134,17 +165,17 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         ignite.cluster().active(true);
 
-        IgniteCache<Object, Object> cache1 = ignite.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache2 = ignite.cache(CACHE_NAME2);
 
         for (int i = 0; i < 100_000; i++) {
             Long id = (long)i;
 
-            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME)
+            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME2)
                 .setField(KEY_NAME, id)
                 .setField(COLUMN1_NAME, i / 2)
                 .setField(COLUMN2_NAME, "str" + Integer.toHexString(i));
 
-            cache1.put(id, o.build());
+            cache2.put(id, o.build());
         }
 
         ignite.cluster().active(false);
@@ -182,22 +213,22 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         ignite.cluster().active(true);
 
-        IgniteCache<Object, Object> cache1 = ignite.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache2 = ignite.cache(CACHE_NAME2);
 
         String addColSql = "ALTER TABLE " + TABLE + " ADD COLUMN " + COLUMN3_NAME + " BIGINT";
 
-        cache1.query(new SqlFieldsQuery(addColSql)).getAll();
+        cache2.query(new SqlFieldsQuery(addColSql)).getAll();
 
         for (int i = 0; i < 100_000; i++) {
             Long id = (long)i;
 
-            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME)
+            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME2)
                 .setField(KEY_NAME, id)
                 .setField(COLUMN1_NAME, i / 2)
                 .setField(COLUMN2_NAME, "str" + Integer.toHexString(i))
                 .setField(COLUMN3_NAME, id * 10);
 
-            cache1.put(id, o.build());
+            cache2.put(id, o.build());
         }
 
         MetricRegistry metrics = cacheGroupMetrics(0, GROUP_NAME).get2();
@@ -205,11 +236,11 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
         GridTestUtils.runAsync(() -> {
             String createIdxSql = "CREATE INDEX " + INDEX_NAME + " ON " + TABLE + "(" + COLUMN3_NAME + ")";
 
-            cache1.query(new SqlFieldsQuery(createIdxSql)).getAll();
+            cache2.query(new SqlFieldsQuery(createIdxSql)).getAll();
 
-            String selectIdxSql = "select * from information_schema.indexes where index_name='" + INDEX_NAME + "'";
+            String selectIdxSql = "select * from sys.indexes where index_name='" + INDEX_NAME + "'";
 
-            List<List<?>> all = cache1.query(new SqlFieldsQuery(selectIdxSql)).getAll();
+            List<List<?>> all = cache2.query(new SqlFieldsQuery(selectIdxSql)).getAll();
 
             assertEquals("Index not found", 1, all.size());
         });
@@ -227,9 +258,13 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
      * Test number of partitions need to finished indexes rebuilding.
      * <p>Case:
      * <ul>
-     *     <li>Start cluster, load data with indexes</li>
+     *     <li>Start cluster</li>
+     *     <li>Load data for first cache in group</li>
+     *     <li>Create new column for second cache in group</li>
+     *     <li>Load data for second cache in group</li>
      *     <li>Kill single node, delete index.bin, start node.</li>
      *     <li>Make sure that index rebuild count is in range of total new index size and 0 and decreasing</li>
+     *     <li>Create index for new column in second cache in group</li>
      *     <li>Wait until rebuild finished, assert that no index errors</li>
      * </ul>
      * </p>
@@ -244,17 +279,34 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         ignite.cluster().active(true);
 
-        IgniteCache<Object, Object> cache1 = ignite.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache2 = ignite.cache(CACHE_NAME2);
+
+        IgniteCache<Object, Object> cache3 = ignite.cache(CACHE_NAME3);
 
         for (int i = 0; i < 100_000; i++) {
             Long id = (long)i;
 
-            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME)
+            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME2)
                     .setField(KEY_NAME, id)
                     .setField(COLUMN1_NAME, i / 2)
                     .setField(COLUMN2_NAME, "str" + Integer.toHexString(i));
 
-            cache1.put(id, o.build());
+            cache2.put(id, o.build());
+        }
+
+        String addColSql = "ALTER TABLE \"" + CACHE_NAME3 + "\"." + OBJECT_NAME3 + " ADD COLUMN " + COLUMN3_NAME + " BIGINT";
+
+        cache3.query(new SqlFieldsQuery(addColSql)).getAll();
+
+        for (long id = 100_000; id<200_000; id++){
+
+            BinaryObjectBuilder o2 = ignite.binary().builder(OBJECT_NAME3)
+                .setField(KEY_NAME, id*3)
+                .setField(COLUMN1_NAME, (int)(id / 2))
+                .setField(COLUMN2_NAME, "str" + Long.toHexString(id))
+                .setField(COLUMN3_NAME, id * 10);
+
+            cache3.put(id, o2.build());
         }
 
         String consistentId = ignite.cluster().localNode().consistentId().toString();
@@ -271,7 +323,7 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
             if (indexBin.getAbsolutePath().contains(consistentId))
                 U.delete(indexBin);
 
-        startGrid(0);
+        ignite = startGrid(0);
 
         MetricRegistry metrics = cacheGroupMetrics(0, GROUP_NAME).get2();
 
@@ -280,8 +332,19 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
         assertTrue("Timeout wait start rebuild index",
                 waitForCondition(() -> indexBuildCountPartitionsLeft.value() > 0, 30_000));
 
+        cache3 = ignite.cache(CACHE_NAME3);
+
+        String createIdxSql = "CREATE INDEX ON \"" + CACHE_NAME3 + "\"." + OBJECT_NAME3 + "(" + COLUMN3_NAME + ")";
+
+        cache3.query(new SqlFieldsQuery(createIdxSql)).getAll();
+
         assertTrue("Timeout wait finished rebuild index",
-                GridTestUtils.waitForCondition(() -> indexBuildCountPartitionsLeft.value() == 0, 30_000));
+            GridTestUtils.waitForCondition(() -> {
+                assertTrue("indexBuildCountPartitionsLeft below zero", indexBuildCountPartitionsLeft.value() >= 0);
+                return indexBuildCountPartitionsLeft.value() == 0;
+            }, 30_000));
+
+        assertTrue("Checking for the absence of indexBuildCountPartitionsLeft below zero", indexBuildCountPartitionsLeft.value() == 0);
     }
 
     /**
@@ -305,22 +368,22 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         ignite.cluster().active(true);
 
-        IgniteCache<Object, Object> cache1 = ignite.cache(CACHE_NAME);
+        IgniteCache<Object, Object> cache2 = ignite.cache(CACHE_NAME2);
 
         String addColSql = "ALTER TABLE " + TABLE + " ADD COLUMN " + COLUMN3_NAME + " BIGINT";
 
-        cache1.query(new SqlFieldsQuery(addColSql)).getAll();
+        cache2.query(new SqlFieldsQuery(addColSql)).getAll();
 
         for (int i = 0; i < 100_000; i++) {
             Long id = (long)i;
 
-            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME)
+            BinaryObjectBuilder o = ignite.binary().builder(OBJECT_NAME2)
                     .setField(KEY_NAME, id)
                     .setField(COLUMN1_NAME, i / 2)
                     .setField(COLUMN2_NAME, "str" + Integer.toHexString(i))
                     .setField(COLUMN3_NAME, id * 10);
 
-            cache1.put(id, o.build());
+            cache2.put(id, o.build());
         }
 
         stopGrid(1);
@@ -330,11 +393,11 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
         GridTestUtils.runAsync(() -> {
             String createIdxSql = "CREATE INDEX " + INDEX_NAME + " ON " + TABLE + "(" + COLUMN3_NAME + ")";
 
-            cache1.query(new SqlFieldsQuery(createIdxSql)).getAll();
+            cache2.query(new SqlFieldsQuery(createIdxSql)).getAll();
 
-            String selectIdxSql = "select * from information_schema.indexes where index_name='" + INDEX_NAME + "'";
+            String selectIdxSql = "select * from sys.indexes where index_name='" + INDEX_NAME + "'";
 
-            List<List<?>> all = cache1.query(new SqlFieldsQuery(selectIdxSql)).getAll();
+            List<List<?>> all = cache2.query(new SqlFieldsQuery(selectIdxSql)).getAll();
 
             assertEquals("Index not found", 1, all.size());
         });

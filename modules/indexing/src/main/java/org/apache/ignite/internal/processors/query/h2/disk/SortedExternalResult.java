@@ -39,7 +39,6 @@ import org.h2.value.ValueRow;
 /**
  * This class is intended for spilling to the disk (disk offloading) sorted intermediate query results.
  */
-@SuppressWarnings("MissortedModifiers")
 public class SortedExternalResult extends AbstractExternalResult<Value> implements ResultExternal {
     /** Distinct flag. */
     private final boolean distinct;
@@ -137,7 +136,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
             if (distinct && containsRowWithOrderCheck(row))
                 continue;
 
-            addRowToBuffer(row, false); // Memory is already reserved in LocalResult.
+            addRowToBuffer(row);
 
             size++;
         }
@@ -153,7 +152,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         if (distinct && containsRowWithOrderCheck(row))
                 return size;
 
-        addRowToBuffer(row, true);
+        addRowToBuffer(row);
 
         if (needToSpill())
             spillRowsBufferToDisk();
@@ -247,9 +246,8 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
     /**
      * Adds row to in-memory row buffer.
      * @param row Row.
-     * @param reserveMemory Flag whether to reserve memory.
      */
-    private void addRowToBuffer(Value[] row, boolean reserveMemory) {
+    private void addRowToBuffer(Value[] row) {
         if (distinct) {
             assert unsortedRowsBuf == null;
 
@@ -260,11 +258,9 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             Value[] old = sortedRowsBuf.put(key, row);
 
-            if (reserveMemory) {
-                long delta = H2Utils.calculateMemoryDelta(key, old, row);
+            long delta = H2Utils.calculateMemoryDelta(key, old, row);
 
-                memTracker.reserved(delta);
-            }
+            memTracker.reserve(delta);
         }
         else {
             assert sortedRowsBuf == null;
@@ -274,11 +270,9 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
 
             unsortedRowsBuf.add(row);
 
-            if (reserveMemory) {
-                long delta = H2Utils.calculateMemoryDelta(null, null, row);
+            long delta = H2Utils.calculateMemoryDelta(null, null, row);
 
-                memTracker.reserved(delta);
-            }
+            memTracker.reserve(delta);
         }
     }
 
@@ -315,7 +309,7 @@ public class SortedExternalResult extends AbstractExternalResult<Value> implemen
         for (Map.Entry<ValueRow, Value[]> row : rows)
             delta += H2Utils.calculateMemoryDelta(row.getKey(), row.getValue(), null);
 
-        memTracker.released(-delta);
+        memTracker.release(-delta);
     }
 
     /** {@inheritDoc} */

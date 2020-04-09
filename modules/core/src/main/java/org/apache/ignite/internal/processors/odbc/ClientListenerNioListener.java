@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
+import org.apache.ignite.configuration.ThinClientConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
@@ -39,6 +40,7 @@ import org.apache.ignite.internal.util.nio.GridNioServerListenerAdapter;
 import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.nio.GridNioSessionMetaKey;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.plugin.security.SecurityException;
 import org.jetbrains.annotations.Nullable;
 
 /**
@@ -78,6 +80,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /** Client connection config. */
     private ClientConnectorConfiguration cliConnCfg;
 
+    /** Thin client configuration. */
+    private final ThinClientConfiguration thinCfg;
+
     /**
      * Constructor.
      *
@@ -95,6 +100,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
         maxCursors = cliConnCfg.getMaxOpenCursorsPerConnection();
         log = ctx.log(getClass());
+
+        thinCfg = cliConnCfg.getThinClientConfiguration() == null ? new ThinClientConfiguration()
+            : new ThinClientConfiguration(cliConnCfg.getThinClientConfiguration());
     }
 
     /** {@inheritDoc} */
@@ -288,12 +296,12 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
         ClientListenerConnectionContext connCtx = null;
 
         try {
-            connCtx = prepareContext(ses, clientType);
+            connCtx = prepareContext(clientType, ses);
 
             ensureClientPermissions(clientType);
 
             if (connCtx.isVersionSupported(ver)) {
-                connCtx.initializeFromHandshake(ver, reader);
+                connCtx.initializeFromHandshake(ses, ver, reader);
 
                 ses.addMeta(CONN_CTX_META_KEY, connCtx);
             }
@@ -304,7 +312,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
 
             connCtx.handler().writeHandshake(writer);
         }
-        catch (IgniteAccessControlException authEx) {
+        catch (IgniteAccessControlException | SecurityException authEx) {
             writer.writeBoolean(false);
 
             writer.writeShort((short)0);
@@ -314,7 +322,9 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
             writer.doWriteString(authEx.getMessage());
 
             if (ver.compareTo(ClientConnectionContext.VER_1_1_0) >= 0)
-                writer.writeInt(ClientStatus.AUTH_FAILED);
+                writer.writeInt(
+                    authEx instanceof IgniteAccessControlException ? ClientStatus.AUTH_FAILED : ClientStatus.SECURITY_VIOLATION
+                );
         }
         catch (IgniteCheckedException e) {
             U.warn(log, "Error during handshake [rmtAddr=" + ses.remoteAddress() + ", msg=" + e.getMessage() + ']');
@@ -344,12 +354,13 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
     /**
      * Prepare context.
      *
-     * @param ses Session.
+     * @param ses Client's NIO session.
      * @param clientType Client type.
      * @return Context.
      * @throws IgniteCheckedException If failed.
      */
-    private ClientListenerConnectionContext prepareContext(GridNioSession ses, byte clientType) throws IgniteCheckedException {
+    private ClientListenerConnectionContext prepareContext(byte clientType, GridNioSession ses)
+        throws IgniteCheckedException {
         long connId = nextConnectionId();
 
         switch (clientType) {
@@ -360,7 +371,7 @@ public class ClientListenerNioListener extends GridNioServerListenerAdapter<byte
                 return new JdbcConnectionContext(ctx, ses, busyLock, connId, maxCursors);
 
             case THIN_CLIENT:
-                return new ClientConnectionContext(ctx, connId, maxCursors);
+                return new ClientConnectionContext(ctx, ses, connId, maxCursors, thinCfg);
         }
 
         throw new IgniteCheckedException("Unknown client type: " + clientType);

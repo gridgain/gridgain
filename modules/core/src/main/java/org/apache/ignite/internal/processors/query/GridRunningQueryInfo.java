@@ -18,6 +18,8 @@ package org.apache.ignite.internal.processors.query;
 
 import java.util.UUID;
 import org.apache.ignite.internal.processors.cache.query.GridCacheQueryType;
+import org.apache.ignite.internal.util.tostring.GridToStringExclude;
+import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
  * Query descriptor.
@@ -42,13 +44,21 @@ public class GridRunningQueryInfo {
     private final long startTime;
 
     /** */
+    @GridToStringExclude
     private final GridQueryCancel cancel;
 
     /** */
     private final boolean loc;
 
     /** */
+    private final GridQueryMemoryMetricProvider memMetricProvider;
+
+    /** */
+    @GridToStringExclude
     private final QueryRunningFuture fut = new QueryRunningFuture();
+
+    /** Originator. */
+    private final String qryInitiatorId;
 
     /**
      * Constructor.
@@ -61,6 +71,7 @@ public class GridRunningQueryInfo {
      * @param startTime Query start time.
      * @param cancel Query cancel.
      * @param loc Local query flag.
+     * @param qryInitiatorId Query's initiator identifier.
      */
     public GridRunningQueryInfo(
         Long id,
@@ -70,7 +81,9 @@ public class GridRunningQueryInfo {
         String schemaName,
         long startTime,
         GridQueryCancel cancel,
-        boolean loc
+        boolean loc,
+        GridQueryMemoryMetricProvider memMetricProvider,
+        String qryInitiatorId
     ) {
         this.id = id;
         this.nodeId = nodeId;
@@ -80,6 +93,8 @@ public class GridRunningQueryInfo {
         this.startTime = startTime;
         this.cancel = cancel;
         this.loc = loc;
+        this.memMetricProvider = memMetricProvider;
+        this.qryInitiatorId = qryInitiatorId;
     }
 
     /**
@@ -124,6 +139,11 @@ public class GridRunningQueryInfo {
         return startTime;
     }
 
+    /** */
+    public GridQueryMemoryMetricProvider memoryMetricProvider() {
+        return memMetricProvider;
+    }
+
     /**
      * @param curTime Current time.
      * @param duration Duration of long query.
@@ -160,5 +180,18 @@ public class GridRunningQueryInfo {
      */
     public boolean local() {
         return loc;
+    }
+
+    /**
+     * @return Query's originator string (client host+port, user name,
+     * job name or any user's information about query initiator).
+     */
+    public String queryInitiatorId() {
+        return qryInitiatorId;
+    }
+
+    /**{@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(GridRunningQueryInfo.class, this);
     }
 }

@@ -98,6 +98,9 @@ public class QueryParser {
     /** Logger. */
     private final IgniteLogger log;
 
+    /** Query parser metrics holder. */
+    private final QueryParserMetricsHolder metricsHolder;
+
     /** */
     private volatile GridBoundedConcurrentLinkedHashMap<QueryDescriptor, QueryParserCacheEntry> cache =
         new GridBoundedConcurrentLinkedHashMap<>(CACHE_SIZE);
@@ -112,7 +115,8 @@ public class QueryParser {
         this.idx = idx;
         this.connMgr = connMgr;
 
-        log = idx.kernalContext().log(QueryParser.class);
+        this.log = idx.kernalContext().log(QueryParser.class);
+        this.metricsHolder = new QueryParserMetricsHolder(idx.kernalContext().metric());
     }
 
     /**
@@ -145,6 +149,8 @@ public class QueryParser {
         QueryParserCacheEntry cached = cache.get(qryDesc);
 
         if (cached != null) {
+            metricsHolder.countCacheHit();
+
             return new QueryParserResult(
                 qryDesc,
                 QueryParameters.fromQuery(qry),
@@ -155,6 +161,8 @@ public class QueryParser {
                 cached.command()
             );
         }
+
+        metricsHolder.countCacheMiss();
 
         // Try parsing as native command.
         QueryParserResult parseRes = parseNative(schemaName, qry, remainingAllowed);
@@ -725,7 +733,8 @@ public class QueryParser {
             qry.isEnforceJoinOrder(),
             qry.isLocal(),
             skipReducerOnUpdate,
-            batched
+            batched,
+            qry.getQueryInitiatorId()
         );
     }
 }

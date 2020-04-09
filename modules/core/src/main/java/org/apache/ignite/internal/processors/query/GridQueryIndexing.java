@@ -107,11 +107,12 @@ public interface GridQueryIndexing {
      * @param qry Query.
      * @param params Query parameters.
      * @param streamer Data streamer to feed data to.
+     * @param qryInitiatorId Query initiator ID.
      * @return Update counter.
      * @throws IgniteCheckedException If failed.
      */
     public long streamUpdateQuery(String schemaName, String qry, @Nullable Object[] params,
-        IgniteDataStreamer<?, ?> streamer) throws IgniteCheckedException;
+        IgniteDataStreamer<?, ?> streamer, String qryInitiatorId) throws IgniteCheckedException;
 
     /**
      * Execute a batched INSERT statement using data streamer as receiver.
@@ -120,11 +121,12 @@ public interface GridQueryIndexing {
      * @param qry Query.
      * @param params Query parameters.
      * @param cliCtx Client connection context.
+     * @param qryInitiatorId Query initiator ID.
      * @return Update counters.
      * @throws IgniteCheckedException If failed.
      */
     public List<Long> streamBatchedUpdateQuery(String schemaName, String qry, List<Object[]> params,
-        SqlClientContext cliCtx) throws IgniteCheckedException;
+        SqlClientContext cliCtx, String qryInitiatorId) throws IgniteCheckedException;
 
     /**
      * Executes text query.
@@ -468,13 +470,14 @@ public interface GridQueryIndexing {
     Collection<ColumnInformation> columnsInformation(String schemaNamePtrn, String tblNamePtrn, String colNamePtrn);
 
     /**
-     * Return index size by schema name and index name.
+     * Return index size by schema, table and index name.
      *
      * @param schemaName Schema name.
+     * @param tblName Table name.
      * @param idxName Index name.
      * @return Index size (Number of elements) or {@code 0} if index not found.
      */
-    default long indexSize(String schemaName, String idxName) throws IgniteCheckedException {
+    default long indexSize(String schemaName, String tblName, String idxName) throws IgniteCheckedException {
         return 0;
     }
 }

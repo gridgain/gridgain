@@ -17,7 +17,9 @@
 package org.apache.ignite.plugin.security;
 
 import java.net.InetSocketAddress;
+import java.security.cert.Certificate;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
@@ -38,6 +40,9 @@ public class AuthenticationContext {
     /** Subject address. */
     private InetSocketAddress addr;
 
+    /** All Subject address. */
+    private List<InetSocketAddress> allAddr;
+
     /** */
     private Map<String, Object> nodeAttrs;
 
@@ -46,6 +51,9 @@ public class AuthenticationContext {
 
     /** True if this is a client node context. */
     private boolean client;
+
+    /** Client SSL certificates. */
+    private Certificate[] certs;
 
     /**
      * Gets subject type.
@@ -155,6 +163,23 @@ public class AuthenticationContext {
     }
 
     /**
+     * @return Client SSL certificates.
+     * @param certificates
+     */
+    public Certificate[] certificates() {
+        return certs;
+    }
+
+    /**
+     * Set client SSL certificates.
+     */
+    public AuthenticationContext certificates(Certificate[] certs) {
+        this.certs = certs;
+
+        return this;
+    }
+
+    /**
      * @return {@code true} if this is a client node context.
      */
     public boolean isClient() {
@@ -169,4 +194,23 @@ public class AuthenticationContext {
 
         return this;
     }
+
+    /**
+     * Gets All subject network addresses.
+     *
+     * @return All subject network addresses.
+     */
+    public List<InetSocketAddress> allAddresses() {
+        return allAddr;
+    }
+
+    /**
+     * Sets All subject network addresses.
+     *
+     * @param allAddr List of All subject network addresses.
+     */
+    public void allAddresses(List<InetSocketAddress> allAddr) {
+        this.allAddr = allAddr;
+    }
+
 }

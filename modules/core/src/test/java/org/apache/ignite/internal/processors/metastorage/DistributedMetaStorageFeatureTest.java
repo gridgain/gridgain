@@ -26,6 +26,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 
@@ -55,6 +56,7 @@ public class DistributedMetaStorageFeatureTest extends GridCommonAbstractTest {
     /** */
     @Test
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testFeatureExplicitlyDisabled() throws Exception {
         testFeatureDisabled0();
     }

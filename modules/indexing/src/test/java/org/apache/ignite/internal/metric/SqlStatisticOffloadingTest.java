@@ -80,7 +80,7 @@ public class SqlStatisticOffloadingTest extends DiskSpillingAbstractTest {
         // Ensure that metrics increased.
         Metrics m1 = withdrawMetrics();
 
-        Metrics expected = m0.add(Metrics.of(6249, 6249, 1, 16878, 16878, 1)); // Expected numbers of written bytes.
+        Metrics expected = m0.add(Metrics.of(6249, 6249, 1, 16878, 16878, 2)); // Expected numbers of written bytes.
 
         assertEquals(expected, m1);
 

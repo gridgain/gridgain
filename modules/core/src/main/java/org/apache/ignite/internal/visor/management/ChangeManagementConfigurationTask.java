@@ -18,7 +18,7 @@ package org.apache.ignite.internal.visor.management;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.processors.management.ManagementConfiguration;
-import org.apache.ignite.internal.processors.management.ManagementConsoleProcessorAdapter;
+import org.apache.ignite.internal.processors.management.ManagementConsoleProcessor;
 import org.apache.ignite.internal.processors.task.GridInternal;
 import org.apache.ignite.internal.processors.task.GridVisorManagementTask;
 import org.apache.ignite.internal.util.typedef.internal.S;
@@ -58,12 +58,12 @@ public class ChangeManagementConfigurationTask extends VisorOneNodeTask<Manageme
 
         /** {@inheritDoc} */
         @Override protected ManagementConfiguration run(ManagementConfiguration cfg) throws IgniteException {
-            ManagementConsoleProcessorAdapter processor = ignite.context().managementConsole();
+            ManagementConsoleProcessor mgmtProc = ignite.context().managementConsole();
 
-            if (cfg != null && !cfg.equals(processor.configuration()))
-                processor.configuration(cfg);
+            if (cfg != null && !cfg.equals(mgmtProc.configuration()))
+                mgmtProc.configuration(cfg);
 
-            return processor.configuration();
+            return mgmtProc.configuration();
         }
 
         /** {@inheritDoc} */

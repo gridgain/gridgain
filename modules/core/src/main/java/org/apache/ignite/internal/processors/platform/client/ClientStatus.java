@@ -51,6 +51,15 @@ public final class ClientStatus {
     /** Authorization failure. */
     public static final int SECURITY_VIOLATION = 1012;
 
+    /** Active transactions per connection limit exceeded. */
+    public static final int TX_LIMIT_EXCEEDED = 1020;
+
+    /** Transaction not found. */
+    public static final int TX_NOT_FOUND = 1021;
+
+    /** Transaction timed out. */
+    public static final int TX_TIMED_OUT = 1022;
+
     /** Authentication failed. */
     public static final int AUTH_FAILED = 2000;
 }

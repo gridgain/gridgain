@@ -59,6 +59,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheMode.PARTITIONED;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
+import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
 
 /**
  * Tests for {@code IgniteDataStreamerImpl}.
@@ -608,7 +609,9 @@ public class DataStreamerImplSelfTest extends GridCommonAbstractTest {
                             appMsg,
                             GridTestUtils.<Boolean>getFieldValue(ioMsg, "ordered"),
                             ioMsg.timeout(),
-                            ioMsg.skipOnTimeout());
+                            ioMsg.skipOnTimeout(),
+                            UNDEFINED_CONNECTION_INDEX
+                        );
 
                         needStaleTop = false;
                     }

@@ -40,7 +40,6 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.discovery.DiscoverySpi;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
-import org.apache.ignite.testframework.junits.SystemPropertiesList;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.After;
@@ -49,21 +48,19 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_GLOBAL_METASTORAGE_HISTORY_MAX_BYTES;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 
 /**
  * Test for {@link DistributedMetaStorageImpl} with disabled persistence.
  */
 public class DistributedMetaStorageTest extends GridCommonAbstractTest {
+    /** String exceeding max length of metastorage key. */
+    private static final String LONG_KEY;
+
     /**
      * Used in tests for updatesCount counter of metastorage and corresponds to keys CLUSTER_ID, CLUSTER_TAG and other
      * initial objects that were added but should not be counted along with keys defined in tests.
      */
-    private static final int INITIAL_UPDATES_COUNT = 1;
-
-    /** String exceeding max length of metastorage key. */
-    private static final String LONG_KEY;
+    private static int initialUpdatesCount = -1;
 
     /** **/
     private TcpDiscoverySpi customTcpDiscoverySpi = null;
@@ -117,6 +114,19 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
     /** {@inheritDoc} */
     @Override protected FailureHandler getFailureHandler(String igniteInstanceName) {
         return new StopNodeFailureHandler();
+    }
+
+    /** {@inheritDoc} */
+    @Override protected void beforeTestsStarted() throws Exception {
+        super.beforeTestsStarted();
+
+        startGrid(0);
+
+        // We have to start the second node and wait when it is started
+        // to be sure that all async metastorage updates of the node_0 are completed.
+        startGrid(1);
+
+        initialUpdatesCount = (int)metastorage(0).getUpdatesCount();
     }
 
     /** */
@@ -522,15 +532,15 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         metastorage(0).write("key1", "value1");
 
-        assertEquals(1, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(1, metastorage(0).getUpdatesCount() - initialUpdatesCount);
 
         metastorage(0).write("key2", "value2");
 
-        assertEquals(2, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
 
         metastorage(0).write("key1", "value1");
 
-        assertEquals(2, metastorage(0).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(2, metastorage(0).getUpdatesCount() - initialUpdatesCount);
     }
 
     /** */
@@ -546,7 +556,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         AtomicInteger clientLsnrUpdatesCnt = new AtomicInteger();
 
-        assertEquals(1, metastorage(1).getUpdatesCount() - INITIAL_UPDATES_COUNT);
+        assertEquals(1, metastorage(1).getUpdatesCount() - initialUpdatesCount);
 
         assertEquals("value0", metastorage(1).read("key0"));
 
@@ -588,7 +598,7 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
 
         // Wait enough to cover failover timeout.
         assertTrue(GridTestUtils.waitForCondition(
-            () -> metastorage(1).getUpdatesCount() - INITIAL_UPDATES_COUNT == expUpdatesCnt, 15_000));
+            () -> metastorage(1).getUpdatesCount() - initialUpdatesCount == expUpdatesCnt, 15_000));
 
         if (isPersistent())
             assertEquals("value0", metastorage(1).read("key0"));
@@ -602,10 +612,6 @@ public class DistributedMetaStorageTest extends GridCommonAbstractTest {
      * @throws Exception If failed.
      */
     @Test
-    @SystemPropertiesList({
-        @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "true"),
-        @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "true"),
-    })
     public void testUnstableTopology() throws Exception {
         int cnt = 8;
 

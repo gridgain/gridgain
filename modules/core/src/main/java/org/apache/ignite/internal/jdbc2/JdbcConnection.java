@@ -51,11 +51,11 @@ import org.apache.ignite.IgniteClientDisconnectedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteJdbcDriver;
-import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.compute.ComputeTaskTimeoutException;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteKernal;
 import org.apache.ignite.internal.IgnitionEx;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
@@ -71,6 +71,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.lang.IgniteProductVersion;
+import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
 import static java.sql.ResultSet.CONCUR_READ_ONLY;
@@ -95,7 +96,6 @@ import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING_FLUSH_FREQ;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING_PER_NODE_BUF_SIZE;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_STREAMING_PER_NODE_PAR_OPS;
 import static org.apache.ignite.IgniteJdbcDriver.PROP_TX_ALLOWED;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA;
 import static org.apache.ignite.internal.jdbc2.JdbcUtils.convertToSqlException;
 import static org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode.createJdbcSqlException;
 
@@ -113,6 +113,14 @@ public class JdbcConnection implements Connection {
     /** Multiple statements V2 task supported since version. */
     private static final IgniteProductVersion MULTIPLE_STATEMENTS_TASK_V2_SUPPORTED_SINCE =
         IgniteProductVersion.fromString("8.7.8");
+
+    /** Close remote cursor task is supported since version. {@link JdbcCloseCursorTask}*/
+    private static final IgniteProductVersion CLOSE_CURSOR_TASK_SUPPORTED_SINCE =
+        IgniteProductVersion.fromString("8.7.13");
+
+    /** Multiple statements V3 task supported since version. */
+    private static final IgniteProductVersion MULTIPLE_STATEMENTS_TASK_V3_SUPPORTED_SINCE =
+        IgniteProductVersion.fromString("8.7.16");
 
     /**
      * Ignite nodes cache.
@@ -197,6 +205,16 @@ public class JdbcConnection implements Connection {
     final Set<JdbcStatement> statements = new HashSet<>();
 
     /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     */
+    private final String clientDesc;
+
+    /**
      * Creates new connection.
      *
      * @param url Connection URL.
@@ -216,19 +234,6 @@ public class JdbcConnection implements Connection {
         enforceJoinOrder = Boolean.parseBoolean(props.getProperty(PROP_ENFORCE_JOIN_ORDER));
         lazy = Boolean.parseBoolean(props.getProperty(PROP_LAZY));
         txAllowed = Boolean.parseBoolean(props.getProperty(PROP_TX_ALLOWED));
-
-        long maxMemory = Long.parseLong(props.getProperty(PROP_QRY_MAX_MEMORY, "0"));
-
-        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA, false) && maxMemory != 0L) {
-            LOG.warning("Memory quotas per connection is disabled." +
-                " To enable it please set Ignite system property \"" + IGNITE_SQL_ENABLE_CONNECTION_MEMORY_QUOTA
-                + "\" to \"true\"");
-
-            maxMemory = 0L;
-        }
-
-        qryMaxMemory = maxMemory;
-
         stream = Boolean.parseBoolean(props.getProperty(PROP_STREAMING));
 
         if (stream && cacheName == null) {
@@ -260,6 +265,11 @@ public class JdbcConnection implements Connection {
 
             ignite = getIgnite(cfg);
 
+            qryMaxMemory = Long.parseLong(props.getProperty(PROP_QRY_MAX_MEMORY, "0"));
+
+            if (qryMaxMemory != 0L)
+                ((IgniteEx)ignite).context().security().authorize(SecurityPermission.SET_QUERY_MEMORY_QUOTA);
+
             if (!isValid(2)) {
                 throw new SQLException("Client is invalid. Probably cache name is wrong.",
                     SqlStateCode.CLIENT_CONNECTION_FAILED);
@@ -280,6 +290,8 @@ public class JdbcConnection implements Connection {
                 if (schemaName == null)
                     schemaName = QueryUtils.DFLT_SCHEMA;
             }
+
+            clientDesc = "jdbc-v2:" + F.first(ignite.cluster().localNode().addresses()) + ":" + ignite.name();
         }
         catch (Exception e) {
             close();
@@ -900,6 +912,20 @@ public class JdbcConnection implements Connection {
     }
 
     /**
+     * @return {@code true} if close remote cursor is supported.
+     */
+    boolean isCloseCursorTaskSupported() {
+        return U.isOldestNodeVersionAtLeast(CLOSE_CURSOR_TASK_SUPPORTED_SINCE, ignite.cluster().nodes());
+    }
+
+    /**
+     * @return {@code true} if multiple statements allowed, {@code false} otherwise.
+     */
+    boolean isMultipleStatementsTaskV3Supported() {
+        return U.isOldestNodeVersionAtLeast(MULTIPLE_STATEMENTS_TASK_V3_SUPPORTED_SINCE, ignite.cluster().nodes());
+    }
+
+    /**
      * @return {@code true} if update on server is enabled, {@code false} otherwise.
      */
     boolean skipReducerOnUpdate() {
@@ -964,6 +990,20 @@ public class JdbcConnection implements Connection {
      */
     JdbcStatement createStatement0() throws SQLException {
         return (JdbcStatement)createStatement();
+    }
+
+    /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     *
+     * @return Client descriptor string.
+     */
+    String clientDescriptor() {
+        return clientDesc;
     }
 
     /**
