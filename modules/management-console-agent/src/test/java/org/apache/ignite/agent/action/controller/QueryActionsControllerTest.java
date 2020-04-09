@@ -16,7 +16,10 @@
 
 package org.apache.ignite.agent.action.controller;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,6 +35,8 @@ import org.apache.ignite.agent.dto.action.TaskResponse;
 import org.apache.ignite.agent.dto.action.query.NextPageQueryArgument;
 import org.apache.ignite.agent.dto.action.query.QueryArgument;
 import org.apache.ignite.agent.dto.action.query.ScanQueryArgument;
+import org.apache.ignite.binary.BinaryObjectBuilder;
+import org.apache.ignite.cache.QueryEntity;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.testframework.GridTestUtils;
@@ -120,6 +125,89 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                 int val = ctx.read("$[3].rows[0][1]");
 
                 return resArr.size() == 4 && arr.size() == 1 && id == 1 && val == 2;
+            }
+
+            return false;
+        });
+    }
+
+    /**
+     * Should execute query with specified default schema.
+     */
+    @Test
+    public void shouldExecuteQueryWithDefaultSchema() {
+        final String testSchema = "MC_AGENT_TEST_SCHEMA";
+        final String testTable = "MC_AGENT_TEST_TABLE";
+        final String fullTestTable = String.format("%s.%s", testSchema, testTable);
+        final String testClassName = "test.data." + testTable;
+
+        CacheConfiguration<Integer, Object> ccfg = defaultCacheConfiguration();
+        ccfg.setSqlSchema(testSchema);
+
+        ArrayList<QueryEntity> qryEntities = new ArrayList<>();
+
+        QueryEntity qryEntity = new QueryEntity();
+
+        qryEntity.setKeyType("java.lang.Integer");
+        qryEntity.setValueType(testClassName);
+        qryEntity.setTableName(testTable);
+        qryEntity.setKeyFieldName("id");
+
+        HashSet<String> keyFields = new HashSet<>();
+
+        keyFields.add("id");
+
+        qryEntity.setKeyFields(keyFields);
+
+        LinkedHashMap<String, String> fields = new LinkedHashMap<>();
+
+        fields.put("id", "java.lang.Integer");
+        fields.put("Name", "java.lang.String");
+
+        qryEntity.setFields(fields);
+
+        qryEntities.add(qryEntity);
+
+        ccfg.setQueryEntities(qryEntities);
+
+        IgniteCache<Integer, Object> cache = cluster.ignite().createCache(ccfg);
+        Integer testId = 1;
+
+        BinaryObjectBuilder b = ignite(0).binary().builder(testClassName);
+        b.setField("id", testId);
+        b.setField("name", "name");
+
+        cache.put(testId, b.build());
+
+        Request req = new Request()
+            .setAction("QueryActions.executeSqlQuery")
+            .setNodeIds(singleton(cluster.localNode().id()))
+            .setId(UUID.randomUUID())
+            .setArgument(
+                new QueryArgument()
+                    .setQueryId("qry")
+                    .setDefaultSchema(testSchema)
+                    .setQueryText(getSelectQuery(fullTestTable) +
+                        getSelectQuery(testTable))
+                    .setPageSize(10)
+            );
+
+        executeAction(req, (res) -> {
+            JobResponse r = F.first(res);
+
+            if (r != null && r.getStatus() == COMPLETED) {
+                DocumentContext ctx = parse(r.getResult());
+
+                JSONArray resArr = ctx.read("$[*]]");
+
+                Integer id1 = ctx.read("$[0].rows[0][0]");
+                String val1 = ctx.read("$[0].rows[0][1]");
+
+                Integer id2 = ctx.read("$[1].rows[0][0]");
+                String val2 = ctx.read("$[1].rows[0][1]");
+
+                return resArr.size() == 2 && id1 == 1 && "name".equals(val1)
+                    && id1.equals(id2) && val1.equals(val2);
             }
 
             return false;
@@ -365,7 +453,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                         .setQueryId(UUID.randomUUID().toString())
                         .setQueryText("SELECT count(*), sleep() AS \"" + nid + "\" FROM \"TestCache\".STRING")
                         .setPageSize(1)
-                        .setCacheName("TestCache")
+                        .setDefaultSchema("TestCache")
                 );
 
             executeAction(req, (res) -> {
@@ -422,7 +510,7 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
                     .setQueryId(UUID.randomUUID().toString())
                     .setQueryText("SELECT count(*), sleep() FROM \"TestCache\".STRING")
                     .setPageSize(1)
-                    .setCacheName("TestCache")
+                    .setDefaultSchema("TestCache")
             );
 
         executeAction(qryReq, (res) -> {
@@ -460,14 +548,15 @@ public class QueryActionsControllerTest extends AbstractActionControllerTest {
      * @return Create table query string.
      */
     private String getCreateQuery() {
-        return getCreateQuery("mc_agent_test_table");
+        return getCreateQuery("mc_agent_test_table", null);
     }
 
     /**
      * @return Create table query string with special table name.
      */
-    private String getCreateQuery(String name) {
-        return "CREATE TABLE " + name + " (id int, value int, PRIMARY KEY (id));";
+    private String getCreateQuery(String name, String additionaParams) {
+        return "CREATE TABLE " + name + " (id int, value int, PRIMARY KEY (id)) " +
+            (additionaParams != null ? "WITH \"" + additionaParams + "\"": "") + ";";
     }
 
     /**

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -13,22 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.ignite.development.utils.indexreader;
 
-namespace Apache.Ignite.Core.Impl.Common
-{
-    /// <summary>
-    /// Represents an Ignite platform.
-    /// </summary>
-    public enum Platform
-    {
-        /// <summary>
-        /// Java platform.
-        /// </summary>
-        Java = 0,
+/**
+ * This class is used for index tree traversal to store each tree's items. It's useful to have different storage
+ * logic for different trees. See implementations of this interface for more info.
+ */
+interface ItemStorage<T> extends Iterable<T> {
+    /** */
+    void add(T item);
 
-        /// <summary>
-        /// .NET platform.
-        /// </summary>
-        DotNet = 1
-    }
+    /** */
+    boolean contains(T item);
+
+    /** */
+    long size();
 }
