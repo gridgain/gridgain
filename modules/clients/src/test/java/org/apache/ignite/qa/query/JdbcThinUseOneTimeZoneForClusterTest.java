@@ -41,6 +41,13 @@ public class JdbcThinUseOneTimeZoneForClusterTest extends UseOneTimeZoneForClust
     }
 
     /** {@inheritDoc} */
+    @Override protected void beforeTest() throws Exception {
+        super.beforeTest();
+
+        url = URL;
+    }
+
+    /** {@inheritDoc} */
     @Test
     @Override public void testClientsInDifferentTimeZones() throws Exception {
         super.testClientsInDifferentTimeZones();
