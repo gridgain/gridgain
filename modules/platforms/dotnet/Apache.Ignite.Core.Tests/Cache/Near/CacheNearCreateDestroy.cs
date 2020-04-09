@@ -216,11 +216,11 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Tests that platform near cache can be started on a given client node only, avoiding server near cache.
+        /// Tests that platform cache can be started on a given client node only, avoiding server platform cache.
         /// Checks different overloads of CreateCache/GetOrCreateCache.
         /// </summary>
         [Test]
-        public void TestClientOnlyPlatformNearCache()
+        public void TestClientOnlyPlatformCache()
         {
             var cache = _grid.CreateCache<int, int>(TestUtils.TestName);
             cache[1] = 2;
@@ -251,10 +251,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         }
 
         /// <summary>
-        /// Tests that Java near cache is not necessary for .NET near cache to function on server nodes.
+        /// Tests that Java near cache is not necessary for .NET platform cache to function on server nodes.
         /// </summary>
         [Test]
-        public void TestPlatformNearCacheOnServerWithoutJavaNearCache()
+        public void TestPlatformCacheOnServerWithoutJavaNearCache()
         {
             var cfg = new CacheConfiguration(TestUtils.TestName)
             {

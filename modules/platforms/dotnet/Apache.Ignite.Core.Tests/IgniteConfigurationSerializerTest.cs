@@ -175,10 +175,10 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(99, af.Partitions);
             Assert.IsTrue(af.ExcludeNeighbors);
             
-            var platformNear = cacheCfg.PlatformCacheConfiguration;
-            Assert.AreEqual("int", platformNear.KeyTypeName);
-            Assert.AreEqual("string", platformNear.ValueTypeName);
-            Assert.IsTrue(platformNear.KeepBinary);
+            var platformCacheConfiguration = cacheCfg.PlatformCacheConfiguration;
+            Assert.AreEqual("int", platformCacheConfiguration.KeyTypeName);
+            Assert.AreEqual("string", platformCacheConfiguration.ValueTypeName);
+            Assert.IsTrue(platformCacheConfiguration.KeepBinary);
 
             Assert.AreEqual(new Dictionary<string, object>
             {

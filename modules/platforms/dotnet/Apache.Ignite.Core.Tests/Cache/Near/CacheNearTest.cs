@@ -1097,7 +1097,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// Tests that <see cref="CachePeekMode.Platform"/> works with distributed GetSize overloads.
         /// </summary>
         [Test]
-        public void TestGetSizeWithPlatformNear([Values(true, false)] bool longMode, 
+        public void TestGetSizeWithPlatform([Values(true, false)] bool longMode, 
             [Values(true, false)] bool async)
         {
             var cache = GetCache<int, int>(CacheTestMode.Client, TestUtils.TestName);
@@ -1133,7 +1133,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
         /// with specific partition.
         /// </summary>
         [Test]
-        public void TestGetSizeWithPlatformNearAndPartition([Values(true, false)] bool async)
+        public void TestGetSizeWithPlatformAndPartition([Values(true, false)] bool async)
         {
             var cache = GetCache<int, int>(CacheTestMode.Client, TestUtils.TestName);
             var primaryAndPlatform = new[] {CachePeekMode.Primary, CachePeekMode.Platform};
@@ -1206,13 +1206,13 @@ namespace Apache.Ignite.Core.Tests.Cache.Near
 
             var primary = getKeys(CachePeekMode.Primary);
             var near = getKeys(CachePeekMode.Near);
-            var platformNear = getKeys(CachePeekMode.Platform);
+            var platform = getKeys(CachePeekMode.Platform);
             var all = getKeys(CachePeekMode.All);
             var all2 = getKeys(CachePeekMode.Primary | CachePeekMode.Near | CachePeekMode.Platform);
             
             CollectionAssert.AreEqual(all, all2);
-            CollectionAssert.AreEquivalent(all, platformNear.Concat(primary).Concat(near));
-            CollectionAssert.AreEquivalent(platformNear, primary.Concat(near));
+            CollectionAssert.AreEquivalent(all, platform.Concat(primary).Concat(near));
+            CollectionAssert.AreEquivalent(platform, primary.Concat(near));
         }
 
         /// <summary>

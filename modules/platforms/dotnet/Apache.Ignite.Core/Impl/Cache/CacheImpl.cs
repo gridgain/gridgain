@@ -492,10 +492,10 @@ namespace Apache.Ignite.Core.Impl.Cache
         {
             IgniteArgumentCheck.NotNull(key, "key");
 
-            bool hasPlatformNear;
-            var peekModes = IgniteUtils.EncodePeekModes(modes, out hasPlatformNear);
+            bool hasPlatformCache;
+            var peekModes = IgniteUtils.EncodePeekModes(modes, out hasPlatformCache);
 
-            if (hasPlatformNear)
+            if (hasPlatformCache)
             {
                 if (_nearCache != null && _nearCache.TryGetValue(key, out value))
                 {
@@ -1266,10 +1266,10 @@ namespace Apache.Ignite.Core.Impl.Cache
             size = 0;
             onlyNativeNear = false;
             
-            bool hasPlatformNear;
-            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasPlatformNear);
+            bool hasPlatformCache;
+            var modes0 = IgniteUtils.EncodePeekModes(modes, out hasPlatformCache);
 
-            if (hasPlatformNear)
+            if (hasPlatformCache)
             {
                 if (_nearCache != null)
                 {
@@ -1714,13 +1714,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** <inheritdoc /> */
         public IEnumerable<ICacheEntry<TK, TV>> GetLocalEntries(CachePeekMode[] peekModes)
         {
-            bool hasPlatformNearMode;
-            var encodedPeekModes = IgniteUtils.EncodePeekModes(peekModes, out hasPlatformNearMode);
-            var onlyPlatformNearMode = hasPlatformNearMode && encodedPeekModes == 0;
+            bool hasPlatformCacheMode;
+            var encodedPeekModes = IgniteUtils.EncodePeekModes(peekModes, out hasPlatformCacheMode);
+            var onlyPlatformCacheMode = hasPlatformCacheMode && encodedPeekModes == 0;
 
-            if (IsNear && hasPlatformNearMode)
+            if (IsNear && hasPlatformCacheMode)
             {
-                if (onlyPlatformNearMode)
+                if (onlyPlatformCacheMode)
                 {
                     // Only PlatformNear.
                     return _nearCache.GetEntries<TK, TV>();
@@ -1729,7 +1729,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 return _nearCache.GetEntries<TK, TV>().Concat(new CacheEnumerable<TK, TV>(this, encodedPeekModes));
             }
 
-            if (!IsNear && onlyPlatformNearMode)
+            if (!IsNear && onlyPlatformCacheMode)
             {
                 return Enumerable.Empty<ICacheEntry<TK, TV>>();
             }
