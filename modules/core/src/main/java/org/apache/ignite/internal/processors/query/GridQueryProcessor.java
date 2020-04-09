@@ -366,7 +366,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         if (data.hasJoiningNodeData() && data.joiningNodeData() instanceof Map) {
             Map<String, Integer> joiningNodeIndexesInlineSize = (Map<String, Integer>)data.joiningNodeData();
 
-            checkInlineSizes(idx.secondaryIndexesInlineSize(), joiningNodeIndexesInlineSize, data.joiningNodeId());
+            checkInlineSizes(secondaryIndexesInlineSize(), joiningNodeIndexesInlineSize, data.joiningNodeId());
         }
     }
 
@@ -390,7 +390,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
 
         if (!F.isEmpty(data.nodeSpecificData())) {
-            Map<String, Integer> indexesInlineSize = idx.secondaryIndexesInlineSize();
+            Map<String, Integer> indexesInlineSize = secondaryIndexesInlineSize();
 
             if (!F.isEmpty(indexesInlineSize)) {
                 Map<UUID, Serializable> nodeSpecific = data.nodeSpecificData();
@@ -401,6 +401,15 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 }
             }
         }
+    }
+
+    /**
+     *
+     * @return Information about secondary indexes inline size. Key is a full index name, value is a effective inline size.
+     * @see GridQueryIndexing#secondaryIndexesInlineSize()
+     */
+    public Map<String, Integer> secondaryIndexesInlineSize() {
+        return idx != null ? idx.secondaryIndexesInlineSize() : Collections.emptyMap();
     }
 
     /**
@@ -448,10 +457,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
     /**
      * @return Serialiazible information about secondary indexes inline size.
-     * @see GridQueryIndexing#secondaryIndexesInlineSize()
+     * @see #secondaryIndexesInlineSize()
      */
     private Serializable collectSecondaryIndexesInlineSize() {
-        Map<String, Integer> map = idx.secondaryIndexesInlineSize();
+        Map<String, Integer> map = secondaryIndexesInlineSize();
 
         return map instanceof Serializable ? (Serializable)map : new HashMap<>(map);
     }
@@ -887,7 +896,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                                     SchemaAbstractOperation op0 = op.proposeMessage().operation();
 
                                     if (op0 instanceof SchemaIndexCreateOperation) {
-                                        SchemaIndexCreateOperation opCreate = (SchemaIndexCreateOperation) op0;
+                                        SchemaIndexCreateOperation opCreate = (SchemaIndexCreateOperation)op0;
 
                                         QueryTypeDescriptorImpl typeDesc = tblTypMap.get(opCreate.tableName());
 
@@ -897,7 +906,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                                             typeDesc);
                                     }
                                     else if (op0 instanceof SchemaIndexDropOperation) {
-                                        SchemaIndexDropOperation opDrop = (SchemaIndexDropOperation) op0;
+                                        SchemaIndexDropOperation opDrop = (SchemaIndexDropOperation)op0;
 
                                         QueryTypeDescriptorImpl typeDesc = idxTypMap.get(opDrop.indexName());
 
@@ -1035,7 +1044,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             onCacheStop(cacheInfo, true);
     }
 
-
     /**
      * @param cacheInfo Cache context info.
      * @param removeIdx If {@code true}, will remove index.
@@ -1079,7 +1087,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
         if (!dscoMsgIdHist.add(id)) {
             U.warn(log, "Received duplicate schema custom discovery message (will ignore) [opId=" +
-                msg.operation().id() + ", msg=" + msg  +']');
+                msg.operation().id() + ", msg=" + msg + ']');
 
             return;
         }
@@ -1098,7 +1106,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
         else
             U.warn(log, "Received unsupported schema custom discovery message (will ignore) [opId=" +
-                msg.operation().id() + ", msg=" + msg  +']');
+                msg.operation().id() + ", msg=" + msg + ']');
     }
 
     /**
@@ -1116,7 +1124,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         String cacheName = op.cacheName();
 
         if (op instanceof SchemaIndexCreateOperation) {
-            SchemaIndexCreateOperation op0 = (SchemaIndexCreateOperation) op;
+            SchemaIndexCreateOperation op0 = (SchemaIndexCreateOperation)op;
 
             QueryIndex idx = op0.index();
 
@@ -1154,7 +1162,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
             }
         }
         else if (op instanceof SchemaIndexDropOperation) {
-            SchemaIndexDropOperation op0 = (SchemaIndexDropOperation) op;
+            SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)op;
 
             String idxName = op0.indexName();
 
@@ -1531,7 +1539,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                     idxs.put(idxKey, idxDesc);
                 }
                 else if (op instanceof SchemaIndexDropOperation) {
-                    SchemaIndexDropOperation op0 = (SchemaIndexDropOperation) op;
+                    SchemaIndexDropOperation op0 = (SchemaIndexDropOperation)op;
 
                     QueryUtils.processDynamicIndexChange(op0.indexName(), null, type);
 
@@ -1653,7 +1661,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                 }
                 else
                     //For not started caches we shouldn't add any data to index.
-                    visitor = clo -> {};
+                    visitor = clo -> {
+                    };
 
                 idx.dynamicIndexCreate(op0.schemaName(), op0.tableName(), idxDesc, op0.ifNotExists(), visitor);
             }
@@ -1793,7 +1802,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
 
         if (!res && !ifNotExists)
-            throw new SchemaOperationException(SchemaOperationException.CODE_TABLE_EXISTS,  entity.getTableName());
+            throw new SchemaOperationException(SchemaOperationException.CODE_TABLE_EXISTS, entity.getTableName());
     }
 
     /**
@@ -2474,13 +2483,13 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                         GridQueryCancel cancel0 = cancel != null ? cancel : new GridQueryCancel();
 
                         List<FieldsQueryCursor<List<?>>> res = idx.querySqlFields(
-                                schemaName,
-                                qry,
-                                cliCtx,
-                                keepBinary,
-                                failOnMultipleStmts,
-                                cancel0
-                            );
+                            schemaName,
+                            qry,
+                            cliCtx,
+                            keepBinary,
+                            failOnMultipleStmts,
+                            cancel0
+                        );
 
                         if (cctx != null)
                             sendQueryExecutedEvent(qry.getSql(), qry.getArgs(), cctx, qryType);
@@ -2608,8 +2617,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param keepBinary Keep binary flag.
      * @return Cursor.
      */
-    public <K, V> QueryCursor<Cache.Entry<K,V>> querySql(
-        final GridCacheContext<?,?> cctx,
+    public <K, V> QueryCursor<Cache.Entry<K, V>> querySql(
+        final GridCacheContext<?, ?> cctx,
         final SqlQuery qry,
         boolean keepBinary
     ) {
@@ -2634,7 +2643,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         ).get(0);
 
         // Convert.
-        QueryKeyValueIterable<K, V>converted = new QueryKeyValueIterable<>(res);
+        QueryKeyValueIterable<K, V> converted = new QueryKeyValueIterable<>(res);
 
         return new QueryCursorImpl<Cache.Entry<K, V>>(converted) {
             @Override public void close() {
@@ -2789,10 +2798,11 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @param qryType actual query type, usually either SQL or SQL_FIELDS.
      */
     private void sendQueryExecutedEvent(
-            String sqlQry,
-            Object[] params,
-            GridCacheContext<?, ?> cctx,
-            GridCacheQueryType qryType) {
+        String sqlQry,
+        Object[] params,
+        GridCacheContext<?, ?> cctx,
+        GridCacheQueryType qryType
+    ) {
         if (cctx.events().isRecordable(EVT_CACHE_QUERY_EXECUTED)) {
             ctx.event().record(new CacheQueryExecutedEvent<>(
                 ctx.discovery().localNode(),
@@ -3165,7 +3175,6 @@ public class GridQueryProcessor extends GridProcessorAdapter {
         }
     }
 
-
     /**
      * @return Value object context.
      */
@@ -3348,10 +3357,10 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                             // thread under load. Hence, moving short-lived operation to separate worker.
                             new IgniteThread(ctx.igniteInstanceName(), "schema-circuit-breaker-" + op.id(),
                                 new Runnable() {
-                                @Override public void run() {
-                                    onSchemaPropose(nextOp.proposeMessage());
-                                }
-                            }).start();
+                                    @Override public void run() {
+                                        onSchemaPropose(nextOp.proposeMessage());
+                                    }
+                                }).start();
                         }
                     }
                 }
