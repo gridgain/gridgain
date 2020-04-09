@@ -820,9 +820,9 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
             final GridIterator<CacheDataRow> it;
 
-            if (part != null) {
-                final GridDhtCacheAdapter dht = cctx.isNear() ? cctx.near().dht() : cctx.dht();
+            final GridDhtCacheAdapter dht = cctx.isNear() ? cctx.near().dht() : cctx.dht();
 
+            if (part != null) {
                 GridDhtLocalPartition locPart0 = dht.topology().localPartition(part, topVer, false);
 
                 if (locPart0 == null || locPart0.state() != OWNING || !locPart0.reserve()) {
@@ -840,6 +840,13 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
             }
             else {
                 locPart = null;
+
+                Set<Integer> lostParts = dht.topology().lostPartitions();
+
+                if (!lostParts.isEmpty()) {
+                    throw new CacheInvalidStateException("Failed to execute scan query because cache partition has been " +
+                            "lost [cacheName=" + cctx.name() + ", part=" + lostParts.iterator().next() + "]");
+                }
 
                 it = cctx.offheap().cacheIterator(cctx.cacheId(), true, backups, topVer,
                     qry.mvccSnapshot(), qry.isDataPageScanEnabled());

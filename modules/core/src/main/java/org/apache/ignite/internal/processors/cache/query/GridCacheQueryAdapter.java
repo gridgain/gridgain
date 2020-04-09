@@ -28,11 +28,11 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
+import javax.cache.CacheException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.CacheMode;
-import org.apache.ignite.cache.PartitionLossPolicy;
 import org.apache.ignite.cache.query.Query;
 import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.cluster.ClusterNode;
@@ -536,6 +536,16 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
     @Override public GridCloseableIterator executeScanQuery() throws IgniteCheckedException {
         assert type == SCAN : "Wrong processing of query: " + type;
 
+        Set<Integer> lostParts = cctx.topology().lostPartitions();
+
+        if (!lostParts.isEmpty()) {
+            if (part == null || lostParts.contains(part)) {
+                throw new CacheException(new CacheInvalidStateException("Failed to execute query because cache partition " +
+                        "has been lostParts [cacheName=" + cctx.name() +
+                        ", part=" + (part == null ? lostParts.iterator().next() : part) + ']'));
+            }
+        }
+
         // Affinity nodes snapshot.
         Collection<ClusterNode> nodes = new ArrayList<>(nodes());
 
@@ -543,11 +553,6 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
 
         if (nodes.isEmpty()) {
             if (part != null) {
-                if (cctx.topology().lostPartitions().contains(part)) {
-                    throw new CacheInvalidStateException("Failed to execute scan query because cache partition has been " +
-                        "lost [cacheName=" + cctx.name() + ", part=" + part + "]");
-                }
-
                 if (forceLocal) {
                     throw new IgniteCheckedException("No queryable nodes for partition " + part
                             + " [forced local query=" + this + "]");

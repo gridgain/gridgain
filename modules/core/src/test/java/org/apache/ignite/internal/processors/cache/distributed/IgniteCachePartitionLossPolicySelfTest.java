@@ -402,21 +402,39 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         for (int p = 0; p < parts; p++) {
             boolean loc = ig.affinity(cacheName).isPrimary(ig.cluster().localNode(), p);
 
+            List<?> objects;
+
             try {
-                runQuery(ig, cacheName, false, p);
+                objects = runQuery(ig, cacheName, false, p);
 
                 assertTrue("Query over lost partition should have failed: safe=" + safe +
                         ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
+
+                if (safe)
+                    assertEquals(1, objects.size());
             } catch (Exception e) {
+                assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
+            }
+
+            try {
+                runQuery(ig, cacheName, false, -1);
+
+                assertFalse("Query should have failed in safe mode with lost partitions", safe);
+            } catch (Exception e) {
+                assertTrue("Query must always work in unsafe mode", safe);
+
                 assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
             }
 
             if (loc) {
                 try {
-                    runQuery(ig, cacheName, true, p);
+                    objects = runQuery(ig, cacheName, true, p);
 
                     assertTrue("Query over lost partition should have failed: safe=" + safe +
                             ", expLost=" + expLostParts + ", p=" + p, !safe || !expLostParts.contains(p));
+
+                    if (safe)
+                        assertEquals(1, objects.size());
                 } catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, CacheInvalidStateException.class));
                 }
@@ -430,22 +448,25 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
      * @param loc Local.
      * @param part Partition.
      */
-    protected void runQuery(Ignite ig, String cacheName, boolean loc, int part) {
+    protected List<?> runQuery(Ignite ig, String cacheName, boolean loc, int part) {
         IgniteCache cache = ig.cache(cacheName);
 
         ScanQuery qry = new ScanQuery();
-        qry.setPartition(part);
+
+        if (part != -1)
+            qry.setPartition(part);
 
         if (loc)
             qry.setLocal(true);
 
-        cache.query(qry).getAll();
+        return cache.query(qry).getAll();
     }
 
     /**
-     * @param autoAdjustTimeout Auto-adjust timeout.
-     * @return Lost partition ID.
-     * @throws Exception If failed.
+     * @param nodes Nodes.
+     * @param autoAdjust Auto adjust.
+     * @param lsnr Listener.
+     * @param stopNodes Stop nodes.
      */
     private Set<Integer> prepareTopology(int nodes, boolean autoAdjust, P1<Event> lsnr, int... stopNodes) throws Exception {
         final IgniteEx crd = startGrids(nodes);

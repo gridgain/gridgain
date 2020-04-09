@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cache;
 
+import java.util.List;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
@@ -38,16 +39,17 @@ public class IndexingCachePartitionLossPolicySelfTest extends IgniteCachePartiti
     }
 
     /** {@inheritDoc} */
-    @Override protected void runQuery(Ignite ig, String cacheName, boolean loc, int part) {
+    @Override protected List<?> runQuery(Ignite ig, String cacheName, boolean loc, int part) {
         IgniteCache cache = ig.cache(cacheName);
 
         SqlFieldsQuery qry = new SqlFieldsQuery("SELECT * FROM Integer");
 
-        qry.setPartitions(part);
+        if (part != -1)
+            qry.setPartitions(part);
 
         // TODO https://issues.apache.org/jira/browse/IGNITE-7039
         // if (loc)
         //    qry.setLocal(true);
 
-        cache.query(qry).getAll();
+        return cache.query(qry).getAll();
     }}
