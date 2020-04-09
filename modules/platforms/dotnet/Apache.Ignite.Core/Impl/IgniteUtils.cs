@@ -208,10 +208,10 @@ namespace Apache.Ignite.Core.Impl
         /// <summary>
         /// Encodes the peek modes into a single int value.
         /// </summary>
-        public static int EncodePeekModes(CachePeekMode[] modes, out bool hasPlatformNear)
+        public static int EncodePeekModes(CachePeekMode[] modes, out bool hasPlatformCache)
         {
             var res = 0;
-            hasPlatformNear = false;
+            hasPlatformCache = false;
 
             if (modes == null)
             {
@@ -224,11 +224,11 @@ namespace Apache.Ignite.Core.Impl
             }
 
             // Clear NativeNear bit: Java does not understand it.
-            const int platformNear = (int) CachePeekMode.Platform;
+            const int platformCache = (int) CachePeekMode.Platform;
             const int all = (int) CachePeekMode.All;
-            hasPlatformNear = (res & platformNear) == platformNear || (res & all) == all;
+            hasPlatformCache = (res & platformCache) == platformCache || (res & all) == all;
             
-            return res & ~platformNear;
+            return res & ~platformCache;
         }
     }
 }
