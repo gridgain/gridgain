@@ -283,7 +283,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found at line");
+        }, SQLException.class, "Unmatched quote found at the end of line");
 
         checkCacheContents(TBL_NAME, true, 0);
     }
@@ -304,7 +304,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found at line");
+        }, SQLException.class, "Unmatched quote found at the end of line");
 
         checkCacheContents(TBL_NAME, true, 0);
     }
@@ -325,7 +325,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found at line");
+        }, SQLException.class, "Unmatched quote found at the end of line");
 
         checkCacheContents(TBL_NAME, true, 0);
     }
@@ -346,7 +346,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found at line");
+        }, SQLException.class, "Unmatched quote found at the end of line");
 
         checkCacheContents(TBL_NAME, true, 0);
     }
@@ -367,7 +367,7 @@ public abstract class JdbcThinBulkLoadAbstractSelfTest extends JdbcThinAbstractD
 
                 return null;
             }
-        }, SQLException.class, "Unmatched quote found at line");
+        }, SQLException.class, "Unmatched quote found at the end of line");
 
         checkCacheContents(TBL_NAME, true, 0);
     }
