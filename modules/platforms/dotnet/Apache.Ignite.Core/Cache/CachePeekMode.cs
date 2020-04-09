@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Cache
     using System;
     using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Common;
 
     /// <summary>
     /// Enumeration of all supported cache peek modes.
@@ -64,6 +65,7 @@ namespace Apache.Ignite.Core.Cache
         /// Peeks value from local native .NET cache
         /// (see <see cref="CacheConfiguration.PlatformCacheConfiguration"/>). 
         /// </summary>
+        [IgniteExperimental]
         Platform = 0x1000
     }
 }
