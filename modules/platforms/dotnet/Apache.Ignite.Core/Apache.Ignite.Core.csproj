@@ -108,6 +108,7 @@
     <Compile Include="Impl\Client\Endpoint.cs" />
     <Compile Include="Impl\Client\MinVersionAttribute.cs" />
     <Compile Include="Impl\Client\SocketEndpoint.cs" />
+    <Compile Include="Impl\Common\PlatformType.cs" />
     <Compile Include="Impl\Common\TaskRunner.cs" />
     <Compile Include="Impl\Log\NoopLogger.cs" />
     <Compile Include="Impl\Transactions\TransactionCollectionImpl.cs" />
@@ -282,7 +283,6 @@
     <Compile Include="Impl\Cache\Expiry\ExpiryPolicySerializer.cs" />
     <Compile Include="Impl\Cache\ICacheLockInternal.cs" />
     <Compile Include="Impl\Common\Listenable.cs" />
-    <Compile Include="Impl\Common\Platform.cs" />
     <Compile Include="Impl\Binary\UserSerializerProxy.cs" />
     <Compile Include="Impl\Cache\Affinity\AffinityFunctionSerializer.cs" />
     <Compile Include="Impl\Cache\Affinity\PlatformAffinityFunction.cs" />
