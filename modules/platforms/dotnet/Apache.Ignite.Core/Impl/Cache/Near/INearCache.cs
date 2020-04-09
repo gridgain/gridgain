@@ -76,6 +76,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Near
         /// <summary>
         /// Gets all entries.
         /// </summary>
-        IEnumerable<ICacheEntry<TK,TV>> GetEntries<TK, TV>();
+        /// <param name="partition"></param>
+        IEnumerable<ICacheEntry<TK, TV>> GetEntries<TK, TV>(int? partition = null);
     }
 }
