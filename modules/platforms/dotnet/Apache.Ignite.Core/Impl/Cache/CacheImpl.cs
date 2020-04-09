@@ -74,7 +74,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** Pre-allocated delegate. */
         private readonly Func<IBinaryStream, Exception> _readException;
 
-        /** Near cache. */
+        /** Platform cache. */
         private readonly IPlatformCache _platformCache;
 
         /// <summary>
@@ -1156,18 +1156,18 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private int Size0(bool loc, params CachePeekMode[] modes)
         {
-            int nativeNearSize;
-            bool onlyNativeNear;
-            var modes0 = EncodePeekModes(null, modes, out onlyNativeNear, out nativeNearSize);
+            int platformCacheSize;
+            bool onlyPlatform;
+            var modes0 = EncodePeekModes(null, modes, out onlyPlatform, out platformCacheSize);
             
-            if (onlyNativeNear)
+            if (onlyPlatform)
             {
-                return nativeNearSize;
+                return platformCacheSize;
             }
 
             var op = loc ? CacheOp.SizeLoc : CacheOp.Size;
 
-            return (int) DoOutInOp((int) op, modes0) + nativeNearSize; 
+            return (int) DoOutInOp((int) op, modes0) + platformCacheSize; 
         }
         
         /// <summary>
@@ -1179,13 +1179,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private long Size0(bool loc, int? part, params CachePeekMode[] modes)
         {
-            int nativeNearSize;
-            bool onlyNativeNear;
-            var modes0 = EncodePeekModes(part, modes, out onlyNativeNear, out nativeNearSize);
+            int platformCacheSize;
+            bool onlyPlatform;
+            var modes0 = EncodePeekModes(part, modes, out onlyPlatform, out platformCacheSize);
             
-            if (onlyNativeNear)
+            if (onlyPlatform)
             {
-                return nativeNearSize;
+                return platformCacheSize;
             }
 
             var op = loc ? CacheOp.SizeLongLoc : CacheOp.SizeLong; 
@@ -1203,7 +1203,7 @@ namespace Apache.Ignite.Core.Impl.Cache
                 {
                     writer.WriteBoolean(false);   
                 }                     
-            }) + nativeNearSize;  
+            }) + platformCacheSize;  
         }
 
         /// <summary>
@@ -1213,17 +1213,17 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private Task<int> SizeAsync0(params CachePeekMode[] modes)
         {
-            int nativeNearSize;
-            bool onlyNativeNear;
-            var modes0 = EncodePeekModes(null, modes, out onlyNativeNear, out nativeNearSize);
+            int platformCacheSize;
+            bool onlyPlatform;
+            var modes0 = EncodePeekModes(null, modes, out onlyPlatform, out platformCacheSize);
             
-            if (onlyNativeNear)
+            if (onlyPlatform)
             {
-                return TaskRunner.FromResult(nativeNearSize);
+                return TaskRunner.FromResult(platformCacheSize);
             }
             
             return DoOutOpAsync<int>(CacheOp.SizeAsync, w => w.WriteInt(modes0))
-                .ContWith(t => t.Result + nativeNearSize, TaskContinuationOptions.ExecuteSynchronously);
+                .ContWith(t => t.Result + platformCacheSize, TaskContinuationOptions.ExecuteSynchronously);
         }
         
         /// <summary>
@@ -1234,13 +1234,13 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <returns>Size.</returns>
         private Task<long> SizeAsync0(int? part, params CachePeekMode[] modes)
         {
-            int nativeNearSize;
-            bool onlyNativeNear;
-            var modes0 = EncodePeekModes(part, modes, out onlyNativeNear, out nativeNearSize);
+            int platformCacheSize;
+            bool onlyPlatform;
+            var modes0 = EncodePeekModes(part, modes, out onlyPlatform, out platformCacheSize);
             
-            if (onlyNativeNear)
+            if (onlyPlatform)
             {
-                return TaskRunner.FromResult((long) nativeNearSize);
+                return TaskRunner.FromResult((long) platformCacheSize);
             }
 
             return DoOutOpAsync<long>(CacheOp.SizeLongAsync, writer =>
@@ -1256,16 +1256,16 @@ namespace Apache.Ignite.Core.Impl.Cache
                 {
                     writer.WriteBoolean(false);   
                 }             
-            }).ContWith(t => t.Result + nativeNearSize, TaskContinuationOptions.ExecuteSynchronously);
+            }).ContWith(t => t.Result + platformCacheSize, TaskContinuationOptions.ExecuteSynchronously);
         }
 
         /// <summary>
-        /// Encodes peek modes, includes native near check.
+        /// Encodes peek modes, includes native platform check.
         /// </summary>
-        private int EncodePeekModes(int? part, CachePeekMode[] modes, out bool onlyNativeNear, out int size)
+        private int EncodePeekModes(int? part, CachePeekMode[] modes, out bool onlyPlatform, out int size)
         {
             size = 0;
-            onlyNativeNear = false;
+            onlyPlatform = false;
             
             bool hasPlatformCache;
             var modes0 = IgniteUtils.EncodePeekModes(modes, out hasPlatformCache);
@@ -1279,7 +1279,7 @@ namespace Apache.Ignite.Core.Impl.Cache
 
                 if (modes0 == 0)
                 {
-                    onlyNativeNear = true;
+                    onlyPlatform = true;
                 }
             }
 
@@ -1664,13 +1664,13 @@ namespace Apache.Ignite.Core.Impl.Cache
             if (HasPlatformCache)
             {
                 // NOTE: Users can pass a ScanQuery that has different generic arguments.
-                // We do not support this scenario for near cache scan optimization.
+                // We do not support this scenario for platform cache scan optimization.
                 var scan = qry as ScanQuery<TK, TV>;
 
                 // Local scan with Partition can be satisfied directly from platform cache on server nodes.
                 if (scan != null && scan.Local && scan.Partition != null)
                 {
-                    return ScanNear(scan);
+                    return ScanPlatformCache(scan);
                 }
             }
 
@@ -2035,8 +2035,8 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /// <summary>
-        /// Enumerates provided keys, looking for near cache values.
-        /// Keys that are not in near cache are written to the writer.
+        /// Enumerates provided keys, looking for platform cache values.
+        /// Keys that are not in platform cache are written to the writer.
         /// </summary>
         private void WriteKeysOrGetFromPlatformCache(BinaryWriter writer, IEnumerator<TK> enumerator,
             ref ICollection<ICacheEntry<TK, TV>> res, bool discardResults = false)
@@ -2101,9 +2101,9 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /// <summary>
-        /// Performs Scan query over Near Cache.
+        /// Performs Scan query over platform cache.
         /// </summary>
-        private IQueryCursor<ICacheEntry<TK, TV>> ScanNear(ScanQuery<TK, TV> qry)
+        private IQueryCursor<ICacheEntry<TK, TV>> ScanPlatformCache(ScanQuery<TK, TV> qry)
         {
             var filter = qry.Filter;
 
