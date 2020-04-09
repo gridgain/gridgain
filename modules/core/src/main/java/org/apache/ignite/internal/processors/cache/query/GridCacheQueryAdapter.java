@@ -541,8 +541,8 @@ public class GridCacheQueryAdapter<T> implements CacheQuery<T> {
         if (!lostParts.isEmpty()) {
             if (part == null || lostParts.contains(part)) {
                 throw new CacheException(new CacheInvalidStateException("Failed to execute query because cache partition " +
-                        "has been lostParts [cacheName=" + cctx.name() +
-                        ", part=" + (part == null ? lostParts.iterator().next() : part) + ']'));
+                    "has been lostParts [cacheName=" + cctx.name() +
+                    ", part=" + (part == null ? lostParts.iterator().next() : part) + ']'));
             }
         }
 

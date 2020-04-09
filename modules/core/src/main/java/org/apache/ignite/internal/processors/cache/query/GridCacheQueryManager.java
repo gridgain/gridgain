@@ -827,10 +827,10 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
                 if (locPart0 == null || locPart0.state() != OWNING || !locPart0.reserve()) {
                     throw locPart0.state() == LOST ?
-                            new CacheInvalidStateException("Failed to execute scan query because cache partition has been " +
+                        new CacheInvalidStateException("Failed to execute scan query because cache partition has been " +
                             "lost [cacheName=" + cctx.name() + ", part=" + part + "]") :
-                            new GridDhtUnreservedPartitionException(part, cctx.affinity().affinityTopologyVersion(),
-                                    "Partition can not be reserved");
+                        new GridDhtUnreservedPartitionException(part, cctx.affinity().affinityTopologyVersion(),
+                            "Partition can not be reserved");
                 }
 
                 locPart = locPart0;
@@ -845,7 +845,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
 
                 if (!lostParts.isEmpty()) {
                     throw new CacheInvalidStateException("Failed to execute scan query because cache partition has been " +
-                            "lost [cacheName=" + cctx.name() + ", part=" + lostParts.iterator().next() + "]");
+                        "lost [cacheName=" + cctx.name() + ", part=" + lostParts.iterator().next() + "]");
                 }
 
                 it = cctx.offheap().cacheIterator(cctx.cacheId(), true, backups, topVer,

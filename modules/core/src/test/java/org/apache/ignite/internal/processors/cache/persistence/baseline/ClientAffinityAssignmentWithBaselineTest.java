@@ -111,9 +111,6 @@ public class ClientAffinityAssignmentWithBaselineTest extends GridCommonAbstract
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        cfg.setFailureDetectionTimeout(10000000L);
-        cfg.setClientFailureDetectionTimeout(10000000L);
-
         if (igniteInstanceName.startsWith(CLIENT_GRID_NAME)) {
             // Intentionally skipping data storage in client configuration.
             cfg.setClientMode(true);

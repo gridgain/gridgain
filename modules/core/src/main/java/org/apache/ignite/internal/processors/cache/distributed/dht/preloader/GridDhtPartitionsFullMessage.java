@@ -150,8 +150,8 @@ public class GridDhtPartitionsFullMessage extends GridDhtPartitionsAbstractMessa
      * @param id Exchange ID.
      * @param lastVer Last version.
      * @param topVer Topology version. For messages not related to exchange may be {@link AffinityTopologyVersion#NONE}.
-     * @param partHistSuppliers
-     * @param partsToReload
+     * @param partHistSuppliers Suppliers.
+     * @param partsToReload Partitions to reload.
      */
     public GridDhtPartitionsFullMessage(@Nullable GridDhtPartitionExchangeId id,
         @Nullable GridCacheVersion lastVer,

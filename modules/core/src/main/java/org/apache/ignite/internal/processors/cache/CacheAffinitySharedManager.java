@@ -2342,7 +2342,8 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                     // If current owners are empty no supplier can exist.
                     // A group with lost partitions never gets rebalanced so should not be added to waitInfo.
-                    if (!owners.isEmpty() && !owners.containsAll(idealAssignment.get(p)) && !top.lostPartitions().contains(p))
+                    if (!owners.isEmpty() && !owners.containsAll(idealAssignment.get(p)) &&
+                        !top.lostPartitions().contains(p))
                         rebalanceInfo.add(aff.groupId(), p, newNodes);
                 }
             }

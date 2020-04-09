@@ -1477,7 +1477,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
 
         // Optimisation: try to resolve value locally and escape 'get future' creation.
         if (!forcePrimary && ctx.config().isReadFromBackup() && ctx.affinityNode() &&
-                ctx.group().topology().lostPartitions().isEmpty()) {
+            ctx.group().topology().lostPartitions().isEmpty()) {
             try {
                 Map<K, V> locVals = U.newHashMap(keys.size());
 
@@ -1854,7 +1854,7 @@ public class GridDhtAtomicCache<K, V> extends GridDhtCacheAdapter<K, V> {
                                     assert topFut.isDone() : topFut;
 
                                     Throwable err =
-                                            topFut.validateCache(ctx, req.recovery(), false, null, req.keys());
+                                        topFut.validateCache(ctx, req.recovery(), false, null, req.keys());
 
                                     if (err != null) {
                                         IgniteCheckedException e = new IgniteCheckedException(err);

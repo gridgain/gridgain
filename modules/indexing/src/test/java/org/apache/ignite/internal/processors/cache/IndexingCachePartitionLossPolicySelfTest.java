@@ -52,4 +52,5 @@ public class IndexingCachePartitionLossPolicySelfTest extends IgniteCachePartiti
         //    qry.setLocal(true);
 
         return cache.query(qry).getAll();
-    }}
+    }
+}

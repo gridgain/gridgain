@@ -493,13 +493,15 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
     /**
      * Creates non-existing partitions belong to given affinity {@code aff}.
-     *  @param affVer Affinity version.
+     *
+     * @param affVer Affinity version.
      * @param aff Affinity assignments.
      * @param updateSeq Update sequence.
      */
-    private void createPartitions(AffinityTopologyVersion affVer,
-                                  List<List<ClusterNode>> aff,
-                                  long updateSeq
+    private void createPartitions(
+        AffinityTopologyVersion affVer,
+        List<List<ClusterNode>> aff,
+        long updateSeq
     ) {
         if (!grp.affinityNode())
             return;
@@ -1594,9 +1596,9 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
                 if (exchangeVer != null) {
                     assert exchangeVer.compareTo(readyTopVer) >= 0 && exchangeVer.compareTo(lastTopChangeVer) >= 0;
 
-                    // Apply lost partitions from full message.
                     lastTopChangeVer = readyTopVer = exchangeVer;
 
+                    // Apply lost partitions from full message.
                     if (lostParts != null) {
                         this.lostParts = new HashSet<>(lostParts);
 

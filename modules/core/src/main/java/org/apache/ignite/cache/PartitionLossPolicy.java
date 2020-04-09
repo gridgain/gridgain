@@ -48,6 +48,8 @@ public enum PartitionLossPolicy {
      * All writes to the cache will be failed with an exception. All reads will proceed as if all partitions
      * were in a consistent state. The result of reading from a lost partition is undefined and may be different
      * on different nodes in the cluster.
+     *
+     * @deprecated {@link READ_ONLY_SAFE} is used instead.
      */
     READ_ONLY_ALL,
 
@@ -60,6 +62,8 @@ public enum PartitionLossPolicy {
     /**
      * All reads and writes will proceed as if all partitions were in a consistent state. The result of reading
      * from a lost partition is undefined and may be different on different nodes in the cluster.
+     *
+     * @deprecated {@link READ_WRITE_SAFE} is used instead.
      */
     READ_WRITE_ALL,
 

@@ -1690,22 +1690,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (context().exchangeFreeSwitch()) {
                 // Independently called on all nodes.
                 doInParallel(
-                        U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                        cctx.kernalContext().getSystemExecutorService(),
-                        cctx.affinity().cacheGroups().values(),
-                        desc -> {
-                            if (desc.config().getCacheMode() == CacheMode.LOCAL)
-                                return null;
-
-                            CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
-
-                            GridDhtPartitionTopology top = grp != null ? grp.topology() :
-                                    cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
-
-                            top.beforeExchange(this, true, true);
-
+                    U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
+                    cctx.kernalContext().getSystemExecutorService(),
+                    cctx.affinity().cacheGroups().values(),
+                    desc -> {
+                        if (desc.config().getCacheMode() == CacheMode.LOCAL)
                             return null;
-                        });
+
+                        CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
+
+                        GridDhtPartitionTopology top = grp != null ? grp.topology() :
+                            cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
+
+                        top.beforeExchange(this, true, true);
+
+                        return null;
+                    });
 
                 onDone(initialVersion());
             }
@@ -2456,7 +2456,6 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (err == null) {
                 cctx.database().rebuildIndexesIfNeeded(this);
 
-                // TODO parallelize.
                 for (CacheGroupContext grp : cctx.cache().cacheGroups()) {
                     if (!grp.isLocal())
                         grp.topology().onExchangeDone(this, grp.affinity().readyAffinity(res), false);
@@ -3434,22 +3433,22 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
         try {
             // Reserve at least 2 threads for system operations.
             doInParallelUninterruptibly(
-                    U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                    cctx.kernalContext().getSystemExecutorService(),
-                    cctx.affinity().cacheGroups().values(),
-                    desc -> {
-                        if (desc.config().getCacheMode() == CacheMode.LOCAL)
-                            return null;
-
-                        CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
-
-                        GridDhtPartitionTopology top = grp != null ? grp.topology() :
-                                cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
-
-                        top.detectLostPartitions(resTopVer, this);
-
+                U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
+                cctx.kernalContext().getSystemExecutorService(),
+                cctx.affinity().cacheGroups().values(),
+                desc -> {
+                    if (desc.config().getCacheMode() == CacheMode.LOCAL)
                         return null;
-                    });
+
+                    CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
+
+                    GridDhtPartitionTopology top = grp != null ? grp.topology() :
+                        cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
+
+                    top.detectLostPartitions(resTopVer, this);
+
+                    return null;
+                });
         } catch (IgniteCheckedException e) {
             throw new IgniteException(e);
         }
@@ -3465,24 +3464,24 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
 
         try {
             doInParallelUninterruptibly(
-                    U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
-                    cctx.kernalContext().getSystemExecutorService(),
-                    cctx.affinity().caches().values(),
-                    desc -> {
-                        if (desc.cacheConfiguration().getCacheMode() == CacheMode.LOCAL)
-                            return null;
-
-                        if (cacheNames.contains(desc.cacheName())) {
-                            CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
-
-                            GridDhtPartitionTopology top = grp != null ? grp.topology() :
-                                    cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
-
-                            top.resetLostPartitions(initialVersion());
-                        }
-
+                U.availableThreadCount(cctx.kernalContext(), GridIoPolicy.SYSTEM_POOL, 2),
+                cctx.kernalContext().getSystemExecutorService(),
+                cctx.affinity().caches().values(),
+                desc -> {
+                    if (desc.cacheConfiguration().getCacheMode() == CacheMode.LOCAL)
                         return null;
-                    });
+
+                    if (cacheNames.contains(desc.cacheName())) {
+                        CacheGroupContext grp = cctx.cache().cacheGroup(desc.groupId());
+
+                        GridDhtPartitionTopology top = grp != null ? grp.topology() :
+                            cctx.exchange().clientTopology(desc.groupId(), events().discoveryCache());
+
+                        top.resetLostPartitions(initialVersion());
+                    }
+
+                    return null;
+                });
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

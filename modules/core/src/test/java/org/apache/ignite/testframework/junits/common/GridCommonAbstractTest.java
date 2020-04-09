@@ -683,10 +683,10 @@ public abstract class GridCommonAbstractTest extends GridAbstractTest {
      */
     @SuppressWarnings("BusyWait")
     protected void awaitPartitionMapExchange(
-            boolean waitEvicts,
-            boolean waitNode2PartUpdate,
-            @Nullable Collection<ClusterNode> nodes,
-            boolean printPartState
+        boolean waitEvicts,
+        boolean waitNode2PartUpdate,
+        @Nullable Collection<ClusterNode> nodes,
+        boolean printPartState
     ) throws InterruptedException {
         awaitPartitionMapExchange(waitEvicts, waitNode2PartUpdate, nodes, printPartState, null);
     }

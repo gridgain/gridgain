@@ -143,12 +143,12 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
      * @param partLossPlc Loss policy.
      */
     public GridClientPartitionTopology(
-            GridCacheSharedContext<?, ?> cctx,
-            DiscoCache discoCache,
-            int grpId,
-            int parts,
-            Object similarAffKey,
-            PartitionLossPolicy partLossPlc
+        GridCacheSharedContext<?, ?> cctx,
+        DiscoCache discoCache,
+        int grpId,
+        int parts,
+        Object similarAffKey,
+        PartitionLossPolicy partLossPlc
     ) {
         this.cctx = cctx;
         this.discoCache = discoCache;

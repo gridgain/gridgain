@@ -64,7 +64,7 @@ public class IgniteCachePrimarySyncTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
         CacheConfiguration<Object, Object> ccfg1 = new CacheConfiguration<>(ATOMIC_CACHE)
-            .setReadFromBackup(false) // TODO can fail with read from backups = true (default)
+            .setReadFromBackup(false)
             .setAtomicityMode(ATOMIC)
             .setBackups(2)
             .setWriteSynchronizationMode(PRIMARY_SYNC);

@@ -173,24 +173,24 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
         cfg.setClientMode(client);
 
         cfg.setDataStorageConfiguration(
-                new DataStorageConfiguration()
-                        .setWalMode(WALMode.LOG_ONLY)
-                        .setWalSegmentSize(4 * 1024 * 1024)
-                        .setDefaultDataRegionConfiguration(
-                                new DataRegionConfiguration()
-                                        .setPersistenceEnabled(persistence)
-                                        .setMaxSize(100L * 1024 * 1024))
+            new DataStorageConfiguration()
+                .setWalMode(WALMode.LOG_ONLY)
+                .setWalSegmentSize(4 * 1024 * 1024)
+                .setDefaultDataRegionConfiguration(
+                    new DataRegionConfiguration()
+                        .setPersistenceEnabled(persistence)
+                        .setMaxSize(100L * 1024 * 1024))
         );
 
         CacheConfiguration[] ccfgs = new CacheConfiguration[CACHES.length];
 
         for (int i = 0; i < ccfgs.length; i++) {
             ccfgs[i] = new CacheConfiguration(CACHES[i])
-                    .setCacheMode(PARTITIONED)
-                    .setBackups(backups)
-                    .setWriteSynchronizationMode(FULL_SYNC)
-                    .setPartitionLossPolicy(partLossPlc)
-                    .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
+                .setCacheMode(PARTITIONED)
+                .setBackups(backups)
+                .setWriteSynchronizationMode(FULL_SYNC)
+                .setPartitionLossPolicy(partLossPlc)
+                .setAffinity(new RendezvousAffinityFunction(false, PARTS_CNT));
         }
 
         cfg.setCacheConfiguration(ccfgs);

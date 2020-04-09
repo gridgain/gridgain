@@ -1207,9 +1207,9 @@ public class TxPartitionCounterStateConsistencyTest extends TxPartitionCounterSt
                 }
                 catch (Exception e) {
                     assertTrue(X.getFullStackTrace(e), X.hasCause(e, ClusterTopologyException.class) ||
-                            X.hasCause(e, ClusterTopologyCheckedException.class) ||
-                            X.hasCause(e, TransactionRollbackException.class) ||
-                            X.hasCause(e, CacheInvalidStateException.class));
+                        X.hasCause(e, ClusterTopologyCheckedException.class) ||
+                        X.hasCause(e, TransactionRollbackException.class) ||
+                        X.hasCause(e, CacheInvalidStateException.class));
                 }
             }
 

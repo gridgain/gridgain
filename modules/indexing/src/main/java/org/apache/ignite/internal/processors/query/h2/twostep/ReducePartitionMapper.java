@@ -88,11 +88,11 @@ public class ReducePartitionMapper {
 
             if (!lostParts.isEmpty()) {
                 int lostPart = parts == null ? lostParts.iterator().next() :
-                        IntStream.of(parts).filter(lostParts::contains).findFirst().orElse(-1);
+                    IntStream.of(parts).filter(lostParts::contains).findFirst().orElse(-1);
 
                 if (lostPart >= 0) {
                     throw new CacheException(new CacheInvalidStateException("Failed to execute query because cache " +
-                            "partition has been lostPart [cacheName=" + cctx.name() + ", part=" + lostPart + ']'));
+                        "partition has been lostPart [cacheName=" + cctx.name() + ", part=" + lostPart + ']'));
                 }
             }
         }
