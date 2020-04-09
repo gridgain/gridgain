@@ -88,7 +88,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Platform
 
                 // Remove invalid entry to free up memory.
                 // NOTE: We may end up removing a good entry that was inserted concurrently,
-                // but this does not violate correctness, only causes a potential near cache miss.
+                // but this does not violate correctness, only causes a potential platform cache miss.
                 _map.TryRemove(key0, out entry);
             }
 

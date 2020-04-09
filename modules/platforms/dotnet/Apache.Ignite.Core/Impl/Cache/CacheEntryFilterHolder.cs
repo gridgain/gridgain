@@ -43,7 +43,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /** Grid. */
         private readonly Marshaller _marsh;
 
-        /** Near cache. When not null, only the key is passed to the filter. */
+        /** Platform cache. When not null, only the key is passed to the filter. */
         private IPlatformCache _platformCache;
 
         /// <summary>
@@ -87,8 +87,8 @@ namespace Apache.Ignite.Core.Impl.Cache
             }
             else
             {
-                // Near cache on primary node is always up-to-date with actual cache entry in Java,
-                // so we can use value from near cache for filtering.
+                // Platform cache on primary node is always up-to-date with actual cache entry in Java,
+                // so we can use value from platform cache for filtering.
                 if (_platformCache == null || !_platformCache.TryGetValue(key, out val))
                 {
                     // Request value from Java.

@@ -212,8 +212,8 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
             AddHandler(UnmanagedCallbackOp.PluginProcessorStop, PluginProcessorStop);
             AddHandler(UnmanagedCallbackOp.PluginProcessorIgniteStop, PluginProcessorIgniteStop);
             AddHandler(UnmanagedCallbackOp.PluginCallbackInLongLongOutLong, PluginCallbackInLongLongOutLong);
-            AddHandler(UnmanagedCallbackOp.NearCacheUpdate, NearCacheUpdate);
-            AddHandler(UnmanagedCallbackOp.NearCacheUpdateFromThreadLocal, NearCacheUpdateFromThreadLocal);
+            AddHandler(UnmanagedCallbackOp.PlatformCacheUpdate, PlatformCacheUpdate);
+            AddHandler(UnmanagedCallbackOp.PlatformCacheUpdateFromThreadLocal, PlatformCacheUpdateFromThreadLocal);
             AddHandler(UnmanagedCallbackOp.OnCacheStopped, OnCacheStopped);
             AddHandler(UnmanagedCallbackOp.OnAffinityTopologyVersionChanged, OnAffinityTopologyVersionChanged);
         }
@@ -424,11 +424,11 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         }
         
         /// <summary>
-        /// Updates near cache entry.
+        /// Updates platform cache entry.
         /// </summary>
         /// <param name="memPtr">Memory pointer.</param>
         /// <returns>Unused.</returns>
-        private long NearCacheUpdate(long memPtr)
+        private long PlatformCacheUpdate(long memPtr)
         {
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
@@ -441,9 +441,9 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         }
         
         /// <summary>
-        /// Updates near cache entry.
+        /// Updates platform cache entry.
         /// </summary>
-        private long NearCacheUpdateFromThreadLocal(long cacheIdAndPartition, long verMajor, long verMinor, void* arg)
+        private long PlatformCacheUpdateFromThreadLocal(long cacheIdAndPartition, long verMajor, long verMinor, void* arg)
         {
             int cacheId = (int)(cacheIdAndPartition & 0xFFFFFFFF);
             int partition = (int) (cacheIdAndPartition >> 32);

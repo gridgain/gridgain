@@ -143,7 +143,7 @@ namespace Apache.Ignite.Core.Impl
         /** Plugin processor. */
         private readonly PluginProcessor _pluginProcessor;
 
-        /** Near cache manager. */
+        /** Platform cache manager. */
         private readonly PlatformCacheManager _platformCacheManager;
 
         /// <summary>
@@ -1058,7 +1058,7 @@ namespace Apache.Ignite.Core.Impl
         }
 
         /// <summary>
-        /// Gets the near cache manager.
+        /// Gets the platform cache manager.
         /// </summary>
         public PlatformCacheManager PlatformCacheManager
         {

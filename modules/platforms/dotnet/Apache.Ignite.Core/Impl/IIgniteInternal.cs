@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Impl
         PluginProcessor PluginProcessor { get; }
 
         /// <summary>
-        /// Gets the near cache manager.
+        /// Gets the platform cache manager.
         /// </summary>
         PlatformCacheManager PlatformCacheManager { get; }
 

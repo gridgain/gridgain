@@ -49,7 +49,7 @@
                     <property name="name" value="cachePlatformObj"/>
                     <property name="platformCacheConfiguration">
                         <bean class="org.apache.ignite.configuration.PlatformCacheConfiguration">
-                            <!-- Do not specify types: near cache defaults to ConcurrentDictionary<object, object> -->
+                            <!-- Do not specify types: platform cache defaults to ConcurrentDictionary<object, object> -->
                         </bean>
                     </property>
                 </bean>
