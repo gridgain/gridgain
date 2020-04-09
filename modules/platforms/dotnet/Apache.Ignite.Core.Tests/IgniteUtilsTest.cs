@@ -42,8 +42,8 @@ namespace Apache.Ignite.Core.Tests
             
             foreach (var mode in allModesExceptNative)
             {
-                var hasNativeNear = mode == CachePeekMode.All;
-                Assert.AreEqual(Tuple.Create((int) mode, hasNativeNear), EncodePeekModes(mode), mode.ToString());
+                var hasPlatform = mode == CachePeekMode.All;
+                Assert.AreEqual(Tuple.Create((int) mode, hasPlatform), EncodePeekModes(mode), mode.ToString());
             }
             
             Assert.AreEqual(Tuple.Create(63, true), EncodePeekModes(allModes));
@@ -62,9 +62,9 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static Tuple<int, bool> EncodePeekModes(params CachePeekMode[] modes)
         {
-            bool hasNativeNear;
-            var encoded = IgniteUtils.EncodePeekModes(modes, out hasNativeNear);
-            return Tuple.Create(encoded, hasNativeNear);
+            bool hasPlatform;
+            var encoded = IgniteUtils.EncodePeekModes(modes, out hasPlatform);
+            return Tuple.Create(encoded, hasPlatform);
         }
     }
 }

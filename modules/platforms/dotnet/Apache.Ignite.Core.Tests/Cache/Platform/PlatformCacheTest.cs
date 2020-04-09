@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
     using NUnit.Framework;
 
     /// <summary>
-    /// Near cache test.
+    /// Platform cache test.
     /// </summary>
     public sealed class PlatformCacheTest
     {
@@ -133,28 +133,6 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         {
             _grid.GetCache<int, int>(CacheName).RemoveAll();
             _logger.Clear();
-        }
-
-        /// <summary>
-        /// Tests the existing near cache.
-        /// </summary>
-        [Test]
-        public void TestExistingNearCache()
-        {
-            var cache = _grid.GetCache<int, int>(CacheName);
-            cache[1] = 1;
-
-            var nearCache = _grid.GetOrCreateNearCache<int, int>(CacheName, new NearCacheConfiguration());
-            
-            Assert.AreEqual(1, nearCache[1]);
-
-            // GetOrCreate when exists
-            nearCache = _grid.GetOrCreateNearCache<int, int>(CacheName, new NearCacheConfiguration());
-            
-            Assert.AreEqual(1, nearCache[1]);
-
-            cache[1] = 2;
-            Assert.AreEqual(2, nearCache[1]);
         }
 
         /// <summary>
@@ -406,7 +384,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
         }
 
         /// <summary>
-        /// Tests that error during Put does not affect correct data in near cache.
+        /// Tests that error during Put does not affect correct data in platform cache.
         /// </summary>
         [Test]
         public void TestFailedPutKeepsCorrectPlatformCacheValue(
@@ -1332,10 +1310,10 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             var clientCache = _client.CreateCache<int, Foo>(cfg, nearCfg);
             var serverCache = _grid.GetCache<int, Foo>(cfg.Name);
 
-            // Put Foo, but near cache expects Guid.
+            // Put Foo, but platform cache expects Guid.
             clientCache.GetAndPut(1, new Foo(2));
             
-            // Entry is not in near cache.
+            // Entry is not in platform cache.
             Assert.AreEqual(0, clientCache.GetLocalSize(CachePeekMode.Platform));
 
             // Ignite cache is updated.
@@ -1352,7 +1330,7 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
 
         /// <summary>
         /// <see cref="ICache{TK,TV}.LoadCache"/> uses same filter mechanism as <see cref="ScanQuery{TK,TV}"/>.
-        /// Near cache should never be used for cache store load filters.  
+        /// Platform cache should never be used for cache store load filters.  
         /// </summary>
         [Test]
         public void TestCacheStoreLoadFilterDoesNotUseNearCache()

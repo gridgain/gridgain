@@ -223,7 +223,7 @@ namespace Apache.Ignite.Core.Impl
                 res |= (int) mode;
             }
 
-            // Clear NativeNear bit: Java does not understand it.
+            // Clear Platform bit: Java does not understand it.
             const int platformCache = (int) CachePeekMode.Platform;
             const int all = (int) CachePeekMode.All;
             hasPlatformCache = (res & platformCache) == platformCache || (res & all) == all;
