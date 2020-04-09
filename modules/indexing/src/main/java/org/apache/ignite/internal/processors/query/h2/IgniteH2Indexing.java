@@ -1005,8 +1005,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         res.setSchema(schemaName);
         res.setSql(sql);
 
-        if (qry.getTimeout() > 0)
-            res.setTimeout(qry.getTimeout(), TimeUnit.MILLISECONDS);
+        QueryUtils.copyQueryTimeout(res, qry.getTimeout(), TimeUnit.MILLISECONDS);
 
         return res;
     }
