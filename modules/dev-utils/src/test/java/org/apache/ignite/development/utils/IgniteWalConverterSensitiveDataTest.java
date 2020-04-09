@@ -33,7 +33,6 @@ import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
-import org.apache.ignite.internal.pagemem.wal.record.SwitchSegmentRecord;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.CacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.GridCacheOperation;
@@ -43,14 +42,16 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.testframework.wal.record.UnsupportedWalRecord;
+import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
 
 import static java.lang.String.valueOf;
 import static java.lang.System.setOut;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
+import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
+import static org.apache.ignite.testframework.wal.record.RecordUtils.isLogEnabled;
 
 /**
  * Class for testing sensitive data when reading {@link WALRecord} using
@@ -88,11 +89,16 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         IgniteEx crd = startGrid(nodeId);
         crd.cluster().active(true);
 
+        try (Transaction tx = crd.transactions().txStart()) {
+            crd.cache(DEFAULT_CACHE_NAME).put(SENSITIVE_DATA, SENSITIVE_DATA);
+            tx.commit();
+        }
+
         GridKernalContext kernalCtx = crd.context();
         IgniteWriteAheadLogManager wal = kernalCtx.cache().context().wal();
 
         for (WALRecord walRecord : withSensitiveData()) {
-            if (!UnsupportedWalRecord.class.isInstance(walRecord) && !SwitchSegmentRecord.class.isInstance(walRecord))
+            if (isLogEnabled(walRecord))
                 wal.log(walRecord);
         }
 
@@ -144,7 +150,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         return super.getConfiguration(igniteInstanceName)
             .setDataStorageConfiguration(new DataStorageConfiguration().setDefaultDataRegionConfiguration(
                 new DataRegionConfiguration().setPersistenceEnabled(true)
-            )).setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME));
+            )).setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL));
     }
 
     /**
