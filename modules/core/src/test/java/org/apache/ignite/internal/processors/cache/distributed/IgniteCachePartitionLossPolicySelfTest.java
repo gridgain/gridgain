@@ -122,7 +122,8 @@ public class IgniteCachePartitionLossPolicySelfTest extends GridCommonAbstractTe
 
         for (CacheAtomicityMode mode : Arrays.asList(TRANSACTIONAL, ATOMIC)) {
             // Test always scenarios.
-            params.add(new Object[]{TRANSACTIONAL, IGNORE, 0, false, 3, new int[]{2}, false});
+            params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, false});
+            params.add(new Object[]{mode, IGNORE, 0, false, 3, new int[]{2}, true});
 
             // Random scenarios.
             for (Integer backups : Arrays.asList(0, 1, 2)) {
