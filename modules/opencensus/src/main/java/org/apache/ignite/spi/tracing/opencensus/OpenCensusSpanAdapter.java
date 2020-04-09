@@ -123,9 +123,6 @@ public class OpenCensusSpanAdapter implements Span {
             Thread.currentThread().interrupt();
         }
 
-        // Useful for debug.
-        span.putAttribute("end.stack.trace", AttributeValue.stringAttributeValue(U.stackTrace()));
-
         span.end();
 
         ended = true;
