@@ -19,19 +19,24 @@ package org.apache.ignite.util;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.IgniteDataStreamer;
+import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
+import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
+import org.apache.ignite.lang.IgnitePredicate;
 import org.junit.Test;
 
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.INDEX_FILE_NAME;
 import static org.apache.ignite.internal.processors.cache.verify.IdleVerifyUtility.IDLE_DATA_ALTERATION_MSG;
@@ -139,7 +144,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         int maxItems = 10000;
 
-        createCacheAndPreload(ig, cntPreload, 1);
+        createCacheAndPreload(ig, cntPreload, 1, new CachePredicate(F.asList(ig.name())));
 
         GridCacheDatabaseSharedManager db = null;
 
@@ -209,6 +214,28 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
         out = testOut.toString();
 
         assertNotContains(log, out, IDLE_DATA_ALTERATION_MSG);
+    }
+
+    /**
+     *
+     */
+    static class CachePredicate implements IgnitePredicate<ClusterNode> {
+        /** */
+        private List<String> excludeNodes;
+
+        /**
+         * @param excludeNodes Nodes names.
+         */
+        public CachePredicate(List<String> excludeNodes) {
+            this.excludeNodes = excludeNodes;
+        }
+
+        /** {@inheritDoc} */
+        @Override public boolean apply(ClusterNode clusterNode) {
+            String name = clusterNode.attribute(ATTR_IGNITE_INSTANCE_NAME).toString();
+
+            return !excludeNodes.contains(name);
+        }
     }
 
     /**

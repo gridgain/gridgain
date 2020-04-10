@@ -54,6 +54,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.jetbrains.annotations.Nullable;
 
 import static java.lang.String.join;
 import static java.lang.System.lineSeparator;
@@ -63,7 +64,6 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.nonNull;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_ENABLE_EXPERIMENTAL_COMMAND;
 import static org.apache.ignite.configuration.DataStorageConfiguration.DFLT_CHECKPOINT_FREQ;
-import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_INSTANCE_NAME;
 import static org.apache.ignite.internal.processors.cache.verify.VerifyBackupPartitionsDumpTask.IDLE_DUMP_FILE_PREFIX;
 import static org.apache.ignite.testframework.GridTestUtils.cleanIdleVerifyLogFiles;
 
@@ -367,40 +367,28 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
      * @param ignite Ignite.
      * @param countEntries Count of entries.
      * @param partitions Partitions count.
+     * @param filter Node filter.
      */
-    protected void createCacheAndPreload(Ignite ignite, int countEntries, int partitions) {
+    protected void createCacheAndPreload(
+        Ignite ignite,
+        int countEntries,
+        int partitions,
+        @Nullable IgnitePredicate<ClusterNode> filter
+    ) {
         assert nonNull(ignite);
 
-        ignite.createCache(new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+        CacheConfiguration<?, ?> ccfg = new CacheConfiguration<>(DEFAULT_CACHE_NAME)
             .setAffinity(new RendezvousAffinityFunction(false, partitions))
-            .setNodeFilter(new CachePredicate(F.asList(ignite.name())))
-            .setBackups(1));
+            .setBackups(1);
+
+        if (filter != null)
+            ccfg.setNodeFilter(filter);
+
+        ignite.createCache(ccfg);
 
         try (IgniteDataStreamer streamer = ignite.dataStreamer(DEFAULT_CACHE_NAME)) {
             for (int i = 0; i < countEntries; i++)
                 streamer.addData(i, i);
-        }
-    }
-
-    /**
-     *
-     */
-    static class CachePredicate implements IgnitePredicate<ClusterNode> {
-        /** */
-        private List<String> excludeNodes;
-
-        /**
-         * @param excludeNodes Nodes names.
-         */
-        public CachePredicate(List<String> excludeNodes) {
-            this.excludeNodes = excludeNodes;
-        }
-
-        /** {@inheritDoc} */
-        @Override public boolean apply(ClusterNode clusterNode) {
-            String name = clusterNode.attribute(ATTR_IGNITE_INSTANCE_NAME).toString();
-
-            return !excludeNodes.contains(name);
         }
     }
 
@@ -411,6 +399,6 @@ public abstract class GridCommandHandlerAbstractTest extends GridCommonAbstractT
      * @param countEntries Count of entries.
      */
     protected void createCacheAndPreload(Ignite ignite, int countEntries) {
-        createCacheAndPreload(ignite, countEntries, 32);
+        createCacheAndPreload(ignite, countEntries, 32, null);
     }
 }
