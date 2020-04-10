@@ -79,10 +79,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     }
 
     /**
-     * @throws Exception if failed.
+     * Current test checks that in case if DNS will not be able to resolve hostname,
+     * then no exceptions were thrown from getRegisteredAddresses method.
      */
     @Test
-    public void testFqdnResolveWhenDnsCantResolveHostName() throws Exception {
+    public void testFqdnResolveWhenDnsCantResolveHostName() {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Set<String> addrs = new HashSet<>();
@@ -101,6 +102,8 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     }
 
     /**
+     * Current test checks that TcpDiscoveryVmIpFinder will return new IP if DNS service will change the FQDn resolution.
+     *
      * @throws Exception if failed.
      */
     @Test
@@ -134,10 +137,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     }
 
     /**
-     * @throws Exception if failed.
+     * Current test checks that in case of roundrobin DNS server that returns two IP if we set the FQDN name with port range
+     * then every pair of host/port addresses will have the same IP (not different).
      */
     @Test
-    public void testFqdnWithPortRangeResolveWithTwoIpRoundRobinDns() throws Exception {
+    public void testFqdnWithPortRangeResolveWithTwoIpRoundRobinDns() {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Set<String> addrs = new HashSet<>();
@@ -172,10 +176,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     }
 
     /**
-     * @throws Exception if failed.
+     * Current test checks that in case if TcpDiscoveryVmIpFinder has FQDN name and additional "registeredAddresses"
+     * then both of them can be resolved.
      */
     @Test
-    public void testFqdnResolveAfterDnsHostChangeWithRegisteredAddrs() throws Exception {
+    public void testFqdnResolveAfterDnsHostChangeWithRegisteredAddrs() {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Set<String> addrs = new HashSet<>();
@@ -215,10 +220,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     }
 
     /**
-     * @throws Exception if failed.
+     * Current test checks that in case if FQDN name with port range can be resolved in several IP addresses at the same time
+     * then should be returned set with full ip/port sets for all ip addresses that can be resolved.
      */
     @Test
-    public void testMultiFqdnResolveWithPortRange() throws Exception {
+    public void testMultiFqdnResolveWithPortRange() {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Collection<String> addrs = new ArrayList<>();
@@ -256,10 +262,11 @@ public class TcpDiscoveryVmIpFinderDnsResolveTest extends GridCommonAbstractTest
     }
 
     /**
-     * @throws Exception if failed.
+     * Current test checks that if FQDN name can be resolved in several IP addresses at the same time
+     * then all of them should be returned.
      */
     @Test
-    public void testMultiFqdnResolve() throws Exception {
+    public void testMultiFqdnResolve() {
         TcpDiscoveryVmIpFinder ipFinder = new TcpDiscoveryVmIpFinder();
 
         Collection<String> addrs = new ArrayList<>();
