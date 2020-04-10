@@ -248,7 +248,7 @@ public class JdbcUtils {
     /**
      */
     public static Timestamp convertWithTimeZone(Timestamp ts, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null)
+        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
             return ts;
 
         Instant i = Instant.ofEpochMilli(ts.getTime());
@@ -263,7 +263,7 @@ public class JdbcUtils {
     /**
      */
     public static Time convertWithTimeZone(Time t, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null)
+        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
             return t;
 
         Instant i = Instant.ofEpochMilli(t.getTime());
@@ -278,7 +278,7 @@ public class JdbcUtils {
     /**
      */
     public static java.util.Date convertWithTimeZone(java.util.Date t, TimeZone tzFrom, TimeZone tzTo) {
-        if (tzTo == null || tzFrom == null)
+        if (tzTo == null || tzFrom == null || tzTo.getID().equals(tzFrom.getID()))
             return t;
 
         Instant i = Instant.ofEpochMilli(t.getTime());
