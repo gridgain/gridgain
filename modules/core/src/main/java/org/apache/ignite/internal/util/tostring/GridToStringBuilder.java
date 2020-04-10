@@ -48,13 +48,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.nonNull;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_COLLECTION_LIMIT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_THROW_RUNTIME_EXCEPTION;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-import static org.apache.ignite.IgniteSystemProperties.getEnum;
-import static org.apache.ignite.internal.util.tostring.GridProcessingSensitiveDataStrategy.HIDE;
 
 /**
  * Provides auto-generation framework for {@code toString()} output.
@@ -104,25 +101,12 @@ public class GridToStringBuilder {
     /** Supplier for {@link #includeSensitive} with default behavior. */
     private static final AtomicReference<Supplier<Boolean>> INCL_SENS_SUP_REF =
         new AtomicReference<>(new Supplier<Boolean>() {
-            /** Value of {@link IgniteSystemProperties#IGNITE_TO_STRING_INCLUDE_SENSITIVE}. */
+            /** Value of "IGNITE_TO_STRING_INCLUDE_SENSITIVE". */
             final boolean INCLUDE_SENSITIVE = getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, true);
 
             /** {@inheritDoc} */
             @Override public Boolean get() {
                 return INCLUDE_SENSITIVE;
-            }
-        });
-
-    /** Supplier for {@link #sensitiveStrategy} with default behavior. */
-    private static final AtomicReference<Supplier<GridProcessingSensitiveDataStrategy>> SENS_STGY_SUP_REF =
-        new AtomicReference<>(new Supplier<GridProcessingSensitiveDataStrategy>() {
-            /** Value of {@link IgniteSystemProperties#IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY}. */
-            final GridProcessingSensitiveDataStrategy SENSITIVE_STGY =
-                getEnum(IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY, HIDE);
-
-            /** {@inheritDoc} */
-            @Override public GridProcessingSensitiveDataStrategy get() {
-                return SENSITIVE_STGY;
             }
         });
 
@@ -166,59 +150,34 @@ public class GridToStringBuilder {
     private static class Holder {
         /** Supplier holder for {@link #includeSensitive}. */
         static final Supplier<Boolean> INCL_SENS_SUP = INCL_SENS_SUP_REF.get();
-
-        /** Supplier holder for {@link #sensitiveStrategy}. */
-        static final Supplier<GridProcessingSensitiveDataStrategy> SENS_STGY_SUP = SENS_STGY_SUP_REF.get();
     }
 
     /**
-     * Setting logic of {@link #includeSensitive} method.<br/>
-     * By default, it take value of
-     * {@link IgniteSystemProperties#IGNITE_TO_STRING_INCLUDE_SENSITIVE IGNITE_TO_STRING_INCLUDE_SENSITIVE}.<br/>
-     * <b>Important!</b> Changing logic is possible only until first call of {@link #includeSensitive} method.<br/>
+     * Setting the logic of the {@link #includeSensitive} method. <br/>
+     * By default, it take the value of
+     * {@link IgniteSystemProperties#IGNITE_TO_STRING_INCLUDE_SENSITIVE
+     * IGNITE_TO_STRING_INCLUDE_SENSITIVE} system property. <br/>
+     * <b>Important!</b> Changing the logic is possible only until the first
+     * call of  {@link #includeSensitive} method. <br/>
      *
-     * @param sup Supplier.
+     * @param sup
      */
     public static void setIncludeSensitiveSupplier(Supplier<Boolean> sup) {
-        assert nonNull(sup.get());
+        assert nonNull(sup);
 
         INCL_SENS_SUP_REF.set(sup);
     }
 
     /**
-     * Setting logic of {@link #sensitiveStrategy} method.<br/>
-     * By default, it take value of
-     * {@link IgniteSystemProperties#IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY}.<br/>
-     * <b>Important!</b> Changing logic is possible only until first call of {@link #sensitiveStrategy} method.<br/>
+     * Return {@code true} if need to include sensitive data otherwise
+     * {@code false}.
      *
-     * @param sup Supplier.
-     */
-    public static void setSensitiveStrategySupplier(Supplier<GridProcessingSensitiveDataStrategy> sup) {
-        assert nonNull(sup.get());
-
-        SENS_STGY_SUP_REF.set(sup);
-    }
-
-    /**
-     * Return {@code true} if need to include sensitive data otherwise {@code false}.<br/>
-     * If {@code false}, sensitive data must be processed according to {@link #sensitiveStrategy}.
-     *
-     * @return {@code true} if need to include sensitive data otherwise {@code false}.
-     * @see GridToStringBuilder#setIncludeSensitiveSupplier
+     * @return {@code true} if need to include sensitive data otherwise
+     *      {@code false}.
+     * @see GridToStringBuilder#setIncludeSensitiveSupplier(Supplier)
      */
     public static boolean includeSensitive() {
         return Holder.INCL_SENS_SUP.get();
-    }
-
-    /**
-     * Return Strategy for processing of sensitive data.<br/>
-     * NOTE: Strategy should only be used if {@link #includeSensitive} returns {@code false}.
-     *
-     * @return Strategy for processing of sensitive data.
-     * @see GridToStringBuilder#setSensitiveStrategySupplier
-     */
-    public static GridProcessingSensitiveDataStrategy sensitiveStrategy() {
-        return Holder.SENS_STGY_SUP.get();
     }
 
     /**

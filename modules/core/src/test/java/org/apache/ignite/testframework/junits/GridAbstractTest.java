@@ -42,6 +42,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.UnaryOperator;
 import javax.cache.configuration.Factory;
 import javax.cache.configuration.FactoryBuilder;
 import javax.management.DynamicMBean;
@@ -146,18 +147,15 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_CLIENT_CACHE_CHANG
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DISCO_FAILED_CLIENT_RECONNECT_DELAY;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_EVENT_DRIVEN_SERVICE_PROCESSOR_ENABLED;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP;
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_UPDATE_NOTIFIER;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
-import static org.apache.ignite.IgniteSystemProperties.getEnum;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL_SNAPSHOT;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.internal.GridKernalState.DISCONNECTED;
-import static org.apache.ignite.internal.util.tostring.GridProcessingSensitiveDataStrategy.HIDE;
-import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.getFieldValue;
+import static org.apache.ignite.testframework.GridTestUtils.getFieldValueHierarchy;
 import static org.apache.ignite.testframework.GridTestUtils.setFieldValue;
 import static org.apache.ignite.testframework.config.GridTestProperties.BINARY_MARSHALLER_USE_SIMPLE_NAME_MAPPER;
 import static org.apache.ignite.testframework.config.GridTestProperties.IGNITE_CFG_PREPROCESSOR_CLS;
@@ -273,7 +271,6 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
         System.setProperty(IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP, "false");
 
         S.setIncludeSensitiveSupplier(() -> getBoolean(IGNITE_TO_STRING_INCLUDE_SENSITIVE, true));
-        S.setSensitiveStrategySupplier(() -> getEnum(IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY, HIDE));
 
         if (GridTestClockTimer.startTestTimer()) {
             Thread timer = new Thread(new GridTestClockTimer(), "ignite-clock-for-tests");
@@ -649,6 +646,8 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
     private void beforeFirstTest() throws Exception {
         sharedStaticIpFinder = new TcpDiscoveryVmIpFinder(true);
 
+        clsLdr = Thread.currentThread().getContextClassLoader();
+
         info(">>> Starting test class: " + testClassDescription() + " <<<");
 
         if (isSafeTopology())
@@ -674,6 +673,7 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
             t.printStackTrace();
 
             try {
+                // This is a very questionable solution.
                 cleanUpTestEnviroment();
             }
             catch (Exception e) {
@@ -892,7 +892,19 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * @throws Exception If anything failed.
      */
     protected IgniteEx startGrid(int idx) throws Exception {
-        return (IgniteEx)startGrid(getTestIgniteInstanceName(idx));
+        return startGrid(getTestIgniteInstanceName(idx));
+    }
+
+    /**
+     * Starts new grid with given index.
+     *
+     * @param idx Index of the grid to start.
+     * @param cfgOp Configuration mutator. Can be used to avoid overcomplification of {@link #getConfiguration()}.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(int idx, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
+        return startGrid(getTestIgniteInstanceName(idx), cfgOp);
     }
 
     /**
@@ -950,12 +962,64 @@ public abstract class GridAbstractTest extends JUnitAssertAware {
      * Starts new grid with given name.
      *
      * @param igniteInstanceName Ignite instance name.
+     * @param cfgOp Configuration mutator. Can be used to avoid overcomplification of {@link #getConfiguration()}.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected IgniteEx startGrid(String igniteInstanceName, UnaryOperator<IgniteConfiguration> cfgOp) throws Exception {
+        return (IgniteEx)startGrid(igniteInstanceName, cfgOp, null);
+    }
+
+    /**
+     * Starts new grid with given name.
+     *
+     * @param igniteInstanceName Ignite instance name.
      * @param ctx Spring context.
      * @return Started grid.
      * @throws Exception If failed.
      */
     protected Ignite startGrid(String igniteInstanceName, GridSpringResourceContext ctx) throws Exception {
         return startGrid(igniteInstanceName, optimize(getConfiguration(igniteInstanceName)), ctx);
+    }
+
+    /**
+     * Starts new grid with given name.
+     *
+     * @param igniteInstanceName Ignite instance name.
+     * @param cfgOp Configuration mutator. Can be used to avoid overcomplification of {@link #getConfiguration()}.
+     * @param ctx Spring context.
+     * @return Started grid.
+     * @throws Exception If anything failed.
+     */
+    protected Ignite startGrid(String igniteInstanceName, UnaryOperator<IgniteConfiguration> cfgOp, GridSpringResourceContext ctx) throws Exception {
+        IgniteConfiguration cfg = optimize(getConfiguration(igniteInstanceName));
+
+        if (cfgOp != null)
+            cfg = cfgOp.apply(cfg);
+
+        return startGrid(igniteInstanceName, cfg, ctx);
+    }
+
+    /**
+     * @param regionCfg Region config.
+     */
+    private void validateDataRegion(DataRegionConfiguration regionCfg) {
+        if (regionCfg.isPersistenceEnabled() && regionCfg.getMaxSize() == DataStorageConfiguration.DFLT_DATA_REGION_MAX_SIZE)
+            throw new AssertionError("Max size of data region should be set explicitly to avoid memory over usage");
+    }
+
+    /**
+     * @param cfg Config.
+     */
+    private void validateConfiguration(IgniteConfiguration cfg) {
+        if (cfg.getDataStorageConfiguration() != null) {
+            validateDataRegion(cfg.getDataStorageConfiguration().getDefaultDataRegionConfiguration());
+
+            if (cfg.getDataStorageConfiguration().getDataRegionConfigurations() != null) {
+                for (DataRegionConfiguration reg : cfg.getDataStorageConfiguration().getDataRegionConfigurations())
+                    validateDataRegion(reg);
+            }
+        }
     }
 
     /**

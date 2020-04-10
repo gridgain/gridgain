@@ -36,10 +36,10 @@ import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
 import org.apache.ignite.internal.util.GridLogThrottle;
-import org.apache.ignite.internal.util.tostring.GridProcessingSensitiveDataStrategy;
 import org.apache.ignite.internal.util.tostring.GridToStringBuilder;
 import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.plugin.security.SecurityPermission;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.stream.StreamTransformer;
 import org.jetbrains.annotations.Nullable;
 
@@ -189,9 +189,7 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TROUBLESHOOTING_LOGGER = "IGNITE_TROUBLESHOOTING_LOGGER";
 
     /**
-     * Enables writing sensitive information in {@code toString()} output.
-     * If set {@code false}, sensitive data is processed according to
-     * {@link #IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY}. By default, {@code true}.
+     * Setting to {@code true} enables writing sensitive information in {@code toString()} output.
      */
     public static final String IGNITE_TO_STRING_INCLUDE_SENSITIVE = "IGNITE_TO_STRING_INCLUDE_SENSITIVE";
 
@@ -1398,11 +1396,12 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_INDEX_COST_FUNCTION = "IGNITE_INDEX_COST_FUNCTION";
 
     /**
-     * Setting a {@link GridProcessingSensitiveDataStrategy strategy}
-     * for processing sensitive data, when {@link #IGNITE_TO_STRING_INCLUDE_SENSITIVE} = {@code false}.
-     * By default, {@link GridProcessingSensitiveDataStrategy#HIDE HIDE}.
+     * Enables setting attribute value of {@link
+     * TcpCommunicationSpi#ATTR_HOST_NAMES ATTR_HOST_NAMES} when value {@link
+     * IgniteConfiguration#getLocalHost getLocalHost} is ip, for backward
+     * compatibility. By default, {@code false}.
      */
-    public static final String IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY = "IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY";
+    public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
 
     /**
      * Enforces singleton.
@@ -1442,16 +1441,7 @@ public final class IgniteSystemProperties {
         if (val == null)
             return dflt;
 
-        E e;
-
-        try {
-            e = Enum.valueOf(enumCls, val);
-        }
-        catch (IllegalArgumentException ignore) {
-            e = dflt;
-        }
-
-        return e;
+        return Enum.valueOf(enumCls, val);
     }
 
     /**

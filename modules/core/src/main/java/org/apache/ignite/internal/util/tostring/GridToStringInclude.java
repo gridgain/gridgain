@@ -35,10 +35,9 @@ import java.lang.annotation.Target;
 public @interface GridToStringInclude {
     /**
      * A flag indicating a sensitive information stored in the field or fields of the class.<br/>
-     * If {@link IgniteSystemProperties#IGNITE_TO_STRING_INCLUDE_SENSITIVE IGNITE_TO_STRING_INCLUDE_SENSITIVE} = {@code true},
-     * then such information will be included in output {@code toString()}, otherwise, depending on the {@link GridProcessingSensitiveDataStrategy strategy}
-     * set in {@link IgniteSystemProperties#IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY IGNITE_PROCESSING_SENSITIVE_DATA_STRATEGY},
-     * this information will be processed accordingly in output {@code toString()}.
+     * Such information will be included in {@code toString()} output ONLY when the system property
+     * {@link IgniteSystemProperties#IGNITE_TO_STRING_INCLUDE_SENSITIVE IGNITE_TO_STRING_INCLUDE_SENSITIVE}
+     * is set to {@code true}.
      *
      * @return Attribute value.
      */
