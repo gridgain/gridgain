@@ -117,7 +117,7 @@ namespace ignite
     {
         namespace query
         {
-            TypeInfoQuery::TypeInfoQuery(diagnostic::Diagnosable& diag, int16_t sqlType) :
+            TypeInfoQuery::TypeInfoQuery(diagnostic::DiagnosableAdapter& diag, int16_t sqlType) :
                 Query(diag, QueryType::TYPE_INFO),
                 columnsMeta(),
                 executed(false),
@@ -190,9 +190,9 @@ namespace ignite
                 return SqlResult::AI_SUCCESS;
             }
 
-            const meta::ColumnMetaVector & TypeInfoQuery::GetMeta() const
+            const meta::ColumnMetaVector* TypeInfoQuery::GetMeta()
             {
-                return columnsMeta;
+                return &columnsMeta;
             }
 
             SqlResult::Type TypeInfoQuery::FetchNextRow(app::ColumnBindingMap & columnBindings)
