@@ -17,7 +17,9 @@
 package org.apache.ignite.util;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
@@ -27,6 +29,7 @@ import org.junit.Test;
 import static java.lang.String.format;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_INDEX_PAYLOAD_SIZE;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_OK;
+import static org.apache.ignite.internal.processors.cache.CheckIndexesInlineSizeOnNodeJoinMultiJvmTest.getSqlStatements;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 
 /**
@@ -34,9 +37,6 @@ import static org.apache.ignite.testframework.GridTestUtils.assertContains;
  */
 @WithSystemProperty(key = IGNITE_MAX_INDEX_PAYLOAD_SIZE, value = "1")
 public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHandlerAbstractTest {
-    /** */
-    private static final String STR = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
     /** */
     private static final String INDEX_PROBLEM_FMT =
         "Full index name: PUBLIC#TEST_TABLE#%s nodes: [%s] inline size: 1, nodes: [%s] inline size: 2";
@@ -75,15 +75,8 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
 
         startGrids(NODES_CNT).cluster().active(true);
 
-        executeSql(grid(0), "CREATE TABLE TEST_TABLE (i INT, l LONG, s0 VARCHAR, s1 VARCHAR, PRIMARY KEY (i, s0))");
-
-        for (int i = 0; i < 10; i++)
-            executeSql(grid(0), "INSERT INTO TEST_TABLE (i, l, s0, s1) VALUES (?, ?, ?, ?)", i, i * i, STR + i, STR + i * i);
-
-        executeSql(grid(0), "CREATE INDEX i_idx ON TEST_TABLE(i)");
-        executeSql(grid(0), "CREATE INDEX l_idx ON TEST_TABLE(l)");
-        executeSql(grid(0), "CREATE INDEX s0_idx ON TEST_TABLE(s0) INLINE_SIZE 10");
-        executeSql(grid(0), "CREATE INDEX s1_idx ON TEST_TABLE(s1)");
+        for (Map.Entry<String, Object[]> entry : getSqlStatements().entrySet())
+            executeSql(grid(0), entry.getKey(), entry.getValue());
     }
 
     /** {@inheritDoc} */
@@ -125,18 +118,7 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "check_index_inline_sizes"));
 
-        UUID locNodeId = grid(0).localNode().id();
-
-        String utilityOutput = testOut.toString();
-
-        assertContains(log, utilityOutput, "Found 4 secondary indexes.");
-        assertContains(log, utilityOutput, "3 indexes have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
-        assertContains(log, utilityOutput, "Indexes:");
-        assertContains(log, utilityOutput, format(INDEX_PROBLEM_FMT, "L_IDX", locNodeId, remoteNodeId));
-        assertContains(log, utilityOutput, format(INDEX_PROBLEM_FMT, "S1_IDX", locNodeId, remoteNodeId));
-        assertContains(log, utilityOutput, format(INDEX_PROBLEM_FMT, "I_IDX", locNodeId, remoteNodeId));
-        assertContains(log, utilityOutput, "  Check that value of property IGNITE_MAX_INDEX_PAYLOAD_SIZE are the same on all nodes.");
-        assertContains(log, utilityOutput, "  Recreate indexes with different inline size.");
+        checkUtilityOutput(log, testOut.toString(), grid(0).localNode().id(), remoteNodeId);
     }
 
     /** */
@@ -147,5 +129,16 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
     /** */
     private static List<List<?>> executeSql(IgniteEx node, String stmt, Object... args) {
         return node.context().query().querySqlFields(new SqlFieldsQuery(stmt).setArgs(args), true).getAll();
+    }
+
+    public static void checkUtilityOutput(IgniteLogger log, String output, UUID localNodeId, UUID remoteNodeId) {
+        assertContains(log, output, "Found 4 secondary indexes.");
+        assertContains(log, output, "3 indexes have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
+        assertContains(log, output, "Indexes:");
+        assertContains(log, output, format(INDEX_PROBLEM_FMT, "L_IDX", localNodeId, remoteNodeId));
+        assertContains(log, output, format(INDEX_PROBLEM_FMT, "S1_IDX", localNodeId, remoteNodeId));
+        assertContains(log, output, format(INDEX_PROBLEM_FMT, "I_IDX", localNodeId, remoteNodeId));
+        assertContains(log, output, "  Check that value of property IGNITE_MAX_INDEX_PAYLOAD_SIZE are the same on all nodes.");
+        assertContains(log, output, "  Recreate indexes with different inline size.");
     }
 }

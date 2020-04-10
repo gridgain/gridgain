@@ -18,11 +18,13 @@ package org.apache.ignite.internal.processors.cache;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -98,15 +100,8 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
 
         startGrids(NODES_CNT).cluster().active(true);
 
-        executeSql(grid(0), "CREATE TABLE TEST_TABLE (i INT, l LONG, s0 VARCHAR, s1 VARCHAR, PRIMARY KEY (i, s0))");
-
-        for (int i = 0; i < 10; i++)
-            executeSql(grid(0), "INSERT INTO TEST_TABLE (i, l, s0, s1) VALUES (?, ?, ?, ?)", i, i * i, STR + i, STR + i * i);
-
-        executeSql(grid(0), "CREATE INDEX i_idx ON TEST_TABLE(i)");
-        executeSql(grid(0), "CREATE INDEX l_idx ON TEST_TABLE(l)");
-        executeSql(grid(0), "CREATE INDEX s0_idx ON TEST_TABLE(s0) INLINE_SIZE 10");
-        executeSql(grid(0), "CREATE INDEX s1_idx ON TEST_TABLE(s1)");
+        for (Map.Entry<String, Object[]> entry : getSqlStatements().entrySet())
+            executeSql(grid(0), entry.getKey(), entry.getValue());
     }
 
     /** {@inheritDoc} */
@@ -236,5 +231,24 @@ public class CheckIndexesInlineSizeOnNodeJoinMultiJvmTest extends GridCommonAbst
     /** */
     private static List<List<?>> executeSql(IgniteEx node, String stmt, Object... args) {
         return node.context().query().querySqlFields(new SqlFieldsQuery(stmt).setArgs(args), true).getAll();
+    }
+
+    /** */
+    public static Map<String, Object[]> getSqlStatements() {
+        Object[] EMPTY = new Object[0];
+
+        Map<String, Object[]> stmts = new LinkedHashMap<>();
+
+        stmts.put("CREATE TABLE TEST_TABLE (i INT, l LONG, s0 VARCHAR, s1 VARCHAR, PRIMARY KEY (i, s0))", EMPTY);
+
+        for (int i = 0; i < 10; i++)
+            stmts.put("INSERT INTO TEST_TABLE (i, l, s0, s1) VALUES (?, ?, ?, ?)", Stream.of(i, i * i, STR + i, STR + i * i).toArray());
+
+        stmts.put("CREATE INDEX i_idx ON TEST_TABLE(i)", EMPTY);
+        stmts.put("CREATE INDEX l_idx ON TEST_TABLE(l)", EMPTY);
+        stmts.put("CREATE INDEX s0_idx ON TEST_TABLE(s0) INLINE_SIZE 10", EMPTY);
+        stmts.put("CREATE INDEX s1_idx ON TEST_TABLE(s1)", EMPTY);
+
+        return stmts;
     }
 }
