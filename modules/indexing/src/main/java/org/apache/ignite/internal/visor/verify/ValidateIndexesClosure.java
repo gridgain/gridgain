@@ -207,7 +207,8 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
                 if (desc == null)
                     missingCaches.add(cacheName);
                 else
-                    grpIds.add(desc.groupId());
+                    if (ignite.context().cache().cacheGroup(desc.groupId()).affinityNode())
+                        grpIds.add(desc.groupId());
             }
 
             if (!missingCaches.isEmpty()) {

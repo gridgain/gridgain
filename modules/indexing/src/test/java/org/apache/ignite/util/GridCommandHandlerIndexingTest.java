@@ -142,7 +142,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         int cntPreload = 100;
 
-        int maxItems = 10000;
+        int maxItems = 100000;
 
         createCacheAndPreload(ig, cntPreload, 1, new CachePredicate(F.asList(ig.name())));
 
