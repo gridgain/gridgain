@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal.commandline.cache;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -30,11 +32,11 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.client.GridClientConfiguration;
 import org.apache.ignite.internal.client.GridClientNode;
 import org.apache.ignite.internal.commandline.Command;
+import org.apache.ignite.internal.commandline.cache.check_indexes_inline_size.CheckIndexInlineSizesResult;
+import org.apache.ignite.internal.commandline.cache.check_indexes_inline_size.CheckIndexInlineSizesTask;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.internal.SB;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
-import org.apache.ignite.internal.commandline.cache.check_indexes_inline_size.CheckIndexInlineSizesResult;
-import org.apache.ignite.internal.commandline.cache.check_indexes_inline_size.CheckIndexInlineSizesTask;
 
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
@@ -59,23 +61,30 @@ public class CheckIndexInlineSizes implements Command<Void> {
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
+            log.severe("GG-23133 nodes: " + client.compute().nodes());
+
             Set<UUID> serverNodes = client.compute().nodes().stream()
                 .filter(node -> Objects.equals(node.attribute(ATTR_CLIENT_MODE), false))
                 .map(GridClientNode::nodeId)
                 .collect(toSet());
 
-            Set<UUID> supportedServerNodes = client.compute().nodes().stream()
-                .filter(CheckIndexInlineSizes::checkIndexInlineSizesSupported)
-                .map(GridClientNode::nodeId)
+            log.severe("GG-23133 server nodes: " + serverNodes);
+
+            Set<GridClientNode> supportedServerNodes = client.compute().nodes().stream()
+                .filter(n -> checkIndexInlineSizesSupported(log, n))
                 .collect(toSet());
 
-            CheckIndexInlineSizesResult res = client.compute().execute(
+            log.severe("GG-23133 supported server nodes: " + supportedServerNodes);
+
+            Collection<UUID> supportedServerNodeIds = F.transform(supportedServerNodes, GridClientNode::nodeId);
+
+            CheckIndexInlineSizesResult res = client.compute().projection(supportedServerNodes).execute(
                 CheckIndexInlineSizesTask.class.getName(),
-                new VisorTaskArgument<>(supportedServerNodes, false)
+                new VisorTaskArgument<>(supportedServerNodeIds, false)
             );
 
             Set<UUID> unsupportedNodes = serverNodes.stream()
-                .filter(n -> !supportedServerNodes.contains(n))
+                .filter(n -> !supportedServerNodeIds.contains(n))
                 .collect(toSet());
 
             analizeResults(log, unsupportedNodes, res);
@@ -162,7 +171,8 @@ public class CheckIndexInlineSizes implements Command<Void> {
     }
 
     /** */
-    private static boolean checkIndexInlineSizesSupported(GridClientNode node) {
+    private static boolean checkIndexInlineSizesSupported(Logger log, GridClientNode node) {
+        log.severe("checkIndexInlineSizesSupported() node: " + node + " features: " + node.attributes());
         return nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.CHECK_INDEX_INLINE_SIZES);
     }
 }
