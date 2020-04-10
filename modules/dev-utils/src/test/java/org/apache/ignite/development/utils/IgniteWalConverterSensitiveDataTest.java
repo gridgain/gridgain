@@ -39,7 +39,6 @@ import org.apache.ignite.internal.processors.cache.GridCacheOperation;
 import org.apache.ignite.internal.processors.cache.KeyCacheObjectImpl;
 import org.apache.ignite.internal.processors.cache.version.GridCacheVersion;
 import org.apache.ignite.internal.util.typedef.internal.CU;
-import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
@@ -47,8 +46,11 @@ import org.junit.Test;
 
 import static java.lang.String.valueOf;
 import static java.lang.System.setOut;
+import static java.lang.System.setProperty;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
+import static org.apache.ignite.development.utils.IgniteWalConverter.PRINT_RECORDS;
+import static org.apache.ignite.development.utils.IgniteWalConverter.SENSITIVE_DATA;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.wal.record.RecordUtils.isLogEnabled;
@@ -57,10 +59,9 @@ import static org.apache.ignite.testframework.wal.record.RecordUtils.isLogEnable
  * Class for testing sensitive data when reading {@link WALRecord} using
  * {@link IgniteWalConverter}.
  */
-@WithSystemProperty(key = "PRINT_RECORDS", value = "true")
 public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest {
     /** Sensitive data. */
-    private static final String SENSITIVE_DATA = "must_hide_it";
+    private static final String SENSITIVE_DATA_VALUE = "must_hide_it";
 
     /** Path to directory where WAL is stored. */
     private static String WAL_DIR_PATH;
@@ -90,7 +91,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         crd.cluster().active(true);
 
         try (Transaction tx = crd.transactions().txStart()) {
-            crd.cache(DEFAULT_CACHE_NAME).put(SENSITIVE_DATA, SENSITIVE_DATA);
+            crd.cache(DEFAULT_CACHE_NAME).put(SENSITIVE_DATA_VALUE, SENSITIVE_DATA_VALUE);
             tx.commit();
         }
 
@@ -133,7 +134,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         setOut(SYS_OUT);
 
         log.info(TEST_OUT.toString());
-        TEST_OUT.reset();
+        resetTestOut();
     }
 
     /** {@inheritDoc} */
@@ -153,42 +154,72 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
             )).setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL));
     }
 
-//    todo: Need test for:
-//    todo: org.apache.ignite.IgniteSystemProperties#getEnum(java.lang.Class<E>, java.lang.String, E)
-//    todo: org.apache.ignite.internal.util.tostring.GridToStringBuilder#sensitiveStrategy
-
     /**
-     * Test checks that by default sensitive data is displayed in
-     * {@link WALRecord} when use {@link IgniteWalConverter}.
+     * Test checks that by default {@link WALRecord} will not be output without
+     * system option {@link IgniteWalConverter#PRINT_RECORDS}.
      *
      * @throws Exception If failed.
      */
     @Test
-    public void testShowSensitiveDataByDefault() throws Exception {
-        assertTrue(S.includeSensitive());
-
+    public void testNotPrintRecordsByDefault() throws Exception {
         injectTestSystemOut();
 
         IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
 
-        assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA);
+        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
     }
 
     /**
-     * Test verifies that sensitive data will be hidden (by default).
+     * Test checks that by default sensitive data is displayed.
      *
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "false")
-    public void testHideSensitiveDataByDefault() throws Exception {
-        assertFalse(S.includeSensitive());
-
+    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
+    public void testShowSensitiveDataByDefault() throws Exception {
         injectTestSystemOut();
 
         IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
 
-        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA);
+        assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+    }
+
+    /**
+     * Test checks that sensitive data is displayed.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
+    @WithSystemProperty(key = SENSITIVE_DATA, value = "SHOW")
+    public void testShowSensitiveData() throws Exception {
+        injectTestSystemOut();
+
+        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
+        assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+
+        setProperty(SENSITIVE_DATA, currentTestMethod().getName());
+        resetTestOut();
+
+        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
+        assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+    }
+
+    /**
+     * Test verifies that sensitive data will be hidden.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
+    @WithSystemProperty(key = SENSITIVE_DATA, value = "HIDE")
+    @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
+    public void testHideSensitiveData() throws Exception {
+        injectTestSystemOut();
+
+        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
+
+        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
     }
 
     /**
@@ -196,6 +227,13 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      */
     private void injectTestSystemOut() {
         setOut(new PrintStream(TEST_OUT));
+    }
+
+    /**
+     * Reset {@link #TEST_OUT}.
+     */
+    private void resetTestOut() {
+        TEST_OUT.reset();
     }
 
     /**
@@ -210,8 +248,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
         DataEntry dataEntry = new DataEntry(
             cacheId,
-            new KeyCacheObjectImpl(SENSITIVE_DATA, null, 0),
-            new CacheObjectImpl(SENSITIVE_DATA, null),
+            new KeyCacheObjectImpl(SENSITIVE_DATA_VALUE, null, 0),
+            new CacheObjectImpl(SENSITIVE_DATA_VALUE, null),
             GridCacheOperation.CREATE,
             new GridCacheVersion(),
             new GridCacheVersion(),
@@ -220,10 +258,10 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
             0
         );
 
-        byte[] sensitiveDataBytes = SENSITIVE_DATA.getBytes(StandardCharsets.UTF_8);
+        byte[] sensitiveDataBytes = SENSITIVE_DATA_VALUE.getBytes(StandardCharsets.UTF_8);
 
         walRecords.add(new DataRecord(dataEntry));
-        walRecords.add(new MetastoreDataRecord(SENSITIVE_DATA, sensitiveDataBytes));
+        walRecords.add(new MetastoreDataRecord(SENSITIVE_DATA_VALUE, sensitiveDataBytes));
 
         return walRecords;
     }
