@@ -17,10 +17,13 @@
 package org.apache.ignite.development.utils;
 
 import java.io.File;
+import java.util.List;
 import org.apache.ignite.internal.pagemem.wal.WALIterator;
 import org.apache.ignite.internal.pagemem.wal.WALPointer;
+import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
+import org.apache.ignite.internal.pagemem.wal.record.UnwrappedDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
@@ -35,6 +38,7 @@ import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.logger.NullLogger;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
 import static org.apache.ignite.IgniteSystemProperties.getEnum;
@@ -140,15 +144,28 @@ public class IgniteWalConverter {
      * @param sensitiveData Strategy for processing of sensitive data.
      * @return String representation of {@link WALRecord}.
      */
-    static String toString(WALRecord walRecord, ProcessSensitiveData sensitiveData) {
+    private static String toString(WALRecord walRecord, ProcessSensitiveData sensitiveData) {
         if (SHOW == sensitiveData || HIDE == sensitiveData)
             return walRecord.toString();
 
         // TODO: 10.04.2020
         if (MetastoreDataRecord.class.isInstance(walRecord)) {
-        } else if (DataRecord.class.isInstance(walRecord)){
         }
-        
+        else if (DataRecord.class.isInstance(walRecord)) {
+            DataRecord dataRecord = (DataRecord)walRecord;
+
+            List<DataEntry> dataEntries = dataRecord.writeEntries();
+
+            if (!dataEntries.isEmpty()) {
+                dataEntries = dataEntries.stream()
+                    .map(dataEntry -> UnwrappedDataEntry.class.isInstance(dataEntry) ?
+                        new DataEntryWrapper(dataEntry, (UnwrappedDataEntry)dataEntry, sensitiveData) : dataEntry)
+                    .collect(toList());
+            }
+
+            dataRecord.setWriteEntries(dataEntries);
+        }
+
         return walRecord.toString();
     }
 }

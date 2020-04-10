@@ -222,6 +222,17 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
     }
 
+    @Test
+    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
+    @WithSystemProperty(key = SENSITIVE_DATA, value = "HASH")
+    public void testHashSensitiveData() throws Exception {
+        injectTestSystemOut();
+
+        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
+
+        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+    }
+
     /**
      * Inject {@link #TEST_OUT} to System.out for analyze in test.
      */

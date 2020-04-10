@@ -120,6 +120,6 @@ public class UnwrapMvccDataEntry extends MvccDataEntry implements UnwrappedDataE
         if (S.includeSensitive())
             sb.a("k = ").a(unwrappedKey()).a(", v = [ ").a(unwrappedValue()).a("], ");
 
-        return sb.a("super = [" + super.toString() + "]]").toString();
+        return sb.a("super = [").a(super.toString()).a("]]").toString();
     }
 }
