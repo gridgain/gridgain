@@ -249,7 +249,8 @@ public class GridDhtPartitionFullMap extends HashMap<UUID, GridDhtPartitionMap> 
 
     /** {@inheritDoc} */
     @Override public String toString() {
-        return S.toString(GridDhtPartitionFullMap.class, this, "size", size());
+        return S.toString(GridDhtPartitionFullMap.class, this, "size", size(), "map", map2string());
+        //return S.toString(GridDhtPartitionFullMap.class, this, "size", size());
     }
 
     /** {@inheritDoc} */

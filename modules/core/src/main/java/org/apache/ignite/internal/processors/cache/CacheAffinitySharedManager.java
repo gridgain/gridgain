@@ -55,10 +55,7 @@ import org.apache.ignite.internal.processors.affinity.GridAffinityAssignmentCach
 import org.apache.ignite.internal.processors.cache.distributed.dht.ClientCacheDhtTopologyFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAffinityAssignmentResponse;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtAssignmentFetchFuture;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupAffinityMessage;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionFullMap;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionMap;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.*;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridClientPartitionTopology;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
@@ -267,7 +264,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
      * @param top Topology.
      * @param checkGrpId Group ID.
      */
-    void checkRebalanceState(GridDhtPartitionTopology top, Integer checkGrpId) {
+    void checkRebalanceState(GridDhtPartitionTopology top, Integer checkGrpId, @Nullable GridDhtPartitionsSingleMessage msg0, ClusterNode sender) {
         CacheAffinityChangeMessage msg = null;
 
         synchronized (mux) {
@@ -303,15 +300,23 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
                     if (waitInfo.waitGrps.isEmpty()) {
                         msg = affinityChangeMessage(waitInfo);
-
-                        waitInfo = null;
                     }
                 }
             }
 
             try {
-                if (msg != null)
+                if (msg != null) {
+                    CacheGroupContext cache = cctx.cache().cacheGroup(CU.cacheId("cache"));
+                    log.error("DBG: late affinity change triggered waitInfo=" + waitInfo +
+                        ", from=" + sender.id() +
+                        ", readyVer=" + cache.topology().readyTopologyVersion() +
+                        ", top=" + U.field(cache.topology(), "node2part") +
+                        ", msg=" + msg0, new Exception());
+
+                    waitInfo = null;
+
                     cctx.discovery().sendCustomEvent(msg);
+                }
             }
             catch (IgniteCheckedException e) {
                 U.error(log, "Failed to send affinity change message.", e);
@@ -2950,7 +2955,7 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
 
         /** {@inheritDoc} */
         @Override public String toString() {
-            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps + ']';
+            return "WaitRebalanceInfo [topVer=" + topVer + ", grps=" + waitGrps + ", ass=" + assignments.keySet() + ']';
         }
     }
 
