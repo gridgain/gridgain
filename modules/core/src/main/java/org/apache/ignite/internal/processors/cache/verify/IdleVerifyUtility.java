@@ -150,7 +150,7 @@ public class IdleVerifyUtility {
             getUpdateCountersSnapshot(ign, Collections.singleton(grpId));
 
         if (curCntrs.isEmpty())
-            throw new IgniteCheckedException("Requested group not found: grpId=" + grpId);
+            throw new GridNotIdleException("No OWNING partitions for group=" + grpId);
 
         List<Integer> diff = new ArrayList<>();
 

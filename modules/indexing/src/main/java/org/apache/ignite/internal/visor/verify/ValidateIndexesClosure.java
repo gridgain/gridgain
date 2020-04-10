@@ -351,8 +351,6 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
 
             checkSizes(cacheSizeFutures, idxSizeFutures, checkSizeResults);
 
-            //idleChecker0.run(); // fix it !!!
-
             log.warning("ValidateIndexesClosure finished: processed " + totalPartitions + " partitions and "
                     + totalIndexes + " indexes.");
         }
