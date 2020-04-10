@@ -666,8 +666,8 @@ public class IgniteIndexReaderTest {
         try {
             String output = runIndexReader(workDir, CACHE_GROUP_NAME, null, false);
 
-            // 1 corrupted page detected while traversing.
-            int travErrCnt = 1;
+            // 1 corrupted page detected while traversing, and 1 index size inconsistency error.
+            int travErrCnt = 2;
 
             // 2 errors while sequential scan: 1 page with unknown IO type, and 1 correct, but orphan innerIO page.
             int seqErrCnt = 2;
