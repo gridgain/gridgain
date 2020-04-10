@@ -22,6 +22,7 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.authentication.IgniteAccessControlException;
 import org.apache.ignite.internal.processors.security.SecurityContext;
+import org.apache.ignite.internal.util.nio.GridNioSession;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.security.AuthenticationContext;
 import org.apache.ignite.plugin.security.SecurityCredentials;
@@ -39,6 +40,9 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     /** Kernal context. */
     protected final GridKernalContext ctx;
 
+    /** Nio session. */
+    protected final GridNioSession ses;
+
     /** Security context or {@code null} if security is disabled. */
     private SecurityContext secCtx;
 
@@ -49,13 +53,27 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     private AuthorizationContext authCtx;
 
     /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     */
+    private String clientDesc;
+
+    /**
      * Constructor.
      *
      * @param ctx Kernal context.
+     * @param ses Client's NIO session.
+     * @param connId Connection ID.
      */
-    protected ClientListenerAbstractConnectionContext(GridKernalContext ctx, long connId) {
+    protected ClientListenerAbstractConnectionContext(GridKernalContext ctx, GridNioSession ses,
+        long connId) {
         this.ctx = ctx;
         this.connId = connId;
+        this.ses = ses;
     }
 
     /**
@@ -134,5 +152,29 @@ public abstract class ClientListenerAbstractConnectionContext implements ClientL
     @Override public void onDisconnected() {
         if (ctx.security().enabled())
             ctx.security().onSessionExpired(secCtx.subject().id());
+    }
+
+    /**
+     *
+     */
+    protected void initClientDescriptor(String prefix) {
+        clientDesc = prefix + ":" + ses.remoteAddress().getHostString() + ":" + ses.remoteAddress().getPort();
+
+        if (authCtx != null)
+            clientDesc += "@" + authCtx.userName();
+    }
+
+    /**
+     * Describes the client connection:
+     * - thin cli: "cli:host:port@user_name"
+     * - thin JDBC: "jdbc-thin:host:port@user_name"
+     * - ODBC: "odbc:host:port@user_name"
+     *
+     * Used by the running query view to display query initiator.
+     *
+     * @return Client descriptor string.
+     */
+    public String clientDescriptor() {
+        return clientDesc;
     }
 }

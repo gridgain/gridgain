@@ -843,6 +843,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     /**
      * Tests correct error exit code for wrong baseline auto-adjustment enabling in control.sh
      */
+    @Test
     public void testBaselineAutoAdjustmentWrongArguments() throws Exception {
         IgniteEx ignite = startGrids(1);
 

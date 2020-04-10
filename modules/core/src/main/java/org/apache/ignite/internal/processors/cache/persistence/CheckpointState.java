@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2019 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Common
-{
-    /// <summary>
-    /// Represents an Ignite platform.
-    /// </summary>
-    public enum Platform
-    {
-        /// <summary>
-        /// Java platform.
-        /// </summary>
-        Java = 0,
+package org.apache.ignite.internal.processors.cache.persistence;
 
-        /// <summary>
-        /// .NET platform.
-        /// </summary>
-        DotNet = 1
-    }
+/**
+ * Possible checkpoint states. Ordinal is important. Every next state follows the previous one.
+ */
+public enum CheckpointState {
+    /** Checkpoint is waiting to execution. **/
+    SCHEDULED,
+    /** Checkpoint was awakened and it is preparing to start. **/
+    LOCK_TAKEN,
+    /** Checkpoint counted the pages and write lock was released. **/
+    LOCK_RELEASED,
+    /** Checkpoint marker was stored to disk. **/
+    MARKER_STORED_TO_DISK,
+    /** Checkpoint was finished. **/
+    FINISHED
 }

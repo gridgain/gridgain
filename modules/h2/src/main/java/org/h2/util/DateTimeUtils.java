@@ -1585,7 +1585,7 @@ public class DateTimeUtils {
     /**
      * @return Server time zone is used to convert date.
      */
-    private static TimeZone getTimeZone() {
+    public static TimeZone getTimeZone() {
         return timeZone;
     }
 
@@ -1593,7 +1593,7 @@ public class DateTimeUtils {
      * Sets  time zone for the node that is used to convert date.
      * @param tz Server time zone is used to convert date.
      */
-    private static void setTimeZone(TimeZone tz) {
+    public static void setTimeZone(TimeZone tz) {
         timeZone = tz;
     }
 }
