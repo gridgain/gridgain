@@ -244,6 +244,9 @@ public class IgniteConfiguration {
     /** Default time interval between MVCC vacuum runs in milliseconds. */
     public static final long DFLT_MVCC_VACUUM_FREQUENCY = 5000;
 
+    /** Default value of environment type is {@link EnvironmentType#STAND_ALONE}. */
+    private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STAND_ALONE;
+
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
 
@@ -550,6 +553,10 @@ public class IgniteConfiguration {
     /** Communication failure resolver */
     private CommunicationFailureResolver commFailureRslvr;
 
+    /** Environment type - hint to Ignite that it is started in a specific environment and should adapt
+     * its behavior and algorithms to specific properties. */
+    private EnvironmentType envType = DFLT_ENV_TYPE;
+
     /** Plugin providers. */
     private PluginProvider[] pluginProvs;
 
@@ -677,6 +684,7 @@ public class IgniteConfiguration {
         utilityCachePoolSize = cfg.getUtilityCacheThreadPoolSize();
         waitForSegOnStart = cfg.isWaitForSegmentOnStart();
         warmupClos = cfg.getWarmupClosure();
+        envType = cfg.getEnvironmentType();
         sqlCfg = cfg.getSqlConfiguration();
     }
 
@@ -3533,6 +3541,35 @@ public class IgniteConfiguration {
     @Deprecated
     public IgniteConfiguration setSqlOffloadingEnabled(boolean offloadingEnabled) {
         sqlCfg.setSqlOffloadingEnabled(offloadingEnabled);
+
+        return this;
+    }
+
+    /**
+     * <b>This is an experimental feature. Envronment awareness approac may be changed.</b>
+     * <p>
+     *
+     * Configured environment type.
+     *
+     * @return {@link EnvironmentType environment type}.
+     */
+    @IgniteExperimental
+    public EnvironmentType getEnvironmentType() {
+        return envType;
+    }
+
+    /**
+     * <b>This is an experimental feature. Envronment awareness approac may be changed.</b>
+     * <p>
+     *
+     * Sets environment type hint.
+     *
+     * @param environmentType Environment type value.
+     * @return {@code this} for chaining.
+     */
+    @IgniteExperimental
+    public IgniteConfiguration setEnvironmentType(EnvironmentType environmentType) {
+        this.envType = environmentType;
 
         return this;
     }

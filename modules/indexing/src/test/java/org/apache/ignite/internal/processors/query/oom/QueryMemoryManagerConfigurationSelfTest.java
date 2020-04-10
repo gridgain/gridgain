@@ -26,7 +26,6 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_MEMORY_RESERVATION_BLOCK_SIZE;
-import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_SQL_QUERY_OFFLOADING_ENABLED;
 import static org.apache.ignite.internal.processors.query.h2.QueryMemoryManager.DFLT_MEMORY_RESERVATION_BLOCK_SIZE;
 import static org.apache.ignite.internal.util.IgniteUtils.GB;
 import static org.apache.ignite.internal.util.IgniteUtils.KB;
