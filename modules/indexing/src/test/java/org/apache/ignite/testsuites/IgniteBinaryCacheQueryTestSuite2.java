@@ -71,6 +71,7 @@ import org.apache.ignite.internal.processors.query.SqlMergeTest;
 import org.apache.ignite.internal.processors.query.SqlPartOfComplexPkLookupTest;
 import org.apache.ignite.internal.processors.query.SqlQueriesTopologyMappingTest;
 import org.apache.ignite.internal.processors.query.SqlTwoCachesInGroupWithSameEntryTest;
+import org.apache.ignite.internal.processors.query.UseOneTimeZoneForClusterTest;
 import org.apache.ignite.internal.processors.query.StopNodeOnSqlQueryWithIncompatibleTypeTest;
 import org.apache.ignite.internal.processors.query.h2.CacheQueryEntityWithDateTimeApiFieldsTest;
 import org.apache.ignite.internal.processors.query.h2.DmlStatementsProcessorTest;
@@ -115,6 +116,8 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     StopNodeOnSqlQueryWithIncompatibleTypeTest.class,
+
+    UseOneTimeZoneForClusterTest.class,
 
     DisabledSqlFunctionsTest.class,
 
