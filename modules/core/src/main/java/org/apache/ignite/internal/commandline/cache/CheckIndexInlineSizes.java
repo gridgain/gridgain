@@ -103,6 +103,8 @@ public class CheckIndexInlineSizes implements Command<Void> {
             }
         }
 
+        log.info("Found " + indexToSizeNode.size() + " secondary indexes.");
+
         Map<String, Map<Integer, Set<UUID>>> problems = indexToSizeNode.entrySet().stream()
             .filter(e -> e.getValue().size() > 1)
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));

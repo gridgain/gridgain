@@ -129,6 +129,7 @@ public class GridCommandHandlerCheckIndexesInlineSizeTest extends GridCommandHan
 
         String utilityOutput = testOut.toString();
 
+        assertContains(log, utilityOutput, "Found 4 secondary indexes.");
         assertContains(log, utilityOutput, "3 indexes have different effective inline size on nodes. It can lead to performance degradation in SQL queries.");
         assertContains(log, utilityOutput, "Indexes:");
         assertContains(log, utilityOutput, format(INDEX_PROBLEM_FMT, "L_IDX", locNodeId, remoteNodeId));
