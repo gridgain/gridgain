@@ -336,12 +336,14 @@ public class GridDhtPartitionDemander {
                 fut.listen(f -> oldFut.onDone(f.result()));
 
             // Make sure partitions sceduled for full rebalancing are first cleared.
-            for (Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> e : assignments.entrySet()) {
-                for (Integer partId : e.getValue().partitions().fullSet()) {
-                    GridDhtLocalPartition part = grp.topology().localPartition(partId);
+            if (grp.persistenceEnabled()) {
+                for (Map.Entry<ClusterNode, GridDhtPartitionDemandMessage> e : assignments.entrySet()) {
+                    for (Integer partId : e.getValue().partitions().fullSet()) {
+                        GridDhtLocalPartition part = grp.topology().localPartition(partId);
 
-                    if (part != null && part.state() == MOVING)
-                        part.clearAsync();
+                        if (part != null && part.state() == MOVING)
+                            part.clearAsync();
+                    }
                 }
             }
 
