@@ -131,7 +131,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
      * @throws Exception
      */
     public void runIdleVerifyCheckCrcFailsOnNotIdleCluster(boolean allowOverwrite) throws Exception {
-        IgniteEx ig = startGrids(1);
+        IgniteEx ig = startGrids(2);
 
         ig.cluster().active(true);
 
@@ -139,7 +139,7 @@ public class GridCommandHandlerIndexingTest extends GridCommandHandlerClusterPer
 
         int maxItems = 10000;
 
-        createCacheAndPreload(ig, cntPreload, 8);
+        createCacheAndPreload(ig, cntPreload, 1);
 
         GridCacheDatabaseSharedManager db = null;
 

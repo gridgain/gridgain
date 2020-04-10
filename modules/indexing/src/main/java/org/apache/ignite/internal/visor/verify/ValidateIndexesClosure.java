@@ -220,7 +220,7 @@ public class ValidateIndexesClosure implements IgniteCallable<VisorValidateIndex
             Collection<CacheGroupContext> groups = ignite.context().cache().cacheGroups();
 
             for (CacheGroupContext grp : groups) {
-                if (!grp.systemCache() && !grp.isLocal())
+                if (!grp.systemCache() && !grp.isLocal() && grp.affinityNode())
                     grpIds.add(grp.groupId());
             }
         }
