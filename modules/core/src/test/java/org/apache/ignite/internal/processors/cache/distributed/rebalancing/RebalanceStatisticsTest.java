@@ -811,7 +811,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
          * Default constructor.
          */
         public GrpStatPred() {
-            super(compile("Information per cache group \\(.* rebalance\\): \\[id=.*, name=(.*?), startTime=.*"));
+            super(
+                compile("Rebalance information per cache group \\(.* rebalance\\): \\[id=.*, name=(.*?), startTime=.*")
+            );
         }
 
         /** {@inheritDoc} */
@@ -835,7 +837,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
          * Default constructor.
          */
         public TotalStatPred() {
-            super(compile("Total information \\(including successful and not rebalances\\):.*"));
+            super(compile("Rebalance total information \\(including successful and not rebalances\\):.*"));
         }
 
         /** {@inheritDoc} */

@@ -106,7 +106,7 @@ public class RebalanceStatisticsUtils {
     ) {
         SB sb = new SB();
 
-        sb.a("Information per cache group (").a(suc ? "successful" : "interrupted").a(" rebalance): [")
+        sb.a("Rebalance information per cache group (").a(suc ? "successful" : "interrupted").a(" rebalance): [")
             .a(grpInfo(cacheGrpCtx)).a(", ").a(time(stat.start(), stat.end())).a(", restarted=")
             .a(stat.attempt() - 1).a("] ");
 
@@ -206,7 +206,7 @@ public class RebalanceStatisticsUtils {
         long start = totalStat.values().stream().mapToLong(CacheGroupTotalRebalanceStatistics::start).min().orElse(0);
         long end = totalStat.values().stream().mapToLong(CacheGroupTotalRebalanceStatistics::end).max().orElse(0);
 
-        sb.a("Total information (including successful and not rebalances): [").a(time(start, end)).a("] ");
+        sb.a("Rebalance total information (including successful and not rebalances): [").a(time(start, end)).a("] ");
 
         Set<ClusterNode> supNodes = new HashSet<>();
         for (CacheGroupTotalRebalanceStatistics stat : totalStat.values())
