@@ -23,7 +23,6 @@ import org.apache.ignite.internal.pagemem.wal.WALPointer;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.DataRecord;
 import org.apache.ignite.internal.pagemem.wal.record.MetastoreDataRecord;
-import org.apache.ignite.internal.pagemem.wal.record.UnwrappedDataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager;
@@ -148,22 +147,15 @@ public class IgniteWalConverter {
         if (SHOW == sensitiveData || HIDE == sensitiveData)
             return walRecord.toString();
 
-        // TODO: 10.04.2020
-        if (MetastoreDataRecord.class.isInstance(walRecord)) {
-        }
+        if (MetastoreDataRecord.class.isInstance(walRecord))
+            walRecord = new MetastoreDataRecordWrapper((MetastoreDataRecord)walRecord, sensitiveData);
         else if (DataRecord.class.isInstance(walRecord)) {
             DataRecord dataRecord = (DataRecord)walRecord;
 
-            List<DataEntry> dataEntries = dataRecord.writeEntries();
+            List<DataEntry> entryWrappers = dataRecord.writeEntries().stream()
+                .map(dataEntry -> new DataEntryWrapper(dataEntry, sensitiveData)).collect(toList());
 
-            if (!dataEntries.isEmpty()) {
-                dataEntries = dataEntries.stream()
-                    .map(dataEntry -> UnwrappedDataEntry.class.isInstance(dataEntry) ?
-                        new DataEntryWrapper(dataEntry, (UnwrappedDataEntry)dataEntry, sensitiveData) : dataEntry)
-                    .collect(toList());
-            }
-
-            dataRecord.setWriteEntries(dataEntries);
+            dataRecord.setWriteEntries(entryWrappers);
         }
 
         return walRecord.toString();

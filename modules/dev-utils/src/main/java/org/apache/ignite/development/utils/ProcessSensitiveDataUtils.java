@@ -17,6 +17,7 @@
 package org.apache.ignite.development.utils;
 
 import java.security.MessageDigest;
+import java.util.Base64;
 import org.apache.ignite.IgniteException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -38,7 +39,7 @@ class ProcessSensitiveDataUtils {
 
             byte[] digest = md.digest();
 
-            return new String(digest);
+            return Base64.getEncoder().encodeToString(digest);
         }
         catch (Exception e) {
             throw new IgniteException(e);

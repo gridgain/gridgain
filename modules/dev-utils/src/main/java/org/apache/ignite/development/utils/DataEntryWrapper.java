@@ -19,8 +19,10 @@ package org.apache.ignite.development.utils;
 import org.apache.ignite.internal.pagemem.wal.record.DataEntry;
 import org.apache.ignite.internal.pagemem.wal.record.UnwrappedDataEntry;
 import org.apache.ignite.internal.util.typedef.internal.SB;
+import org.jetbrains.annotations.Nullable;
 
 import static java.lang.String.valueOf;
+import static java.util.Objects.isNull;
 import static org.apache.ignite.development.utils.ProcessSensitiveData.HASH;
 import static org.apache.ignite.development.utils.ProcessSensitiveData.MD5;
 import static org.apache.ignite.development.utils.ProcessSensitiveDataUtils.md5;
@@ -28,9 +30,9 @@ import static org.apache.ignite.development.utils.ProcessSensitiveDataUtils.md5;
 /**
  * Wrapper {@link DataEntry} for sensitive data output.
  */
-public class DataEntryWrapper extends DataEntry {
+class DataEntryWrapper extends DataEntry {
     /** Unwrapped DataEntry. */
-    private final UnwrappedDataEntry unwrappedDataEntry;
+    @Nullable private final UnwrappedDataEntry unwrappedDataEntry;
 
     /** Strategy for the processing of sensitive data. */
     private final ProcessSensitiveData sensitiveData;
@@ -39,12 +41,10 @@ public class DataEntryWrapper extends DataEntry {
      * Constructor.
      *
      * @param dataEntry          Instance of {@link DataEntry}.
-     * @param unwrappedDataEntry Unwrapped DataEntry.
      * @param sensitiveData      Strategy for the processing of sensitive data.
      */
     public DataEntryWrapper(
         DataEntry dataEntry,
-        UnwrappedDataEntry unwrappedDataEntry,
         ProcessSensitiveData sensitiveData
     ) {
         super(
@@ -59,12 +59,17 @@ public class DataEntryWrapper extends DataEntry {
             dataEntry.partitionCounter()
         );
 
-        this.unwrappedDataEntry = unwrappedDataEntry;
         this.sensitiveData = sensitiveData;
+
+        this.unwrappedDataEntry = UnwrappedDataEntry.class.isInstance(dataEntry) ?
+            (UnwrappedDataEntry) dataEntry : null;
     }
 
     /** {@inheritDoc} */
     @Override public String toString() {
+        if (isNull(unwrappedDataEntry))
+            return super.toString();
+
         Object key = unwrappedDataEntry.unwrappedKey();
         Object value = unwrappedDataEntry.unwrappedValue();
 

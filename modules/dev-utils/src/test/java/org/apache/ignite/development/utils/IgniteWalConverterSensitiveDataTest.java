@@ -51,6 +51,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.development.utils.IgniteWalConverter.PRINT_RECORDS;
 import static org.apache.ignite.development.utils.IgniteWalConverter.SENSITIVE_DATA;
+import static org.apache.ignite.development.utils.ProcessSensitiveDataUtils.md5;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
 import static org.apache.ignite.testframework.wal.record.RecordUtils.isLogEnabled;
@@ -222,6 +223,11 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
     }
 
+    /**
+     * Test verifies that sensitive data should be replaced with hash.
+     *
+     * @throws Exception If failed.
+     */
     @Test
     @WithSystemProperty(key = PRINT_RECORDS, value = "true")
     @WithSystemProperty(key = SENSITIVE_DATA, value = "HASH")
@@ -230,7 +236,29 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
         IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
 
-        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+        String testOut = TEST_OUT.toString();
+
+        assertNotContains(log, testOut, SENSITIVE_DATA_VALUE);
+        assertContains(log, testOut, valueOf(SENSITIVE_DATA_VALUE.hashCode()));
+    }
+
+    /**
+     * Test verifies that sensitive data should be replaced with MD5 hash.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    @WithSystemProperty(key = PRINT_RECORDS, value = "true")
+    @WithSystemProperty(key = SENSITIVE_DATA, value = "MD5")
+    public void testMd5HashSensitiveData() throws Exception {
+        injectTestSystemOut();
+
+        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
+
+        String testOut = TEST_OUT.toString();
+
+        assertNotContains(log, testOut, SENSITIVE_DATA_VALUE);
+        assertContains(log, testOut, md5(SENSITIVE_DATA_VALUE));
     }
 
     /**
