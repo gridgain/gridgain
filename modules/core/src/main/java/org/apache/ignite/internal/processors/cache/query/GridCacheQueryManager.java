@@ -791,11 +791,10 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
         final InternalScanFilter<K,V> intFilter = keyValFilter != null ? new InternalScanFilter<>(keyValFilter) : null;
 
         try {
-            if (keyValFilter instanceof PlatformCacheEntryFilter) {
+            if (keyValFilter instanceof PlatformCacheEntryFilter)
                 ((PlatformCacheEntryFilter)keyValFilter).cacheContext(cctx);
-            } else {
+            else
                 injectResources(keyValFilter);
-            }
 
             Integer part = cctx.isLocal() ? null : qry.partition();
 
@@ -826,7 +825,7 @@ public abstract class GridCacheQueryManager<K, V> extends GridCacheManagerAdapte
                 GridDhtLocalPartition locPart0 = dht.topology().localPartition(part, topVer, false);
 
                 if (locPart0 == null || locPart0.state() != OWNING || !locPart0.reserve()) {
-                    throw locPart0.state() == LOST ?
+                    throw locPart0 != null && locPart0.state() == LOST ?
                         new CacheInvalidStateException("Failed to execute scan query because cache partition has been " +
                             "lost [cacheName=" + cctx.name() + ", part=" + part + "]") :
                         new GridDhtUnreservedPartitionException(part, cctx.affinity().affinityTopologyVersion(),
