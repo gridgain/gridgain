@@ -141,7 +141,11 @@ public enum SpanType {
     TX_PROCESS_DHT_ONE_PHASE_COMMIT_ACK_REQ(Scope.TX, "tx.dht.process.one-phase-commit-ack.req", 38),
 
     /** Transaction dht prepare response. */
-    TX_PROCESS_DHT_PREPARE_RESP(Scope.TX, "tx.dht.process.prepare.response", 39);
+    TX_PROCESS_DHT_PREPARE_RESP(Scope.TX, "tx.dht.process.prepare.response", 39),
+
+    // TODO GG-28559 Instead of creating custom span with Ignite api, open census api should be used.
+    /** Custom job call. */
+    CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 41);
 
     /** Scope */
     private Scope scope;

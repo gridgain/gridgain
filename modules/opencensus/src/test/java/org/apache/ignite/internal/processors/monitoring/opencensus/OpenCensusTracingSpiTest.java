@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import io.opencensus.exporter.trace.zipkin.ZipkinExporterConfiguration;
 import io.opencensus.exporter.trace.zipkin.ZipkinTraceExporter;
 import io.opencensus.trace.AttributeValue;
@@ -35,21 +34,17 @@ import io.opencensus.trace.Tracing;
 import io.opencensus.trace.export.SpanData;
 import io.opencensus.trace.export.SpanExporter;
 import io.opencensus.trace.samplers.Samplers;
-import org.apache.ignite.Ignite;
-import org.apache.ignite.cache.CacheAtomicityMode;
-import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.EventType;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
+import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.processors.tracing.SpanTags;
-import org.apache.ignite.internal.processors.tracing.SpanType;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTraceExporter;
 import org.apache.ignite.spi.tracing.opencensus.OpenCensusTracingSpi;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
-import org.apache.ignite.transactions.Transaction;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,8 +52,17 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static io.opencensus.trace.AttributeValue.stringAttributeValue;
-import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
-import static org.apache.ignite.transactions.TransactionIsolation.SERIALIZABLE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_JOB_EXECUTE_REQUEST;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_JOB_EXECUTE_RESPONSE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_REGULAR_PROCESS;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_READ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.COMMUNICATION_SOCKET_WRITE;
+import static org.apache.ignite.internal.processors.tracing.SpanType.CUSTOM_JOB_CALL;
+import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_ADD;
+import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_FINISH;
+import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_JOIN_REQUEST;
+import static org.apache.ignite.internal.processors.tracing.SpanType.DISCOVERY_NODE_LEFT;
+import static org.apache.ignite.internal.processors.tracing.SpanType.EXCHANGE_FUTURE;
 
 /**
  * Tests to check correctness of OpenCensus Tracing SPI implementation.
@@ -86,13 +90,6 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         cfg.setTracingSpi(new OpenCensusTracingSpi());
 
-        CacheConfiguration ccfg = new CacheConfiguration(DEFAULT_CACHE_NAME);
-
-        ccfg.setAtomicityMode(CacheAtomicityMode.TRANSACTIONAL);
-        ccfg.setBackups(2);
-
-        cfg.setCacheConfiguration(ccfg);
-
         return cfg;
     }
 
@@ -103,10 +100,10 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     public static void beforeTests() {
         /* Uncomment following code to see visualisation on local Zipkin: */
 
-        ZipkinTraceExporter.createAndRegister(ZipkinExporterConfiguration.builder()
-            .setV2Url("http://localhost:9411/api/v2/spans")
-            .setServiceName("ignite")
-            .build());
+//        ZipkinTraceExporter.createAndRegister(ZipkinExporterConfiguration.builder()
+//            .setV2Url("http://localhost:9411/api/v2/spans")
+//            .setServiceName("ignite")
+//            .build());
     }
 
     /**
@@ -125,30 +122,6 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         startGrids(GRID_CNT);
 
         startGrid("client");
-    }
-
-    @Test
-    public void test_PESSIMISTIC_SERIALIZABLE() throws Exception {
-//        startGrids(3);
-//
-        Ignite client = startGrid("client");
-
-        try(Transaction tx = client.transactions().txStart(PESSIMISTIC, SERIALIZABLE)) {
-            client.cache(DEFAULT_CACHE_NAME).put(1, 1);
-            client.cache(DEFAULT_CACHE_NAME).put(2, 2);
-
-            tx.commit();
-        }
-
-//        grid(0).cache(DEFAULT_CACHE_NAME).localPeek(1, CachePeekMode.BACKUP);
-
-        hnd.flush();
-
-        List<SpanData> collect = hnd.allSpans()
-            .filter(span -> SpanType.TX.traceName().equals(span.getName()))
-            .collect(Collectors.toList());
-
-//        Thread.sleep(500_000);
     }
 
     /**
@@ -180,7 +153,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         // Check existence of Traces.Discovery.NODE_JOIN_REQUEST spans with OK status on all nodes:
         Map<AttributeValue, SpanData> nodeJoinReqSpans = hnd.allSpans()
-            .filter(span -> SpanType.DISCOVERY_NODE_JOIN_REQUEST.traceName().equals(span.getName()))
+            .filter(span -> DISCOVERY_NODE_JOIN_REQUEST.traceName().equals(span.getName()))
             .filter(span -> span.getStatus() == Status.OK)
             .filter(span -> stringAttributeValue(joinedNodeId).equals(
                 span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
@@ -198,14 +171,14 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
             Assert.assertTrue(
                 String.format(
                     "%s not found on node with name=%s, nodeJoinReqSpans=%s",
-                    SpanType.DISCOVERY_NODE_JOIN_REQUEST.traceName(), nodeName, nodeJoinReqSpans),
+                    DISCOVERY_NODE_JOIN_REQUEST, nodeName, nodeJoinReqSpans),
                 nodeJoinReqSpans.containsKey(stringAttributeValue(nodeName)))
         );
 
         // Check existence of Traces.Discovery.NODE_JOIN_ADD spans with OK status on all nodes:
         for (int i = 0; i <= GRID_CNT; i++) {
             List<SpanData> nodeJoinAddSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
-                .filter(span -> SpanType.DISCOVERY_NODE_JOIN_ADD.traceName().equals(span.getName()))
+                .filter(span -> DISCOVERY_NODE_JOIN_ADD.traceName().equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> stringAttributeValue(joinedNodeId).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
@@ -213,7 +186,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
             Assert.assertTrue(
                 String.format("%s span not found, nodeId=%d",
-                    SpanType.DISCOVERY_NODE_JOIN_ADD.traceName(), i),
+                    DISCOVERY_NODE_JOIN_ADD, i),
                 !nodeJoinReqSpans.isEmpty()
             );
 
@@ -226,7 +199,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 );
                 Assert.assertEquals(
                     "Parent span name is invalid, parentSpan=" + parentSpan,
-                    SpanType.DISCOVERY_NODE_JOIN_REQUEST.traceName(),
+                    DISCOVERY_NODE_JOIN_REQUEST.traceName(),
                     parentSpan.getName()
                 );
                 Assert.assertEquals(
@@ -240,7 +213,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         // Check existence of Traces.Discovery.NODE_JOIN_FINISH spans with OK status on all nodes:
         for (int i = 0; i <= GRID_CNT; i++) {
             List<SpanData> nodeJoinAddSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
-                .filter(span -> SpanType.DISCOVERY_NODE_JOIN_FINISH.traceName().equals(span.getName()))
+                .filter(span -> DISCOVERY_NODE_JOIN_FINISH.traceName().equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> stringAttributeValue(joinedNodeId).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
@@ -248,7 +221,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
             Assert.assertTrue(
                 String.format("%s span not found, nodeId=%d",
-                    SpanType.DISCOVERY_NODE_JOIN_FINISH.traceName(), i),
+                    DISCOVERY_NODE_JOIN_FINISH, i),
                 !nodeJoinReqSpans.isEmpty()
             );
 
@@ -261,7 +234,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 );
                 Assert.assertEquals(
                     "Parent span name is invalid " + parentSpan,
-                    SpanType.DISCOVERY_NODE_JOIN_ADD.traceName(),
+                    DISCOVERY_NODE_JOIN_ADD.traceName(),
                     parentSpan.getName()
                 );
                 Assert.assertEquals(
@@ -290,9 +263,9 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         hnd.flush();
 
-        // Check existence of Traces.Discovery.NODE_LEFT spans with OK status on all nodes:
+        // Check existence of DISCOVERY_NODE_LEFT spans with OK status on all nodes:
         Map<AttributeValue, SpanData> nodeLeftSpans = hnd.allSpans()
-            .filter(span -> SpanType.DISCOVERY_NODE_LEFT.traceName().equals(span.getName()))
+            .filter(span -> DISCOVERY_NODE_LEFT.traceName().equals(span.getName()))
             .filter(span -> stringAttributeValue(leftNodeId).equals(
                 span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT_NODE, SpanTags.ID))))
             .filter(span -> span.getStatus() == Status.OK)
@@ -303,14 +276,14 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                     throw new AssertionError(String.format(
                         "More than 1 %s span handled on a node (id can be extracted from span), " +
                             "existingSpan=%s, extraSpan=%s",
-                        SpanType.DISCOVERY_NODE_LEFT.traceName(), span1, span2
+                        DISCOVERY_NODE_LEFT, span1, span2
                     ));
                 }
             ));
 
         clusterNodeNames.forEach(nodeName ->
             Assert.assertTrue(
-                "Span " + SpanType.DISCOVERY_NODE_LEFT.traceName() + " doesn't exist on node with name=" + nodeName,
+                "Span " + DISCOVERY_NODE_LEFT + " doesn't exist on node with name=" + nodeName,
                 nodeLeftSpans.containsKey(stringAttributeValue(nodeName)))
         );
     }
@@ -333,7 +306,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
         // Check PME for NODE_LEFT event on remaining nodes:
         for (int i = 0; i < GRID_CNT - 1; i++) {
             List<SpanData> exchFutSpans = hnd.spansReportedByNode(getTestIgniteInstanceName(i))
-                .filter(span -> SpanType.EXCHANGE_FUTURE.traceName().equals(span.getName()))
+                .filter(span -> EXCHANGE_FUTURE.traceName().equals(span.getName()))
                 .filter(span -> span.getStatus() == Status.OK)
                 .filter(span -> AttributeValue.longAttributeValue(EventType.EVT_NODE_LEFT).equals(
                     span.getAttributes().getAttributeMap().get(SpanTags.tag(SpanTags.EVENT, SpanTags.TYPE))))
@@ -343,7 +316,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
             Assert.assertTrue(
                 String.format("%s span not found (or more than 1), nodeId=%d, exchFutSpans=%s",
-                    SpanType.EXCHANGE_FUTURE.traceName(), i, exchFutSpans),
+                    EXCHANGE_FUTURE, i, exchFutSpans),
                 exchFutSpans.size() == 1
             );
 
@@ -356,7 +329,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
                 );
                 Assert.assertEquals(
                     "Parent span name is invalid " + parentSpan,
-                    SpanType.DISCOVERY_NODE_LEFT.traceName(),
+                    DISCOVERY_NODE_LEFT.traceName(),
                     parentSpan.getName()
                 );
                 Assert.assertEquals(
@@ -390,52 +363,45 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
     /**
      * @throws Exception if failed.
      */
-//    @Test
-//    // TODO: 20.02.20 Do we need custom spans, seems no.
-//    public void testCommunicationMessages() throws Exception {
-//        IgniteEx ignite = grid(0);
-//        IgniteEx ignite1 = grid(1);
-//
-//        String customParentSpan = "job.call";
-//
-//        try (MTC.TraceSurroundings ignore = startChildSpan(ignite.context().tracing().create(customParentSpan))) {
-//            ignite.compute(ignite.cluster().forNode(ignite1.localNode())).withNoFailover().call(() -> "");
-//        }
-//
-//        hnd.flush();
-//
-//        SpanData jobSpan = hnd.spanByName(customParentSpan);
-//
-//        List<SpanData> data = hnd.unrollByParent(jobSpan);
-//
-//        List<AttributeValue> nodejobMsgTags = data.stream()
-//            .filter(it -> it.getAttributes().getAttributeMap().containsKey(SpanTags.MESSAGE))
-//            .map(it -> it.getAttributes().getAttributeMap().get(SpanTags.MESSAGE))
-//            .collect(Collectors.toList());
-//
-//        List<String> nodejobTraces = data.stream()
-//            .map(SpanData::getName)
-//            .collect(Collectors.toList());
-//
-//        assertEquals(nodejobTraces.toString(), 7, nodejobTraces.size());
-//
-//        assertEquals(1, nodejobTraces.stream().filter(it -> it.contains(customParentSpan)).count());
-//
-//        //request + response
-//        assertEquals(2, nodejobTraces.stream().filter(it ->
-//            it.contains(Trace.COMMUNICATION_SOCKET_WRITE.traceName())).count());
-//        //request + response
-//        assertEquals(2, nodejobTraces.stream().filter(it ->
-//            it.contains(Trace.COMMUNICATION_SOCKET_READ.traceName())).count());
-//        //request + response
-//        assertEquals(2, nodejobTraces.stream().filter(it ->
-//            it.contains(Trace.COMMUNICATION_REGULAR_PROCESS.traceName())).count());
-//
-//        assertTrue(nodejobMsgTags.stream().anyMatch(it ->
-//            it.equals(stringAttributeValue(Trace.COMMUNICATION_JOB_EXECUTE_REQUEST.traceName()))));
-//        assertTrue(nodejobMsgTags.stream().anyMatch(it ->
-//            it.equals(stringAttributeValue(Trace.COMMUNICATION_JOB_EXECUTE_RESPONSE.traceName()))));
-//    }
+    @Test
+    // TODO GG-28559 Instead of creating custom span with Ignite api, open census api should be used.
+    public void testCommunicationMessages() throws Exception {
+        IgniteEx ignite = grid(0);
+        IgniteEx ignite1 = grid(1);
+
+        try (MTC.TraceSurroundings ignore = MTC.support(ignite.context().tracing().create(CUSTOM_JOB_CALL))) {
+            ignite.compute(ignite.cluster().forNode(ignite1.localNode())).withNoFailover().call(() -> "");
+        }
+
+        hnd.flush();
+
+        SpanData jobSpan = hnd.spanByName(CUSTOM_JOB_CALL.traceName());
+
+        List<SpanData> data = hnd.unrollByParent(jobSpan);
+
+        List<AttributeValue> nodejobMsgTags = data.stream()
+            .filter(it -> it.getAttributes().getAttributeMap().containsKey(SpanTags.MESSAGE))
+            .map(it -> it.getAttributes().getAttributeMap().get(SpanTags.MESSAGE))
+            .collect(Collectors.toList());
+
+        List<String> nodejobTraces = data.stream()
+            .map(SpanData::getName)
+            .collect(Collectors.toList());
+
+        assertEquals(nodejobTraces.toString(), 7, nodejobTraces.size());
+
+        assertEquals(1, nodejobTraces.stream().filter(it -> it.contains(CUSTOM_JOB_CALL.traceName())).count());
+
+        //request + response
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_SOCKET_WRITE.traceName())).count());
+        //request + response
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_SOCKET_READ.traceName())).count());
+        //request + response
+        assertEquals(2, nodejobTraces.stream().filter(it -> it.contains(COMMUNICATION_REGULAR_PROCESS.traceName())).count());
+
+        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_REQUEST.traceName()))));
+        assertTrue(nodejobMsgTags.stream().anyMatch(it -> it.equals(stringAttributeValue(COMMUNICATION_JOB_EXECUTE_RESPONSE.traceName()))));
+    }
 
     /**
      * Test span exporter handler.
