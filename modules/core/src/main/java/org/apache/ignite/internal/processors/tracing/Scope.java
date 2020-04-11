@@ -30,10 +30,7 @@ public enum Scope {
     COMMUNICATION((short)3),
 
     /** Transactional scope. */
-    TX((short)4),
-
-    /** Affinity scope. */
-    AFFINITY((short)5);
+    TX((short)4);
 
     /** Scope index. */
     private final short idx;

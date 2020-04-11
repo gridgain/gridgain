@@ -39,9 +39,11 @@ public enum SpanType {
     /** Custom event. */
     DISCOVERY_CUSTOM_EVENT(Scope.DISCOVERY, "discovery.custom.event", 6),
 
-    // Exchange traces.
     /** Exchange future. */
     EXCHANGE_FUTURE(Scope.DISCOVERY, "exchange.future", 7),
+
+    /** Affinity calculation. */
+    AFFINITY_CALCULATION(Scope.DISCOVERY, "affinity.calculation", 40),
 
     // Communication traces.
     /** Job execution request. */
@@ -139,11 +141,7 @@ public enum SpanType {
     TX_PROCESS_DHT_ONE_PHASE_COMMIT_ACK_REQ(Scope.TX, "tx.dht.process.one-phase-commit-ack.req", 38),
 
     /** Transaction dht prepare response. */
-    TX_PROCESS_DHT_PREPARE_RESP(Scope.TX, "tx.dht.process.prepare.response", 39),
-
-    // Affinity
-    /** Affinity calculation. */
-    AFFINITY_CALCULATION(Scope.COMMUNICATION, "affinity.calculation", 40);
+    TX_PROCESS_DHT_PREPARE_RESP(Scope.TX, "tx.dht.process.prepare.response", 39);
 
     /** Scope */
     private Scope scope;
