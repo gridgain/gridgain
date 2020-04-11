@@ -35,7 +35,7 @@ public class CacheGroupRebalanceStatistics {
     private volatile int attempt;
 
     /** Rebalance statistics for suppliers. */
-    private final Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> supplierStat = new ConcurrentHashMap<>();
+    private final Map<ClusterNode, SupplierRebalanceStatistics> supplierStat = new ConcurrentHashMap<>();
 
     /**
      * Default constructor.
@@ -93,7 +93,7 @@ public class CacheGroupRebalanceStatistics {
      * @param end            End time of rebalance in milliseconds.
      */
     public void end(UUID supplierNodeId, long end) {
-        for (Map.Entry<ClusterNode, CacheGroupSupplierRebalanceStatistics> supStatEntry : supplierStat.entrySet()) {
+        for (Map.Entry<ClusterNode, SupplierRebalanceStatistics> supStatEntry : supplierStat.entrySet()) {
             if (supStatEntry.getKey().id().equals(supplierNodeId)) {
                 supStatEntry.getValue().end(end);
                 return;
@@ -156,7 +156,7 @@ public class CacheGroupRebalanceStatistics {
      *
      * @return Rebalance statistics for suppliers.
      */
-    public Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> supplierStatistics() {
+    public Map<ClusterNode, SupplierRebalanceStatistics> supplierStatistics() {
         return supplierStat;
     }
 
@@ -192,7 +192,7 @@ public class CacheGroupRebalanceStatistics {
      * @param supplierNode Supplier node.
      * @return Rebalance statistics for supplier node.
      */
-    private CacheGroupSupplierRebalanceStatistics supplierRebalanceStatistics(ClusterNode supplierNode) {
-        return supplierStat.computeIfAbsent(supplierNode, n -> new CacheGroupSupplierRebalanceStatistics());
+    private SupplierRebalanceStatistics supplierRebalanceStatistics(ClusterNode supplierNode) {
+        return supplierStat.computeIfAbsent(supplierNode, n -> new SupplierRebalanceStatistics());
     }
 }

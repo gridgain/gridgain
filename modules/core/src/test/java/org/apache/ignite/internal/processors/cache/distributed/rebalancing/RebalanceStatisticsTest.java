@@ -52,9 +52,7 @@ import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupRebalanceStatistics;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupSupplierRebalanceStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupTotalRebalanceStatistics;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupTotalSupplierRebalanceStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
@@ -63,6 +61,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloaderAssignments;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.SupplierRebalanceStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
@@ -697,15 +696,15 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         checkTime(expStart, expEnd, act.start(), act.end());
 
-        Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> expSupStats = exp.supplierStatistics();
-        Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
+        Map<ClusterNode, SupplierRebalanceStatistics> expSupStats = exp.supplierStatistics();
+        Map<ClusterNode, SupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
 
         assertEquals(expSupStats.size(), actSupStats.size());
         assertFalse(actSupStats.isEmpty());
 
-        for (Entry<ClusterNode, CacheGroupSupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
-            CacheGroupSupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
-            CacheGroupSupplierRebalanceStatistics actSupStat = actSupStats.get(expSupStatE.getKey());
+        for (Entry<ClusterNode, SupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
+            SupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
+            SupplierRebalanceStatistics actSupStat = actSupStats.get(expSupStatE.getKey());
 
             assertNotNull(actSupStat);
 
@@ -741,15 +740,15 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         checkTime(expStart, expEnd, act.start(), act.end());
 
-        Map<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> expSupStats = exp.supplierStatistics();
-        Map<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
+        Map<ClusterNode, SupplierRebalanceStatistics> expSupStats = exp.supplierStatistics();
+        Map<ClusterNode, SupplierRebalanceStatistics> actSupStats = act.supplierStatistics();
 
         assertEquals(expSupStats.size(), actSupStats.size());
         assertFalse(actSupStats.isEmpty());
 
-        for (Entry<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
-            CacheGroupTotalSupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
-            CacheGroupTotalSupplierRebalanceStatistics actSupStat = actSupStats.get(expSupStatE.getKey());
+        for (Entry<ClusterNode, SupplierRebalanceStatistics> expSupStatE : expSupStats.entrySet()) {
+            SupplierRebalanceStatistics expSupStat = expSupStatE.getValue();
+            SupplierRebalanceStatistics actSupStat = actSupStats.get(expSupStatE.getKey());
 
             assertNotNull(actSupStat);
 

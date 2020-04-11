@@ -110,23 +110,15 @@ public class RebalanceStatisticsUtils {
             .a(grpInfo(cacheGrpCtx)).a(", ").a(time(stat.start(), stat.end())).a(", restarted=")
             .a(stat.attempt() - 1).a("] ");
 
-        Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> supStats = stat.supplierStatistics();
+        Map<ClusterNode, SupplierRebalanceStatistics> supStats = stat.supplierStatistics();
         if (supStats.isEmpty())
             return sb.toString();
 
         sb.a(SUP_STAT_HEAD);
 
         int nodeId = 0;
-        for (CacheGroupSupplierRebalanceStatistics supStat : supStats.values()) {
-            long fp = 0, hp = 0;
-
-            for (Entry<Integer, Boolean> pe : supStat.partitions().entrySet()) {
-                if (pe.getValue())
-                    fp++;
-                else
-                    hp++;
-            }
-
+        for (SupplierRebalanceStatistics supStat : supStats.values()) {
+            long fp = supStat.fullParts(), hp = supStat.histParts();
             long fe = supStat.fullEntries(), he = supStat.histEntries();
             long fb = supStat.fullBytes(), hb = supStat.histBytes();
 
@@ -146,7 +138,7 @@ public class RebalanceStatisticsUtils {
             .a(grpInfo(cacheGrpCtx)).a("] ");
 
         SortedMap<Integer, Boolean> parts = new TreeMap<>();
-        for (CacheGroupSupplierRebalanceStatistics supStat : supStats.values())
+        for (SupplierRebalanceStatistics supStat : supStats.values())
             parts.putAll(supStat.partitions());
 
         AffinityAssignment aff = cacheGrpCtx.affinity().cachedAffinity(top);
@@ -225,7 +217,7 @@ public class RebalanceStatisticsUtils {
                 if (!stat.supplierStatistics().containsKey(supNode))
                     continue;
 
-                CacheGroupTotalSupplierRebalanceStatistics supStat = stat.supplierStatistics().get(supNode);
+                SupplierRebalanceStatistics supStat = stat.supplierStatistics().get(supNode);
                 fp += supStat.fullParts();
                 hp += supStat.histParts();
                 fe += supStat.fullEntries();

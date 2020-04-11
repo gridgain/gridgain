@@ -18,18 +18,23 @@ package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.ignite.internal.util.typedef.internal.U;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.util.Objects.isNull;
+
 /**
- * Statistics for rebalance cache group by supplier.
+ * Statistics of rebalance by supplier.
  */
-public class CacheGroupSupplierRebalanceStatistics {
+public class SupplierRebalanceStatistics {
     /** Start time of rebalance in milliseconds. */
-    private volatile long start;
+    private final AtomicLong start = new AtomicLong();
 
     /** End time of rebalance in milliseconds. */
-    private volatile long end;
+    private final AtomicLong end = new AtomicLong();
 
     /**
      * Rebalanced partitions.
@@ -37,6 +42,12 @@ public class CacheGroupSupplierRebalanceStatistics {
      * historically({@code false}) rebalanced.
      */
     private final Map<Integer, Boolean> parts = new ConcurrentHashMap<>();
+
+    /** Counter of partitions received by full rebalance. */
+    private final LongAdder fullParts = new LongAdder();
+
+    /** Counter of partitions received by historical rebalance. */
+    private final LongAdder histParts = new LongAdder();
 
     /** Counter of entries received by full rebalance. */
     private final LongAdder fullEntries = new LongAdder();
@@ -53,18 +64,45 @@ public class CacheGroupSupplierRebalanceStatistics {
     /**
      * Updating statistics.
      *
-     * @param p            Partition id.
-     * @param hist         Historical or full rebalance.
-     * @param e            Count of entries.
-     * @param b            Count of bytes.
+     * @param s Start time of rebalance in milliseconds.
+     * @param e End time of rebalance in milliseconds.
+     * @param fp Count of partitions received by full rebalance.
+     * @param hp Count of partitions received by historical rebalance.
+     * @param fe Count of entries received by full rebalance.
+     * @param he Count of partitions received by entries rebalance.
+     * @param fb Count of bytes received by full rebalance.
+     * @param hb Count of bytes received by historical rebalance.
+     */
+    public void update(long s, long e, long fp, long hp, long fe, long he, long fb, long hb) {
+        start.getAndUpdate(prev -> prev == 0 ? s : min(s, prev));
+        end.getAndUpdate(prev -> max(e, prev));
+
+        fullParts.add(fp);
+        histParts.add(hp);
+        fullEntries.add(fe);
+        histEntries.add(he);
+        fullBytes.add(fb);
+        histBytes.add(hb);
+    }
+
+    /**
+     * Updating statistics.
+     *
+     * @param p    Partition id.
+     * @param hist Historical or full rebalance.
+     * @param e    Count of entries.
+     * @param b    Count of bytes.
      */
     public void update(boolean hist, int p, long e, long b) {
-        parts.put(p, !hist);
+        Boolean prev = parts.put(p, !hist);
+
+        if (isNull(prev))
+            (hist ? histParts : fullParts).add(1);
 
         (hist ? histEntries : fullEntries).add(e);
         (hist ? histBytes : fullBytes).add(b);
 
-        end = U.currentTimeMillis();
+        end(U.currentTimeMillis());
     }
 
     /**
@@ -73,17 +111,8 @@ public class CacheGroupSupplierRebalanceStatistics {
      * @param start Start time of rebalance in milliseconds.
      */
     public void start(long start) {
-        this.start = start;
-        end = start;
-    }
-
-    /**
-     * Return start time of rebalance in milliseconds.
-     *
-     * @return Start time of rebalance in milliseconds.
-     */
-    public long start() {
-        return start;
+        this.start.set(start);
+        end(start);
     }
 
     /**
@@ -92,7 +121,16 @@ public class CacheGroupSupplierRebalanceStatistics {
      * @param end End time of rebalance in milliseconds.
      */
     public void end(long end) {
-        this.end = end;
+        this.end.set(end);
+    }
+
+    /**
+     * Return start time of rebalance in milliseconds.
+     *
+     * @return Start time of rebalance in milliseconds.
+     */
+    public long start() {
+        return start.get();
     }
 
     /**
@@ -101,7 +139,7 @@ public class CacheGroupSupplierRebalanceStatistics {
      * @return End time of rebalance in milliseconds.
      */
     public long end() {
-        return end;
+        return end.get();
     }
 
     /**
@@ -113,6 +151,24 @@ public class CacheGroupSupplierRebalanceStatistics {
      */
     public Map<Integer, Boolean> partitions() {
         return parts;
+    }
+
+    /**
+     * Return count of partitions received by full rebalance.
+     *
+     * @return Count of partitions received by full rebalance.
+     */
+    public long fullParts() {
+        return fullParts.sum();
+    }
+
+    /**
+     * Return count of partitions received by historical rebalance.
+     *
+     * @return Count of partitions received by historical rebalance.
+     */
+    public long histParts() {
+        return histParts.sum();
     }
 
     /**

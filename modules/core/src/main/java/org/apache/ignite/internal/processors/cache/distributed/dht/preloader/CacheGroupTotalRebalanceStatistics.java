@@ -36,7 +36,7 @@ public class CacheGroupTotalRebalanceStatistics {
     private final AtomicLong end = new AtomicLong();
 
     /** Rebalance statistics for suppliers. */
-    private final Map<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> supStat = new ConcurrentHashMap<>();
+    private final Map<ClusterNode, SupplierRebalanceStatistics> supStat = new ConcurrentHashMap<>();
 
     /**
      * Default constructor.
@@ -64,28 +64,20 @@ public class CacheGroupTotalRebalanceStatistics {
         start.getAndUpdate(s -> s == 0 ? grpStat.start() : min(grpStat.start(), s));
         end.getAndUpdate(e -> max(grpStat.end(), e));
 
-        Map<ClusterNode, CacheGroupSupplierRebalanceStatistics> grpSupStats = grpStat.supplierStatistics();
-        for (Entry<ClusterNode, CacheGroupSupplierRebalanceStatistics> grpSupStatEntry : grpSupStats.entrySet()) {
-            CacheGroupTotalSupplierRebalanceStatistics totalSupStat = supStat.computeIfAbsent(
+        Map<ClusterNode, SupplierRebalanceStatistics> grpSupStats = grpStat.supplierStatistics();
+        for (Entry<ClusterNode, SupplierRebalanceStatistics> grpSupStatEntry : grpSupStats.entrySet()) {
+            SupplierRebalanceStatistics totalSupStat = supStat.computeIfAbsent(
                 grpSupStatEntry.getKey(),
-                n -> new CacheGroupTotalSupplierRebalanceStatistics()
+                n -> new SupplierRebalanceStatistics()
             );
 
-            CacheGroupSupplierRebalanceStatistics grpSupStat = grpSupStatEntry.getValue();
-
-            long fp = 0, hp = 0;
-            for (Entry<Integer, Boolean> part : grpSupStat.partitions().entrySet()) {
-                if (part.getValue())
-                    fp++;
-                else
-                    hp++;
-            }
+            SupplierRebalanceStatistics grpSupStat = grpSupStatEntry.getValue();
 
             totalSupStat.update(
                 grpSupStat.start(),
                 grpSupStat.end(),
-                fp,
-                hp,
+                grpSupStat.fullParts(),
+                grpSupStat.histParts(),
                 grpSupStat.fullEntries(),
                 grpSupStat.histEntries(),
                 grpSupStat.fullBytes(),
@@ -117,7 +109,7 @@ public class CacheGroupTotalRebalanceStatistics {
      *
      * @return Rebalance statistics for suppliers.
      */
-    public Map<ClusterNode, CacheGroupTotalSupplierRebalanceStatistics> supplierStatistics() {
+    public Map<ClusterNode, SupplierRebalanceStatistics> supplierStatistics() {
         return supStat;
     }
 
