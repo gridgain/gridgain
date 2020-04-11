@@ -51,8 +51,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.GridCacheEntryInfo;
 import org.apache.ignite.internal.processors.cache.IgniteRebalanceIterator;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupRebalanceStatistics;
-import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.CacheGroupTotalRebalanceStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemandMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionDemander.RebalanceFuture;
@@ -61,6 +59,7 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPartitionsExchangeFuture;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloader;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.GridDhtPreloaderAssignments;
+import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.RebalanceStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.SupplierRebalanceStatistics;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtLocalPartition;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState;
@@ -184,9 +183,9 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         createCluster(3);
 
         int restartNodeId = 2;
-        Map<String, CacheGroupRebalanceStatistics> expGrpStats = calcGrpStat(restartNodeId);
+        Map<String, RebalanceStatistics> expGrpStats = calcGrpStat(restartNodeId);
 
-        Map<String, CacheGroupTotalRebalanceStatistics> expTotalStats = new HashMap<>();
+        Map<String, RebalanceStatistics> expTotalStats = new HashMap<>();
         updateTotalStat(expTotalStats, expGrpStats);
 
         GrpStatPred grpStatPred = new GrpStatPred();
@@ -245,7 +244,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         listenLog.registerAllListeners(logListeners);
 
         int restartNodeId = 2;
-        AtomicReference<Map<String, CacheGroupRebalanceStatistics>> calcGrpStatRef = new AtomicReference<>();
+        AtomicReference<Map<String, RebalanceStatistics>> calcGrpStatRef = new AtomicReference<>();
 
         long beforeRestartNode = currentTimeMillis();
 
@@ -269,10 +268,10 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         long afterRestartNode = currentTimeMillis();
 
-        Map<String, CacheGroupRebalanceStatistics> expGrpStats = calcGrpStatRef.get();
+        Map<String, RebalanceStatistics> expGrpStats = calcGrpStatRef.get();
         assertNotNull(expGrpStats);
 
-        Map<String, CacheGroupTotalRebalanceStatistics> expTotalStats = new HashMap<>();
+        Map<String, RebalanceStatistics> expTotalStats = new HashMap<>();
         updateTotalStat(expTotalStats, expGrpStats);
 
         expGrpStats.remove(UTILITY_CACHE_NAME);
@@ -366,7 +365,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
 
         for (GrpStat value : grpStatPred.values) {
             IgniteEx node = value.get1();
-            CacheGroupRebalanceStatistics stat = value.get4();
+            RebalanceStatistics stat = value.get4();
             boolean restartedCache = value.get2().cacheOrGroupName().equals(DEFAULT_CACHE_NAME + 2);
 
             checkDuration(stat);
@@ -389,7 +388,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      *
      * @param stat Cache group rebaslance statistics.
      */
-    private void checkDuration(CacheGroupRebalanceStatistics stat) {
+    private void checkDuration(RebalanceStatistics stat) {
         requireNonNull(stat);
 
         assertTrue((stat.end() - stat.start()) >= 0);
@@ -511,11 +510,11 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * @return Rebalance statistics for cache groups.
      * @throws Exception if any error occurs.
      */
-    private Map<String, CacheGroupRebalanceStatistics> calcGrpStat(int nodeId) throws Exception {
-        Map<String, CacheGroupRebalanceStatistics> grpStats = new HashMap<>();
+    private Map<String, RebalanceStatistics> calcGrpStat(int nodeId) throws Exception {
+        Map<String, RebalanceStatistics> grpStats = new HashMap<>();
 
         for (CacheGroupContext grpCtx : grid(nodeId).context().cache().cacheGroups()) {
-            CacheGroupRebalanceStatistics grpStat = new CacheGroupRebalanceStatistics();
+            RebalanceStatistics grpStat = new RebalanceStatistics();
             grpStats.put(grpCtx.cacheOrGroupName(), grpStat);
 
             Map<GridDhtLocalPartition, GridDhtPartitionState> locPartState = new HashMap<>();
@@ -581,18 +580,14 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * @param grpStats   Cache group rebalance statistics.
      */
     private void updateTotalStat(
-        Map<String, CacheGroupTotalRebalanceStatistics> totalStats,
-        Map<String, CacheGroupRebalanceStatistics> grpStats
+        Map<String, RebalanceStatistics> totalStats,
+        Map<String, RebalanceStatistics> grpStats
     ) {
         requireNonNull(totalStats);
         requireNonNull(grpStats);
 
-        for (Entry<String, CacheGroupRebalanceStatistics> grpStatE : grpStats.entrySet()) {
-            totalStats.computeIfAbsent(
-                grpStatE.getKey(),
-                s -> new CacheGroupTotalRebalanceStatistics()
-            ).update(grpStatE.getValue());
-        }
+        for (Entry<String, RebalanceStatistics> e : grpStats.entrySet())
+            totalStats.computeIfAbsent(e.getKey(), s -> new RebalanceStatistics()).merge(e.getValue());
     }
 
     /**
@@ -610,8 +605,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      */
     private void checkStat(
         int nodeId,
-        Map<String, CacheGroupRebalanceStatistics> expGrpStats,
-        Map<String, CacheGroupTotalRebalanceStatistics> expTotalStats,
+        Map<String, RebalanceStatistics> expGrpStats,
+        Map<String, RebalanceStatistics> expTotalStats,
         GrpStatPred grpStatPred,
         TotalStatPred totalStatPred,
         @Nullable Predicate<CacheGroupContext> grpFilter,
@@ -638,22 +633,22 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         assertEquals(expGrpStats.size(), actGrpStatSize);
         assertTrue(actGrpStatSize > 0);
 
-        for (T4<IgniteEx, CacheGroupContext, RebalanceFuture, CacheGroupRebalanceStatistics> t4 : grpStatPred.values) {
+        for (T4<IgniteEx, CacheGroupContext, RebalanceFuture, RebalanceStatistics> t4 : grpStatPred.values) {
             if (nonNull(grpFilter) && !grpFilter.test(t4.get2()))
                 continue;
 
             //check that result was successful
             assertTrue(t4.get3().get());
 
-            CacheGroupRebalanceStatistics actGrpStat = t4.get4();
+            RebalanceStatistics actGrpStat = t4.get4();
             assertEquals(1, actGrpStat.attempt());
 
-            CacheGroupRebalanceStatistics expGrpStat = expGrpStats.get(t4.get2().cacheOrGroupName());
+            RebalanceStatistics expGrpStat = expGrpStats.get(t4.get2().cacheOrGroupName());
             checkGrpStat(expGrpStat, actGrpStat, expStart, expEnd, hist);
         }
 
-        for (T2<IgniteEx, Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics>> t2 : totalStatPred.values) {
-            Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics> actTotalStats = t2.get2();
+        for (T2<IgniteEx, Map<CacheGroupContext, RebalanceStatistics>> t2 : totalStatPred.values) {
+            Map<CacheGroupContext, RebalanceStatistics> actTotalStats = t2.get2();
 
             int actTotalStatSize = nonNull(grpFilter) ?
                 (int)actTotalStats.keySet().stream().filter(grpFilter).count() : actTotalStats.size();
@@ -661,7 +656,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             assertEquals(expTotalStats.size(), actTotalStatSize);
             assertTrue(actTotalStatSize > 0);
 
-            for (Entry<CacheGroupContext, CacheGroupTotalRebalanceStatistics> actTotalStatE : actTotalStats.entrySet()) {
+            for (Entry<CacheGroupContext, RebalanceStatistics> actTotalStatE : actTotalStats.entrySet()) {
                 if (nonNull(grpFilter) && !grpFilter.test(actTotalStatE.getKey()))
                     continue;
 
@@ -685,8 +680,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * @param hist Historical rebalance.
      */
     private void checkGrpStat(
-        CacheGroupRebalanceStatistics exp,
-        CacheGroupRebalanceStatistics act,
+        RebalanceStatistics exp,
+        RebalanceStatistics act,
         long expStart,
         long expEnd,
         boolean hist
@@ -730,8 +725,8 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
      * @param expEnd Expected end time.
      */
     private void checkTotalStat(
-        CacheGroupTotalRebalanceStatistics exp,
-        CacheGroupTotalRebalanceStatistics act,
+        RebalanceStatistics exp,
+        RebalanceStatistics act,
         long expStart,
         long expEnd
     ) {
@@ -783,7 +778,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
     /**
      * Class container for statistics of rebalance for cache group.
      */
-    static class GrpStat extends T4<IgniteEx, CacheGroupContext, RebalanceFuture, CacheGroupRebalanceStatistics> {
+    static class GrpStat extends T4<IgniteEx, CacheGroupContext, RebalanceFuture, RebalanceStatistics> {
         /**
          * Constructor.
          *
@@ -792,12 +787,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
          * @param val3 Rebalance future.
          * @param val4 Rebalance statistics.
          */
-        public GrpStat(
-            IgniteEx val1,
-            CacheGroupContext val2,
-            RebalanceFuture val3,
-            CacheGroupRebalanceStatistics val4
-        ) {
+        public GrpStat(IgniteEx val1, CacheGroupContext val2, RebalanceFuture val3, RebalanceStatistics val4) {
             super(val1, val2, val3, val4);
         }
     }
@@ -824,14 +814,14 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
             CacheGroupContext grpCtx = node.context().cache().cacheGroup(cacheId(m.group(1)));
             RebalanceFuture rebFut = (RebalanceFuture)grpCtx.preloader().rebalanceFuture();
 
-            return new GrpStat(node, grpCtx, rebFut, new CacheGroupRebalanceStatistics(rebFut.statistics()));
+            return new GrpStat(node, grpCtx, rebFut, new RebalanceStatistics(rebFut.statistics()));
         }
     }
 
     /**
      * Predicate for getting total rebalance statistics for all cache group when listening log.
      */
-    class TotalStatPred extends StatPred<T2<IgniteEx, Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics>>> {
+    class TotalStatPred extends StatPred<T2<IgniteEx, Map<CacheGroupContext, RebalanceStatistics>>> {
         /**
          * Default constructor.
          */
@@ -840,16 +830,16 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         }
 
         /** {@inheritDoc} */
-        @Override public T2<IgniteEx, Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics>> value(
+        @Override public T2<IgniteEx, Map<CacheGroupContext, RebalanceStatistics>> value(
             Matcher m,
             IgniteThread t
         ) {
             IgniteEx node = grid(t.getIgniteInstanceName());
 
-            Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics> stat = new HashMap<>();
+            Map<CacheGroupContext, RebalanceStatistics> stat = new HashMap<>();
             for (CacheGroupContext grpCtx : node.context().cache().cacheGroups()) {
                 GridDhtPartitionDemander demander = ((GridDhtPreloader)grpCtx.preloader()).demander();
-                stat.put(grpCtx, new CacheGroupTotalRebalanceStatistics(demander.totalStatistics()));
+                stat.put(grpCtx, new RebalanceStatistics(demander.totalStatistics()));
             }
             return new T2<>(node, stat);
         }

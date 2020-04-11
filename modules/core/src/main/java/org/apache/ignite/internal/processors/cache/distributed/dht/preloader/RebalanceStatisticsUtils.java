@@ -17,8 +17,6 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -35,8 +33,6 @@ import org.apache.ignite.internal.processors.affinity.AffinityAssignment;
 import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 import static java.time.ZoneId.systemDefault;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Comparator.comparing;
@@ -100,7 +96,7 @@ public class RebalanceStatisticsUtils {
      */
     public static String cacheGroupRebalanceStatistics(
         CacheGroupContext cacheGrpCtx,
-        CacheGroupRebalanceStatistics stat,
+        RebalanceStatistics stat,
         boolean suc,
         AffinityTopologyVersion top
     ) {
@@ -192,41 +188,30 @@ public class RebalanceStatisticsUtils {
      * @return String representation of total rebalance statistics
      *      for all cache groups.
      */
-    public static String totalRebalanceStatistic(Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics> totalStat) {
+    public static String totalRebalanceStatistic(Map<CacheGroupContext, RebalanceStatistics> totalStat) {
         SB sb = new SB();
 
-        long start = totalStat.values().stream().mapToLong(CacheGroupTotalRebalanceStatistics::start).min().orElse(0);
-        long end = totalStat.values().stream().mapToLong(CacheGroupTotalRebalanceStatistics::end).max().orElse(0);
+        long start = totalStat.values().stream().mapToLong(RebalanceStatistics::start).min().orElse(0);
+        long end = totalStat.values().stream().mapToLong(RebalanceStatistics::end).max().orElse(0);
 
         sb.a("Rebalance total information (including successful and not rebalances): [").a(time(start, end)).a("] ");
 
-        Set<ClusterNode> supNodes = new HashSet<>();
-        for (CacheGroupTotalRebalanceStatistics stat : totalStat.values())
-            supNodes.addAll(stat.supplierStatistics().keySet());
+        RebalanceStatistics total = new RebalanceStatistics();
+        totalStat.values().forEach(total::merge);
 
-        if (supNodes.isEmpty())
+        Map<ClusterNode, SupplierRebalanceStatistics> supStats = total.supplierStatistics();
+
+        if (supStats.isEmpty())
             return sb.toString();
 
         sb.a(SUP_STAT_HEAD);
 
         int nodeId = 0;
-        for (ClusterNode supNode : supNodes) {
-            long fp = 0, hp = 0, fe = 0, he = 0, fb = 0, hb = 0, s = 0, e = 0;
-
-            for (CacheGroupTotalRebalanceStatistics stat : totalStat.values()) {
-                if (!stat.supplierStatistics().containsKey(supNode))
-                    continue;
-
-                SupplierRebalanceStatistics supStat = stat.supplierStatistics().get(supNode);
-                fp += supStat.fullParts();
-                hp += supStat.histParts();
-                fe += supStat.fullEntries();
-                he += supStat.histEntries();
-                fb += supStat.fullBytes();
-                hb += supStat.histBytes();
-                s = s == 0 ? supStat.start() : min(supStat.start(), s);
-                e = max(supStat.end(), e);
-            }
+        for (SupplierRebalanceStatistics supStat : supStats.values()) {
+            long fp = supStat.fullParts(), hp = supStat.histParts();
+            long fe = supStat.fullEntries(), he = supStat.histEntries();
+            long fb = supStat.fullBytes(), hb = supStat.histBytes();
+            long s = supStat.start(), e = supStat.end();
 
             sb.a(supInfo(nodeId++, fp, hp, fe, he, fb, hb, s, e));
         }
@@ -234,7 +219,7 @@ public class RebalanceStatisticsUtils {
         sb.a(SUP_STAT_ALIASES);
 
         nodeId = 0;
-        for (ClusterNode supNode : supNodes)
+        for (ClusterNode supNode : supStats.keySet())
             sb.a(supInfo(nodeId++, supNode));
 
         return sb.toString();

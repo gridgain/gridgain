@@ -62,27 +62,20 @@ public class SupplierRebalanceStatistics {
     private final LongAdder histBytes = new LongAdder();
 
     /**
-     * Updating statistics.
+     * Merging statistics of rebalance by supplier, without {@link #partitions}.
      *
-     * @param s Start time of rebalance in milliseconds.
-     * @param e End time of rebalance in milliseconds.
-     * @param fp Count of partitions received by full rebalance.
-     * @param hp Count of partitions received by historical rebalance.
-     * @param fe Count of entries received by full rebalance.
-     * @param he Count of partitions received by entries rebalance.
-     * @param fb Count of bytes received by full rebalance.
-     * @param hb Count of bytes received by historical rebalance.
+     * @param other Other statistics of rebalance by supplier.
      */
-    public void update(long s, long e, long fp, long hp, long fe, long he, long fb, long hb) {
-        start.getAndUpdate(prev -> prev == 0 ? s : min(s, prev));
-        end.getAndUpdate(prev -> max(e, prev));
+    public void merge(SupplierRebalanceStatistics other) {
+        start.getAndUpdate(prev -> prev == 0 ? other.start() : min(other.start(), prev));
+        end.getAndUpdate(prev -> max(other.end(), prev));
 
-        fullParts.add(fp);
-        histParts.add(hp);
-        fullEntries.add(fe);
-        histEntries.add(he);
-        fullBytes.add(fb);
-        histBytes.add(hb);
+        fullParts.add(other.fullParts());
+        histParts.add(other.histParts());
+        fullEntries.add(other.fullEntries());
+        histEntries.add(other.histEntries());
+        fullBytes.add(other.fullBytes());
+        histBytes.add(other.histBytes());
     }
 
     /**

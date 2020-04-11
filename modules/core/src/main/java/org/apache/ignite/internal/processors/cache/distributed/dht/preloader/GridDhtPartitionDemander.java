@@ -128,7 +128,7 @@ public class GridDhtPartitionDemander {
 
     /** Total statistics of rebalance. */
     @GridToStringExclude
-    @Nullable private final CacheGroupTotalRebalanceStatistics totalRebStat;
+    @Nullable private final RebalanceStatistics totalRebStat;
 
     /**
      * @param grp Ccahe group.
@@ -152,7 +152,7 @@ public class GridDhtPartitionDemander {
             syncFut.onDone();
         }
 
-        totalRebStat = availablePrintRebalanceStatistics() ? new CacheGroupTotalRebalanceStatistics() : null;
+        totalRebStat = availablePrintRebalanceStatistics() ? new RebalanceStatistics() : null;
     }
 
     /**
@@ -452,7 +452,7 @@ public class GridDhtPartitionDemander {
         AffinityTopologyVersion topVer = supplyMsg.topologyVersion();
 
         RebalanceFuture rebalanceFut = this.rebalanceFut;
-        CacheGroupRebalanceStatistics rebalanceStat = rebalanceFut.stat;
+        RebalanceStatistics rebalanceStat = rebalanceFut.stat;
 
         rebalanceFut.cancelLock.readLock().lock();
 
@@ -1110,7 +1110,7 @@ public class GridDhtPartitionDemander {
 
         /** Rebalance statistics. */
         @GridToStringExclude
-        @Nullable final CacheGroupRebalanceStatistics stat;
+        @Nullable final RebalanceStatistics stat;
 
         /** Entries batches queued. */
         private final Map<Integer /* Partition id. */, LongAdder /* Batch count. */ > queued = new HashMap<>();
@@ -1191,8 +1191,8 @@ public class GridDhtPartitionDemander {
             if (!availablePrintRebalanceStatistics())
                 stat = null;
             else {
-                CacheGroupRebalanceStatistics prevStat = previous.stat;
-                stat = new CacheGroupRebalanceStatistics(nonNull(prevStat) ? prevStat.attempt() + 1 : 1);
+                RebalanceStatistics prevStat = previous.stat;
+                stat = new RebalanceStatistics(nonNull(prevStat) ? prevStat.attempt() + 1 : 1);
             }
         }
 
@@ -1791,11 +1791,11 @@ public class GridDhtPartitionDemander {
             if (log.isInfoEnabled())
                 log.info(cacheGroupRebalanceStatistics(grp, stat, get(), topVer));
 
-            ((GridDhtPreloader)grp.preloader()).demander().totalRebStat.update(stat);
+            ((GridDhtPreloader)grp.preloader()).demander().totalRebStat.merge(stat);
             stat.reset();
 
             //Check that rebalance is over for all cache groups successfully
-            for (GridCacheContext cacheCtx : ctx.cacheContexts()) {
+            for (GridCacheContext<?, ?> cacheCtx : ctx.cacheContexts()) {
                 IgniteInternalFuture<Boolean> rebFut = cacheCtx.preloader().rebalanceFuture();
 
                 if (!rebFut.isDone() || !rebFut.get())
@@ -1805,7 +1805,7 @@ public class GridDhtPartitionDemander {
             //exclude not rebalanced cache groups
             Set<GridDhtPartitionDemander> demanders = demanders(d -> !d.rebalanceFut.isInitial());
 
-            Map<CacheGroupContext, CacheGroupTotalRebalanceStatistics> totalStats =
+            Map<CacheGroupContext, RebalanceStatistics> totalStats =
                 demanders.stream().collect(toMap(d -> d.grp, d -> d.totalRebStat));
 
             if (log.isInfoEnabled())
@@ -1820,7 +1820,7 @@ public class GridDhtPartitionDemander {
          *
          * @return Rebalance statistics.
          */
-        @Nullable public CacheGroupRebalanceStatistics statistics() {
+        @Nullable public RebalanceStatistics statistics() {
             return stat;
         }
     }
@@ -1830,7 +1830,7 @@ public class GridDhtPartitionDemander {
      *
      * @return Total statistics of rebalance.
      */
-    @Nullable public CacheGroupTotalRebalanceStatistics totalStatistics() {
+    @Nullable public RebalanceStatistics totalStatistics() {
         return totalRebStat;
     }
 }

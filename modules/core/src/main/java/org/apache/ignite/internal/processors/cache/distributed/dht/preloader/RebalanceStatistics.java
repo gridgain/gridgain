@@ -17,30 +17,36 @@
 package org.apache.ignite.internal.processors.cache.distributed.dht.preloader;
 
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.ignite.cluster.ClusterNode;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 /**
- * Rebalance statistics for cache group.
+ * Statistics of rebalance.
  */
-public class CacheGroupRebalanceStatistics {
+public class RebalanceStatistics {
     /** Start time of rebalance in milliseconds. */
-    private volatile long start;
+    private final AtomicLong start = new AtomicLong();
 
     /** End time of rebalance in milliseconds. */
-    private volatile long end;
+    private final AtomicLong end = new AtomicLong();
 
     /** Rebalance attempt. */
-    private volatile int attempt;
+    private final AtomicInteger attempt = new AtomicInteger();
 
     /** Rebalance statistics for suppliers. */
-    private final Map<ClusterNode, SupplierRebalanceStatistics> supplierStat = new ConcurrentHashMap<>();
+    private final Map<ClusterNode, SupplierRebalanceStatistics> supStat = new ConcurrentHashMap<>();
 
     /**
      * Default constructor.
      */
-    public CacheGroupRebalanceStatistics() {
+    public RebalanceStatistics() {
     }
 
     /**
@@ -48,10 +54,10 @@ public class CacheGroupRebalanceStatistics {
      *
      * @param attempt Rebalance attempt, must be greater than {@code 0}.
      */
-    public CacheGroupRebalanceStatistics(int attempt) {
+    public RebalanceStatistics(int attempt) {
         assert attempt > 0;
 
-        this.attempt = attempt;
+        this.attempt.set(attempt);
     }
 
     /**
@@ -59,11 +65,11 @@ public class CacheGroupRebalanceStatistics {
      *
      * @param other Other instance.
      */
-    public CacheGroupRebalanceStatistics(CacheGroupRebalanceStatistics other) {
-        attempt = other.attempt;
-        start = other.start;
-        end = other.end;
-        supplierStat.putAll(other.supplierStat);
+    public RebalanceStatistics(RebalanceStatistics other) {
+        attempt.set(other.attempt.get());
+        start.set(other.start.get());
+        end.set(other.end.get());
+        supStat.putAll(other.supStat);
     }
 
     /**
@@ -93,7 +99,7 @@ public class CacheGroupRebalanceStatistics {
      * @param end            End time of rebalance in milliseconds.
      */
     public void end(UUID supplierNodeId, long end) {
-        for (Map.Entry<ClusterNode, SupplierRebalanceStatistics> supStatEntry : supplierStat.entrySet()) {
+        for (Entry<ClusterNode, SupplierRebalanceStatistics> supStatEntry : supStat.entrySet()) {
             if (supStatEntry.getKey().id().equals(supplierNodeId)) {
                 supStatEntry.getValue().end(end);
                 return;
@@ -115,13 +121,27 @@ public class CacheGroupRebalanceStatistics {
     }
 
     /**
+     * Merging statistics, without {@link SupplierRebalanceStatistics#partitions}.
+     *
+     * @param other Other rebalance statistics.
+     */
+    public void merge(RebalanceStatistics other) {
+        start.getAndUpdate(s -> s == 0 ? other.start() : min(other.start(), s));
+        end.getAndUpdate(e -> max(other.end(), e));
+        attempt.getAndUpdate(a -> max(other.attempt(), a));
+
+        for (Entry<ClusterNode, SupplierRebalanceStatistics> e : other.supplierStatistics().entrySet())
+            supStat.computeIfAbsent(e.getKey(), n -> new SupplierRebalanceStatistics()).merge(e.getValue());
+    }
+
+    /**
      * Set start time of rebalance in milliseconds.
      *
      * @param start Start time of rebalance in milliseconds.
      */
     public void start(long start) {
-        this.start = start;
-        end = start;
+        this.start.set(start);
+        end(start);
     }
 
     /**
@@ -130,7 +150,7 @@ public class CacheGroupRebalanceStatistics {
      * @return Start time of rebalance in milliseconds.
      */
     public long start() {
-        return start;
+        return start.get();
     }
 
     /**
@@ -139,7 +159,7 @@ public class CacheGroupRebalanceStatistics {
      * @param end End time of rebalance in milliseconds.
      */
     public void end(long end) {
-        this.end = end;
+        this.end.set(end);
     }
 
     /**
@@ -148,7 +168,7 @@ public class CacheGroupRebalanceStatistics {
      * @return End time of rebalance in milliseconds.
      */
     public long end() {
-        return end;
+        return end.get();
     }
 
     /**
@@ -157,7 +177,7 @@ public class CacheGroupRebalanceStatistics {
      * @return Rebalance statistics for suppliers.
      */
     public Map<ClusterNode, SupplierRebalanceStatistics> supplierStatistics() {
-        return supplierStat;
+        return supStat;
     }
 
     /**
@@ -166,24 +186,24 @@ public class CacheGroupRebalanceStatistics {
      * @return Rebalance attempt.
      */
     public int attempt() {
-        return attempt;
+        return attempt.get();
     }
 
     /**
      * Reset statistics.
      */
     public void reset() {
-        start = 0L;
-        end = 0L;
+        start.set(0);
+        end.set(0);
 
-        supplierStat.clear();
+        supStat.clear();
     }
 
     /**
      * Reset attempt.
      */
     public void resetAttempt() {
-        attempt = 0;
+        attempt.set(0);
     }
 
     /**
@@ -193,6 +213,6 @@ public class CacheGroupRebalanceStatistics {
      * @return Rebalance statistics for supplier node.
      */
     private SupplierRebalanceStatistics supplierRebalanceStatistics(ClusterNode supplierNode) {
-        return supplierStat.computeIfAbsent(supplierNode, n -> new SupplierRebalanceStatistics());
+        return supStat.computeIfAbsent(supplierNode, n -> new SupplierRebalanceStatistics());
     }
 }
