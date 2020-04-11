@@ -61,6 +61,10 @@ public class TraceableMessagesTable {
      * @return Trace name associated with message with given class.
      */
     public static SpanType traceName(Class<? extends TraceableMessage> msgCls) {
+        if (msgCls.equals(TcpDiscoveryNodeAddedMessage.class)) {
+            System.out.printf("!!!");
+        }
+
         SpanType trace = msgTraceLookupTable.get(msgCls);
 
         if (trace == null)
@@ -76,6 +80,10 @@ public class TraceableMessagesTable {
     public static String traceName(Object obj) {
         if (obj == null)
             return "unknown";
+
+        if (obj.getClass().equals(TcpDiscoveryNodeAddedMessage.class)) {
+            System.out.printf("!!!");
+        }
 
         if (obj instanceof GridIoMessage)
             return traceName(((GridIoMessage)obj).message());
