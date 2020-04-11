@@ -19,6 +19,7 @@ package org.apache.ignite.internal.processors.tracing.messages;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.tracing.NoopSpan;
 import org.apache.ignite.internal.processors.tracing.SpanManager;
+import org.apache.ignite.spi.discovery.tcp.messages.TcpDiscoveryNodeAddedMessage;
 
 /**
  * Helper to handle traceable messages.
@@ -82,6 +83,9 @@ public class TraceableMessagesHandler {
             spanMgr.serialize(parent.spanContainer().span())
         );
 
+        if (msg.getClass().equals(TcpDiscoveryNodeAddedMessage.class)) {
+            System.out.println("!!!");
+        }
         msg.spanContainer().span(
             spanMgr.create(TraceableMessagesTable.traceName(msg.getClass()), parent.spanContainer().span())
                 .addLog("Created")
