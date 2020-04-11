@@ -194,17 +194,17 @@ public enum SpanType {
     }
 
     static {
-        SpanType[] traces = SpanType.values();
+        SpanType[] spanTypes = SpanType.values();
 
         int maxIdx = 0;
 
-        for (SpanType trace : traces)
-            maxIdx = Math.max(maxIdx, trace.idx);
+        for (SpanType spanType : spanTypes)
+            maxIdx = Math.max(maxIdx, spanType.idx);
 
         VALS = new SpanType[maxIdx + 1];
 
-        for (SpanType trace : traces)
-            VALS[trace.idx] = trace;
+        for (SpanType spanType : spanTypes)
+            VALS[spanType.idx] = spanType;
     }
 
     /**

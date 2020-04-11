@@ -26,7 +26,6 @@ import org.apache.ignite.internal.processors.tracing.Scope;
 import org.apache.ignite.internal.processors.tracing.Span;
 import org.apache.ignite.internal.processors.tracing.SpanStatus;
 import org.apache.ignite.internal.processors.tracing.SpanType;
-import org.apache.ignite.internal.util.typedef.internal.U;
 
 /**
  * Span implementation based on OpenCensus library.
@@ -38,26 +37,29 @@ public class OpenCensusSpanAdapter implements Span {
     /** Flag indicates that span is ended. */
     private volatile boolean ended;
 
-    private final SpanType trace;
+    /** Span type. */
+    private final SpanType spanType;
 
+    /** Set of supported scopes for given span. */
     private final Set<Scope> supportedScopes;
 
     /**
      * @param span OpenCensus span delegate.
+     * @param spanType Type of span to create.
      */
-    // TODO: 20.02.20 How to extract scope from opencensus.trace.Span? Should we really do this.
-    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType trace) {
+    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType spanType) {
         this.span = span;
-        this.trace = trace;
+        this.spanType = spanType;
         supportedScopes = Collections.emptySet();
     }
 
     /**
      * @param span OpenCensus span delegate.
+     * @param spanType Type of span to create.
      */
-    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType trace, Set<Scope> supportedScopes) {
+    public OpenCensusSpanAdapter(io.opencensus.trace.Span span, SpanType spanType, Set<Scope> supportedScopes) {
         this.span = span;
-        this.trace = trace;
+        this.spanType = spanType;
         this.supportedScopes = supportedScopes;
     }
 
@@ -137,13 +139,11 @@ public class OpenCensusSpanAdapter implements Span {
 
     /** {@inheritDoc} */
     @Override public SpanType type() {
-        return trace;
+        return spanType;
     }
 
+    /** {@inheritDoc} */
     @Override public Set<Scope> supportedScopes() {
-        if (SpanType.TX_NEAR_PREPARE.equals(trace)){
-            System.out.printf("!!!");
-        }
         return supportedScopes;
     }
 }

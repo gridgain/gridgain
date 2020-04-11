@@ -26,39 +26,39 @@ public interface SpanManager {
     /**
      * Creates Span with given name.
      *
-     * @param trace Trace.
+     * @param spanType Type of span to create.
      */
-    public default Span create(@NotNull SpanType trace) {
-        return create(trace, (Span)null);
+    public default Span create(@NotNull SpanType spanType) {
+        return create(spanType, (Span)null);
     }
 
     /**
      * Creates Span given name and explicit parent.
      *
-     * @param trace Trace.
+     * @param spanType Type of span to create.
      * @param parentSpan Parent span.
      * @return Created span.
      */
-    public Span create(@NotNull SpanType trace, @Nullable Span parentSpan);
+    public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan);
 
     /**
      * Creates Span given name and explicit parent.
      *
-     * @param trace Trace.
+     * @param spanType Type of span to create.
      * @param serializedSpan Parent span as serialized bytes.
      * @return Created span.
      */
-    public Span create(@NotNull SpanType trace, @Nullable byte[] serializedSpan);
+    public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedSpan);
 
     /**
      * Creates Span given name and explicit parent.
      *
-     * @param trace Trace.
+     * @param spanType Type of span to create.
      * @param parentSpan Parent span.
      * @param supportedScopes Supported scopes.
      * @return Created span.
      */
-    public Span create (@NotNull SpanType trace, @Nullable Span parentSpan, Scope...supportedScopes);
+    public Span create (@NotNull SpanType spanType, @Nullable Span parentSpan, Scope...supportedScopes);
 
     /**
      * Serializes span to byte array to send context over network.

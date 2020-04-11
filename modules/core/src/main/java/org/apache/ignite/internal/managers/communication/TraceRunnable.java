@@ -30,25 +30,25 @@ public abstract class TraceRunnable implements Runnable {
     /** */
     private final Tracing tracing;
 
-    /** Name of new span. */
-    private final SpanType trace;
+    /** SpanType of the new span. */
+    private final SpanType spanType;
 
     /** Parent span from which new span should be created. */
     private final Span parent;
 
     /**
      * @param tracing Tracing processor.
-     * @param trace New trace.
+     * @param spanType Span type to create.
      */
-    public TraceRunnable(Tracing tracing, SpanType trace) {
+    protected TraceRunnable(Tracing tracing, SpanType spanType) {
         this.tracing = tracing;
-        this.trace = trace;
+        this.spanType = spanType;
         parent = MTC.span();
     }
 
     /** {@inheritDoc} */
     @Override public void run() {
-        Span span = tracing.create(trace, parent);
+        Span span = tracing.create(spanType, parent);
 
         try (TraceSurroundings ignore = MTC.support(span.equals(NoopSpan.INSTANCE) ? parent : span)) {
             execute();

@@ -146,18 +146,18 @@ public class GridTracingManager extends GridManagerAdapter<TracingSpi> implement
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType trace, @Nullable Span parentSpan) {
-        return enrichWithLocalNodeParameters(generateSpan(parentSpan, trace));
+    @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan) {
+        return enrichWithLocalNodeParameters(generateSpan(parentSpan, spanType));
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType trace, @Nullable byte[] serializedSpan) {
-        return enrichWithLocalNodeParameters(getSpi().create(trace, serializedSpan));
+    @Override public Span create(@NotNull SpanType spanType, @Nullable byte[] serializedSpan) {
+        return enrichWithLocalNodeParameters(getSpi().create(spanType, serializedSpan));
     }
 
     /** {@inheritDoc} */
-    @Override public Span create(@NotNull SpanType trace, @Nullable Span parentSpan, Scope... supportedScopes) {
-        return enrichWithLocalNodeParameters(generateSpan(parentSpan, trace, supportedScopes));
+    @Override public Span create(@NotNull SpanType spanType, @Nullable Span parentSpan, Scope... supportedScopes) {
+        return enrichWithLocalNodeParameters(generateSpan(parentSpan, spanType, supportedScopes));
     }
 
     /** {@inheritDoc} */

@@ -61,12 +61,12 @@ public class TraceableMessagesTable {
      * @return Trace name associated with message with given class.
      */
     public static SpanType traceName(Class<? extends TraceableMessage> msgCls) {
-        SpanType trace = msgTraceLookupTable.get(msgCls);
+        SpanType spanType = msgTraceLookupTable.get(msgCls);
 
-        if (trace == null)
+        if (spanType == null)
             throw new IgniteException("Trace name is not defined for " + msgCls);
 
-        return trace;
+        return spanType;
     }
 
     /**
