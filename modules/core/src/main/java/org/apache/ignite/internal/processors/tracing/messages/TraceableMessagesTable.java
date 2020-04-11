@@ -80,8 +80,8 @@ public class TraceableMessagesTable {
         if (obj instanceof GridIoMessage)
             return traceName(((GridIoMessage)obj).message());
 
-        // TODO: 20.02.20 Refactor!!!
-        return null;
-//        return msgTraceLookupTable.getOrDefault(obj.getClass(), obj.getClass().getSimpleName());
+        SpanType val = msgTraceLookupTable.get(obj.getClass());
+
+        return val != null ? val.traceName() : obj.getClass().getSimpleName();
     }
 }
