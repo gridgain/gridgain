@@ -34,20 +34,6 @@ import org.junit.runners.Suite;
 
 /** */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({
-    IgniteDbSingleNodeWithIndexingWalRestoreTest.class,
-    IgniteDbSingleNodeWithIndexingPutGetTest.class,
-    IgniteDbMultiNodeWithIndexingPutGetTest.class,
-    IgnitePdsSingleNodeWithIndexingPutGetPersistenceTest.class,
-    IgnitePdsSingleNodeWithIndexingAndGroupPutGetPersistenceSelfTest.class,
-    IgnitePersistentStoreSchemaLoadTest.class,
-    IgnitePersistentStoreQueryWithMultipleClassesPerCacheTest.class,
-    IgniteTwoRegionsRebuildIndexTest.class,
-    RebuildIndexWithHistoricalRebalanceTest.class,
-    IgniteTcBotInitNewPageTest.class,
-    IndexingMultithreadedLoadContinuousRestartTest.class,
-    LongDestroyDurableBackgroundTaskTest.class,
-    RebuildIndexTest.class
-})
+@Suite.SuiteClasses({})
 public class IgnitePdsWithIndexingTestSuite {
 }

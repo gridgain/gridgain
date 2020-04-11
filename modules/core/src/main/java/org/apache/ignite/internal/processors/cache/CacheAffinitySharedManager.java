@@ -307,11 +307,14 @@ public class CacheAffinitySharedManager<K, V> extends GridCacheSharedManagerAdap
             try {
                 if (msg != null) {
                     CacheGroupContext cache = cctx.cache().cacheGroup(CU.cacheId("cache"));
-                    log.error("DBG: late affinity change triggered waitInfo=" + waitInfo +
-                        ", from=" + sender.id() +
-                        ", readyVer=" + cache.topology().readyTopologyVersion() +
-                        ", top=" + U.field(cache.topology(), "node2part") +
-                        ", msg=" + msg0, new Exception());
+
+                    if (msg0 != null) {
+                        log.error("DBG: late affinity change triggered waitInfo=" + waitInfo +
+                            ", from=" + sender.id() +
+                            ", readyVer=" + cache.topology().readyTopologyVersion() +
+                            ", top=" + U.field(cache.topology(), "node2part") +
+                            ", msg=" + msg0, new Exception());
+                    }
 
                     waitInfo = null;
 
