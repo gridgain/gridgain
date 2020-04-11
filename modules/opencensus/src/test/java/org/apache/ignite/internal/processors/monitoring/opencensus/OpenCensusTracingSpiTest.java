@@ -124,7 +124,7 @@ public class OpenCensusTracingSpiTest extends GridCommonAbstractTest {
 
         startGrids(GRID_CNT);
 
-//        startGrid("client");
+        startGrid("client");
     }
 
     @Test
