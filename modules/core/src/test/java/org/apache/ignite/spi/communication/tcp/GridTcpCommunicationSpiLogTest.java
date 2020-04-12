@@ -155,12 +155,12 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
      */
     @Test
     public void testClientHalfOpenedConnectionDebugLogMessage() throws Exception {
-        LogListener logLsnr0 = LogListener.matches("The session change request was offered [req=NioOperationFuture [op=CLOSE]]")
+        LogListener logLsnr0 = LogListener.matches("The session change request was offered [req=NioOperationFuture [op=CLOSE")
             .atLeast(1)
             .atMost(1)
             .build();
 
-        LogListener logLsnr1 = LogListener.matches("The session request will be processed [req=NioOperationFuture [op=CLOSE]]")
+        LogListener logLsnr1 = LogListener.matches("The session request will be processed [req=NioOperationFuture [op=CLOSE")
             .atLeast(1)
             .atMost(1)
             .build();
