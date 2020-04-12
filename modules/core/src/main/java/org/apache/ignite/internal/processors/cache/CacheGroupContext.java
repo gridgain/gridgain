@@ -207,7 +207,7 @@ public class CacheGroupContext {
      * @param walEnabled Wal enabled flag.
      * @param persistenceGroup {@code true} if this group was configured as persistence in despite of data region.
      */
-    CacheGroupContext(
+    public CacheGroupContext(
         GridCacheSharedContext ctx,
         int grpId,
         UUID rcvdFrom,

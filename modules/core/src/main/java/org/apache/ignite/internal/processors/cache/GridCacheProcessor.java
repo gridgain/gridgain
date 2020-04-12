@@ -2812,7 +2812,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     /**
      * @param grpId Group ID.
      */
-    private void stopCacheGroup(int grpId) {
+    public void stopCacheGroup(int grpId) {
         CacheGroupContext grp = cacheGrps.remove(grpId);
 
         if (grp != null)
@@ -4002,6 +4002,14 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      */
     public boolean isCacheRestarting(String cacheName) {
         return cachesInfo.isRestarting(cacheName);
+    }
+
+    public void onCacheDataRemoveStarted(String cacheName) {
+        cachesInfo.onCacheDataRemoveStarted(cacheName);
+    }
+
+    public void onCacheDataRemoveFinished(String cacheName) {
+        cachesInfo.onCacheDataRemoveFinished(cacheName);
     }
 
     /**

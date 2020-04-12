@@ -441,8 +441,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
         int p,
         AffinityTopologyVersion topVer,
         boolean create
-    )
-        throws GridDhtInvalidPartitionException {
+    ) throws GridDhtInvalidPartitionException {
         if (!create)
             return null;
 

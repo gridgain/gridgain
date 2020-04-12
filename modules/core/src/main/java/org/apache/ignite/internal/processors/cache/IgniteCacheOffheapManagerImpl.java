@@ -36,6 +36,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.IgniteSystemProperties;
+import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.NodeStoppingException;
@@ -60,9 +61,11 @@ import org.apache.ignite.internal.processors.cache.mvcc.txlog.TxState;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRow;
 import org.apache.ignite.internal.processors.cache.persistence.CacheDataRowAdapter;
 import org.apache.ignite.internal.processors.cache.persistence.CacheSearchRow;
+import org.apache.ignite.internal.processors.cache.persistence.RemoveCacheDataDurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.RootPage;
 import org.apache.ignite.internal.processors.cache.persistence.RowStore;
 import org.apache.ignite.internal.processors.cache.persistence.freelist.SimpleDataRow;
+import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.partstate.GroupPartitionId;
 import org.apache.ignite.internal.processors.cache.persistence.partstorage.PartitionMetaStorage;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
@@ -283,30 +286,22 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
     private void removeCacheData(int cacheId) {
         assert grp.affinityNode();
 
-        try {
-            if (grp.sharedGroup()) {
-                assert cacheId != CU.UNDEFINED_CACHE_ID;
+        GridCacheContext cctx = null;
 
-                for (CacheDataStore store : cacheDataStores())
-                    store.clear(cacheId);
+        for (GridCacheContext cacheContext : grp.caches()) {
+            if (cacheContext.cacheId() == cacheId) {
+                cctx = cacheContext;
 
-                // Clear non-persistent pending tree if needed.
-                if (pendingEntries != null) {
-                    PendingRow row = new PendingRow(cacheId);
-
-                    GridCursor<PendingRow> cursor = pendingEntries.find(row, row, PendingEntriesTree.WITHOUT_KEY);
-
-                    while (cursor.next()) {
-                        boolean res = pendingEntries.removex(cursor.get());
-
-                        assert res;
-                    }
-                }
+                break;
             }
         }
-        catch (IgniteCheckedException e) {
-            throw new IgniteException(e.getMessage(), e);
-        }
+
+        assert cctx != null : "Cache context not found for cacheId=" + cacheId + " in group: grp=" + grp;
+
+        DurableBackgroundTask removeDataTask = new RemoveCacheDataDurableBackgroundTask(cctx.config(), grp.sharedGroup());
+
+        ctx.kernalContext().durableBackgroundTasksProcessor()
+                .startDurableBackgroundTask(removeDataTask, grp.persistenceEnabled());
     }
 
     /**
@@ -2922,7 +2917,7 @@ public class IgniteCacheOffheapManagerImpl implements IgniteCacheOffheapManager 
             }
 
             if (ex != null)
-                throw new IgniteCheckedException("Fail destroy store", ex);
+                throw new IgniteCheckedException("Failed to destroy store", ex);
 
             // Allow checkpointer to progress if a partition contains less than BATCH_SIZE keys.
             if (rmv > 0) {

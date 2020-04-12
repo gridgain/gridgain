@@ -256,7 +256,17 @@ public class DurableBackgroundTasksProcessor extends GridProcessorAdapter implem
      * @param ccfg Cache configuration.
      */
     public void startDurableBackgroundTask(DurableBackgroundTask task, CacheConfiguration ccfg) {
-        if (CU.isPersistentCache(ccfg, ctx.config().getDataStorageConfiguration()))
+        startDurableBackgroundTask(task, CU.isPersistentCache(ccfg, ctx.config().getDataStorageConfiguration()));
+    }
+
+    /**
+     * Starts durable background task. If task is applied to persistent cache, saves it to metastorage.
+     *
+     * @param task Continuous task.
+     * @param isPersistentCache Whether cache is persistent.
+     */
+    public void startDurableBackgroundTask(DurableBackgroundTask task, boolean isPersistentCache) {
+        if (isPersistentCache)
             addDurableBackgroundTask(task);
 
         asyncDurableBackgroundTaskExecute(task, false);
