@@ -1785,13 +1785,17 @@ public class GridDhtPartitionDemander {
         private void printRebalanceStatistics() throws IgniteCheckedException {
             assert isDone() : "RebalanceFuture should be done.";
             assert availablePrintRebalanceStatistics();
+            assert nonNull(stat);
+
+            RebalanceStatistics totalStat = ((GridDhtPreloader)grp.preloader()).demander().totalRebStat;
+            assert nonNull(totalStat);
 
             stat.end(U.currentTimeMillis());
 
             if (log.isInfoEnabled())
                 log.info(cacheGroupRebalanceStatistics(grp, stat, get(), topVer));
 
-            ((GridDhtPreloader)grp.preloader()).demander().totalRebStat.merge(stat);
+            totalStat.merge(stat);
             stat.reset();
 
             //Check that rebalance is over for all cache groups successfully
@@ -1811,8 +1815,8 @@ public class GridDhtPartitionDemander {
             if (log.isInfoEnabled())
                 log.info(totalRebalanceStatistic(totalStats));
 
-            totalStats.forEach((grpCtx, totalStat) -> totalStat.reset());
-            demanders.forEach(d -> d.rebalanceFut.statistics().resetAttempt());
+            totalStats.forEach((grpCtx, statistics) -> statistics.reset());
+            demanders.forEach(d -> d.rebalanceFut.stat.resetAttempt());
         }
 
         /**
