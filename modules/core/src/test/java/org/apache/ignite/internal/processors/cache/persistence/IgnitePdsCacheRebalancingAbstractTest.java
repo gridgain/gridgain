@@ -604,7 +604,7 @@ public abstract class IgnitePdsCacheRebalancingAbstractTest extends GridCommonAb
 
         assertPartitionsSame(idleVerify(grid(0), CACHE));
 
-        for (int it = 0; it < SF.applyLB(50, 3); it++) {
+        for (int it = 0; it < SF.applyLB(1000, 3); it++) {
             final int it0 = it;
 
             IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
