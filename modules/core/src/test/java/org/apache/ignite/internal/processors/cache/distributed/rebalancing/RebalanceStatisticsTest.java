@@ -153,7 +153,7 @@ public class RebalanceStatisticsTest extends GridCommonAbstractTest {
         LogListener[] logListeners = {
             matches(new GrpStatPred()).build(),
             matches(new TotalStatPred()).build(),
-            matches(compile("Partitions distribution per cache group \\(.* rebalance\\):.*")).build()
+            matches(compile("Rebalance duration was greater than.*partitions distribution.*")).build()
         };
 
         listenLog.registerAllListeners(logListeners);

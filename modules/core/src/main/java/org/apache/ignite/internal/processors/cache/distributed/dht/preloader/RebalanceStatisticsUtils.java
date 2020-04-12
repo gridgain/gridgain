@@ -74,17 +74,6 @@ public class RebalanceStatisticsUtils {
     }
 
     /**
-     * Returns ability to print partitions distribution depending on {@link
-     * IgniteSystemProperties#IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD}.
-     *
-     * @param d Duration of rebalance, in milliseconds.
-     * @return {@code True} if printing partitions distribution is available.
-     */
-    public static boolean availablePrintPartitionsDistribution(long d) {
-        return d >= getLong(IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD, MINUTES.toMillis(10));
-    }
-
-    /**
      * Creating a string representation of group cache rebalance statistics for
      * logging.
      *
@@ -127,11 +116,15 @@ public class RebalanceStatisticsUtils {
         for (ClusterNode supNode : supStats.keySet())
             sb.a(supInfo(nodeId++, supNode));
 
-        if (!availablePrintPartitionsDistribution(stat.end() - stat.start()))
+        String thresholdPropName = IGNITE_WRITE_REBALANCE_PARTITION_DISTRIBUTION_THRESHOLD;
+        long threshold = getLong(thresholdPropName, MINUTES.toMillis(10));
+
+        if ((stat.end() - stat.start()) < threshold)
             return sb.toString();
 
-        sb.a("Partitions distribution per cache group (").a(suc ? "successful" : "interrupted").a(" rebalance): [")
-            .a(grpInfo(cacheGrpCtx)).a("] ");
+        sb.a("Rebalance duration was greater than ").a(threshold).a(" ms, printing detailed information about " +
+            "partitions distribution (threshold can be changed by setting number of milliseconds into " +
+            thresholdPropName + ") ");
 
         SortedMap<Integer, Boolean> parts = new TreeMap<>();
         for (SupplierRebalanceStatistics supStat : supStats.values())
