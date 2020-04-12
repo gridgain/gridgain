@@ -36,22 +36,12 @@ import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
-import org.apache.ignite.internal.processors.affinity.AffinityTopologyVersion;
-import org.apache.ignite.internal.processors.cache.CacheGroupContext;
-import org.apache.ignite.internal.processors.cache.CacheObjectContext;
-import org.apache.ignite.internal.processors.cache.CacheType;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
-import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
-import org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionTopology;
-import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
-import org.apache.ignite.internal.processors.cache.persistence.freelist.FreeList;
 import org.apache.ignite.internal.processors.cache.persistence.metastorage.pendingtask.DurableBackgroundTask;
 import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
-import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.visor.VisorTaskArgument;
@@ -65,7 +55,6 @@ import org.apache.ignite.testframework.LogListener;
 import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.thread.IgniteThread;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 import static java.util.Collections.singleton;
@@ -80,6 +69,7 @@ import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
  */
 @WithSystemProperty(key = IGNITE_PDS_SKIP_CHECKPOINT_ON_NODE_STOP, value = "true")
 public class LongDestroyCacheDurableBackgroundTaskTest extends GridCommonAbstractTest {
+    /** */
     private static final String SHARED_GROUP_NAME = "sg";
 
     private static final String SHARED_GROUP_CACHE = SHARED_GROUP_NAME + "Cache";
@@ -513,78 +503,5 @@ public class LongDestroyCacheDurableBackgroundTaskTest extends GridCommonAbstrac
         assertTrue(findGarbageTaskRes.exceptions().isEmpty());
 
         return findGarbageTaskRes.result().get(nodeId);
-    }
-
-    private class GridCacheProcessorMock extends GridCacheProcessor {
-        /**
-         * @param ctx Kernal context.
-         */
-        public GridCacheProcessorMock(GridKernalContext ctx) {
-            super(ctx);
-        }
-
-        /**
-         *
-         */
-        @Override @Nullable public CacheGroupContext cacheGroup(int grpId) {
-            return null;
-        }
-
-        /**
-         * Cache group context mock.
-         */
-        private class CacheGroupContextMock extends CacheGroupContext {
-            /**
-             *
-             */
-            CacheGroupContextMock(
-                GridCacheSharedContext ctx,
-                int grpId,
-                UUID rcvdFrom,
-                CacheType cacheType,
-                CacheConfiguration ccfg,
-                boolean affNode,
-                DataRegion dataRegion,
-                CacheObjectContext cacheObjCtx,
-                FreeList freeList,
-                ReuseList reuseList,
-                AffinityTopologyVersion locStartVer,
-                boolean persistenceEnabled,
-                boolean walEnabled,
-                boolean recoveryMode
-            ) {
-                super(
-                    ctx,
-                    grpId,
-                    rcvdFrom,
-                    cacheType,
-                    ccfg,
-                    affNode,
-                    dataRegion,
-                    cacheObjCtx,
-                    freeList,
-                    reuseList,
-                    locStartVer,
-                    persistenceEnabled,
-                    walEnabled,
-                    recoveryMode
-                );
-            }
-
-            /**
-             * {@inheritDoc}
-             */
-            @Override public GridDhtPartitionTopology topology() {
-                if (Thread.currentThread() instanceof IgniteThread) {
-                    IgniteThread thread = (IgniteThread)Thread.currentThread();
-
-                    if (thread.getIgniteInstanceName().endsWith(String.valueOf(RESTARTED_NODE_NUM))
-                        && blockRemoval.compareAndSet(true, false))
-                        throw new RuntimeException("Aborting destroy (test).");
-                }
-
-                return super.topology();
-            }
-        }
     }
 }
