@@ -60,26 +60,20 @@ public class CheckIndexInlineSizes implements Command<Void> {
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
-            log.severe("GG-23133 nodes: " + client.compute().nodes());
-
             Set<UUID> serverNodes = client.compute().nodes().stream()
                 .filter(node -> Objects.equals(node.attribute(ATTR_CLIENT_MODE), false))
                 .map(GridClientNode::nodeId)
                 .collect(toSet());
 
-            log.severe("GG-23133 server nodes: " + serverNodes);
-
             Set<GridClientNode> supportedServerNodes = client.compute().nodes().stream()
                 .filter(n -> checkIndexInlineSizesSupported(log, n))
                 .collect(toSet());
-
-            log.severe("GG-23133 supported server nodes: " + supportedServerNodes);
 
             Collection<UUID> supportedServerNodeIds = F.transform(supportedServerNodes, GridClientNode::nodeId);
 
             CheckIndexInlineSizesResult res = client.compute().projection(supportedServerNodes).execute(
                 CheckIndexInlineSizesTask.class.getName(),
-                new VisorTaskArgument<>(supportedServerNodeIds, false)
+                new VisorTaskArgument<>(serverNodes, false)
             );
 
             Set<UUID> unsupportedNodes = serverNodes.stream()
