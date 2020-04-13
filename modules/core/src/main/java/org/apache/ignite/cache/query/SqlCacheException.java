@@ -15,6 +15,7 @@
  */
 package org.apache.ignite.cache.query;
 
+import java.sql.SQLException;
 import javax.cache.CacheException;
 import org.apache.ignite.internal.processors.cache.query.IgniteQueryErrorCode;
 
@@ -38,5 +39,9 @@ public class SqlCacheException extends CacheException {
 
     public String sqlState() {
         return sqlState;  // TODO: implement.
+    }
+
+    public SQLException toJdbcException() {
+        return new SQLException(getMessage(), sqlState, errCode, this);
     }
 }
