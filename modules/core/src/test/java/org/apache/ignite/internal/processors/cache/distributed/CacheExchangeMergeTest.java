@@ -1645,55 +1645,59 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         LogListener logLsnr = matches("Merge exchange future on finish [").build();
         listeningLog.registerAllListeners(logLsnr);
 
-        startGrid(0);
-
-        for (int i = 1; i < 9; i++) {
-            IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(i));
-            TestRecordingCommunicationSpi spi = ((TestRecordingCommunicationSpi)cfg.getCommunicationSpi());
-
-            spi.blockMessages((node, msg) -> delay(msg));
-            runAsync(() -> startGrid(cfg), "create-node-" + cfg.getIgniteInstanceName());
-            spi.waitForBlocked();
-        }
-
-        List<Ignite> allNodes = IgnitionEx.allGridsx();
-
         AtomicBoolean stop = new AtomicBoolean();
         Collection<Exception> exceptions = new ConcurrentLinkedQueue<>();
-        CountDownLatch latch = new CountDownLatch(allNodes.size());
 
-        for (Ignite gridEx : allNodes) {
-            runAsync(() -> {
-                Collection<DiscoveryEvent> evts = ((IgniteEx)gridEx).context().cache().context().exchange()
-                    .lastTopologyFuture().events().events();
+        try {
+            startGrid(0);
 
-                latch.countDown();
+            for (int i = 1; i < 9; i++) {
+                IgniteConfiguration cfg = getConfiguration(getTestIgniteInstanceName(i));
+                TestRecordingCommunicationSpi spi = ((TestRecordingCommunicationSpi)cfg.getCommunicationSpi());
 
-                int i = 0;
-                while (!stop.get()) {
-                    try {
-                        for (DiscoveryEvent evt : evts) {
-                            if (nonNull(evt))
-                                i++;
+                spi.blockMessages((node, msg) -> delay(msg));
+                runAsync(() -> startGrid(cfg), "create-node-" + cfg.getIgniteInstanceName());
+                spi.waitForBlocked();
+            }
+
+            List<Ignite> allNodes = IgnitionEx.allGridsx();
+            CountDownLatch latch = new CountDownLatch(allNodes.size());
+
+            for (Ignite gridEx : allNodes) {
+                runAsync(() -> {
+                    Collection<DiscoveryEvent> evts = ((IgniteEx)gridEx).context().cache().context().exchange()
+                        .lastTopologyFuture().events().events();
+
+                    latch.countDown();
+
+                    int i = 0;
+                    while (!stop.get()) {
+                        try {
+                            for (DiscoveryEvent evt : evts) {
+                                if (nonNull(evt))
+                                    i++;
+                            }
+                        }
+                        catch (ConcurrentModificationException e) {
+                            exceptions.add(e);
+
+                            log.error("i = " + i, e);
+
+                            break;
                         }
                     }
-                    catch (ConcurrentModificationException e) {
-                        exceptions.add(e);
+                }, "get-ex-" + gridEx.configuration().getIgniteInstanceName());
+            }
 
-                        log.error("i = " + i, e);
+            for (Ignite node : allNodes)
+                TestRecordingCommunicationSpi.spi(node).stopBlock();
 
-                        break;
-                    }
-                }
-            }, "get-ex-" + gridEx.configuration().getIgniteInstanceName());
+            latch.await();
+            awaitPartitionMapExchange();
         }
-
-        for (Ignite node : allNodes)
-            TestRecordingCommunicationSpi.spi(node).stopBlock();
-
-        latch.await();
-        awaitPartitionMapExchange();
-        stop.set(true);
+        finally {
+            stop.set(true);
+        }
 
         assertTrue(logLsnr.check());
         assertTrue(exceptions.isEmpty());
