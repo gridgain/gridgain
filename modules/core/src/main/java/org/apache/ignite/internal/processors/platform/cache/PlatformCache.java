@@ -363,7 +363,7 @@ public class PlatformCache extends PlatformAbstractTarget {
     public static final int OP_CLEAR_STATISTICS = 94;
 
     /** */
-    private static final int OP_PUT_WITH_NEAR = 95;
+    private static final int OP_PUT_WITH_PLATFORM_CACHE = 95;
     
     /** */
     private static final int OP_RESERVE_PARTITION = 96;
@@ -833,13 +833,13 @@ public class PlatformCache extends PlatformAbstractTarget {
 
                 }
 
-                case OP_PUT_WITH_NEAR:
-                    platformCtx.enableThreadLocalForNearUpdate();
+                case OP_PUT_WITH_PLATFORM_CACHE:
+                    platformCtx.enableThreadLocalForPlatformCacheUpdate();
 
                     try {
                         cache.put(reader.readObjectDetached(), reader.readObjectDetached());
                     } finally {
-                        platformCtx.disableThreadLocalForNearUpdate();
+                        platformCtx.disableThreadLocalForPlatformCacheUpdate();
                     }
 
                     return TRUE;

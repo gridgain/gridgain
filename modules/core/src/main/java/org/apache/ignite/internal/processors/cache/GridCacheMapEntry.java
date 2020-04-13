@@ -1620,7 +1620,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
         if (intercept)
             cctx.config().getInterceptor().onAfterPut(new CacheLazyEntry(cctx, key, key0, val, val0, keepBinary, updateCntr0));
 
-        updatePlatformNearCache(val, topVer);
+        updatePlatformCache(val, topVer);
 
         return valid ? new GridCacheUpdateTxResult(true, updateCntr0, logPtr) :
             new GridCacheUpdateTxResult(false, logPtr);
@@ -2217,7 +2217,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     cctx.config().getInterceptor().onAfterRemove(new CacheLazyEntry(cctx, key, key0, old, old0, keepBinary, 0L));
             }
 
-            updatePlatformNearCache(op == UPDATE ? updated : null, cctx.affinity().affinityTopologyVersion());
+            updatePlatformCache(op == UPDATE ? updated : null, cctx.affinity().affinityTopologyVersion());
         }
         finally {
             unlockEntry();
@@ -2525,7 +2525,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     cctx.config().getInterceptor().onAfterRemove(entry);
             }
 
-            updatePlatformNearCache(c.op == UPDATE ? updateVal : null, topVer);
+            updatePlatformCache(c.op == UPDATE ? updateVal : null, topVer);
         }
         finally {
             unlockEntry();
@@ -3503,7 +3503,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                         topVer);
                 }
 
-                updatePlatformNearCache(val, topVer);
+                updatePlatformCache(val, topVer);
 
                 onUpdateFinished(updateCntr);
 
@@ -4126,7 +4126,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
         cctx.continuousQueries().onEntryExpired(this, key, expiredVal);
 
-        updatePlatformNearCache(null, null);
+        updatePlatformCache(null, null);
 
         return rmvd;
     }
@@ -5880,7 +5880,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
 
-            entry.updatePlatformNearCache(null, null);
+            entry.updatePlatformCache(null, null);
 
             return null;
         }
@@ -6255,7 +6255,7 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
 
             cctx.continuousQueries().onEntryExpired(entry, entry.key(), expiredVal);
 
-            entry.updatePlatformNearCache(null, null);
+            entry.updatePlatformCache(null, null);
 
             return true;
         }
@@ -6976,17 +6976,17 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /**
-     * Invokes platform near cache callback, if applicable.
+     * Invokes platform cache update callback, if applicable.
      *
      * @param val Updated value, null on remove.
      * @param val Topology version, null on remove.
      */
-    protected void updatePlatformNearCache(@Nullable CacheObject val, @Nullable AffinityTopologyVersion ver) {
-        if (!hasPlatformNearCache())
+    protected void updatePlatformCache(@Nullable CacheObject val, @Nullable AffinityTopologyVersion ver) {
+        if (!hasPlatformCache())
             return;
 
         PlatformProcessor proc = this.cctx.kernalContext().platform();
-        if (!proc.hasContext() || !proc.context().isNativeNearCacheSupported())
+        if (!proc.hasContext() || !proc.context().isPlatformCacheSupported())
             return;
 
         try {
@@ -6996,21 +6996,21 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
             byte[] keyBytes = this.key.valueBytes(ctx);
             byte[] valBytes = val == null ? null : val.valueBytes(ctx);
 
-            proc.context().updateNearCache(this.cctx.cacheId(), keyBytes, valBytes, partition(), ver);
+            proc.context().updatePlatformCache(this.cctx.cacheId(), keyBytes, valBytes, partition(), ver);
         } catch (Throwable e) {
-            U.error(log, "Failed to update Platform Near Cache: " + e);
+            U.error(log, "Failed to update Platform Cache: " + e);
         }
     }
 
     /**
-     * Gets a value indicating whether platform near cache exists for current cache.
+     * Gets a value indicating whether platform cache exists for current cache.
      *
-     * @return True when Platform Near Cache exists for this cache; false otherwise.
+     * @return True when platform cache exists for this cache; false otherwise.
      */
     @SuppressWarnings("rawtypes")
-    private boolean hasPlatformNearCache() {
+    private boolean hasPlatformCache() {
         GridCacheAdapter cache = cctx.cache();
 
-        return cache != null && cache.cacheCfg.getPlatformNearConfiguration() != null;
+        return cache != null && cache.cacheCfg.getPlatformCacheConfiguration() != null;
     }
 }

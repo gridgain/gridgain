@@ -31,10 +31,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
+import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonTest;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.TestJavaProcess;
-import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 
@@ -43,7 +43,7 @@ import static org.apache.ignite.jdbc.JdbcTestUtils.sql;
 /**
  * Checks JDBC thin client on different timezones.
  */
-public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
+public class JdbcThinTimezoneTest extends AbstractIndexingCommonTest {
     /** Jdbc thin url. */
     private static final String URL = "jdbc:ignite:thin://127.0.0.1";
 
@@ -53,13 +53,22 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
     /** Time zones to check. */
     private static final String[] TIME_ZONES = {"EST5EDT", "IST", "Europe/Moscow"};
 
+    /** Time zones to check. */
+    private static final String[] NODE_TIME_ZONES = {"CST", "EST"};
+
+    /** Time zone ID for other JVM to start remote grid. */
+    private String tzId;
+
     /** {@inheritDoc} */
     @Override protected void beforeTestsStarted() throws Exception {
         super.beforeTestsStarted();
 
         cleanPersistenceDir();
 
-        startGrids(3);
+        startGrid(0);
+
+        for (String nodeTz : NODE_TIME_ZONES)
+            startRemoteGrid("node-" + nodeTz, nodeTz);
     }
 
     /** {@inheritDoc} */
@@ -75,11 +84,6 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
             "timeVal TIME, " +
             "tsVal TIMESTAMP, " +
             "PRIMARY KEY (tz, label))", Collections.emptyList());
-    }
-
-    /** {@inheritDoc} */
-    @Override protected void afterTest() throws Exception {
-        super.afterTest();
     }
 
     /** */
@@ -366,4 +370,20 @@ public class JdbcThinTimezoneTest extends GridCommonAbstractTest {
         }, "-Duser.timezone=" + tz.getID());
     }
 
+    /**
+     * @return Additional JVM args for remote instances.
+     */
+    @Override protected List<String> additionalRemoteJvmArgs() {
+        return Collections.singletonList("-Duser.timezone=" + tzId);
+    }
+
+    /**
+     * @param name Remote node name.
+     * @param tzId Default time zone for the node.
+     */
+    private void startRemoteGrid(String name, String tzId) throws Exception {
+        this.tzId = tzId;
+
+        startRemoteGrid(name, optimize(getConfiguration(name)), null);
+    }
 }

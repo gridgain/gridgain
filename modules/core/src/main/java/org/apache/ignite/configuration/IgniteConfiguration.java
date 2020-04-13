@@ -258,8 +258,8 @@ public class IgniteConfiguration {
     /** Default value for SQL offloading flag. */
     public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
 
-    /** Default value of environment type is {@link EnvironmentType#STAND_ALONE}. */
-    private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STAND_ALONE;
+    /** Default value of environment type is {@link EnvironmentType#STANDALONE}. */
+    private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STANDALONE;
 
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;
