@@ -19,7 +19,6 @@ package org.apache.ignite.internal.processors.platform.client;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.binary.BinaryWriterExImpl;
-import org.apache.ignite.internal.processors.authentication.AuthorizationContext;
 import org.apache.ignite.internal.processors.odbc.ClientListenerProtocolVersion;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequest;
 import org.apache.ignite.internal.processors.odbc.ClientListenerRequestHandler;
@@ -37,9 +36,6 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
     /** Client context. */
     private final ClientConnectionContext ctx;
 
-    /** Auth context. */
-    private final AuthorizationContext authCtx;
-
     /** Protocol version. */
     private final ClientListenerProtocolVersion ver;
 
@@ -50,14 +46,12 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
      * Constructor.
      *
      * @param ctx Kernal context.
-     * @param authCtx Authentication context.
      * @param ver Protocol version.
      */
-    ClientRequestHandler(ClientConnectionContext ctx, AuthorizationContext authCtx, ClientListenerProtocolVersion ver) {
+    ClientRequestHandler(ClientConnectionContext ctx, ClientListenerProtocolVersion ver) {
         assert ctx != null;
 
         this.ctx = ctx;
-        this.authCtx = authCtx;
         this.ver = ver;
         log = ctx.kernalContext().log(getClass());
     }
