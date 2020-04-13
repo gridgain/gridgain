@@ -148,7 +148,7 @@ public class SecurityPermissionSetBuilder {
      */
     public SecurityPermissionSetBuilder appendSystemPermissions(SecurityPermission... perms) {
         validate(toCollection("EVENTS_", "ADMIN_", "CACHE_CREATE", "CACHE_DESTROY", "JOIN_AS_SERVER",
-            "SET_QUERY_MEMORY_QUOTA", "GET_QUERY_VIEWS"), perms);
+            "SET_QUERY_MEMORY_QUOTA", "GET_QUERY_VIEWS", "KILL_QUERY"), perms);
 
         sysPerms.addAll(toCollection(perms));
 

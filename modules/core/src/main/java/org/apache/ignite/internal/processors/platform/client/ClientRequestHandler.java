@@ -93,7 +93,7 @@ public class ClientRequestHandler implements ClientListenerRequestHandler {
         catch (SecurityException ex) {
             throw new IgniteClientException(
                 ClientStatus.SECURITY_VIOLATION,
-                "Client is not authorized to perform this operation",
+                ex.getMessage(),
                 ex
             );
         }
