@@ -382,37 +382,37 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testSqlHints() throws Exception {
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp)) {
-            assertHints(conn, false, false, false, false, false,
-                false, partitionAwareness);
-        }
-
-        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&distributedJoins=true")) {
-            assertHints(conn, true, false, false, false, false,
-                false, partitionAwareness);
-        }
-
-        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&enforceJoinOrder=true")) {
-            assertHints(conn, false, true, false, false, false,
-                false, partitionAwareness);
-        }
-
-        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&collocated=true")) {
-            assertHints(conn, false, false, true, false, false,
-                false, partitionAwareness);
-        }
-
-        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&replicatedOnly=true")) {
-            assertHints(conn, false, false, false, true, false,
-                false, partitionAwareness);
-        }
-
-        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&lazy=true")) {
             assertHints(conn, false, false, false, false, true,
                 false, partitionAwareness);
         }
 
-        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&skipReducerOnUpdate=true")) {
+        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&distributedJoins=true")) {
+            assertHints(conn, true, false, false, false, true,
+                false, partitionAwareness);
+        }
+
+        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&enforceJoinOrder=true")) {
+            assertHints(conn, false, true, false, false, true,
+                false, partitionAwareness);
+        }
+
+        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&collocated=true")) {
+            assertHints(conn, false, false, true, false, true,
+                false, partitionAwareness);
+        }
+
+        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&replicatedOnly=true")) {
+            assertHints(conn, false, false, false, true, true,
+                false, partitionAwareness);
+        }
+
+        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&lazy=false")) {
             assertHints(conn, false, false, false, false, false,
+                false, partitionAwareness);
+        }
+
+        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessProp + "&skipReducerOnUpdate=true")) {
+            assertHints(conn, false, false, false, false, true,
                 true, partitionAwareness);
         }
 
@@ -431,32 +431,32 @@ public class JdbcThinConnectionSelfTest extends JdbcThinAbstractSelfTest {
     @Test
     public void testSqlHintsSemicolon() throws Exception {
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessPropSemicolon + ";distributedJoins=true")) {
-            assertHints(conn, true, false, false, false, false,
+            assertHints(conn, true, false, false, false, true,
                 false, partitionAwareness);
         }
 
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessPropSemicolon + ";enforceJoinOrder=true")) {
-            assertHints(conn, false, true, false, false, false,
+            assertHints(conn, false, true, false, false, true,
                 false, partitionAwareness);
         }
 
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessPropSemicolon + ";collocated=true")) {
-            assertHints(conn, false, false, true, false, false,
+            assertHints(conn, false, false, true, false, true,
                 false, partitionAwareness);
         }
 
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessPropSemicolon + ";replicatedOnly=true")) {
-            assertHints(conn, false, false, false, true, false,
+            assertHints(conn, false, false, false, true, true,
                 false, partitionAwareness);
         }
 
-        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessPropSemicolon + ";lazy=true")) {
-            assertHints(conn, false, false, false, false, true,
+        try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessPropSemicolon + ";lazy=false")) {
+            assertHints(conn, false, false, false, false, false,
                 false, partitionAwareness);
         }
 
         try (Connection conn = DriverManager.getConnection(urlWithPartitionAwarenessPropSemicolon + ";skipReducerOnUpdate=true")) {
-            assertHints(conn, false, false, false, false, false,
+            assertHints(conn, false, false, false, false, true,
                 true, partitionAwareness);
         }
 

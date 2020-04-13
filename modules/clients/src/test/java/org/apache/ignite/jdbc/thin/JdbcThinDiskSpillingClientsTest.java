@@ -220,7 +220,7 @@ public class JdbcThinDiskSpillingClientsTest extends DiskSpillingAbstractTest {
          * @return Connection string
          */
         protected String getConnectionString() {
-            return "jdbc:ignite:thin://127.0.0.1:10800..10802?" +
+            return "jdbc:ignite:thin://127.0.0.1:10800..10802?lazy=false&" +
                 "queryMaxMemory=" + (SMALL_MEM_LIMIT);
         }
 

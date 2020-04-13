@@ -131,15 +131,15 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
     public void testResetUrl() throws Exception {
         IgniteJdbcThinDataSource ids = new IgniteJdbcThinDataSource();
 
-        ids.setUrl("jdbc:ignite:thin://127.0.0.1:10800/test?lazy=true");
+        ids.setUrl("jdbc:ignite:thin://127.0.0.1:10800/test?lazy=false");
 
         assertEquals("test", ids.getSchema());
-        assertTrue(ids.isLazy());
+        assertFalse(ids.isLazy());
 
         ids.setUrl("jdbc:ignite:thin://mydomain.org,localhost?collocated=true");
 
         assertNull(ids.getSchema());
-        assertFalse(ids.isLazy());
+        assertTrue(ids.isLazy());
         assertTrue(ids.isCollocated());
     }
 
@@ -158,7 +158,7 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
                 assertFalse(io.connectionProperties().isAutoCloseServerCursor());
                 assertFalse(io.connectionProperties().isCollocated());
                 assertFalse(io.connectionProperties().isEnforceJoinOrder());
-                assertFalse(io.connectionProperties().isLazy());
+                assertTrue(io.connectionProperties().isLazy());
                 assertFalse(io.connectionProperties().isDistributedJoins());
                 assertFalse(io.connectionProperties().isReplicatedOnly());
             }
@@ -167,7 +167,7 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
         ids.setAutoCloseServerCursor(true);
         ids.setCollocated(true);
         ids.setEnforceJoinOrder(true);
-        ids.setLazy(true);
+        ids.setLazy(false);
         ids.setDistributedJoins(true);
         ids.setReplicatedOnly(true);
 
@@ -177,7 +177,7 @@ public class JdbcThinDataSourceSelfTest extends JdbcThinAbstractSelfTest {
                 assertTrue(io.connectionProperties().isAutoCloseServerCursor());
                 assertTrue(io.connectionProperties().isCollocated());
                 assertTrue(io.connectionProperties().isEnforceJoinOrder());
-                assertTrue(io.connectionProperties().isLazy());
+                assertFalse(io.connectionProperties().isLazy());
                 assertTrue(io.connectionProperties().isDistributedJoins());
                 assertTrue(io.connectionProperties().isReplicatedOnly());
             }
