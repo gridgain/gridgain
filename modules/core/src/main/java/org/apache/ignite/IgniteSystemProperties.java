@@ -1404,6 +1404,11 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
 
     /**
+     * Disables lazy query execution ({@code false} by default).
+     */
+    public static final String IGNITE_DISABLE_LAZY_QUERY_EXECUTION = "IGNITE_DISABLE_LAZY_QUERY_EXECUTION";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

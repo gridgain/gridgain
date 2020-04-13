@@ -85,7 +85,7 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
 
     /** Lazy query execution property. */
     private BooleanProperty lazy = new BooleanProperty(
-        "lazy", "Enable lazy query execution", false, false);
+        "lazy", "Enable lazy query execution (enables by default)", true, false);
 
     /** Socket send buffer size property. */
     private IntegerProperty socketSendBuffer = new IntegerProperty(

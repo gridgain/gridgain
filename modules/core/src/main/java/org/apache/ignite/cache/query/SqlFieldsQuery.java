@@ -19,6 +19,7 @@ package org.apache.ignite.cache.query;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.ignite.IgniteCache;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.processors.query.QueryUtils;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
@@ -49,12 +50,11 @@ public class SqlFieldsQuery extends Query<List<?>> {
     /** Default value of the update internal batch size. */
     private static final int DFLT_UPDATE_BATCH_SIZE = 1;
 
+    /** Default lazy mode. */
+    private static final boolean DFLT_LAZY = !IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_DISABLE_LAZY_QUERY_EXECUTION, false);
+
     /** Threaded query originator. */
     private static ThreadLocal<String> threadedQryInitiatorId = new ThreadLocal<>();
-
-    /** Do not remove. For tests only. */
-    @SuppressWarnings("NonConstantFieldWithUpperCaseName")
-    private static boolean DFLT_LAZY;
 
     /** SQL Query. */
     private String sql;
