@@ -1664,7 +1664,7 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
 
         for (Ignite gridEx : allNodes) {
             runAsync(() -> {
-                List<DiscoveryEvent> evts = ((IgniteEx)gridEx).context().cache().context().exchange()
+                Collection<DiscoveryEvent> evts = ((IgniteEx)gridEx).context().cache().context().exchange()
                     .lastTopologyFuture().events().events();
 
                 latch.countDown();
@@ -1696,8 +1696,6 @@ public class CacheExchangeMergeTest extends GridCommonAbstractTest {
         stop.set(true);
 
         assertTrue(logLsnr.check());
-        // TODO: change to assertTrue
-        log.info("kirill=" + exceptions.size());
-        assertFalse(exceptions.isEmpty());
+        assertTrue(exceptions.isEmpty());
     }
 }
