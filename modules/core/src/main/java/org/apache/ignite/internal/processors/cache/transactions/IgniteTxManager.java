@@ -112,6 +112,7 @@ import org.jsr166.ConcurrentLinkedHashMap;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_BUFFER_SIZE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DEFERRED_ONE_PHASE_COMMIT_ACK_REQUEST_TIMEOUT;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_DUMP_TX_COLLISIONS_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_OPERATIONS_DUMP_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LONG_TRANSACTION_TIME_DUMP_THRESHOLD;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_COMPLETED_TX_COUNT;
@@ -179,6 +180,9 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
     /** Deadlock detection maximum iterations. */
     static int DEADLOCK_MAX_ITERS =
         IgniteSystemProperties.getInteger(IGNITE_TX_DEADLOCK_DETECTION_MAX_ITERS, 1000);
+
+    private static volatile int collisionsDumpInterval =
+        IgniteSystemProperties.getInteger(IGNITE_DUMP_TX_COLLISIONS_INTERVAL,1);
 
     /** Committing transactions. */
     private final ThreadLocal<IgniteInternalTx> threadCtx = new ThreadLocal<>();
@@ -2941,6 +2945,20 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         IgniteCompute compute = cctx.kernalContext().grid().compute(grp);
 
         compute.broadcast(job);
+    }
+
+    /**
+     * @return Collisions dump interval.
+     */
+    public int collisionsDumpInterval() {
+        return collisionsDumpInterval;
+    }
+
+    /**
+     * @param collisionsDumpInterval New collisions dump interval.
+     */
+    public void collisionsDumpInterval(int collisionsDumpInterval) {
+        this.collisionsDumpInterval = collisionsDumpInterval;
     }
 
     /**

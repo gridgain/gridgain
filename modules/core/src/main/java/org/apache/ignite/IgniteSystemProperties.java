@@ -1405,6 +1405,12 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES = "IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES";
 
     /**
+     * When above zero, prints tx key collisions once per interval (in seconds).
+     * Default is 1 s.
+     */
+    public static final String IGNITE_DUMP_TX_COLLISIONS_INTERVAL = "IGNITE_DUMP_TX_COLLISIONS_INTERVAL";
+
+    /**
      * Enforces singleton.
      */
     private IgniteSystemProperties() {

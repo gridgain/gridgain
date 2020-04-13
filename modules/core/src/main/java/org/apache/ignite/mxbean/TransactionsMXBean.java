@@ -246,4 +246,12 @@ public interface TransactionsMXBean {
             "cannot receive locks for all their keys for a long time. Returns {@code 0} or less if not set."
     )
     long getLongOperationsDumpTimeout();
+
+
+    @MXBeanParametersNames("timeout")
+    @MXBeanDescription("Timeout threshold (in seconds) for printing key contention queue size.")
+    void setShowKeyCollisionsInterval(long timeout);
+
+    @MXBeanDescription("")
+    long getShowKeyCollisionsInterval();
 }
