@@ -235,6 +235,25 @@ namespace Apache.Ignite.Core.Impl.Compute
         }
 
         /** <inheritDoc /> */
+        public TRes AffinityCall<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo)
+        {
+            throw new NotImplementedException();
+        }
+
+        /** <inheritDoc /> */
+        public Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo)
+        {
+            throw new NotImplementedException();
+        }
+
+        /** <inheritDoc /> */
+        public Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        /** <inheritDoc /> */
         public TJobRes Call<TJobRes>(Func<TJobRes> func)
         {
             return _compute.Execute(func).Get();
@@ -383,6 +402,25 @@ namespace Apache.Ignite.Core.Impl.Compute
 
             return GetTaskIfAlreadyCancelled<object>(cancellationToken) ??
                 _compute.AffinityRun(cacheName, affinityKey, action).GetTask(cancellationToken);
+        }
+
+        /** <inheritDoc /> */
+        public void AffinityRun(IEnumerable<string> cacheNames, int partition, IComputeAction action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /** <inheritDoc /> */
+        public Task AffinityRunAsync(IEnumerable<string> cacheNames, int partition, IComputeAction action)
+        {
+            throw new NotImplementedException();
+        }
+
+        /** <inheritDoc /> */
+        public Task AffinityRunAsync(IEnumerable<string> cacheNames, int partition, IComputeAction action,
+            CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
         }
 
         /** <inheritDoc /> */
