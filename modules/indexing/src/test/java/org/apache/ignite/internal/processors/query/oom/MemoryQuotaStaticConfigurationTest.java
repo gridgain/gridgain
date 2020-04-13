@@ -15,10 +15,8 @@
  */
 package org.apache.ignite.internal.processors.query.oom;
 
-import javax.cache.CacheException;
 import org.apache.ignite.cache.query.SqlFieldsQuery;
-import org.apache.ignite.internal.processors.query.IgniteSQLException;
-import org.apache.ignite.internal.util.typedef.X;
+import org.apache.ignite.cache.query.SqlMemoryQuotaException;
 import org.junit.Test;
 
 /**
@@ -69,12 +67,8 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
 
                 break;
             }
-            catch (CacheException e) {
-                IgniteSQLException sqlEx = X.cause(e, IgniteSQLException.class);
-
-                assertNotNull("Wrong exception: " + X.getFullStackTrace(e), sqlEx);
-
-                assertTrue("Wrong message:" + sqlEx.getMessage(), sqlEx.getMessage().contains("Query quota exceeded."));
+            catch (SqlMemoryQuotaException e) {
+                assertTrue("Wrong message:" + e.getMessage(), e.getMessage().contains("Query quota exceeded."));
             }
         }
 
