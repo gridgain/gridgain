@@ -557,7 +557,7 @@
                             </group>
                             <group>
                                 <title>Control Center</title>
-                                <packages>org.apache.ignite.agent*</packages>
+                                <packages>org.apache.ignite.internal.agent*</packages>
                             </group>
                             <group>
                                 <title>System view SPI</title>
