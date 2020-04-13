@@ -36,8 +36,11 @@ import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 public class DiskSpillingGlobalQuotaTest extends DiskSpillingAbstractTest {
     /**{@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
-        return super.getConfiguration(igniteInstanceName)
-            .setSqlConfiguration(new SqlConfiguration().setSqlGlobalMemoryQuota("16k"));
+        IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
+
+        cfg.getSqlConfiguration().setSqlGlobalMemoryQuota("16k");
+
+        return cfg;
     }
 
     /** */
