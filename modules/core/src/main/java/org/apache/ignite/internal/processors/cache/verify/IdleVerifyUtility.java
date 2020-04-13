@@ -25,6 +25,7 @@ import org.apache.ignite.internal.pagemem.PageIdUtils;
 import org.apache.ignite.internal.processors.cache.CacheGroupContext;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager;
+import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStore;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.jetbrains.annotations.Nullable;
@@ -103,7 +104,7 @@ public class IdleVerifyUtility {
         if (!(db instanceof GridCacheDatabaseSharedManager))
             return false;
 
-        GridCacheDatabaseSharedManager.CheckpointProgress progress =
+        CheckpointProgress progress =
             ((GridCacheDatabaseSharedManager)db).getCheckpointer().currentProgress();
 
         return progress != null && progress.inProgress();
