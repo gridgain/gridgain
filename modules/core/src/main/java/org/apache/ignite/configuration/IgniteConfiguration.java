@@ -244,8 +244,8 @@ public class IgniteConfiguration {
     /** Default time interval between MVCC vacuum runs in milliseconds. */
     public static final long DFLT_MVCC_VACUUM_FREQUENCY = 5000;
 
-    /** Default value of environment type is {@link EnvironmentType#STAND_ALONE}. */
-    private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STAND_ALONE;
+    /** Default value of environment type is {@link EnvironmentType#STANDALONE}. */
+    private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STANDALONE;
 
     /** Optional local Ignite instance name. */
     private String igniteInstanceName;

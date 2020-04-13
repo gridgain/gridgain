@@ -26,13 +26,16 @@ public class SqlConfiguration {
     public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
 
     /** Default timeout after which long query warning will be printed. */
-    public static final long DFLT_LONG_QRY_WARN_TIMEOUT = 3000;
+    public static final long DFLT_LONG_QRY_WARN_TIMEOUT = 1000;
 
     /** Default SQL query global memory quota. */
     public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "60%"; // 60% of heap.
 
     /** Default SQL per query memory quota. */
     public static final String DFLT_SQL_QUERY_MEMORY_QUOTA = "0";
+
+    /** Default value for SQL offloading flag. */
+    public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
 
     /** Default disabled SQL functions list. */
     public static final String[] DFLT_DISABLED_SQL_FUNCTIONS = new String[] {
@@ -47,9 +50,6 @@ public class SqlConfiguration {
         "SESSION_ID",
         "CANCEL_SESSION"
     };
-
-    /** Default value for SQL offloading flag. */
-    public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
 
     /** */
     private long longQryWarnTimeout = DFLT_LONG_QRY_WARN_TIMEOUT;
