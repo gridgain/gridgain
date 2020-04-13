@@ -41,6 +41,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.lang.IgniteBiPredicate;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
@@ -116,7 +117,7 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
         persistence = true;
 
-        doTestPartitionLostWhileClearing(2);
+        doTestPartitionLostWhileClearing(2, 0);
     }
 
     /**
@@ -127,7 +128,7 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
         persistence = false;
 
-        doTestPartitionLostWhileClearing(2);
+        doTestPartitionLostWhileClearing(2, 0);
     }
 
     /**
@@ -138,7 +139,7 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
         persistence = true;
 
-        doTestPartitionLostWhileClearing(3);
+        doTestPartitionLostWhileClearing(3, 0);
     }
 
     /**
@@ -149,7 +150,7 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
         persistence = false;
 
-        doTestPartitionLostWhileClearing(3);
+        doTestPartitionLostWhileClearing(3, 0);
     }
 
     /**
@@ -160,7 +161,7 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
         persistence = true;
 
-        doTestPartitionLostWhileClearing(2);
+        doTestPartitionLostWhileClearing(2, 0);
     }
 
     /**
@@ -171,7 +172,7 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
         persistence = false;
 
-        doTestPartitionLostWhileClearing(2);
+        doTestPartitionLostWhileClearing(2, 0);
     }
 
     /**
@@ -182,7 +183,41 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
         persistence = true;
 
-        doTestPartitionLostWhileClearing(3);
+        doTestPartitionLostWhileClearing(3, 0);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPartitionLostWhileClearing_FailOnFullMessage_Unsafe_Volatile() throws Exception {
+        lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
+        persistence = false;
+
+        doTestPartitionLostWhileClearing(3, 0);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testPartitionLostWhileClearing_Restart() throws Exception {
+        lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+        persistence = true;
+
+        doTestPartitionLostWhileClearing(2, 1);
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    @Ignore("https://ggsystems.atlassian.net/browse/GG-28521")
+    public void testPartitionLostWhileClearing_Restart_2() throws Exception {
+        lossPlc = PartitionLossPolicy.READ_WRITE_SAFE;
+        persistence = true;
+
+        doTestPartitionLostWhileClearing(2, 2);
     }
 
     /**
@@ -256,23 +291,14 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
     }
 
     /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testPartitionLostWhileClearing_FailOnFullMessage_Unsafe_Volatile() throws Exception {
-        lossPlc = PartitionLossPolicy.IGNORE; // READ_WRITE_SAFE is used instead of IGNORE.
-        persistence = false;
-
-        doTestPartitionLostWhileClearing(3);
-    }
-
-    /**
      * Test scenario: last supplier has left while a partition on demander is cleared before sending first demand request.
      *
      * @param cnt Nodes count.
+     * @param mode Test mode: 0 - reset while clearing, 1 - restart while clearing and activate all, 2 - restart while
+     *             clearing and activate in wrong order.
      * @throws Exception If failed.
      */
-    private void doTestPartitionLostWhileClearing(int cnt) throws Exception {
+    private void doTestPartitionLostWhileClearing(int cnt, int mode) throws Exception {
         IgniteEx crd = startGrids(cnt);
         crd.cluster().baselineAutoAdjustEnabled(false);
         crd.cluster().active(true);
@@ -312,33 +338,53 @@ public class CachePartitionLostAfterSupplierHasLeftTest extends GridCommonAbstra
         assertEquals(GridDhtPartitionState.LOST, part.state());
         assertTrue(g1.cachex(DEFAULT_CACHE_NAME).lostPartitions().contains(partId));
 
-        // Will own a clearing partition.
-        g1.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
+        if (mode != 0) {
+            stopAllGrids();
 
-        awaitPartitionMapExchange();
+            if (mode == 1) {
+                crd = startGrids(cnt);
+                crd.cluster().active(true);
+            }
+            else if (mode == 2) {
+                crd = startGrid(idx1);
+                crd.cluster().active(true);
 
-        // Expecting partition in OWNING state.
-        final PartitionUpdateCounter cntr = counter(partId, DEFAULT_CACHE_NAME, g1.name());
-        assertNotNull(cntr);
+                startGrid(idx0);
+            }
+            else
+                fail("Mode: " + mode);
 
-        // Counter must be reset.
-        assertEquals(0, cntr.get());
+            awaitPartitionMapExchange();
 
-        // Puts done concurrently with clearing after reset should not be lost.
-        g1.cache(DEFAULT_CACHE_NAME).putAll(keys.stream().collect(Collectors.toMap(k -> k, v -> -1)));
+            assertPartitionsSame(idleVerify(crd, DEFAULT_CACHE_NAME));
+        }
+        else {
+            // Will own a clearing partition.
+            g1.resetLostPartitions(Collections.singletonList(DEFAULT_CACHE_NAME));
 
-        g1.context().cache().context().evict().awaitFinishAll();
+            awaitPartitionMapExchange();
 
-        for (Integer key : keys)
-            assertEquals("key=" + key.toString(), -1, g1.cache(DEFAULT_CACHE_NAME).get(key));
+            // Expecting partition in OWNING state.
+            final PartitionUpdateCounter cntr = counter(partId, DEFAULT_CACHE_NAME, g1.name());
+            assertNotNull(cntr);
+
+            // Counter must be reset.
+            assertEquals(0, cntr.get());
+
+            // Puts done concurrently with clearing after reset should not be lost.
+            g1.cache(DEFAULT_CACHE_NAME).putAll(keys.stream().collect(Collectors.toMap(k -> k, v -> -1)));
+
+            g1.context().cache().context().evict().awaitFinishAll();
+
+            for (Integer key : keys)
+                assertEquals("key=" + key.toString(), -1, g1.cache(DEFAULT_CACHE_NAME).get(key));
+        }
     }
 
     /**
      * @param ignite Ignite.
      * @param cache Cache.
-     * @param partId Partition id.
-     * @param cnt Count.
-     * @param skip Skip.
+     * @param keys Keys.
      */
     private void load(IgniteEx ignite, String cache, List<Integer> keys) {
         try (IgniteDataStreamer<Object, Object> s = ignite.dataStreamer(cache)) {

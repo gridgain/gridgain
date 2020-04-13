@@ -1080,7 +1080,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             }
 
             return changed;
-        } finally {
+        }
+        finally {
             lock.writeLock().unlock();
         }
     }

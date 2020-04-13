@@ -840,7 +840,7 @@ public class GridPartitionedSingleGetFuture extends GridCacheFutureAdapter<Objec
     }
 
     /**
-     * @param topVer Topology version.
+     * @param topFut Ready topology future for validation.
      * @return True if validate success, False is not.
      */
     private boolean validate(GridDhtTopologyFuture topFut) {
