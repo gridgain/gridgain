@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteDataStreamer;
 import org.apache.ignite.cache.query.FieldsQueryCursor;
@@ -479,5 +480,23 @@ public interface GridQueryIndexing {
      */
     default long indexSize(String schemaName, String tblName, String idxName) throws IgniteCheckedException {
         return 0;
+    }
+
+    /**
+     * Setup cluster timezone ID used for date time conversion.
+     *
+     * @param tz Cluster timezone.
+     */
+    default void clusterTimezone(TimeZone tz) throws IgniteCheckedException {
+        // No-op.
+    }
+
+    /**
+     * Gets cluster SQL timezone used for date time conversion.
+     *
+     * @return Cluster SQL timezone.
+     */
+    default TimeZone clusterTimezone() {
+        return TimeZone.getDefault();
     }
 }
