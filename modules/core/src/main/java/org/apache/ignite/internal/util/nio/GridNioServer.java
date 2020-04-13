@@ -1248,12 +1248,16 @@ public class GridNioServer<T> {
                 if (!skipWrite) {
                     Span span = tracing.create(COMMUNICATION_SOCKET_WRITE, req.span());
 
-                    if (span.equals(NoopSpan.INSTANCE))
-                        sendBytes(sockCh, ses, buf);
-                    else {
-                        try (TraceSurroundings ignore = MTC.support(span)) {
-                            sendBytes(sockCh, ses, buf);
-                        }
+                    try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
+                        int cnt = sockCh.write(buf);
+
+                        if (log.isTraceEnabled())
+                            log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
+
+                        if (sentBytesCntMetric != null)
+                            sentBytesCntMetric.add(cnt);
+
+                        ses.bytesSent(cnt);
                     }
                 }
                 else {
@@ -1280,27 +1284,6 @@ public class GridNioServer<T> {
                     req.onMessageWritten();
                 }
             }
-        }
-
-        /**
-         * Send bytes.
-         *
-         * @param sockCh Channel.
-         * @param ses Session.
-         * @param buf Buffer.
-         * @throws IOException If write failed.
-         */
-        private void sendBytes(WritableByteChannel sockCh, GridSelectorNioSessionImpl ses,
-            ByteBuffer buf) throws IOException {
-            int cnt = sockCh.write(buf);
-
-            if (log.isTraceEnabled())
-                log.trace("Bytes sent [sockCh=" + sockCh + ", cnt=" + cnt + ']');
-
-            if (sentBytesCntMetric != null)
-                sentBytesCntMetric.add(cnt);
-
-            ses.bytesSent(cnt);
         }
 
         /** {@inheritDoc} */
@@ -1600,7 +1583,7 @@ public class GridNioServer<T> {
 
             Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
 
-            if (span.equals(NoopSpan.INSTANCE)) {
+            try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
                 MTC.span().addTag(SpanTags.MESSAGE, traceName(msg));
 
                 assert msg != null;
@@ -1618,26 +1601,6 @@ public class GridNioServer<T> {
                 }
 
                 return finished;
-            } else {
-                try (TraceSurroundings ignore = MTC.support(span)) {
-                    MTC.span().addTag(SpanTags.MESSAGE, traceName(msg));
-
-                    assert msg != null;
-
-                    if (writer != null)
-                        writer.setCurrentWriteClass(msg.getClass());
-
-                    finished = msg.writeTo(buf, writer);
-
-                    if (finished) {
-                        pendingRequests.add(req);
-
-                        if (writer != null)
-                            writer.reset();
-                    }
-
-                    return finished;
-                }
             }
         }
 
@@ -1801,10 +1764,7 @@ public class GridNioServer<T> {
 
             Span span = tracing.create(SpanType.COMMUNICATION_SOCKET_WRITE, req.span());
 
-//            if (req.span() != null && req.span() != NoopSpan.INSTANCE && req.span().trace().equals(Trace.TX_NEAR_PREPARE)) {
-//                System.out.println("!!!");
-//            }
-            if (span.equals(NoopSpan.INSTANCE)) {
+            try (TraceSurroundings ignore = span.equals(NoopSpan.INSTANCE) ? null : MTC.support(span)) {
                 MTC.span().addTag(SpanTags.MESSAGE, traceName(msg));
 
                 if (writer != null)
@@ -1820,24 +1780,6 @@ public class GridNioServer<T> {
                 }
 
                 return finished;
-            } else {
-                try (TraceSurroundings ignore = MTC.support(span)) {
-                    MTC.span().addTag(SpanTags.MESSAGE, traceName(msg));
-
-                    if (writer != null)
-                        writer.setCurrentWriteClass(msg.getClass());
-
-                    finished = msg.writeTo(buf, writer);
-
-                    if (finished) {
-                        onMessageWritten(ses, msg);
-
-                        if (writer != null)
-                            writer.reset();
-                    }
-
-                    return finished;
-                }
             }
         }
 

@@ -169,10 +169,12 @@ public class IgniteTransactionsImpl<K, V> implements IgniteTransactionsEx {
 
         MTC.supportInitial(cctx.kernalContext().tracing().create(TX, (Span)null));
 
-        MTC.span().addTag("Isolation", isolation.name());
-        MTC.span().addTag("Concurrency", concurrency.name());
-        MTC.span().addTag("Timeout", timeout);
-        MTC.span().addTag("Label", lb);
+        MTC.span().addTag("isolation", isolation.name());
+        MTC.span().addTag("concurrency", concurrency.name());
+        MTC.span().addTag("timeout", timeout);
+
+        if (lb != null)
+            MTC.span().addTag("label", lb);
 
         try {
             GridNearTxLocal tx = cctx.tm().userTx(sysCacheCtx);
