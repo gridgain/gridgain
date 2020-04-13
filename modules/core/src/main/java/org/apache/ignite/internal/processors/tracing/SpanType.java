@@ -143,6 +143,18 @@ public enum SpanType {
     /** Transaction dht prepare response. */
     TX_PROCESS_DHT_PREPARE_RESP(Scope.TX, "tx.dht.process.prepare.response", 39),
 
+    /** Transaction near finish request. */
+    TX_NEAR_FINISH_REQ(Scope.TX, "tx.near.process.finish.request", 40),
+
+    /** Transaction near finish  response. */
+    TX_NEAR_FINISH_RESP(Scope.TX, "tx.near.process.finish.response", 41),
+
+    /** Transaction near prepare request. */
+    TX_NEAR_PREPARE_REQ(Scope.TX, "tx.near.process.prepare.request", 42),
+
+    /** Transaction near prepare  response. */
+    TX_NEAR_PREPARE_RESP(Scope.TX, "tx.near.process.prepare.response", 43),
+
     // TODO GG-28559 Instead of creating custom span with Ignite api, open census api should be used.
     /** Custom job call. */
     CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 41);

@@ -110,6 +110,10 @@ import static org.apache.ignite.internal.processors.cache.GridCacheOperation.TRA
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.isNearEnabled;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.RENTING;
 import static org.apache.ignite.internal.processors.cache.transactions.IgniteInternalTx.FinalizationStatus.USER_FINISH;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_FINISH_REQ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_FINISH_RESP;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_PREPARE_REQ;
+import static org.apache.ignite.internal.processors.tracing.SpanType.TX_NEAR_PREPARE_RESP;
 import static org.apache.ignite.internal.util.lang.GridFunc.isEmpty;
 import static org.apache.ignite.transactions.TransactionConcurrency.OPTIMISTIC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
@@ -147,24 +151,27 @@ public class IgniteTxHandler {
      * @param req Request.
      */
     private void processNearTxPrepareRequest(UUID nearNodeId, GridNearTxPrepareRequest req) {
-        if (txPrepareMsgLog.isDebugEnabled()) {
-            txPrepareMsgLog.debug("Received near prepare request [txId=" + req.version() +
-                ", node=" + nearNodeId + ']');
-        }
-
-        ClusterNode nearNode = ctx.node(nearNodeId);
-
-        if (nearNode == null) {
+        try (TraceSurroundings ignored =
+                 MTC.support(ctx.kernalContext().tracing().create(TX_NEAR_PREPARE_REQ, MTC.span()))) {
             if (txPrepareMsgLog.isDebugEnabled()) {
-                txPrepareMsgLog.debug("Received near prepare from node that left grid (will ignore) [" +
-                    "txId=" + req.version() +
+                txPrepareMsgLog.debug("Received near prepare request [txId=" + req.version() +
                     ", node=" + nearNodeId + ']');
             }
 
-            return;
-        }
+            ClusterNode nearNode = ctx.node(nearNodeId);
 
-        processNearTxPrepareRequest0(nearNode, req);
+            if (nearNode == null) {
+                if (txPrepareMsgLog.isDebugEnabled()) {
+                    txPrepareMsgLog.debug("Received near prepare from node that left grid (will ignore) [" +
+                        "txId=" + req.version() +
+                        ", node=" + nearNodeId + ']');
+                }
+
+                return;
+            }
+
+            processNearTxPrepareRequest0(nearNode, req);
+        }
     }
 
     /**
@@ -773,27 +780,31 @@ public class IgniteTxHandler {
      * @param res Response.
      */
     private void processNearTxPrepareResponse(UUID nodeId, GridNearTxPrepareResponse res) {
-        if (txPrepareMsgLog.isDebugEnabled())
-            txPrepareMsgLog.debug("Received near prepare response [txId=" + res.version() + ", node=" + nodeId + ']');
+        try (TraceSurroundings ignored =
+                 MTC.support(ctx.kernalContext().tracing().create(TX_NEAR_PREPARE_RESP, MTC.span()))) {
+            if (txPrepareMsgLog.isDebugEnabled())
+                txPrepareMsgLog.debug("Received near prepare response [txId=" + res.version() + ", node=" +
+                    nodeId + ']');
 
-        GridNearTxPrepareFutureAdapter fut = (GridNearTxPrepareFutureAdapter)ctx.mvcc()
-            .<IgniteInternalTx>versionedFuture(res.version(), res.futureId());
+            GridNearTxPrepareFutureAdapter fut = (GridNearTxPrepareFutureAdapter)ctx.mvcc()
+                .<IgniteInternalTx>versionedFuture(res.version(), res.futureId());
 
-        if (fut == null) {
-            U.warn(log, "Failed to find future for near prepare response [txId=" + res.version() +
-                ", node=" + nodeId +
-                ", res=" + res + ']');
+            if (fut == null) {
+                U.warn(log, "Failed to find future for near prepare response [txId=" + res.version() +
+                    ", node=" + nodeId +
+                    ", res=" + res + ']');
 
-            return;
+                return;
+            }
+
+            IgniteInternalTx tx = fut.tx();
+
+            assert tx != null;
+
+            res.txState(tx.txState());
+
+            fut.onResult(nodeId, res);
         }
-
-        IgniteInternalTx tx = fut.tx();
-
-        assert tx != null;
-
-        res.txState(tx.txState());
-
-        fut.onResult(nodeId, res);
     }
 
     /**
@@ -801,22 +812,25 @@ public class IgniteTxHandler {
      * @param res Response.
      */
     private void processNearTxFinishResponse(UUID nodeId, GridNearTxFinishResponse res) {
-        if (txFinishMsgLog.isDebugEnabled())
-            txFinishMsgLog.debug("Received near finish response [txId=" + res.xid() + ", node=" + nodeId + ']');
+        try (TraceSurroundings ignored =
+                 MTC.support(ctx.kernalContext().tracing().create(TX_NEAR_FINISH_RESP, MTC.span()))) {
+            if (txFinishMsgLog.isDebugEnabled())
+                txFinishMsgLog.debug("Received near finish response [txId=" + res.xid() + ", node=" + nodeId + ']');
 
-        GridNearTxFinishFuture fut = (GridNearTxFinishFuture)ctx.mvcc().<IgniteInternalTx>future(res.futureId());
+            GridNearTxFinishFuture fut = (GridNearTxFinishFuture)ctx.mvcc().<IgniteInternalTx>future(res.futureId());
 
-        if (fut == null) {
-            if (txFinishMsgLog.isDebugEnabled()) {
-                txFinishMsgLog.debug("Failed to find future for near finish response [txId=" + res.xid() +
-                    ", node=" + nodeId +
-                    ", res=" + res + ']');
+            if (fut == null) {
+                if (txFinishMsgLog.isDebugEnabled()) {
+                    txFinishMsgLog.debug("Failed to find future for near finish response [txId=" + res.xid() +
+                        ", node=" + nodeId +
+                        ", res=" + res + ']');
+                }
+
+                return;
             }
 
-            return;
+            fut.onResult(nodeId, res);
         }
-
-        fut.onResult(nodeId, res);
     }
 
     /**
@@ -917,16 +931,20 @@ public class IgniteTxHandler {
         UUID nodeId,
         GridNearTxFinishRequest req
     ) {
-        if (txFinishMsgLog.isDebugEnabled())
-            txFinishMsgLog.debug("Received near finish request [txId=" + req.version() + ", node=" + nodeId + ']');
+        try (TraceSurroundings ignored =
+                 MTC.support(ctx.kernalContext().tracing().create(TX_NEAR_FINISH_REQ, MTC.span()))) {
+            if (txFinishMsgLog.isDebugEnabled())
+                txFinishMsgLog.debug("Received near finish request [txId=" + req.version() + ", node=" + nodeId +
+                    ']');
 
-        IgniteInternalFuture<IgniteInternalTx> fut = finish(nodeId, null, req);
+            IgniteInternalFuture<IgniteInternalTx> fut = finish(nodeId, null, req);
 
-        assert req.txState() != null || fut == null || fut.error() != null ||
-            (ctx.tm().tx(req.version()) == null && ctx.tm().nearTx(req.version()) == null) :
-            "[req=" + req + ", fut=" + fut + "]";
+            assert req.txState() != null || fut == null || fut.error() != null ||
+                (ctx.tm().tx(req.version()) == null && ctx.tm().nearTx(req.version()) == null) :
+                "[req=" + req + ", fut=" + fut + "]";
 
-        return fut;
+            return fut;
+        }
     }
 
     /**
