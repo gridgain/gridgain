@@ -238,11 +238,51 @@ public class IgniteConfiguration {
     @SuppressWarnings("UnnecessaryBoxing")
     public static final Long DFLT_CLIENT_FAILURE_DETECTION_TIMEOUT = new Long(30_000);
 
+    /**
+     *  Default timeout after which long query warning will be printed.
+     *
+     * @deprecated Please use {@link SqlConfiguration#DFLT_LONG_QRY_WARN_TIMEOUT}.
+     */
+    @Deprecated
+    public static final long DFLT_LONG_QRY_WARN_TIMEOUT = 3000;
+
     /** Default number of MVCC vacuum threads.. */
     public static final int DFLT_MVCC_VACUUM_THREAD_CNT = 2;
 
     /** Default time interval between MVCC vacuum runs in milliseconds. */
     public static final long DFLT_MVCC_VACUUM_FREQUENCY = 5000;
+
+    /**
+     * Default SQL query history size.
+     *
+     * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_HISTORY_SIZE}.
+     */
+    @Deprecated
+    public static final int DFLT_SQL_QUERY_HISTORY_SIZE = 1000;
+
+    /**
+     *  Default SQL query global memory quota.
+     *
+     * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA}.
+     */
+    @Deprecated
+    public static final String DFLT_SQL_QUERY_GLOBAL_MEMORY_QUOTA = "60%";
+
+    /**
+     *  Default SQL per query memory quota.
+     *
+     * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_MEMORY_QUOTA}.
+     */
+    @Deprecated
+    public static final String DFLT_SQL_QUERY_MEMORY_QUOTA = "0";
+
+    /**
+     *  Default value for SQL offloading flag.
+     *
+     * @deprecated Please use {@link SqlConfiguration#DFLT_SQL_QUERY_OFFLOADING_ENABLED}.
+     */
+    @Deprecated
+    public static final boolean DFLT_SQL_QUERY_OFFLOADING_ENABLED = false;
 
     /** Default value of environment type is {@link EnvironmentType#STANDALONE}. */
     private static final EnvironmentType DFLT_ENV_TYPE = EnvironmentType.STANDALONE;
