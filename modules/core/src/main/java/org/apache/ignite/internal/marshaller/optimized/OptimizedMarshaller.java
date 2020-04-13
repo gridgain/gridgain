@@ -100,7 +100,7 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
     private final ConcurrentMap<Class, OptimizedClassDescriptor> clsMap = new ConcurrentHashMap<>();
 
     /** */
-    private OptimizedObjectStreamRegistry registry = new OptimizedObjectStreamRegistry(0);
+    private OptimizedObjectStreamRegistry registry = new OptimizedObjectSharedStreamRegistry();
 
     /**
      * Creates new marshaller will all defaults.
@@ -164,7 +164,9 @@ public class OptimizedMarshaller extends AbstractNodeNameAwareMarshaller {
      * @return {@code this} for chaining.
      */
     public OptimizedMarshaller setPoolSize(int poolSize) {
-        registry = new OptimizedObjectStreamRegistry(poolSize);
+        registry = poolSize > 0 ?
+            new OptimizedObjectPooledStreamRegistry(poolSize) :
+            new OptimizedObjectSharedStreamRegistry();
 
         return this;
     }

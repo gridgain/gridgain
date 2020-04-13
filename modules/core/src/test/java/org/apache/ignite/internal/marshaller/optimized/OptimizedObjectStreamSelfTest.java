@@ -1025,7 +1025,7 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
      */
     @Test
     public void testReadToArray() throws Exception {
-        OptimizedObjectStreamRegistry reg = new OptimizedObjectStreamRegistry(0);
+        OptimizedObjectStreamRegistry reg = new OptimizedObjectSharedStreamRegistry();
 
         OptimizedObjectInputStream in = reg.in();
 
@@ -1179,7 +1179,7 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
         OptimizedObjectOutputStream out = null;
         OptimizedObjectInputStream in = null;
 
-        OptimizedObjectStreamRegistry reg = new OptimizedObjectStreamRegistry(0);
+        OptimizedObjectStreamRegistry reg = new OptimizedObjectSharedStreamRegistry();
 
         try {
             out = reg.out();
@@ -1213,10 +1213,8 @@ public class OptimizedObjectStreamSelfTest extends GridCommonAbstractTest {
      *
      * @param out Output stream.
      * @param in Input stream.
-     * @throws Exception If failed.
      */
-    private void checkHandles(OptimizedObjectOutputStream out, OptimizedObjectInputStream in)
-        throws Exception {
+    private void checkHandles(OptimizedObjectOutputStream out, OptimizedObjectInputStream in) {
         Object[] outHandles = out.handledObjects();
         Object[] inHandles = in.handledObjects();
 
