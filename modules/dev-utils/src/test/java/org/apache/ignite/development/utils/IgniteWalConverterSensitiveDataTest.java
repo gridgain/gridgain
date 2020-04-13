@@ -19,10 +19,15 @@ package org.apache.ignite.development.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
+import org.apache.ignite.IgniteCache;
+import org.apache.ignite.cache.QueryEntity;
+import org.apache.ignite.cache.QueryIndex;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.DataRegionConfiguration;
 import org.apache.ignite.configuration.DataStorageConfiguration;
@@ -47,22 +52,24 @@ import org.junit.Test;
 import static java.lang.String.valueOf;
 import static java.lang.System.setOut;
 import static java.lang.System.setProperty;
+import static java.util.Arrays.asList;
+import static java.util.Objects.requireNonNull;
+import static java.util.function.Function.identity;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_TO_STRING_INCLUDE_SENSITIVE;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.development.utils.IgniteWalConverter.PRINT_RECORDS;
 import static org.apache.ignite.development.utils.IgniteWalConverter.SENSITIVE_DATA;
-import static org.apache.ignite.development.utils.ProcessSensitiveDataUtils.md5;
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
 import static org.apache.ignite.testframework.GridTestUtils.assertNotContains;
-import static org.apache.ignite.testframework.wal.record.RecordUtils.isLogEnabled;
+import static org.apache.ignite.testframework.wal.record.RecordUtils.isIncludeIntoLog;
 
 /**
  * Class for testing sensitive data when reading {@link WALRecord} using
  * {@link IgniteWalConverter}.
  */
 public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest {
-    /** Sensitive data. */
-    private static final String SENSITIVE_DATA_VALUE = "must_hide_it";
+    /** Sensitive data prefix. */
+    private static final String SENSITIVE_DATA_VALUE_PREFIX = "must_hide_it_";
 
     /** Path to directory where WAL is stored. */
     private static String WAL_DIR_PATH;
@@ -72,6 +79,9 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
     /** System out. */
     private static PrintStream SYS_OUT;
+
+    /** Sensitive data values. */
+    private static List<String> SENSITIVE_DATA_VALUES = new ArrayList<>();
 
     /**
      * Test out - can be injected via {@link #injectTestSystemOut()} instead
@@ -92,7 +102,20 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         crd.cluster().active(true);
 
         try (Transaction tx = crd.transactions().txStart()) {
-            crd.cache(DEFAULT_CACHE_NAME).put(SENSITIVE_DATA_VALUE, SENSITIVE_DATA_VALUE);
+            IgniteCache<Object, Object> cache = crd.cache(DEFAULT_CACHE_NAME);
+
+            SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX + 0);
+            SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX + 1);
+            SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX + 2);
+
+            String val0 = SENSITIVE_DATA_VALUES.get(0);
+            String val1 = SENSITIVE_DATA_VALUES.get(1);
+            String val2 = SENSITIVE_DATA_VALUES.get(2);
+
+            cache.put(val0, val0);
+            cache.withKeepBinary().put(val1, val1);
+            cache.put(val2, new Person(1, val2));
+
             tx.commit();
         }
 
@@ -100,9 +123,11 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
         IgniteWriteAheadLogManager wal = kernalCtx.cache().context().wal();
 
         for (WALRecord walRecord : withSensitiveData()) {
-            if (isLogEnabled(walRecord))
+            if (isIncludeIntoLog(walRecord))
                 wal.log(walRecord);
         }
+
+        SENSITIVE_DATA_VALUES.add(SENSITIVE_DATA_VALUE_PREFIX);
 
         wal.flush(null, true);
 
@@ -150,9 +175,16 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         return super.getConfiguration(igniteInstanceName)
-            .setDataStorageConfiguration(new DataStorageConfiguration().setDefaultDataRegionConfiguration(
-                new DataRegionConfiguration().setPersistenceEnabled(true)
-            )).setCacheConfiguration(new CacheConfiguration<>(DEFAULT_CACHE_NAME).setAtomicityMode(TRANSACTIONAL));
+            .setCacheConfiguration(
+                new CacheConfiguration<>(DEFAULT_CACHE_NAME)
+                    .setAtomicityMode(TRANSACTIONAL)
+                    .setQueryEntities(asList(personQueryEntity()))
+            )
+            .setDataStorageConfiguration(
+                new DataStorageConfiguration().setDefaultDataRegionConfiguration(
+                    new DataRegionConfiguration().setPersistenceEnabled(true)
+                )
+            );
     }
 
     /**
@@ -163,11 +195,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
      */
     @Test
     public void testNotPrintRecordsByDefault() throws Exception {
-        injectTestSystemOut();
-
-        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
-
-        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+        exeWithCheck(false, false, identity());
     }
 
     /**
@@ -178,11 +206,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     @Test
     @WithSystemProperty(key = PRINT_RECORDS, value = "true")
     public void testShowSensitiveDataByDefault() throws Exception {
-        injectTestSystemOut();
-
-        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
-
-        assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+        exeWithCheck(true, true, identity());
     }
 
     /**
@@ -194,16 +218,12 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     @WithSystemProperty(key = PRINT_RECORDS, value = "true")
     @WithSystemProperty(key = SENSITIVE_DATA, value = "SHOW")
     public void testShowSensitiveData() throws Exception {
-        injectTestSystemOut();
-
-        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
-        assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+        exeWithCheck(true, true, identity());
 
         setProperty(SENSITIVE_DATA, currentTestMethod().getName());
         resetTestOut();
 
-        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
-        assertContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+        exeWithCheck(true, true, identity());
     }
 
     /**
@@ -216,11 +236,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     @WithSystemProperty(key = SENSITIVE_DATA, value = "HIDE")
     @WithSystemProperty(key = IGNITE_TO_STRING_INCLUDE_SENSITIVE, value = "true")
     public void testHideSensitiveData() throws Exception {
-        injectTestSystemOut();
-
-        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
-
-        assertNotContains(log, TEST_OUT.toString(), SENSITIVE_DATA_VALUE);
+        exeWithCheck(false, false, identity());
     }
 
     /**
@@ -232,14 +248,7 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     @WithSystemProperty(key = PRINT_RECORDS, value = "true")
     @WithSystemProperty(key = SENSITIVE_DATA, value = "HASH")
     public void testHashSensitiveData() throws Exception {
-        injectTestSystemOut();
-
-        IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
-
-        String testOut = TEST_OUT.toString();
-
-        assertNotContains(log, testOut, SENSITIVE_DATA_VALUE);
-        assertContains(log, testOut, valueOf(SENSITIVE_DATA_VALUE.hashCode()));
+        exeWithCheck(true, false, s -> valueOf(s.hashCode()));
     }
 
     /**
@@ -251,14 +260,41 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
     @WithSystemProperty(key = PRINT_RECORDS, value = "true")
     @WithSystemProperty(key = SENSITIVE_DATA, value = "MD5")
     public void testMd5HashSensitiveData() throws Exception {
+        exeWithCheck(true, false, ProcessSensitiveDataUtils::md5);
+    }
+
+    /**
+     * Executing {@link IgniteWalConverter} with checking the content of its output.
+     *
+     * @param containsData Contains or not elements {@link #SENSITIVE_DATA_VALUES} in utility output.
+     * @param containsPrefix Contains or not {@link #SENSITIVE_DATA_VALUE_PREFIX} in utility output.
+     * @param converter Converting elements {@link #SENSITIVE_DATA_VALUES} for checking in utility output.
+     * @throws Exception If failed.
+     */
+    private void exeWithCheck(
+        boolean containsData,
+        boolean containsPrefix,
+        Function<String, String> converter
+    ) throws Exception {
+        requireNonNull(converter);
+
         injectTestSystemOut();
 
         IgniteWalConverter.main(new String[] {valueOf(PAGE_SIZE), WAL_DIR_PATH});
 
-        String testOut = TEST_OUT.toString();
+        String testOutStr = TEST_OUT.toString();
 
-        assertNotContains(log, testOut, SENSITIVE_DATA_VALUE);
-        assertContains(log, testOut, md5(SENSITIVE_DATA_VALUE));
+        if (containsPrefix)
+            assertContains(log, testOutStr, SENSITIVE_DATA_VALUE_PREFIX);
+        else
+            assertNotContains(log, testOutStr, SENSITIVE_DATA_VALUE_PREFIX);
+
+        for (String sensitiveDataValue : SENSITIVE_DATA_VALUES) {
+            if (containsData)
+                assertContains(log, testOutStr, converter.apply(sensitiveDataValue));
+            else
+                assertNotContains(log, testOutStr, converter.apply(sensitiveDataValue));
+        }
     }
 
     /**
@@ -287,8 +323,8 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
 
         DataEntry dataEntry = new DataEntry(
             cacheId,
-            new KeyCacheObjectImpl(SENSITIVE_DATA_VALUE, null, 0),
-            new CacheObjectImpl(SENSITIVE_DATA_VALUE, null),
+            new KeyCacheObjectImpl(SENSITIVE_DATA_VALUE_PREFIX, null, 0),
+            new CacheObjectImpl(SENSITIVE_DATA_VALUE_PREFIX, null),
             GridCacheOperation.CREATE,
             new GridCacheVersion(),
             new GridCacheVersion(),
@@ -297,11 +333,50 @@ public class IgniteWalConverterSensitiveDataTest extends GridCommonAbstractTest 
             0
         );
 
-        byte[] sensitiveDataBytes = SENSITIVE_DATA_VALUE.getBytes(StandardCharsets.UTF_8);
+        byte[] sensitiveDataBytes = SENSITIVE_DATA_VALUE_PREFIX.getBytes(StandardCharsets.UTF_8);
 
         walRecords.add(new DataRecord(dataEntry));
-        walRecords.add(new MetastoreDataRecord(SENSITIVE_DATA_VALUE, sensitiveDataBytes));
+        walRecords.add(new MetastoreDataRecord(SENSITIVE_DATA_VALUE_PREFIX, sensitiveDataBytes));
 
         return walRecords;
+    }
+
+    /**
+     * Create {@link QueryEntity} for {@link Person}.
+     *
+     * @return QueryEntity for {@link Person}.
+     */
+    private QueryEntity personQueryEntity() {
+        String orgIdField = "orgId";
+        String nameField = "name";
+
+        return new QueryEntity()
+            .setKeyType(String.class.getName())
+            .setValueType(Person.class.getName())
+            .addQueryField(orgIdField, Integer.class.getName(), null)
+            .addQueryField(nameField, String.class.getName(), null)
+            .setIndexes(asList(new QueryIndex(nameField), new QueryIndex(orgIdField)));
+    }
+
+    /**
+     * Simple class Person for tests.
+     */
+    private static class Person implements Serializable {
+        /** Id organization. */
+        int orgId;
+
+        /** Name organization. */
+        String name;
+
+        /**
+         * Constructor.
+         *
+         * @param orgId Organization id.
+         * @param name Organization name.
+         */
+        Person(int orgId, String name) {
+            this.orgId = orgId;
+            this.name = name;
+        }
     }
 }

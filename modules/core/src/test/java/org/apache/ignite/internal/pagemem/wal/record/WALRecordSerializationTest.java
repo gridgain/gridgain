@@ -106,7 +106,7 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
             for (WALRecord.RecordType recordType : recordTypes) {
                 WALRecord record = RecordUtils.buildWalRecord(recordType);
 
-                if (RecordUtils.isLogEnabled(record)) {
+                if (RecordUtils.isIncludeIntoLog(record)) {
                     serializedRecords.add(new ReflectionEquals(record, "prev", "pos",
                         "updateCounter" //updateCounter for PartitionMetaStateRecord isn't serialized.
                     ));
@@ -163,7 +163,7 @@ public class WALRecordSerializationTest extends GridCommonAbstractTest {
             for (WALRecord.RecordType recordType : recordTypes) {
                 WALRecord record = RecordUtils.buildWalRecord(recordType);
 
-                if (RecordUtils.isLogEnabled(record) && !DELTA_TYPE_SET.contains(record.type())) {
+                if (RecordUtils.isIncludeIntoLog(record) && !DELTA_TYPE_SET.contains(record.type())) {
                     serializedRecords.add(new ReflectionEquals(record, "prev", "pos",
                         "updateCounter" //updateCounter for PartitionMetaStateRecord isn't serialized.
                     ));
