@@ -27,6 +27,7 @@ import org.apache.ignite.internal.managers.communication.GridMessageListener;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsDest;
+import static org.apache.ignite.agent.utils.FakeUtils.sendFakeMetrics;
 import static org.apache.ignite.internal.GridTopic.TOPIC_METRICS;
 import static org.apache.ignite.internal.IgniteFeatures.MANAGEMENT_CONSOLE;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
@@ -72,6 +73,9 @@ public class MetricsProcessor extends GridProcessorAdapter {
 
             try {
                 mgr.send(buildMetricsDest(), res.body());
+
+                // GG-28545 Send fake metrics.
+                sendFakeMetrics(res, mgr);
             }
             catch (Throwable e) {
                 log.error("Failed to send metrics to Control Center", e);

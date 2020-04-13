@@ -20,11 +20,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.ignite.agent.dto.IgniteConfigurationWrapper;
 import org.apache.ignite.agent.dto.NodeConfiguration;
+import org.apache.ignite.cluster.ClusterGroup;
 import org.apache.ignite.internal.GridKernalContext;
+import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
 
 import static org.apache.ignite.agent.ManagementConsoleAgent.TOPIC_MANAGEMENT_CONSOLE;
 import static org.apache.ignite.agent.utils.AgentObjectMapperFactory.jsonMapper;
+import static org.apache.ignite.agent.utils.FakeUtils.exportFakeNodeConfigs;
 
 /**
  * Node configuration exporter.
@@ -45,13 +49,24 @@ public class NodesConfigurationExporter extends GridProcessorAdapter {
      */
     public void export() {
         try {
-            String consistentId = ctx.cluster().get().localNode().consistentId().toString();
+            IgniteEx ignite = ctx.grid();
 
-            String cfg = mapper.writeValueAsString(new IgniteConfigurationWrapper(ctx.config()));
+            IgniteClusterEx cluster = ignite.cluster();
 
-            NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, cfg);
+            String consistentId = cluster.localNode().consistentId().toString();
 
-            ctx.grid().message(ctx.grid().cluster().forOldest()).send(TOPIC_MANAGEMENT_CONSOLE, nodeCfg);
+            IgniteConfigurationWrapper cfgWrapper = new IgniteConfigurationWrapper(ctx.config());
+
+            String json = mapper.writeValueAsString(cfgWrapper);
+
+            NodeConfiguration nodeCfg = new NodeConfiguration(consistentId, json);
+
+            ClusterGroup oldestNode = cluster.forOldest();
+
+            ignite.message(oldestNode).send(TOPIC_MANAGEMENT_CONSOLE, nodeCfg);
+
+            // GG-28545 Fake node configurations.
+            exportFakeNodeConfigs(ignite, cfgWrapper, mapper, oldestNode);
         }
         catch (JsonProcessingException e) {
             log.error("Failed to serialize the IgniteConfiguration to JSON", e);

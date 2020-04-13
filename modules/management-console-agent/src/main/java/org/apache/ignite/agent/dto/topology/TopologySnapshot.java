@@ -25,6 +25,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import static java.util.Collections.emptyList;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static org.apache.ignite.agent.utils.FakeUtils.prepareFakeTopology;
 
 /**
  * DTO for topology snapshot.
@@ -65,6 +66,9 @@ public class TopologySnapshot {
                     nodes.put(id, new Node(node).setBaselineNode(true).setOnline(false));
             }
         }
+
+        // GG-28545 Generating fake nodes to simulate large cluster.
+        prepareFakeTopology(nodes);
 
         return new TopologySnapshot(topVer, crdConsistentId, nodes.values());
     }

@@ -18,7 +18,6 @@ package org.apache.ignite.agent.processor;
 
 import org.apache.ignite.agent.dto.cluster.BaselineInfo;
 import org.apache.ignite.agent.dto.cluster.ClusterInfo;
-import org.apache.ignite.agent.dto.topology.TopologySnapshot;
 import org.apache.ignite.agent.ws.WebSocketManager;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
@@ -32,6 +31,7 @@ import org.apache.ignite.internal.util.typedef.internal.CU;
 
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
 import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.apache.ignite.agent.dto.topology.TopologySnapshot.topology;
 import static org.apache.ignite.agent.utils.AgentUtils.getClusterFeatures;
 import static org.apache.ignite.events.EventType.EVTS_CLUSTER_ACTIVATION;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
@@ -115,7 +115,7 @@ public class ClusterInfoProcessor extends GridProcessorAdapter {
 
         mgr.send(
             buildClusterTopologyDest(cluster.id()),
-            TopologySnapshot.topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
+            topology(cluster.topologyVersion(), crdId, cluster.nodes(), cluster.currentBaselineTopology())
         );
 
         if (evt != null)
