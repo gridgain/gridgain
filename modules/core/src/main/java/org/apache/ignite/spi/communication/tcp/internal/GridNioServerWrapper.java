@@ -790,7 +790,7 @@ public class GridNioServerWrapper {
 
                     @Override public MessageReader reader(GridNioSession ses, MessageFactory msgFactory)
                         throws IgniteCheckedException {
-                        final IgniteSpiContext ctx = stateProvider.getSpiContext();
+                        final IgniteSpiContext ctx = stateProvider.getSpiContextWithoutInitialLatch();
 
                         if (formatter == null || context != ctx) {
                             context = ctx;
@@ -812,7 +812,7 @@ public class GridNioServerWrapper {
                     private MessageFormatter formatter;
 
                     @Override public MessageWriter writer(GridNioSession ses) throws IgniteCheckedException {
-                        final IgniteSpiContext ctx = stateProvider.getSpiContext();
+                        final IgniteSpiContext ctx = stateProvider.getSpiContextWithoutInitialLatch();
 
                         if (formatter == null || context != ctx) {
                             context = ctx;

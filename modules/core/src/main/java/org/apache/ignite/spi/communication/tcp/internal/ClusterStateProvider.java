@@ -52,6 +52,9 @@ public class ClusterStateProvider {
     /** Stopped supplier. */
     private final Supplier<Boolean> stoppedSupplier;
 
+    /** Spi context without latch supplier. */
+    private final IgniteSpiContext spiContextWithoutLatch;
+
     /** Logger. */
     private final IgniteLogger log;
 
@@ -63,6 +66,7 @@ public class ClusterStateProvider {
      * @param locNodeSupplier Local node supplier.
      * @param tcpCommSpi Tcp communication spi.
      * @param stoppedSupplier Stopped supplier.
+     * @param spiCtxWithoutLatch Spi context without latch
      * @param log Logger.
      * @param igniteExSupplier Returns already exists instance from spi.
      */
@@ -71,6 +75,7 @@ public class ClusterStateProvider {
         Supplier<ClusterNode> locNodeSupplier,
         TcpCommunicationSpi tcpCommSpi,
         Supplier<Boolean> stoppedSupplier,
+        IgniteSpiContext spiCtxWithoutLatch,
         IgniteLogger log,
         Supplier<Ignite> igniteExSupplier
     ) {
@@ -78,6 +83,7 @@ public class ClusterStateProvider {
         this.locNodeSupplier = locNodeSupplier;
         this.tcpCommSpi = tcpCommSpi;
         this.stoppedSupplier = stoppedSupplier;
+        this.spiContextWithoutLatch = spiCtxWithoutLatch;
         this.log = log;
         this.igniteExSupplier = igniteExSupplier;
     }
@@ -129,6 +135,13 @@ public class ClusterStateProvider {
      */
     public IgniteSpiContext getSpiContext() {
         return tcpCommSpi.getSpiContext();
+    }
+
+    /**
+     * @return {@link IgniteSpiContext} of {@link TcpCommunicationSpi}.
+     */
+    public IgniteSpiContext getSpiContextWithoutInitialLatch() {
+        return spiContextWithoutLatch;
     }
 
     /**
