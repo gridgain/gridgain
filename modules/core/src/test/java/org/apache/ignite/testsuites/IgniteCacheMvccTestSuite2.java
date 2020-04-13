@@ -54,6 +54,7 @@ import org.apache.ignite.internal.processors.cache.distributed.GridCachePartitio
 import org.apache.ignite.internal.processors.cache.distributed.GridCacheTransformEventSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheClientNodePartitionsExchangeTest;
 import org.apache.ignite.internal.processors.cache.distributed.IgniteCacheServerNodeConcurrentStart;
+import org.apache.ignite.internal.processors.cache.distributed.LoadDataWiaStreamerDuringExchnageTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.CachePartitionPartialCountersMapSelfTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheColocatedDebugTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridCacheColocatedMvccTxSingleThreadedSelfTest;
@@ -154,6 +155,7 @@ public class IgniteCacheMvccTestSuite2 {
         ignoredTests.add(GridCacheNearClientHitTest.class);
         ignoredTests.add(GridCacheNearTxForceKeyTest.class);
         ignoredTests.add(CacheLoadingConcurrentGridStartSelfTest.class);
+        ignoredTests.add(LoadDataWiaStreamerDuringExchnageTest.class);
         ignoredTests.add(CacheLoadingConcurrentGridStartSelfTestAllowOverwrite.class);
         ignoredTests.add(IgniteCachePartitionedBackupNodeFailureRecoveryTest.class);
 
