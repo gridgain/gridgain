@@ -43,121 +43,121 @@ public enum SpanType {
     EXCHANGE_FUTURE(Scope.DISCOVERY, "exchange.future", 7),
 
     /** Affinity calculation. */
-    AFFINITY_CALCULATION(Scope.DISCOVERY, "affinity.calculation", 40),
+    AFFINITY_CALCULATION(Scope.DISCOVERY, "affinity.calculation", 8),
 
     // Communication traces.
     /** Job execution request. */
-    COMMUNICATION_JOB_EXECUTE_REQUEST(Scope.COMMUNICATION, "communication.job.execute.request", 8),
+    COMMUNICATION_JOB_EXECUTE_REQUEST(Scope.COMMUNICATION, "communication.job.execute.request", 9),
 
     /** Job execution response. */
-    COMMUNICATION_JOB_EXECUTE_RESPONSE(Scope.COMMUNICATION, "communication.job.execute.response", 9),
+    COMMUNICATION_JOB_EXECUTE_RESPONSE(Scope.COMMUNICATION, "communication.job.execute.response",10),
 
     /** Socket write action. */
-    COMMUNICATION_SOCKET_WRITE(Scope.COMMUNICATION, "socket.write", 10),
+    COMMUNICATION_SOCKET_WRITE(Scope.COMMUNICATION, "socket.write", 11),
 
     /** Socket read action. */
-    COMMUNICATION_SOCKET_READ(Scope.COMMUNICATION, "socket.read", 11),
+    COMMUNICATION_SOCKET_READ(Scope.COMMUNICATION, "socket.read", 12),
 
     /** Process regular. */
-    COMMUNICATION_REGULAR_PROCESS(Scope.COMMUNICATION, "process.regular", 12),
+    COMMUNICATION_REGULAR_PROCESS(Scope.COMMUNICATION, "process.regular", 13),
 
     /** Process ordered. */
-    COMMUNICATION_ORDERED_PROCESS(Scope.COMMUNICATION, "process.ordered", 13),
+    COMMUNICATION_ORDERED_PROCESS(Scope.COMMUNICATION, "process.ordered", 14),
 
     // Tx traces.
     /** Transaction start. */
-    TX(Scope.TX, "transaction", 14),
+    TX(Scope.TX, "transaction", 15),
 
     /** Transaction commit.*/
-    TX_COMMIT(Scope.TX, "transactions.commit", 15),
+    TX_COMMIT(Scope.TX, "transactions.commit", 16),
 
     /** Transaction rollback.*/
-    TX_ROLLBACK(Scope.TX, "transactions.rollback", 16),
+    TX_ROLLBACK(Scope.TX, "transactions.rollback", 17),
 
     /** Transaction close.*/
-    TX_CLOSE(Scope.TX, "transactions.close", 17),
+    TX_CLOSE(Scope.TX, "transactions.close", 18),
 
     /** Transaction suspend.*/
-    TX_SUSPEND(Scope.TX, "transactions.suspend", 18),
+    TX_SUSPEND(Scope.TX, "transactions.suspend", 19),
 
     /** Transaction resume.*/
-    TX_RESUME(Scope.TX, "transactions.resume", 19),
+    TX_RESUME(Scope.TX, "transactions.resume", 20),
 
     /** Transaction near prepare.*/
-    TX_NEAR_PREPARE(Scope.TX, "transactions.near.prepare", 20),
+    TX_NEAR_PREPARE(Scope.TX, "transactions.near.prepare", 21),
 
     /** Transaction near prepare ondone.*/
-    TX_NEAR_PREPARE_ON_DONE(Scope.TX, "transactions.near.prepare.ondone", 21),
+    TX_NEAR_PREPARE_ON_DONE(Scope.TX, "transactions.near.prepare.ondone", 22),
 
     /** Transaction near prepare onerror.*/
-    TX_NEAR_PREPARE_ON_ERROR(Scope.TX, "transactions.near.prepare.onerror", 22),
+    TX_NEAR_PREPARE_ON_ERROR(Scope.TX, "transactions.near.prepare.onerror", 23),
 
     /** Transaction near prepare ontimeout.*/
-    TX_NEAR_PREPARE_ON_TIMEOUT(Scope.TX, "transactions.near.prepare.ontimeout", 23),
+    TX_NEAR_PREPARE_ON_TIMEOUT(Scope.TX, "transactions.near.prepare.ontimeout", 24),
 
     /** Transaction dht prepare.*/
-    TX_DHT_PREPARE(Scope.TX, "transactions.dht.prepare", 24),
+    TX_DHT_PREPARE(Scope.TX, "transactions.dht.prepare", 25),
 
     /** Transaction dht prepare ondone.*/
-    TX_DHT_PREPARE_ON_DONE(Scope.TX, "transactions.dht.prepare.ondone", 25),
+    TX_DHT_PREPARE_ON_DONE(Scope.TX, "transactions.dht.prepare.ondone", 26),
 
     /** Transaction near finish.*/
-    TX_NEAR_FINISH(Scope.TX, "transactions.near.finish", 26),
+    TX_NEAR_FINISH(Scope.TX, "transactions.near.finish", 27),
 
     /** Transaction near finish ondone.*/
-    TX_NEAR_FINISH_ON_DONE(Scope.TX, "transactions.near.finish.ondone", 27),
+    TX_NEAR_FINISH_ON_DONE(Scope.TX, "transactions.near.finish.ondone", 28),
 
     /** Transaction dht finish.*/
-    TX_DHT_FINISH(Scope.TX, "transactions.dht.finish", 28),
+    TX_DHT_FINISH(Scope.TX, "transactions.dht.finish", 29),
 
     /** Transaction dht finish ondone.*/
-    TX_DHT_FINISH_ON_DONE(Scope.TX, "transactions.dht.finish.ondone", 29),
+    TX_DHT_FINISH_ON_DONE(Scope.TX, "transactions.dht.finish.ondone", 30),
 
     /** Transaction map proceed.*/
-    TX_MAP_PROCEED(Scope.TX, "transactions.lock.map.proceed", 30),
+    TX_MAP_PROCEED(Scope.TX, "transactions.lock.map.proceed", 31),
 
     /** Transaction map proceed.*/
-    TX_COLOCATED_LOCK_MAP(Scope.TX, "transactions.colocated.lock.map", 31),
+    TX_COLOCATED_LOCK_MAP(Scope.TX, "transactions.colocated.lock.map", 32),
 
     /** Transaction lock map.*/
-    TX_DHT_LOCK_MAP(Scope.TX, "transactions.dht.lock.map", 32),
+    TX_DHT_LOCK_MAP(Scope.TX, "transactions.dht.lock.map", 33),
 
     /** Transaction near enlist read.*/
-    TX_NEAR_ENLIST_READ(Scope.TX, "transactions.near.enlist.read", 33),
+    TX_NEAR_ENLIST_READ(Scope.TX, "transactions.near.enlist.read", 34),
 
     /** Transaction near enlist write.*/
-    TX_NEAR_ENLIST_WRITE(Scope.TX, "transactions.near.enlist.write", 34),
+    TX_NEAR_ENLIST_WRITE(Scope.TX, "transactions.near.enlist.write", 35),
 
     /** Transaction dht process prepare request.*/
-    TX_PROCESS_DHT_PREPARE_REQ(Scope.TX, "tx.dht.process.prepare.req", 35),
+    TX_PROCESS_DHT_PREPARE_REQ(Scope.TX, "tx.dht.process.prepare.req", 36),
 
     /** Transaction dht process finish request. */
-    TX_PROCESS_DHT_FINISH_REQ(Scope.TX, "tx.dht.process.finish.req", 36),
+    TX_PROCESS_DHT_FINISH_REQ(Scope.TX, "tx.dht.process.finish.req", 37),
 
     /** Transaction dht finish response. */
-    TX_PROCESS_DHT_FINISH_RESP(Scope.TX, "tx.dht.process.finish.resp", 37),
+    TX_PROCESS_DHT_FINISH_RESP(Scope.TX, "tx.dht.process.finish.resp", 38),
 
     /** Transaction dht one phase commit ack request. */
-    TX_PROCESS_DHT_ONE_PHASE_COMMIT_ACK_REQ(Scope.TX, "tx.dht.process.one-phase-commit-ack.req", 38),
+    TX_PROCESS_DHT_ONE_PHASE_COMMIT_ACK_REQ(Scope.TX, "tx.dht.process.one-phase-commit-ack.req", 39),
 
     /** Transaction dht prepare response. */
-    TX_PROCESS_DHT_PREPARE_RESP(Scope.TX, "tx.dht.process.prepare.response", 39),
+    TX_PROCESS_DHT_PREPARE_RESP(Scope.TX, "tx.dht.process.prepare.response", 40),
 
     /** Transaction near finish request. */
-    TX_NEAR_FINISH_REQ(Scope.TX, "tx.near.process.finish.request", 40),
+    TX_NEAR_FINISH_REQ(Scope.TX, "tx.near.process.finish.request", 41),
 
     /** Transaction near finish  response. */
-    TX_NEAR_FINISH_RESP(Scope.TX, "tx.near.process.finish.response", 41),
+    TX_NEAR_FINISH_RESP(Scope.TX, "tx.near.process.finish.response", 42),
 
     /** Transaction near prepare request. */
-    TX_NEAR_PREPARE_REQ(Scope.TX, "tx.near.process.prepare.request", 42),
+    TX_NEAR_PREPARE_REQ(Scope.TX, "tx.near.process.prepare.request", 43),
 
     /** Transaction near prepare  response. */
-    TX_NEAR_PREPARE_RESP(Scope.TX, "tx.near.process.prepare.response", 43),
+    TX_NEAR_PREPARE_RESP(Scope.TX, "tx.near.process.prepare.response", 44),
 
     // TODO GG-28559 Instead of creating custom span with Ignite api, open census api should be used.
     /** Custom job call. */
-    CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 41);
+    CUSTOM_JOB_CALL(Scope.COMMUNICATION, "job.call", 45);
 
     /** Scope */
     private Scope scope;
