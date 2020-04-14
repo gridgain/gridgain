@@ -97,7 +97,7 @@ public class IgniteStandardMXBean extends StandardMBean {
                     assert !str.trim().isEmpty() : "Method description cannot be empty: " + mtd;
 
                     // Enforce proper English.
-                    assert Character.isUpperCase(str.charAt(0)) == true :
+                    assert Character.isUpperCase(str.charAt(0)) :
                         "Description must start with upper case: " + str;
 
                     assert str.charAt(str.length() - 1) == '.' : "Description must end with period: " + str;
@@ -125,7 +125,7 @@ public class IgniteStandardMXBean extends StandardMBean {
             assert !str.trim().isEmpty();
 
             // Enforce proper English.
-            assert Character.isUpperCase(str.charAt(0)) == true : str;
+            assert Character.isUpperCase(str.charAt(0)) : str;
             assert str.charAt(str.length() - 1) == '.' : str;
         }
 
@@ -148,7 +148,7 @@ public class IgniteStandardMXBean extends StandardMBean {
                 assert !str.trim().isEmpty();
 
                 // Enforce proper English.
-                assert Character.isUpperCase(str.charAt(0)) == true : str;
+                assert Character.isUpperCase(str.charAt(0)) : str;
                 assert str.charAt(str.length() - 1) == '.' : str;
             }
         }
@@ -178,7 +178,7 @@ public class IgniteStandardMXBean extends StandardMBean {
                 assert !str.trim().isEmpty();
 
                 // Enforce proper English.
-                assert Character.isUpperCase(str.charAt(0)) == true : str;
+                assert Character.isUpperCase(str.charAt(0)) : str;
                 assert str.charAt(str.length() - 1) == '.' : str;
             }
         }
@@ -253,7 +253,7 @@ public class IgniteStandardMXBean extends StandardMBean {
      */
     @SuppressWarnings("unchecked")
     private Method findMethod(Class itf, String methodName, Class[] params) {
-        assert itf.isInterface() == true;
+        assert itf.isInterface();
 
         Method res = null;
 

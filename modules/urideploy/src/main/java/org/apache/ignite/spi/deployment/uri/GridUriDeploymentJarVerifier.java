@@ -174,7 +174,7 @@ final class GridUriDeploymentJarVerifier {
                 // Will return quietly if no problem.
                 verifyDigestsImplicitly(jin);
 
-                if (verifyEntry(jarEntry, manifest, pubKey, allSigned, true) == false)
+                if (!verifyEntry(jarEntry, manifest, pubKey, allSigned, true))
                     return false;
 
                 manifestFiles.remove(jarEntry.getName());
@@ -235,7 +235,7 @@ final class GridUriDeploymentJarVerifier {
                 // Will return quietly if no problem.
                 verifyDigestsImplicitly(jarFile.getInputStream(jarEntry));
 
-                if (verifyEntry(jarEntry, manifest, pubKey, allSigned, false) == false)
+                if (!verifyEntry(jarEntry, manifest, pubKey, allSigned, false))
                     return false;
 
                 manifestFiles.remove(jarEntry.getName());
@@ -284,16 +284,16 @@ final class GridUriDeploymentJarVerifier {
             inManifest = true;
 
         // Don't ignore files not listed in manifest and META-INF directory.
-        if (allSigned == true && inManifest == false && entryName.toUpperCase().startsWith("META-INF/") == false)
+        if (allSigned && !inManifest && !entryName.toUpperCase().startsWith("META-INF/"))
             return false;
 
         // Looking at entries in manifest file.
         if (inManifest) {
-            Certificate[] certs = makeCerts == false ? jarEntry.getCertificates() : getCertificates(jarEntry);
+            Certificate[] certs = !makeCerts ? jarEntry.getCertificates() : getCertificates(jarEntry);
 
             boolean isSigned = certs != null && certs.length > 0;
 
-            if (isSigned == false || pubKey != null && findKeyInCertificates(pubKey, certs) == false)
+            if (!isSigned || pubKey != null && !findKeyInCertificates(pubKey, certs))
                 return false;
         }
 

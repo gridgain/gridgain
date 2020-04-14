@@ -65,7 +65,7 @@ class GridUriDeploymentUriParser {
             p++;            // Skip ':'
 
             if (at(p, n, '/')) {
-                if (at(p, n, '/') == true && at(p + 1, n, '/')) {
+                if (at(p, n, '/') && at(p + 1, n, '/')) {
                     p += 2;
 
                     // Seek authority.
