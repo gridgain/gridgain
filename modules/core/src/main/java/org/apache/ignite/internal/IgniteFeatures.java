@@ -149,7 +149,7 @@ public enum IgniteFeatures {
     CHECK_INDEX_INLINE_SIZES(36),
 
     /** Dump tx collisions possibility. */
-    TX_COLLISIONS_DUMP(36);
+    DISTRIBUTED_TX_COLLISIONS_DUMP(36);
 
     /**
      * Unique feature identifier.
