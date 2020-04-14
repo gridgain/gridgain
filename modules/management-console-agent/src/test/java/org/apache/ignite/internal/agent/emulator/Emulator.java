@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.agent.emulator;
+package org.apache.ignite.internal.agent.emulator;
 
 import java.io.EOFException;
 import java.lang.reflect.Type;
@@ -32,14 +32,14 @@ import java.util.stream.IntStream;
 import javax.websocket.DeploymentException;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.agent.dto.action.Request;
-import org.apache.ignite.agent.dto.action.Status;
-import org.apache.ignite.agent.dto.action.TaskResponse;
-import org.apache.ignite.agent.dto.cluster.BaselineInfo;
-import org.apache.ignite.agent.dto.cluster.ClusterInfo;
-import org.apache.ignite.agent.dto.topology.Node;
-import org.apache.ignite.agent.dto.topology.TopologySnapshot;
-import org.apache.ignite.agent.ws.WebSocketManager;
+import org.apache.ignite.internal.agent.dto.action.Request;
+import org.apache.ignite.internal.agent.dto.action.Status;
+import org.apache.ignite.internal.agent.dto.action.TaskResponse;
+import org.apache.ignite.internal.agent.dto.cluster.BaselineInfo;
+import org.apache.ignite.internal.agent.dto.cluster.ClusterInfo;
+import org.apache.ignite.internal.agent.dto.topology.Node;
+import org.apache.ignite.internal.agent.dto.topology.TopologySnapshot;
+import org.apache.ignite.internal.agent.ws.WebSocketManager;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
@@ -59,13 +59,13 @@ import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 import org.springframework.scheduling.concurrent.CustomizableThreadFactory;
 
 import static java.util.stream.Collectors.toList;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionRequestTopic;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildActionTaskResponseDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildClusterTopologyDest;
-import static org.apache.ignite.agent.StompDestinationsUtils.buildMetricsPullTopic;
-import static org.apache.ignite.agent.utils.AgentUtils.monitoringUri;
-import static org.apache.ignite.agent.utils.AgentUtils.toWsUri;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionRequestTopic;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildActionTaskResponseDest;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterDest;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildClusterTopologyDest;
+import static org.apache.ignite.internal.agent.StompDestinationsUtils.buildMetricsPullTopic;
+import static org.apache.ignite.internal.agent.utils.AgentUtils.monitoringUri;
+import static org.apache.ignite.internal.agent.utils.AgentUtils.toWsUri;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_BUILD_VER;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_JVM_PID;
