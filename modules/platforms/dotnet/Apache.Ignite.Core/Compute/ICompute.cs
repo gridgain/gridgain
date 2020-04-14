@@ -356,10 +356,10 @@ namespace Apache.Ignite.Core.Compute
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
         /// The first cache is used for affinity co-location.</param>
         /// <param name="partition">Partition number.</param>
-        /// <param name="clo">Job to execute.</param>
+        /// <param name="func">Job to execute.</param>
         /// <returns>Job result for this execution.</returns>
         /// <typeparam name="TRes">Type of job result.</typeparam>
-        Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo);
+        Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> func);
 
         /// <summary>
         /// Executes given job on the primary node for the specified partition.
@@ -367,11 +367,11 @@ namespace Apache.Ignite.Core.Compute
         /// <param name="cacheNames">Names of the caches to reserve the partition in.
         /// The first cache is used for affinity co-location.</param>
         /// <param name="partition">Partition number.</param>
-        /// <param name="clo">Job to execute.</param>
+        /// <param name="func">Job to execute.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>Job result for this execution.</returns>
         /// <typeparam name="TRes">Type of job result.</typeparam>
-        Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo, 
+        Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> func, 
             CancellationToken cancellationToken);
 
         /// <summary>

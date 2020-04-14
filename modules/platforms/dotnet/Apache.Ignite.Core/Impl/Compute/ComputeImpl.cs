@@ -71,7 +71,7 @@ namespace Apache.Ignite.Core.Impl.Compute
         private const int OpWithExecutor = 10;
 
         /** */
-        private const int OpAffinityCall = 11;
+        private const int OpAffinityCallAsync = 11;
 
         /** Underlying projection. */
         private readonly ClusterGroupImpl _prj;
@@ -511,7 +511,7 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
             IgniteArgumentCheck.NotNull(func, "func");
 
-            return DoOutOpObjectAsync<TJobRes>(OpAffinityCall, w =>
+            return DoOutOpObjectAsync<TJobRes>(OpAffinityCallAsync, w =>
             {
                 var cacheCount = w.WriteStrings(cacheNames);
 

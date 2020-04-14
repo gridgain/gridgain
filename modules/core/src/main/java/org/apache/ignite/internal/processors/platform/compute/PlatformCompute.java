@@ -48,7 +48,7 @@ import static org.apache.ignite.internal.processors.task.GridTaskThreadContextKe
 /**
  * Interop compute.
  */
-@SuppressWarnings({"unchecked"})
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class PlatformCompute extends PlatformAbstractTarget {
     /** */
     private static final int OP_AFFINITY = 1;
@@ -81,10 +81,7 @@ public class PlatformCompute extends PlatformAbstractTarget {
     private static final int OP_WITH_EXECUTOR = 10;
 
     /** */
-    private static final int OP_AFFINITY_CALL = 11;
-
-    /** */
-    private static final int OP_AFFINITY_CALL_ASYNC = 12;
+    private static final int OP_AFFINITY_CALL_ASYNC = 11;
 
     /** Compute instance. */
     private final IgniteComputeImpl compute;

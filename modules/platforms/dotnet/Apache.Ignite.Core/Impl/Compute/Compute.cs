@@ -244,16 +244,17 @@ namespace Apache.Ignite.Core.Impl.Compute
         }
 
         /** <inheritDoc /> */
-        public Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo)
+        public Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, 
+            IComputeFunc<TRes> func)
         {
-            throw new NotImplementedException();
+            return _compute.AffinityCall(cacheNames, partition, func).Task;
         }
 
         /** <inheritDoc /> */
-        public Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo,
-            CancellationToken cancellationToken)
+        public Task<TRes> AffinityCallAsync<TRes>(IEnumerable<string> cacheNames, int partition, 
+            IComputeFunc<TRes> func, CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return _compute.AffinityCall(cacheNames, partition, func).GetTask(cancellationToken);
         }
 
         /** <inheritDoc /> */
