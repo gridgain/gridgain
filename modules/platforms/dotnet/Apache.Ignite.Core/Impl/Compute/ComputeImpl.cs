@@ -509,9 +509,6 @@ namespace Apache.Ignite.Core.Impl.Compute
                 
                 w.WriteInt(partition);
                 
-                // TODO: Job is wrapped into 3 (!!) objects.
-                // We can't fix this because of compat - goes over network. 
-                // Or do we care? At least for new APIs.
                 var job = new ComputeJobHolder(Marshaller.Ignite, new ComputeOutFuncJob(func.ToNonGeneric()));
                 w.WriteObject(job);
             });
