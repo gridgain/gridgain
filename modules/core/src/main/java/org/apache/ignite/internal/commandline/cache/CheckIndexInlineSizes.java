@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteSystemProperties;
@@ -40,6 +41,7 @@ import org.apache.ignite.internal.visor.VisorTaskArgument;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_CLIENT_MODE;
+import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DAEMON;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.commandline.CommandLogger.INDENT;
 import static org.apache.ignite.internal.commandline.cache.CacheCommands.usageCache;
@@ -57,11 +59,16 @@ public class CheckIndexInlineSizes implements Command<Void> {
     public static final String INDEXES_INLINE_SIZE_ARE_SAME =
         "All secondary indexes have the same effective inline size on all cluster nodes.";
 
+    /** Predicate to filter server nodes. */
+    private static final Predicate<GridClientNode> SRV_NODES = node ->
+        Objects.equals(node.attribute(ATTR_CLIENT_MODE), false) &&
+            Objects.equals(node.attribute(ATTR_DAEMON), false);
+
     /** {@inheritDoc} */
     @Override public Object execute(GridClientConfiguration clientCfg, Logger log) throws Exception {
         try (GridClient client = Command.startClient(clientCfg)) {
             Set<UUID> serverNodes = client.compute().nodes().stream()
-                .filter(node -> Objects.equals(node.attribute(ATTR_CLIENT_MODE), false))
+                .filter(SRV_NODES)
                 .map(GridClientNode::nodeId)
                 .collect(toSet());
 
@@ -73,7 +80,7 @@ public class CheckIndexInlineSizes implements Command<Void> {
 
             CheckIndexInlineSizesResult res = client.compute().projection(supportedServerNodes).execute(
                 CheckIndexInlineSizesTask.class.getName(),
-                new VisorTaskArgument<>(serverNodes, false)
+                new VisorTaskArgument<>(supportedServerNodeIds, false)
             );
 
             Set<UUID> unsupportedNodes = serverNodes.stream()
@@ -165,7 +172,6 @@ public class CheckIndexInlineSizes implements Command<Void> {
 
     /** */
     private static boolean checkIndexInlineSizesSupported(Logger log, GridClientNode node) {
-        log.severe("checkIndexInlineSizesSupported() node: " + node + " features: " + node.attributes());
         return nodeSupports(node.attribute(ATTR_IGNITE_FEATURES), IgniteFeatures.CHECK_INDEX_INLINE_SIZES);
     }
 }
