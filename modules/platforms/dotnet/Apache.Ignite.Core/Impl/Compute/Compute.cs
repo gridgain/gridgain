@@ -258,12 +258,6 @@ namespace Apache.Ignite.Core.Impl.Compute
         }
 
         /** <inheritDoc /> */
-        public TJobRes Call<TJobRes>(Func<TJobRes> func)
-        {
-            return _compute.Execute(func).Get();
-        }
-
-        /** <inheritDoc /> */
         public Task<TRes> CallAsync<TFuncRes, TRes>(IEnumerable<IComputeFunc<TFuncRes>> clos, 
             IComputeReducer<TFuncRes, TRes> reducer)
         {

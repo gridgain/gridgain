@@ -261,22 +261,6 @@ namespace Apache.Ignite.Core.Impl.Compute
         }
 
         /// <summary>
-        /// Executes provided delegate on a node in this grid projection. The result of the
-        /// job execution is returned from the result closure.
-        /// </summary>
-        /// <param name="func">Func to execute.</param>
-        /// <returns>Job result for this execution.</returns>
-        public Future<TJobRes> Execute<TJobRes>(Func<TJobRes> func)
-        {
-            IgniteArgumentCheck.NotNull(func, "func");
-
-            var wrappedFunc = new ComputeOutFuncWrapper(func, () => func());
-
-            return ExecuteClosures0(new ComputeSingleClosureTask<object, TJobRes, TJobRes>(),
-                new ComputeOutFuncJob(wrappedFunc), null, false);
-        }
-
-        /// <summary>
         /// Executes collection of jobs on nodes within this grid projection.
         /// </summary>
         /// <param name="clos">Collection of jobs to execute.</param>
@@ -524,7 +508,12 @@ namespace Apache.Ignite.Core.Impl.Compute
                 }
                 
                 w.WriteInt(partition);
-                w.WriteObject(new ComputeOutFuncJob(func.ToNonGeneric()));
+                
+                // TODO: Job is wrapped into 3 (!!) objects.
+                // We can't fix this because of compat - goes over network. 
+                // Or do we care? At least for new APIs.
+                var job = new ComputeJobHolder(Marshaller.Ignite, new ComputeOutFuncJob(func.ToNonGeneric()));
+                w.WriteObject(job);
             });
         }
 
