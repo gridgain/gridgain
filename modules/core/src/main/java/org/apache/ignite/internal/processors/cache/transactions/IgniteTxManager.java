@@ -338,11 +338,6 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
             }
         };
 
-        if (collisionsDumpInterval() != -1)
-            cctx.kernalContext().timeout().schedule(() -> {},
-            collisionsDumpInterval(),
-            collisionsDumpInterval());
-
         cctx.gridEvents().addDiscoveryEventListener((evt, discoCache) -> {
                 if (evt.type() == EVT_NODE_FAILED || evt.type() == EVT_NODE_LEFT) {
                     UUID nodeId = evt.eventNode().id();
