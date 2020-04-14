@@ -494,6 +494,24 @@ namespace Apache.Ignite.Core.Impl.Compute
                 writeAction: w => WriteAffinity(w, cacheName, affinityKey));
         }
 
+        /// <summary>
+        /// Executes given func on a node where specified partition is located,
+        /// </summary>
+        /// <param name="cacheNames">Cache names. First cache is used for co-location.</param>
+        /// <param name="partition">Partition.</param>
+        /// <param name="func">Func to execute.</param>
+        /// <typeparam name="TJobRes">Result type.</typeparam>
+        /// <returns>Result.</returns>
+        public Future<TJobRes> AffinityCall<TJobRes>(IEnumerable<string> cacheNames, int partition,
+            IComputeFunc<TJobRes> func)
+        {
+            IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
+            IgniteArgumentCheck.NotNull(func, "func");
+
+            // TODO
+            return null;
+        }
+
         /** <inheritDoc /> */
         protected override T Unmarshal<T>(IBinaryStream stream)
         {

@@ -235,9 +235,12 @@ namespace Apache.Ignite.Core.Impl.Compute
         }
 
         /** <inheritDoc /> */
-        public TRes AffinityCall<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> clo)
+        public TRes AffinityCall<TRes>(IEnumerable<string> cacheNames, int partition, IComputeFunc<TRes> func)
         {
-            throw new NotImplementedException();
+            IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
+            IgniteArgumentCheck.NotNull(func, "func");
+            
+            return _compute.AffinityCall(cacheNames, partition, func).Get();
         }
 
         /** <inheritDoc /> */
