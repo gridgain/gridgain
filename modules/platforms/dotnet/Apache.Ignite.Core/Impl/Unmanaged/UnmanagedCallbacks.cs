@@ -35,6 +35,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
     using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Impl.Compute;
     using Apache.Ignite.Core.Impl.Datastream;
+    using Apache.Ignite.Core.Impl.Deployment;
     using Apache.Ignite.Core.Impl.Events;
     using Apache.Ignite.Core.Impl.Handle;
     using Apache.Ignite.Core.Impl.Log;
@@ -623,6 +624,7 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         {
             using (var stream = IgniteManager.Memory.Get(memPtr).GetStream())
             {
+                /*
                 var job = ComputeJobHolder.CreateJob(_ignite, stream);
                 
                 stream.Reset();
@@ -633,6 +635,22 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
                 // 3. Execute with peer class loading, under try-catch
                 // 4. Write result.
                 job.ExecuteRemote(stream, false);
+                */
+                
+                var func = _ignite.Marshaller.Unmarshal<object>(stream);
+
+                ResourceProcessor.Inject(func, _ignite);
+
+                var invoker = DelegateTypeDescriptor.GetComputeOutFunc(func.GetType());
+                
+                // TODO: Exception handling (exception during execution, during result serialization)
+                using (PeerAssemblyResolver.GetInstance(_ignite, Guid.Empty))
+                {
+                    var res = invoker(func);
+                    var writer = _ignite.Marshaller.StartMarshal(stream);
+                    BinaryUtils.WriteInvocationResult(writer, true, res);
+                    _ignite.Marshaller.FinishMarshal(writer);
+                }
             }
 
             return 0;

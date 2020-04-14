@@ -509,8 +509,9 @@ namespace Apache.Ignite.Core.Impl.Compute
                 
                 w.WriteInt(partition);
                 
-                var job = new ComputeJobHolder(Marshaller.Ignite, new ComputeOutFuncJob(func.ToNonGeneric()));
-                w.WriteObject(job);
+                // TODO: 3 wrappers are not necessary. We don't need any wrappers, in fact.
+                // var job = new ComputeJobHolder(Marshaller.Ignite, new ComputeOutFuncJob(func.ToNonGeneric()));
+                w.WriteObject(func);
             });
         }
 
