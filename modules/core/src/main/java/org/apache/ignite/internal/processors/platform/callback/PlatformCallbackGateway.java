@@ -333,6 +333,22 @@ public class PlatformCallbackGateway {
     }
 
     /**
+     * Read compute job from stream, execute, and write results back to the same stream.
+     *
+     * @param memPtr Memory pointer.
+     */
+    public void computeJobReadAndExecute(long memPtr) {
+        enter();
+
+        try {
+            PlatformCallbackUtils.inLongOutLong(envPtr, PlatformCallbackOp.ComputeJobReadAndExecute, memPtr);
+        }
+        finally {
+            leave();
+        }
+    }
+
+    /**
      * Cancel the job.
      *
      * @param jobPtr Job pointer.

@@ -17,11 +17,19 @@
 package org.apache.ignite.internal.processors.platform.compute;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.internal.binary.BinaryRawReaderEx;
+import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.processors.platform.PlatformContext;
+import org.apache.ignite.internal.processors.platform.memory.PlatformInputStream;
+import org.apache.ignite.internal.processors.platform.memory.PlatformMemory;
+import org.apache.ignite.internal.processors.platform.memory.PlatformOutputStream;
 import org.apache.ignite.internal.processors.platform.utils.PlatformUtils;
 import org.apache.ignite.lang.IgniteCallable;
 import org.apache.ignite.resources.IgniteInstanceResource;
 
+/**
+ * TODO: What is this class? Very similar to PlatformClosureJob. Consolidate.
+ */
 @SuppressWarnings("rawtypes")
 public class PlatformCallable implements IgniteCallable {
     /** */
@@ -51,8 +59,24 @@ public class PlatformCallable implements IgniteCallable {
 
         PlatformContext ctx = PlatformUtils.platformContext(ignite);
 
-        ctx.gateway().com
+        try (PlatformMemory mem = ctx.memory().allocate()) {
+            PlatformOutputStream out = mem.output();
 
-        return null;
+            BinaryRawWriterEx writer = ctx.writer(out);
+
+            writer.writeObject(func);
+
+            out.synchronize();
+
+            ctx.gateway().computeJobReadAndExecute(mem.pointer());
+
+            PlatformInputStream in = mem.input();
+
+            in.synchronize();
+
+            BinaryRawReaderEx reader = ctx.reader(in);
+
+            return PlatformUtils.readInvocationResult(ctx, reader);
+        }
     }
 }
