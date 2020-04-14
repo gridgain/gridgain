@@ -1444,8 +1444,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
             }, metricsLogFreq, metricsLogFreq);
         }
 
-        scheduleLongOperationsDumpTask(ctx.cache().context().tm().longOperationsDumpTimeout());
-
         ctx.performance().add("Disable assertions (remove '-ea' from JVM options)", !U.assertionsEnabled());
 
         ctx.performance().logSuggestions(log, igniteInstanceName);
@@ -1467,36 +1465,6 @@ public class IgniteKernal implements IgniteEx, IgniteMXBean, Externalizable {
     /** */
     private static DecimalFormat doubleFormat() {
         return new DecimalFormat("#.##", DecimalFormatSymbols.getInstance(Locale.US));
-    }
-
-    /**
-     * Scheduling tasks for dumping long operations. Closes current task
-     * (if any) and if the {@code longOpDumpTimeout > 0} schedules a new task
-     * with a new timeout, delay and start period equal to
-     * {@code longOpDumpTimeout}, otherwise task is deleted.
-     *
-     * @param longOpDumpTimeout Long operations dump timeout.
-     */
-    public void scheduleLongOperationsDumpTask(long longOpDumpTimeout) {
-        if (isStopping())
-            return;
-
-        synchronized (this) {
-            GridTimeoutProcessor.CancelableTask task = longOpDumpTask;
-
-            if (nonNull(task))
-                task.close();
-
-            if (longOpDumpTimeout > 0) {
-                longOpDumpTask = ctx.timeout().schedule(
-                    () -> ctx.cache().context().exchange().dumpLongRunningOperations(longOpDumpTimeout),
-                    longOpDumpTimeout,
-                    longOpDumpTimeout
-                );
-            }
-            else
-                longOpDumpTask = null;
-        }
     }
 
     /**

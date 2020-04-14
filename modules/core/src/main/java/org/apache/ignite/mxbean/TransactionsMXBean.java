@@ -250,8 +250,8 @@ public interface TransactionsMXBean {
 
     @MXBeanParametersNames("timeout")
     @MXBeanDescription("Timeout threshold (in seconds) for printing key contention queue size.")
-    void setShowKeyCollisionsInterval(long timeout);
+    void setShowKeyCollisionsInterval(int timeout);
 
     @MXBeanDescription("")
-    long getShowKeyCollisionsInterval();
+    int getShowKeyCollisionsInterval();
 }

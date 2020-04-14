@@ -181,12 +181,12 @@ public class TransactionsMXBeanImpl implements TransactionsMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public void setShowKeyCollisionsInterval(long timeout) {
- !!!
+    @Override public void setShowKeyCollisionsInterval(int timeout) {
+        ctx.cache().context().tm().collisionsDumpInterval(timeout);
     }
 
     /** {@inheritDoc} */
-    @Override public long getShowKeyCollisionsInterval() {
+    @Override public int getShowKeyCollisionsInterval() {
         return ctx.cache().context().tm().collisionsDumpInterval();
     }
 

@@ -1406,7 +1406,7 @@ public final class IgniteSystemProperties {
 
     /**
      * When above zero, prints tx key collisions once per interval (in seconds).
-     * Default is 1 s.
+     * Default is 1000 ms.
      */
     public static final String IGNITE_DUMP_TX_COLLISIONS_INTERVAL = "IGNITE_DUMP_TX_COLLISIONS_INTERVAL";
 

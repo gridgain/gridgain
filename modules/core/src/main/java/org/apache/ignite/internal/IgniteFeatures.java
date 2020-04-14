@@ -146,7 +146,10 @@ public enum IgniteFeatures {
     INVERSE_TCP_CONNECTION(35),
 
     /** Check secondary indexes inline size on join/by control utility request. */
-    CHECK_INDEX_INLINE_SIZES(36);
+    CHECK_INDEX_INLINE_SIZES(36),
+
+    /** Dump tx collisions possibility. */
+    TX_COLLISIONS_DUMP(36);
 
     /**
      * Unique feature identifier.
