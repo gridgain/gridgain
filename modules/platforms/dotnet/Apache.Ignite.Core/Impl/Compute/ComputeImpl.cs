@@ -70,6 +70,9 @@ namespace Apache.Ignite.Core.Impl.Compute
         /** */
         private const int OpWithExecutor = 10;
 
+        /** */
+        private const int OpAffinityCall = 11;
+
         /** Underlying projection. */
         private readonly ClusterGroupImpl _prj;
 
@@ -508,8 +511,18 @@ namespace Apache.Ignite.Core.Impl.Compute
             IgniteArgumentCheck.NotNull(cacheNames, "cacheNames");
             IgniteArgumentCheck.NotNull(func, "func");
 
-            // TODO
-            return null;
+            return DoOutOpObjectAsync<TJobRes>(OpAffinityCall, w =>
+            {
+                var cacheCount = w.WriteStrings(cacheNames);
+
+                if (cacheCount == 0)
+                {
+                    throw new ArgumentException("cacheNames can not be empty", "cacheNames");
+                }
+                
+                w.WriteInt(partition);
+                w.WriteObject(func);
+            });
         }
 
         /** <inheritDoc /> */
